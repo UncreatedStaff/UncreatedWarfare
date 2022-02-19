@@ -109,7 +109,9 @@ namespace Uncreated.Warfare.Components
 
                 if (IsDestroyed) yield break;
 
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
                     if (player.GetTeam() == Team)
@@ -162,7 +164,9 @@ namespace Uncreated.Warfare.Components
         }
         public void Destroy()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (UCPlayer player in NearbyDefenders)
                 OnDefenderLeft(player);
             foreach (UCPlayer player in NearbyAttackers)

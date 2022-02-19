@@ -59,7 +59,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public static FlagData ReadFlagData(ref Utf8JsonReader reader)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             FlagData data = new FlagData();
             while (reader.Read())
             {
@@ -137,7 +139,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void WriteFlagData(Utf8JsonWriter writer)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             writer.WriteProperty(nameof(id), id);
             writer.WriteProperty(nameof(name), name);
             writer.WriteProperty(nameof(short_name), short_name);

@@ -52,7 +52,9 @@ namespace Uncreated.Warfare.Components
         }
         public void OnPlayerEnteredVehicle(Player nelsonplayer, InteractableVehicle vehicle)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
@@ -104,7 +106,9 @@ namespace Uncreated.Warfare.Components
         }
         public void OnPlayerExitedVehicle(Player nelsonplayer, InteractableVehicle vehicle)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
@@ -156,7 +160,9 @@ namespace Uncreated.Warfare.Components
         }
         public void OnPlayerSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, byte toSeatIndex)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
@@ -183,7 +189,9 @@ namespace Uncreated.Warfare.Components
         }
         public void EvaluateUsage(SteamPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             byte currentSeat = player.player.movement.getSeat();
             bool isCrewSeat = Data.CrewSeats.Contains(currentSeat);
 
@@ -216,7 +224,9 @@ namespace Uncreated.Warfare.Components
         }
         private IEnumerator<WaitForSeconds> ForceSupplyLoop(UCPlayer caller, ESupplyType type, int amount)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Guid buildGUID = Guid.Empty;
             Guid ammoGUID = Guid.Empty;
 
@@ -336,7 +346,9 @@ namespace Uncreated.Warfare.Components
         }
         private IEnumerator<WaitForSeconds> AutoSupplyLoop()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Guid buildGUID = Guid.Empty;
             Guid ammoGUID = Guid.Empty;
 
@@ -406,7 +418,9 @@ namespace Uncreated.Warfare.Components
             {
                 yield return new WaitForSeconds(3);
 
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (F.IsInMain(Vehicle.transform.position))
                 {
                     //var ammoCrate = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.AmmoCrateGUID, 30, Vehicle.transform.position, true).FirstOrDefault();

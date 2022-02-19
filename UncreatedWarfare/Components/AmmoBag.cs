@@ -22,7 +22,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public void ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Ammo -= ammoCost;
 
             KitManager.ResupplyKit(player, kit, true);

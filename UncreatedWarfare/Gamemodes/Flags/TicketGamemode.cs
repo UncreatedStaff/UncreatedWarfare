@@ -11,13 +11,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         { }
         public override void Init()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             base.Init();
             TicketManager = new TicketManager();
         }
         protected override void EventLoopAction()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (TimeToTicket())
                 EvaluateTickets();
             base.EventLoopAction();
@@ -26,25 +30,33 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             if (Every10Seconds)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 TicketManager.OnFlag10Seconds();
             }
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             TicketManager.OnGroupChanged(player.Player.channel.owner, oldteam, newteam);
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             TicketManager.OnPlayerJoined(player);
             base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
         }
         public override void Dispose()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             TicketManager?.Dispose();
             base.Dispose();
         }

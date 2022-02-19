@@ -16,7 +16,9 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.whitelist" };
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UnturnedPlayer player = (UnturnedPlayer)caller;
             if (!Data.Gamemode.UseWhitelist)
             {

@@ -24,7 +24,9 @@ namespace Uncreated.Warfare
             [HarmonyPostfix]
             static void TryAddPlayerPostfix(ref byte seat, Player player, InteractableVehicle __instance, ref bool __result)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (__result)
                 {
                     if (VehicleBay.VehicleExists(__instance.asset.GUID, out VehicleData vehicleData))

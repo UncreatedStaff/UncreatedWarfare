@@ -99,7 +99,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public virtual void Init()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < Provider.clients.Count; i++)
                 PlayerManager.InvokePlayerConnected(UnturnedPlayer.FromSteamPlayer(Provider.clients[i]));
             Cooldowns = new CooldownManager();
@@ -115,7 +117,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public static void OnStagingComplete()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
             {
                 Vehicles.VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
@@ -132,7 +136,9 @@ namespace Uncreated.Warfare.Gamemodes
             {
                 _ticks++;
                 yield return new WaitForSeconds(_eventLoopSpeed);
+#if DEBUG
                 IDisposable profiler = ProfilingUtils.StartTracking(Name + " Gamemode Event Loop");
+#endif
                 DateTime start = DateTime.Now;
                 for (int i = 0; i < Provider.clients.Count; i++)
                 {
@@ -172,11 +178,13 @@ namespace Uncreated.Warfare.Gamemodes
                 }
 
                 Quests.QuestManager.OnGameTick();
+#if DEBUG
                 profiler.Dispose();
                 if (EveryXSeconds(150))
                 {
                     F.SaveProfilingData();
                 }
+#endif
                 if (UCWarfare.I.CoroutineTiming)
                     L.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
             }
@@ -196,7 +204,9 @@ namespace Uncreated.Warfare.Gamemodes
         public abstract void DeclareWin(ulong winner);
         public bool KeepGamemode()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Type nextMode = GetNextGamemode();
             if (this.GetType() != nextMode)
             {
@@ -270,7 +280,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public static Gamemode FindGamemode(string name)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 if (GAMEMODES.TryGetValue(name, out Type type))
@@ -380,7 +392,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void ReplaceBarricadesAndStructures()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 bool isStruct = this is IStructureSaving;
@@ -431,7 +445,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public static void ReadGamemodes()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (GAMEMODE_ROTATION.Count > 0) GAMEMODE_ROTATION.Clear();
             if (UCWarfare.Config.GamemodeRotation == null)
             {
@@ -496,7 +512,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public static Type GetNextGamemode()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             using (IEnumerator<KeyValuePair<Type, float>> iter = GAMEMODE_ROTATION.GetEnumerator())
             {
                 float total = 0f;

@@ -60,7 +60,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void OnLevelLoaded()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (BuildableData b in config.data.Buildables)
             {
                 if (!Whitelister.IsWhitelisted(b.foundationID, out _))
@@ -86,7 +88,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void OnPlayerDisconnect(UCPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (FOB f in Team1FOBs)
             {
                 if (f.FriendliesOnFOB.Remove(player))
@@ -114,7 +118,9 @@ namespace Uncreated.Warfare.FOBs
         
         public static void Tick()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = SpecialFOBs.Count - 1; i >= 0; i--)
             {
                 SpecialFOB special = SpecialFOBs[i];
@@ -130,7 +136,9 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID)
             {
@@ -168,7 +176,9 @@ namespace Uncreated.Warfare.FOBs
         
         public static FOB RegisterNewFOB(BarricadeDrop drop)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             FOB fob = new FOB(drop);
             
             if (fob.Owner != 0 && Data.Is(out IGameStats ws) && ws.GameStats is IFobsTracker ft)
@@ -268,7 +278,9 @@ namespace Uncreated.Warfare.FOBs
         {
             if (Data.Is(out Insurgency insurgency))
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 Cache cache = drop.model.gameObject.AddComponent<Cache>();
 
                 int number;
@@ -292,7 +304,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void DeleteFOB(FOB fob)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = fob.Team;
 
             UCPlayer killer = UCPlayer.FromID(fob.Killer);
@@ -365,7 +379,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void DeleteSpecialFOB(string name, ulong team)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             SpecialFOB removed = SpecialFOBs.FirstOrDefault(x => x.Name == name && x.Team == team);
             SpecialFOBs.Remove(removed);
 
@@ -385,7 +401,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void DeleteCache(BarricadeDrop cache)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.Is(out Insurgency ins)) return;
 
             ulong team = cache.GetServersideData().group;
@@ -440,7 +458,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static bool FindFOBByName(string name, ulong team, out object fob)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             fob = SpecialFOBs.Find(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && f.Team == team);
             if (fob != null)
                 return true;
@@ -465,7 +485,9 @@ namespace Uncreated.Warfare.FOBs
 
         public static void UpdateFOBListForTeam(ulong team, SpecialFOB fob = null)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (team == 0) return;
             if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
@@ -476,7 +498,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateFOBListForTeam(ulong team, FOB fob = null)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (team == 0) return;
             if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
@@ -487,7 +511,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateFOBListForTeam(ulong team, Cache fob = null)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (team == 0) return;
             if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
@@ -498,7 +524,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void SendFOBListToTeam(ulong team)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (team == 0) return;
             if (!Data.Is(out TeamGamemode gm)) return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
@@ -526,7 +554,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateResourceUIString(FOB fob)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.Is(out TeamGamemode gm)) return;
             if (fob.IsBleeding) return;
 
@@ -559,7 +589,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateFOBList(UCPlayer player, FOB fob = null)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<FOB> FOBList;
             ulong team = player.GetTeam();
             if (team == 1)
@@ -596,7 +628,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateFOBList(UCPlayer player, SpecialFOB fob = null)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<FOB> FOBList;
             ulong team = player.GetTeam();
             if (team == 1)
@@ -622,7 +656,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void UpdateFOBList(UCPlayer player, Cache cache = null)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<FOB> FOBList;
             ulong team = player.GetTeam();
             if (team == 1)
@@ -653,7 +689,9 @@ namespace Uncreated.Warfare.FOBs
         }
         private static void UpdateUIList(ulong team, ITransportConnection connection, List<FOB> FOBList, UCPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             EffectManager.sendUIEffect(fobListId, fobListKey, connection, true);
 
             int i2 = 0;

@@ -96,7 +96,9 @@ namespace Uncreated.Warfare
         public bool IsOfficer { get => CurrentRank.OfficerTier > 0; }
         public void RedownloadRanks()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Dictionary<EBranch, int> xplevels = Data.DatabaseManager.GetAllXP(Steam64);
             if (_ranks != null)
                 _ranks.Clear();
@@ -111,12 +113,13 @@ namespace Uncreated.Warfare
         internal List<Guid>? _completedQuests;
         public void RedownloadMedals()
         {
-            using IDisposable profiler = ProfilingUtils.StartTracking();
             _medals.Update(Data.DatabaseManager.GetTeamwork(Steam64));
         }
         public void UpdateRank(EBranch branch, int newXP)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Ranks.TryGetValue(branch, out RankData data))
                 data.Update(newXP);
             else
@@ -125,7 +128,9 @@ namespace Uncreated.Warfare
         }
         public void UpdateRankTeam(ulong team)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             _ranks = new Dictionary<EBranch, RankData>(6);
             RedownloadRanks();
         }
@@ -357,7 +362,9 @@ namespace Uncreated.Warfare
         public ushort GetMarkerID() => Squad == null || Squad.Leader == null || Squad.Leader.Steam64 != Steam64 ? MarkerID : SquadLeaderMarkerID;
         public bool IsSquadLeader()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Squad is null)
                 return false;
 
@@ -365,7 +372,9 @@ namespace Uncreated.Warfare
         }
         public bool IsNearSquadLeader(float distance)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (distance == 0 || Squad is null || Squad.Leader is null || Squad.Leader.Player is null || Squad.Leader.Player.transform is null)
                 return false;
 
@@ -376,7 +385,9 @@ namespace Uncreated.Warfare
         }
         public bool IsOrIsNearLeader(float distance)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Squad is null || Player.transform is null || Squad.Leader.Player.transform is null)
                 return false;
 
@@ -390,7 +401,9 @@ namespace Uncreated.Warfare
         }
         public int NearbyMemberBonus(int amount, float distance)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 if (Player.life.isDead || Player.transform is null)
@@ -432,7 +445,9 @@ namespace Uncreated.Warfare
         /// <summary>Gets some of the values from the playersave again.</summary>
         public static void Refresh(ulong Steam64)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer? pl = PlayerManager.OnlinePlayers?.FirstOrDefault(s => s.Steam64 == Steam64);
             if (pl == null) return;
             else if (PlayerManager.HasSave(Steam64, out PlayerSave save))

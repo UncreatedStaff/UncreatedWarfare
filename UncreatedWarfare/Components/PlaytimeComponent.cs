@@ -13,10 +13,10 @@ namespace Uncreated.Warfare.Components
     {
         public static LandmineData Nil = new LandmineData(null, null);
         public Guid barricadeGUID;
-        public Player owner;
+        public Player? owner;
         public ulong ownerID;
         public int instanceID;
-        public LandmineData(InteractableTrap trap, BarricadeComponent owner)
+        public LandmineData(InteractableTrap? trap, BarricadeComponent? owner)
         {
             if (trap == null || owner == null)
             {
@@ -51,7 +51,7 @@ namespace Uncreated.Warfare.Components
         public LandmineData LastLandmineExploded;
         public Guid lastExplodedVehicle;
         public Guid lastRoadkilled;
-        private Coroutine _currentTeleportRequest;
+        private Coroutine? _currentTeleportRequest;
         public Vehicles.VehicleSpawn currentlylinking;
         private struct ToastMessageInfo
         {
@@ -80,14 +80,14 @@ namespace Uncreated.Warfare.Components
         }
         private static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
         {
-            new ToastMessageInfo(EToastMessageSeverity.INFO, new Guid("d7504683-4b32-4ed4-9191-4b4136ab1bc8"), 0, 12f), // info
-            new ToastMessageInfo(EToastMessageSeverity.WARNING, new Guid("5678a559-695e-4d99-9dfe-a9a771b6616f"), 0, 12f), // warning
-            new ToastMessageInfo(EToastMessageSeverity.SEVERE, new Guid("26fed656-4ccf-4c46-aac1-df01dbba0aab"), 0, 12f), // error
-            new ToastMessageInfo(EToastMessageSeverity.MINI, new Guid("a213915d-61ad-41ce-bab3-4fb12fe6870c"), 1, 1.58f), // xp
-            new ToastMessageInfo(EToastMessageSeverity.MEDIUM, new Guid("5f695955f0da4d19adacac39140da797"), 2, 4f), // xp
-            new ToastMessageInfo(EToastMessageSeverity.BIG, new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 3, 5.5f), // big
-            new ToastMessageInfo(EToastMessageSeverity.PROGRESS, new Guid("a113a0f2d0af4db8b5e5bcbc17fc96c9"), 4, 1.6f), // progress
-            new ToastMessageInfo(EToastMessageSeverity.TIP, new Guid("abbf74e86f1c4665925884c70b9433ba"), 1, 4f), // tip
+            new ToastMessageInfo(EToastMessageSeverity.INFO,        new Guid("d7504683-4b32-4ed4-9191-4b4136ab1bc8"), 0, 12f),      // info
+            new ToastMessageInfo(EToastMessageSeverity.WARNING,     new Guid("5678a559-695e-4d99-9dfe-a9a771b6616f"), 0, 12f),      // warning
+            new ToastMessageInfo(EToastMessageSeverity.SEVERE,      new Guid("26fed656-4ccf-4c46-aac1-df01dbba0aab"), 0, 12f),      // error
+            new ToastMessageInfo(EToastMessageSeverity.MINI,        new Guid("a213915d-61ad-41ce-bab3-4fb12fe6870c"), 1, 1.58f),    // xp
+            new ToastMessageInfo(EToastMessageSeverity.MEDIUM,      new Guid("5f695955-f0da-4d19-adac-ac39140da797"), 2, 4f),       // xp
+            new ToastMessageInfo(EToastMessageSeverity.BIG,         new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 3, 5.5f),     // big
+            new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    new Guid("a113a0f2-d0af-4db8-b5e5-bcbc17fc96c9"), 4, 1.6f),     // progress
+            new ToastMessageInfo(EToastMessageSeverity.TIP,         new Guid("abbf74e8-6f1c-4665-9258-84c70b9433ba"), 1, 4f),       // tip
         };
         private struct ToastChannel
         {
@@ -127,7 +127,9 @@ namespace Uncreated.Warfare.Components
         private ToastChannel[] channels;
         public void QueueMessage(ToastMessage message, bool priority = false)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ToastMessageInfo info = ToastMessageInfo.Nil;
             for (int i = 0; i < TOASTS.Length; i++)
             {
@@ -206,7 +208,9 @@ namespace Uncreated.Warfare.Components
         }
         public void Update()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float dt = Time.deltaTime;
             CurrentTimeSeconds += dt;
             for (int i = 0; i < channels.Length; i++)
@@ -238,15 +242,18 @@ namespace Uncreated.Warfare.Components
         }
         public bool TeleportTo(object location, float delay, bool shouldCancelOnMove, bool startCoolDown = true, float yawOverride = -1)
         {
-            UCPlayer player = UCPlayer.FromPlayer(this.player);
+            UCPlayer? player = UCPlayer.FromPlayer(this.player);
 
-            if (_currentTeleportRequest == default)
+            if (player != null)
             {
-                _currentTeleportRequest = StartCoroutine(TeleportCoroutine(player, location, delay, shouldCancelOnMove, startCoolDown, yawOverride));
-                return true;
+                if (_currentTeleportRequest == default)
+                {
+                    _currentTeleportRequest = StartCoroutine(TeleportCoroutine(player, location, delay, shouldCancelOnMove, startCoolDown, yawOverride));
+                    return true;
+                }
+                else
+                    player.Message("deploy_e_alreadydeploying");
             }
-            else
-                player.Message("deploy_e_alreadydeploying");
             return false;
         }
 
@@ -255,14 +262,13 @@ namespace Uncreated.Warfare.Components
             bool isFOB = structure is FOB;
             bool isSpecialFOB = structure is SpecialFOB;
             bool isCache = structure is Cache;
-            bool isTransform = structure is SerializableTransform;
             bool isMain = structure is Vector3;
 
             PendingFOB = structure;
 
-            FOB fob = null;
-            SpecialFOB special = null;
-            Cache cache = null;
+            FOB? fob = null;
+            SpecialFOB? special = null;
+            Cache? cache = null;
 
             if (isFOB)
                 fob = structure as FOB;
@@ -273,12 +279,12 @@ namespace Uncreated.Warfare.Components
 
 
             if (isFOB)
-                player.Message("deploy_fob_standby", fob.UIColor, fob.Name, delay.ToString());
-            if (isSpecialFOB)
-                player.Message("deploy_fob_standby", special.UIColor, special.Name, delay.ToString());
-            if (isCache)
-                player.Message("deploy_fob_standby", cache.UIColor, cache.Name, delay.ToString());
-            if (isMain)
+                player.Message("deploy_fob_standby", fob!.UIColor, fob.Name, delay.ToString());
+            else if (isSpecialFOB)
+                player.Message("deploy_fob_standby", special!.UIColor, special.Name, delay.ToString());
+            else if (isCache)
+                player.Message("deploy_fob_standby", cache!.UIColor, cache.Name, delay.ToString());
+            else if (isMain)
                 player.Message("deploy_fob_standby", "f0c28d", "MAIN", delay.ToString());
 
             int counter = 0;
@@ -289,7 +295,9 @@ namespace Uncreated.Warfare.Components
             {
                 yield return new WaitForSeconds(0.25F);
 
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 try
                 {
                     if (player.Player.life.isDead)
@@ -308,7 +316,7 @@ namespace Uncreated.Warfare.Components
                     }
                     if (isFOB)
                     {
-                        if (fob.NearbyEnemies.Count != 0)
+                        if (fob!.NearbyEnemies.Count != 0)
                         {
                             player.Message("deploy_c_enemiesNearby");
 
@@ -332,7 +340,7 @@ namespace Uncreated.Warfare.Components
                     }
                     else if (isCache)
                     {
-                        if (cache.NearbyAttackers.Count != 0)
+                        if (cache!.NearbyAttackers.Count != 0)
                         {
                             player.Message("deploy_c_enemiesNearby");
 
@@ -373,21 +381,24 @@ namespace Uncreated.Warfare.Components
             float rotation = player.Player.transform.eulerAngles.y;
             if (isFOB)
             {
-                position = fob.Bunker.model.position;
-                rotation = fob.Bunker.model.eulerAngles.y;
+                if (fob!.Bunker != null)
+                {
+                    position = fob.Bunker.model.position;
+                    rotation = fob.Bunker.model.eulerAngles.y;
+                }
             }
             else if (isCache)
             {
-                position = cache.Structure.model.TransformPoint(new Vector3(3, 0, 0));
+                position = cache!.Structure.model.TransformPoint(new Vector3(3, 0, 0));
                 rotation = cache.Structure.model.eulerAngles.y;
             }
             else if (isSpecialFOB)
             {
-                position = special.Point;
+                position = special!.Point;
             }
-            else if (structure is Vector3)
+            else if (structure is Vector3 vector)
             {
-                position = (Vector3)structure;
+                position = vector;
             }
 
             if (yawOverride != -1)
@@ -399,14 +410,17 @@ namespace Uncreated.Warfare.Components
 
             if (isFOB)
             {
-                player.Message("deploy_s", fob.UIColor, fob.Name);
+                player.Message("deploy_s", fob!.UIColor, fob.Name);
 
                 Points.TryAwardFOBCreatorXP(fob, Points.XPConfig.FOBDeployedXP, "xp_fob_in_use");
+
+                if (fob!.Bunker!.model.TryGetComponent(out BuildableComponent comp))
+                    Quests.QuestManager.OnPlayerSpawnedAtBunker(comp, fob!, player);
             }
-            if (isSpecialFOB)
-                player.Message("deploy_s", special.UIColor, special.Name);
-            if (isCache)
-                player.Message("deploy_s", cache.UIColor, cache.Name);
+            else if (isSpecialFOB)
+                player.Message("deploy_s", special!.UIColor, special.Name);
+            else if (isCache)
+                player.Message("deploy_s", cache!.UIColor, cache.Name);
             else if (structure is Vector3)
             {
                 player.Message("deploy_s", "f0c28d", "MAIN");

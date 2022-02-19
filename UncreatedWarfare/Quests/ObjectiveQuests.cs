@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;
@@ -260,6 +261,76 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         public override string Translate() => QuestData!.Translate(_player, _rallyUses, UseCount);
     }
 }
+[QuestData(EQuestType.TEAMMATES_DEPLOY_ON_FOB)]
+public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State, FOBUseQuest>
+{
+    public DynamicIntegerValue UseCount;
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("deployments", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out UseCount))
+                UseCount = new DynamicIntegerValue(10);
+        }
+    }
+    public struct State : IQuestState<Tracker, FOBUseQuest>
+    {
+        public IDynamicValue<int>.IChoice UseCount;
+        public void Init(FOBUseQuest data)
+        {
+            this.UseCount = data.UseCount.GetValue();
+        }
+        public bool IsEligable(UCPlayer player) => true;
+
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("deployments", StringComparison.Ordinal))
+                UseCount = DynamicIntegerValue.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("deployments", UseCount);
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyBunkerSpawn
+    {
+        private readonly int UseCount = 0;
+        private int _fobUses;
+        protected override bool CompletedCheck => _fobUses >= UseCount;
+        public override short FlagValue => (short)_fobUses;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
+        {
+            UseCount = questState.UseCount.InsistValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("deployments", StringComparison.Ordinal))
+                _fobUses = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("deployments", _fobUses);
+        }
+        public override void ResetToDefaults() => _fobUses = 0;
+        public void OnPlayerSpawnedAtBunker(BuildableComponent bunker, FOB fob, UCPlayer spawner)
+        {
+            if (spawner.GetTeam() == _player.GetTeam()
+                && bunker != null && 
+                bunker.PlayerHits.TryGetValue(_player.Steam64, out int hitCount) &&
+                (float)hitCount / bunker.Buildable.requiredHits >= 0.25f)
+            {
+                _fobUses++;
+                if (_fobUses >= UseCount)
+                    TellCompleted();
+                else
+                    TellUpdated();
+            }
+        }
+        public override string Translate() => QuestData!.Translate(_player, _fobUses, UseCount);
+    }
+}
 
 [QuestData(EQuestType.WIN_GAMEMODE)]
 public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamemodeQuest.State, WinGamemodeQuest>
@@ -328,18 +399,21 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         }
 
         public override void ResetToDefaults() => _wins = 0;
-        // TODO:
-        [Obsolete("add presence checking", error: true)]
         public void OnGameOver(ulong winner)
         {
             ulong team = _player.GetTeam();
             if (winner == team && Gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
-                _wins++;
-                if (_wins >= WinCount)
-                    TellCompleted();
-                else
-                    TellUpdated();
+                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2 &&
+                    st2.stats.TryGetValue(_player.Steam64, out BasePlayerStats st3) && st3 is TeamPlayerStats teamstats &&
+                    (winner == 1 ? teamstats.onlineCount1 : teamstats.onlineCount2) / (float)st2.coroutinect > 0.65f)
+                {
+                    _wins++;
+                    if (_wins >= WinCount)
+                        TellCompleted();
+                    else
+                        TellUpdated();
+                }
             }
         }
         public override string Translate() => QuestData!.Translate(_player, Gamemode.ToString());

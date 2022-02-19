@@ -31,7 +31,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool SimulatePlayerLifePre(uint simulation, PlayerLife __instance, uint ___lastBleed, ref bool ____isBleeding, ref uint ___lastRegenerate)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.simulatePlayerLife) return true;
                 if (!Data.Is(out IRevives r)) return true;
                 if (Provider.isServer)
@@ -61,7 +63,9 @@ namespace Uncreated.Warfare
             [HarmonyPostfix]
             static void SimulatePlayerLifePost(uint simulation, PlayerLife __instance, ref uint ___lastBleed, ref bool ____isBleeding)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.simulatePlayerLife) return;
                 if (!Data.Is(out IRevives r)) return;
                 if (Provider.isServer)
@@ -92,7 +96,9 @@ namespace Uncreated.Warfare
             [HarmonyPostfix]
             static void OnStopStoring(PlayerInventory __instance)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.closeStorage) return;
                 UCPlayer player = UCPlayer.FromPlayer(__instance.player);
                 if (player == null) return;

@@ -16,7 +16,9 @@ namespace Uncreated.Warfare.Kits
         protected override string LoadDefaults() => "[]";
         public static void DropAllSigns()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (RequestSign sign in ActiveObjects)
             {
                 sign.SpawnCheck(false);
@@ -27,7 +29,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool AddRequestSign(InteractableSign sign, out RequestSign signadded)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             signadded = default;
             BarricadeDrop drop = UCBarricadeManager.GetSignFromInteractable(sign);
             if (drop != null && !ObjectExists(x => x.instance_id == drop.instanceID, out signadded))
@@ -40,14 +44,18 @@ namespace Uncreated.Warfare.Kits
         }
         public static void RemoveRequestSign(RequestSign sign)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             RemoveWhere(x => x.instance_id == sign.instance_id);
             //await sign.InvokeUpdate();
         }
         public static void RemoveRequestSigns(string kitname) => RemoveWhere(x => x.kit_name == kitname);
         public static bool SignExists(InteractableSign sign, out RequestSign found)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (sign == null)
             {
                 found = null;
@@ -75,7 +83,9 @@ namespace Uncreated.Warfare.Kits
         public static void UpdateSignsWithName(string kitName, Action<RequestSign> action) => UpdateObjectsWhere(rs => rs.kit_name == kitName, action);
         public static void InvokeLangUpdateForSignsOfKit(SteamPlayer player, string kitName)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitManager.KitExists(kitName, out Kit kitobj))
             {
                 if (kitobj.IsLoadout)
@@ -94,7 +104,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void InvokeLangUpdateForSignsOfKit(string kitName)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitManager.KitExists(kitName, out Kit kitobj))
             {
                 if (kitobj.IsLoadout)
@@ -113,7 +125,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void InvokeLangUpdateForAllSigns(SteamPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 ActiveObjects[i].InvokeUpdate(player);
@@ -121,7 +135,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void InvokeLangUpdateForAllSigns()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 ActiveObjects[i].InvokeUpdate();
@@ -129,7 +145,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void SetSignTextSneaky(InteractableSign sign, string text)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             BarricadeDrop barricadeByRootFast = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             byte[] state = barricadeByRootFast.GetServersideData().barricade.state;
             byte[] bytes = Encoding.UTF8.GetBytes(text);
@@ -225,7 +243,9 @@ namespace Uncreated.Warfare.Kits
         }
         public void InvokeUpdate(SteamPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (barricadetransform != null)
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
@@ -250,7 +270,9 @@ namespace Uncreated.Warfare.Kits
         }
         public void InvokeUpdate()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (barricadetransform != null)
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
@@ -276,7 +298,9 @@ namespace Uncreated.Warfare.Kits
         /// <summary>Spawns the sign if it is not already placed.</summary>
         public void SpawnCheck(bool save)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
             if (drop == null || data == null)
             {
@@ -330,7 +354,9 @@ namespace Uncreated.Warfare.Kits
         public static void WriteRequestSign(RequestSign obj, Utf8JsonWriter writer) => obj.WriteJson(writer);
         public void WriteJson(Utf8JsonWriter writer)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             writer.WriteProperty(nameof(kit_name), kit_name);
             writer.WriteProperty(nameof(transform), transform);
             writer.WriteProperty(nameof(sign_id), sign_id);
@@ -340,7 +366,9 @@ namespace Uncreated.Warfare.Kits
         }
         public void ReadJson(ref Utf8JsonReader reader)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)

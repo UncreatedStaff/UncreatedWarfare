@@ -24,7 +24,9 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.structure" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UnturnedPlayer player = (UnturnedPlayer)caller;
             string action = command[0].ToLower();
             if (command.Length > 0)

@@ -85,8 +85,8 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
             else 
                 TellUpdated();
         }
-        internal static readonly NetCall<ulong, string, bool> SendDiscordKeyState = new NetCall<ulong, string, bool>(1115);
-        [NetCall(ENetCall.FROM_SERVER, 1115)]
+        internal static readonly NetCall<ulong, string, bool> SendDiscordKeyState = new NetCall<ulong, string, bool>(1124);
+        [NetCall(ENetCall.FROM_SERVER, 1124)]
         internal static void ReceiveDiscordKeyState(IConnection connection, ulong player, string key, bool state)
         {
             if (!string.IsNullOrEmpty(key))

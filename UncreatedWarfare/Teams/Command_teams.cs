@@ -15,7 +15,9 @@ namespace Uncreated.Warfare.Teams
         public List<string> Permissions => new List<string>() { "uc.teams" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
             if (!Data.Is(out ITeams teamgm) && teamgm.UseJoinUI)

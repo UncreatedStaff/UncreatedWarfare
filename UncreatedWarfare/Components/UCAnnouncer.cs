@@ -20,7 +20,9 @@ namespace Uncreated.Warfare.Components
         private IEnumerator<string> Enumerator;
         void Start()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ReloadConfig();
             stop = false;
             if (Messages.Count > 0)
@@ -44,7 +46,9 @@ namespace Uncreated.Warfare.Components
         }
         public void ReloadConfig()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.DATA_DIRECTORY, out bool folderExists);
             Messages.Clear();
             if (folderExists)
@@ -164,7 +168,9 @@ namespace Uncreated.Warfare.Components
             while (!stop)
             {
                 yield return new WaitForSeconds(TimeBetweenMessages);
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!Enumerator.MoveNext())
                 {
                     Enumerator.Reset();

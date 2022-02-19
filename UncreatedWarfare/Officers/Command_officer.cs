@@ -17,7 +17,9 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>() { "uc.officer" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
             if (command.Length >= 1 && (command[0].ToLower() == "setrank" || command[0].ToLower() == "set"))

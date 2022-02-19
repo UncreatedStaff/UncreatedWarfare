@@ -87,6 +87,87 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
     }
 }
+
+[QuestData(EQuestType.KILL_FROM_RANGE)]
+public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker, KillEnemiesRangeQuest.State, KillEnemiesRangeQuest>
+{
+    public DynamicIntegerValue KillCount;
+    public DynamicFloatValue Range;
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("kills", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out KillCount))
+                KillCount = new DynamicIntegerValue(20);
+        }
+        else if (propertyname.Equals("range", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadFloatValue(out Range))
+                Range = new DynamicFloatValue(new FloatRange(50, 200));
+        }
+    }
+    public struct State : IQuestState<Tracker, KillEnemiesRangeQuest>
+    {
+        public IDynamicValue<int>.IChoice KillThreshold;
+        public IDynamicValue<float>.IChoice Range;
+        public bool IsEligable(UCPlayer player) => true;
+        public void Init(KillEnemiesRangeQuest data)
+        {
+            this.KillThreshold = data.KillCount.GetValue();
+            this.Range = data.Range.GetValue();
+        }
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("kills", StringComparison.Ordinal))
+                KillThreshold = DynamicIntegerValue.ReadChoice(ref reader);
+            else if (prop.Equals("range", StringComparison.Ordinal))
+                Range = DynamicFloatValue.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", KillThreshold);
+            writer.WriteProperty("range", Range);
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyOnKill
+    {
+        private readonly int KillThreshold = 0;
+        private readonly float Range;
+        private string translationCache1;
+        private int _kills;
+        protected override bool CompletedCheck => _kills >= KillThreshold;
+        public override short FlagValue => (short)_kills;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
+        {
+            KillThreshold = questState.KillThreshold.InsistValue();
+            Range = questState.Range.InsistValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("kills", StringComparison.Ordinal))
+                _kills = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("kills", _kills);
+        }
+        public override void ResetToDefaults() => _kills = 0;
+        public void OnKill(UCWarfare.KillEventArgs kill)
+        {
+            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && kill.distance >= Range && kill.item != default)
+            {
+                _kills++;
+                if (_kills >= KillThreshold)
+                    TellCompleted();
+                else
+                    TellUpdated();
+            }
+        }
+        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
+    }
+}
 [QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON)]
 public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Tracker, KillEnemiesQuestWeapon.State, KillEnemiesQuestWeapon>
 {
@@ -711,7 +792,6 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
     }
 }
-
 [QuestData(EQuestType.KILL_ENEMIES_WITH_BRANCH)]
 public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Tracker, KillEnemiesQuestBranch.State, KillEnemiesQuestBranch>
 {

@@ -13,7 +13,9 @@ namespace Uncreated.Warfare
 
         public static void TryGiveTip(UCPlayer player, ETip type, params string[] translationArgs)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Tip tip = _tips.Find(t => t.Steam64 == player.Steam64 && t.Type == type);
             if (tip is null)
             {

@@ -151,7 +151,9 @@ namespace Uncreated.Warfare
         }
         public static void LoadVariables()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
 
             /* INITIALIZE UNCREATED NETWORKING */
             Logging.OnLog += L.Log;

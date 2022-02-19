@@ -87,7 +87,9 @@ namespace Uncreated
         
         public static void Save()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Save -> " + directory);
+#endif
             _threadLocker.Wait();
             if (useSerializer)
             {
@@ -137,7 +139,9 @@ namespace Uncreated
         }
         public static void Reload()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Reload -> " + directory);
+#endif
             _threadLocker.Wait();
             if (!File.Exists(directory))
                 CreateFileIfNotExists(ActiveObjects.LoadDefaults());
@@ -646,7 +650,9 @@ namespace Uncreated
         }
         public void TryUpgrade()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver TryUpgrade -> " + directory);
+#endif
             try
             {
                 bool needsSaving = false;

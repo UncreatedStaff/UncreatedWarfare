@@ -31,7 +31,9 @@ namespace Uncreated.Warfare
         public static PlayerSave? GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave? save) ? save : null;
         public static void ApplyToOnline()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < OnlinePlayers.Count; i++)
             {
                 UCPlayer player = OnlinePlayers[i];
@@ -46,7 +48,9 @@ namespace Uncreated.Warfare
         }
         public static void ApplyTo(UCPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave? save) || save == null)
                 save = new PlayerSave(player.Steam64);
             save.Team = player.GetTeam();
@@ -76,7 +80,9 @@ namespace Uncreated.Warfare
         public static void AddSave(PlayerSave save) => PlayerSave.WriteToSaveFile(save);
         private static void OnPlayerConnected(UnturnedPlayer rocketplayer)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!PlayerSave.TryReadSaveFile(rocketplayer.CSteamID.m_SteamID, out PlayerSave? save) || save == null)
             {
                 save = new PlayerSave(rocketplayer.CSteamID.m_SteamID);
@@ -101,7 +107,9 @@ namespace Uncreated.Warfare
         }
         private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer? player = UCPlayer.FromUnturnedPlayer(rocketplayer);
             if (player == null) return;
             player.IsOnline = false;
@@ -138,7 +146,9 @@ namespace Uncreated.Warfare
         }
         internal static void PickGroupAfterJoin(UCPlayer ucplayer)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong oldGroup = ucplayer.Player.quests.groupID.m_SteamID;
             if (HasSave(ucplayer.Steam64, out PlayerSave save))
             {

@@ -14,7 +14,9 @@ namespace Uncreated.Warfare
         private const int HWIDS_COLUMN_SIZE = 161;
         public static async Task BanPlayer(ulong offender, ulong banner, int duration, string reason)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (duration == 0)
             {
                 UCPlayer admin2 = UCPlayer.FromID(banner);
@@ -182,7 +184,9 @@ namespace Uncreated.Warfare
 
         public static unsafe EBanResponse VerifyJoin(SteamPending player, ref string reason, ref int remainingDuration)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             EBanResponse state = EBanResponse.ALL_GOOD;
             byte[][] hwids = (byte[][])player.playerID.GetHwids();
             string banreason = null;
@@ -271,7 +275,9 @@ namespace Uncreated.Warfare
         }
         public static unsafe void AssertLoginInformation(SteamPending player, uint ipv4, byte[][] hwids)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             byte[] hwidsList = new byte[HWIDS_COLUMN_SIZE];
             byte[] searchBuffer = new byte[HWIDS_COLUMN_SIZE];
             int len = hwids.Length;
@@ -324,7 +330,9 @@ namespace Uncreated.Warfare
         }
         public static async Task KickPlayer(ulong offender, ulong kicker, string reason)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer admin = UCPlayer.FromID(kicker);
 
             if (!IsValidSteam64ID(offender))
@@ -375,7 +383,9 @@ namespace Uncreated.Warfare
 
         public static async Task MutePlayer(UCPlayer muted, ulong mutedS64, UCPlayer admin, EMuteType type, int duration, string reason)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             await Data.DatabaseManager.NonQueryAsync(
                 "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4);",
                 new object[]
@@ -390,7 +400,9 @@ namespace Uncreated.Warfare
         }
         public static void ApplyMuteSettings(UCPlayer joining)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (joining == null) return;
             string reason = null;
             int duration = -2;

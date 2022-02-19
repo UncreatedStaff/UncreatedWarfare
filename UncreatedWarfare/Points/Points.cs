@@ -29,7 +29,9 @@ namespace Uncreated.Warfare.Point
         }
         public static void OnPlayerJoined(UCPlayer player, bool isnewGame)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!isnewGame && (player.IsTeam1() || player.IsTeam2()))
             {
                 UpdateXPUI(player);
@@ -38,7 +40,9 @@ namespace Uncreated.Warfare.Point
         }
         public static void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (newGroup == 1 || newGroup == 2)
             {
                 UpdateXPUI(player);
@@ -52,7 +56,9 @@ namespace Uncreated.Warfare.Point
         }
         public static void OnBranchChanged(UCPlayer player, EBranch oldBranch, EBranch newBranch)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string rank;
             if (player.CurrentRank.Level > 0)
                 rank = Translation.Translate("branch_changed", player, Translation.TranslateBranch(player.Branch, player), player.CurrentRank.Name, player.CurrentRank.Level.ToString(Data.Locale));
@@ -72,7 +78,9 @@ namespace Uncreated.Warfare.Point
         }
         public static void AwardXP(UCPlayer player, int amount, string message = "")
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats || amount == 0) return;
 
             int oldLevel = player.CurrentRank.Level;
@@ -143,7 +151,9 @@ namespace Uncreated.Warfare.Point
         public static void AwardXP(Player player, int amount, string message = "") => AwardXP(UCPlayer.FromPlayer(player), amount, message);
         public static void AwardTW(UCPlayer player, int amount, string message = "")
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats || amount == 0) return;
 
             MedalData oldMedals = player.Medals;
@@ -195,7 +205,9 @@ namespace Uncreated.Warfare.Point
         public static void AwardTW(Player player, int amount, string message = "") => AwardTW(UCPlayer.FromPlayer(player), amount, message);
         public static void UpdateXPUI(UCPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if ((Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
             {
                 if (UCWarfare.Config.Debug)
@@ -240,7 +252,9 @@ namespace Uncreated.Warfare.Point
         }
         public static void UpdateTWUI(UCPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out IEndScreen lb) && lb.isScreenUp || Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player))
                 return;
 
@@ -270,7 +284,9 @@ namespace Uncreated.Warfare.Point
         }
         public static string GetProgressBar(int currentPoints, int totalPoints, int barLength = 50)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float ratio = currentPoints / (float)totalPoints;
 
             int progress = Mathf.RoundToInt(ratio * barLength);
@@ -286,7 +302,9 @@ namespace Uncreated.Warfare.Point
         }
         public static void TryAwardDriverAssist(Player gunner, int amount, float quota = 0)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             InteractableVehicle vehicle = gunner.movement.getVehicle();
             if (vehicle != null)
             {
@@ -304,7 +322,9 @@ namespace Uncreated.Warfare.Point
         }
         public static void TryAwardFOBCreatorXP(FOB fob, int amount, string translationKey)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer creator = UCPlayer.FromID(fob.Creator);
 
             if (creator != null)

@@ -23,7 +23,9 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.dev" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
 
             if (command.Length > 0 && command[0].ToLower() == "addcache")

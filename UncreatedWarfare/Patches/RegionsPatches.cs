@@ -22,7 +22,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static void DestroyBarricadePostFix(BarricadeDrop barricade, byte x, byte y, ushort plant)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.destroyBarricade) return;
                 BarricadeDestroyedHandler?.Invoke(barricade.GetServersideData(), barricade, barricade.GetServersideData().instanceID, plant);
             }
@@ -34,7 +36,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static void DestroyStructurePostFix(StructureDrop structure, byte x, byte y, Vector3 ragdoll)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.destroyStructure) return;
                 StructureDestroyedHandler?.Invoke(structure.GetServersideData(), structure, structure.GetServersideData().instanceID);
             }
@@ -46,7 +50,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool ServerSetSignTextInternalLang(InteractableSign sign, BarricadeRegion region, byte x, byte y, ushort plant, string trimmedText)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.ServerSetSignTextInternal) return true;
                 if (trimmedText.StartsWith("sign_"))
                 {
@@ -94,7 +100,9 @@ namespace Uncreated.Warfare
                 byte to_rot,
                 byte to_page)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 __state = null;
 
                 ItemRegion region = ItemManager.regions[x, y];
@@ -121,7 +129,6 @@ namespace Uncreated.Warfare
                 byte to_rot,
                 byte to_page)
             {
-                using IDisposable profiler = ProfilingUtils.StartTracking();
                 EventFunctions.droppeditemsInverse.Remove(instanceID);
             }
 
@@ -145,7 +152,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool SendRegion(SteamPlayer client, BarricadeRegion region, byte x, byte y, NetId parentNetId, float sortOrder)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.SendRegion) return true;
                 UCPlayer pl = UCPlayer.FromSteamPlayer(client);
                 if (region.drops.Count > 0)

@@ -27,7 +27,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 
         public override void Calculate()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             tracker.GetTopStats(14, out statsT1, out statsT2);
 
             longestShotTaken = tracker.LongestShot.Player != 0;
@@ -62,7 +64,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void SendLeaderboard()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.Is(out Insurgency gm)) return;
             if (Assets.find(GUID) is not EffectAsset asset) return;
             this.asset = asset;
@@ -75,7 +79,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public virtual void SendLeaderboard(UCPlayer player, string teamcolor, Insurgency gm)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 ulong team = player.GetTeam();
@@ -254,7 +260,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         bool[][] states;
         protected override void Update()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float rt = Time.realtimeSinceStartup;
             for (int i = 1; i < Math.Min(15, statsT1.Count); i++)
             {
@@ -289,14 +297,12 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         private void UpdateStateT1(bool newval, int index)
         {
-            using IDisposable profiler = ProfilingUtils.StartTracking();
             states[0][index - 1] = newval;
             for (int i = 0; i < Provider.clients.Count; i++)
                 EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, Provider.clients[i].transportConnection, false, "1VC" + index.ToString(), newval);
         }
         private void UpdateStateT2(bool newval, int index)
         {
-            using IDisposable profiler = ProfilingUtils.StartTracking();
             states[1][index - 1] = newval;
             for (int i = 0; i < Provider.clients.Count; i++)
                 EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, Provider.clients[i].transportConnection, false, "2VC" + index.ToString(), newval);
@@ -327,7 +333,9 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public virtual void GetTopStats(int count, out List<InsurgencyPlayerStats> statsT1, out List<InsurgencyPlayerStats> statsT2)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<InsurgencyPlayerStats> stats = this.stats.Values.ToList();
 
             stats.RemoveAll(p =>

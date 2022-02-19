@@ -190,7 +190,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void ResetFlag()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             SetOwner(0, false);
             _points = 0;
             HasBeenCapturedT1 = false;
@@ -224,7 +226,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void RecalcCappers()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Team1TotalPlayers = 0;
             Team1TotalCappers = 0;
             Team2TotalPlayers = 0;
@@ -261,7 +265,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         /// <param name="departedPlayers">Players that have left the flag since last check.</param>
         public void GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departedPlayers)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Player[] OldPlayers = PlayersOnFlag.ToArray();
             RecalcCappers();
             newPlayers = new List<Player>(2);
@@ -287,7 +293,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void SetPoints(float value, bool skipEvent = false, bool skipDeltaPoints = false)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float OldPoints = _points;
             if (value > MAX_POINTS) _points = MAX_POINTS;
             else if (value < -MAX_POINTS) _points = -MAX_POINTS;
@@ -357,7 +365,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public bool IsNeutral() => _points == 0;
         public void CapT1(float amount)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             amount *= CaptureMultiplier;
             float amt = Points + amount;
             if (Points > 0 && amt < 0 || Points < 0 && amt > 0) // if sign will be changing
@@ -376,7 +386,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void CapT2(float amount)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             amount *= CaptureMultiplier;
             float amt = Points - amount;
             if (Points > 0 && amt < 0 || Points < 0 && amt > 0) // if sign will be changing
@@ -448,7 +460,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public bool IsContested(out ulong winner)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (IsContestedOverride != null)
                 return IsContestedOverride(this, out winner);
             if ((T1Obj && T2Obj) || (T1Obj && Owner == 2) || (T2Obj && Owner == 1)) // must be objective for both teams
@@ -504,7 +518,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void EvaluatePoints(bool overrideInactiveCheck = false)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (EvaluatePointsOverride != null)
             {
                 EvaluatePointsOverride(this, overrideInactiveCheck);

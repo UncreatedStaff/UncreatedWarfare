@@ -85,7 +85,9 @@ namespace Uncreated.Warfare
         }
         public static bool PermissionCheck(this IRocketPlayer player, EAdminType type)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
             for (int i = 0; i < groups.Count; i++)
             {
@@ -121,7 +123,9 @@ namespace Uncreated.Warfare
         }
         public static EAdminType GetPermissions(this IRocketPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
             EAdminType perms = 0;
             for (int i = 0; i < groups.Count; i++)
@@ -302,7 +306,9 @@ namespace Uncreated.Warfare
         /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
         public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (text == null) return;
             if (text.StartsWith("sign_"))
             {
@@ -327,7 +333,9 @@ namespace Uncreated.Warfare
         }
         public static void InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, bool changeText = false, string text = "")
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (text == default || client == default) return;
             string newtext;
             if (!changeText)
@@ -354,7 +362,9 @@ namespace Uncreated.Warfare
         }
         public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (source == null) return null;
             if (replaceIf == null || replaceWith == null || source.Length == 0 || replaceIf.Length == 0) return source;
             char[] chars = source.ToCharArray();
@@ -386,7 +396,9 @@ namespace Uncreated.Warfare
         }
         public static string RemoveMany(this string source, bool caseSensitive, params char[] replacables)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (source == null) return null;
             if (replacables.Length == 0) return source;
             char[] chars = source.ToCharArray();
@@ -456,7 +468,9 @@ namespace Uncreated.Warfare
         }
         public static PlaytimeComponent GetPlaytimeComponent(this Player player, out bool success)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.PlaytimeComponents.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
             {
                 success = Data.PlaytimeComponents[player.channel.owner.playerID.steamID.m_SteamID] != null;
@@ -480,7 +494,9 @@ namespace Uncreated.Warfare
         }
         public static PlaytimeComponent GetPlaytimeComponent(this CSteamID player, out bool success)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.PlaytimeComponents.ContainsKey(player.m_SteamID))
             {
                 success = Data.PlaytimeComponents[player.m_SteamID] != null;
@@ -513,7 +529,9 @@ namespace Uncreated.Warfare
         }
         public static PlaytimeComponent GetPlaytimeComponent(this ulong player, out bool success)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player == 0)
             {
                 success = false;
@@ -549,14 +567,18 @@ namespace Uncreated.Warfare
         public static FPlayerName GetPlayerOriginalNames(UnturnedPlayer player) => GetPlayerOriginalNames(player.Player);
         public static FPlayerName GetPlayerOriginalNames(Player player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.OriginalNames.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
                 return Data.OriginalNames[player.channel.owner.playerID.steamID.m_SteamID];
             else return new FPlayerName(player);
         }
         public static FPlayerName GetPlayerOriginalNames(ulong player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.OriginalNames.TryGetValue(player, out FPlayerName names))
                 return names;
             else
@@ -575,7 +597,9 @@ namespace Uncreated.Warfare
         }
         public static async Task<FPlayerName> GetPlayerOriginalNamesAsync(ulong player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.OriginalNames.TryGetValue(player, out FPlayerName names))
                 return names;
             else
@@ -594,7 +618,9 @@ namespace Uncreated.Warfare
         }
         public static bool IsInMain(this Player player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.Is<ITeams>(out _)) return false;
             ulong team = player.GetTeam();
             if (team == 1) return TeamManager.Team1Main.IsInside(player.transform.position);
@@ -603,14 +629,18 @@ namespace Uncreated.Warfare
         }
         public static bool IsInMain(Vector3 point)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.Is<ITeams>(out _)) return false;
             return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
         }
         public static bool IsOnFlag(this Player player) => player != null && Data.Is(out IFlagRotation fg) && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
         public static bool IsOnFlag(this Player player, out Flag flag)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player != null && Data.Is(out IFlagRotation fg))
             {
                 if (fg.OnFlag == null)
@@ -700,6 +730,9 @@ namespace Uncreated.Warfare
         private static string emp = string.Empty;
         public static string GetClosestLocation(Vector3 point)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ref string closest = ref emp;
             float smallest = -1f;
             for (int i = 0; i < LevelNodes.nodes.Count; i++)
@@ -748,7 +781,9 @@ namespace Uncreated.Warfare
             call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
         public static bool FilterName(string original, out string final)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (UCWarfare.Config.DisableNameFilter || UCWarfare.Config.MinAlphanumericStringLength <= 0)
             {
                 final = original;
@@ -808,7 +843,9 @@ namespace Uncreated.Warfare
         public static string ToGridPosition(Vector3 pos)
         {
             if (!_setGridConstants) SetGridPositionConstants();
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float x = Level.size / 2 + _toMapCoordsMultiplier * pos.x;
             float y = Level.size / 2 - _toMapCoordsMultiplier * pos.z;
 

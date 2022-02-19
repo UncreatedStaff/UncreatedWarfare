@@ -48,7 +48,9 @@ namespace Uncreated.Warfare.Revives
             while (true)
             {
                 yield return new WaitForSeconds(0.5f);
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (DownedPlayers.Count == 0) continue;
                 UpdateInjuredMarkers();
                 UpdateMedicMarkers();
@@ -56,7 +58,9 @@ namespace Uncreated.Warfare.Revives
         }
         private void UseableConsumeable_onPerformingAid(Player healer, Player downed, ItemConsumeableAsset asset, ref bool shouldAllow)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer medic = UCPlayer.FromPlayer(healer);
             if (medic == null)
             {
@@ -81,7 +85,9 @@ namespace Uncreated.Warfare.Revives
 
         private void OnPlayerRespawned(PlayerLife obj)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (obj.player.TryGetComponent(out Reviver r))
                 r.TellStandDelayed(1.5f);
             obj.player.movement.sendPluginSpeedMultiplier(1.0f);
@@ -90,7 +96,9 @@ namespace Uncreated.Warfare.Revives
 
         internal void OnPlayerConnected(UCPlayer ucplayer)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ucplayer.Player.equipment.onEquipRequested += OnEquipRequested;
             ucplayer.Player.stance.onStanceUpdated += delegate
             {
@@ -104,7 +112,9 @@ namespace Uncreated.Warfare.Revives
         /// <summary>Pre-destroy</summary>
         internal void OnPlayerDisconnected(SteamPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             player.player.equipment.onEquipRequested -= OnEquipRequested;
             player.player.stance.onStanceUpdated -= delegate
             {
@@ -124,7 +134,9 @@ namespace Uncreated.Warfare.Revives
         }
         internal void SetStanceBetter(Player player, EPlayerStance stance)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.PrivateStance == null || Data.ReplicateStance == null)
             {
                 player.stance.checkStance(stance);
@@ -135,7 +147,9 @@ namespace Uncreated.Warfare.Revives
         }
         internal void OnPlayerHealed(Player medic, Player target)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
                 r.RevivePlayer(null);
@@ -182,7 +196,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void RevivePlayer(Player target)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
                 if (target.TryGetComponent(out Reviver r))
@@ -191,7 +207,9 @@ namespace Uncreated.Warfare.Revives
         }
         internal void OnPlayerDamagedRequested(ref DamagePlayerParameters parameters, ref bool shouldAllow)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Gamemode.State != EState.ACTIVE)
             {
                 shouldAllow = false;
@@ -252,7 +270,9 @@ namespace Uncreated.Warfare.Revives
         }
         private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!shouldAllow)
                 return;
             if (parameters.player.movement.getVehicle() != null || parameters.cause == EDeathCause.VEHICLE)
@@ -353,7 +373,9 @@ namespace Uncreated.Warfare.Revives
         }
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             //L.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
             SetStanceBetter(player.Player, EPlayerStance.STAND);
             if (DownedPlayers.ContainsKey(player.CSteamID.m_SteamID))
@@ -378,7 +400,9 @@ namespace Uncreated.Warfare.Revives
         }
         private void OnEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             //L.Log(equipment.player.channel.owner.playerID.playerName + " tried to equip", ConsoleColor.DarkRed);
             if (DownedPlayers.ContainsKey(equipment.player.channel.owner.playerID.steamID.m_SteamID))
             {
@@ -387,7 +411,9 @@ namespace Uncreated.Warfare.Revives
         }
         private void StanceUpdatedLocal(SteamPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (DownedPlayers.ContainsKey(player.playerID.steamID.m_SteamID) && player.player.transform.TryGetComponent(out Reviver reviver))
             {
                 reviver.TellStanceNoDelay(EPlayerStance.PRONE);
@@ -427,7 +453,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void SpawnInjuredMarker(Vector3 Position, ulong Team)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             IEnumerator<UCPlayer> player = Medics
                 .Where(x => x.GetTeam() == Team)
                 .GetEnumerator();
@@ -442,7 +470,9 @@ namespace Uncreated.Warfare.Revives
         }
         internal void GiveUp(Player player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (DownedPlayers.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out DownedPlayerData p))
             {
                 player.life.askDamage(byte.MaxValue, Vector3.down, p.parameters.cause, p.parameters.limb, p.parameters.killer, out _, p.parameters.trackKill, p.parameters.ragdollEffect, false, true);
@@ -451,7 +481,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void SpawnInjuredMarkers(IEnumerator<UCPlayer> players, Vector3[] positions, bool dispose, bool clearAll)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             while (players.MoveNext())
             {
                 if (clearAll)
@@ -468,7 +500,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void SpawnMedicMarkers(IEnumerator<ITransportConnection> players, Vector3[] positions, bool dispose, bool clearAll)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             while (players.MoveNext())
             {
                 if (clearAll)
@@ -480,7 +514,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void SpawnInjuredMarkers(ITransportConnection player, Vector3[] positions, bool clearAll, Vector3 center)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (clearAll)
                 EffectManager.askEffectClearByID(Squads.SquadManager.config.data.InjuredMarker, player);
             for (int i = 0; i < positions.Length; i++)
@@ -489,7 +525,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void SpawnMedicMarkers(ITransportConnection player, Vector3[] positions, bool clearAll)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (clearAll)
                 EffectManager.askEffectClearByID(Squads.SquadManager.config.data.MedicMarker, player);
             for (int i = 0; i < positions.Length; i++)
@@ -497,7 +535,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void ClearInjuredMarker(ulong clearedPlayer, ulong Team)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             IEnumerator<UCPlayer> medics = Medics
                 .Where(x => x.GetTeam() == Team)
                 .GetEnumerator();
@@ -515,12 +555,13 @@ namespace Uncreated.Warfare.Revives
         }
         public void ClearInjuredMarkers(UCPlayer medic)
         {
-            using IDisposable profiler = ProfilingUtils.StartTracking();
             EffectManager.askEffectClearByID(Squads.SquadManager.config.data.InjuredMarker, medic.Player.channel.owner.transportConnection);
         }
         public Vector3[] GetPositionsOfTeam(ulong Team)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong[] downed = DownedPlayers.Keys.ToArray();
             List<Vector3> positions = new List<Vector3>();
             for (int i = 0; i < downed.Length; i++)
@@ -533,7 +574,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void UpdateInjuredMarkers()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             IEnumerator<UCPlayer> medics = Medics.
                 Where(x => x.GetTeam() == 1)
                 .GetEnumerator();
@@ -547,7 +590,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void UpdateMedicMarkers()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < DownedPlayers.Keys.Count; i++)
             {
                 UCPlayer downed = UCPlayer.FromID(DownedPlayers.Keys.ElementAt(i));
@@ -565,7 +610,9 @@ namespace Uncreated.Warfare.Revives
         }
         public void UpdateMedicMarkers(ITransportConnection player, ulong team, Vector3 origin, bool clearOld)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (team > 0 && team < 3) return;
             Vector3[] medics = Medics
                 .Where(x => x.GetTeam() == team &&
@@ -593,7 +640,9 @@ namespace Uncreated.Warfare.Revives
 #pragma warning restore IDE0051
             private void OnPlayerPostDamage(Player player, byte damage, Vector3 force, EDeathCause cause, ELimb limb, CSteamID killerid)
             {
-                using IDisposable profiler = ProfilingUtils.StartTracking();
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (killerid.TryGetPlaytimeComponent(out Components.PlaytimeComponent killer) && killer.stats != null && killer.stats is IPVPModeStats pvp)
                 {
                     pvp.AddDamage(damage);
@@ -640,7 +689,9 @@ namespace Uncreated.Warfare.Revives
             }
             public void RevivePlayer(IRevives g = default, bool remove = true)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (g == default) Data.Is(out g);
                 if (g != default)
                 {
@@ -657,7 +708,9 @@ namespace Uncreated.Warfare.Revives
             }
             public void FinishKillingPlayer(bool isDead = false)
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (Data.Is(out IRevives g))
                 {
                     this.RevivePlayer(g, false);

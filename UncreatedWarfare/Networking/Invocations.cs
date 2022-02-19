@@ -404,7 +404,7 @@ namespace Uncreated.Warfare.Networking
             }
             internal static readonly NetCall<string, EClass, string> SendKitClass = new NetCall<string, EClass, string>(1114);
 
-            // 1115 used by discord key quest
+            // 1124 used by discord key quest
         }
 
         internal static readonly NetCall<string> RequestKit = new NetCall<string>(ReceiveKitRequest);

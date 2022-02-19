@@ -68,9 +68,8 @@ namespace Uncreated.Players
         public readonly EToastMessageSeverity Severity;
         private readonly long time;
         public readonly string Message1;
-        /// <summary>NULLABLE</summary>
-        public readonly string Message2;
-        public readonly string Message3;
+        public readonly string? Message2;
+        public readonly string? Message3;
         public const float FULL_TOAST_TIME = 12f;
         public const float MINI_TOAST_TIME = 4f;
         public const float BIG_TOAST_TIME = 5.5f;

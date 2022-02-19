@@ -1,4 +1,6 @@
-﻿using Rocket.Core;
+﻿#define USE_DEBUGGER
+
+using Rocket.Core;
 using Rocket.Core.Plugins;
 using Rocket.Unturned;
 using SDG.Unturned;
@@ -50,7 +52,9 @@ namespace Uncreated.Warfare
         private bool InitialLoadEventSubscription;
         protected override void Load()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Instance = this;
             Data.Logs = Data.ReadRocketLog();
             Data.LoadColoredConsole();
@@ -122,7 +126,9 @@ namespace Uncreated.Warfare
         }
         private void OnLevelLoaded(int level)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
@@ -157,7 +163,9 @@ namespace Uncreated.Warfare
         }
         private void SubscribeToEvents()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Data.Gamemode.Subscribe();
             U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
             U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
@@ -196,7 +204,9 @@ namespace Uncreated.Warfare
         }
         private void UnsubscribeFromEvents()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Data.Gamemode.Unsubscribe();
             Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
@@ -254,7 +264,9 @@ namespace Uncreated.Warfare
         }
         internal void UpdateLangs(SteamPlayer player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
             foreach (BarricadeRegion region in BarricadeManager.regions)
             {
@@ -315,7 +327,9 @@ namespace Uncreated.Warfare
         }
         private void Update()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             while (ThreadActionRequests.Count > 0)
             {
                 MainThreadTask.MainThreadResult res = null;
@@ -337,7 +351,9 @@ namespace Uncreated.Warfare
         }
         protected override void Unload()
         {
+#if DEBUG
             IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (StatsRoutine != null)
             {
                 StopCoroutine(StatsRoutine);
@@ -375,8 +391,10 @@ namespace Uncreated.Warfare
                 WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.Locale) + ".dat");
             }
             NetFactory.ClearRegistry();
+#if DEBUG
             profiler.Dispose();
             F.SaveProfilingData();
+#endif
         }
         public static Color GetColor(string key)
         {

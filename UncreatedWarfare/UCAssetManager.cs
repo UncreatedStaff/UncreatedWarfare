@@ -11,7 +11,9 @@ namespace Uncreated.Warfare
 
         public static VehicleAsset FindVehicleAsset(string vehicleName)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<VehicleAsset> assets = Assets.find(EAssetType.VEHICLE).Cast<VehicleAsset>()
                 .Where(k => k?.name != null && k.vehicleName != null).OrderBy(k => k.vehicleName.Length).ToList();
 
@@ -25,7 +27,9 @@ namespace Uncreated.Warfare
         }
         public static ItemAsset FindItemAsset(string itemName, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = false)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             itemName = itemName.ToLower();
 
             numberOfSimilarNames = 0;

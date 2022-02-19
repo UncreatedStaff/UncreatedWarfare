@@ -25,7 +25,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         public Invasion() : base(nameof(Invasion), Config.TeamCTF.EvaluateTime) { }
         public override void StartNextGame(bool onLoad = false)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             PickTeams();
 
             base.StartNextGame(onLoad);
@@ -56,7 +58,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public override void LoadRotation()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (_allFlags == null || _allFlags.Count == 0) return;
             LoadFlagsIntoRotation();
             if (_rotation.Count < 1)
@@ -115,7 +119,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public override void InitFlag(Flag flag)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             base.InitFlag(flag);
             flag.EvaluatePointsOverride = FlagCheck;
             flag.IsContestedOverride = ContestedCheck;
@@ -124,7 +130,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         private void FlagCheck(Flag flag, bool overrideInactiveCheck = false)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (State == EState.ACTIVE || overrideInactiveCheck)
             {
                 if (flag.ID == (AttackingTeam == 1ul ? ObjectiveTeam1.ID : ObjectiveTeam2.ID))
@@ -152,7 +160,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         private bool ContestedCheck(Flag flag, out ulong winner)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (flag.IsObj(_attackTeam))
             {
                 if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers == 0)
@@ -206,7 +216,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = player.GetTeam();
             L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
             player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
@@ -244,7 +256,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         protected override void PlayerLeftFlagRadius(Flag flag, Player player)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = player.GetTeam();
             L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
             player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
@@ -282,7 +296,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (NewOwner == 1)
             {
                 if (_attackTeam == 1 && _objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
@@ -400,7 +416,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (NewPoints == 0)
                 flag.SetOwner(0);
             SendUIParameters t1 = SendUIParameters.Nil;
@@ -438,7 +456,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             CTFUI.ClearFlagList(player);
             if (_onFlag.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out int id))
                 InvasionUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == id)

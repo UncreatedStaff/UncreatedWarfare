@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Ranks;
@@ -26,12 +27,18 @@ public static class QuestManager
     public const string PROGRESSION_LOCATION = Data.DATA_DIRECTORY + "Quests\\progression.json";
     public static void Init()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         InitTypesReflector();
         ReadQuestDatas();
     }
     /// <summary>Generate and register a random tracker with the provided data to the player.</summary>
     public static BaseQuestTracker CreateTracker(BaseQuestData data, UCPlayer player)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         BaseQuestTracker tracker = data.CreateTracker(player);
         OnQuestStarted(tracker);
         RegisteredTrackers.Add(tracker);
@@ -41,6 +48,9 @@ public static class QuestManager
     /// <returns>A tracker using a <see cref="IQuestPreset"/> that is matched by <see cref="IQuestPreset.Key"/> and <see cref="IQuestPreset.Team"/> (or 0), or <see langword="null"/> if no preset is found.</returns>
     public static BaseQuestTracker? CreateTracker(UCPlayer player, Guid key)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         ulong team = player.GetTeam();
         // look for one that matches their team first.
         for (int i = 0; i < Quests.Count; i++)
@@ -82,21 +92,58 @@ public static class QuestManager
         }
         return null;
     }
+    public static IQuestPreset? GetPreset(Guid key, ulong team)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        // look for one that matches their team first.
+        for (int i = 0; i < Quests.Count; i++)
+        {
+            foreach (IQuestPreset preset in Quests[i].Presets)
+            {
+                if (preset.Key == key && preset.Team == team)
+                {
+                    return preset;
+                }
+            }
+        }
+        for (int i = 0; i < Quests.Count; i++)
+        {
+            foreach (IQuestPreset preset in Quests[i].Presets)
+            {
+                if (preset.Key == key && preset.Team == 0)
+                {
+                    return preset;
+                }
+            }
+        }
+        return null;
+    }
     /// <summary>Deregister a tracker and call <see cref="BaseQuestTracker.Dispose"/> on it.</summary>
     public static void DeregisterTracker(BaseQuestTracker tracker)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         tracker.Dispose();
         RegisteredTrackers.Remove(tracker);
     }
     /// <summary>Register a tracker.</summary>
     public static void RegisterTracker(BaseQuestTracker tracker)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         OnQuestStarted(tracker);
         RegisteredTrackers.Add(tracker);
     }
     /// <summary>Run on disconnect.</summary>
     public static void DeregisterOwnedTrackers(UCPlayer player)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         for (int i = RegisteredTrackers.Count - 1; i >= 0; i--)
         {
             if (RegisteredTrackers[i].Player.Steam64 == player.Steam64)
@@ -106,8 +153,12 @@ public static class QuestManager
             }
         }
     }
-    public static void PrintAllQuests(UCPlayer player)
+    public static void PrintAllQuests(UCPlayer? player)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        /*
         L.Log("All quests:");
         for (int i = 0; i < Quests.Count; i++)
         {
@@ -128,7 +179,7 @@ public static class QuestManager
                     L.Log("            " + fields2[f].Name + ": " + (fields2[f].GetValue(preset.State)?.ToString() ?? "null"));
                 }
             }
-        }
+        }*/
         if (player == null) return;
         L.Log("Player Quests: " + player.Steam64.ToString());
         if (player.RankData != null)
@@ -143,30 +194,39 @@ public static class QuestManager
         for (int i = 0; i < RegisteredTrackers.Count; i++)
         {
             if (RegisteredTrackers[i].Player.Steam64 == player.Steam64)
-                L.Log("    Tracker type " + RegisteredTrackers[i].QuestData.QuestType + " - \"" + RegisteredTrackers[i].Translate() + "\".");
+                L.Log("    Tracker type " + RegisteredTrackers[i].QuestData!.QuestType + " - \"" + RegisteredTrackers[i].Translate() + "\".");
         }
     }
     /// <summary>Ticks any <see cref="BaseQuestTracker"/> that's data has overridden <see cref="BaseQuestData.TickFrequencySeconds"/> and has set it > 0.</summary>
     public static void OnGameTick()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         DailyQuests.Tick();
         for (int i = 0; i < RegisteredTrackers.Count; i++)
         {
             BaseQuestTracker tracker = RegisteredTrackers[i];
-            if (tracker.QuestData.TickFrequencySeconds > 0 && Data.Gamemode.EveryXSeconds(tracker.QuestData.TickFrequencySeconds))
+            if (tracker.QuestData != null && tracker.QuestData.TickFrequencySeconds > 0 && Data.Gamemode.EveryXSeconds(tracker.QuestData.TickFrequencySeconds))
                 tracker.Tick();
         }
     }
     public static void OnQuestStarted(BaseQuestTracker tracker)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (!tracker.IsDailyQuest && tracker.Flag != 0)
         {
             tracker.Player.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
-            L.LogDebug("Flag quest started: " + tracker.QuestData.QuestType);
+            L.LogDebug("Flag quest started: " + (tracker.QuestData?.QuestType.ToString() ?? "null"));
         }
     }
     public static void OnQuestCompleted(BaseQuestTracker tracker)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestCompleted(tracker);
         else
@@ -184,11 +244,15 @@ public static class QuestManager
     }
     public static void OnQuestUpdated(BaseQuestTracker tracker, bool skipFlagUpdate = false)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestUpdated(tracker);
         else
         {
-            SaveProgress(tracker, tracker.Preset.Team);
+            if (tracker.Preset != null)
+                SaveProgress(tracker, tracker.Preset.Team);
             if (tracker.Flag != 0 && !skipFlagUpdate)
             {
                 tracker.Player.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
@@ -200,6 +264,9 @@ public static class QuestManager
 
     public static bool QuestComplete(this UCPlayer player, Guid key)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (player._completedQuests == null) GetCompletedQuests(player);
         return player._completedQuests!.Contains(key);
     }
@@ -209,6 +276,9 @@ public static class QuestManager
     /// <summary>Registers all the <see cref="QuestDataAttribute"/>'s to <see cref="QuestTypes"/>.</summary>
     public static void InitTypesReflector()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
@@ -221,6 +291,9 @@ public static class QuestManager
     /// <summary>Creates an instance of the provided <paramref name="type"/>. Pulls from <see cref="QuestTypes"/>. <see cref="InitTypesReflector"/> should be ran before use.</summary>
     public static BaseQuestData? GetQuestData(EQuestType type)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (QuestTypes.TryGetValue(type, out Type result))
         {
             try
@@ -245,6 +318,9 @@ public static class QuestManager
     /// <summary>Read function to parse a quest data with quest type <paramref name="type"/>.</summary>
     public static BaseQuestData? ReadQuestData(ref Utf8JsonReader reader)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         BaseQuestData? quest = null;
         while (reader.Read())
         {
@@ -323,6 +399,9 @@ public static class QuestManager
     /// <summary>Read all quests.</summary>
     public static void ReadQuestDatas()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         Quests.Clear();
         if (!File.Exists(QUEST_LOCATION))
         {
@@ -379,6 +458,9 @@ public static class QuestManager
     }
     private static void SaveProgress(BaseQuestTracker t, string savePath)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         string dir = Path.GetDirectoryName(savePath);
         if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
         using (FileStream stream = new FileStream(savePath, FileMode.Create, FileAccess.ReadWrite, FileShare.Read))
@@ -404,6 +486,9 @@ public static class QuestManager
     }
     private static void ReadProgress(BaseQuestTracker t, string savePath)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (!File.Exists(savePath)) return;
         using (FileStream stream = new FileStream(savePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
         {
@@ -442,6 +527,9 @@ public static class QuestManager
     }
     private static void GetCompletedQuests(UCPlayer player)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         string folder = ReadWrite.PATH + ServerSavedata.directory + "\\" + Provider.serverID + "\\Players\\" + player.Steam64.ToString(Data.Locale) +
                         "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\Quests\\";
         string[] files = Directory.GetFiles(folder, "*.json", SearchOption.TopDirectoryOnly);
@@ -548,6 +636,11 @@ public static class QuestManager
     {
         foreach (INotifyRallyActive tracker in RegisteredTrackers.OfType<INotifyRallyActive>())
             tracker.OnRallyActivated(rally);
+    }
+    public static void OnPlayerSpawnedAtBunker(BuildableComponent bunker, FOB fob, UCPlayer spawner)
+    {
+        foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
+            tracker.OnPlayerSpawnedAtBunker(bunker, fob, spawner);
     }
     public static void OnVehicleDestroyed(UCPlayer owner, UCPlayer destroyer, VehicleData data, Components.VehicleComponent component)
     {

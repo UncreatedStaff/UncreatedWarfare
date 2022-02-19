@@ -35,15 +35,15 @@ namespace Uncreated.Warfare.Components
             IsSalvaged = false;
             PlayerHits = new Dictionary<ulong, int>();
 
-            var data = foundation.GetServersideData();
+            SDG.Unturned.BarricadeData data = foundation.GetServersideData();
 
-            UCPlayer placer = UCPlayer.FromID(data.owner);
-            if (placer is not null && !(buildable.type == EBuildableType.FORTIFICATION || buildable.type == EBuildableType.AMMO_CRATE))
+            UCPlayer? placer = UCPlayer.FromID(data.owner);
+            if (placer != null && !(buildable.type == EBuildableType.FORTIFICATION || buildable.type == EBuildableType.AMMO_CRATE))
             {
-                foreach (var player in PlayerManager.OnlinePlayers.Where(p => p != placer && 
+                foreach (UCPlayer player in PlayerManager.OnlinePlayers.Where(p => p != placer && 
                 p.GetTeam() == data.group && 
                 !F.IsInMain(p.Position) &&
-                p.Player.movement.getVehicle() is null &&
+                p.Player.movement.getVehicle() == null &&
                 (p.Position - foundation.model.position).sqrMagnitude < Math.Pow(80, 2)))
                 {
                     Tips.TryGiveTip(player, ETip.HELP_BUILD, placer.CharacterName);
@@ -53,7 +53,9 @@ namespace Uncreated.Warfare.Components
 
         public void IncrementBuildPoints(UCPlayer builder)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int amount = 1;
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
                 amount = 2;
@@ -83,7 +85,9 @@ namespace Uncreated.Warfare.Components
         }
         public void Build()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             SDG.Unturned.BarricadeData data = Foundation.GetServersideData();
 
             string structureName = "";
@@ -114,22 +118,20 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                ItemAsset ammoasset = null;
-                if (Assets.find(Buildable.emplacementData.ammoID) is ItemAsset a)
-                {
-                    ammoasset = a;
-                }
-                else
-                    L.LogDebug($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid Item.");
+                ItemAsset? ammoasset = Assets.find<ItemAsset>(Buildable.emplacementData.ammoID);
 
                 if (Assets.find(Buildable.emplacementData.vehicleID) is not VehicleAsset vehicleasset)
                 {
-                    L.LogDebug($"Emplacement {Assets.find(Buildable.emplacementData.vehicleID)?.name?.Replace("_Base", "") ?? Buildable.emplacementData.vehicleID.ToString("N")}'s vehicle id is not a valid vehicle.");
+                    L.LogError($"Emplacement {Assets.find(Buildable.emplacementData.vehicleID)?.name?.Replace("_Base", "") ?? Buildable.emplacementData.vehicleID.ToString("N")}'s vehicle id is not a valid vehicle.");
                     return;
                 }
 
-                for (int i = 0; i < Buildable.emplacementData.ammoAmount; i++)
-                    ItemManager.dropItem(new Item(ammoasset.id, true), data.point, true, true, true);
+                if (ammoasset != null)
+                    for (int i = 0; i < Buildable.emplacementData.ammoAmount; i++)
+                        ItemManager.dropItem(new Item(ammoasset.id, true), data.point, true, true, true);
+                else
+                    L.LogWarning($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid item.");
+
                 Quaternion rotation = Foundation.model.rotation;
                 rotation.eulerAngles = new Vector3(rotation.eulerAngles.x + 90, rotation.eulerAngles.y, rotation.eulerAngles.z);
                 InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleasset.id, new Vector3(data.point.x, data.point.y + 1, data.point.z), rotation);
@@ -147,9 +149,9 @@ namespace Uncreated.Warfare.Components
 
                 if (Buildable.emplacementData.baseID != Guid.Empty)
                 {
-                    if (!(Assets.find(Buildable.emplacementData.baseID) is ItemBarricadeAsset emplacementBase))
+                    if (Assets.find(Buildable.emplacementData.baseID) is not ItemBarricadeAsset emplacementBase)
                     {
-                        L.LogDebug($"Emplacement base was not a valid barricade.");
+                        L.LogWarning($"Emplacement base was not a valid barricade.");
                     }
                     else
                     {
@@ -163,7 +165,7 @@ namespace Uncreated.Warfare.Components
 
             foreach (KeyValuePair<ulong, int> entry in PlayerHits)
             {
-                UCPlayer player = UCPlayer.FromID(entry.Key);
+                UCPlayer? player = UCPlayer.FromID(entry.Key);
 
                 float contribution = (float)entry.Value / Buildable.requiredHits;
 
@@ -188,10 +190,12 @@ namespace Uncreated.Warfare.Components
         }
         public void Destroy()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (IsSalvaged)
             {
-                var fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
+                FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
                 if (fob is not null)
                 {
                     fob.AddBuild(Buildable.requiredBuild);
@@ -202,7 +206,9 @@ namespace Uncreated.Warfare.Components
         }
         public static bool TryPlaceRadio(Barricade radio, UCPlayer placer, Vector3 point)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = placer.GetTeam();
             float radius = FOBManager.config.data.FOBBuildPickupRadius;
 
@@ -257,7 +263,9 @@ namespace Uncreated.Warfare.Components
         }
         public static bool TryPlaceBuildable(Barricade foundation, BuildableData buildable, UCPlayer placer, Vector3 point)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = placer.GetTeam();
 
             FOB fob = FOB.GetNearestFOB(point, EFOBRadius.FULL, team);

@@ -32,7 +32,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void LoadSpawns()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (VehicleSpawn spawn in ActiveObjects)
             {
                 spawn.Initialize();
@@ -40,7 +42,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleExploded(InteractableVehicle vehicle)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn) && spawn.IsActive)
             {
                 spawn.StartVehicleRespawnTimer();
@@ -51,7 +55,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         internal void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.VehicleBayGUID)
             {
                 if (IsRegistered(data.instanceID, out _, EStructType.BARRICADE))
@@ -63,7 +69,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         internal void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (data.structure.asset.GUID == Gamemode.Config.Barricades.VehicleBayGUID)
             {
                 if (IsRegistered(data.instanceID, out _, EStructType.STRUCTURE))
@@ -76,7 +84,9 @@ namespace Uncreated.Warfare.Vehicles
         public static void RespawnAllVehicles()
         {
             L.Log("Respawning vehicles...", ConsoleColor.Magenta);
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = VehicleManager.vehicles.Count - 1; i >= 0; i--)
             {
                 InteractableVehicle v = VehicleManager.vehicles[i];
@@ -99,7 +109,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void CreateSpawn(BarricadeDrop drop, SDG.Unturned.BarricadeData data, Guid vehicleID)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.BARRICADE, new SerializableTransform(drop.model));
             spawn.Initialize();
             AddObjectToSave(spawn);
@@ -108,7 +120,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void CreateSpawn(StructureDrop drop, SDG.Unturned.StructureData data, Guid vehicleID)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.STRUCTURE, new SerializableTransform(drop.model));
             spawn.Initialize();
             AddObjectToSave(spawn);
@@ -117,7 +131,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void DeleteSpawn(uint barricadeInstanceID, EStructType type)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             VehicleSpawn spawn = GetObject(s => s.SpawnPadInstanceID == barricadeInstanceID && s.type == type);
             if (spawn != null)
             {
@@ -129,7 +145,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool IsRegistered(uint barricadeInstanceID, out VehicleSpawn spawn, EStructType type)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (type == EStructType.BARRICADE)
                 return ObjectExists(s => barricadeInstanceID == s.SpawnPadInstanceID, out spawn);
             else if (type == EStructType.STRUCTURE)
@@ -142,7 +160,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool IsRegistered(SerializableTransform transform, out VehicleSpawn spawn, EStructType type)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (type == EStructType.BARRICADE)
                 return ObjectExists(s => transform == s.BarricadeDrop.model.transform, out spawn);
             else if (type == EStructType.STRUCTURE)
@@ -185,7 +205,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         private static void OnPlayerEnterMain(SteamPlayer player, ulong team)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             player.SendChat("entered_main", TeamManager.TranslateName(team, player, true));
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
@@ -202,7 +224,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void UpdateSigns(Guid vehicle)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 VehicleSpawn spawn = ActiveObjects[i];
@@ -212,7 +236,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static void UpdateSigns(uint vehicle)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 VehicleSpawn spawn = ActiveObjects[i];
@@ -267,7 +293,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void Initialize()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 if (type == EStructType.BARRICADE)
@@ -412,7 +440,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void SpawnVehicle()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (HasLinkedVehicle(out _))
             {
                 L.LogDebug("Could not spawn vehicle because another is already linked");
@@ -470,7 +500,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public bool HasLinkedVehicle(out InteractableVehicle vehicle)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (VehicleInstanceID == 0)
             {
                 vehicle = null;
@@ -489,7 +521,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void StartVehicleRespawnTimer()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if ((type == EStructType.BARRICADE && BarricadeDrop is null) || (type == EStructType.STRUCTURE && StructureDrop is null))
             {
                 L.LogWarning($"VEHICLE SPAWNER ERROR: could not start respawn timer, {(type == EStructType.BARRICADE ? "Barricade" : "Structure")}Drop was null");
@@ -507,7 +541,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void CancelVehicleRespawnTimer()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if ((type == EStructType.BARRICADE && BarricadeDrop is null) || (type == EStructType.STRUCTURE && StructureDrop is null))
             {
                 L.LogWarning($"VEHICLE SPAWNER ERROR: could not start respawn timer, {(type == EStructType.BARRICADE ? "Barricade" : "Structure")}Drop was null");
@@ -546,7 +582,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void UpdateSign()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (this.LinkedSign == null || this.LinkedSign.SignInteractable == null || this.LinkedSign.SignDrop == null) return;
             if (TeamManager.Team1Main.IsInside(LinkedSign.SignDrop.model.transform.position))
             {
@@ -570,7 +608,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         private static void UpdateSignInternal(IEnumerator<SteamPlayer> players, VehicleSpawn spawn)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
             foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
@@ -594,7 +634,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void UpdateSignInternal(SteamPlayer player, VehicleSpawn spawn)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
             if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))

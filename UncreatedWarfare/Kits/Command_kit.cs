@@ -30,7 +30,9 @@ namespace Uncreated.Warfare.Kits
         }
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer ucplayer;
             if (!(caller is UnturnedPlayer player))
             {

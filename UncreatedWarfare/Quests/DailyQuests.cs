@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Players;
 using Uncreated.Warfare.Quests.Types;
 
 namespace Uncreated.Warfare.Quests;
@@ -20,6 +21,9 @@ public static class DailyQuests
     /// <summary>Checks if a day has passed.</summary>
     public static void Tick()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         DateTime now = DateTime.Now;
         if ((now - LastRefresh).TotalDays > 1d)
         {
@@ -41,6 +45,9 @@ public static class DailyQuests
     /// <summary>Should run on player connected.</summary>
     public static void RegisterDailyTrackers(UCPlayer player)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         BaseQuestTracker[] trackers = new BaseQuestTracker[DAILY_QUEST_COUNT];
         for (int i = 0; i < DAILY_QUEST_COUNT; i++)
         {
@@ -71,6 +78,9 @@ public static class DailyQuests
     /// <summary>Should run on player disconnected.</summary>
     public static void DeregisterDailyTrackers(UCPlayer player)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (DailyTrackers.TryGetValue(player.Steam64, out DailyQuestTracker tracker))
         {
             for (int i = 0; i < DAILY_QUEST_COUNT; i++)
@@ -82,21 +92,32 @@ public static class DailyQuests
     }
     public static void OnDailyQuestCompleted(BaseQuestTracker tracker)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.Translate() + "\"", ConsoleColor.Cyan);
+        ToastMessage.QueueMessage(tracker.Player, new ToastMessage("Daily Quest Completed!", tracker.Translate(), "good job man idk does this need filled?", EToastMessageSeverity.PROGRESS));
         // todo UI or something, xp reward?
+        tracker.Player.SendChat("Daily Quest Completed!");
     }
 
     public static void OnDailyQuestUpdated(BaseQuestTracker tracker)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (DailyTrackers.TryGetValue(tracker.Player.Steam64, out DailyQuestTracker t2))
         {
             SaveProgress(t2);
         }
-        L.Log("Daily quest " + tracker.QuestData.QuestType + " updated: \"" + tracker.Translate() + "\"");
+        tracker.Player.SendChat("Daily Quest updated: " + tracker.Translate());
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>
     public static void CreateNewDailyQuests()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         LastRefresh = DateTime.Now;
         if (QuestManager.Quests.Count <= DAILY_QUEST_COUNT)
         {
@@ -130,6 +151,9 @@ public static class DailyQuests
                                                              "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\daily_quest_progress.json";
     public static void SaveProgress(DailyQuestTracker tracker)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         string path = GetDailySavePath(tracker.Player.Steam64);
         
         using (FileStream stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
@@ -153,6 +177,9 @@ public static class DailyQuests
     }
     public static void LoadSave(DailyQuestTracker tracker)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         string path = GetDailySavePath(tracker.Player.Steam64);
         if (!File.Exists(path))
             return;

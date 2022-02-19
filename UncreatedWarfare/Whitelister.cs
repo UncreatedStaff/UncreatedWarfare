@@ -27,7 +27,6 @@ namespace Uncreated.Warfare
         }
         private void OnStructureDamageRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
-            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (F.IsInMain(structureTransform.position))
             {
                 shouldAllow = false;
@@ -35,7 +34,6 @@ namespace Uncreated.Warfare
         }
         private void OnBarricadeDamageRequested(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
-            using IDisposable profiler = ProfilingUtils.StartTracking();
             if (F.IsInMain(barricadeTransform.position))
             {
                 shouldAllow = false;
@@ -43,7 +41,9 @@ namespace Uncreated.Warfare
         }
         private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, SDG.Unturned.ItemData itemData, ref bool shouldAllow)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromPlayer(P);
 
             if (player.OnDuty())
@@ -119,7 +119,9 @@ namespace Uncreated.Warfare
         private void OnBarricadeSalvageRequested(BarricadeDrop barricade, SteamPlayer instigatorClient, ref bool shouldAllow)
         {
             if (!shouldAllow) return;
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
 
             UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
 
@@ -154,7 +156,9 @@ namespace Uncreated.Warfare
         }
         private void OnStructureSalvageRequested(StructureDrop structure, SteamPlayer instigatorClient, ref bool shouldAllow)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
             if (player.OnDuty())
                 return;
@@ -167,7 +171,9 @@ namespace Uncreated.Warfare
         }
         private void OnEditSignRequest(CSteamID steamID, InteractableSign sign, ref string text, ref bool shouldAllow)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UCPlayer player = UCPlayer.FromCSteamID(steamID);
             if (!player.OnDuty())
             {
@@ -187,7 +193,9 @@ namespace Uncreated.Warfare
             ref ulong group,
             ref bool shouldAllow)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 UCPlayer player = UCPlayer.FromID(owner);
@@ -245,7 +253,9 @@ namespace Uncreated.Warfare
             ref bool shouldAllow
             )
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 UCPlayer player = UCPlayer.FromID(owner);

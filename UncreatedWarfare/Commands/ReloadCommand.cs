@@ -34,7 +34,9 @@ namespace Uncreated.Warfare.Commands
             string cmd = command.Length == 0 ? string.Empty : command[0].ToLower();
             if (command.Length == 0 || (command.Length == 1 && cmd == "all"))
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (isConsole || player.HasPermission("uc.reload.all"))
                 {
                     ReloadTranslations();
@@ -54,7 +56,9 @@ namespace Uncreated.Warfare.Commands
             }
             else
             {
+#if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking(cmd + "_Execute");
+#endif
                 if (cmd == "config")
                 {
                     if (isConsole || player.HasPermission("uc.reload.config") || player.HasPermission("uc.reload.all"))
@@ -148,7 +152,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadConfig()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 Gamemode.ConfigObj.Reload();
@@ -180,7 +186,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadTranslations()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 Data.LanguageAliases = JSONMethods.LoadLangAliases();
@@ -198,7 +206,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadGamemodeConfig()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Gamemode.ConfigObj.Reload();
             SquadManager.TempCacheEffectIDs();
             Gamemodes.Flags.TeamCTF.CTFUI.TempCacheEffectIDs();
@@ -208,7 +218,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadFlags()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 Gamemode.ConfigObj.Reload();
@@ -231,7 +243,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadKits()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Kits.KitManager.Reload();
             foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
             {
@@ -240,7 +254,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadAllConfigFiles()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 UCWarfare.I.Announcer.Reload();
@@ -279,12 +295,16 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadTCPServer()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Data.ReloadTCP();
         }
         internal static void ReloadSQLServer()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Data.DatabaseManager.Close();
             Data.DatabaseManager.Open();
         }

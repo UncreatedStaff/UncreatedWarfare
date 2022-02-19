@@ -61,7 +61,9 @@ namespace Uncreated.Warfare.Commands
                     {
                         try
                         {
+#if DEBUG
                             using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
+#endif
                             info.Invoke(this, new object[2] { command, player });
                         }
                         catch (Exception ex)
@@ -1171,6 +1173,27 @@ namespace Uncreated.Warfare.Commands
         private void questdump(string[] command, Player player)
         {
             QuestManager.PrintAllQuests(player == null ? null : UCPlayer.FromPlayer(player));
+        }
+        private void completequest(string[] command, Player player)
+        {
+            if (player == default)
+            {
+                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
+                return;
+            }
+            if (command.Length == 2 && Enum.TryParse(command[1], true, out EQuestType type))
+            {
+                for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
+                {
+                    if (QuestManager.RegisteredTrackers[i].Player.Steam64 == player.channel.owner.playerID.steamID.m_SteamID && 
+                        QuestManager.RegisteredTrackers[i].QuestData?.QuestType == type)
+                    {
+                        QuestManager.OnQuestUpdated(QuestManager.RegisteredTrackers[i]);
+                        QuestManager.OnQuestCompleted(QuestManager.RegisteredTrackers[i]);
+                        break;
+                    }
+                }
+            }
         }
         private void saveall(string[] command, Player player)
         {

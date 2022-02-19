@@ -379,7 +379,9 @@ namespace Uncreated.Warfare.Teams
 
         public static void EvaluateBases()
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < Provider.clients.Count; i++)
             {
                 SteamPlayer pl = Provider.clients[i];

@@ -16,7 +16,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         private static int overlayStep = 0;
         public static void CreateFlagTestAreaOverlay(IFlagRotation gamemode, Player player, List<Zone> zones, bool drawpath, bool drawrange, bool drawIsInTest, bool drawsearchangles, bool lockthreaduntildone = false, string filename = default)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (lockthreaduntildone)
             {
                 List<Zone> newZones = zones;
@@ -110,7 +112,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         internal static void GenerateZoneOverlay(IFlagRotation gamemode, Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename, bool drawAngles)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             complete = false;
             L.Log("STEP " + step.ToString(Data.Locale));
             if (step == 0)
@@ -242,7 +246,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public static void DrawZoneMap(IFlagRotation gamemode, string filename)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Color multidimensionalcolor = new Color(1, 1, 0);
             Color multidimensionalcolorpath = new Color(1, 0.25f, 0);
             Color color1 = new Color(0.1f, 1, 0.15f);

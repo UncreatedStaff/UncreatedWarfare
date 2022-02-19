@@ -19,7 +19,9 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.clear" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UnturnedPlayer player = caller as UnturnedPlayer;
             bool isConsole = caller.DisplayName == "Console";
             if (command.Length < 1)
