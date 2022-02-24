@@ -68,7 +68,7 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromSteamPlayer(steamplayer);
+            UCPlayer? player = UCPlayer.FromSteamPlayer(steamplayer);
             if (player == null) return;
             if (player.Squad != null)
             {
@@ -296,10 +296,9 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            for (int i = 0; i < player.Squad.Members.Count; i++)
-            {
-                EffectManager.sendUIEffectText(squadMenuKey, player.Squad.Members[i].connection, true, "MI" + i.ToString(), player.Squad.Members[i].Icon.ToString());
-            }
+            if (player.Squad != null)
+                for (int i = 0; i < player.Squad.Members.Count; i++)
+                    EffectManager.sendUIEffectText(squadMenuKey, player.Squad.Members[i].connection, true, "MI" + i.ToString(), player.Squad.Members[i].Icon.ToString());
         }
         public static void UpdateMemberList(Squad squad)
         {
@@ -472,7 +471,7 @@ namespace Uncreated.Warfare.Squads
             
             if (willNeedNewLeader)
             {   
-                squad.Leader = null; // need to set leader to null before sorting, otherwise old leader will get added back
+                squad.Leader = null!; // need to set leader to null before sorting, otherwise old leader will get added back
             }
             SortMembers(squad);
             if (willNeedNewLeader)

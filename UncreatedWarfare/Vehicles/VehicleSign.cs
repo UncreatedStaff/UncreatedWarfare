@@ -104,7 +104,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 return ObjectExists(x => x != default && x.instance_id == drop.instanceID, out vbsign);
             }
-            vbsign = default;
+            vbsign = default!;
             return false;
         }
         public static bool LinkSign(InteractableSign sign, VehicleSpawn spawn)
@@ -140,9 +140,9 @@ namespace Uncreated.Warfare.Vehicles
         [JsonIgnore]
         public VehicleSpawn bay;
         [JsonIgnore]
-        public BarricadeDrop SignDrop;
+        public BarricadeDrop? SignDrop;
         [JsonIgnore]
-        public InteractableSign SignInteractable;
+        public InteractableSign? SignInteractable;
         public uint instance_id;
         public uint bay_instance_id;
         public EStructType bay_type;
@@ -176,7 +176,7 @@ namespace Uncreated.Warfare.Vehicles
 #endif
             if (!StructureSaver.StructureExists(this.instance_id, EStructType.BARRICADE, out save))
             {
-                BarricadeDrop drop = UCBarricadeManager.GetBarriadeBySerializedTransform(sign_transform);
+                BarricadeDrop? drop = UCBarricadeManager.GetBarriadeBySerializedTransform(sign_transform);
                 if (drop == null)
                 {
                     L.LogWarning("Failed to link sign to the correct instance id.");
@@ -190,7 +190,8 @@ namespace Uncreated.Warfare.Vehicles
                         this.instance_id = structure.instance_id;
                         SignDrop = drop;
                         SignInteractable = drop.interactable as InteractableSign;
-                        RequestSigns.SetSignTextSneaky(SignInteractable, this.placeholder_text);
+                        if (SignInteractable != null)
+                            RequestSigns.SetSignTextSneaky(SignInteractable, this.placeholder_text);
                     }
                     else
                     {
@@ -202,13 +203,15 @@ namespace Uncreated.Warfare.Vehicles
                     this.instance_id = drop.instanceID;
                     SignDrop = drop;
                     SignInteractable = drop.interactable as InteractableSign;
-                    RequestSigns.SetSignTextSneaky(SignInteractable, this.placeholder_text);
+                    if (SignInteractable != null)
+                        RequestSigns.SetSignTextSneaky(SignInteractable, this.placeholder_text);
                 }
             }
             else
             {
                 SignDrop = UCBarricadeManager.GetBarricadeFromInstID(save.instance_id);
-                SignInteractable = SignDrop.interactable as InteractableSign;
+                if (SignDrop != null)
+                    SignInteractable = SignDrop.interactable as InteractableSign;
             }
             if (SignDrop == null)
             {
@@ -222,7 +225,7 @@ namespace Uncreated.Warfare.Vehicles
             {
                 if (this.bay_type == EStructType.BARRICADE)
                 {
-                    BarricadeDrop drop = UCBarricadeManager.GetBarriadeBySerializedTransform(bay_transform);
+                    BarricadeDrop? drop = UCBarricadeManager.GetBarriadeBySerializedTransform(bay_transform);
                     if (drop == null)
                     {
                         L.LogWarning("Failed to link sign to the correct vehicle bay instance id.");
@@ -246,7 +249,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
                 else
                 {
-                    StructureDrop drop = UCBarricadeManager.GetStructureBySerializedTransform(bay_transform);
+                    StructureDrop? drop = UCBarricadeManager.GetStructureBySerializedTransform(bay_transform);
                     if (drop == null)
                     {
                         L.LogWarning("Failed to link sign to the correct vehicle bay instance id.");
@@ -284,7 +287,7 @@ namespace Uncreated.Warfare.Vehicles
             this.instance_id = save.instance_id;
             this.bay_instance_id = bay.SpawnPadInstanceID;
             this.bay_type = bay.type;
-            Asset asset = Assets.find(bay.VehicleID);
+            Asset? asset = Assets.find(bay.VehicleID);
             this.placeholder_text = $"sign_vbs_" + (asset == null ? bay.VehicleID.ToString("N") : asset.id.ToString(Data.Locale));
             this.sign_transform = save.transform;
             this.SignInteractable = sign;
@@ -293,15 +296,21 @@ namespace Uncreated.Warfare.Vehicles
                 this.bay_transform = s.transform;
             else if (bay.type == EStructType.BARRICADE)
             {
-                SDG.Unturned.BarricadeData paddata = UCBarricadeManager.GetBarricadeFromInstID(bay.SpawnPadInstanceID, out BarricadeDrop paddrop);
-                if (drop != default) this.bay_transform = new SerializableTransform(paddrop.model);
-                StructureSaver.AddStructure(paddrop, paddata, out _);
+                SDG.Unturned.BarricadeData? paddata = UCBarricadeManager.GetBarricadeFromInstID(bay.SpawnPadInstanceID, out BarricadeDrop? paddrop);
+                if (paddata != null)
+                {
+                    if (drop != default) this.bay_transform = new SerializableTransform(paddrop!.model);
+                    StructureSaver.AddStructure(paddrop!, paddata, out _);
+                }
             }
             else if (bay.type == EStructType.STRUCTURE)
             {
-                SDG.Unturned.StructureData paddata = UCBarricadeManager.GetStructureFromInstID(bay.SpawnPadInstanceID, out StructureDrop paddrop);
-                if (drop != default) this.bay_transform = new SerializableTransform(paddrop.model);
-                StructureSaver.AddStructure(paddrop, paddata, out _);
+                SDG.Unturned.StructureData? paddata = UCBarricadeManager.GetStructureFromInstID(bay.SpawnPadInstanceID, out StructureDrop? paddrop);
+                if (paddata != null)
+                {
+                    if (drop != default) this.bay_transform = new SerializableTransform(paddrop!.model);
+                    StructureSaver.AddStructure(paddrop!, paddata, out _);
+                }
             }
         }
     }

@@ -25,7 +25,7 @@ namespace Uncreated.Warfare
 
             return asset;
         }
-        public static ItemAsset FindItemAsset(string itemName, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = false)
+        public static ItemAsset? FindItemAsset(string itemName, out int numberOfSimilarNames, bool additionalCheckWithoutNonAlphanumericCharacters = false)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -45,7 +45,7 @@ namespace Uncreated.Warfare
 
             numberOfSimilarNames = selection.Count();
 
-            ItemAsset asset = selection.FirstOrDefault();
+            ItemAsset? asset = selection.FirstOrDefault();
 
             if (asset == null && additionalCheckWithoutNonAlphanumericCharacters)
             {

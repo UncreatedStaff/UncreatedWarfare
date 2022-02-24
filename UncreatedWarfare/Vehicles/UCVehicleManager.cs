@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Vehicles
 {
     public static class UCVehicleManager
     {
-        public static InteractableVehicle VehicleFromPlayerLook(UnturnedPlayer player)
+        public static InteractableVehicle? VehicleFromPlayerLook(UnturnedPlayer player)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -31,7 +31,7 @@ namespace Uncreated.Warfare.Vehicles
                 return null;
             }
         }
-        public static VehicleBarricadeRegion FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out ushort index, int subvehicleIndex = 0)
+        public static VehicleBarricadeRegion? FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out ushort index, int subvehicleIndex = 0)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

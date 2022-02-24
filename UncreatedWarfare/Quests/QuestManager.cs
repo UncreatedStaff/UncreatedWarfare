@@ -34,14 +34,17 @@ public static class QuestManager
         ReadQuestDatas();
     }
     /// <summary>Generate and register a random tracker with the provided data to the player.</summary>
-    public static BaseQuestTracker CreateTracker(BaseQuestData data, UCPlayer player)
+    public static BaseQuestTracker? CreateTracker(BaseQuestData data, UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        BaseQuestTracker tracker = data.CreateTracker(player);
-        OnQuestStarted(tracker);
-        RegisteredTrackers.Add(tracker);
+        BaseQuestTracker? tracker = data.CreateTracker(player);
+        if (tracker != null)
+        {
+            OnQuestStarted(tracker);
+            RegisteredTrackers.Add(tracker);
+        }
         return tracker;
     }
     /// <summary>Find, generate, and register a tracker using a <paramref name="key"/> and a set <see cref="IQuestPreset"/>.</summary>
@@ -59,7 +62,7 @@ public static class QuestManager
             {
                 if (preset.Key == key && preset.Team == team)
                 {
-                    BaseQuestTracker tr = Quests[i].GetTracker(player, preset);
+                    BaseQuestTracker? tr = Quests[i].GetTracker(player, preset);
                     if (tr == null)
                     {
                         L.LogWarning("Failed to get a tracker from key " + key.ToString("N"));
@@ -78,7 +81,7 @@ public static class QuestManager
                 if (preset.Key == key && preset.Team == 0)
                 {
                     IQuestState state = preset.State;
-                    BaseQuestTracker tr = Quests[i].GetTracker(player, preset);
+                    BaseQuestTracker? tr = Quests[i].GetTracker(player, preset);
                     if (tr == null)
                     {
                         L.LogWarning("Failed to get a tracker from key " + key.ToString("N"));
@@ -330,12 +333,12 @@ public static class QuestManager
             }
             else if (reader.TokenType == JsonTokenType.PropertyName)
             {
-                string? propertyName = reader.GetString();
+                string? propertyName = reader.GetString()!;
                 if (propertyName == null) reader.Read();
                 else if (propertyName.Equals("quest_type", StringComparison.OrdinalIgnoreCase) && quest == null)
                 {
                     if (!reader.Read()) return quest;
-                    string? typeValue = reader.GetString();
+                    string? typeValue = reader.GetString()!;
                     if (typeValue != null && Enum.TryParse(typeValue, true, out EQuestType type))
                     {
                         quest = GetQuestData(type);
@@ -356,10 +359,10 @@ public static class QuestManager
                             {
                                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                                 {
-                                    string? key = reader.GetString();
+                                    string? key = reader.GetString()!;
                                     if (reader.Read() && key != null && reader.TokenType == JsonTokenType.String)
                                     {
-                                        string? value = reader.GetString();
+                                        string? value = reader.GetString()!;
                                         if (value != null && !quest.Translations.ContainsKey(key))
                                             quest.Translations.Add(key, value);
                                     }
@@ -501,7 +504,7 @@ public static class QuestManager
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string? prop = reader.GetString();
+                    string? prop = reader.GetString()!;
                     if (reader.Read())
                     {
                         try
@@ -552,7 +555,7 @@ public static class QuestManager
                             {
                                 if (preset.Key == guid && preset.Team == team)
                                 {
-                                    BaseQuestTracker tr = Quests[i].GetTracker(player, preset);
+                                    BaseQuestTracker? tr = Quests[i].GetTracker(player, preset);
                                     if (tr == null)
                                     {
                                         goto nextFile;
@@ -642,7 +645,7 @@ public static class QuestManager
         foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
             tracker.OnPlayerSpawnedAtBunker(bunker, fob, spawner);
     }
-    public static void OnVehicleDestroyed(UCPlayer owner, UCPlayer destroyer, VehicleData data, Components.VehicleComponent component)
+    public static void OnVehicleDestroyed(UCPlayer? owner, UCPlayer destroyer, VehicleData data, Components.VehicleComponent component)
     {
         foreach (INotifyVehicleDestroyed tracker in RegisteredTrackers.OfType<INotifyVehicleDestroyed>())
             tracker.OnVehicleDestroyed(owner, destroyer, data, component);

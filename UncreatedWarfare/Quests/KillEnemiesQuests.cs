@@ -135,7 +135,6 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
     {
         private readonly int KillThreshold = 0;
         private readonly float Range;
-        private string translationCache1;
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
@@ -165,7 +164,7 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
+        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON)]

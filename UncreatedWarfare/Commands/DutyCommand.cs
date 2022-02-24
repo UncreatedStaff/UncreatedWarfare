@@ -23,7 +23,8 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UnturnedPlayer player = caller as UnturnedPlayer;
+            UnturnedPlayer? player = caller as UnturnedPlayer;
+            if (player == null) return;
             FPlayerName names = F.GetPlayerOriginalNames(player.Player);
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
             if (groups.Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup))

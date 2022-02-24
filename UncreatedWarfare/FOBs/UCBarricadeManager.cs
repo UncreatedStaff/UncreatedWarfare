@@ -26,7 +26,7 @@ namespace Uncreated.Warfare
                 storage.items.tryAddItem(new Item(iasset.id, true));
             }
         }
-        public static InteractableSign GetSignFromLook(UnturnedPlayer player)
+        public static InteractableSign? GetSignFromLook(UnturnedPlayer player)
         {
             Transform look = player.Player.look.aim;
             Ray ray = new Ray
@@ -44,7 +44,7 @@ namespace Uncreated.Warfare
                 return null;
             }
         }
-        public static BarricadeDrop GetSignFromInteractable(InteractableSign sign)
+        public static BarricadeDrop? GetSignFromInteractable(InteractableSign sign)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -66,9 +66,9 @@ namespace Uncreated.Warfare
             }
             return null;
         }
-        public static SDG.Unturned.StructureData GetStructureDataFromLook(UnturnedPlayer player, out StructureDrop drop)
+        public static SDG.Unturned.StructureData? GetStructureDataFromLook(UnturnedPlayer player, out StructureDrop? drop)
         {
-            Transform structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);
+            Transform? structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);
             if (structureTransform == null)
             {
                 drop = null;
@@ -79,13 +79,26 @@ namespace Uncreated.Warfare
                 return null;
             return drop.GetServersideData();
         }
-        public static SDG.Unturned.BarricadeData GetBarricadeDataFromLook(PlayerLook look) => GetBarricadeDataFromLook(look, out _);
-        public static SDG.Unturned.BarricadeData GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop drop)
+        public static SDG.Unturned.StructureData? GetStructureDataFromLook(UCPlayer player, out StructureDrop? drop)
+        {
+            Transform? structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);
+            if (structureTransform == null)
+            {
+                drop = null;
+                return null;
+            }
+            drop = StructureManager.FindStructureByRootTransform(structureTransform);
+            if (drop == null)
+                return null;
+            return drop.GetServersideData();
+        }
+        public static SDG.Unturned.BarricadeData? GetBarricadeDataFromLook(PlayerLook look) => GetBarricadeDataFromLook(look, out _);
+        public static SDG.Unturned.BarricadeData? GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop? drop)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            Transform barricadeTransform = GetBarricadeTransformFromLook(look);
+            Transform? barricadeTransform = GetBarricadeTransformFromLook(look);
             if (barricadeTransform == null)
             {
                 drop = null;
@@ -96,13 +109,13 @@ namespace Uncreated.Warfare
                 return null;
             return drop.GetServersideData();
         }
-        public static Transform GetTransformFromLook(PlayerLook look, int Raymask) =>
+        public static Transform? GetTransformFromLook(PlayerLook look, int Raymask) =>
             Physics.Raycast(look.aim.position, look.aim.forward, out RaycastHit hit, 4, Raymask) ? hit.transform : default;
-        public static Transform GetBarricadeTransformFromLook(PlayerLook look) => GetTransformFromLook(look, RayMasks.BARRICADE);
-        public static Transform GetVehicleTransformFromLook(PlayerLook look) => GetTransformFromLook(look, RayMasks.VEHICLE);
-        public static T GetInteractableFromLook<T>(PlayerLook look, int Raymask = RayMasks.BARRICADE) where T : Interactable
+        public static Transform? GetBarricadeTransformFromLook(PlayerLook look) => GetTransformFromLook(look, RayMasks.BARRICADE);
+        public static Transform? GetVehicleTransformFromLook(PlayerLook look) => GetTransformFromLook(look, RayMasks.VEHICLE);
+        public static T? GetInteractableFromLook<T>(PlayerLook look, int Raymask = RayMasks.BARRICADE) where T : Interactable
         {
-            Transform barricadeTransform = GetTransformFromLook(look, Raymask);
+            Transform? barricadeTransform = GetTransformFromLook(look, Raymask);
             if (barricadeTransform == null) return null;
             if (barricadeTransform.TryGetComponent(out T interactable))
                 return interactable;
@@ -128,7 +141,7 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            drop = null;
+            drop = null!;
             return false;
         }
         public static IEnumerable<BarricadeDrop> GetBarricadesByGUID(Guid ID)
@@ -403,7 +416,7 @@ namespace Uncreated.Warfare
                 return rtn;
             }
         }
-        public static bool BarricadeExists(Guid id, float range, Vector3 origin, ulong team, out BarricadeDrop drop)
+        public static bool BarricadeExists(Guid id, float range, Vector3 origin, ulong team, out BarricadeDrop? drop)
         {
             lock (regionBuffer)
             {
@@ -431,7 +444,7 @@ namespace Uncreated.Warfare
                 return false;
             }
         }
-        public static bool BarricadeExists(Guid id, float range, Vector3 origin, out BarricadeDrop drop)
+        public static bool BarricadeExists(Guid id, float range, Vector3 origin, out BarricadeDrop? drop)
         {
             lock (regionBuffer)
             {
@@ -483,7 +496,8 @@ namespace Uncreated.Warfare
                         {
                             if (region.drops[i].GetServersideData().barricade.asset.GUID == ids[r])
                             {
-                                (lists[r] as List<BarricadeDrop>).Add(region.drops[i]);
+                                if (lists[r] is List<BarricadeDrop> l)
+                                    l.Add(region.drops[i]);
                             }
                         }
                     }
@@ -524,7 +538,8 @@ namespace Uncreated.Warfare
                         {
                             if (region.drops[i].GetServersideData().barricade.asset.GUID == ids[r] && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRanges[r])
                             {
-                                (lists[r] as List<BarricadeDrop>).Add(region.drops[i]);
+                                if (lists[r] is List<BarricadeDrop> l)
+                                    l.Add(region.drops[i]);
                             }
                         }
                     }
@@ -575,9 +590,9 @@ namespace Uncreated.Warfare
         {
             return GetNearbyItems(id.id, range, origin);
         }
-        public static T GetInteractable2FromLook<T>(PlayerLook look, int Raymask = RayMasks.BARRICADE) where T : Interactable2
+        public static T? GetInteractable2FromLook<T>(PlayerLook look, int Raymask = RayMasks.BARRICADE) where T : Interactable2
         {
-            Transform barricadeTransform = GetTransformFromLook(look, Raymask);
+            Transform? barricadeTransform = GetTransformFromLook(look, Raymask);
             if (barricadeTransform == null) return null;
             if (barricadeTransform.TryGetComponent(out T interactable))
                 return interactable;
@@ -636,7 +651,7 @@ namespace Uncreated.Warfare
             }
             return 0;
         }
-        public static InteractableVehicle GetVehicleFromLook(PlayerLook look) => GetInteractableFromLook<InteractableVehicle>(look, RayMasks.VEHICLE);
+        public static InteractableVehicle? GetVehicleFromLook(PlayerLook look) => GetInteractableFromLook<InteractableVehicle>(look, RayMasks.VEHICLE);
 
         public static BarricadeDrop GetDropFromBarricadeData(SDG.Unturned.BarricadeData data)
         {
@@ -657,7 +672,7 @@ namespace Uncreated.Warfare
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
             return barricadeRegions.SelectMany(brd => brd.drops).Where(d => d.instanceID == data.instanceID).FirstOrDefault();
         }
-        public static SDG.Unturned.BarricadeData GetBarricadeFromInstID(uint instanceID, out BarricadeDrop drop)
+        public static SDG.Unturned.BarricadeData? GetBarricadeFromInstID(uint instanceID, out BarricadeDrop? drop)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -693,7 +708,7 @@ namespace Uncreated.Warfare
             drop = default;
             return default;
         }
-        public static BarricadeDrop GetBarricadeFromInstID(uint instanceID)
+        public static BarricadeDrop? GetBarricadeFromInstID(uint instanceID)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -726,7 +741,7 @@ namespace Uncreated.Warfare
             }
             return default;
         }
-        public static SDG.Unturned.StructureData GetStructureFromInstID(uint instanceID, out StructureDrop drop)
+        public static SDG.Unturned.StructureData? GetStructureFromInstID(uint instanceID, out StructureDrop? drop)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -750,7 +765,7 @@ namespace Uncreated.Warfare
             drop = default;
             return default;
         }
-        public static StructureDrop GetStructureFromInstID(uint instanceID)
+        public static StructureDrop? GetStructureFromInstID(uint instanceID)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -772,7 +787,7 @@ namespace Uncreated.Warfare
             }
             return default;
         }
-        public static BarricadeDrop GetBarriadeBySerializedTransform(SerializableTransform t)
+        public static BarricadeDrop? GetBarriadeBySerializedTransform(SerializableTransform t)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -791,7 +806,7 @@ namespace Uncreated.Warfare
             }
             return null;
         }
-        public static StructureDrop GetStructureBySerializedTransform(SerializableTransform t)
+        public static StructureDrop? GetStructureBySerializedTransform(SerializableTransform t)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

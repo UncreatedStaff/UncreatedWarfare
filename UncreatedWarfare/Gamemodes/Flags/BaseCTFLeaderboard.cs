@@ -109,7 +109,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 
                 EffectManager.sendUIEffect(this.asset!.id, LeaderboardEx.leaderboardKey, channel, true);
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TitleWinner", Translation.Translate("winner", player, TeamManager.TranslateName(_winner, player.Player), teamcolor));
-                if (shuttingDown)
+                if (shuttingDown && shuttingDownMessage != null)
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label_shutting_down", player, shuttingDownMessage));
                 else
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label", player));

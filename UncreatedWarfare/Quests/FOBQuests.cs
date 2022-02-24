@@ -169,7 +169,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
                     for (int i = 0; i < ins.Caches.Count; i++)
                     {
                         Gamemodes.Insurgency.Insurgency.CacheData cache = ins.Caches[i];
-                        if (cache != null && cache.IsActive && F.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange)
+                        if (cache != null && cache.IsActive && F.SqrDistance2D(fob.Position, cache.Cache.Position) <= SqrBuildRange)
                             goto add;
                     }
                 }
@@ -263,7 +263,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
                     for (int i = 0; i < ins.Caches.Count; i++)
                     {
                         Gamemodes.Insurgency.Insurgency.CacheData cache = ins.Caches[i];
-                        if (cache != null && cache.IsActive && F.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= 100f)
+                        if (cache != null && cache.IsActive && F.SqrDistance2D(fob.Position, cache.Cache.Position) <= 100f)
                             goto add;
                     }
                 }

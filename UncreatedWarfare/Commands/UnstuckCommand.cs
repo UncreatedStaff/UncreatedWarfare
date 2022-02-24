@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (caller is UnturnedPlayer player)
             {
-                UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(player);
+                UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
                 if (ucplayer == null) return;
 
                 if (Data.Is(out ITeams t) && TeamManager.LobbyZone.IsInside(ucplayer.Position))

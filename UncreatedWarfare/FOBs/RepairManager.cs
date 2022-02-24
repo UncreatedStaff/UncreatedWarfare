@@ -89,7 +89,7 @@ namespace Uncreated.Warfare.FOBs
     {
         public SDG.Unturned.BarricadeData structure; // physical barricade structure of the rallypoint
         public BarricadeDrop drop;
-        public InteractableStorage storage;
+        public InteractableStorage? storage;
         public Dictionary<uint, int> VehiclesRepairing;
         public bool IsActive;
 
@@ -214,14 +214,17 @@ namespace Uncreated.Warfare.FOBs
                                 {
                                     fob.ReduceBuild(1);
 
-                                    UCPlayer stationPlacer = UCPlayer.FromID(parent.structure.owner);
-                                    if (stationPlacer != null && stationPlacer.CSteamID != nearby[i].lockedOwner )
+                                    UCPlayer? stationPlacer = UCPlayer.FromID(parent.structure.owner);
+                                    if (stationPlacer != null)
                                     {
-                                        Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, Translation.Translate("xp_repaired_vehicle", stationPlacer));
-                                        Points.AwardTW(stationPlacer, Points.TWConfig.RepairVehiclePoints);
+                                        if (stationPlacer.CSteamID != nearby[i].lockedOwner)
+                                        {
+                                            Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, Translation.Translate("xp_repaired_vehicle", stationPlacer));
+                                            Points.AwardTW(stationPlacer, Points.TWConfig.RepairVehiclePoints);
+                                        }
+                                        if (!(stationPlacer.Steam64 == fob.Creator || stationPlacer.Steam64 == fob.Placer))
+                                            Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), "xp_fob_repaired_vehicle");
                                     }
-                                    if (!(stationPlacer.Steam64 == fob.Creator || stationPlacer.Steam64 == fob.Placer))
-                                        Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), "xp_fob_repaired_vehicle");
                                 }
                             }
                         }

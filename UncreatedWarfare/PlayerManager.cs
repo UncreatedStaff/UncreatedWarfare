@@ -27,7 +27,7 @@ namespace Uncreated.Warfare
             _dict = new Dictionary<ulong, UCPlayer>(50);
         }
         public static UCPlayer? FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
-        public static bool HasSave(ulong playerID, out PlayerSave? save) => PlayerSave.TryReadSaveFile(playerID, out save);
+        public static bool HasSave(ulong playerID, out PlayerSave save) => PlayerSave.TryReadSaveFile(playerID, out save!);
         public static PlayerSave? GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave? save) ? save : null;
         public static void ApplyToOnline()
         {

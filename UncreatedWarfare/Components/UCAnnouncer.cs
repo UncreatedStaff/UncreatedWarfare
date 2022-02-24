@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Components
 {
     public class UCAnnouncer : MonoBehaviour
     {
-        public Coroutine coroutine;
+        public Coroutine? coroutine;
         private bool stop = false;
 
         private float TimeBetweenMessages;
@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Components
                         {
                             if (reader.TokenType == JsonTokenType.PropertyName)
                             {
-                                string prop = reader.GetString();
+                                string prop = reader.GetString()!;
                                 if (reader.Read())
                                 {
                                     switch (prop)
@@ -109,8 +109,8 @@ namespace Uncreated.Warfare.Components
                                         case "Messages":
                                             if (reader.TokenType == JsonTokenType.StartObject)
                                             {
-                                                Dictionary<string, TranslationData> current = new Dictionary<string, TranslationData>();
-                                                string lang = null;
+                                                Dictionary<string, TranslationData>? current = new Dictionary<string, TranslationData>();
+                                                string? lang = null;
                                                 bool i = false;
                                                 while (reader.Read())
                                                 {
@@ -128,15 +128,15 @@ namespace Uncreated.Warfare.Components
                                                     {
                                                         if (!i)
                                                         {
-                                                            lang = reader.GetString();
+                                                            lang = reader.GetString()!;
                                                             i = true;
                                                         }
                                                         else
                                                         {
-                                                            string key = reader.GetString();
+                                                            string key = reader.GetString()!;
                                                             if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                                             {
-                                                                string value = reader.GetString();
+                                                                string value = reader.GetString()!;
                                                                 TranslationData data = new TranslationData(value);
                                                                 if (current == null)
                                                                     current = new Dictionary<string, TranslationData>();

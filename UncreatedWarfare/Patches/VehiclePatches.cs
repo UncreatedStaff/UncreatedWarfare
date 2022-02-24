@@ -31,7 +31,7 @@ namespace Uncreated.Warfare
                 {
                     if (VehicleBay.VehicleExists(__instance.asset.GUID, out VehicleData vehicleData))
                     {
-                        UCPlayer enterer = UCPlayer.FromPlayer(player);
+                        UCPlayer? enterer = UCPlayer.FromPlayer(player);
 
                         if (enterer != null)
                         {
@@ -51,7 +51,7 @@ namespace Uncreated.Warfare
                             }
                             else
                             {
-                                UCPlayer owner = UCPlayer.FromCSteamID(__instance.lockedOwner);
+                                UCPlayer? owner = UCPlayer.FromCSteamID(__instance.lockedOwner);
 
                                 if (vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
                                 {
@@ -59,13 +59,13 @@ namespace Uncreated.Warfare
                                     {
                                         if (seat == 0)
                                         {
-                                            bool canEnterDriverSeat = owner is null || enterer == owner || VehicleBay.IsOwnerInVehicle(__instance, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2));
+                                            bool canEnterDriverSeat = owner is null || enterer == owner || VehicleBay.IsOwnerInVehicle(__instance, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || (owner!.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2));
 
                                             if (!canEnterDriverSeat)
                                             {
                                                 if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
                                                 {
-                                                    if (owner.Squad == null)
+                                                    if (owner!.Squad == null)
                                                         enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
                                                     else
                                                         enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
@@ -95,7 +95,7 @@ namespace Uncreated.Warfare
                                         {
                                             if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
                                             {
-                                                if (owner.Squad == null)
+                                                if (owner!.Squad == null)
                                                     enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
                                                 else
                                                     enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);

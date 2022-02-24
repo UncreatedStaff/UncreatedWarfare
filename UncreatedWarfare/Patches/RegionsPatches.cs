@@ -90,7 +90,7 @@ namespace Uncreated.Warfare
             [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
             [HarmonyPrefix]
             static void OnItemDropRemovedPrefix(
-                ref SDG.Unturned.ItemData __state,
+                ref SDG.Unturned.ItemData? __state,
                 in ServerInvocationContext context,
                 byte x,
                 byte y,
@@ -119,7 +119,7 @@ namespace Uncreated.Warfare
             [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
             [HarmonyPostfix]
             static void OnItemDropRemovedPostfix(
-                SDG.Unturned.ItemData __state,
+                SDG.Unturned.ItemData? __state,
                 in ServerInvocationContext context,
                 byte x,
                 byte y,
@@ -156,7 +156,8 @@ namespace Uncreated.Warfare
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
                 if (!UCWarfare.Config.Patches.SendRegion) return true;
-                UCPlayer pl = UCPlayer.FromSteamPlayer(client);
+                UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
+                if (pl == null) return true;
                 if (region.drops.Count > 0)
                 {
                     byte packet = 0;
@@ -174,7 +175,7 @@ namespace Uncreated.Warfare
                             if (num > Block.BUFFER_SIZE / 2)
                                 break;
                         }
-                        string lang;
+                        string? lang;
                         if (hasSign)
                         {
                             if (!Data.Languages.TryGetValue(client.playerID.steamID.m_SteamID, out lang))
@@ -193,7 +194,7 @@ namespace Uncreated.Warfare
                             {
                                 BarricadeDrop drop = region.drops[index];
                                 SDG.Unturned.BarricadeData serversideData = drop.GetServersideData();
-                                InteractableStorage interactable = drop.interactable as InteractableStorage;
+                                InteractableStorage? interactable = drop.interactable as InteractableStorage;
                                 writer.WriteGuid(drop.asset.GUID);
                                 if (interactable != null)
                                 {
@@ -244,7 +245,7 @@ namespace Uncreated.Warfare
                                                     {
                                                         if (VehicleBay.VehicleExists(VehicleSpawner.ActiveObjects[i].VehicleID, out VehicleData data))
                                                             newtext = string.Format(Translation.TranslateVBS(VehicleSpawner.ActiveObjects[i], data, lang),
-                                                                UCWarfare.GetColorHex(pl != null && pl.CurrentRank.Level >= data.UnlockLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                                                                UCWarfare.GetColorHex(pl.CurrentRank.Level >= data.UnlockLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
                                                         else
                                                             newtext = Translation.TranslateSign(newtext, lang, pl, false);
                                                         break;
@@ -257,11 +258,7 @@ namespace Uncreated.Warfare
                                             newtext = newtext.Replace("<size=", "").Replace("</size>", "");
                                         }
                                         byte[] state = serversideData.barricade.state;
-                                        byte[] textbytes = Encoding.UTF8.GetBytes(newtext);// F.ClampToByteCount(, byte.MaxValue - 18, out bool requiredClamping);
-                                        /*if (requiredClamping)
-                                        {
-                                            L.LogWarning(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes), it was clamped to :" + Encoding.UTF8.GetString(textbytes));
-                                        }*/
+                                        byte[] textbytes = Encoding.UTF8.GetBytes(newtext);
                                         if (textbytes.Length > byte.MaxValue - 18)
                                         {
                                             L.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");

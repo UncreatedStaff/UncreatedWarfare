@@ -32,7 +32,7 @@ namespace Uncreated.Warfare
         public static readonly Version Version = new Version(2, 0, 0, 0);
         public static int Season => Version.Major;
         public static UCWarfare Instance;
-        public Coroutine StatsRoutine;
+        public Coroutine? StatsRoutine;
         public UCAnnouncer Announcer;
         //public NetworkingQueue Queue;
         public static UCWarfare I { get => Instance; }
@@ -88,7 +88,7 @@ namespace Uncreated.Warfare
                 else
                 {
                     string json = File.ReadAllText(Data.ElseWhereSQLPath);
-                    _sqlElsewhere = JsonSerializer.Deserialize<MySqlData>(json, JsonEx.serializerSettings);
+                    _sqlElsewhere = JsonSerializer.Deserialize<MySqlData>(json, JsonEx.serializerSettings)!;
                 }
             }
 
@@ -267,7 +267,7 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+            UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
             foreach (BarricadeRegion region in BarricadeManager.regions)
             {
                 List<BarricadeDrop> signs = new List<BarricadeDrop>();
@@ -332,7 +332,7 @@ namespace Uncreated.Warfare
 #endif
             while (ThreadActionRequests.Count > 0)
             {
-                MainThreadTask.MainThreadResult res = null;
+                MainThreadTask.MainThreadResult? res = null;
                 try
                 {
                     res = ThreadActionRequests.Dequeue();
@@ -374,9 +374,9 @@ namespace Uncreated.Warfare
             CommandWindow.shouldLogDeaths = true;
             Data.NetClient.Dispose();
             Logging.OnLog -= L.Log;
-            Logging.OnLogWarning -= L.LogWarning;
-            Logging.OnLogError -= L.LogError;
-            Logging.OnLogException -= L.LogError;
+            Logging.OnLogWarning -= L.LogWarningEventCall;
+            Logging.OnLogError -= L.LogErrorEventCall;
+            Logging.OnLogException -= L.LogErrorEventCall;
             try
             {
                 Patches.Unpatch();

@@ -155,7 +155,8 @@ namespace Uncreated.Warfare.Commands
             }
             else
             {
-                UnturnedPlayer player = caller as UnturnedPlayer;
+                UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+                if (player == null) return;
                 FPlayerName callerName = F.GetPlayerOriginalNames(player.Player);
                 if (!Provider.isServer)
                     player.SendChat("server_not_running");
@@ -316,8 +317,8 @@ namespace Uncreated.Warfare.Commands
 
         public static void IPBanPlayer(ulong Violator, ulong Admin, string Reason, uint DurationMins)
         {
-            SteamPlayer violator = PlayerTool.getSteamPlayer(Violator);
-            SteamPlayer admin = PlayerTool.getSteamPlayer(Admin);
+            SteamPlayer? violator = PlayerTool.getSteamPlayer(Violator);
+            SteamPlayer? admin = PlayerTool.getSteamPlayer(Admin);
             FPlayerName callerName;
             if (admin == null)
                 callerName = Data.DatabaseManager.GetUsernames(Admin);
@@ -327,7 +328,7 @@ namespace Uncreated.Warfare.Commands
             if (violator == null)
                 names = Data.DatabaseManager.GetUsernames(Violator);
             else
-                names = F.GetPlayerOriginalNames(admin);
+                names = F.GetPlayerOriginalNames(Violator);
             if (violator == null)
             {
                 CSteamID adminc = admin == null ? new CSteamID(Admin) : admin.playerID.steamID;

@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Squads
 
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || data.barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
             {
-                UCPlayer player = UCPlayer.FromID(data.owner);
+                UCPlayer? player = UCPlayer.FromID(data.owner);
                 if (player?.Squad != null)
                 {
                     RegisterNewRallyPoint(data, player.Squad);
@@ -50,7 +50,8 @@ namespace Uncreated.Warfare.Squads
 #endif
             if (barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
             {
-                UCPlayer player = UCPlayer.FromID(owner);
+                UCPlayer? player = UCPlayer.FromID(owner);
+                if (player == null) return;
                 if (player.Squad != null && player.Squad.Leader.Steam64 == player.Steam64)
                 {
                     if (player.Squad.Members.Count > 1)
@@ -172,8 +173,13 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            rallypoint = rallypoints.Find(r => r.squad.Name == player.Squad.Name && r.squad.Team == player.Squad.Team);
-            return rallypoint != null;
+            if (player.Squad != null)
+            {
+                rallypoint = rallypoints.Find(r => r.squad.Name == player.Squad.Name && r.squad.Team == player.Squad.Team);
+                return rallypoint != null;
+            }
+            rallypoint = null!;
+            return false;
         }
         public static bool HasRally(Squad squad, out RallyPoint rallypoint)
         {

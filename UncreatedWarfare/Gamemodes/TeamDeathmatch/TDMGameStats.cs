@@ -126,7 +126,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
             }
             else
             {
-                stats = null;
+                stats = null!;
                 return false;
             }
         }

@@ -51,7 +51,7 @@ public static class DailyQuests
         BaseQuestTracker[] trackers = new BaseQuestTracker[DAILY_QUEST_COUNT];
         for (int i = 0; i < DAILY_QUEST_COUNT; i++)
         {
-            BaseQuestTracker tracker = DailyQuestDatas[i].GetTracker(player, ref States[i]);
+            BaseQuestTracker? tracker = DailyQuestDatas[i].GetTracker(player, ref States[i]);
             if (tracker != null)
             {
                 QuestManager.RegisterTracker(tracker);
@@ -95,7 +95,8 @@ public static class DailyQuests
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.Translate() + "\"", ConsoleColor.Cyan);
+        if (tracker.QuestData != null)
+            L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.Translate() + "\"", ConsoleColor.Cyan);
         ToastMessage.QueueMessage(tracker.Player, new ToastMessage("Daily Quest Completed!", tracker.Translate(), "good job man idk does this need filled?", EToastMessageSeverity.PROGRESS));
         // todo UI or something, xp reward?
         tracker.Player.SendChat("Daily Quest Completed!");
@@ -194,7 +195,7 @@ public static class DailyQuests
             {
                 while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    if (reader.GetString().Equals("time", StringComparison.OrdinalIgnoreCase))
+                    if (reader.GetString()!.Equals("time", StringComparison.OrdinalIgnoreCase))
                     {
                         if (reader.Read() && reader.TokenType == JsonTokenType.Number && reader.TryGetInt64(out long time))
                         {
@@ -202,7 +203,7 @@ public static class DailyQuests
                                 goto deleteFile; // expired progress file from another day, delete the file and load default values
                         }
                     }
-                    else if (reader.GetString().Equals("daily_challenges", StringComparison.OrdinalIgnoreCase))
+                    else if (reader.GetString()!.Equals("daily_challenges", StringComparison.OrdinalIgnoreCase))
                     {
                         if (reader.Read() && reader.TokenType == JsonTokenType.StartArray)
                         {
@@ -216,7 +217,7 @@ public static class DailyQuests
                                 }
                                 else if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string prop = reader.GetString();
+                                    string prop = reader.GetString()!;
                                     if (reader.Read() && i != -1)
                                     {
                                         try

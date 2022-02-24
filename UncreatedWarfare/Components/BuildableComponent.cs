@@ -102,7 +102,7 @@ namespace Uncreated.Warfare.Components
 
                 if (Buildable.type == EBuildableType.FOB_BUNKER)
                 {
-                    FOB fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
+                    FOB? fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
                     if (fob != null)
                     {
                         fob.UpdateBunker(structure);
@@ -118,11 +118,11 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                ItemAsset? ammoasset = Assets.find<ItemAsset>(Buildable.emplacementData.ammoID);
+                ItemAsset? ammoasset = Buildable.emplacementData == null ? null : Assets.find<ItemAsset>(Buildable.emplacementData.ammoID);
 
-                if (Assets.find(Buildable.emplacementData.vehicleID) is not VehicleAsset vehicleasset)
+                if (Buildable.emplacementData == null || Assets.find(Buildable.emplacementData.vehicleID) is not VehicleAsset vehicleasset)
                 {
-                    L.LogError($"Emplacement {Assets.find(Buildable.emplacementData.vehicleID)?.name?.Replace("_Base", "") ?? Buildable.emplacementData.vehicleID.ToString("N")}'s vehicle id is not a valid vehicle.");
+                    L.LogError($"Emplacement {(Buildable.emplacementData == null ? "null" : Assets.find(Buildable.emplacementData.vehicleID)?.name?.Replace("_Base", "") ?? Buildable.emplacementData.vehicleID.ToString("N"))}'s vehicle id is not a valid vehicle.");
                     return;
                 }
 
@@ -219,7 +219,7 @@ namespace Uncreated.Warfare.Components
                     placer?.Message("no_placement_fobs_underwater");
                     return false;
                 }
-                else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.data.FOBMaxHeightAboveTerrain)
+                else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.config.data.FOBMaxHeightAboveTerrain)
                 {
                     placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
                     return false;
@@ -251,7 +251,7 @@ namespace Uncreated.Warfare.Components
                 }
             }
 
-            FOB nearbyFOB = FOB.GetNearestFOB(point, EFOBRadius.FOB_PLACEMENT, team);
+            FOB? nearbyFOB = FOB.GetNearestFOB(point, EFOBRadius.FOB_PLACEMENT, team);
             if (nearbyFOB != null)
             {
                 // another FOB radio is too close
@@ -268,7 +268,7 @@ namespace Uncreated.Warfare.Components
 #endif
             ulong team = placer.GetTeam();
 
-            FOB fob = FOB.GetNearestFOB(point, EFOBRadius.FULL, team);
+            FOB? fob = FOB.GetNearestFOB(point, EFOBRadius.FULL, team);
 
             if (buildable.type == EBuildableType.FOB_BUNKER)
             {
@@ -279,7 +279,7 @@ namespace Uncreated.Warfare.Components
                         placer?.Message("no_placement_fobs_underwater");
                         return false;
                     }
-                    else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z, point.y, 0) + FOBManager.config.data.FOBMaxHeightAboveTerrain)
+                    else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.config.data.FOBMaxHeightAboveTerrain)
                     {
                         placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
                         return false;
@@ -341,7 +341,7 @@ namespace Uncreated.Warfare.Components
                         return false;
                     }
                 }
-                if (buildable.type == EBuildableType.EMPLACEMENT)
+                if (buildable.type == EBuildableType.EMPLACEMENT && buildable.emplacementData != null)
                 {
                     int existing = UCVehicleManager.GetNearbyVehicles(buildable.structureID, fob.Radius, fob.Position).Count();
                     if (existing >= buildable.emplacementData.allowedPerFob)

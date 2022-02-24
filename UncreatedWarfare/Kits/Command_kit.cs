@@ -11,13 +11,14 @@ namespace Uncreated.Warfare.Kits
 {
     public class Command_kit : IRocketCommand
     {
+        private static readonly char[] LOADOUT_CHARACTERS = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't' };
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "kit";
         public string Help => "creates, renames or deletes a kit";
         public string Syntax => "/kit";
         public List<string> Aliases => new List<string>(0);
         public List<string> Permissions => new List<string>(1) { "uc.kit" };
-        static void Reply(UCPlayer player, string key, params string[] formatting)
+        static void Reply(UCPlayer? player, string key, params string[] formatting)
         {
             if (player == null)
             {
@@ -33,23 +34,13 @@ namespace Uncreated.Warfare.Kits
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer ucplayer;
-            if (!(caller is UnturnedPlayer player))
-            {
-                player = null;
-                ucplayer = null;
-            }
-            else
-            {
-                ucplayer = UCPlayer.FromIRocketPlayer(caller);
-                player = (UnturnedPlayer)caller;
-            }
+            UCPlayer? ucplayer = UCPlayer.FromIRocketPlayer(caller);
             if (!Data.Is<IKitRequests>(out _))
             {
                 if (ucplayer == null)
                     L.LogWarning(Translation.Translate("command_e_gamemode", 0));
                 else
-                    player.SendChat("command_e_gamemode");
+                    ucplayer.SendChat("command_e_gamemode");
                 return;
             }
             string property;
@@ -68,14 +59,14 @@ namespace Uncreated.Warfare.Kits
 
                 if (KitManager.KitExists(kitName, out Kit kit)) // create kit
                 {
-                    if (kit.AllowedUsers.Contains(player.CSteamID.m_SteamID))
+                    if (kit.AllowedUsers.Contains(ucplayer.Steam64))
                     {
-                        if (player.GetTeam() == kit.Team)
+                        if (ucplayer.GetTeam() == kit.Team)
                         {
                             if (!CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var cooldown, kit.Name))
                             {
                                 bool branchChanged = false;
-                                if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
+                                if (KitManager.HasKit(ucplayer, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                                     branchChanged = true;
 
                                 KitManager.GiveKit(ucplayer, kit);
@@ -114,7 +105,7 @@ namespace Uncreated.Warfare.Kits
                 }
             }
 
-            if (player != null && !player.OnDuty())
+            if (ucplayer != null && !ucplayer.OnDuty())
             {
                 Reply(ucplayer, "kits_notonduty");
                 return;
@@ -169,14 +160,14 @@ namespace Uncreated.Warfare.Kits
                     }
                     if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
                     {
-                        KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
+                        KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         Reply(ucplayer, "kit_created", kitName);
                         return;
                     }
                     else // overwrite kit
                     {
-                        KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
+                        KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         Reply(ucplayer, "kit_overwritten", kitName);
                         return;
@@ -210,7 +201,7 @@ namespace Uncreated.Warfare.Kits
                     if (KitManager.KitExists(kitName, out Kit kit))
                     {
                         bool branchChanged = false;
-                        if (KitManager.HasKit(player.CSteamID, out var oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
+                        if (KitManager.HasKit(ucplayer, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
 
                         KitManager.GiveKit(ucplayer, kit);
@@ -297,8 +288,8 @@ namespace Uncreated.Warfare.Kits
 
                     ulong steam64 = 0;
 
-                    UCPlayer target;
-                    if (targetPlayer.Length == 17 && ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out steam64))
+                    UCPlayer? target;
+                    if (ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
                         target = UCPlayer.FromID(steam64);
                     else
                         target = UCPlayer.FromName(targetPlayer);
@@ -350,8 +341,8 @@ namespace Uncreated.Warfare.Kits
 
                     ulong steam64 = 0;
 
-                    UCPlayer target;
-                    if (targetPlayer.Length == 17 && ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out steam64))
+                    UCPlayer? target;
+                    if (ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
                         target = UCPlayer.FromID(steam64);
                     else
                         target = UCPlayer.FromName(targetPlayer);
@@ -475,17 +466,17 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
 
-                    char[] chars = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't' };
+                    
 
-                    var loadoutsCount = KitManager.GetKitsWhere(k => k.IsLoadout && k.AllowedUsers.Contains(steamid)).Count();
+                    int loadoutsCount = KitManager.GetKitsWhere(k => k.IsLoadout && k.AllowedUsers.Contains(steamid)).Count();
 
-                    char letter = chars[loadoutsCount];
+                    char letter = LOADOUT_CHARACTERS[loadoutsCount];
                     string loadoutName = steamid.ToString() + "_" + letter;
 
                     if (!KitManager.KitExists(loadoutName, out _))
                     {
 
-                        Kit loadout = KitManager.CreateKit(loadoutName, KitManager.ItemsFromInventory(player), KitManager.ClothesFromInventory(player));
+                        Kit loadout = KitManager.CreateKit(loadoutName, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
 
                         KitManager.UpdateObjectsWhere(k => k.Name == loadoutName, k =>
                         {

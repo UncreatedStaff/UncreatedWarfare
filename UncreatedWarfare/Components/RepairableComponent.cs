@@ -58,7 +58,7 @@ namespace Uncreated.Warfare.Components
                 string structureName = Assets.find<ItemBarricadeAsset>(buildable.foundationID).itemName;
                 string message = structureName + " DESTROYED";
 
-                UCPlayer player = null;
+                UCPlayer? player = null;
                 if (Structure.model.TryGetComponent(out BarricadeComponent component))
                 {
                     player = UCPlayer.FromID(component.LastDamager);

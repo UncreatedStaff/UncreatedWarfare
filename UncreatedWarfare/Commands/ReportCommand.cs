@@ -28,7 +28,7 @@ namespace Uncreated.Warfare.Commands
 #endif
             // /report john greifing keeps using the mortar on the fobs 
             // /report john teamkilling teamkilled 5 teammates
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
             if (player == null)
             {
                 L.LogWarning("This command can't be called from console.");
@@ -92,7 +92,7 @@ namespace Uncreated.Warfare.Commands
                 if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out target)))
                 {
                     UCPlayer.ENameSearchType search = GetNameType(type);
-                    UCPlayer temptarget = UCPlayer.FromName(inPlayer, search);
+                    UCPlayer? temptarget = UCPlayer.FromName(inPlayer, search);
                     if (temptarget == null)
                     {
                         target = Data.Reporter.RecentPlayerNameCheck(inPlayer, search);
@@ -108,7 +108,7 @@ namespace Uncreated.Warfare.Commands
 
 
         Report:
-            Report report;
+            Report? report;
             report = type switch
             {
                 EReportType.CHAT_ABUSE => Data.Reporter.CreateChatAbuseReport(player.Steam64, target, message),
@@ -121,7 +121,7 @@ namespace Uncreated.Warfare.Commands
             };
             if (report == null)
                 goto UnknownError;
-            SteamPlayer targetPl = PlayerTool.getSteamPlayer(target);
+            SteamPlayer? targetPl = PlayerTool.getSteamPlayer(target);
             Data.DatabaseManager.AddReport(report);
             FPlayerName targetNames = F.GetPlayerOriginalNames(target);
             string typename = GetName(type);
@@ -150,11 +150,11 @@ namespace Uncreated.Warfare.Commands
                     {
                         //await UCWarfare.ToUpdate();
                         //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
-                        L.Log(Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl2), ConsoleColor.Cyan);
+                        L.Log(Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE, string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
                     }
                     else
                     {
-                        L.Log(Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                        L.Log(Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE, string.Empty, "0"), ConsoleColor.Cyan);
                     }
 
                     return;

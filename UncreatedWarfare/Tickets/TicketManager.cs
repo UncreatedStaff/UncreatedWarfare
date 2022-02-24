@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Tickets
                 ulong killerID = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
                 ulong victimID = parameters.dead.channel.owner.playerID.steamID.m_SteamID;
 
-                UCPlayer assister = UCPlayer.FromID(component.secondLastAttacker.Key);
+                UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
                 if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
                 {
                     Points.AwardXP(
@@ -122,10 +122,10 @@ namespace Uncreated.Warfare.Tickets
 
                 if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
                 {
-                    UCPlayer owner = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
+                    UCPlayer? owner = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
                     if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
-                        UCPlayer player = UCPlayer.FromID(vc.lastDamager);
+                        UCPlayer? player = UCPlayer.FromID(vc.lastDamager);
                         bool wasCrashed = false;
 
                         if (player == null)
@@ -369,21 +369,22 @@ namespace Uncreated.Warfare.Tickets
 
             foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
-                UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+                UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
 
+                if (player == null) continue;
                 int xp = Points.XPConfig.FlagCapturedXP;
 
                 Points.AwardXP(player, player.NearbyMemberBonus(xp, 60), Translation.Translate("xp_flag_captured", player.Steam64));
 
                 if (player.IsNearSquadLeader(50))
                 {
-                    if (alreadyUpdated.TryGetValue(player.Squad, out int amount))
+                    if (alreadyUpdated.TryGetValue(player.Squad!, out int amount))
                     {
                         amount += Points.TWConfig.MemberFlagCapturePoints;
                     }
                     else
                     {
-                        alreadyUpdated.Add(player.Squad, Points.TWConfig.MemberFlagCapturePoints);
+                        alreadyUpdated.Add(player.Squad!, Points.TWConfig.MemberFlagCapturePoints);
                     }
                 }
             }
@@ -405,8 +406,9 @@ namespace Uncreated.Warfare.Tickets
 
             foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
-                UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+                UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
 
+                if (player == null) continue;
                 int xp = Points.XPConfig.FlagNeutralizedXP;
 
                 Points.AwardXP(player, xp, Translation.Translate("xp_flag_neutralized", player.Steam64));

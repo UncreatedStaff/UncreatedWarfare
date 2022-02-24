@@ -497,7 +497,7 @@ namespace Uncreated.Warfare
                 return true;
             }), text, formatting);
         }
-        public static void SendSingleMessage(string text, Color color, EChatMode mode, string iconURL, bool richText, SteamPlayer recipient)
+        public static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer? recipient)
         {
             try
             {

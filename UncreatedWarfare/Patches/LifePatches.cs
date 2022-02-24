@@ -100,7 +100,7 @@ namespace Uncreated.Warfare
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
                 if (!UCWarfare.Config.Patches.closeStorage) return;
-                UCPlayer player = UCPlayer.FromPlayer(__instance.player);
+                UCPlayer? player = UCPlayer.FromPlayer(__instance.player);
                 if (player == null) return;
                 if (player.StorageCoroutine != null)
                     player.Player.StopCoroutine(player.StorageCoroutine);

@@ -46,7 +46,7 @@ namespace Uncreated.Warfare.Commands
         public void Execute(IRocketPlayer caller, string[] command)
         {
             bool isConsole = caller is ConsolePlayer;
-            Player player = isConsole ? null : (caller as UnturnedPlayer).Player;
+            Player? player = (caller as UnturnedPlayer)?.Player;
             if (command.Length > 0)
             {
                 try
@@ -54,7 +54,7 @@ namespace Uncreated.Warfare.Commands
                     MethodInfo info = type.GetMethod(command[0], BindingFlags.NonPublic | BindingFlags.Instance);
                     if (info == null)
                     {
-                        if (isConsole) L.LogError(Translation.Translate("test_no_method", 0, out _, command[0]));
+                        if (player == null) L.LogError(Translation.Translate("test_no_method", 0, out _, command[0]));
                         else player.SendChat("test_no_method", command[0]);
                     }
                     else
@@ -64,25 +64,25 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
                             using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
 #endif
-                            info.Invoke(this, new object[2] { command, player });
+                            info.Invoke(this, new object[2] { command, player! });
                         }
                         catch (Exception ex)
                         {
                             L.LogError(ex.InnerException ?? ex);
-                            if (isConsole) L.LogError(Translation.Translate("test_error_executing", 0, out _, info.Name, (ex.InnerException ?? ex).GetType().Name));
+                            if (player == null) L.LogError(Translation.Translate("test_error_executing", 0, out _, info.Name, (ex.InnerException ?? ex).GetType().Name));
                             else player.SendChat("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
                         }
                     }
                 }
                 catch (AmbiguousMatchException)
                 {
-                    if (isConsole) L.LogError(Translation.Translate("test_multiple_matches", 0, out _, command[0]));
+                    if (player == null) L.LogError(Translation.Translate("test_multiple_matches", 0, out _, command[0]));
                     else player.SendChat("test_multiple_matches", command[0]);
                 }
             }
             else
             {
-                if (isConsole) L.LogError("Usage: /test <operation> [parameters...]");
+                if (player == null) L.LogError("Usage: /test <operation> [parameters...]");
                 else player.SendChat("Usage: /test <operation> [parameters...]", Color.red);
             }
         }
@@ -102,7 +102,7 @@ namespace Uncreated.Warfare.Commands
             }
             if (int.TryParse(command[2], out int amount))
             {
-                UCPlayer target = UCPlayer.FromName(command[1]);
+                UCPlayer? target = UCPlayer.FromName(command[1]);
                 if (target == default)
                 {
                     if (player == null)
@@ -135,7 +135,7 @@ namespace Uncreated.Warfare.Commands
             }
             if (int.TryParse(command[2], out int amount))
             {
-                UCPlayer target = UCPlayer.FromName(command[1]);
+                UCPlayer? target = UCPlayer.FromName(command[1]);
                 if (target == default)
                 {
                     if (player == null)
@@ -296,7 +296,7 @@ namespace Uncreated.Warfare.Commands
                 L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
-            InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.look);
+            InteractableSign? sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.look);
             if (sign == null) player.SendChat("test_sign_no_sign");
             else
             {
@@ -438,7 +438,7 @@ namespace Uncreated.Warfare.Commands
             }
             if (Data.Is(out IFlagRotation fg))
             {
-                Flag flag;
+                Flag? flag;
                 if (fg is TeamCTF ctf)
                 {
                     if (arg == "obj1" && ctf.ObjectiveTeam1 != null)
@@ -833,7 +833,7 @@ namespace Uncreated.Warfare.Commands
                 else player.SendChat("Skipped staging phase.");
                 gm.SkipStagingPhase();
             }
-            Gamemode newGamemode = Gamemode.FindGamemode(command[1]);
+            Gamemode? newGamemode = Gamemode.FindGamemode(command[1]);
             try
             {
                 if (newGamemode != null)
@@ -849,7 +849,9 @@ namespace Uncreated.Warfare.Commands
                     Chat.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
                     for (int i = 0; i < Provider.clients.Count; i++)
                     {
-                        Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, false);
+                        UCPlayer? pl = UCPlayer.FromSteamPlayer(Provider.clients[i]);
+                        if (pl != null)
+                            Data.Gamemode.OnPlayerJoined(pl, true, false);
                     }
                 }
                 else
@@ -919,7 +921,7 @@ namespace Uncreated.Warfare.Commands
                         player.SendChat("Syntax: /resetlobby <Player>", Color.red);
                     return;
                 }
-                UCPlayer ucplayer = UCPlayer.FromName(command[1]);
+                UCPlayer? ucplayer = UCPlayer.FromName(command[1]);
                 if (ucplayer == null)
                 {
                     if (player == null)
@@ -944,7 +946,7 @@ namespace Uncreated.Warfare.Commands
                 L.Log("This command can only be called by a player.");
                 return;
             }
-            UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+            UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
             if (ucplayer == null)
             {
                 player.SendChat("UCPlayer error", Color.yellow);
@@ -977,19 +979,19 @@ namespace Uncreated.Warfare.Commands
                 L.LogError(Translation.Translate("test_no_players_console", 0, out _));
                 return;
             }
-            Transform t = UCBarricadeManager.GetTransformFromLook(player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL | RayMasks.VEHICLE);
+            Transform? t = UCBarricadeManager.GetTransformFromLook(player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL | RayMasks.VEHICLE);
             if (t == null)
             {
                 player.SendChat("No transform found");
                 return;
             }
-            BarricadeDrop bd = BarricadeManager.FindBarricadeByRootTransform(t);
+            BarricadeDrop? bd = BarricadeManager.FindBarricadeByRootTransform(t);
             if (bd != null)
             {
                 player.SendChat(bd.instanceID.ToString());
                 return;
             }
-            StructureDrop dp = StructureManager.FindStructureByRootTransform(t);
+            StructureDrop? dp = StructureManager.FindStructureByRootTransform(t);
             if (dp != null)
             {
                 player.SendChat(dp.instanceID.ToString());
@@ -1032,20 +1034,20 @@ namespace Uncreated.Warfare.Commands
                 player.SendChat("Command usage: /test linkto <spawn's expected vb instance id>");
                 return;
             }
-            Transform t = UCBarricadeManager.GetTransformFromLook(player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE); 
+            Transform? t = UCBarricadeManager.GetTransformFromLook(player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE); 
             if (t == null)
             {
                 player.SendChat("No transform found");
                 return;
             }
-            BarricadeDrop bd = BarricadeManager.FindBarricadeByRootTransform(t);
+            BarricadeDrop? bd = BarricadeManager.FindBarricadeByRootTransform(t);
             if (bd != null)
             {
                 if (StructureSaver.StructureExists(bd.instanceID, EStructType.BARRICADE, out _))
                 {
                     if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
                     {
-                        BarricadeDrop oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
+                        BarricadeDrop? oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
                         if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
                             UnityEngine.Object.Destroy(vsc);
                         spawn.SpawnPadInstanceID = bd.instanceID;
@@ -1065,7 +1067,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
                 {
-                    BarricadeDrop oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
+                    BarricadeDrop? oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
                     if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
                         UnityEngine.Object.Destroy(vsc);
                     StructureSaver.AddStructure(bd, bd.GetServersideData(), out _);
@@ -1090,7 +1092,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
                     {
-                        StructureDrop oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
+                        StructureDrop? oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
                         if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
                             UnityEngine.Object.Destroy(vsc);
                         spawn.SpawnPadInstanceID = dp.instanceID;
@@ -1110,7 +1112,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
                 {
-                    StructureDrop oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
+                    StructureDrop? oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
                     if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
                         UnityEngine.Object.Destroy(vsc);
                     StructureSaver.AddStructure(dp, dp.GetServersideData(), out _);
@@ -1198,17 +1200,6 @@ namespace Uncreated.Warfare.Commands
         private void saveall(string[] command, Player player)
         {
             F.SaveProfilingData();
-        }
-        private void removeoutsidestructs(string[] command, UCPlayer player)
-        {
-            BarricadeDrop barricade = null;
-            byte[] state = barricade.GetServersideData().barricade.state;
-            byte[] newstate = new byte[state.Length];
-            Buffer.BlockCopy(BitConverter.GetBytes(player.CSteamID.m_SteamID), 0, newstate, 0, sizeof(ulong));
-            Buffer.BlockCopy(BitConverter.GetBytes(player.Player.quests.groupID.m_SteamID), 0, newstate, sizeof(ulong), sizeof(ulong));
-            Buffer.BlockCopy(state, sizeof(ulong) * 2, newstate, sizeof(ulong) * 2, state.Length - sizeof(ulong) * 2);
-            BarricadeManager.updateReplicatedState(barricade.model, newstate, newstate.Length);
-            BarricadeManager.changeOwnerAndGroup(barricade.model, player.CSteamID.m_SteamID, 3);
         }
     }
 #pragma warning restore IDE0051

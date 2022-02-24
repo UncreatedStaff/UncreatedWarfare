@@ -36,8 +36,8 @@ namespace Uncreated.Warfare.Point
 
             RankTier = -1;
 
-            Name = null;
-            Abbreviation = null;
+            Name = null!;
+            Abbreviation = null!;
 
             OfficerTeam = officerTeam;
             OfficerTier = -1;

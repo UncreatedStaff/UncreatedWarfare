@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.ReportSystem
             { EDamageOrigin.Zombie_Swipe, "Zombie Swipe" },
         };
         public static readonly Dictionary<EDeathCause, string> DeathCauseLocalization = new Dictionary<EDeathCause, string>(30);
-        public Report CreateReport(ulong reporter, ulong violator, string message)
+        public Report? CreateReport(ulong reporter, ulong violator, string message)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -64,7 +64,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public ChatAbuseReport CreateChatAbuseReport(ulong reporter, ulong violator, string message)
+        public ChatAbuseReport? CreateChatAbuseReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -72,7 +72,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public VoiceChatAbuseReport CreateVoiceChatAbuseReport(ulong reporter, ulong violator, string message)
+        public VoiceChatAbuseReport? CreateVoiceChatAbuseReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -80,7 +80,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public SoloingReport CreateSoloingReport(ulong reporter, ulong violator, string message)
+        public SoloingReport? CreateSoloingReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -88,7 +88,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public WasteingAssetsReport CreateWasteingAssetsReport(ulong reporter, ulong violator, string message)
+        public WasteingAssetsReport? CreateWasteingAssetsReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -96,7 +96,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public IntentionalTeamkillReport CreateIntentionalTeamkillReport(ulong reporter, ulong violator, string message)
+        public IntentionalTeamkillReport? CreateIntentionalTeamkillReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -104,7 +104,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public GreifingFOBsReport CreateGreifingFOBsReport(ulong reporter, ulong violator, string message)
+        public GreifingFOBsReport? CreateGreifingFOBsReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {

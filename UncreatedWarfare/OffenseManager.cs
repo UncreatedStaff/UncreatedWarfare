@@ -19,14 +19,14 @@ namespace Uncreated.Warfare
 #endif
             if (duration == 0)
             {
-                UCPlayer admin2 = UCPlayer.FromID(banner);
+                UCPlayer? admin2 = UCPlayer.FromID(banner);
                 if (admin2 == null)
                     L.Log(Translation.Translate("ban_invalid_number_console", 0, "0"));
                 else
                     admin2.SendChat("ban_invalid_number", "0");
                 return;
             }
-            UCPlayer admin = UCPlayer.FromID(banner);
+            UCPlayer? admin = UCPlayer.FromID(banner);
 
             if (!IsValidSteam64ID(offender))
             {
@@ -37,7 +37,7 @@ namespace Uncreated.Warfare
                 return;
             }
 
-            UCPlayer bannedPlayer = UCPlayer.FromID(offender);
+            UCPlayer? bannedPlayer = UCPlayer.FromID(offender);
             
             if (bannedPlayer == null)
             {
@@ -189,7 +189,7 @@ namespace Uncreated.Warfare
 #endif
             EBanResponse state = EBanResponse.ALL_GOOD;
             byte[][] hwids = (byte[][])player.playerID.GetHwids();
-            string banreason = null;
+            string? banreason = null;
             if (!player.transportConnection.TryGetIPv4Address(out uint ipv4))
             {
                 state = EBanResponse.UNABLE_TO_GET_IP;
@@ -333,11 +333,11 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer admin = UCPlayer.FromID(kicker);
+            UCPlayer? admin = UCPlayer.FromID(kicker);
 
             if (!IsValidSteam64ID(offender))
                 goto NoPlayer;
-            UCPlayer bannedPlayer = UCPlayer.FromID(offender);
+            UCPlayer? bannedPlayer = UCPlayer.FromID(offender);
             if (bannedPlayer == null)
                 goto NoPlayer;
 
@@ -381,7 +381,7 @@ namespace Uncreated.Warfare
             await UCWarfare.ToUpdate();
         }
 
-        public static async Task MutePlayer(UCPlayer muted, ulong mutedS64, UCPlayer admin, EMuteType type, int duration, string reason)
+        public static async Task MutePlayer(UCPlayer muted, ulong mutedS64, UCPlayer? admin, EMuteType type, int duration, string reason)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -404,7 +404,7 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             if (joining == null) return;
-            string reason = null;
+            string? reason = null;
             int duration = -2;
             DateTime timestamp = DateTime.MinValue;
             EMuteType type = EMuteType.NONE;

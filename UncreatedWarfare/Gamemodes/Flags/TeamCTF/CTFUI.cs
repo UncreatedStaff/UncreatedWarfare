@@ -440,7 +440,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 p.sendChat, p.sendUI, p.absoluteCap, p.overrideChatConfig, p.formatting, p.team1count, p.team2count);
         public static void UIOrChat(char charactericon, bool useui, ushort uiid, bool pts, ulong team, EFlagStatus type, string translation_key, Color color, ITransportConnection PlayerConnection, SteamPlayer player,
             int c, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true,
-            bool absolute = true, bool sendChatOverride = false, string[] formatting = null, int team1count = 0, int team2count = 0)
+            bool absolute = true, bool sendChatOverride = false, string[]? formatting = null, int team1count = 0, int team2count = 0)
         {
             if (type == EFlagStatus.DONT_DISPLAY)
             {

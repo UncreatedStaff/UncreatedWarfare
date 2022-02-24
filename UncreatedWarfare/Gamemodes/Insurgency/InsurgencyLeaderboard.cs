@@ -111,7 +111,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 FPlayerName originalNames = F.GetPlayerOriginalNames(player);
                 EffectManager.sendUIEffect(this.asset.id, LeaderboardEx.leaderboardKey, channel, true);
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TitleWinner", Translation.Translate("winner", language, TeamManager.TranslateName(_winner, player.Player), teamcolor));
-                if (shuttingDown)
+                if (shuttingDown && shuttingDownMessage != null)
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label_shutting_down", language, shuttingDownMessage));
                 else
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label", language));
@@ -212,7 +212,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TimeDeployedValue", Translation.ObjectTranslate("stats_player_time_value", language, TimeSpan.FromSeconds(stats.timedeployed), defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "XPGainedValue", Translation.ObjectTranslate("stats_player_value", language, stats.XPGained, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "IntelligenceGatheredValue", Translation.ObjectTranslate("stats_player_time_value", language, TimeSpan.FromSeconds(stats.timeonpoint), defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CachesDiscoveredValue", Translation.ObjectTranslate("stats_player_value", language, stats._cachesDiscovered, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CachesDiscoveredValue", Translation.ObjectTranslate("stats_player_value", language, 0 /*stats._cachesDiscovered*/, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CachesDestroyedValue", Translation.ObjectTranslate("stats_player_value", language, stats._cachesDestroyed, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TeamkillsValue", Translation.ObjectTranslate("stats_player_value", language, stats.teamkills, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "EnemyFOBsDestroyedValue", Translation.ObjectTranslate("stats_player_value", language, stats.FOBsDestroyed, defaultColor));
@@ -266,7 +266,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             float rt = Time.realtimeSinceStartup;
             for (int i = 1; i < Math.Min(15, statsT1.Count); i++)
             {
-                UCPlayer pl = statsT1[i].Player == null ? null : UCPlayer.FromPlayer(statsT1[i].Player);
+                UCPlayer? pl = statsT1[i].Player == null ? null : UCPlayer.FromPlayer(statsT1[i].Player);
                 if (states[0][i - 1])
                 {
                     if (pl == null || rt - pl.LastSpoken > 1f)
@@ -281,7 +281,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             }
             for (int i = 1; i < Math.Min(15, statsT2.Count); i++)
             {
-                UCPlayer pl = statsT2[i].Player == null ? null : UCPlayer.FromPlayer(statsT2[i].Player);
+                UCPlayer? pl = statsT2[i].Player == null ? null : UCPlayer.FromPlayer(statsT2[i].Player);
                 if (states[1][i - 1])
                 {
                     if (pl == null || rt - pl.LastSpoken > 1f)
@@ -400,7 +400,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         internal int _killsAttack;
         internal int _killsDefense;
         internal int _cachesDestroyed;
-        internal int _cachesDiscovered;
+        //internal int _cachesDiscovered;
         internal int _intelligencePointsCollected;
         public int XPGained => _xp;
         public int OFPGained => _ofp;

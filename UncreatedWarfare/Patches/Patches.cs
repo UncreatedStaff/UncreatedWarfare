@@ -126,10 +126,10 @@ namespace Uncreated.Warfare
 #endif
                 if (!UCWarfare.Config.Patches.ReceiveChatRequest) return true;
                 SteamPlayer callingPlayer = context.GetCallingPlayer();
-                UCPlayer caller = UCPlayer.FromSteamPlayer(callingPlayer);
+                UCPlayer? caller = UCPlayer.FromSteamPlayer(callingPlayer);
                 if (caller != null && (caller.MuteType & Commands.EMuteType.TEXT_CHAT) == Commands.EMuteType.TEXT_CHAT && caller.TimeUnmuted > DateTime.Now)
                 {
-                    caller.SendChat("text_chat_feedback_muted", caller.MuteReason,
+                    caller.SendChat("text_chat_feedback_muted", caller.MuteReason ?? string.Empty,
                         caller.TimeUnmuted.ToString("g") + " EST");
                     return false;
                 }
@@ -198,7 +198,7 @@ namespace Uncreated.Warfare
                 else if (mode == EChatMode.LOCAL)
                 {
                     float num = 16384f;
-                    UCPlayer player = UCPlayer.FromSteamPlayer(callingPlayer);
+                    UCPlayer? player = UCPlayer.FromSteamPlayer(callingPlayer);
                     if (player == null || player.Squad == null || player.Squad.Members == null)
                     {
                         foreach (SteamPlayer client in Provider.clients)
@@ -298,7 +298,8 @@ namespace Uncreated.Warfare
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
                 if (!UCWarfare.Config.Patches.requestGroupExit) return true;
-                if (UCPlayer.FromPlayer(player).OnDutyOrAdmin()) return true;
+                UCPlayer? pl = UCPlayer.FromPlayer(player);
+                if (pl == null || pl.OnDutyOrAdmin()) return true;
                 player.SendChat("cant_leave_group");
                 return false;
             }
@@ -370,9 +371,9 @@ namespace Uncreated.Warfare
                     var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
                     if (drop != null)
                     {
-                        UCPlayer builder = UCPlayer.FromPlayer(__instance.player);
+                        UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
 
-                        if (builder.GetTeam() == drop.GetServersideData().group)
+                        if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
                         {
                             if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
                             {

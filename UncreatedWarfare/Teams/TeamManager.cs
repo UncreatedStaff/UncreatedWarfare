@@ -96,11 +96,11 @@ namespace Uncreated.Warfare.Teams
             _lobbyZone = null;
             _lobbySpawn = default;
         }
-        private static Zone _t1main;
-        private static Zone _t1amc;
-        private static Zone _t2main;
-        private static Zone _t2amc;
-        private static Zone _lobbyZone;
+        private static Zone? _t1main;
+        private static Zone? _t1amc;
+        private static Zone? _t2main;
+        private static Zone? _t2amc;
+        private static Zone? _lobbyZone;
         private static Vector3 _lobbySpawn = default;
         internal static void OnReloadFlags()
         {
@@ -242,6 +242,7 @@ namespace Uncreated.Warfare.Teams
         public static string TranslateName(ulong team, SteamPlayer player, bool colorize = false) => TranslateName(team, player.playerID.steamID.m_SteamID, colorize);
         public static string TranslateName(ulong team, Player player, bool colorize = false) => TranslateName(team, player.channel.owner.playerID.steamID.m_SteamID, colorize);
         public static string TranslateName(ulong team, CSteamID player, bool colorize = false) => TranslateName(team, player.m_SteamID, colorize);
+        public static string TranslateName(ulong team, UCPlayer player, bool colorize = false) => TranslateName(team, player.Steam64, colorize);
         public static string TranslateName(ulong team, ulong player, bool colorize = false)
         {
             string uncolorized;

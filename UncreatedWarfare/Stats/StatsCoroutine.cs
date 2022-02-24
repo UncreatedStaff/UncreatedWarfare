@@ -47,8 +47,8 @@ namespace Uncreated.Warfare.Stats
                         else
                             StatsManager.ModifyStats(players.Current.playerID.steamID.m_SteamID, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
                         /* ON DUTY AWARDER */
-                        UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
-                        if (Points.XPConfig.OnDutyXP > 0 && player.OnDuty())
+                        UCPlayer? player = UCPlayer.FromSteamPlayer(players.Current);
+                        if (player != null && Points.XPConfig.OnDutyXP > 0 && player.OnDuty())
                         {
                             Points.AwardXP(player.Player, Points.XPConfig.OnDutyXP, Translation.Translate("xp_on_duty", player));
                         }

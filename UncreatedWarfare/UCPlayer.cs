@@ -540,12 +540,12 @@ namespace Uncreated.Warfare
             ServerSavedata.writeBlock(GetPath(save.Steam64), block);
         }
         public static bool HasPlayerSave(ulong player) => ServerSavedata.fileExists(GetPath(player));
-        public static bool TryReadSaveFile(ulong player, out PlayerSave? save)
+        public static bool TryReadSaveFile(ulong player, out PlayerSave save)
         {
             string path = GetPath(player);
             if (!ServerSavedata.fileExists(path))
             {
-                save = null;
+                save = null!;
                 return false;
             }
             Block block = ServerSavedata.readBlock(path, 0);

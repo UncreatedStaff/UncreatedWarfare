@@ -20,10 +20,10 @@ namespace Uncreated.Warfare.Structures
             {
                 structure.SpawnCheck();
                 if (!structure.exists)
-                    L.LogError($"Structure {structure?.Asset?.itemName ?? structure.id.ToString("N")} ({structure.instance_id}) failed to spawn.");
+                    L.LogError($"Structure {structure.Asset?.itemName ?? structure.id.ToString("N")} ({structure.instance_id}) failed to spawn.");
             }
         }
-        public static bool AddStructure(StructureDrop drop, SDG.Unturned.StructureData data, out Structure structureadded)
+        public static bool AddStructure(StructureDrop drop, SDG.Unturned.StructureData data, out Structure? structureadded)
         {
             if (data == default || drop == default)
             {
@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Structures
         {
             if (data == default || drop == default)
             {
-                structureadded = default;
+                structureadded = default!;
                 return false;
             }
             if (!ObjectExists(s => s != null && s.instance_id == drop.instanceID, out Structure structure))
@@ -55,7 +55,7 @@ namespace Uncreated.Warfare.Structures
             }
             else
             {
-                structureadded = default;
+                structureadded = default!;
                 return false;
             }
         }
@@ -76,7 +76,7 @@ namespace Uncreated.Warfare.Structures
         public const string ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND = "ERROR_BARRICADE_NOT_FOUND";
         public Guid id;
         [JsonIgnore]
-        public ItemAsset Asset
+        public ItemAsset? Asset
         {
             get
             {
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.Structures
             }
         }
         [JsonIgnore]
-        private ItemAsset _asset;
+        private ItemAsset? _asset;
         [JsonIgnore]
         public byte[] Metadata
         {
@@ -127,7 +127,7 @@ namespace Uncreated.Warfare.Structures
             this.instance_id = instance_id;
             if (type == EStructType.BARRICADE)
             {
-                UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
                 if (drop == default)
                 {
                     this.transform = transform;
@@ -141,7 +141,7 @@ namespace Uncreated.Warfare.Structures
             }
             else if (type == EStructType.STRUCTURE)
             {
-                UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop drop);
+                UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop? drop);
                 if (drop == default)
                 {
                     this.transform = transform;
@@ -175,7 +175,7 @@ namespace Uncreated.Warfare.Structures
 #endif
             if (type == EStructType.BARRICADE)
             {
-                SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop bdrop);
+                SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? bdrop);
                 if (data == default)
                 {
                     if (Asset is not ItemBarricadeAsset asset)
@@ -240,7 +240,7 @@ namespace Uncreated.Warfare.Structures
                 }
                 else
                 {
-                    SerializableTransform n = new SerializableTransform(bdrop.model);
+                    SerializableTransform n = new SerializableTransform(bdrop!.model);
                     if (transform != n)
                     {
                         transform = n;
@@ -254,7 +254,7 @@ namespace Uncreated.Warfare.Structures
             }
             else if (type == EStructType.STRUCTURE)
             {
-                SDG.Unturned.StructureData data = UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop sdrop);
+                SDG.Unturned.StructureData? data = UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop? sdrop);
                 if (data == default)
                 {
                     if (Asset is not ItemStructureAsset asset)
@@ -322,7 +322,7 @@ namespace Uncreated.Warfare.Structures
                 }
                 else
                 {
-                    SerializableTransform n = new SerializableTransform(sdrop.model);
+                    SerializableTransform n = new SerializableTransform(sdrop!.model);
                     if (transform != n)
                     {
                         transform = n;
@@ -363,7 +363,7 @@ namespace Uncreated.Warfare.Structures
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string prop = reader.GetString();
+                    string prop = reader.GetString()!;
                     if (reader.Read())
                     {
                         switch (prop)
@@ -372,7 +372,7 @@ namespace Uncreated.Warfare.Structures
                                 id = reader.GetGuid();
                                 break;
                             case nameof(state):
-                                state = reader.GetString();
+                                state = reader.GetString()!;
                                 break;
                             case nameof(transform):
                                 if (reader.TokenType == JsonTokenType.StartObject)
@@ -393,7 +393,7 @@ namespace Uncreated.Warfare.Structures
 
             if (type == EStructType.BARRICADE)
             {
-                UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
                 if (drop == default)
                 {
                     exists = false;
@@ -406,7 +406,7 @@ namespace Uncreated.Warfare.Structures
             }
             else if (type == EStructType.STRUCTURE)
             {
-                UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop drop);
+                UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop? drop);
                 if (drop == default)
                 {
                     exists = false;

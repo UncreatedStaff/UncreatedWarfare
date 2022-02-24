@@ -97,7 +97,9 @@ namespace Uncreated.Warfare.Components
                 count ++;
                 if (count >= (2 / tickFrequency))
                     count = 0;
+#if DEBUG
                 profiler.Dispose();
+#endif
                 yield return new WaitForSeconds(tickFrequency);
             }
         }
@@ -315,7 +317,7 @@ namespace Uncreated.Warfare.Components
 
             FOBManager.SendFOBListToTeam(Team);
         }
-        public void UpdateBunker(BarricadeDrop bunker)
+        public void UpdateBunker(BarricadeDrop? bunker)
         {
             L.LogDebug("Bunker updated: " + bunker?.GetType());
 

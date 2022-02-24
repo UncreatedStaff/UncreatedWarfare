@@ -85,7 +85,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
             writer.WriteProperty("vehicles_destroyed", _vehDest);
         }
         public override void ResetToDefaults() => _vehDest = 0;
-        public void OnVehicleDestroyed(UCPlayer owner, UCPlayer destroyer, VehicleData data, Components.VehicleComponent component)
+        public void OnVehicleDestroyed(UCPlayer? owner, UCPlayer destroyer, VehicleData data, Components.VehicleComponent component)
         {
             if (destroyer.Steam64 == _player.Steam64 && component.Team != _player.GetTeam() && VehicleType.IsMatch(data.Type)
                 && VehicleIDs.IsMatch(component.Vehicle.asset))

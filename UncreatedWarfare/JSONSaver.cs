@@ -67,7 +67,7 @@ namespace Uncreated
         }
         protected static T AddObjectToSave(T item, bool save = true)
         {
-            if (item.Equals(default(T))) return default;
+            if (item == null) throw new ArgumentNullException(nameof(item));
             ActiveObjects.Add(item);
             if (save) Save();
             return item;
@@ -147,7 +147,7 @@ namespace Uncreated
                 CreateFileIfNotExists(ActiveObjects.LoadDefaults());
             if (useDeserializer)
             {
-                FileStream rs = null;
+                FileStream? rs = null;
                 try
                 {
                     using (rs = new FileStream(directory, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -192,7 +192,7 @@ namespace Uncreated
                 }
             }
             bool clsd = false;
-            StreamReader r = null;
+            StreamReader? r = null;
             try
             {
                 r = File.OpenText(directory);
@@ -201,7 +201,7 @@ namespace Uncreated
                 r.Dispose();
                 clsd = true;
                 _threadLocker.Release();
-                T[] vals = JsonSerializer.Deserialize<T[]>(json, JsonEx.serializerSettings);
+                T[]? vals = JsonSerializer.Deserialize<T[]>(json, JsonEx.serializerSettings);
                 if (vals != null)
                 {
                     ActiveObjects.Clear();
@@ -230,7 +230,7 @@ namespace Uncreated
             return item != null;
         }
         /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-        private static FieldInfo GetField(string property, out byte reason)
+        private static FieldInfo? GetField(string property, out byte reason)
         {
             for (int i = 0; i < fields.Length; i++)
             {
@@ -255,7 +255,7 @@ namespace Uncreated
             reason = 1;
             return default;
         }
-        private static object ParseInput(string input, Type type, out bool parsed)
+        private static object? ParseInput(string input, Type type, out bool parsed)
         {
             if (input == default || type == default)
             {
@@ -424,7 +424,7 @@ namespace Uncreated
         /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
         public static T SetProperty(T obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
         {
-            FieldInfo field = GetField(property, out byte reason);
+            FieldInfo? field = GetField(property, out byte reason);
             if (reason != 0)
             {
                 if (reason == 1 || reason == 2)
@@ -446,7 +446,13 @@ namespace Uncreated
             }
             found = true;
             allowedToChange = true;
-            object parsedValue = ParseInput(value, field.FieldType, out parsed);
+            object? parsedValue;
+            if (field == null)
+            {
+                parsed = false;
+                parsedValue = null;
+            }
+            else parsedValue = ParseInput(value, field.FieldType, out parsed);
             if (parsed)
             {
                 if (field != default)
@@ -568,7 +574,7 @@ namespace Uncreated
         }
         public static T SetProperty<V>(T obj, string property, V value, out bool success, out bool found, out bool allowedToChange)
         {
-            FieldInfo field = GetField(property, out byte reason);
+            FieldInfo? field = GetField(property, out byte reason);
             if (reason != 0)
             {
                 if (reason == 1 || reason == 2)

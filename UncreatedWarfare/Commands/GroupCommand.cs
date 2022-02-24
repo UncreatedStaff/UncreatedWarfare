@@ -28,7 +28,8 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UnturnedPlayer player = caller as UnturnedPlayer;
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
             if (!Data.Is(out ITeams gm))
             {
                 player.Message("command_e_gamemode");

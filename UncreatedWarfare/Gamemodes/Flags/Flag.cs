@@ -31,8 +31,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         private ulong _owner = 0;
         public List<Player> PlayersOnFlagTeam1;
         public int Team1TotalPlayers;
-        public EvaluatePointsDelegate EvaluatePointsOverride = null;
-        public IsContestedDelegate IsContestedOverride = null;
+        public EvaluatePointsDelegate? EvaluatePointsOverride = null;
+        public IsContestedDelegate? IsContestedOverride = null;
         public int Team1TotalCappers;
         public List<Player> PlayersOnFlagTeam2;
         public int Team2TotalPlayers;

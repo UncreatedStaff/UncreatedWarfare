@@ -86,7 +86,7 @@ namespace Uncreated.Warfare.Kits
             }
             return false;
         }
-        public static List<KitItem> ItemsFromInventory(UnturnedPlayer player)
+        public static List<KitItem> ItemsFromInventory(UCPlayer player)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -95,9 +95,9 @@ namespace Uncreated.Warfare.Kits
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
-                for (byte i = 0; i < player.Inventory.getItemCount(page); i++)
+                for (byte i = 0; i < player.Player.inventory.getItemCount(page); i++)
                 {
-                    ItemJar jar = player.Inventory.getItem(page, i);
+                    ItemJar jar = player.Player.inventory.getItem(page, i);
                     if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
                     {
                         items.Add(new KitItem(
@@ -115,7 +115,7 @@ namespace Uncreated.Warfare.Kits
 
             return items;
         }
-        public static List<KitClothing> ClothesFromInventory(UnturnedPlayer player)
+        public static List<KitClothing> ClothesFromInventory(UCPlayer player)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

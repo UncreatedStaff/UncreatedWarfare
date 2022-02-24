@@ -56,7 +56,8 @@ namespace Uncreated.Warfare.Commands
             }
             else
             {
-                UnturnedPlayer player = caller as UnturnedPlayer;
+                UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+                if (player == null) return;
                 if (!Provider.isServer)
                     player.SendChat("server_not_running");
                 else
@@ -95,8 +96,8 @@ namespace Uncreated.Warfare.Commands
         }
         public static void KickPlayer(ulong Violator, ulong Admin, string Reason)
         {
-            SteamPlayer violator = PlayerTool.getSteamPlayer(Violator);
-            SteamPlayer admin = PlayerTool.getSteamPlayer(Admin);
+            SteamPlayer? violator = PlayerTool.getSteamPlayer(Violator);
+            SteamPlayer? admin = PlayerTool.getSteamPlayer(Admin);
             FPlayerName callerName;
             if (admin == null)
                 callerName = Data.DatabaseManager.GetUsernames(Admin);
@@ -106,7 +107,7 @@ namespace Uncreated.Warfare.Commands
             if (violator == null)
                 names = Data.DatabaseManager.GetUsernames(Violator);
             else
-                names = F.GetPlayerOriginalNames(admin);
+                names = F.GetPlayerOriginalNames(Violator);
             if (violator == null)
             {
                 SharedInvocations.PrintText.NetInvoke(DateTime.Now, "KICK: Player not found online", ConsoleColor.Red);

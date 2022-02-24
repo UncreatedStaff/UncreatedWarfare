@@ -56,8 +56,8 @@ namespace Uncreated.Warfare.Components
                 (LevelNodes.nodes
                 .Where(n => n.type == ENodeType.LOCATION)
                 .Aggregate((n1, n2) =>
-                    (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)
-                .name;
+                    (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)?
+                .name ?? string.Empty;
 
             if (Data.Is(out IFlagRotation fg))
             {

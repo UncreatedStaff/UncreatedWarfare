@@ -1428,7 +1428,8 @@ namespace Uncreated.Warfare
                     languages.Clear();
                 while (players.MoveNext())
                 {
-                    UCPlayer pl = UCPlayer.FromSteamPlayer(players.Current);
+                    UCPlayer? pl = UCPlayer.FromSteamPlayer(players.Current);
+                    if (pl == null) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                         lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
@@ -1460,7 +1461,8 @@ namespace Uncreated.Warfare
                     languages.Clear();
                 while (players.MoveNext())
                 {
-                    UCPlayer pl = UCPlayer.FromPlayer(players.Current);
+                    UCPlayer? pl = UCPlayer.FromPlayer(players.Current);
+                    if (pl == null) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                         lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
@@ -1663,14 +1665,14 @@ namespace Uncreated.Warfare
             this.Language = lang;
             this.Players = new List<UCPlayer>(Provider.clients.Count);
             this.nextIndex = 0;
-            this.Next = null;
+            this.Next = null!;
         }
         public LanguageSet(string lang, UCPlayer first)
         {
             this.Language = lang;
             this.Players = new List<UCPlayer>(lang == JSONMethods.DEFAULT_LANGUAGE ? Provider.clients.Count : 4) { first };
             this.nextIndex = 0;
-            this.Next = null;
+            this.Next = null!;
         }
         public void Add(UCPlayer pl) => this.Players.Add(pl);
         /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
@@ -1688,7 +1690,7 @@ namespace Uncreated.Warfare
         /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
         public void Reset()
         {
-            Next = null;
+            Next = null!;
             nextIndex = 0;
         }
 

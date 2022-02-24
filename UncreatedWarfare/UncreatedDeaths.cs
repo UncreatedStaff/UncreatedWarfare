@@ -51,7 +51,7 @@ namespace Uncreated.Warfare
                     Asset a = Assets.find(parameters.item);
                     Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID,
                         parameters.dead.channel.owner.playerID.steamID.m_SteamID,
-                        parameters.key, parameters.itemName ?? "", a == null ? (ushort)0 : a.id, parameters.distance);
+                        parameters.key, parameters.itemName, a == null ? (ushort)0 : a.id, parameters.distance);
                 }
                 Invocations.Shared.LogTeamkilled.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                     parameters.key, parameters.itemName, DateTime.Now);
@@ -84,7 +84,7 @@ namespace Uncreated.Warfare
         {
             public Player killer;
             public Player dead;
-            public Player LandmineLinkedAssistant;
+            public Player? LandmineLinkedAssistant;
             public EDeathCause cause;
             public Guid item;
             public string itemName;
@@ -364,7 +364,7 @@ namespace Uncreated.Warfare
         public class DeathEventArgs
         {
             public Player dead;
-            public KillEventArgs killerargs;
+            public KillEventArgs? killerargs;
             public EDeathCause cause;
             public Guid item;
             public string itemName;
@@ -480,14 +480,14 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer ucplayer = UCPlayer.FromUnturnedPlayer(dead);
+            UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(dead);
             if (ucplayer != null)
                 ucplayer.LifeCounter++;
 
             if (cause == EDeathCause.LANDMINE)
             {
                 SteamPlayer placer = PlayerTool.getSteamPlayer(murderer.m_SteamID);
-                Player triggerer;
+                Player? triggerer;
                 FPlayerName placerName;
                 FPlayerName triggererName;
                 bool foundPlacer;
@@ -583,7 +583,7 @@ namespace Uncreated.Warfare
                 {
                     key += "_UNKNOWN";
                 }
-                if (foundTriggerer && triggerer.channel.owner.playerID.steamID.m_SteamID != dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID != placer.playerID.steamID.m_SteamID)
+                if (foundTriggerer && triggerer!.channel.owner.playerID.steamID.m_SteamID != dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID != placer.playerID.steamID.m_SteamID)
                 {
                     key += "_TRIGGERED";
                 }
@@ -594,7 +594,7 @@ namespace Uncreated.Warfare
                 L.Log(key);
                 if (foundPlacer && foundTriggerer)
                 {
-                    if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
+                    if (triggerer!.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID && triggerer.channel.owner.playerID.steamID.m_SteamID == placer.playerID.steamID.m_SteamID)
                     {
                         if (Config.DeathMessages.PenalizeSuicides)
                             Suicide(new SuicideEventArgs()
@@ -810,7 +810,7 @@ namespace Uncreated.Warfare
                 }
                 else if (foundTriggerer)
                 {
-                    if (triggerer.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
+                    if (triggerer!.channel.owner.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                     {
                         if (Config.DeathMessages.PenalizeSuicides)
                             Suicide(new SuicideEventArgs()
@@ -888,11 +888,11 @@ namespace Uncreated.Warfare
             }
             else
             {
-                SteamPlayer killer = PlayerTool.getSteamPlayer(murderer.m_SteamID);
+                SteamPlayer? killer = PlayerTool.getSteamPlayer(murderer.m_SteamID);
                 FPlayerName killerName;
                 bool foundKiller;
                 Guid item;
-                string itemName = null;
+                string? itemName = null;
                 float distance = 0f;
                 bool translateName = false;
                 ulong killerTeam;
@@ -906,7 +906,6 @@ namespace Uncreated.Warfare
                         item = info.item;
                         distance = info.distance;
                         killerName = info.killerName;
-                        killer = null;
                         killerTeam = info.killerTeam;
                         kitname = info.kitName;
                         foundKiller = false;
@@ -998,7 +997,7 @@ namespace Uncreated.Warfare
                         {
                             key = k1;
                         }
-                        if (dead.CSteamID.m_SteamID == killer.playerID.steamID.m_SteamID && cause != EDeathCause.SUICIDE && Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey(k2))
+                        if (dead.CSteamID.m_SteamID == killer!.playerID.steamID.m_SteamID && cause != EDeathCause.SUICIDE && Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey(k2))
                         {
                             key = k2;
                         }
@@ -1018,7 +1017,7 @@ namespace Uncreated.Warfare
                 if (itemName == null) itemName = item.ToString();
                 if (foundKiller)
                 {
-                    if (killer.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
+                    if (killer!.playerID.steamID.m_SteamID == dead.CSteamID.m_SteamID)
                     {
                         if (Config.DeathMessages.PenalizeSuicides)
                             Suicide(new SuicideEventArgs()
@@ -1190,7 +1189,8 @@ namespace Uncreated.Warfare
                     item = c.lastRoadkilled;
                 else item = killer.player.equipment.asset.GUID;
             }
-            else item = killer.player.equipment.asset.GUID;
+            else if (killer != null) item = killer.player.equipment.asset.GUID;
+            else item = default;
         }
     }
     public class DeathInfo

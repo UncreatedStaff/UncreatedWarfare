@@ -32,7 +32,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 
             base.StartNextGame(onLoad);
 
-            Flag firstFlag = null;
+            Flag? firstFlag = null;
             if (DefendingTeam == 1)
                 firstFlag = Rotation.Last();
             else if (DefendingTeam == 2)
@@ -42,8 +42,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 SpawnBlockerOnT1();
             else 
                 SpawnBlockerOnT2();
-
-            _vcp = FOBManager.RegisterNewSpecialFOB(Config.Invasion.SpecialFOBName, firstFlag.ZoneData.Center3DAbove, _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
+            if (firstFlag != null)
+                _vcp = FOBManager.RegisterNewSpecialFOB(Config.Invasion.SpecialFOBName, firstFlag.ZoneData.Center3DAbove, _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
             StartStagingPhase(Config.Invasion.StagingTime);
         }
 
@@ -135,7 +135,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 #endif
             if (State == EState.ACTIVE || overrideInactiveCheck)
             {
-                if (flag.ID == (AttackingTeam == 1ul ? ObjectiveTeam1.ID : ObjectiveTeam2.ID))
+                if (flag.ID == (AttackingTeam == 1ul ? ObjectiveTeam1!.ID : ObjectiveTeam2!.ID))
                 {
                     //bool atkOnFlag = (AttackingTeam == 1ul && flag.Team1TotalCappers > 0) || (AttackingTeam == 2ul && flag.Team2TotalCappers > 0);
                     if (!flag.IsContested(out ulong winner))
@@ -483,10 +483,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public override void ShowStagingUI(UCPlayer player)
         {
-            Flag obj = null;
+            Flag? obj = null;
             if (AttackingTeam == 1) obj = ObjectiveTeam1;
             else if (AttackingTeam == 2) obj = ObjectiveTeam2;
-
+            if (obj == null) return;
             EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
             if (player.GetTeam() == AttackingTeam)
                 EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_invasion_attack", player));
@@ -508,7 +508,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
                 CTFUI.ClearFlagList(player.transportConnection);
                 SendUIParameters.Nil.SendToPlayer(player); // clear all capturing uis
                 if (player.player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
-                    c.stats = null;
+                    c.stats = null!;
             }
             base.Dispose();
         }

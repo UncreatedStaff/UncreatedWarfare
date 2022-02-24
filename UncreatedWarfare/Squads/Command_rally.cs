@@ -20,7 +20,8 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
             if (!Data.Is(out ISquads ctf))
             {
                 player.SendChat("command_e_gamemode");
@@ -34,7 +35,7 @@ namespace Uncreated.Warfare.Commands
 
             if (player.Squad != null)
             {
-                if (RallyManager.HasRally(player, out var rallypoint) && rallypoint.IsActive)
+                if (RallyManager.HasRally(player, out RallyPoint rallypoint) && rallypoint.IsActive)
                 {
                     if (command.Length == 0)
                     {

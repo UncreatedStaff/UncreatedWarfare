@@ -20,7 +20,8 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
 
             if (command.Length >= 1 && (command[0].ToLower() == "setrank" || command[0].ToLower() == "set"))
             {
@@ -30,7 +31,7 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                UCPlayer target = UCPlayer.FromName(command[1]);
+                UCPlayer? target = UCPlayer.FromName(command[1]);
                 ulong Steam64 = 0;
                 string characterName = "";
                 if (ulong.TryParse(command[1], out Steam64) && Data.DatabaseManager.PlayerExistsInDatabase(Steam64, out FPlayerName names))
@@ -77,10 +78,9 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                UCPlayer target = UCPlayer.FromName(command[1]);
-                ulong Steam64 = 0;
-                string characterName = "";
-                if (ulong.TryParse(command[1], out Steam64) && Data.DatabaseManager.PlayerExistsInDatabase(Steam64, out FPlayerName names))
+                UCPlayer? target = UCPlayer.FromName(command[1]);
+                string characterName = string.Empty;
+                if (ulong.TryParse(command[1], out ulong Steam64) && Data.DatabaseManager.PlayerExistsInDatabase(Steam64, out FPlayerName names))
                 {
                     characterName = names.CharacterName;
                     goto DischargePlayer;
@@ -97,11 +97,6 @@ namespace Uncreated.Warfare.Commands
                 {
                     OfficerStorage.DischargeOfficer(target.Steam64);
                     player.Message("officer_s_discharged", target.CharacterName);
-                }
-                else
-                {
-                    OfficerStorage.DischargeOfficer(target.Steam64);
-                    player.Message("officer_s_discharged", characterName);
                 }
             }
             else

@@ -23,12 +23,13 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
 
             int amount = 1;
             string itemName = "";
             ushort shortID;
-            ItemAsset asset = null;
+            ItemAsset? asset = null;
 
             bool amountWasValid = true;
 
@@ -132,6 +133,7 @@ namespace Uncreated.Warfare.Commands
 
 
             SpawnItem:
+            if (asset == null) return;
             Item itemFromID = new Item(asset.id, true);
             for (int i = 0; i < amount; i++)
             {

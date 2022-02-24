@@ -2740,7 +2740,7 @@ public interface INotifyBuildableBuilt : INotifyTracker
 }
 public interface INotifyVehicleDestroyed : INotifyTracker
 {
-    public void OnVehicleDestroyed(UCPlayer owner, UCPlayer destroyer, VehicleData data, VehicleComponent component);
+    public void OnVehicleDestroyed(UCPlayer? owner, UCPlayer destroyer, VehicleData data, VehicleComponent component);
 }
 public interface INotifyVehicleDistanceUpdates : INotifyTracker
 {

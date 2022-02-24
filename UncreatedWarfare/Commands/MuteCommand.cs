@@ -18,8 +18,8 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.mute" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UCPlayer admin = UCPlayer.FromIRocketPlayer(caller);
-
+            UCPlayer? admin = UCPlayer.FromIRocketPlayer(caller);
+            
             if (command.Length < 4)
                 goto Syntax;
             EMuteType type;
@@ -44,7 +44,7 @@ namespace Uncreated.Warfare.Commands
                 else
                     goto CantReadDuration;
 
-            UCPlayer player;
+            UCPlayer? player;
             if (ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong target) && OffenseManager.IsValidSteam64ID(target))
             {
                 player = UCPlayer.FromID(target);
@@ -58,7 +58,8 @@ namespace Uncreated.Warfare.Commands
 
             string reason = string.Join(" ", command, 3, command.Length - 3);
 
-            OffenseManager.MutePlayer(player, target, admin, type, duration, reason).ConfigureAwait(false);
+            if (player != null)
+                OffenseManager.MutePlayer(player, target, admin, type, duration, reason).ConfigureAwait(false);
 
             return;
 

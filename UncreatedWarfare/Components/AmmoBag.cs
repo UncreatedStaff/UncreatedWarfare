@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.FOBs
 
             KitManager.ResupplyKit(player, kit, true);
 
-            UCPlayer owner = UCPlayer.FromID(data.owner);
+            UCPlayer? owner = UCPlayer.FromID(data.owner);
             if (owner != null && owner.Steam64 != player.Steam64)
             {
                 Points.AwardXP(owner, Points.XPConfig.ResupplyFriendlyXP, Translation.Translate("xp_resupplied_teammate", owner));

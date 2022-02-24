@@ -52,7 +52,7 @@ namespace Uncreated.Warfare.Components
         public Guid lastExplodedVehicle;
         public Guid lastRoadkilled;
         private Coroutine? _currentTeleportRequest;
-        public Vehicles.VehicleSpawn currentlylinking;
+        public Vehicles.VehicleSpawn? currentlylinking;
         private struct ToastMessageInfo
         {
             public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);

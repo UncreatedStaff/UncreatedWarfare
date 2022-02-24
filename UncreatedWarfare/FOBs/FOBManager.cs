@@ -142,7 +142,7 @@ namespace Uncreated.Warfare.FOBs
             if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID)
             {
-                FOB fob = FOB.GetNearestFOB(data.point, EFOBRadius.SHORT, data.group);
+                FOB? fob = FOB.GetNearestFOB(data.point, EFOBRadius.SHORT, data.group);
 
                 if (fob != null)
                 {
@@ -253,8 +253,8 @@ namespace Uncreated.Warfare.FOBs
                     Team2FOBs.Add(fob);
                 }
             }
-            UCPlayer placer = UCPlayer.FromID(drop.GetServersideData().owner);
-            if (placer is not null)
+            UCPlayer? placer = UCPlayer.FromID(drop.GetServersideData().owner);
+            if (placer != null)
             {
                 if (Assets.find(Gamemode.Config.Barricades.FOBBaseGUID) is ItemAsset fobBase)
                     ItemManager.dropItem(new Item(fobBase.id, true), placer.Position, true, true, true);
@@ -300,7 +300,7 @@ namespace Uncreated.Warfare.FOBs
                 return cache;
             }
             else
-                return null;
+                return null!;
         }
         public static void DeleteFOB(FOB fob)
         {
@@ -309,14 +309,14 @@ namespace Uncreated.Warfare.FOBs
 #endif
             ulong team = fob.Team;
 
-            UCPlayer killer = UCPlayer.FromID(fob.Killer);
+            UCPlayer? killer = UCPlayer.FromID(fob.Killer);
             ulong killerteam = 0;
             if (killer != null)
-                killerteam = (ulong)(killer.GetTeam());
+                killerteam = killer.GetTeam();
 
             ulong instanceID = fob.Radio.instanceID;
 
-            FOB removed;
+            FOB? removed;
             if (team == 1)
             {
                 removed = Team1FOBs.FirstOrDefault(x => x.Radio.instanceID == instanceID);
@@ -408,7 +408,7 @@ namespace Uncreated.Warfare.FOBs
 
             ulong team = cache.GetServersideData().group;
 
-            UCPlayer killer = null;
+            UCPlayer? killer = null;
             if (cache.model.TryGetComponent(out BarricadeComponent component))
                 killer = UCPlayer.FromID(component.LastDamager);
 
@@ -456,7 +456,7 @@ namespace Uncreated.Warfare.FOBs
 
             SendFOBListToTeam(team);
         }
-        public static bool FindFOBByName(string name, ulong team, out object fob)
+        public static bool FindFOBByName(string name, ulong team, out object? fob)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -483,7 +483,7 @@ namespace Uncreated.Warfare.FOBs
             return false;
         }
 
-        public static void UpdateFOBListForTeam(ulong team, SpecialFOB fob = null)
+        public static void UpdateFOBListForTeam(ulong team, SpecialFOB? fob = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -496,7 +496,7 @@ namespace Uncreated.Warfare.FOBs
                     UpdateFOBList(PlayerManager.OnlinePlayers[i], fob);
             }
         }
-        public static void UpdateFOBListForTeam(ulong team, FOB fob = null)
+        public static void UpdateFOBListForTeam(ulong team, FOB? fob = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -509,7 +509,7 @@ namespace Uncreated.Warfare.FOBs
                     UpdateFOBList(PlayerManager.OnlinePlayers[i], fob);
             }
         }
-        public static void UpdateFOBListForTeam(ulong team, Cache fob = null)
+        public static void UpdateFOBListForTeam(ulong team, Cache? fob = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -587,7 +587,7 @@ namespace Uncreated.Warfare.FOBs
                 fob.UIResourceString);
             }
         }
-        public static void UpdateFOBList(UCPlayer player, FOB fob = null)
+        public static void UpdateFOBList(UCPlayer player, FOB? fob = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -626,7 +626,7 @@ namespace Uncreated.Warfare.FOBs
                 EffectManager.sendUIEffectText(fobListKey, player.connection, true, "R" + ii, FOBList[i].UIResourceString);
             }
         }
-        public static void UpdateFOBList(UCPlayer player, SpecialFOB fob = null)
+        public static void UpdateFOBList(UCPlayer player, SpecialFOB? fob = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -654,7 +654,7 @@ namespace Uncreated.Warfare.FOBs
                 EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, SpecialFOBs[i].Name.Colorize(SpecialFOBs[i].UIColor), SpecialFOBs[i].GridCoordinates, SpecialFOBs[i].ClosestLocation));
             }
         }
-        public static void UpdateFOBList(UCPlayer player, Cache cache = null)
+        public static void UpdateFOBList(UCPlayer player, Cache? cache = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -761,8 +761,8 @@ namespace Uncreated.Warfare.FOBs
                 (LevelNodes.nodes
                 .Where(n => n.type == ENodeType.LOCATION)
                 .Aggregate((n1, n2) =>
-                    (n1.point - point).sqrMagnitude <= (n2.point - point).sqrMagnitude ? n1 : n2) as LocationNode)
-                .name;
+                    (n1.point - point).sqrMagnitude <= (n2.point - point).sqrMagnitude ? n1 : n2) as LocationNode)?
+                .name ?? string.Empty;
 
             if (Data.Is(out IFlagRotation fg))
             {
@@ -841,8 +841,8 @@ namespace Uncreated.Warfare.FOBs
                 new Guid("58d6410084f04e43ba4462a1c9a6b8c0"), // Logistics_Woodlands
                 new Guid("fe1a85aeb8e34c2fbeca3e485300a61c"), // Logistics_Forest
                 new Guid("6082d95b5fcb4805a7a2120e3e3c6f68"), // UH60_Blackhawk
-                new Guid("18a6b283dbd245d0a13e0daa09b84aed"),  // Mi8
-                new Guid("855859643f3c49a088a85be7260a5226"),  // Mi8
+                new Guid("18a6b283dbd245d0a13e0daa09b84aed"), // Mi8
+                new Guid("855859643f3c49a088a85be7260a5226"), // Mi8
                 new Guid("5613d32e8e194b3caf44aa16c2e19456")  // Mi8
 
             };
@@ -1110,7 +1110,7 @@ namespace Uncreated.Warfare.FOBs
         public int requiredHits;
         public int requiredBuild;
         public int team;
-        public EmplacementData emplacementData;
+        public EmplacementData? emplacementData;
 
         public static implicit operator Guid(BuildableData data) => data.structureID;
     }

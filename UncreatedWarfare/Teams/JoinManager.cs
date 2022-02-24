@@ -44,12 +44,24 @@ namespace Uncreated.Warfare.Teams
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             ulong team = player.GetTeam();
-            LobbyPlayer pl = LobbyPlayers.FirstOrDefault(x => x.Steam64 == player.channel.owner.playerID.steamID.m_SteamID);
+            int ind = LobbyPlayers.FindIndex(x => x.Steam64 == player.channel.owner.playerID.steamID.m_SteamID);
+            if (ind == -1)
+            {
+                UCPlayer? pl2 = UCPlayer.FromPlayer(player);
+                if (pl2 != null)
+                    LobbyPlayers.Add(LobbyPlayer.CreateNew(pl2, team));
+                return;
+            }
+            LobbyPlayer pl = LobbyPlayers[ind];
             if (pl != null)
             {
                 if (!pl.Reset())
                 {
-                    pl = LobbyPlayer.CreateNew(UCPlayer.FromPlayer(player), team);
+                    UCPlayer? pl2 = UCPlayer.FromPlayer(player);
+                    if (pl2 != null)
+                        LobbyPlayers[ind] = LobbyPlayer.CreateNew(pl2, team);
+                    else
+                        LobbyPlayers.RemoveAt(ind);
                 }
                 else
                 {
@@ -58,7 +70,10 @@ namespace Uncreated.Warfare.Teams
             }
             else
             {
-                pl = LobbyPlayer.CreateNew(UCPlayer.FromPlayer(player), team);
+                UCPlayer? pl2 = UCPlayer.FromPlayer(player);
+                if (pl2 != null)
+                    LobbyPlayers.Add(LobbyPlayer.CreateNew(pl2, team));
+                return;
             }
         }
         public bool IsInLobby(UCPlayer player)
@@ -516,7 +531,7 @@ namespace Uncreated.Warfare.Teams
             public bool IsInLobby;
             public bool IsDonatorT1;
             public bool IsDonatorT2;
-            public Coroutine current = null;
+            public Coroutine? current = null;
 
             public LobbyPlayer(UCPlayer player, ulong team)
             {
@@ -532,7 +547,7 @@ namespace Uncreated.Warfare.Teams
                 Team = 0;
                 current = null;
                 if (Player == null || PlayerTool.getSteamPlayer(Player.Steam64) == null)
-                    Player = PlayerManager.OnlinePlayers.Find(x => x.Steam64 == Steam64) ?? null;
+                    Player = PlayerManager.OnlinePlayers.Find(x => x.Steam64 == Steam64);
                 return Player != null;
             }
             public void CheckKits()

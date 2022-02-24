@@ -44,18 +44,16 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromPlayer(P);
+            UCPlayer? player = UCPlayer.FromPlayer(P);
 
-            if (player.OnDuty())
+            if (player == null || player.OnDuty())
             {
                 return;
             }
-            WhitelistItem whitelistedItem;
+            WhitelistItem? whitelistedItem;
             bool isWhitelisted;
             if (Assets.find(EAssetType.ITEM, itemData.item.id) is not ItemAsset a)
             {
-                whitelistedItem = null;
-                isWhitelisted = false;
                 L.LogError("Unknown asset on item " + itemData.item.id.ToString());
                 shouldAllow = false;
                 return;
@@ -123,11 +121,11 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
 
-            UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
+            UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
 
             bool isFOB = barricade.model.TryGetComponent(out Components.FOBComponent f);
 
-            if (player.OnDuty() && isFOB)
+            if (player == null || player.OnDuty() && isFOB)
             {
                 f.parent.IsWipedByAuthority = true;
             }
@@ -159,8 +157,8 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
-            if (player.OnDuty())
+            UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
+            if (player == null || player.OnDuty())
                 return;
             SDG.Unturned.StructureData data = structure.GetServersideData();
             if (IsWhitelisted(data.structure.asset.GUID, out _))
@@ -174,8 +172,8 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromCSteamID(steamID);
-            if (!player.OnDuty())
+            UCPlayer? player = UCPlayer.FromCSteamID(steamID);
+            if (player != null && !player.OnDuty())
             {
                 shouldAllow = false;
                 player.Message("whitelist_noeditsign");
@@ -198,7 +196,7 @@ namespace Uncreated.Warfare
 #endif
             try
             {
-                UCPlayer player = UCPlayer.FromID(owner);
+                UCPlayer? player = UCPlayer.FromID(owner);
                 if (player == null || player.Player == null || player.OnDuty()) return;
                 if (TeamManager.IsInAnyMain(point))
                 {
@@ -258,7 +256,7 @@ namespace Uncreated.Warfare
 #endif
             try
             {
-                UCPlayer player = UCPlayer.FromID(owner);
+                UCPlayer? player = UCPlayer.FromID(owner);
                 if (player == null || player.Player == null || player.OnDuty()) return;
                 if (TeamManager.IsInAnyMainOrAMCOrLobby(point))
                 {

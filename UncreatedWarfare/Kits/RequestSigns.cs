@@ -32,8 +32,8 @@ namespace Uncreated.Warfare.Kits
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            signadded = default;
-            BarricadeDrop drop = UCBarricadeManager.GetSignFromInteractable(sign);
+            signadded = default!;
+            BarricadeDrop? drop = UCBarricadeManager.GetSignFromInteractable(sign);
             if (drop != null && !ObjectExists(x => x.instance_id == drop.instanceID, out signadded))
             {
                 signadded = new RequestSign(sign);
@@ -58,13 +58,13 @@ namespace Uncreated.Warfare.Kits
 #endif
             if (sign == null)
             {
-                found = null;
+                found = null!;
                 return false;
             }
-            BarricadeDrop drop = UCBarricadeManager.GetSignFromInteractable(sign);
+            BarricadeDrop? drop = UCBarricadeManager.GetSignFromInteractable(sign);
             if (drop == null)
             {
-                found = null;
+                found = null!;
                 return false;
             }
             for (int i = 0; i < ActiveObjects.Count; i++)
@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.Kits
                     return true;
                 }
             }
-            found = null;
+            found = null!;
             return false;
         }
         public static bool SignExists(uint instance_id, out RequestSign found) => ObjectExists(s => s != default && s.instance_id == instance_id, out found);
@@ -168,7 +168,7 @@ namespace Uncreated.Warfare.Kits
     public class RequestSign : IJsonReadWrite
     {
         [JsonIgnore]
-        public Kit Kit
+        public Kit? Kit
         {
             get
             {
@@ -199,7 +199,7 @@ namespace Uncreated.Warfare.Kits
         [JsonSettable]
         public ulong group;
         [JsonIgnore]
-        public Transform barricadetransform;
+        public Transform? barricadetransform;
         public uint instance_id;
         [JsonIgnore]
         public bool exists;
@@ -257,7 +257,7 @@ namespace Uncreated.Warfare.Kits
             }
             else
             {
-                SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
                 if (data != null && drop != null)
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
@@ -284,7 +284,7 @@ namespace Uncreated.Warfare.Kits
             }
             else
             {
-                SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
                 if (data != null && drop != null)
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
@@ -301,7 +301,7 @@ namespace Uncreated.Warfare.Kits
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+            SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
             if (drop == null || data == null)
             {
                 if (Assets.find(sign_id) is not ItemBarricadeAsset asset)
@@ -373,13 +373,13 @@ namespace Uncreated.Warfare.Kits
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string val = reader.GetString();
+                    string val = reader.GetString()!;
                     if (reader.Read())
                     {
                         switch (val)
                         {
                             case nameof(kit_name):
-                                kit_name = reader.GetString();
+                                kit_name = reader.GetString()!;
                                 break;
                             case nameof(transform):
                                 if (reader.TokenType == JsonTokenType.StartObject)

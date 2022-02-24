@@ -21,7 +21,7 @@ namespace Uncreated.Warfare.Revives
         public readonly Dictionary<ulong, DownedPlayerData> DownedPlayers;
         public readonly Dictionary<ulong, DeathInfo> DeathInfo;
         public readonly List<UCPlayer> Medics = new List<UCPlayer>();
-        private Coroutine Updater;
+        private Coroutine? Updater;
         const float SIM_TIME = 0.08f;
         const bool CAN_HEAL_ENEMIES = true;
         public ReviveManager()
@@ -61,7 +61,7 @@ namespace Uncreated.Warfare.Revives
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer medic = UCPlayer.FromPlayer(healer);
+            UCPlayer? medic = UCPlayer.FromPlayer(healer);
             if (medic == null)
             {
                 shouldAllow = false;
@@ -142,8 +142,8 @@ namespace Uncreated.Warfare.Revives
                 player.stance.checkStance(stance);
                 L.LogWarning("Unable to set stance properly, fell back to checkStance.");
             }
-            Data.PrivateStance.SetValue(player.stance, stance);
-            Data.ReplicateStance.Invoke(player.stance, new object[] { false });
+            Data.PrivateStance?.SetValue(player.stance, stance);
+            Data.ReplicateStance?.Invoke(player.stance, new object[] { false });
         }
         internal void OnPlayerHealed(Player medic, Player target)
         {
@@ -158,12 +158,16 @@ namespace Uncreated.Warfare.Revives
                 if (team == tteam)
                 {
                     // TODO: better points calculations
-                    UCPlayer ucmedic = UCPlayer.FromPlayer(medic);
-                    Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
-                    Points.AwardTW(ucmedic, Points.TWConfig.ReviveFriendlyTW);
+                    UCPlayer? ucmedic = UCPlayer.FromPlayer(medic);
+                    UCPlayer? uctarget = UCPlayer.FromPlayer(target);
+                    if (ucmedic != null)
+                    {
+                        Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+                        Points.AwardTW(ucmedic, Points.TWConfig.ReviveFriendlyTW);
+                        if (uctarget != null)
+                            QuestManager.OnRevive(ucmedic, uctarget);
+                    }
 
-                    UCPlayer uctarget = UCPlayer.FromPlayer(target);
-                    QuestManager.OnRevive(ucmedic, uctarget);
 
                     if (medic.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IRevivesStats r2)
                         r2.AddRevive();
@@ -222,7 +226,7 @@ namespace Uncreated.Warfare.Revives
             }
             if (!DownedPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DownedPlayerData p))
             {
-                SteamPlayer killer = PlayerTool.getSteamPlayer(parameters.killer);
+                SteamPlayer? killer = PlayerTool.getSteamPlayer(parameters.killer);
                 if (killer != null && DownedPlayers.ContainsKey(killer.playerID.steamID.m_SteamID))
                 {
                     shouldAllow = false;
@@ -231,8 +235,8 @@ namespace Uncreated.Warfare.Revives
                 if (UCWarfare.Config.Debug)
                     L.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while not downed.", ConsoleColor.DarkGray);
 
-                UCPlayer player = UCPlayer.FromPlayer(parameters.player);
-                if (player.OnDuty())
+                UCPlayer? player = UCPlayer.FromPlayer(parameters.player);
+                if (player != null && player.OnDuty())
                 {
                     if (parameters.player.TryGetComponent(out UnturnedPlayerFeatures features) && features.GodMode)
                     {
@@ -268,7 +272,7 @@ namespace Uncreated.Warfare.Revives
                 }
             }
         }
-        private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer killer)
+        private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer? killer)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -546,7 +550,7 @@ namespace Uncreated.Warfare.Revives
             for (int i = 0; i < downed.Length; i++)
             {
                 if (downed[i] == clearedPlayer) continue;
-                UCPlayer player = UCPlayer.FromID(downed[i]);
+                UCPlayer? player = UCPlayer.FromID(downed[i]);
                 if (player == null) continue;
                 positions.Add(player.Position);
             }
@@ -566,7 +570,7 @@ namespace Uncreated.Warfare.Revives
             List<Vector3> positions = new List<Vector3>();
             for (int i = 0; i < downed.Length; i++)
             {
-                UCPlayer player = UCPlayer.FromID(downed[i]);
+                UCPlayer? player = UCPlayer.FromID(downed[i]);
                 if (player == null || player.GetTeam() != Team) continue;
                 positions.Add(player.Position);
             }
@@ -595,7 +599,7 @@ namespace Uncreated.Warfare.Revives
 #endif
             for (int i = 0; i < DownedPlayers.Keys.Count; i++)
             {
-                UCPlayer downed = UCPlayer.FromID(DownedPlayers.Keys.ElementAt(i));
+                UCPlayer? downed = UCPlayer.FromID(DownedPlayers.Keys.ElementAt(i));
                 if (downed == null) continue;
                 ulong team = downed.GetTeam();
                 Vector3[] medics = Medics
@@ -625,7 +629,7 @@ namespace Uncreated.Warfare.Revives
         }
         private class Reviver : UnturnedPlayerComponent
         {
-            private Coroutine stance;
+            private Coroutine? stance;
 #pragma warning disable IDE0051
             void Start()
             {
@@ -687,12 +691,12 @@ namespace Uncreated.Warfare.Revives
                     stance = null;
                 }
             }
-            public void RevivePlayer(IRevives g = default, bool remove = true)
+            public void RevivePlayer(IRevives? g = default, bool remove = true)
             {
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (g == default) Data.Is(out g);
+                if (g == default) Data.Is<IRevives>(out g);
                 if (g != default)
                 {
                     Player.Player.movement.sendPluginSpeedMultiplier(1.0f);

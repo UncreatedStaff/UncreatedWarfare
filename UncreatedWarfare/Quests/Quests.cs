@@ -44,10 +44,10 @@ public abstract class BaseQuestData
     public string Translate(UCPlayer player, params object[] formatting) =>
         Translate(Data.Languages.TryGetValue(player.Steam64, out string language) ? language : JSONMethods.DEFAULT_LANGUAGE, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
-    public abstract BaseQuestTracker CreateTracker(UCPlayer player);
+    public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
-    public abstract BaseQuestTracker GetTracker(UCPlayer player, ref IQuestState state);
-    public abstract BaseQuestTracker GetTracker(UCPlayer player, IQuestPreset preset);
+    public abstract BaseQuestTracker? GetTracker(UCPlayer player, ref IQuestState state);
+    public abstract BaseQuestTracker? GetTracker(UCPlayer player, IQuestPreset preset);
     public abstract void ReadPresets(ref Utf8JsonReader reader);
 }
 
@@ -106,8 +106,8 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
     public override string ToString() =>
         $"{QuestType} quest data: {_presets?.Length ?? -1} presets, daily quest: {CanBeDailyQuest}, translations: {Translations?.FirstOrDefault().Value ?? "null"}.\n" +
         $"    Presets: {(_presets == null ? "null array" : string.Join(", ", _presets.Select(x => x.ToString())))}";
-    public override BaseQuestTracker CreateTracker(UCPlayer player) => CreateQuestTracker(player);
-    public override BaseQuestTracker GetTracker(UCPlayer player, ref IQuestState state)
+    public override BaseQuestTracker? CreateTracker(UCPlayer player) => CreateQuestTracker(player);
+    public override BaseQuestTracker? GetTracker(UCPlayer player, ref IQuestState state)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -120,7 +120,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         }
         return null;
     }
-    public override BaseQuestTracker GetTracker(UCPlayer player, IQuestPreset preset)
+    public override BaseQuestTracker? GetTracker(UCPlayer player, IQuestPreset preset)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -149,11 +149,11 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                 Guid key = default;
                 ulong varTeam = default;
                 int reqLvl = default;
-                TState state = default;
+                TState? state = default;
                 ushort flag = 0;
                 while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string prop = reader.GetString();
+                    string prop = reader.GetString()!;
                     if (!reader.Read()) break;
                     if (key == default && prop.Equals("key", StringComparison.OrdinalIgnoreCase))
                     {
@@ -207,7 +207,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                             {
                                 if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string prop2 = reader.GetString();
+                                    string prop2 = reader.GetString()!;
                                     try
                                     {
                                         if (reader.Read())
@@ -236,7 +236,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     if (pr.Key == key && varTeam == pr.Team)
                         goto next;
                 }
-                presets.Add(new Preset(key, reqLvl, state, varTeam, flag));
+                presets.Add(new Preset(key, reqLvl, state!, varTeam, flag));
                 next:
                 while (reader.TokenType != JsonTokenType.EndObject && reader.Read()) ;
             }
@@ -252,14 +252,14 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
 {
     protected readonly UCPlayer _player;
     public UCPlayer Player => _player;
-    public BaseQuestData? QuestData;
+    public BaseQuestData QuestData;
     public IQuestPreset? Preset;
     protected bool isDisposed;
-    private bool _isComplete;
+    //private bool _isComplete;
     protected abstract bool CompletedCheck { get; }
     public bool IsDailyQuest = false;
     public ushort Flag = 0;
-    public bool IsCompleted { get => _isComplete || CompletedCheck; }
+    public bool IsCompleted { get => /*_isComplete ||*/ CompletedCheck; }
     public virtual short FlagValue => 0;
     public Guid PresetKey;
     public BaseQuestTracker(UCPlayer target)
@@ -299,5 +299,9 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
         GC.SuppressFinalize(this);
     }
 
-    public void SaveProgresss() => QuestManager.SaveProgress(this, Preset.Team);
+    public void SaveProgresss()
+    {
+        if (Preset != null)
+            QuestManager.SaveProgress(this, Preset.Team);
+    }
 }

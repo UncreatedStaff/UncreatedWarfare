@@ -300,7 +300,11 @@ namespace Uncreated.Warfare
         {
             string newtext = text;
             if (text.StartsWith("sign_"))
-                newtext = Translation.TranslateSign(text, UCPlayer.FromSteamPlayer(client), false);
+            {
+                UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
+                if (pl != null)
+                    newtext = Translation.TranslateSign(text, pl, false);
+            }
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
         /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
@@ -317,7 +321,9 @@ namespace Uncreated.Warfare
                     SteamPlayer pl = Provider.clients[i];
                     if (Regions.checkArea(x, y, pl.player.movement.region_x, pl.player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
                     {
-                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, Translation.TranslateSign(text, UCPlayer.FromSteamPlayer(pl), false));
+                        UCPlayer? pl2 = UCPlayer.FromSteamPlayer(pl);
+                        if (pl2 != null)
+                            Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, Translation.TranslateSign(text, pl2, false));
                     }
                 }
             }
@@ -342,17 +348,17 @@ namespace Uncreated.Warfare
                 newtext = sign.text;
             else newtext = text;
             if (newtext.StartsWith("sign_"))
-                newtext = Translation.TranslateSign(newtext, UCPlayer.FromSteamPlayer(client), false);
+            {
+                UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
+                if (pl != null)
+                    newtext = Translation.TranslateSign(newtext, pl, false);
+            }
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
         public static float GetTerrainHeightAt2DPoint(Vector2 position, float above = 0) => GetTerrainHeightAt2DPoint(position.x, position.y, above: above);
-        public static float GetTerrainHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
+        public static float GetTerrainHeightAt2DPoint(float x, float z, float above = 0)
         {
-            return LevelGround.getHeight(new Vector3(x, 0, z));
-            /*
-            if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.GROUND | RayMasks.GROUND2))
-                return h.point.y + above;
-            else return defaultY; */
+            return LevelGround.getHeight(new Vector3(x, 0, z)) + above;
         }
         public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
         {
@@ -365,7 +371,7 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (source == null) return null;
+            if (source == null) throw new ArgumentNullException(nameof(source));
             if (replaceIf == null || replaceWith == null || source.Length == 0 || replaceIf.Length == 0) return source;
             char[] chars = source.ToCharArray();
             char[] lowerchars = source.ToLower().ToCharArray();
@@ -399,7 +405,7 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (source == null) return null;
+            if (source == null) throw new ArgumentNullException(nameof(source));
             if (replacables.Length == 0) return source;
             char[] chars = source.ToCharArray();
             char[] lowerchars = caseSensitive ? chars : source.ToLower().ToCharArray();
@@ -453,28 +459,28 @@ namespace Uncreated.Warfare
         }
         public static bool TryGetPlaytimeComponent(this Player player, out PlaytimeComponent component)
         {
-            component = GetPlaytimeComponent(player, out bool success);
+            component = GetPlaytimeComponent(player, out bool success)!;
             return success;
         }
         public static bool TryGetPlaytimeComponent(this CSteamID player, out PlaytimeComponent component)
         {
-            component = GetPlaytimeComponent(player, out bool success);
+            component = GetPlaytimeComponent(player, out bool success)!;
             return success;
         }
         public static bool TryGetPlaytimeComponent(this ulong player, out PlaytimeComponent component)
         {
-            component = GetPlaytimeComponent(player, out bool success);
+            component = GetPlaytimeComponent(player, out bool success)!;
             return success;
         }
-        public static PlaytimeComponent GetPlaytimeComponent(this Player player, out bool success)
+        public static PlaytimeComponent? GetPlaytimeComponent(this Player player, out bool success)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (Data.PlaytimeComponents.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
+            if (Data.PlaytimeComponents.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out PlaytimeComponent pt))
             {
-                success = Data.PlaytimeComponents[player.channel.owner.playerID.steamID.m_SteamID] != null;
-                return Data.PlaytimeComponents[player.channel.owner.playerID.steamID.m_SteamID];
+                success = pt != null;
+                return pt;
             }
             else if (player == null || player.transform == null)
             {
@@ -492,15 +498,15 @@ namespace Uncreated.Warfare
                 return null;
             }
         }
-        public static PlaytimeComponent GetPlaytimeComponent(this CSteamID player, out bool success)
+        public static PlaytimeComponent? GetPlaytimeComponent(this CSteamID player, out bool success)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (Data.PlaytimeComponents.ContainsKey(player.m_SteamID))
+            if (Data.PlaytimeComponents.TryGetValue(player.m_SteamID, out PlaytimeComponent pt))
             {
-                success = Data.PlaytimeComponents[player.m_SteamID] != null;
-                return Data.PlaytimeComponents[player.m_SteamID];
+                success = pt != null;
+                return pt;
             }
             else if (player == default || player == CSteamID.Nil)
             {
@@ -527,7 +533,7 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public static PlaytimeComponent GetPlaytimeComponent(this ulong player, out bool success)
+        public static PlaytimeComponent? GetPlaytimeComponent(this ulong player, out bool success)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -537,10 +543,10 @@ namespace Uncreated.Warfare
                 success = false;
                 return default;
             }
-            if (Data.PlaytimeComponents.ContainsKey(player))
+            if (Data.PlaytimeComponents.TryGetValue(player, out PlaytimeComponent pt))
             {
-                success = Data.PlaytimeComponents[player] != null;
-                return Data.PlaytimeComponents[player];
+                success = pt != null;
+                return pt;
             }
             else
             {
@@ -570,8 +576,8 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (Data.OriginalNames.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
-                return Data.OriginalNames[player.channel.owner.playerID.steamID.m_SteamID];
+            if (Data.OriginalNames.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out FPlayerName names))
+                return names;
             else return new FPlayerName(player);
         }
         public static FPlayerName GetPlayerOriginalNames(ulong player)
@@ -583,7 +589,7 @@ namespace Uncreated.Warfare
                 return names;
             else
             {
-                SteamPlayer pl = PlayerTool.getSteamPlayer(player);
+                SteamPlayer? pl = PlayerTool.getSteamPlayer(player);
                 if (pl == default)
                     return Data.DatabaseManager.GetUsernames(player);
                 else return new FPlayerName()
@@ -604,7 +610,7 @@ namespace Uncreated.Warfare
                 return names;
             else
             {
-                SteamPlayer pl = PlayerTool.getSteamPlayer(player);
+                SteamPlayer? pl = PlayerTool.getSteamPlayer(player);
                 if (pl == default)
                     return await Data.DatabaseManager.GetUsernamesAsync(player);
                 else return new FPlayerName()
@@ -647,14 +653,14 @@ namespace Uncreated.Warfare
                 {
                     L.LogError("onflag null");
                     if (fg.Rotation == null) L.LogError("rot null");
-                    flag = null;
+                    flag = null!;
                     return false;
                 }
                 else if (fg.Rotation == null)
                 {
                     L.LogError("rot null");
                     if (fg.OnFlag == null) L.LogError("onflag null");
-                    flag = null;
+                    flag = null!;
                     return false;
                 }
                 if (fg.OnFlag.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int id))
@@ -663,7 +669,7 @@ namespace Uncreated.Warfare
                     return flag != null;
                 }
             }
-            flag = null;
+            flag = null!;
             return false;
         }
         public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";

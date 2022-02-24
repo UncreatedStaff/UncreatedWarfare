@@ -148,7 +148,15 @@ namespace Uncreated.Warfare.Point
                 ex.AddXP(amount);
             }
         }
-        public static void AwardXP(Player player, int amount, string message = "") => AwardXP(UCPlayer.FromPlayer(player), amount, message);
+        public static void AwardXP(Player player, int amount, string message = "")
+        {
+            UCPlayer? pl = UCPlayer.FromPlayer(player);
+            if (pl != null)
+                AwardXP(pl, amount, message);
+            else
+                L.LogWarning("Unable to find player.");
+        }
+
         public static void AwardTW(UCPlayer player, int amount, string message = "")
         {
 #if DEBUG
@@ -202,7 +210,12 @@ namespace Uncreated.Warfare.Point
                 ex.AddOfficerPoints(amount);
             }
         }
-        public static void AwardTW(Player player, int amount, string message = "") => AwardTW(UCPlayer.FromPlayer(player), amount, message);
+        public static void AwardTW(Player player, int amount, string message = "")
+        {
+            UCPlayer? pl = UCPlayer.FromPlayer(player);
+            if (pl != null)
+                AwardTW(pl, amount, message);
+        }
         public static void UpdateXPUI(UCPlayer player)
         {
 #if DEBUG
@@ -325,7 +338,7 @@ namespace Uncreated.Warfare.Point
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer creator = UCPlayer.FromID(fob.Creator);
+            UCPlayer? creator = UCPlayer.FromID(fob.Creator);
 
             if (creator != null)
             {
@@ -335,7 +348,7 @@ namespace Uncreated.Warfare.Point
 
             if (fob.Placer != fob.Creator)
             {
-                UCPlayer placer = UCPlayer.FromID(fob.Placer);
+                UCPlayer? placer = UCPlayer.FromID(fob.Placer);
                 if (placer != null)
                     AwardXP(placer, amount, Translation.Translate(translationKey, placer));
             }

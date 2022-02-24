@@ -433,12 +433,12 @@ namespace Uncreated.Warfare.Networking
                 }
                 else
                 {
-                    kits[i] = null;
+                    kits[i] = null!;
                 }
             }
             ReceiveKits.Invoke(connection, kits);
         }
-        internal static readonly NetCallRaw<Kit> ReceiveKit = new NetCallRaw<Kit>(1117, Kit.Read, Kit.Write);
+        internal static readonly NetCallRaw<Kit?> ReceiveKit = new NetCallRaw<Kit?>(1117, Kit.Read, Kit.Write);
         internal static readonly NetCallRaw<Kit[]> ReceiveKits = new NetCallRaw<Kit[]>(1118, Kit.ReadMany, Kit.WriteMany);
 
         internal static readonly NetCall<ushort> RequestItemInfo = new NetCall<ushort>(ReceiveItemInfoRequest);
@@ -450,7 +450,7 @@ namespace Uncreated.Warfare.Networking
             else 
                 SendItemInfo.Invoke(connection, null);
         }
-        internal static readonly NetCallRaw<ItemData> SendItemInfo = new NetCallRaw<ItemData>(1120, ItemData.Read, ItemData.Write);
+        internal static readonly NetCallRaw<ItemData?> SendItemInfo = new NetCallRaw<ItemData?>(1120, ItemData.Read, ItemData.Write);
 
         internal static readonly NetCall<ushort[]> RequestItemInfos = new NetCall<ushort[]>(ReceiveItemInfosRequest);
         [NetCall(ENetCall.FROM_SERVER, 1121)]
@@ -483,7 +483,7 @@ namespace Uncreated.Warfare.Networking
                 {
                     L.LogError($"Error converting asset of type {assets[i].GetType().FullName} to ItemData ({assets[i].name}).");
                     L.LogError(ex);
-                    rtn[i] = null;
+                    rtn[i] = null!;
                 }
             }
             SendItemInfos.Invoke(connection, rtn);

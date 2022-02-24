@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Commands
         public string Syntax => "/shutdown <aftergame|cancel|*seconds*|instant> <reason (except cancel)>";
         public List<string> Aliases => new List<string>(0);
         public List<string> Permissions => new List<string>(1) { "uc.shutdown" };
-        public static Coroutine Messager = null;
+        public static Coroutine? Messager = null;
         public void Execute(IRocketPlayer caller, string[] command)
         {
             if (caller.DisplayName == "Console")

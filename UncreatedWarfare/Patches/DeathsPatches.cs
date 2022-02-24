@@ -122,7 +122,7 @@ namespace Uncreated.Warfare
                                 c.LastLandmineTriggered = new LandmineData(__instance, owner);
                             }
 
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
+                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner == null || owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
                             {
                                 playerDamage = ___playerDamage,
                                 zombieDamage = ___zombieDamage,
@@ -184,7 +184,7 @@ namespace Uncreated.Warfare
                                     }
                                 }
                             }
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
+                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner == null || owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
                             {
                                 playerDamage = ___playerDamage,
                                 zombieDamage = ___zombieDamage,

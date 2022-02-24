@@ -23,7 +23,8 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
 
             if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(player.Steam64))
             {
@@ -39,7 +40,7 @@ namespace Uncreated.Warfare.Commands
 
             if (command.Length == 1)
             {
-                PlaytimeComponent c = player.Player.GetPlaytimeComponent(out _);
+                PlaytimeComponent? c = player.Player.GetPlaytimeComponent(out _);
 
                 ulong team = player.GetTeam();
                 bool IsInMain = player.Player.IsInMain();
@@ -70,10 +71,10 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
 
-                if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object deployable))
+                if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object? deployable))
                 {
                     if (command[0].ToLower() == "main")
-                        c.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
+                        c?.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
                     else if (command[0].ToLower() == "lobby")
                         player.SendChat("deploy_lobby_removed");
                     else
@@ -99,12 +100,12 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
 
-                    c.TeleportTo(FOB, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
+                    c?.TeleportTo(FOB, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
  
                 }
                 else if (deployable is SpecialFOB special)
                 {
-                    c.TeleportTo(special, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
+                    c?.TeleportTo(special, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
                 }
                 else if (deployable is Cache cache)
                 {
@@ -114,7 +115,7 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
 
-                    c.TeleportTo(cache, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
+                    c?.TeleportTo(cache, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
                 }
 #if false
                 else if (command[0].ToLower() == "lobby")
@@ -126,8 +127,6 @@ namespace Uncreated.Warfare.Commands
                 {
                     player.Message("deploy_e_fobnotfound", command[0]);
                 }
-
-
             }
             else
             {

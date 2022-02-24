@@ -78,6 +78,11 @@ public static class RankManager
     }
     public static ref RankData GetRank(UCPlayer player, out bool success)
     {
+        if (player == null || player.RankData == null)
+        {
+            success = false;
+            return ref RankData.Nil;
+        }
         for (int i = player.RankData.Length - 1; i >= 0; i--)
         {
             ref RankStatus data = ref player.RankData[i];
@@ -106,6 +111,7 @@ public static class RankManager
     }
     public static RankData GetRank(UCPlayer player)
     {
+        if (player == null || player.RankData == null) return default;
         for (int i = player.RankData.Length - 1; i >= 0; i--)
         {
             ref RankStatus data = ref player.RankData[i];
@@ -131,6 +137,7 @@ public static class RankManager
     }
     public static int GetRankOrder(UCPlayer player)
     {
+        if (player == null || player.RankData == null) return -1;
         for (int i = player.RankData.Length - 1; i >= 0; i--)
         {
             ref RankStatus data = ref player.RankData[i];
@@ -156,6 +163,7 @@ public static class RankManager
     }
     public static int GetRankIndex(UCPlayer player)
     {
+        if (player == null || player.RankData == null) return -1;
         for (int i = player.RankData.Length - 1; i >= 0; i--)
         {
             ref RankStatus data = ref player.RankData[i];

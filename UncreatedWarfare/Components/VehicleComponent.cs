@@ -27,9 +27,9 @@ namespace Uncreated.Warfare.Components
         public float Quota { get => _quota; set => _quota = value; }
         public float RequiredQuota { get => _requiredQuota; set => _requiredQuota = value; }
         private bool IsResupplied;
-        private Coroutine quotaLoop;
-        private Coroutine autoSupplyLoop;
-        public Coroutine forceSupplyLoop { get; private set; }
+        private Coroutine? quotaLoop;
+        private Coroutine? autoSupplyLoop;
+        public Coroutine? forceSupplyLoop { get; private set; }
         public void Initialize(InteractableVehicle vehicle)
         {
             Vehicle = vehicle;
@@ -55,7 +55,7 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
                 
@@ -109,7 +109,7 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
 
@@ -163,7 +163,7 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
 
@@ -230,7 +230,7 @@ namespace Uncreated.Warfare.Components
             Guid buildGUID = Guid.Empty;
             Guid ammoGUID = Guid.Empty;
 
-            ItemAsset supplyAsset;
+            ItemAsset? supplyAsset;
 
             if (Team == 1)
             {
@@ -258,7 +258,11 @@ namespace Uncreated.Warfare.Components
                 caller.Message("load_e_itemassetnotfound");
                 yield break;
             }
-
+            if (supplyAsset == null)
+            {
+                caller.Message("load_e_itemassetnotfound");
+                yield break;
+            }
             int existingCount = 0;
             int addedBackCount = 0;
             int addedNewCount = 0;
@@ -363,45 +367,50 @@ namespace Uncreated.Warfare.Components
                 ammoGUID = Gamemode.Config.Items.T2Ammo;
             }
 
-            ItemAsset build = Assets.find(buildGUID) as ItemAsset;
-            ItemAsset ammo = Assets.find(ammoGUID) as ItemAsset;
+            ItemAsset? build = Assets.find(buildGUID) as ItemAsset;
+            ItemAsset? ammo = Assets.find(ammoGUID) as ItemAsset;
 
-            UCPlayer driver = UCPlayer.FromID(LastDriver);
+            UCPlayer? driver = UCPlayer.FromID(LastDriver);
 
             int loaderCount = 0;
 
             bool shouldMessagePlayer = false;
 
-            List<KitItem> trunk = Data.Metadata.TrunkItems;
-            for (int i = 0; i < trunk.Count; i++)
+            if (Data.Metadata != null && Data.Metadata.TrunkItems != null)
             {
-                ItemAsset asset = null;
-                if (trunk[i].id == buildGUID) asset = build;
-                else if (trunk[i].id == ammoGUID) asset = ammo;
-                else asset = Assets.find(trunk[i].id) as ItemAsset;
-
-                if (asset != null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x, asset.size_y, trunk[i].rotation))
+                List<KitItem> trunk = Data.Metadata.TrunkItems;
+                for (int i = 0; i < trunk.Count; i++)
                 {
-                    var item = new Item(asset.id, true) { state = Convert.FromBase64String(trunk[i].metadata) };
-                    Vehicle.trunkItems.addItem(trunk[i].x, trunk[i].y, trunk[i].rotation, item);
-                    loaderCount++;
+                    ItemAsset? asset = null;
+                    if (trunk[i].id == buildGUID) asset = build;
+                    else if (trunk[i].id == ammoGUID) asset = ammo;
+                    else asset = Assets.find(trunk[i].id) as ItemAsset;
 
-                    if (loaderCount >= 3)
+                    if (asset != null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x,
+                            asset.size_y, trunk[i].rotation))
                     {
-                        loaderCount = 0;
-                        if (asset.GUID == buildGUID)
-                            EffectManager.sendEffect(25997, EffectManager.MEDIUM, Vehicle.transform.position);
-                        else
-                            EffectManager.sendEffect(25998, EffectManager.MEDIUM, Vehicle.transform.position);
+                        Item item = new Item(asset.id, true) { state = Convert.FromBase64String(trunk[i].metadata) };
+                        Vehicle.trunkItems.addItem(trunk[i].x, trunk[i].y, trunk[i].rotation, item);
+                        loaderCount++;
 
-                        shouldMessagePlayer = true;
+                        if (loaderCount >= 3)
+                        {
+                            loaderCount = 0;
+                            if (asset.GUID == buildGUID)
+                                EffectManager.sendEffect(25997, EffectManager.MEDIUM, Vehicle.transform.position);
+                            else
+                                EffectManager.sendEffect(25998, EffectManager.MEDIUM, Vehicle.transform.position);
 
-                        yield return new WaitForSeconds(1);
-                        while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
+                            shouldMessagePlayer = true;
+
                             yield return new WaitForSeconds(1);
+                            while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
+                                yield return new WaitForSeconds(1);
+                        }
                     }
                 }
             }
+
             IsResupplied = true;
             autoSupplyLoop = null;
 

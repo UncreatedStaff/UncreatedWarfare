@@ -43,7 +43,7 @@ namespace Uncreated.Warfare.Point
                 isNewOfficer = true;
             }
 
-            UCPlayer player = UCPlayer.FromID(playerID);
+            UCPlayer? player = UCPlayer.FromID(playerID);
             if (player != null)
             {
                 player.RedownloadRanks();
@@ -84,7 +84,7 @@ namespace Uncreated.Warfare.Point
 #endif
             RemoveWhere(o => o.Steam64 == playerID);
 
-            UCPlayer player = UCPlayer.FromID(playerID);
+            UCPlayer? player = UCPlayer.FromID(playerID);
             if (player != null)
             {
                 player.Message("officer_discharged", player.CurrentRank.Name);

@@ -144,7 +144,7 @@ namespace Uncreated.Warfare
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string val = reader.GetString();
+                    string val = reader.GetString()!;
                     if (val != null && reader.Read())
                     {
                         switch (val)
@@ -232,7 +232,7 @@ namespace Uncreated.Warfare
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string val = reader.GetString();
+                    string val = reader.GetString()!;
                     if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                     {
                         switch (val)
@@ -272,12 +272,12 @@ namespace Uncreated.Warfare
                 if (reader.TokenType == JsonTokenType.EndObject) return;
                 else if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string prop = reader.GetString();
+                    string prop = reader.GetString()!;
                     if (!reader.Read()) continue;
                     if (prop == nameof(key))
-                        this.key = reader.GetString();
+                        this.key = reader.GetString()!;
                     else if (prop == nameof(display_name))
-                        this.display_name = reader.GetString();
+                        this.display_name = reader.GetString()!;
                     else if (prop == nameof(values) && reader.TokenType == JsonTokenType.StartArray)
                     {
                         List<string> tlist = new List<string>(24);
@@ -285,7 +285,7 @@ namespace Uncreated.Warfare
                         {
                             if (reader.TokenType == JsonTokenType.String)
                             {
-                                tlist.Add(reader.GetString());
+                                tlist.Add(reader.GetString()!);
                             }
                         }
                         this.values = tlist.ToArray();
@@ -440,11 +440,11 @@ namespace Uncreated.Warfare
                                 else if (reader.TokenType == JsonTokenType.EndObject) break;
                                 else if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string key = reader.GetString();
+                                    string key = reader.GetString()!;
                                     if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                     {
-                                        string color = reader.GetString();
-                                        string value = reader.GetString();
+                                        string color = reader.GetString()!;
+                                        string value = reader.GetString()!;
                                         if (read.ContainsKey(key))
                                             L.LogWarning("Duplicate color key \"" + key + "\" in chat_colors.json");
                                         else
@@ -591,10 +591,10 @@ namespace Uncreated.Warfare
                                             else if (reader.TokenType == JsonTokenType.EndObject) break;
                                             else if (reader.TokenType == JsonTokenType.PropertyName)
                                             {
-                                                string key = reader.GetString();
+                                                string key = reader.GetString()!;
                                                 if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                                 {
-                                                    string value = reader.GetString();
+                                                    string value = reader.GetString()!;
                                                     if (local.ContainsKey(key))
                                                         L.LogWarning("Duplicate key \"" + key + "\" in localization file for " + lang);
                                                     else
@@ -822,7 +822,7 @@ namespace Uncreated.Warfare
                                 else if (reader.TokenType == JsonTokenType.EndObject) break;
                                 else if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string key = reader.GetString();
+                                    string key = reader.GetString()!;
                                     if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                                     {
                                         float x = 0f;
@@ -833,7 +833,7 @@ namespace Uncreated.Warfare
                                             if (reader.TokenType == JsonTokenType.EndObject) break;
                                             else if (reader.TokenType == JsonTokenType.PropertyName)
                                             {
-                                                string prop = reader.GetString();
+                                                string prop = reader.GetString()!;
                                                 if (reader.Read())
                                                 {
                                                     switch (prop)
@@ -924,14 +924,14 @@ namespace Uncreated.Warfare
                                 else if (reader.TokenType == JsonTokenType.EndObject) break;
                                 else if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string input = reader.GetString();
+                                    string input = reader.GetString()!;
                                     if (!ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steam64))
                                     {
                                         L.LogWarning("Invalid Steam64 ID: \"" + input + "\" in Lang\\preferences.json");
                                     }
                                     else if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                     {
-                                        string language = reader.GetString();
+                                        string language = reader.GetString()!;
                                         prefs.Add(steam64, language);
                                     }
                                 }
@@ -1047,7 +1047,8 @@ namespace Uncreated.Warfare
                                 {
                                     LanguageAliasSet set = new LanguageAliasSet();
                                     set.ReadJson(ref reader);
-                                    languageAliasSets.Add(set.key, set);
+                                    if (set.key != null)
+                                        languageAliasSets.Add(set.key, set);
                                 }
                             }
 

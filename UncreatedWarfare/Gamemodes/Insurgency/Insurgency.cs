@@ -531,7 +531,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             yield return new WaitForSeconds(60);
             SpawnNewCache(true);
         }
-        public void OnCacheDestroyed(Cache cache, UCPlayer destroyer)
+        public void OnCacheDestroyed(Cache cache, UCPlayer? destroyer)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -645,7 +645,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 
             public CacheData()
             {
-                Cache = null;
+                Cache = null!;
             }
             public void Activate(Cache cache)
             {

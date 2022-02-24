@@ -35,14 +35,14 @@ namespace Uncreated.Warfare.Squads
 
             return order;
         }
-        public static bool HasOrder(Squad squad, out Order order)
+        public static bool HasOrder(Squad? squad, out Order order)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            order = null;
-            if (squad is null) return false;
-            return (bool)(squad.Leader.Player.TryGetComponent(out order));
+            order = null!;
+            if (squad == null) return false;
+            return squad.Leader.Player.TryGetComponent(out order);
         }
         public static bool CancelOrder(Order order)
         {
@@ -60,10 +60,10 @@ namespace Uncreated.Warfare.Squads
 #endif
             foreach (KeyValuePair<ulong, int> pair in buildable.PlayerHits)
             {
-                UCPlayer player = UCPlayer.FromID(pair.Key);
+                UCPlayer? player = UCPlayer.FromID(pair.Key);
                 if (player != null &&
                     (float)pair.Value / buildable.Buildable.requiredHits >= 0.1F &&
-                    HasOrder(player.Squad, out var order) &&
+                    HasOrder(player.Squad, out Order order) &&
                     order.Type == EOrder.BUILDFOB &&
                     (fob.Position - order.Marker).sqrMagnitude <= Math.Pow(80, 2)
                 )
@@ -93,7 +93,7 @@ namespace Uncreated.Warfare.Squads
         public int RewardXP { get; private set; }
         public int RewardTW { get; private set; }
         public bool IsActive { get; private set; }
-        public Flag Flag { get; private set; }
+        public Flag? Flag { get; private set; }
 
         private OrderCondition Condition;
 
@@ -101,7 +101,7 @@ namespace Uncreated.Warfare.Squads
 
         internal const short orderKey = 12004;
 
-        public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag flag = null)
+        public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag? flag = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -136,7 +136,7 @@ namespace Uncreated.Warfare.Squads
                     RewardTW = 100;
 
                     Vector3 avgMemberPoint = Vector3.zero;
-                    foreach (var player in Squad.Members)
+                    foreach (UCPlayer player in Squad.Members)
                         avgMemberPoint += player.Position;
 
                     avgMemberPoint /= squad.Members.Count;
@@ -178,7 +178,7 @@ namespace Uncreated.Warfare.Squads
                 case EOrder.DEFEND:
                     break;
                 case EOrder.BUILDFOB:
-                    foreach (var player in Squad.Members)
+                    foreach (UCPlayer player in Squad.Members)
                     {
                         GiveReward(player);
                         HideUI(player);
@@ -186,7 +186,7 @@ namespace Uncreated.Warfare.Squads
                     break;
                 case EOrder.MOVE:
 
-                    foreach (var player in Condition.FullfilledPlayers)
+                    foreach (UCPlayer player in Condition.FullfilledPlayers)
                     {
                         if (player.IsOnline)
                         {
@@ -302,7 +302,7 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (counter % (60 / tickFrequency) == 0) // every 60 seconds
                 {
-                    foreach (var player in Squad.Members)
+                    foreach (UCPlayer player in Squad.Members)
                         UpdateUI(player);
                 }
 

@@ -14,7 +14,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
     public static class ZoneDrawing
     {
         private static int overlayStep = 0;
-        public static void CreateFlagTestAreaOverlay(IFlagRotation gamemode, Player player, List<Zone> zones, bool drawpath, bool drawrange, bool drawIsInTest, bool drawsearchangles, bool lockthreaduntildone = false, string filename = default)
+        public static void CreateFlagTestAreaOverlay(IFlagRotation gamemode, Player? player, List<Zone> zones, bool drawpath, bool drawrange, bool drawIsInTest, bool drawsearchangles, bool lockthreaduntildone = false, string? filename = default)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -110,7 +110,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
             }
         }
-        internal static void GenerateZoneOverlay(IFlagRotation gamemode, Texture2D img, Player player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string filename, bool drawAngles)
+        internal static void GenerateZoneOverlay(IFlagRotation gamemode, Texture2D img, Player? player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string? filename, bool drawAngles)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -178,7 +178,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             else if (step == -1) // finalizing image
             {
                 img.Apply();
-                F.SavePhotoToDisk(filename == default ? Data.FlagStorage + "zonearea.png" : filename + ".png", img);
+                F.SavePhotoToDisk(filename == default ? Data.FlagStorage + "zonearea.png" : (filename + ".png"), img);
                 UnityEngine.Object.Destroy(img);
                 complete = true;
             }
@@ -191,60 +191,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
                 img.Apply();
             }
-            else if (step == -3)
-            {
-                /*
-                System.Random r = new System.Random();
-                for (int i = 0; i < zones.Count; i++)
-                {
-                    Color zonecolor = $"{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}".Hex();
-                    
-                    DrawCircle(img, zones[i].InverseZone.Center.x, zones[i].InverseZone.Center.y, ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier, zonecolor, 5, false, true);
-                    if (drawAngles)
-                    {
-                        DrawLine(img,
-                            new Line(
-                                new Vector2(zones[i].InverseZone.Center.x - Mathf.Cos(ObjectivePathing.SIDE_ANGLE_LEFT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_LEFT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
-                                new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_LEFT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_LEFT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
-                            zonecolor, false, 3);
-                        DrawLine(img,
-                            new Line(
-                                new Vector2(zones[i].InverseZone.Center.x - Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
-                                new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_END) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
-                            zonecolor, false, 3);
-                        DrawLine(img,
-                            new Line(
-                                new Vector2(zones[i].InverseZone.Center.x - Mathf.Cos(ObjectivePathing.SIDE_ANGLE_LEFT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_LEFT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
-                                new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_LEFT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_LEFT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
-                            zonecolor, false, 3);
-                        DrawLine(img,
-                            new Line(
-                                new Vector2(zones[i].InverseZone.Center.x - Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                zones[i].InverseZone.Center.y - Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier),
-                                new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.SIDE_ANGLE_RIGHT_START) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
-                            zonecolor, false, 3);
-                        DrawLine(img,
-                             new Line(
-                                 zones[i].InverseZone.Center,
-                                 new Vector2(zones[i].InverseZone.Center.x + Mathf.Cos(ObjectivePathing.MAIN_BASE_ANGLE_OFFSET) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier,
-                                 zones[i].InverseZone.Center.y + Mathf.Sin(ObjectivePathing.MAIN_BASE_ANGLE_OFFSET) * ObjectivePathing.FLAG_RADIUS_SEARCH * zones[i].CoordinateMultiplier)),
-                             zonecolor, false, 3);
-                    }
-                }
-                DrawCircle(img, TeamManager.Team1Main.InverseZone.Center.x, TeamManager.Team1Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team1Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_1_color"), 5, false, true);
-                DrawCircle(img, TeamManager.Team2Main.InverseZone.Center.x, TeamManager.Team2Main.InverseZone.Center.y, ObjectivePathing.MAIN_SEARCH_RADIUS * TeamManager.Team2Main.InverseZone.CoordinateMultiplier, UCWarfare.GetColor("team_2_color"), 5, false, true);
-                */
-                img.Apply();
-            }
         }
-        public static void DrawZoneMap(IFlagRotation gamemode, string filename)
+        public static void DrawZoneMap(IFlagRotation gamemode, string? filename)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

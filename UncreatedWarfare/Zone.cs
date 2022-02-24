@@ -375,7 +375,7 @@ namespace Uncreated.Warfare
                 if (!minX.HasValue || minX.Value < point.x) minX = point.x;
                 if (!minY.HasValue || minY.Value < point.y) minY = point.y;
             }
-            if (maxX.HasValue && maxY.HasValue && minX.HasValue && maxX.HasValue)
+            if (maxX.HasValue && maxY.HasValue && minX.HasValue && minY.HasValue)
             {
                 size = new Vector2(maxX.Value - minX.Value, maxY.Value - minY.Value);
                 return new Vector2(minX.Value, minY.Value);

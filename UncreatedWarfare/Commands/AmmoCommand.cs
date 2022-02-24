@@ -26,16 +26,17 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
 
             if (!Data.Is(out IKitRequests ctf))
             {
                 player.Message("command_e_gamemode");
                 return;
             }
-            SDG.Unturned.BarricadeData barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop drop);
+            SDG.Unturned.BarricadeData? barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop? drop);
             //InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
-            InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+            InteractableVehicle? vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
 
 
             if (vehicle != null)
@@ -97,10 +98,10 @@ namespace Uncreated.Warfare.Commands
                     {
                         player.SendChat("ammo_not_near_fob");
                         return;
-                    }   
+                    }
                 }
 
-                if (!isInMain && fob.Ammo < vehicleData.RearmCost)
+                if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
                 {
                     player.SendChat("ammo_not_enough_stock", fob.Ammo.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
                     return;
@@ -120,7 +121,7 @@ namespace Uncreated.Warfare.Commands
 
                 if (!isInMain)
                 {
-                    fob.ReduceAmmo(vehicleData.RearmCost);
+                    fob!.ReduceAmmo(vehicleData.RearmCost);
                     player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), fob.Ammo.ToString());
                 }
                 else

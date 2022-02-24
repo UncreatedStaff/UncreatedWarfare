@@ -15,9 +15,9 @@ namespace Uncreated
         public Type Type = typeof(TData);
         public string Directory => _dir;
 
-        private readonly CustomDeserializer customDeserializer;
+        private readonly CustomDeserializer? customDeserializer;
         private readonly bool useCustomDeserializer;
-        private readonly CustomSerializer customSerializer;
+        private readonly CustomSerializer? customSerializer;
         private readonly bool useCustomSerializer;
 
         public delegate TData CustomDeserializer(ref Utf8JsonReader reader);
@@ -71,12 +71,12 @@ namespace Uncreated
             {
                 if (useCustomSerializer)
                 {
-                    Utf8JsonWriter writer = null;
+                    Utf8JsonWriter? writer = null;
                     try
                     {
                         writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                         writer.WriteStartObject();
-                        customSerializer.Invoke(data, writer);
+                        customSerializer!.Invoke(data, writer);
                         writer.WriteEndObject();
                     }
                     catch (Exception ex)
@@ -119,12 +119,12 @@ namespace Uncreated
                     {
                         if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                         {
-                            data = customDeserializer.Invoke(ref reader);
+                            data = customDeserializer!.Invoke(ref reader);
                         }
                         if (data != null) return;
                     }
 
-                    data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings);
+                    data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings)!;
                 }
                 catch (JsonException ex)
                 {
@@ -183,12 +183,12 @@ namespace Uncreated
             {
                 if (useCustomSerializer)
                 {
-                    Utf8JsonWriter writer = null;
+                    Utf8JsonWriter? writer = null;
                     try
                     {
                         writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                         writer.WriteStartObject();
-                        customSerializer.Invoke(data, writer);
+                        customSerializer!.Invoke(data, writer);
                         writer.WriteEndObject();
                     }
                     catch (Exception ex)
