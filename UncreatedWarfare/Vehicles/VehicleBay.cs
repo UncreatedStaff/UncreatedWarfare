@@ -17,8 +17,14 @@ namespace Uncreated.Warfare.Vehicles
 {
     public class VehicleBay : JSONSaver<VehicleData>, IDisposable
     {
+        private static Config<VehicleBayConfig> _config;
+        public static VehicleBayConfig Config { get => _config.data; }
+
         public VehicleBay() : base(Data.VehicleStorage + "vehiclebay.json")
         {
+
+            _config = new Config<VehicleBayConfig>(Data.VehicleStorage, "config.json");
+
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
             VehicleManager.onExitVehicleRequested += OnVehicleExitRequested;
@@ -288,7 +294,7 @@ namespace Uncreated.Warfare.Vehicles
         {
             UCPlayer ucplayer = UCPlayer.FromPlayer(player);
             if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID)) return;
-            if (pendingLocation.y - F.GetHeightAt2DPoint(pendingLocation.x, pendingLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
+            if (!ucplayer.OnDuty() && pendingLocation.y - F.GetHeightAt2DPoint(pendingLocation.x, pendingLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
             {
                 player.SendChat("vehicle_too_high");
                 shouldAllow = false;
@@ -324,7 +330,7 @@ namespace Uncreated.Warfare.Vehicles
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
                 }
-                if (Data.Gamemode.State == EState.STAGING && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || player.GetTeam() == atk.AttackingTeam))
+                if (!player.OnDuty() && Data.Gamemode.State == EState.STAGING && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || player.GetTeam() == atk.AttackingTeam))
                 {
                     player.SendChat("vehicle_staging");
                     shouldAllow = false;
@@ -382,12 +388,13 @@ namespace Uncreated.Warfare.Vehicles
 
                     if (vehicleData.CrewSeats.Contains(toSeatIndex) && vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
                     {
-                        if (enterer.KitClass == vehicleData.RequiredClass)
+                        if (enterer.KitClass == vehicleData.RequiredClass || enterer.OnDuty())
                         {
                             if (toSeatIndex == 0) // if a crewman is trying to enter the driver's seat
                             {
                                 bool canEnterDriverSeat = owner is null || 
                                     enterer == owner || 
+                                    enterer.OnDuty() ||
                                     IsOwnerInVehicle(vehicle, owner) || 
                                     (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || 
                                     (owner.Position - vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
@@ -405,7 +412,7 @@ namespace Uncreated.Warfare.Vehicles
                             }
                             else // if the player is trying to switch to a gunner's seat
                             {
-                                if (!F.IsInMain(vehicle.transform.position)) // if player is trying to switch to a gunner's seat outside of main
+                                if (!(F.IsInMain(vehicle.transform.position) || enterer.OnDuty())) // if player is trying to switch to a gunner's seat outside of main
                                 {
                                     if (vehicle.passengers[0].player is null) // if they have no driver
                                     {
@@ -430,7 +437,7 @@ namespace Uncreated.Warfare.Vehicles
                     {
                         if (toSeatIndex == 0)
                         {
-                            bool canEnterDriverSeat = owner is null || enterer == owner || IsOwnerInVehicle(vehicle, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer));
+                            bool canEnterDriverSeat = owner is null || enterer == owner || enterer.OnDuty() || IsOwnerInVehicle(vehicle, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer));
 
                             if (!canEnterDriverSeat)
                             {
@@ -947,5 +954,43 @@ namespace Uncreated.Warfare.Vehicles
         HELI_ATTACK,
         JET,
         EMPLACEMENT,
+    }
+
+    public class VehicleBayConfig : ConfigData
+    {
+        public ushort MissileWarningID;
+        public ushort MissileWarningDriverID;
+        public ushort CountermeasureEffectID;
+        public Guid CountermeasureGUID;
+        public Guid[] TOWMissileWeapons;
+        public Guid[] GroundAAWeapons;
+        public Guid[] AirAAWeapons;
+
+        public override void SetDefaults()
+        {
+            MissileWarningID = 26033;
+            MissileWarningDriverID = 26034;
+            CountermeasureEffectID = 26035;
+            CountermeasureGUID = new Guid("16dbd4e5928e498783675529ca53fc61");
+            TOWMissileWeapons = new Guid[]
+            {
+                new Guid("f8978efc872e415bb41086fdee10d7ad"), // TOW
+                new Guid("d900a6de5bb344f887855ce351e3bb41"), // Kornet
+                new Guid("9ed685df6df34527b104ab227465489d"), // M2 Bradley TOW
+                new Guid("d6312ceb00ad4530bdb07735bc02f070"), // BMP-2 Konkurs
+            };
+            GroundAAWeapons = new Guid[]
+            {
+                new Guid("58b18a3fa1104ca58a7bdebef3ab6b29"), // stinger
+                new Guid("5ae39e59d299415d8c4d08b233206302"), // igla
+
+            };
+            AirAAWeapons = new Guid[]
+            {
+                new Guid("661a347f5e56406e85510a1b427bc4d6"), // F-15 AA
+                new Guid("ad70852b3d31401b9001a13d64a13f78"), // Su-34 AA
+
+            };
+        }
     }
 }

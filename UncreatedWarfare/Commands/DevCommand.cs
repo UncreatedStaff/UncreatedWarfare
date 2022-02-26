@@ -10,6 +10,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -182,6 +183,21 @@ namespace Uncreated.Warfare.Commands
                     player.Message($"Your nearest FOB is: {fob.Name.Colorize(fob.UIColor)} ({(player.Position - fob.Position).magnitude}m away)".Colorize("ebd491"));
                 else
                     player.Message($"You are not near a FOB.".Colorize("ebd491"));
+            }
+            else if (command.Length >= 1 && command[0].ToLower() == "aatest" || command[0].ToLower() == "aa")
+            {
+                if (command.Length == 1)
+                    player.Message($"Please specify a vehicle name.".Colorize("ebd491"));
+
+                var asset = UCAssetManager.FindVehicleAsset(command[1]);
+
+                if (asset is not null)
+                {
+                    var vehicle = VehicleBay.SpawnLockedVehicle(asset.GUID, player.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), out _);
+                    player.Message($"Successfully spawned AA target: {vehicle.asset.vehicleName}".Colorize("ebd491"));
+                }
+                else
+                    player.Message($"A vehicle called '{command[1]} does not exist".Colorize("ebd491"));
             }
             else
                 player.Message($"Dev command did not recognise those arguments.".Colorize("dba29e"));

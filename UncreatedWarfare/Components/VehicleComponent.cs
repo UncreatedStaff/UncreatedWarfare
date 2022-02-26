@@ -5,6 +5,8 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Random = UnityEngine.Random;
+
 namespace Uncreated.Warfare.Components
 {
     public class VehicleComponent : MonoBehaviour
@@ -53,6 +55,8 @@ namespace Uncreated.Warfare.Components
                 Data = data;
                 isInVehiclebay = true;
             }
+
+            countermeasures = new List<Transform>();
         }
         public void OnPlayerEnteredVehicle(Player nelsonplayer, InteractableVehicle vehicle)
         {
@@ -182,6 +186,71 @@ namespace Uncreated.Warfare.Components
                         UsageTable[Steam64] += time;
                 }
             }
+        }
+        Coroutine countermeasureRoutine;
+        List<Transform> countermeasures;
+        public void TrySpawnCountermeasures()
+        {
+            
+
+            if (countermeasureRoutine != null)
+                return;
+
+            StartCoroutine(DropCountermeasures());
+
+            for (byte seat = 0; seat < Vehicle.passengers.Length; seat++)
+            {
+                if (Vehicle.passengers[seat].player != null && Data.CrewSeats.Contains(seat))
+                    EffectManager.sendUIEffect(VehicleBay.Config.CountermeasureEffectID, (short)VehicleBay.Config.CountermeasureEffectID, Vehicle.passengers[seat].player.transportConnection, true);
+            }
+
+            countermeasureRoutine = StartCoroutine(ReloadCountermeasures());
+        }
+        private IEnumerator<WaitForSeconds> DropCountermeasures()
+        {
+            if (Assets.find(VehicleBay.Config.CountermeasureGUID) is VehicleAsset countermeasureAsset)
+            {
+                int flareCount = 5;
+                float angle = 0;
+                for (int i = 0; i < flareCount; i++)
+                {
+                    angle += i * (360 / flareCount) + Random.Range(-35f, 35f);
+
+                    var countermeasure = VehicleManager.spawnVehicleV2(countermeasureAsset.id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
+
+                    countermeasure.transform.Rotate(Vector3.up, angle, Space.Self);
+
+                    var rigidbody = countermeasure.transform.GetComponent<Rigidbody>();
+                    rigidbody.velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity;
+                    rigidbody.AddForce(countermeasure.transform.forward * 5, ForceMode.Impulse);
+
+                    countermeasures.Add(countermeasure.transform);
+                    HeatSeakingMissileComponent.ActiveCountermeasures.Add(countermeasure.transform);
+
+                    yield return new WaitForSeconds(0.25f);
+                }
+            }
+            else
+                L.LogDebug("     ERROR: Countermeasure asset not found");
+
+            
+        }
+        private IEnumerator<WaitForSeconds> ReloadCountermeasures()
+        {
+            yield return new WaitForSeconds(15);    
+
+            foreach (var countermeasure in countermeasures)
+            {
+                HeatSeakingMissileComponent.ActiveCountermeasures.RemoveAll(t => t.GetInstanceID() == countermeasure.GetInstanceID());
+
+                if (countermeasure.TryGetComponent(out InteractableVehicle vehicle))
+                {
+                    VehicleManager.askVehicleDestroy(vehicle);
+                }
+            }
+
+            countermeasures.Clear();
+            countermeasureRoutine = null;
         }
         public void StartForceLoadSupplies(UCPlayer caller, ESupplyType type, int amount)
         {

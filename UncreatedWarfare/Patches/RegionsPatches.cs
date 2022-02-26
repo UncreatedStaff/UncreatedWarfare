@@ -23,6 +23,11 @@ namespace Uncreated.Warfare
             static void DestroyBarricadePostFix(BarricadeDrop barricade, byte x, byte y, ushort plant)
             {
                 if (!UCWarfare.Config.Patches.destroyBarricade) return;
+                if (barricade is null)
+                {
+                    L.Log("NULL BARRICADEDROP IN DestroyBarricadePostFix");
+                    return;
+                }
                 BarricadeDestroyedHandler?.Invoke(barricade.GetServersideData(), barricade, barricade.GetServersideData().instanceID, plant);
             }
             // SDG.Unturned.StructureManager
