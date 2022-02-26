@@ -26,6 +26,11 @@ namespace Uncreated.Warfare
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
                 if (!UCWarfare.Config.Patches.destroyBarricade) return;
+                if (barricade is null)
+                {
+                    L.Log("NULL BARRICADEDROP IN DestroyBarricadePostFix");
+                    return;
+                }
                 BarricadeDestroyedHandler?.Invoke(barricade.GetServersideData(), barricade, barricade.GetServersideData().instanceID, plant);
             }
             // SDG.Unturned.StructureManager

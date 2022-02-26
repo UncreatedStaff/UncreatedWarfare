@@ -16,6 +16,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
@@ -193,6 +194,14 @@ namespace Uncreated.Warfare
                 rocket.killer = gun.player.channel.owner.playerID.steamID;
             }
 
+            if (VehicleBay.Config.TOWMissileWeapons.Contains(gun.equippedGunAsset.GUID))
+                projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, gun.player, 90, 0.3f, 700);
+            else if (VehicleBay.Config.GroundAAWeapons.Contains(gun.equippedGunAsset.GUID))
+                projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 140, 0.75f, 700, 4, 0.66f);
+            else if (VehicleBay.Config.AirAAWeapons.Contains(gun.equippedGunAsset.GUID))
+                projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 140, 0.75f, 700, 10, 0.25F);
+
+
             Patches.DeathsPatches.lastProjected = projectile;
             if (gun.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
             {
@@ -243,7 +252,7 @@ namespace Uncreated.Warfare
                 if (hit != null)
                     RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
                 if (!shouldAllow) return;
-                
+
                 if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
                 {
                     if (player != null && player.OffDuty() && player.KitClass != EClass.RIFLEMAN)
@@ -266,6 +275,11 @@ namespace Uncreated.Warfare
                         return;
                     }
 
+                if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == barricade.asset.GUID))
+                {
+                    shouldAllow = BuildableComponent.TryPlaceRadio(barricade, player, point);
+                    return;
+                }
 
                     BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.foundationID == barricade.asset.GUID);
 
@@ -415,7 +429,7 @@ namespace Uncreated.Warfare
                         save.ShouldRespawnOnJoin = false;
                     }
                 }
-                
+
                 save.LastGame = Data.Gamemode.GameID;
 
                 if (player.Player.life.isDead)
@@ -479,7 +493,7 @@ namespace Uncreated.Warfare
                 L.LogError(ex);
             }
         }
-        
+
         private static void VoiceMutedUseTick()
         {
             // send ui or something
@@ -726,7 +740,7 @@ namespace Uncreated.Warfare
                         }
                         else weapon = Guid.Empty;
                     }
-                    else if(pl.player.equipment.asset != null)
+                    else if (pl.player.equipment.asset != null)
                     {
                         weapon = pl.player.equipment.asset.GUID;
                     }
@@ -1268,7 +1282,16 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             if (Data.Is(out IRevives r))
+            {
                 r.ReviveManager.GiveUp(player);
+            }
+
+            var vehicle = player.movement.getVehicle();
+            if (vehicle != null && player.movement.getSeat() == 0 && (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.HELICOPTER) && vehicle.transform.TryGetComponent(out VehicleComponent component))
+            {
+                component.TrySpawnCountermeasures();
+            }
+
         }
     }
 #pragma warning restore IDE0060 // Remove unused parameter
