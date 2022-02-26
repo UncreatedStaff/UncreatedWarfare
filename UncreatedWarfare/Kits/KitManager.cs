@@ -142,6 +142,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void OnPlayerJoinedQuestHandling(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 if (!ActiveObjects[i].IsLoadout && !ActiveObjects[i].IsPremium && ActiveObjects[i].RequiredQuests != null && ActiveObjects[i].RequiredQuests.Length > 0)
