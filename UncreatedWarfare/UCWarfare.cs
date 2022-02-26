@@ -1,4 +1,6 @@
-﻿using Rocket.Core;
+﻿#define USE_DEBUGGER
+
+using Rocket.Core;
 using Rocket.Core.Plugins;
 using Rocket.Unturned;
 using SDG.Unturned;
@@ -27,8 +29,10 @@ namespace Uncreated.Warfare
     public delegate void VoidDelegate();
     public partial class UCWarfare : RocketPlugin<Config>
     {
+        public static readonly Version Version = new Version(2, 0, 0, 0);
+        public static int Season => Version.Major;
         public static UCWarfare Instance;
-        public Coroutine StatsRoutine;
+        public Coroutine? StatsRoutine;
         public UCAnnouncer Announcer;
         //public NetworkingQueue Queue;
         public static UCWarfare I { get => Instance; }
@@ -48,10 +52,13 @@ namespace Uncreated.Warfare
         private bool InitialLoadEventSubscription;
         protected override void Load()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Instance = this;
             Data.Logs = Data.ReadRocketLog();
             Data.LoadColoredConsole();
-            L.Log("Started loading " + Name + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
+            L.Log("Started loading " + Name + " - " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
 
             /* PATCHES */
@@ -81,7 +88,7 @@ namespace Uncreated.Warfare
                 else
                 {
                     string json = File.ReadAllText(Data.ElseWhereSQLPath);
-                    _sqlElsewhere = JsonSerializer.Deserialize<MySqlData>(json, JsonEx.serializerSettings);
+                    _sqlElsewhere = JsonSerializer.Deserialize<MySqlData>(json, JsonEx.serializerSettings)!;
                 }
             }
 
@@ -119,6 +126,9 @@ namespace Uncreated.Warfare
         }
         private void OnLevelLoaded(int level)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.FlagStorage, out _, true);
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
@@ -153,6 +163,9 @@ namespace Uncreated.Warfare
         }
         private void SubscribeToEvents()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Data.Gamemode.Subscribe();
             U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
             U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
@@ -191,6 +204,9 @@ namespace Uncreated.Warfare
         }
         private void UnsubscribeFromEvents()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Data.Gamemode.Unsubscribe();
             Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
             U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
@@ -248,7 +264,10 @@ namespace Uncreated.Warfare
         }
         internal void UpdateLangs(SteamPlayer player)
         {
-            UCPlayer ucplayer = UCPlayer.FromSteamPlayer(player);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
             foreach (BarricadeRegion region in BarricadeManager.regions)
             {
                 List<BarricadeDrop> signs = new List<BarricadeDrop>();
@@ -308,9 +327,12 @@ namespace Uncreated.Warfare
         }
         private void Update()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             while (ThreadActionRequests.Count > 0)
             {
-                MainThreadTask.MainThreadResult res = null;
+                MainThreadTask.MainThreadResult? res = null;
                 try
                 {
                     res = ThreadActionRequests.Dequeue();
@@ -329,6 +351,9 @@ namespace Uncreated.Warfare
         }
         protected override void Unload()
         {
+#if DEBUG
+            IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (StatsRoutine != null)
             {
                 StopCoroutine(StatsRoutine);
@@ -349,9 +374,9 @@ namespace Uncreated.Warfare
             CommandWindow.shouldLogDeaths = true;
             Data.NetClient.Dispose();
             Logging.OnLog -= L.Log;
-            Logging.OnLogWarning -= L.LogWarning;
-            Logging.OnLogError -= L.LogError;
-            Logging.OnLogException -= L.LogError;
+            Logging.OnLogWarning -= L.LogWarningEventCall;
+            Logging.OnLogError -= L.LogErrorEventCall;
+            Logging.OnLogException -= L.LogErrorEventCall;
             try
             {
                 Patches.Unpatch();
@@ -366,6 +391,10 @@ namespace Uncreated.Warfare
                 WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.Locale) + ".dat");
             }
             NetFactory.ClearRegistry();
+#if DEBUG
+            profiler.Dispose();
+            F.SaveProfilingData();
+#endif
         }
         public static Color GetColor(string key)
         {

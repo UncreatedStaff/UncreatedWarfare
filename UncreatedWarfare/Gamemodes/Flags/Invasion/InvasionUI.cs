@@ -1,5 +1,6 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -12,6 +13,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
     {
         public static SendUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle, ulong atkTeam)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (flag.Owner == atkTeam)
             {
                 if (team == atkTeam)
@@ -213,6 +217,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public static void SendFlagList(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player == null) return;
             ulong team = player.GetTeam();
             if (team < 1 || team > 3) return;
@@ -300,6 +307,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public static void ReplicateFlagUpdate(Flag flag, bool ownerChanged = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out IFlagRotation gm) && Data.Is(out IAttackDefense atkdef))
             {
                 ulong attack = atkdef.AttackingTeam;
@@ -363,6 +373,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
         }
         public static SendUIParameters RefreshStaticUI(ulong team, Flag flag, bool inVehicle, ulong atkTeam)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (team != 1 && team != 2) return SendUIParameters.Nil;
             if (flag.IsObj(atkTeam))
             {

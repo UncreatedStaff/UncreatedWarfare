@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Components
 {
     public class UCAnnouncer : MonoBehaviour
     {
-        public Coroutine coroutine;
+        public Coroutine? coroutine;
         private bool stop = false;
 
         private float TimeBetweenMessages;
@@ -20,6 +20,9 @@ namespace Uncreated.Warfare.Components
         private IEnumerator<string> Enumerator;
         void Start()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ReloadConfig();
             stop = false;
             if (Messages.Count > 0)
@@ -43,6 +46,9 @@ namespace Uncreated.Warfare.Components
         }
         public void ReloadConfig()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.DATA_DIRECTORY, out bool folderExists);
             Messages.Clear();
             if (folderExists)
@@ -92,7 +98,7 @@ namespace Uncreated.Warfare.Components
                         {
                             if (reader.TokenType == JsonTokenType.PropertyName)
                             {
-                                string prop = reader.GetString();
+                                string prop = reader.GetString()!;
                                 if (reader.Read())
                                 {
                                     switch (prop)
@@ -103,8 +109,8 @@ namespace Uncreated.Warfare.Components
                                         case "Messages":
                                             if (reader.TokenType == JsonTokenType.StartObject)
                                             {
-                                                Dictionary<string, TranslationData> current = new Dictionary<string, TranslationData>();
-                                                string lang = null;
+                                                Dictionary<string, TranslationData>? current = new Dictionary<string, TranslationData>();
+                                                string? lang = null;
                                                 bool i = false;
                                                 while (reader.Read())
                                                 {
@@ -122,15 +128,15 @@ namespace Uncreated.Warfare.Components
                                                     {
                                                         if (!i)
                                                         {
-                                                            lang = reader.GetString();
+                                                            lang = reader.GetString()!;
                                                             i = true;
                                                         }
                                                         else
                                                         {
-                                                            string key = reader.GetString();
+                                                            string key = reader.GetString()!;
                                                             if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                                             {
-                                                                string value = reader.GetString();
+                                                                string value = reader.GetString()!;
                                                                 TranslationData data = new TranslationData(value);
                                                                 if (current == null)
                                                                     current = new Dictionary<string, TranslationData>();
@@ -162,6 +168,9 @@ namespace Uncreated.Warfare.Components
             while (!stop)
             {
                 yield return new WaitForSeconds(TimeBetweenMessages);
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!Enumerator.MoveNext())
                 {
                     Enumerator.Reset();

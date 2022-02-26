@@ -20,8 +20,8 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual bool UseJoinUI { get => true; }
         public virtual bool EnableAMC { get => true; }
         public List<ulong> InAMC = new List<ulong>();
-        private Transform _blockerBarricadeT1;
-        private Transform _blockerBarricadeT2;
+        private Transform? _blockerBarricadeT1;
+        private Transform? _blockerBarricadeT2;
         protected TeamGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
         {
 
@@ -63,7 +63,8 @@ namespace Uncreated.Warfare.Gamemodes
                 while (players.MoveNext())
                 {
                     ulong team = players.Current.GetTeam();
-                    UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
+                    UCPlayer? player = UCPlayer.FromSteamPlayer(players.Current);
+                    if (player == null) continue;
                     try
                     {
                         if (!player.OnDutyOrAdmin() && !players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) ||

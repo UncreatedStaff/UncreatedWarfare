@@ -6,6 +6,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -32,6 +33,9 @@ namespace Uncreated.Warfare.Components
 
             while (true)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
                     if (player.GetTeam() == parent.Team)
@@ -93,6 +97,9 @@ namespace Uncreated.Warfare.Components
                 count ++;
                 if (count >= (2 / tickFrequency))
                     count = 0;
+#if DEBUG
+                profiler.Dispose();
+#endif
                 yield return new WaitForSeconds(tickFrequency);
             }
         }
@@ -112,7 +119,7 @@ namespace Uncreated.Warfare.Components
         public string ClosestLocation { get; private set; }
         public ulong Team { get => Radio.GetServersideData().group; }
         public ulong Owner { get => Radio.GetServersideData().owner; }
-        public BarricadeDrop Bunker { get; private set; }
+        public BarricadeDrop? Bunker { get; private set; }
         public Vector3 Position { get => Radio.model.position; }
         public float Radius { get; private set; }
 
@@ -197,6 +204,9 @@ namespace Uncreated.Warfare.Components
 
         public FOB(BarricadeDrop radio)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Radio = radio;
 
             if (Radio.interactable is InteractableStorage storage)
@@ -235,14 +245,14 @@ namespace Uncreated.Warfare.Components
                 if (nearestLogi.transform.TryGetComponent(out VehicleComponent component))
                 {
                     component.Quota += 5;
-                    Creator = component.lastDriver;
+                    Creator = component.LastDriver;
                 }
 
                 if (!nearestLogi.isDriven)
                 {
                     int supplyCount = nearestLogi.trunkItems.getItemCount();
 
-                    UCPlayer creator = UCPlayer.FromID(Creator);
+                    UCPlayer? creator = UCPlayer.FromID(Creator);
                     int groupsUnloaded = 0;
                     if (creator != null)
                     {
@@ -274,7 +284,7 @@ namespace Uncreated.Warfare.Components
 
                     for (int i = nearestLogi.trunkItems.getItemCount() - 1; i >= 0; i--)
                     {
-                        var item = nearestLogi.trunkItems.items[i];
+                        ItemJar item = nearestLogi.trunkItems.items[i];
                         ItemManager.dropItem(new Item(item.item.id, true), nearestLogi.transform.position, false, true, true);
                         nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
                     }
@@ -307,7 +317,7 @@ namespace Uncreated.Warfare.Components
 
             FOBManager.SendFOBListToTeam(Team);
         }
-        public void UpdateBunker(BarricadeDrop bunker)
+        public void UpdateBunker(BarricadeDrop? bunker)
         {
             L.LogDebug("Bunker updated: " + bunker?.GetType());
 
@@ -324,6 +334,9 @@ namespace Uncreated.Warfare.Components
         }
         public void ConsumeResources()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<SDG.Unturned.ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, Radius, Position);
             List<SDG.Unturned.ItemData> NearbyAmmo = UCBarricadeManager.GetNearbyItems(AmmoID, Radius, Position);
 
@@ -337,7 +350,7 @@ namespace Uncreated.Warfare.Components
                 {
                     if (EventFunctions.droppeditemsInverse.TryGetValue(item.instanceID, out ulong playerID))
                     {
-                        UCPlayer player = UCPlayer.FromID(playerID);
+                        UCPlayer? player = UCPlayer.FromID(playerID);
                         if (player != null)
                         {
                             player.SuppliesUnloaded++;
@@ -351,6 +364,8 @@ namespace Uncreated.Warfare.Components
                                     xp *= 2;
                                     tw *= 2;
                                 }
+
+                                QuestManager.OnSuppliesConsumed(this, playerID, player.SuppliesUnloaded);
 
                                 InteractableVehicle vehicle = player.Player.movement.getVehicle();
                                 if (vehicle is not null && vehicle.transform.TryGetComponent(out VehicleComponent component))
@@ -416,9 +431,9 @@ namespace Uncreated.Warfare.Components
         {
             ShowResourceUI(player);
 
-            var vehicle = player.Player.movement.getVehicle();
+            InteractableVehicle? vehicle = player.Player.movement.getVehicle();
             if (vehicle != null && 
-                VehicleBay.VehicleExists(vehicle.asset.GUID, out var data) && 
+                VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data) && 
                 (data.Type == EVehicleType.LOGISTICS || 
                 data.Type == EVehicleType.HELI_TRANSPORT))
             {
@@ -467,6 +482,9 @@ namespace Uncreated.Warfare.Components
         }
         private void SwapRadioBarricade(BarricadeDrop newDrop)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!(Radio == null || Radio.GetServersideData().barricade.isDead))
             {
                 if (Regions.tryGetCoordinate(Radio.model.position, out byte x, out byte y))
@@ -484,6 +502,9 @@ namespace Uncreated.Warfare.Components
         }
         public void StartBleed()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             builtState = Radio.GetServersideData().barricade.state;
 
             if (Radio.model.TryGetComponent(out BarricadeComponent component))
@@ -504,6 +525,9 @@ namespace Uncreated.Warfare.Components
         }
         public void Reactivate()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             SDG.Unturned.BarricadeData data = Radio.GetServersideData();
             Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(builtRadioGUID));
             Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
@@ -524,6 +548,9 @@ namespace Uncreated.Warfare.Components
 
         public void Repair(UCPlayer builder)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float amount = 30;
 
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
@@ -542,6 +569,9 @@ namespace Uncreated.Warfare.Components
         public bool IsDestroyed { get; private set; }
         public void Destroy()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (IsDestroyed)
                 return;
 
@@ -577,6 +607,9 @@ namespace Uncreated.Warfare.Components
         }
         public static List<FOB> GetFOBs(ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>
                 b.model.TryGetComponent<FOBComponent>(out _)
             );
@@ -594,6 +627,9 @@ namespace Uncreated.Warfare.Components
         }
         public static List<FOB> GetNearbyFOBs(Vector3 point, ulong team = 0, EFOBRadius radius = EFOBRadius.FULL)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float radius2 = GetRadius(radius);
             List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(radius2, point, b =>
                 {
@@ -622,7 +658,7 @@ namespace Uncreated.Warfare.Components
 
             return fobs;
         }
-        public static FOB GetNearestFOB(Vector3 point, EFOBRadius radius = EFOBRadius.FULL, ulong team = 0)
+        public static FOB? GetNearestFOB(Vector3 point, EFOBRadius radius = EFOBRadius.FULL, ulong team = 0)
         {
             return GetNearbyFOBs(point, team, radius).FirstOrDefault();
         }

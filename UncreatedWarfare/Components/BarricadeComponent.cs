@@ -7,7 +7,7 @@ namespace Uncreated.Warfare.Components
     public class BarricadeComponent : MonoBehaviour
     {
         public ulong Owner;
-        public Player Player;
+        public Player? Player;
         public Guid BarricadeGUID;
         public ulong LastDamager;
     }

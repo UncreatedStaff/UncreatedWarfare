@@ -95,6 +95,9 @@ namespace Uncreated.Warfare
             [HarmonyPostfix]
             static void OnPlayerEnteredQueuePost()
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.EnableQueueSkip) return;
                 if (Provider.pending.Count > 0)
                 {
@@ -118,12 +121,15 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool OnChatRequested(in ServerInvocationContext context, byte flags, string text)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.ReceiveChatRequest) return true;
                 SteamPlayer callingPlayer = context.GetCallingPlayer();
-                UCPlayer caller = UCPlayer.FromSteamPlayer(callingPlayer);
+                UCPlayer? caller = UCPlayer.FromSteamPlayer(callingPlayer);
                 if (caller != null && (caller.MuteType & Commands.EMuteType.TEXT_CHAT) == Commands.EMuteType.TEXT_CHAT && caller.TimeUnmuted > DateTime.Now)
                 {
-                    caller.SendChat("text_chat_feedback_muted", caller.MuteReason,
+                    caller.SendChat("text_chat_feedback_muted", caller.MuteReason ?? string.Empty,
                         caller.TimeUnmuted.ToString("g") + " EST");
                     return false;
                 }
@@ -192,7 +198,7 @@ namespace Uncreated.Warfare
                 else if (mode == EChatMode.LOCAL)
                 {
                     float num = 16384f;
-                    UCPlayer player = UCPlayer.FromSteamPlayer(callingPlayer);
+                    UCPlayer? player = UCPlayer.FromSteamPlayer(callingPlayer);
                     if (player == null || player.Squad == null || player.Squad.Members == null)
                     {
                         foreach (SteamPlayer client in Provider.clients)
@@ -233,6 +239,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool OnGestureReceived(EPlayerGesture newGesture, PlayerAnimator __instance)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.ReceiveGestureRequest) return true;
                 if (OnPlayerGesture_Global != null)
                 {
@@ -250,6 +259,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool OnPlayerMarked(ref bool newIsMarkerPlaced, ref Vector3 newMarkerPosition, ref string newMarkerTextOverride, PlayerQuests __instance)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.replicateSetMarker) return true;
                 bool isAllowed = true;
                 OnPlayerMarker_Global.Invoke(__instance.player, ref newMarkerPosition, ref newMarkerTextOverride, ref newIsMarkerPlaced, ref isAllowed);
@@ -263,6 +275,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool CancelStoringNonWhitelistedItem(PlayerInventory __instance, byte page_0, byte x_0, byte y_0, byte page_1, byte x_1, byte y_1, byte rot_1)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.ReceiveDragItem) return true;
                 bool allow = true;
                 ItemJar jar = __instance.getItem(page_0, __instance.getIndex(page_0, x_0, y_0));
@@ -279,8 +294,12 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool CancelLeavingGroup(Player player)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.requestGroupExit) return true;
-                if (UCPlayer.FromPlayer(player).OnDutyOrAdmin()) return true;
+                UCPlayer? pl = UCPlayer.FromPlayer(player);
+                if (pl == null || pl.OnDutyOrAdmin()) return true;
                 player.SendChat("cant_leave_group");
                 return false;
             }
@@ -292,6 +311,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool CancelCosmeticChangesPrefix(EVisualToggleType type, PlayerClothing __instance)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.ReceiveVisualToggleRequest) return true;
                 EVisualToggleType newtype = type;
                 bool allow = true;
@@ -306,6 +328,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool CancelCosmeticSetPrefix(EVisualToggleType type, ref bool isVisible, PlayerClothing __instance)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.ServerSetVisualToggleState) return true;
                 EVisualToggleType newtype = type;
                 bool allow = true;
@@ -320,6 +345,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool BatteryStealingOverride(in ServerInvocationContext context)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.ReceiveStealVehicleBattery) return true;
                 bool allow = true;
                 OnBatterySteal_Global?.Invoke(context.GetCallingPlayer(), ref allow);
@@ -334,15 +362,18 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static void OnPreMeleeHit(UseableMelee __instance)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), ((ItemWeaponAsset)__instance.player.equipment.asset).range, RayMasks.BARRICADE, __instance.player);
                 if (info.transform != null)
                 {
                     var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
                     if (drop != null)
                     {
-                        UCPlayer builder = UCPlayer.FromPlayer(__instance.player);
+                        UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
 
-                        if (builder.GetTeam() == drop.GetServersideData().group)
+                        if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
                         {
                             if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
                             {

@@ -25,6 +25,9 @@ namespace Uncreated.Warfare.Vehicles
 
             _config = new Config<VehicleBayConfig>(Data.VehicleStorage, "config.json");
 
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             VehicleManager.onEnterVehicleRequested += OnVehicleEnterRequested;
             VehicleManager.onSwapSeatRequested += OnVehicleSwapSeatRequested;
             VehicleManager.onExitVehicleRequested += OnVehicleExitRequested;
@@ -53,6 +56,9 @@ namespace Uncreated.Warfare.Vehicles
         protected override string LoadDefaults() => "[]";
         public static void AddRequestableVehicle(InteractableVehicle vehicle)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             VehicleData data = new VehicleData(vehicle.asset.GUID);
             data.SaveMetaData(vehicle);
             AddObjectToSave(data);
@@ -60,6 +66,9 @@ namespace Uncreated.Warfare.Vehicles
         public static void RemoveRequestableVehicle(Guid vehicleID) => RemoveWhere(vd => vd.VehicleID == vehicleID);
         public static bool VehicleExists(Guid vehicleID, out VehicleData vehicleData)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 if (ActiveObjects[i].VehicleID == vehicleID)
@@ -68,11 +77,14 @@ namespace Uncreated.Warfare.Vehicles
                     return true;
                 }
             }
-            vehicleData = null;
+            vehicleData = null!;
             return false;
         }
         public static void IncrementRequestCount(Guid vehicleID, bool save)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 if (ActiveObjects[i].VehicleID == vehicleID)
@@ -87,8 +99,11 @@ namespace Uncreated.Warfare.Vehicles
         public static void AddCrewmanSeat(Guid vehicleID, byte newSeatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Add(newSeatIndex));
         public static void RemoveCrewmanSeat(Guid vehicleID, byte seatIndex) => UpdateObjectsWhere(vd => vd.VehicleID == vehicleID, vd => vd.CrewSeats.Remove(seatIndex));
         /// <summary>Level must be loaded.</summary>
-        public static InteractableVehicle SpawnLockedVehicle(Guid vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
+        public static InteractableVehicle? SpawnLockedVehicle(Guid vehicleID, Vector3 position, Quaternion rotation, out uint instanceID)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 instanceID = 0;
@@ -160,41 +175,55 @@ namespace Uncreated.Warfare.Vehicles
                 return null;
             }
         }
+        internal static bool OnQuestCompleted(UCPlayer player, Guid presetKey) => false;
+
         public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
         {
-            VehicleBarricadeRegion vehicleRegion = vehicle.FindRegionFromVehicleWithIndex(out ushort plant);
-            if (plant < ushort.MaxValue)
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            VehicleBarricadeRegion? vehicleRegion = vehicle.FindRegionFromVehicleWithIndex(out ushort plant);
+            if (vehicleRegion != null)
             {
-                for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
+                if (plant < ushort.MaxValue)
                 {
-                    if (i >= 0)
+                    for (int i = vehicleRegion.drops.Count - 1; i >= 0; i--)
                     {
-                        if (vehicleRegion.drops[i].interactable is InteractableStorage store)
-                            store.despawnWhenDestroyed = true;
+                        if (i >= 0)
+                        {
+                            if (vehicleRegion.drops[i].interactable is InteractableStorage store)
+                                store.despawnWhenDestroyed = true;
 
-                        BarricadeManager.destroyBarricade(vehicleRegion.drops[i], 0, 0, plant);
+                            BarricadeManager.destroyBarricade(vehicleRegion.drops[i], 0, 0, plant);
+                        }
                     }
                 }
-            }
-            foreach (VBarricade vb in vehicleData.Metadata.Barricades)
-            {
-                Barricade barricade;
-                if (Assets.find(vb.BarricadeID) is ItemBarricadeAsset asset)
+                if (vehicleData.Metadata != null && vehicleData.Metadata.Barricades != null)
                 {
-                    barricade = new Barricade(asset, asset.health, Convert.FromBase64String(vb.State));
+                    foreach (VBarricade vb in vehicleData.Metadata.Barricades)
+                    {
+                        Barricade barricade;
+                        if (Assets.find(vb.BarricadeID) is ItemBarricadeAsset asset)
+                        {
+                            barricade = new Barricade(asset, asset.health, Convert.FromBase64String(vb.State));
+                        }
+                        else
+                        {
+                            L.LogError("ResupplyVehicleBarricades: Unable to find barricade asset of " + vb.BarricadeID.ToString());
+                            continue;
+                        }
+                        Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
+                        BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
+                    }
+                    EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
                 }
-                else
-                {
-                    L.LogError("ResupplyVehicleBarricades: Unable to find barricade asset of " + vb.BarricadeID.ToString());
-                    continue;
-                }
-                Quaternion quarternion = Quaternion.Euler(vb.AngleX * 2, vb.AngleY * 2, vb.AngleZ * 2);
-                BarricadeManager.dropPlantedBarricade(vehicle.transform, barricade, new Vector3(vb.PosX, vb.PosY, vb.PosZ), quarternion, vb.OwnerID, vb.GroupID);
             }
-            EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
         }
         public static void DeleteVehicle(InteractableVehicle vehicle)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             vehicle.forceRemoveAllPlayers();
             BarricadeRegion reg = BarricadeManager.getRegionFromVehicle(vehicle);
             if (reg != null)
@@ -219,12 +248,15 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool IsVehicleFull(InteractableVehicle vehicle, bool excludeDriver = false)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
             {
                 if (seat == 0 && excludeDriver)
                     continue;
 
-                var passenger = vehicle.passengers[seat];
+                Passenger passenger = vehicle.passengers[seat];
 
                 if (passenger.player == null)
                 {
@@ -235,9 +267,12 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool TryGetFirstNonCrewSeat(InteractableVehicle vehicle, VehicleData data, out byte seat)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (seat = 0; seat < vehicle.passengers.Length; seat++)
             {
-                var passenger = vehicle.passengers[seat];
+                Passenger passenger = vehicle.passengers[seat];
 
                 if (passenger.player == null && !data.CrewSeats.Contains(seat))
                 {
@@ -249,9 +284,12 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool TryGetFirstNonDriverSeat(InteractableVehicle vehicle, out byte seat)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (seat = 0; seat < vehicle.passengers.Length; seat++)
             {
-                var passenger = vehicle.passengers[seat];
+                Passenger passenger = vehicle.passengers[seat];
 
                 if (seat != 0 && passenger.player == null)
                 {
@@ -263,9 +301,12 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static bool IsOwnerInVehicle(InteractableVehicle vehicle, UCPlayer owner)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (vehicle.lockedOwner == CSteamID.Nil || owner == null) return false;
 
-            foreach (var passenger in vehicle.passengers)
+            foreach (Passenger passenger in vehicle.passengers)
             {
                 if (passenger.player != null && owner.CSteamID == passenger.player.playerID.steamID)
                 {
@@ -278,10 +319,13 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static int CountCrewmen(InteractableVehicle vehicle, VehicleData data)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int count = 0;
             for (byte seat = 0; seat < vehicle.passengers.Length; seat++)
             {
-                var passenger = vehicle.passengers[seat];
+                Passenger passenger = vehicle.passengers[seat];
 
                 if (data.CrewSeats.Contains(seat) && passenger.player != null)
                 {
@@ -292,7 +336,10 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleExitRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
         {
-            UCPlayer ucplayer = UCPlayer.FromPlayer(player);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
             if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID)) return;
             if (!ucplayer.OnDuty() && pendingLocation.y - F.GetHeightAt2DPoint(pendingLocation.x, pendingLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
             {
@@ -300,8 +347,7 @@ namespace Uncreated.Warfare.Vehicles
                 shouldAllow = false;
                 return;
             }
-
-            if (KitManager.KitExists(ucplayer.KitName, out Kit kit))
+            if (ucplayer != null && KitManager.KitExists(ucplayer.KitName, out Kit kit))
             {
                 if (kit.Class == EClass.LAT || kit.Class == EClass.HAT)
                 {
@@ -311,6 +357,14 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleEnterRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            if (vehicle == null)
+            {
+                L.LogError("Vehicle not specified");
+                return;
+            }
             try
             {
                 if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
@@ -319,12 +373,12 @@ namespace Uncreated.Warfare.Vehicles
                     shouldAllow = false;
                     return;
                 }
-                if (vehicle == null || !vehicle.asset.canBeLocked)
+                if (!vehicle.asset.canBeLocked)
                 {
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
                     return;
                 }
-                UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+                UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
                 if (player == null)
                 {
                     EventFunctions.OnEnterVehicle(nelsonplayer, vehicle, ref shouldAllow);
@@ -361,13 +415,16 @@ namespace Uncreated.Warfare.Vehicles
         }
         private void OnVehicleSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 if (vehicle == null) return;
                 if (!VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
                     return;
 
-                UCPlayer enterer = UCPlayer.FromPlayer(nelsonplayer);
+                UCPlayer? enterer = UCPlayer.FromPlayer(nelsonplayer);
                 if (enterer == null)
                     return;
 
@@ -384,7 +441,7 @@ namespace Uncreated.Warfare.Vehicles
                         return;
                     }
 
-                    UCPlayer owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
+                    UCPlayer? owner = UCPlayer.FromCSteamID(vehicle.lockedOwner);
 
                     if (vehicleData.CrewSeats.Contains(toSeatIndex) && vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
                     {
@@ -392,17 +449,17 @@ namespace Uncreated.Warfare.Vehicles
                         {
                             if (toSeatIndex == 0) // if a crewman is trying to enter the driver's seat
                             {
-                                bool canEnterDriverSeat = owner is null || 
+                                bool canEnterDriverSeat = owner == null || 
                                     enterer == owner || 
                                     enterer.OnDuty() ||
                                     IsOwnerInVehicle(vehicle, owner) || 
-                                    (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || 
-                                    (owner.Position - vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
+                                    (owner != null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || 
+                                    (owner!.Position - vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
                                     (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, vehicle.lockedGroup.m_SteamID) != null);
 
                                 if (!canEnterDriverSeat)
                                 {
-                                    if (owner.Squad == null)
+                                    if (owner!.Squad == null)
                                         enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
                                     else
                                         enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
@@ -441,7 +498,7 @@ namespace Uncreated.Warfare.Vehicles
 
                             if (!canEnterDriverSeat)
                             {
-                                if (owner.Squad == null)
+                                if (owner!.Squad == null)
                                     enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
                                 else
                                     enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
@@ -498,9 +555,9 @@ namespace Uncreated.Warfare.Vehicles
         [JsonIgnore]
         public bool IsNil => value == float.NaN;
         public EDelayType type;
-        public string gamemode;
+        public string? gamemode;
         public float value;
-        public Delay(EDelayType type, float value, string gamemode = null)
+        public Delay(EDelayType type, float value, string? gamemode = null)
         {
             this.type = type;
             this.value = value;
@@ -544,7 +601,7 @@ namespace Uncreated.Warfare.Vehicles
         public Guid[] Items;
         public Delay[] Delays;
         public List<byte> CrewSeats;
-        public MetaSave Metadata;
+        public MetaSave? Metadata;
         public int RequestCount;
         public VehicleData(Guid vehicleID)
         {
@@ -599,7 +656,7 @@ namespace Uncreated.Warfare.Vehicles
             RequestCount = 0;
             Delays = new Delay[0];
         }
-        public void AddDelay(EDelayType type, float value, string gamemode = null)
+        public void AddDelay(EDelayType type, float value, string? gamemode = null)
         {
             int index = -1;
             for (int i = 0; i < Delays.Length; i++)
@@ -627,7 +684,7 @@ namespace Uncreated.Warfare.Vehicles
                 }
             }
         }
-        public bool RemoveDelay(EDelayType type, float value, string gamemode = null)
+        public bool RemoveDelay(EDelayType type, float value, string? gamemode = null)
         {
             if (Delays.Length == 0) return false;
             int index = -1;
@@ -669,7 +726,7 @@ namespace Uncreated.Warfare.Vehicles
                 ref Delay del = ref Delays[i];
                 if (!string.IsNullOrEmpty(del.gamemode))
                 {
-                    string gamemode = del.gamemode;
+                    string gamemode = del.gamemode!;
                     bool blacklist = false;
                     if (gamemode[0] == '!')
                     {
@@ -724,7 +781,7 @@ namespace Uncreated.Warfare.Vehicles
                 bool universal = string.IsNullOrEmpty(del.gamemode);
                 if (!universal)
                 {
-                    string gamemode = del.gamemode; // !TeamCTF
+                    string gamemode = del.gamemode!; // !TeamCTF
                     bool blacklist = false;
                     if (gamemode[0] == '!') // true
                     {
@@ -858,14 +915,14 @@ namespace Uncreated.Warfare.Vehicles
         }
         public void SaveMetaData(InteractableVehicle vehicle)
         {
-            List<VBarricade> barricades = null;
-            List<KitItem> trunk = null;
+            List<VBarricade>? barricades = null;
+            List<KitItem>? trunk = null;
 
             if (vehicle.trunkItems.items.Count > 0)
             {
                 trunk = new List<KitItem>();
 
-                foreach (var jar in vehicle.trunkItems.items)
+                foreach (ItemJar jar in vehicle.trunkItems.items)
                 {
                     if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
                     {
@@ -901,9 +958,9 @@ namespace Uncreated.Warfare.Vehicles
 
     public class MetaSave
     {
-        public List<VBarricade> Barricades;
-        public List<KitItem> TrunkItems;
-        public MetaSave(List<VBarricade> barricades, List<KitItem> trunkItems)
+        public List<VBarricade>? Barricades;
+        public List<KitItem>? TrunkItems;
+        public MetaSave(List<VBarricade>? barricades, List<KitItem>? trunkItems)
         {
             Barricades = barricades;
             TrunkItems = trunkItems;

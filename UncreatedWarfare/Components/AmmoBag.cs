@@ -1,4 +1,5 @@
 ﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
@@ -21,11 +22,14 @@ namespace Uncreated.Warfare.FOBs
         }
         public void ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Ammo -= ammoCost;
 
             KitManager.ResupplyKit(player, kit, true);
 
-            UCPlayer owner = UCPlayer.FromID(data.owner);
+            UCPlayer? owner = UCPlayer.FromID(data.owner);
             if (owner != null && owner.Steam64 != player.Steam64)
             {
                 Points.AwardXP(owner, Points.XPConfig.ResupplyFriendlyXP, Translation.Translate("xp_resupplied_teammate", owner));

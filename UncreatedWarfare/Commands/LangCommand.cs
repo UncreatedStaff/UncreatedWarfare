@@ -1,5 +1,6 @@
 ﻿using Rocket.API;
 using Rocket.Unturned.Player;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,6 +19,9 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.lang" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UnturnedPlayer player = (UnturnedPlayer)caller;
             string op = command.Length > 0 ? command[0].ToLower() : string.Empty;
             if (command.Length == 0)

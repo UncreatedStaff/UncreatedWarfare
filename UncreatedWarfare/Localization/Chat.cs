@@ -79,6 +79,9 @@ namespace Uncreated.Warfare
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
         public static void SendChat(this SteamPlayer player, string text, Color textColor, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string localizedString = Translation.Translate(text, player.playerID.steamID.m_SteamID, formatting);
             if (Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
                 SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player);
@@ -114,6 +117,9 @@ namespace Uncreated.Warfare
         /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
         public static void SendChat(this SteamPlayer player, string text, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string localizedString = Translation.Translate(text, player.playerID.steamID.m_SteamID, out Color textColor, formatting);
             if (Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
                 SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player);
@@ -194,6 +200,9 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void Broadcast(string text, Color textColor, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
                 string localizedString = Translation.Translate(text, set.Language, formatting);
@@ -239,6 +248,9 @@ namespace Uncreated.Warfare
         /// <param name="players">Enumerator of players to send the message to.</param>
         public static void Broadcast(IEnumerator<SteamPlayer> players, string text, Color textColor, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
             {
                 string localizedString = Translation.Translate(text, set.Language, formatting);
@@ -283,6 +295,9 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void Broadcast(string text, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
                 string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
@@ -327,6 +342,9 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void Broadcast(IEnumerator<SteamPlayer> players, string text, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
             {
                 string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
@@ -365,6 +383,9 @@ namespace Uncreated.Warfare
         }
         private static void BroadcastToPlayers(IEnumerable<LanguageSet> players, string text, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (LanguageSet set in players)
             {
                 string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
@@ -403,6 +424,9 @@ namespace Uncreated.Warfare
         }
         private static void BroadcastToPlayers(IEnumerable<LanguageSet> players, string text, Color textColor, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (LanguageSet set in players)
             {
                 string localizedString = Translation.Translate(text, set.Language, formatting);
@@ -473,7 +497,7 @@ namespace Uncreated.Warfare
                 return true;
             }), text, formatting);
         }
-        public static void SendSingleMessage(string text, Color color, EChatMode mode, string iconURL, bool richText, SteamPlayer recipient)
+        public static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer? recipient)
         {
             try
             {
@@ -520,6 +544,9 @@ namespace Uncreated.Warfare
         }/// <param name="backupcause">Used in case the key can not be found.</param>
         public static void BroadcastDeath(string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, bool translateKillerName, ulong killerTeam, ELimb limb, string itemName, float distance, out string message, bool broadcast = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             message = Translation.TranslateDeath(JSONMethods.DEFAULT_LANGUAGE, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, true, translateKillerName, false);
             foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
@@ -556,6 +583,9 @@ namespace Uncreated.Warfare
         }
         public static void BroadcastLandmineDeath(string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, out string message, bool broadcast = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             message = Translation.TranslateLandmineDeath(JSONMethods.DEFAULT_LANGUAGE, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
             foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {

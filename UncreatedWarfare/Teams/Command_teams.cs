@@ -1,4 +1,5 @@
 ﻿using Rocket.API;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
@@ -14,7 +15,11 @@ namespace Uncreated.Warfare.Teams
         public List<string> Permissions => new List<string>() { "uc.teams" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
 
             if (!Data.Is(out ITeams teamgm) && teamgm.UseJoinUI)
             {

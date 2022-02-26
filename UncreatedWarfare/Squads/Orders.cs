@@ -17,6 +17,9 @@ namespace Uncreated.Warfare.Squads
 
         public static Order GiveOrder(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Order order = squad.Leader.Player.gameObject.AddComponent<Order>();
             order.Initialize(squad, commander, type, marker, message);
             orders.Add(order);
@@ -32,26 +35,35 @@ namespace Uncreated.Warfare.Squads
 
             return order;
         }
-        public static bool HasOrder(Squad squad, out Order order)
+        public static bool HasOrder(Squad? squad, out Order order)
         {
-            order = null;
-            if (squad is null) return false;
-            return (bool)(squad.Leader.Player.TryGetComponent(out order));
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            order = null!;
+            if (squad == null) return false;
+            return squad.Leader.Player.TryGetComponent(out order);
         }
         public static bool CancelOrder(Order order)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             bool success = orders.Remove(order);
             order.Cancel();
             return success;
         }
         public static void OnFOBBunkerBuilt(FOB fob, BuildableComponent buildable)
         {
-            foreach (var pair in buildable.PlayerHits)
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            foreach (KeyValuePair<ulong, int> pair in buildable.PlayerHits)
             {
-                var player = UCPlayer.FromID(pair.Key);
+                UCPlayer? player = UCPlayer.FromID(pair.Key);
                 if (player != null &&
                     (float)pair.Value / buildable.Buildable.requiredHits >= 0.1F &&
-                    HasOrder(player.Squad, out var order) &&
+                    HasOrder(player.Squad, out Order order) &&
                     order.Type == EOrder.BUILDFOB &&
                     (fob.Position - order.Marker).sqrMagnitude <= Math.Pow(80, 2)
                 )
@@ -81,7 +93,7 @@ namespace Uncreated.Warfare.Squads
         public int RewardXP { get; private set; }
         public int RewardTW { get; private set; }
         public bool IsActive { get; private set; }
-        public Flag Flag { get; private set; }
+        public Flag? Flag { get; private set; }
 
         private OrderCondition Condition;
 
@@ -89,8 +101,11 @@ namespace Uncreated.Warfare.Squads
 
         internal const short orderKey = 12004;
 
-        public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag flag = null)
+        public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag? flag = null)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Squad = squad;
             Commander = commander;
             Type = type;
@@ -121,7 +136,7 @@ namespace Uncreated.Warfare.Squads
                     RewardTW = 100;
 
                     Vector3 avgMemberPoint = Vector3.zero;
-                    foreach (var player in Squad.Members)
+                    foreach (UCPlayer player in Squad.Members)
                         avgMemberPoint += player.Position;
 
                     avgMemberPoint /= squad.Members.Count;
@@ -151,6 +166,9 @@ namespace Uncreated.Warfare.Squads
         }
         public void Fulfill()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!IsActive) return;
 
             switch (Type)
@@ -160,7 +178,7 @@ namespace Uncreated.Warfare.Squads
                 case EOrder.DEFEND:
                     break;
                 case EOrder.BUILDFOB:
-                    foreach (var player in Squad.Members)
+                    foreach (UCPlayer player in Squad.Members)
                     {
                         GiveReward(player);
                         HideUI(player);
@@ -168,7 +186,7 @@ namespace Uncreated.Warfare.Squads
                     break;
                 case EOrder.MOVE:
 
-                    foreach (var player in Condition.FullfilledPlayers)
+                    foreach (UCPlayer player in Condition.FullfilledPlayers)
                     {
                         if (player.IsOnline)
                         {
@@ -197,11 +215,14 @@ namespace Uncreated.Warfare.Squads
 
         public void Cancel()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!IsActive) return;
 
-            var toast = new ToastMessage("ORDER CANCELLED".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
+            ToastMessage toast = new ToastMessage("ORDER CANCELLED".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
 
-            foreach (var player in Squad.Members)
+            foreach (UCPlayer player in Squad.Members)
             {
                 HideUI(player);
                 ToastMessage.QueueMessage(player, toast);
@@ -214,11 +235,14 @@ namespace Uncreated.Warfare.Squads
         }
         public void TimeOut()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!IsActive) return;
 
-            var toast = new ToastMessage("ORDER TIMED OUT".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
+            ToastMessage toast = new ToastMessage("ORDER TIMED OUT".Colorize("c7b3a5"), EToastMessageSeverity.MINI);
 
-            foreach (var player in Squad.Members)
+            foreach (UCPlayer player in Squad.Members)
             {
                 HideUI(player);
                 ToastMessage.QueueMessage(player, toast);
@@ -254,6 +278,9 @@ namespace Uncreated.Warfare.Squads
 
             while (true)
             {
+#if DEBUG
+                IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 // every 1 second
 
                 TimeLeft--;
@@ -275,7 +302,7 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (counter % (60 / tickFrequency) == 0) // every 60 seconds
                 {
-                    foreach (var player in Squad.Members)
+                    foreach (UCPlayer player in Squad.Members)
                         UpdateUI(player);
                 }
 
@@ -288,12 +315,18 @@ namespace Uncreated.Warfare.Squads
                 counter++;
                 if (counter >= 60 / tickFrequency)
                     counter = 0;
+#if DEBUG
+                profiler.Dispose();
+#endif
                 yield return new WaitForSeconds(tickFrequency);
             }
         }
         public IEnumerator<WaitForSeconds> Delete()
         {
             yield return new WaitForSeconds(20);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             // TODO: Clear UI
             StopCoroutine(loop);
             Destroy(this);
@@ -326,6 +359,9 @@ namespace Uncreated.Warfare.Squads
         }
         public void UpdateData()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Type == EOrder.MOVE)
             {
                 foreach (UCPlayer player in Squad.Members)

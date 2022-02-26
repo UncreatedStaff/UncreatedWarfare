@@ -102,13 +102,15 @@ namespace Uncreated.Warfare.Networking
             [NetCall(ENetCall.FROM_SERVER, 1024)]
             internal static void ReceiveSetQueueSkip(IConnection connection, ulong player, bool status)
             {
-                if (PlayerManager.HasSaveRead(player, out PlayerSave save))
+                if (PlayerSave.TryReadSaveFile(player, out PlayerSave save))
                 {
                     save.HasQueueSkip = status;
+                    PlayerSave.WriteToSaveFile(save);
                 }
                 else
                 {
-                    PlayerManager.AddSave(new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false));
+                    save = new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false);
+                    PlayerSave.WriteToSaveFile(save);
                 }
             }
 
@@ -401,6 +403,8 @@ namespace Uncreated.Warfare.Networking
                 }
             }
             internal static readonly NetCall<string, EClass, string> SendKitClass = new NetCall<string, EClass, string>(1114);
+
+            // 1124 used by discord key quest
         }
 
         internal static readonly NetCall<string> RequestKit = new NetCall<string>(ReceiveKitRequest);
@@ -429,12 +433,12 @@ namespace Uncreated.Warfare.Networking
                 }
                 else
                 {
-                    kits[i] = null;
+                    kits[i] = null!;
                 }
             }
             ReceiveKits.Invoke(connection, kits);
         }
-        internal static readonly NetCallRaw<Kit> ReceiveKit = new NetCallRaw<Kit>(1117, Kit.Read, Kit.Write);
+        internal static readonly NetCallRaw<Kit?> ReceiveKit = new NetCallRaw<Kit?>(1117, Kit.Read, Kit.Write);
         internal static readonly NetCallRaw<Kit[]> ReceiveKits = new NetCallRaw<Kit[]>(1118, Kit.ReadMany, Kit.WriteMany);
 
         internal static readonly NetCall<ushort> RequestItemInfo = new NetCall<ushort>(ReceiveItemInfoRequest);
@@ -446,7 +450,7 @@ namespace Uncreated.Warfare.Networking
             else 
                 SendItemInfo.Invoke(connection, null);
         }
-        internal static readonly NetCallRaw<ItemData> SendItemInfo = new NetCallRaw<ItemData>(1120, ItemData.Read, ItemData.Write);
+        internal static readonly NetCallRaw<ItemData?> SendItemInfo = new NetCallRaw<ItemData?>(1120, ItemData.Read, ItemData.Write);
 
         internal static readonly NetCall<ushort[]> RequestItemInfos = new NetCall<ushort[]>(ReceiveItemInfosRequest);
         [NetCall(ENetCall.FROM_SERVER, 1121)]
@@ -479,7 +483,7 @@ namespace Uncreated.Warfare.Networking
                 {
                     L.LogError($"Error converting asset of type {assets[i].GetType().FullName} to ItemData ({assets[i].name}).");
                     L.LogError(ex);
-                    rtn[i] = null;
+                    rtn[i] = null!;
                 }
             }
             SendItemInfos.Invoke(connection, rtn);

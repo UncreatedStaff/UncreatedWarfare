@@ -16,6 +16,9 @@ namespace Uncreated.Warfare.Kits
         protected override string LoadDefaults() => "[]";
         public static void DropAllSigns()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (RequestSign sign in ActiveObjects)
             {
                 sign.SpawnCheck(false);
@@ -26,8 +29,11 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool AddRequestSign(InteractableSign sign, out RequestSign signadded)
         {
-            signadded = default;
-            BarricadeDrop drop = UCBarricadeManager.GetSignFromInteractable(sign);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            signadded = default!;
+            BarricadeDrop? drop = UCBarricadeManager.GetSignFromInteractable(sign);
             if (drop != null && !ObjectExists(x => x.instance_id == drop.instanceID, out signadded))
             {
                 signadded = new RequestSign(sign);
@@ -38,21 +44,27 @@ namespace Uncreated.Warfare.Kits
         }
         public static void RemoveRequestSign(RequestSign sign)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             RemoveWhere(x => x.instance_id == sign.instance_id);
             //await sign.InvokeUpdate();
         }
         public static void RemoveRequestSigns(string kitname) => RemoveWhere(x => x.kit_name == kitname);
         public static bool SignExists(InteractableSign sign, out RequestSign found)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (sign == null)
             {
-                found = null;
+                found = null!;
                 return false;
             }
-            BarricadeDrop drop = UCBarricadeManager.GetSignFromInteractable(sign);
+            BarricadeDrop? drop = UCBarricadeManager.GetSignFromInteractable(sign);
             if (drop == null)
             {
-                found = null;
+                found = null!;
                 return false;
             }
             for (int i = 0; i < ActiveObjects.Count; i++)
@@ -63,7 +75,7 @@ namespace Uncreated.Warfare.Kits
                     return true;
                 }
             }
-            found = null;
+            found = null!;
             return false;
         }
         public static bool SignExists(uint instance_id, out RequestSign found) => ObjectExists(s => s != default && s.instance_id == instance_id, out found);
@@ -71,6 +83,9 @@ namespace Uncreated.Warfare.Kits
         public static void UpdateSignsWithName(string kitName, Action<RequestSign> action) => UpdateObjectsWhere(rs => rs.kit_name == kitName, action);
         public static void InvokeLangUpdateForSignsOfKit(SteamPlayer player, string kitName)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitManager.KitExists(kitName, out Kit kitobj))
             {
                 if (kitobj.IsLoadout)
@@ -89,6 +104,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void InvokeLangUpdateForSignsOfKit(string kitName)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitManager.KitExists(kitName, out Kit kitobj))
             {
                 if (kitobj.IsLoadout)
@@ -107,6 +125,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void InvokeLangUpdateForAllSigns(SteamPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 ActiveObjects[i].InvokeUpdate(player);
@@ -114,6 +135,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void InvokeLangUpdateForAllSigns()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
                 ActiveObjects[i].InvokeUpdate();
@@ -121,6 +145,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void SetSignTextSneaky(InteractableSign sign, string text)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             BarricadeDrop barricadeByRootFast = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             byte[] state = barricadeByRootFast.GetServersideData().barricade.state;
             byte[] bytes = Encoding.UTF8.GetBytes(text);
@@ -141,7 +168,7 @@ namespace Uncreated.Warfare.Kits
     public class RequestSign : IJsonReadWrite
     {
         [JsonIgnore]
-        public Kit Kit
+        public Kit? Kit
         {
             get
             {
@@ -172,7 +199,7 @@ namespace Uncreated.Warfare.Kits
         [JsonSettable]
         public ulong group;
         [JsonIgnore]
-        public Transform barricadetransform;
+        public Transform? barricadetransform;
         public uint instance_id;
         [JsonIgnore]
         public bool exists;
@@ -216,6 +243,9 @@ namespace Uncreated.Warfare.Kits
         }
         public void InvokeUpdate(SteamPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (barricadetransform != null)
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
@@ -227,7 +257,7 @@ namespace Uncreated.Warfare.Kits
             }
             else
             {
-                SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
                 if (data != null && drop != null)
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
@@ -240,6 +270,9 @@ namespace Uncreated.Warfare.Kits
         }
         public void InvokeUpdate()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (barricadetransform != null)
             {
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
@@ -251,7 +284,7 @@ namespace Uncreated.Warfare.Kits
             }
             else
             {
-                SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+                SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
                 if (data != null && drop != null)
                 {
                     BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
@@ -265,7 +298,10 @@ namespace Uncreated.Warfare.Kits
         /// <summary>Spawns the sign if it is not already placed.</summary>
         public void SpawnCheck(bool save)
         {
-            SDG.Unturned.BarricadeData data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop drop);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
             if (drop == null || data == null)
             {
                 if (Assets.find(sign_id) is not ItemBarricadeAsset asset)
@@ -318,6 +354,9 @@ namespace Uncreated.Warfare.Kits
         public static void WriteRequestSign(RequestSign obj, Utf8JsonWriter writer) => obj.WriteJson(writer);
         public void WriteJson(Utf8JsonWriter writer)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             writer.WriteProperty(nameof(kit_name), kit_name);
             writer.WriteProperty(nameof(transform), transform);
             writer.WriteProperty(nameof(sign_id), sign_id);
@@ -327,17 +366,20 @@ namespace Uncreated.Warfare.Kits
         }
         public void ReadJson(ref Utf8JsonReader reader)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string val = reader.GetString();
+                    string val = reader.GetString()!;
                     if (reader.Read())
                     {
                         switch (val)
                         {
                             case nameof(kit_name):
-                                kit_name = reader.GetString();
+                                kit_name = reader.GetString()!;
                                 break;
                             case nameof(transform):
                                 if (reader.TokenType == JsonTokenType.StartObject)

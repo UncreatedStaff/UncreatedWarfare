@@ -115,7 +115,7 @@ namespace Uncreated.Warfare.Commands
             if (violator == null)
                 names = Data.DatabaseManager.GetUsernames(Violator);
             else
-                names = F.GetPlayerOriginalNames(admin);
+                names = F.GetPlayerOriginalNames(Violator);
             if (violator == null)
             {
                 CSteamID id = new CSteamID(Violator);

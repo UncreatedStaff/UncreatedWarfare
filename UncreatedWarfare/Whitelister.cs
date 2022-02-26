@@ -41,18 +41,19 @@ namespace Uncreated.Warfare
         }
         private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, SDG.Unturned.ItemData itemData, ref bool shouldAllow)
         {
-            UCPlayer player = UCPlayer.FromPlayer(P);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromPlayer(P);
 
-            if (player.OnDuty())
+            if (player == null || player.OnDuty())
             {
                 return;
             }
-            WhitelistItem whitelistedItem;
+            WhitelistItem? whitelistedItem;
             bool isWhitelisted;
             if (Assets.find(EAssetType.ITEM, itemData.item.id) is not ItemAsset a)
             {
-                whitelistedItem = null;
-                isWhitelisted = false;
                 L.LogError("Unknown asset on item " + itemData.item.id.ToString());
                 shouldAllow = false;
                 return;
@@ -116,12 +117,15 @@ namespace Uncreated.Warfare
         private void OnBarricadeSalvageRequested(BarricadeDrop barricade, SteamPlayer instigatorClient, ref bool shouldAllow)
         {
             if (!shouldAllow) return;
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
 
-            UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
+            UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
 
             bool isFOB = barricade.model.TryGetComponent(out Components.FOBComponent f);
 
-            if (player.OnDuty() && isFOB)
+            if (player == null || player.OnDuty() && isFOB)
             {
                 f.parent.IsWipedByAuthority = true;
             }
@@ -150,8 +154,11 @@ namespace Uncreated.Warfare
         }
         private void OnStructureSalvageRequested(StructureDrop structure, SteamPlayer instigatorClient, ref bool shouldAllow)
         {
-            UCPlayer player = UCPlayer.FromSteamPlayer(instigatorClient);
-            if (player.OnDuty())
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromSteamPlayer(instigatorClient);
+            if (player == null || player.OnDuty())
                 return;
             SDG.Unturned.StructureData data = structure.GetServersideData();
             if (IsWhitelisted(data.structure.asset.GUID, out _))
@@ -162,8 +169,11 @@ namespace Uncreated.Warfare
         }
         private void OnEditSignRequest(CSteamID steamID, InteractableSign sign, ref string text, ref bool shouldAllow)
         {
-            UCPlayer player = UCPlayer.FromCSteamID(steamID);
-            if (!player.OnDuty())
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromCSteamID(steamID);
+            if (player != null && !player.OnDuty())
             {
                 shouldAllow = false;
                 player.Message("whitelist_noeditsign");
@@ -181,9 +191,12 @@ namespace Uncreated.Warfare
             ref ulong group,
             ref bool shouldAllow)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
-                UCPlayer player = UCPlayer.FromID(owner);
+                UCPlayer? player = UCPlayer.FromID(owner);
                 if (player == null || player.Player == null || player.OnDuty()) return;
                 if (TeamManager.IsInAnyMain(point))
                 {
@@ -238,9 +251,12 @@ namespace Uncreated.Warfare
             ref bool shouldAllow
             )
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
-                UCPlayer player = UCPlayer.FromID(owner);
+                UCPlayer? player = UCPlayer.FromID(owner);
                 if (player == null || player.Player == null || player.OnDuty()) return;
                 if (TeamManager.IsInAnyMainOrAMCOrLobby(point))
                 {

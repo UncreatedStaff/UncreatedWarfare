@@ -8,6 +8,9 @@ namespace Uncreated.Warfare.Kits
     {
         public static void GiveKitToPlayer(UnturnedPlayer player, Kit kit)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (kit != null)
             {
                 ClearInventory(player);
@@ -50,6 +53,9 @@ namespace Uncreated.Warfare.Kits
         public static void ClearInventory(UnturnedPlayer player) => ClearInventory(player.Player.channel.owner);
         public static void ClearInventory(SteamPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             player.player.equipment.dequip();
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
@@ -97,6 +103,9 @@ namespace Uncreated.Warfare.Kits
 
         public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort itemID, int amount)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int counter = 0;
 
             for (byte i = (byte)(storage.items.getItemCount() - 1); i >= 0; i--)
@@ -114,6 +123,9 @@ namespace Uncreated.Warfare.Kits
 
         public static int CountItems(Player player, ushort itemID)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int count = 0;
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
@@ -134,6 +146,9 @@ namespace Uncreated.Warfare.Kits
 
         public static void RemoveSingleItem(UCPlayer player, ushort itemID)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
                 byte pageCount = player.Player.inventory.getItemCount(page);

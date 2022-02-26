@@ -29,13 +29,14 @@ namespace Uncreated.Warfare
         public EClass KitClass;
         public EBranch Branch;
         public string KitName;
-        public Squad Squad;
+        public Squad? Squad;
         public Player Player { get; internal set; }
         public CSteamID CSteamID { get; internal set; }
         public string CharacterName;
         public string NickName;
-        public ITransportConnection connection { get { return Player?.channel.owner.transportConnection; } }
-        public Coroutine StorageCoroutine;
+        public ITransportConnection connection => Player.channel.owner.transportConnection;
+        public Coroutine? StorageCoroutine;
+        public Ranks.RankStatus[]? RankData;
         public FPlayerName Name 
         { 
             get
@@ -46,12 +47,12 @@ namespace Uncreated.Warfare
             } 
         }
         public DateTime TimeUnmuted;
-        public string MuteReason;
+        public string? MuteReason;
         public EMuteType MuteType;
         private FPlayerName cachedName = FPlayerName.Nil;
         /// <summary>[Unreliable]</summary>
         private MedalData _medals = MedalData.Nil;
-        private Dictionary<EBranch, RankData> _ranks;
+        private Dictionary<EBranch, RankData>? _ranks;
         public Dictionary<EBranch, RankData> Ranks
         {
             get
@@ -95,8 +96,13 @@ namespace Uncreated.Warfare
         public bool IsOfficer { get => CurrentRank.OfficerTier > 0; }
         public void RedownloadRanks()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Dictionary<EBranch, int> xplevels = Data.DatabaseManager.GetAllXP(Steam64);
-            _ranks.Clear();
+            if (_ranks != null)
+                _ranks.Clear();
+            else _ranks = new Dictionary<EBranch, RankData>(6);
             foreach (KeyValuePair<EBranch, int> entry in xplevels)
             {
                 if (_ranks.ContainsKey(entry.Key))
@@ -104,12 +110,16 @@ namespace Uncreated.Warfare
                 _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
             }
         }
+        internal List<Guid>? _completedQuests;
         public void RedownloadMedals()
         {
             _medals.Update(Data.DatabaseManager.GetTeamwork(Steam64));
         }
         public void UpdateRank(EBranch branch, int newXP)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Ranks.TryGetValue(branch, out RankData data))
                 data.Update(newXP);
             else
@@ -118,6 +128,9 @@ namespace Uncreated.Warfare
         }
         public void UpdateRankTeam(ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             _ranks = new Dictionary<EBranch, RankData>(6);
             RedownloadRanks();
         }
@@ -156,24 +169,32 @@ namespace Uncreated.Warfare
         }
         public bool IsOnline;
         public int LifeCounter;
+
+        public bool IsOnTeam
+        {
+            get
+            {
+                ulong team = this.GetTeam();
+                return team == 1 || team == 2;
+            }
+        }
        
-       
-        public static UCPlayer FromID(ulong steamID)
+        public static UCPlayer? FromID(ulong steamID)
         {
             return PlayerManager.FromID(steamID);
             //return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
         }
-        public static UCPlayer FromCSteamID(CSteamID steamID) =>
+        public static UCPlayer? FromCSteamID(CSteamID steamID) =>
             steamID == default ? null : FromID(steamID.m_SteamID);
-        public static UCPlayer FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
-        public static UCPlayer FromUnturnedPlayer(UnturnedPlayer player) =>
+        public static UCPlayer? FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
+        public static UCPlayer? FromUnturnedPlayer(UnturnedPlayer player) =>
             player == null || player.Player == null || player.CSteamID == default ? null : FromID(player.CSteamID.m_SteamID);
-        public static UCPlayer FromSteamPlayer(SteamPlayer player)
+        public static UCPlayer? FromSteamPlayer(SteamPlayer player)
         {
             if (player == null) return null;
             return FromID(player.playerID.steamID.m_SteamID);
         }
-        public static UCPlayer FromIRocketPlayer(IRocketPlayer caller)
+        public static UCPlayer? FromIRocketPlayer(IRocketPlayer caller)
         {
             if (caller is not UnturnedPlayer pl)
                 if (caller is UCPlayer uc) return uc;
@@ -181,7 +202,7 @@ namespace Uncreated.Warfare
             else return FromUnturnedPlayer(pl);
         }
 
-        public static UCPlayer FromName(string name, bool includeContains = false)
+        public static UCPlayer? FromName(string name, bool includeContains = false)
         {
             if (name == null) return null;
             UCPlayer player = PlayerManager.OnlinePlayers.Find(
@@ -200,7 +221,7 @@ namespace Uncreated.Warfare
             return player;
         }
         /// <summary>Slow, use rarely.</summary>
-        public static UCPlayer FromName(string name, ENameSearchType type)
+        public static UCPlayer? FromName(string name, ENameSearchType type)
         {
             if (type == ENameSearchType.CHARACTER_NAME)
             {
@@ -341,6 +362,9 @@ namespace Uncreated.Warfare
         public ushort GetMarkerID() => Squad == null || Squad.Leader == null || Squad.Leader.Steam64 != Steam64 ? MarkerID : SquadLeaderMarkerID;
         public bool IsSquadLeader()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Squad is null)
                 return false;
 
@@ -348,6 +372,9 @@ namespace Uncreated.Warfare
         }
         public bool IsNearSquadLeader(float distance)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (distance == 0 || Squad is null || Squad.Leader is null || Squad.Leader.Player is null || Squad.Leader.Player.transform is null)
                 return false;
 
@@ -358,6 +385,9 @@ namespace Uncreated.Warfare
         }
         public bool IsOrIsNearLeader(float distance)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Squad is null || Player.transform is null || Squad.Leader.Player.transform is null)
                 return false;
 
@@ -371,6 +401,9 @@ namespace Uncreated.Warfare
         }
         public int NearbyMemberBonus(int amount, float distance)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 if (Player.life.isDead || Player.transform is null)
@@ -412,7 +445,10 @@ namespace Uncreated.Warfare
         /// <summary>Gets some of the values from the playersave again.</summary>
         public static void Refresh(ulong Steam64)
         {
-            UCPlayer pl = PlayerManager.OnlinePlayers?.FirstOrDefault(s => s.Steam64 == Steam64);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? pl = PlayerManager.OnlinePlayers?.FirstOrDefault(s => s.Steam64 == Steam64);
             if (pl == null) return;
             else if (PlayerManager.HasSave(Steam64, out PlayerSave save))
             {
@@ -487,71 +523,50 @@ namespace Uncreated.Warfare
             this.ShouldRespawnOnJoin = ShouldRespawnOnJoin;
             this.IsOtherDonator = IsOtherDonator;
         }
-        public static void Write(ByteWriter W, PlayerSave S)
+        /// <summary>Players / 76561198267927009_0 / Uncreated_S2 / PlayerSave.dat</summary>
+        private static string GetPath(ulong steam64) => "\\Players\\" + steam64.ToString(Data.Locale) +
+                                                        "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\PlayerSave.dat";
+        public static void WriteToSaveFile(PlayerSave save)
         {
-            W.Write(CURRENT_DATA_VERSION);
-            W.Write(S.Steam64);
-            W.Write((byte)S.Team);
-            W.Write(S.KitName ?? string.Empty);
-            W.Write(S.SquadName ?? string.Empty);
-            W.Write(S.HasQueueSkip);
-            W.Write(S.LastGame);
-            W.Write(S.ShouldRespawnOnJoin);
-            W.Write(S.IsOtherDonator);
+            Block block = new Block();
+            block.writeUInt32(save.DATA_VERSION);
+            block.writeByte((byte)save.Team);
+            block.writeString(save.KitName);
+            block.writeString(save.SquadName);
+            block.writeBoolean(save.HasQueueSkip);
+            block.writeInt64(save.LastGame);
+            block.writeBoolean(save.ShouldRespawnOnJoin);
+            block.writeBoolean(save.IsOtherDonator);
+            ServerSavedata.writeBlock(GetPath(save.Steam64), block);
         }
-        public static PlayerSave Read(ByteReader R)
+        public static bool HasPlayerSave(ulong player) => ServerSavedata.fileExists(GetPath(player));
+        public static bool TryReadSaveFile(ulong player, out PlayerSave save)
         {
-            PlayerSave S = new PlayerSave(R.ReadUInt64());
-            S.DATA_VERSION = R.ReadUInt32();
-            if (S.DATA_VERSION > 0)
+            string path = GetPath(player);
+            if (!ServerSavedata.fileExists(path))
             {
-                S.Team = R.ReadUInt8();
-                S.KitName = R.ReadString();
-                S.SquadName = R.ReadString();
-                S.HasQueueSkip = R.ReadBool();
-                S.LastGame = R.ReadInt64();
-                S.ShouldRespawnOnJoin = R.ReadBool();
-                S.IsOtherDonator = R.ReadBool();
+                save = null!;
+                return false;
+            }
+            Block block = ServerSavedata.readBlock(path, 0);
+            uint dv = block.readUInt32();
+            save = new PlayerSave(player);
+            if (dv > 0)
+            {
+                save.Team = block.readByte();
+                save.KitName = block.readString();
+                save.SquadName = block.readString();
+                save.HasQueueSkip = block.readBoolean();
+                save.LastGame = block.readInt64();
+                save.ShouldRespawnOnJoin = block.readBoolean();
+                save.IsOtherDonator = block.readBoolean();
             }
             else
             {
-                S.Team = 0;
-                S.KitName = string.Empty;
-                S.SquadName = string.Empty;
-                S.HasQueueSkip = false;
-                S.LastGame = 0;
-                S.ShouldRespawnOnJoin = false;
-                S.IsOtherDonator = false;
+                save.KitName = string.Empty;
+                save.SquadName = string.Empty;
             }
-            return S;
-        }
-        public static void WriteList(ByteWriter W, List<PlayerSave> SL)
-        {
-            W.Write(SL.Count);
-            for (int i = 0; i < SL.Count; i++)
-                Write(W, SL[i]);
-        }
-        public static List<PlayerSave> ReadList(ByteReader R)
-        {
-            int length = R.ReadInt32();
-            List<PlayerSave> saves = new List<PlayerSave>(length);
-            for (int i = 0; i < length; i++)
-                saves.Add(Read(R));
-            return saves;
-        }
-        public static void WriteMany(ByteWriter W, PlayerSave[] SL)
-        {
-            W.Write(SL.Length);
-            for (int i = 0; i < SL.Length; i++)
-                Write(W, SL[i]);
-        }
-        public static PlayerSave[] ReadMany(ByteReader R)
-        {
-            int length = R.ReadInt32();
-            PlayerSave[] saves = new PlayerSave[length];
-            for (int i = 0; i < length; i++)
-                saves[i] = Read(R);
-            return saves;
+            return true;
         }
     }
 }

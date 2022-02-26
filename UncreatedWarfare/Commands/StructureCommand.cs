@@ -24,6 +24,9 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.structure" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UnturnedPlayer player = (UnturnedPlayer)caller;
             string action = command[0].ToLower();
             if (command.Length > 0)
@@ -37,15 +40,17 @@ namespace Uncreated.Warfare.Commands
                             player.Message("command_e_gamemode");
                             return;
                         }
-                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        Transform? hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        if (hit == null) return;
                         StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
                         if (structure != null)
                         {
                             if (!StructureSaver.StructureExists(structure.instanceID, EStructType.STRUCTURE, out Structure structexists))
                             {
-                                if (StructureSaver.AddStructure(structure, structure.GetServersideData(), out Structure structureaded))
+                                if (StructureSaver.AddStructure(structure, structure.GetServersideData(), out Structure? structureadded))
                                 {
-                                    player.SendChat("structure_saved", structureaded.Asset.itemName);
+                                    if (structureadded != null && structureadded.Asset != null)
+                                        player.SendChat("structure_saved", structureadded.Asset.itemName);
                                 }
                                 else
                                 {
@@ -54,8 +59,9 @@ namespace Uncreated.Warfare.Commands
                             }
                             else
                             {
-                                player.SendChat("structure_saved_already",
-                                    structexists == default ? "unknown" : structexists.Asset.itemName);
+                                if (structexists == null || structexists.Asset != null)
+                                    player.SendChat("structure_saved_already",
+                                    structexists == null ? "unknown" : structexists.Asset!.itemName);
                             }
                             return;
                         }
@@ -64,9 +70,10 @@ namespace Uncreated.Warfare.Commands
                         {
                             if (!StructureSaver.StructureExists(barricade.instanceID, EStructType.BARRICADE, out Structure structureexists))
                             {
-                                if (StructureSaver.AddStructure(barricade, barricade.GetServersideData(), out Structure structureaded))
+                                if (StructureSaver.AddStructure(barricade, barricade.GetServersideData(), out Structure structureadded))
                                 {
-                                    player.Player.SendChat("structure_saved", structureaded.Asset.itemName);
+                                    if (structureadded != null && structureadded.Asset != null)
+                                        player.Player.SendChat("structure_saved", structureadded.Asset!.itemName);
                                 }
                                 else
                                 {
@@ -75,8 +82,9 @@ namespace Uncreated.Warfare.Commands
                             }
                             else
                             {
-                                player.SendChat("structure_saved_already",
-                                    structureexists == default ? "unknown" : structureexists.Asset.itemName);
+                                if (structureexists == null || structureexists.Asset != null)
+                                    player.SendChat("structure_saved_already",
+                                    structureexists == default ? "unknown" : structureexists.Asset!.itemName);
                             }
                         }
                         else player.SendChat("structure_not_looking");
@@ -95,7 +103,8 @@ namespace Uncreated.Warfare.Commands
                             player.Message("command_e_gamemode");
                             return;
                         }
-                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        Transform? hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE);
+                        if (hit == null) return;
                         StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
                         if (structure != null)
                         {
@@ -133,7 +142,8 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.structure.pop"))
                     {
-                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE);
+                        Transform? hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE);
+                        if (hit == null) return;
                         StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
                         if (structure != null)
                         {
@@ -163,7 +173,8 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.structure.examine"))
                     {
-                        Transform hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE);
+                        Transform? hit = UCBarricadeManager.GetTransformFromLook(player.Player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.VEHICLE);
+                        if (hit == null) return;
                         StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
                         if (structure != null)
                         {

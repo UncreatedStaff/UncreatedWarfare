@@ -67,7 +67,7 @@ namespace Uncreated
         }
         protected static T AddObjectToSave(T item, bool save = true)
         {
-            if (item.Equals(default(T))) return default;
+            if (item == null) throw new ArgumentNullException(nameof(item));
             ActiveObjects.Add(item);
             if (save) Save();
             return item;
@@ -87,6 +87,9 @@ namespace Uncreated
         
         public static void Save()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Save -> " + directory);
+#endif
             _threadLocker.Wait();
             if (useSerializer)
             {
@@ -136,12 +139,15 @@ namespace Uncreated
         }
         public static void Reload()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Reload -> " + directory);
+#endif
             _threadLocker.Wait();
             if (!File.Exists(directory))
                 CreateFileIfNotExists(ActiveObjects.LoadDefaults());
             if (useDeserializer)
             {
-                FileStream rs = null;
+                FileStream? rs = null;
                 try
                 {
                     using (rs = new FileStream(directory, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -186,7 +192,7 @@ namespace Uncreated
                 }
             }
             bool clsd = false;
-            StreamReader r = null;
+            StreamReader? r = null;
             try
             {
                 r = File.OpenText(directory);
@@ -195,7 +201,7 @@ namespace Uncreated
                 r.Dispose();
                 clsd = true;
                 _threadLocker.Release();
-                T[] vals = JsonSerializer.Deserialize<T[]>(json, JsonEx.serializerSettings);
+                T[]? vals = JsonSerializer.Deserialize<T[]>(json, JsonEx.serializerSettings);
                 if (vals != null)
                 {
                     ActiveObjects.Clear();
@@ -224,7 +230,7 @@ namespace Uncreated
             return item != null;
         }
         /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-        private static FieldInfo GetField(string property, out byte reason)
+        private static FieldInfo? GetField(string property, out byte reason)
         {
             for (int i = 0; i < fields.Length; i++)
             {
@@ -249,7 +255,7 @@ namespace Uncreated
             reason = 1;
             return default;
         }
-        private static object ParseInput(string input, Type type, out bool parsed)
+        private static object? ParseInput(string input, Type type, out bool parsed)
         {
             if (input == default || type == default)
             {
@@ -418,7 +424,7 @@ namespace Uncreated
         /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
         public static T SetProperty(T obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
         {
-            FieldInfo field = GetField(property, out byte reason);
+            FieldInfo? field = GetField(property, out byte reason);
             if (reason != 0)
             {
                 if (reason == 1 || reason == 2)
@@ -440,7 +446,13 @@ namespace Uncreated
             }
             found = true;
             allowedToChange = true;
-            object parsedValue = ParseInput(value, field.FieldType, out parsed);
+            object? parsedValue;
+            if (field == null)
+            {
+                parsed = false;
+                parsedValue = null;
+            }
+            else parsedValue = ParseInput(value, field.FieldType, out parsed);
             if (parsed)
             {
                 if (field != default)
@@ -562,7 +574,7 @@ namespace Uncreated
         }
         public static T SetProperty<V>(T obj, string property, V value, out bool success, out bool found, out bool allowedToChange)
         {
-            FieldInfo field = GetField(property, out byte reason);
+            FieldInfo? field = GetField(property, out byte reason);
             if (reason != 0)
             {
                 if (reason == 1 || reason == 2)
@@ -644,6 +656,9 @@ namespace Uncreated
         }
         public void TryUpgrade()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver TryUpgrade -> " + directory);
+#endif
             try
             {
                 bool needsSaving = false;
@@ -700,63 +715,6 @@ namespace Uncreated
                 : base(string.Format("Could not deserialize data from {0} because the data was corrupted.", directory), inner)
             {
             }
-        }
-        internal static void RunTest()
-        {
-            int amt = 10000;
-            Stopwatch stopwatch = new Stopwatch();
-            bool old = useDeserializer;
-            TimeSpan elapsed;
-            if (old)
-            {
-                stopwatch.Start();
-                for (int i = 0; i < amt; i++)
-                {
-                    Reload();
-                }
-                stopwatch.Stop();
-                elapsed = stopwatch.Elapsed;
-                L.Log("Test 1, custom read, " + elapsed.ToString());
-                L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
-                stopwatch.Reset();
-                useDeserializer = false;
-            }
-            stopwatch.Start();
-            for (int i = 0; i < amt; i++)
-            {
-                Reload();
-            }
-            stopwatch.Stop();
-            elapsed = stopwatch.Elapsed;
-            stopwatch.Reset();
-            L.Log("Test 2, auto read, " + elapsed.ToString());
-            L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
-            useDeserializer = old;
-            old = useSerializer;
-            if (old)
-            {
-                stopwatch.Start();
-                for (int i = 0; i < amt; i++)
-                {
-                    Save();
-                }
-                stopwatch.Stop();
-                elapsed = stopwatch.Elapsed;
-                L.Log("Test 3, custom write, " + elapsed.ToString());
-                L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
-                stopwatch.Reset();
-                useDeserializer = false;
-            }
-            stopwatch.Start();
-            for (int i = 0; i < amt; i++)
-            {
-                Save();
-            }
-            stopwatch.Stop();
-            elapsed = stopwatch.Elapsed;
-            L.Log("Test 4, auto write, " + elapsed.ToString());
-            L.Log("Avgms: " + (elapsed.TotalMilliseconds / amt));
-            useDeserializer = old;
         }
     }
     public static class JsonEx

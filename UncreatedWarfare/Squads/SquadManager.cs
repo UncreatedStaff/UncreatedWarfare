@@ -55,6 +55,9 @@ namespace Uncreated.Warfare.Squads
         }
         private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player.Squad != null)
             {
                 ReplicateKitChange(player);
@@ -62,7 +65,10 @@ namespace Uncreated.Warfare.Squads
         }
         public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
         {
-            UCPlayer player = UCPlayer.FromSteamPlayer(steamplayer);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromSteamPlayer(steamplayer);
             if (player == null) return;
             if (player.Squad != null)
             {
@@ -92,6 +98,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static void SendSquadMenu(UCPlayer player, Squad squad, bool holdMemberCountUpdate = false)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ITransportConnection c = player.Player.channel.owner.transportConnection;
             EffectManager.sendUIEffect(squadMenuID, squadMenuKey, c, true);
             EffectManager.sendUIEffectText(squadMenuKey, c, true, "Heading", Translation.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
@@ -132,6 +141,9 @@ namespace Uncreated.Warfare.Squads
         // assumes ui is already on screen
         public static void UpdateUIMemberCount(ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer player = PlayerManager.OnlinePlayers[i];
@@ -181,6 +193,9 @@ namespace Uncreated.Warfare.Squads
 
         public static void OnPlayerJoined(UCPlayer player, string squadName)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = player.GetTeam();
             Squad squad = Squads.Find(s => s.Name == squadName && s.Team == team);
 
@@ -195,6 +210,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static void SendSquadListToTeam(ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 if (PlayerManager.OnlinePlayers[i].GetTeam() == team && PlayerManager.OnlinePlayers[i].Squad == null)
@@ -204,6 +222,9 @@ namespace Uncreated.Warfare.Squads
         public static void SendSquadList(UCPlayer player) => SendSquadList(player, player.GetTeam());
         public static void SendSquadList(UCPlayer player, ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ITransportConnection c = player.Player.channel.owner.transportConnection;
             EffectManager.sendUIEffect(squadListID, squadListKey, c, true);
             int s2 = 0;
@@ -230,6 +251,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static void ReplicateLockSquad(Squad squad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int index = 0;
             for (int i = 0; i < Squads.Count; i++)
             {
@@ -269,13 +293,18 @@ namespace Uncreated.Warfare.Squads
         }
         public static void ReplicateKitChange(UCPlayer player)
         {
-            for (int i = 0; i < player.Squad.Members.Count; i++)
-            {
-                EffectManager.sendUIEffectText(squadMenuKey, player.Squad.Members[i].connection, true, "MI" + i.ToString(), player.Squad.Members[i].Icon.ToString());
-            }
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            if (player.Squad != null)
+                for (int i = 0; i < player.Squad.Members.Count; i++)
+                    EffectManager.sendUIEffectText(squadMenuKey, player.Squad.Members[i].connection, true, "MI" + i.ToString(), player.Squad.Members[i].Icon.ToString());
         }
         public static void UpdateMemberList(Squad squad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int m = 0; m < squad.Members.Count; m++)
             {
                 UCPlayer player = squad.Members[m];
@@ -298,12 +327,18 @@ namespace Uncreated.Warfare.Squads
         }
         public static void OnPlayerDisconnected(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player.Squad != null)
                 LeaveSquad(player, player.Squad);
         }
 
         public static string FindUnusedSquadName(ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int n = 0; n < NAMES.Length; n++)
             {
                 string name = NAMES[n];
@@ -326,6 +361,9 @@ namespace Uncreated.Warfare.Squads
 
         public static Squad CreateSquad(UCPlayer leader, ulong team, EBranch branch)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string name = FindUnusedSquadName(team);
             Squad squad = new Squad(name, leader, team, branch);
             Squads.Add(squad);
@@ -341,10 +379,16 @@ namespace Uncreated.Warfare.Squads
         }
         private static void SortSquadListABC()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Squads.Sort((a, b) => a.Name[0].CompareTo(b.Name[0]));
         }
         public static void JoinSquad(UCPlayer player, Squad squad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (UCPlayer p in squad.Members)
             {
                 if (p.Steam64 != player.Steam64)
@@ -372,6 +416,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static void SortMembers(Squad squad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
             {
                 int o = b.Medals.TotalTW.CompareTo(a.Medals.TotalTW); // sort players by their officer status
@@ -385,6 +432,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static void LeaveSquad(UCPlayer player, Squad squad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             player.Message("squad_left");
 
             bool willNeedNewLeader = squad.Leader == null || squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID;
@@ -421,14 +471,13 @@ namespace Uncreated.Warfare.Squads
             
             if (willNeedNewLeader)
             {   
-                squad.Leader = null; // need to set leader to null before sorting, otherwise old leader will get added back
+                squad.Leader = null!; // need to set leader to null before sorting, otherwise old leader will get added back
             }
             SortMembers(squad);
             if (willNeedNewLeader)
             {
                 squad.Leader = squad.Members[0]; // goes to the best officer, then the best xp
                 squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
-                L.Log($"who should become leader: {squad.Members[0].CharacterName}");
                 squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
             }
             for (int i = 0; i < squad.Members.Count; i++)
@@ -451,6 +500,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static void DisbandSquad(Squad squad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Squads.RemoveAll(s => s.Name == squad.Name);
 
             for (int i = 0; i < squad.Members.Count; i++)
@@ -476,6 +528,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player == null || squad == null || squad.Members.Count < 2)
                 return;
 
@@ -502,6 +557,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static void PromoteToLeader(Squad squad, UCPlayer newLeader)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (squad.Leader.KitClass == EClass.SQUADLEADER)
                 KitManager.TryGiveUnarmedKit(squad.Leader);
 
@@ -521,6 +579,9 @@ namespace Uncreated.Warfare.Squads
         }
         public static bool FindSquad(string input, ulong teamID, out Squad squad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
             string name = input.ToLower();
             if (name.Length == 1)
@@ -528,45 +589,28 @@ namespace Uncreated.Warfare.Squads
                 char let = char.ToLower(name[0]);
                 if (let >= 'a' && let <= 'h')
                 {
-                    if (name[0] == 'a')
+                    name = let switch
                     {
-                        name = NAMES[0];
-                    }
-                    else if (name[0] == 'b')
-                    {
-                        name = NAMES[1];
-                    }
-                    else if (name[0] == 'c')
-                    {
-                        name = NAMES[2];
-                    }
-                    else if (name[0] == 'd')
-                    {
-                        name = NAMES[3];
-                    }
-                    else if (name[0] == 'e')
-                    {
-                        name = NAMES[4];
-                    }
-                    else if (name[0] == 'f')
-                    {
-                        name = NAMES[5];
-                    }
-                    else if (name[0] == 'g')
-                    {
-                        name = NAMES[6];
-                    }
-                    else if (name[0] == 'h')
-                    {
-                        name = NAMES[7];
-                    }
+                        'a' => NAMES[0],
+                        'b' => NAMES[1],
+                        'c' => NAMES[2],
+                        'd' => NAMES[3],
+                        'e' => NAMES[4],
+                        'f' => NAMES[5],
+                        'g' => NAMES[6],
+                        'h' => NAMES[7],
+                        _ => name
+                    };
                 }
             }
-            squad = friendlySquads.Find(s => name == s.Name.ToLower() || s.Name.ToLower().Contains(name.ToLower()));
+            squad = friendlySquads.Find(s => s.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1);
             return squad != null;
         }
         public static void SetLocked(Squad squad, bool value)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             squad.IsLocked = value;
             ReplicateLockSquad(squad);
         }

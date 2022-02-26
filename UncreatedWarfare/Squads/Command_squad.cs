@@ -1,4 +1,5 @@
 ﻿using Rocket.API;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -15,7 +16,11 @@ namespace Uncreated.Warfare.Squads
         public List<string> Permissions => new List<string>() { "uc.squad" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
             if (!Data.Is(out ISquads ctf))
             {
                 player.SendChat("command_e_gamemode");
@@ -90,7 +95,7 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (player.Squad != null && player.Squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID)
                 {
-                    UCPlayer target = UCPlayer.FromName(name, true);
+                    UCPlayer? target = UCPlayer.FromName(name, true);
                     if (target != null)
                     {
                         if (target.Squad == player.Squad)
@@ -115,7 +120,7 @@ namespace Uncreated.Warfare.Squads
                 }
                 if (player.Squad != null && player.Squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID)
                 {
-                    UCPlayer target = UCPlayer.FromName(name);
+                    UCPlayer? target = UCPlayer.FromName(name);
                     if (target != null)
                     {
                         if (target.Squad == player.Squad)

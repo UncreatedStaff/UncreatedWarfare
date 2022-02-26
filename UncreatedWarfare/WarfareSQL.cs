@@ -21,6 +21,9 @@ namespace Uncreated.Warfare
         }
         public FPlayerName GetUsernames(ulong Steam64)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             FPlayerName? name = null;
             Query(
                 $"SELECT `PlayerName`, `CharacterName`, `NickName` " +
@@ -38,6 +41,9 @@ namespace Uncreated.Warfare
         }
         public async Task<FPlayerName> GetUsernamesAsync(ulong Steam64)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             FPlayerName? name = null;
             await QueryAsync(
                 $"SELECT `PlayerName`, `CharacterName`, `NickName` " +
@@ -55,6 +61,9 @@ namespace Uncreated.Warfare
         }
         public bool GetDiscordID(ulong Steam64, out ulong DiscordID)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong tid = 0;
             bool found = false;
             Query("SELECT `DiscordID` FROM `discordnames` WHERE `Steam64` = @0 LIMIT 1;", new object[1] { Steam64 }, R =>
@@ -67,6 +76,9 @@ namespace Uncreated.Warfare
         }
         public bool PlayerExistsInDatabase(ulong Steam64, out FPlayerName usernames)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             FPlayerName? name = null;
             Query(
                 $"SELECT `PlayerName`, `CharacterName`, `NickName` " +
@@ -87,6 +99,9 @@ namespace Uncreated.Warfare
         }
         public void CheckUpdateUsernames(FPlayerName player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             FPlayerName oldNames = GetUsernames(player.Steam64);
             bool updatePlayerName = false;
             bool updateCharacterName = false;
@@ -148,6 +163,9 @@ namespace Uncreated.Warfare
         }
         public int GetXP(ulong Steam64, EBranch branch)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int xp = 0;
             Query(
                 "SELECT `XP` " +
@@ -163,6 +181,9 @@ namespace Uncreated.Warfare
         }
         public Dictionary<EBranch, int> GetAllXP(ulong Steam64)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Dictionary<EBranch, int> levels = new Dictionary<EBranch, int>(6);
             Query(
                 "SELECT `Branch`, `XP` " +
@@ -179,6 +200,9 @@ namespace Uncreated.Warfare
         }
         public int GetTeamwork(ulong Steam64)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int teamwork = 0;
             Query(
                 $"SELECT `Points` " +
@@ -194,6 +218,9 @@ namespace Uncreated.Warfare
         }
         public uint GetKills(ulong Steam64, ulong Team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             uint kills = 0;
             Query(
                 "SELECT `Kills` " +
@@ -209,6 +236,9 @@ namespace Uncreated.Warfare
         }
         public uint GetDeaths(ulong Steam64, ulong Team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             uint deaths = 0;
             Query(
                 $"SELECT `Deaths` " +
@@ -224,6 +254,9 @@ namespace Uncreated.Warfare
         }
         public uint GetTeamkills(ulong Steam64, ulong Team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             uint teamkills = 0;
             Query(
                 "SELECT `Teamkills` " +
@@ -240,6 +273,9 @@ namespace Uncreated.Warfare
         /// <returns>New XP Value</returns>
         public int AddTeamwork(ulong Steam64, int amount)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int oldBalance = GetTeamwork(Steam64);
 
             if (amount == 0) return oldBalance;
@@ -281,6 +317,9 @@ namespace Uncreated.Warfare
         private static readonly Uncreated.Networking.Encoding.ByteWriter bw = new Uncreated.Networking.Encoding.ByteWriter(0, false, 27);
         public void AddReport(Report report)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             bw.BaseCapacity = report.Size;
             bw.Flush();
             Report.WriteReport(bw, report);
@@ -298,6 +337,9 @@ namespace Uncreated.Warfare
         /// <returns>New XP Value</returns>
         public int AddXP(ulong Steam64, EBranch branch, int amount)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int oldBalance = GetXP(Steam64, branch);
 
             if (amount == 0) return oldBalance;
@@ -338,6 +380,9 @@ namespace Uncreated.Warfare
         }
         public void AddKill(ulong Steam64, ulong Team, int amount = 1)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return;
             if (amount == 0) return;
             if (amount > 0)
@@ -375,6 +420,9 @@ namespace Uncreated.Warfare
         }
         public void AddDeath(ulong Steam64, ulong Team, int amount = 1)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return;
             if (amount == 0) return;
             if (amount > 0)
@@ -412,6 +460,9 @@ namespace Uncreated.Warfare
         }
         public void AddTeamkill(ulong Steam64, ulong Team, int amount = 1)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return;
             if (amount == 0) return;
             if (amount > 0)
@@ -491,6 +542,9 @@ namespace Uncreated.Warfare
                 new object[] { Teamkiller, Teamkilled, Cause, ItemName, Item, Distance, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
         public bool HasPlayerJoined(ulong Steam64)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int amt = Scalar(
                 $"SELECT COUNT(*) " +
                 $"FROM `logindata` " +
@@ -501,6 +555,9 @@ namespace Uncreated.Warfare
         }
         public void RegisterLogin(Player player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string ipaddress;
             if (player.channel.owner.getIPv4Address(out uint ipnum))
             {
@@ -522,7 +579,10 @@ namespace Uncreated.Warfare
         }
         /// <returns> 0 if not banned, else duration (-1 meaning forever) </returns>
         public int IPBanCheck(ulong id, uint packedIP, byte[] hwid)
-        { // returns true if banned
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong bannedid = 0;
             string oldids = string.Empty;
             int durationref = 0;
@@ -578,6 +638,9 @@ namespace Uncreated.Warfare
         /// <returns><see langword="true"/> if player was already banned and the duration was updated, else <see langword="false"/></returns>
         public bool AddIPBan(ulong id, uint packedIP, string unpackedIP, byte[] hwid, int duration = -1, string reason = "")
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (IPBanCheck(id, packedIP, hwid) != 0)
             {
                 NonQuery(
@@ -598,7 +661,10 @@ namespace Uncreated.Warfare
         }
         public string GetIP(ulong id)
         {
-            string ip = null;
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            string? ip = null;
             Query(
                 $"SELECT `IP` " +
                 $"FROM `logindata` " +

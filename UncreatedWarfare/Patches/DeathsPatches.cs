@@ -28,6 +28,9 @@ namespace Uncreated.Warfare
                 float ___structureDamage, float ___vehicleDamage, float ___resourceDamage, float ___objectDamage,
                 bool ___isBroken, float ___explosionLaunchSpeed)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.UseableTrapOnTriggerEnter) return true;
 
                 if (other.isTrigger ||
@@ -119,7 +122,7 @@ namespace Uncreated.Warfare
                                 c.LastLandmineTriggered = new LandmineData(__instance, owner);
                             }
 
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
+                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner == null || owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
                             {
                                 playerDamage = ___playerDamage,
                                 zombieDamage = ___zombieDamage,
@@ -181,7 +184,7 @@ namespace Uncreated.Warfare
                                     }
                                 }
                             }
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
+                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner == null || owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
                             {
                                 playerDamage = ___playerDamage,
                                 zombieDamage = ___zombieDamage,
@@ -270,6 +273,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool ExplodeVehicle(InteractableVehicle __instance)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.explodeInteractableVehicle) return true;
                 if (!__instance.asset.ShouldExplosionCauseDamage) return true;
                 CSteamID instigator = CSteamID.Nil;
@@ -330,6 +336,9 @@ namespace Uncreated.Warfare
             [HarmonyPostfix]
             static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!(UCWarfare.Config.Patches.project && UCWarfare.Config.EnableMortarWarning)) return;
                 if (lastProjected != null && lastProjected.activeInHierarchy)
                 {
@@ -379,6 +388,9 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (!UCWarfare.Config.Patches.BumperOnTriggerEnter) return true;
                 if (other == null || !Provider.isServer || ___vehicle == null || ___vehicle.asset == null || other.isTrigger || other.CompareTag("Debris"))
                     return false;

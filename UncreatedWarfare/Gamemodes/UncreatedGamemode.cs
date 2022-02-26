@@ -18,11 +18,20 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Gamemodes
 {
+    public enum EGamemode : byte
+    {
+        UNDEFINED,
+        TEAM_CTF,
+        INVASION,
+        INSURGENCY
+    }
+
     public delegate Task TeamWinDelegate(ulong team);
     public abstract class Gamemode : MonoBehaviour, IDisposable, IGamemode
     {
         protected const float MATCH_PRESENT_THRESHOLD = 0.65f;
         public static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
+        public virtual EGamemode GamemodeType { get => EGamemode.UNDEFINED; }
         public static readonly Dictionary<string, Type> GAMEMODES = new Dictionary<string, Type>
         {
             { "TeamCTF", typeof(TeamCTF) },
@@ -47,7 +56,6 @@ namespace Uncreated.Warfare.Gamemodes
         public float SecondsSinceStart => Time.realtimeSinceStartup - _startTime;
         private bool useEventLoop;
         public event TeamWinDelegate OnTeamWin;
-        public PlayerManager LogoutSaver;
         public Whitelister Whitelister;
         public CooldownManager Cooldowns;
         public virtual bool UseWhitelist { get => true; }
@@ -91,7 +99,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public virtual void Init()
         {
-            LogoutSaver = new PlayerManager();
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < Provider.clients.Count; i++)
                 PlayerManager.InvokePlayerConnected(UnturnedPlayer.FromSteamPlayer(Provider.clients[i]));
             Cooldowns = new CooldownManager();
@@ -107,6 +117,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public static void OnStagingComplete()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
             {
                 Vehicles.VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
@@ -123,6 +136,9 @@ namespace Uncreated.Warfare.Gamemodes
             {
                 _ticks++;
                 yield return new WaitForSeconds(_eventLoopSpeed);
+#if DEBUG
+                IDisposable profiler = ProfilingUtils.StartTracking(Name + " Gamemode Event Loop");
+#endif
                 DateTime start = DateTime.Now;
                 for (int i = 0; i < Provider.clients.Count; i++)
                 {
@@ -141,6 +157,7 @@ namespace Uncreated.Warfare.Gamemodes
                         Provider.kick(Provider.clients[i].playerID.steamID, Translation.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
                         continue;
                     }
+                    // TODO: Fix
                     if (Data.Is(out ITeams t) && Teams.TeamManager.LobbyZone.IsInside(Provider.clients[i].player.transform.position) && 
                         t.UseJoinUI && UCPlayer.FromSteamPlayer(Provider.clients[i]) is UCPlayer pl && !t.JoinManager.IsInLobby(pl))
                     {
@@ -159,6 +176,15 @@ namespace Uncreated.Warfare.Gamemodes
                     L.LogError("Error in " + Name + " gamemode in the event loop:");
                     L.LogError(ex);
                 }
+
+                Quests.QuestManager.OnGameTick();
+#if DEBUG
+                profiler.Dispose();
+                if (EveryXSeconds(150))
+                {
+                    F.SaveProfilingData();
+                }
+#endif
                 if (UCWarfare.I.CoroutineTiming)
                     L.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
             }
@@ -178,10 +204,13 @@ namespace Uncreated.Warfare.Gamemodes
         public abstract void DeclareWin(ulong winner);
         public bool KeepGamemode()
         {
-            Type nextMode = GetNextGamemode();
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            Type? nextMode = GetNextGamemode();
             if (this.GetType() != nextMode)
             {
-                Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
+                Gamemode? gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
                 if (gamemode != null)
                 {
                     this.Dispose();
@@ -190,7 +219,11 @@ namespace Uncreated.Warfare.Gamemodes
                     gamemode.OnLevelLoaded();
                     //Chat.Broadcast("force_loaded_gamemode", Data.Gamemode.DisplayName);
                     for (int i = 0; i < Provider.clients.Count; i++)
-                        gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, true);
+                    {
+                        UCPlayer? pl = UCPlayer.FromSteamPlayer(Provider.clients[i]);
+                        if (pl != null)
+                            gamemode.OnPlayerJoined(pl, true, true);
+                    }
                     L.Log("Chosen new gameode " + gamemode.DisplayName, ConsoleColor.DarkCyan);
                     _state = EState.DISCARD;
                     Destroy(this);
@@ -199,7 +232,9 @@ namespace Uncreated.Warfare.Gamemodes
             }
             for (int i = 0; i < Provider.clients.Count; i++)
             {
-                Data.Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, true);
+                UCPlayer? pl = UCPlayer.FromSteamPlayer(Provider.clients[i]);
+                if (pl != null)
+                    Data.Gamemode.OnPlayerJoined(pl, true, true);
             }
 
             return true;
@@ -249,16 +284,18 @@ namespace Uncreated.Warfare.Gamemodes
                 EventLoopCoroutine = StartCoroutine(EventLoop());
             }
         }
-        public static Gamemode FindGamemode(string name)
+        public static Gamemode? FindGamemode(string name)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 if (GAMEMODES.TryGetValue(name, out Type type))
                 {
                     if (type == default) return null;
                     if (!type.IsSubclassOf(typeof(Gamemode))) return null;
-                    Gamemode gamemode = UCWarfare.I.gameObject.AddComponent(type) as Gamemode;
-                    return gamemode;
+                    return UCWarfare.I.gameObject.AddComponent(type) as Gamemode;
                 }
                 else return null;
             }
@@ -273,7 +310,7 @@ namespace Uncreated.Warfare.Gamemodes
         { }
         public virtual void Unsubscribe()
         { }
-        protected Coroutine _stagingPhaseTimer;
+        protected Coroutine? _stagingPhaseTimer;
         public virtual void StartStagingPhase(int seconds)
         {
             _stagingSeconds = seconds;
@@ -360,6 +397,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void ReplaceBarricadesAndStructures()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 bool isStruct = this is IStructureSaving;
@@ -410,17 +450,20 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public static void ReadGamemodes()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (GAMEMODE_ROTATION.Count > 0) GAMEMODE_ROTATION.Clear();
             if (UCWarfare.Config.GamemodeRotation == null)
             {
                 GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(typeof(TeamCTF), 1.0f));
                 return;
             }
-            List<KeyValuePair<string, float>> gms = new List<KeyValuePair<string, float>>();
+            List<KeyValuePair<string?, float>> gms = new List<KeyValuePair<string?, float>>();
             using (IEnumerator<char> iter = UCWarfare.Config.GamemodeRotation.GetEnumerator())
             {
                 StringBuilder current = new StringBuilder(32);
-                string name = null;
+                string? name = null;
                 bool inName = true;
                 float weight = 1f;
                 while (iter.MoveNext())
@@ -437,7 +480,7 @@ namespace Uncreated.Warfare.Gamemodes
                         }
                         else if (c == ',')
                         {
-                            gms.Add(new KeyValuePair<string, float>(current.ToString(), 1f));
+                            gms.Add(new KeyValuePair<string?, float>(current.ToString(), 1f));
                         }
                         else if (current.Length < 32)
                         {
@@ -449,7 +492,7 @@ namespace Uncreated.Warfare.Gamemodes
                         if (c == ',')
                         {
                             if (float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out weight))
-                                gms.Add(new KeyValuePair<string, float>(name, weight));
+                                gms.Add(new KeyValuePair<string?, float>(name, weight));
                             name = null;
                             current.Clear();
                             inName = true;
@@ -461,24 +504,22 @@ namespace Uncreated.Warfare.Gamemodes
                     }
                 }
                 if (name != null && float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out weight))
-                    gms.Add(new KeyValuePair<string, float>(name, weight));
+                    gms.Add(new KeyValuePair<string?, float>(name, weight));
             }
-            using (IEnumerator<KeyValuePair<string, float>> iter = gms.GetEnumerator())
+            using (IEnumerator<KeyValuePair<string?, float>> iter = gms.GetEnumerator())
             {
                 while (iter.MoveNext())
                 {
-                    if (GAMEMODES.TryGetValue(iter.Current.Key, out Type GamemodeType))
+                    if (iter.Current.Key != null && GAMEMODES.TryGetValue(iter.Current.Key, out Type GamemodeType))
                         GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(GamemodeType, iter.Current.Value));
                 }
             }
         }
-        public static Type GetNextGamemode()
+        public static Type? GetNextGamemode()
         {
-            L.Log($"GAMEMODES:");
-            foreach (var entry in GAMEMODE_ROTATION)
-            {
-                L.Log($"    {entry.Key.Name} - {entry.Value}");
-            }
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             using (IEnumerator<KeyValuePair<Type, float>> iter = GAMEMODE_ROTATION.GetEnumerator())
             {
                 float total = 0f;

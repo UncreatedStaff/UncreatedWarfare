@@ -62,7 +62,8 @@ namespace Uncreated.Warfare.Commands
             }
             else
             {
-                UnturnedPlayer player = caller as UnturnedPlayer;
+                UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+                if (player == null) return;
                 if (!Provider.isServer)
                     player.SendChat("server_not_running");
                 else
@@ -116,7 +117,7 @@ namespace Uncreated.Warfare.Commands
             if (violator == null)
                 names = Data.DatabaseManager.GetUsernames(Violator);
             else
-                names = F.GetPlayerOriginalNames(admin);
+                names = F.GetPlayerOriginalNames(Violator);
             if (violator != null)
             {
                 L.Log(Translation.Translate("warn_warned_console" + (admin == null ? "_operator" : string.Empty), 0, out _, names.PlayerName,

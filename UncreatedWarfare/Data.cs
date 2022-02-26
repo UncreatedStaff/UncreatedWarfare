@@ -31,7 +31,7 @@ namespace Uncreated.Warfare
         public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
         public static readonly string MatchDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Matches\";
         private static readonly string _flagStorage = DATA_DIRECTORY + @"Maps\{0}\Flags\";
-        private static string _flagStorageTemp;
+        private static string? _flagStorageTemp;
         public static string FlagStorage
         {
             get
@@ -43,7 +43,7 @@ namespace Uncreated.Warfare
             }
         }
         private static readonly string _structuresStorage = DATA_DIRECTORY + @"Maps\{0}\Structures\";
-        private static string _structStorageTemp = null;
+        private static string? _structStorageTemp = null;
         public static string StructureStorage
         {
             get
@@ -63,7 +63,7 @@ namespace Uncreated.Warfare
         public static readonly string KitsStorage = DATA_DIRECTORY + @"Kits\";
         public static readonly string SQLStorage = DATA_DIRECTORY + @"SQL\";
         private static readonly string _vehicleStorage = DATA_DIRECTORY + @"Maps\{0}\Vehicles\";
-        private static string _vehicleStorageTemp;
+        private static string? _vehicleStorageTemp;
         public static string VehicleStorage
         {
             get
@@ -101,7 +101,7 @@ namespace Uncreated.Warfare
                 gamemode = gm;
                 return true;
             }
-            gamemode = default;
+            gamemode = default!;
             return false;
         }
         internal static ClientInstanceMethod<string> SendChangeText { get; private set; }
@@ -151,16 +151,15 @@ namespace Uncreated.Warfare
         }
         public static void LoadVariables()
         {
-            // TODO: Make flags between 4 and 10;
-            // TODO: Fix exceptions in OffenseManager
-            // TODO: Rename teams
-
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
 
             /* INITIALIZE UNCREATED NETWORKING */
             Logging.OnLog += L.Log;
-            Logging.OnLogWarning += L.LogWarning;
-            Logging.OnLogError += L.LogError;
-            Logging.OnLogException += L.LogError;
+            Logging.OnLogWarning += L.LogWarningEventCall;
+            Logging.OnLogError += L.LogErrorEventCall;
+            Logging.OnLogException += L.LogErrorEventCall;
             NetFactory.RegisterNetMethods(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
 
             /* CREATE DIRECTORIES */
@@ -169,6 +168,7 @@ namespace Uncreated.Warfare
             F.CheckDir(DATA_DIRECTORY, out _, true);
             F.CheckDir(LangStorage, out _, true);
             F.CheckDir(KitsStorage, out _, true);
+            F.CheckDir(PointsStorage, out _, true);
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
             F.CheckDir(OfficerStorage, out _, true);
@@ -190,6 +190,8 @@ namespace Uncreated.Warfare
                 return;
             }
 
+            Quests.QuestManager.Init();
+
             Colors = JSONMethods.LoadColors(out ColorsHex);
             Localization = JSONMethods.LoadTranslations(out DeathLocalization, out LimbLocalization);
             Languages = JSONMethods.LoadLanguagePreferences();
@@ -203,14 +205,18 @@ namespace Uncreated.Warfare
             CommandWindow.shouldLogDeaths = false;
             Gamemode.ReadGamemodes();
 
-            Type nextMode = Gamemode.GetNextGamemode();
+            Type? nextMode = Gamemode.GetNextGamemode();
             if (nextMode == null) nextMode = typeof(TeamCTF);
-            Gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
+            Gamemode = (UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode)!;
             if (Gamemode != null)
             {
                 Gamemode.Init();
                 for (int i = 0; i < Provider.clients.Count; i++)
-                    Gamemode.OnPlayerJoined(UCPlayer.FromSteamPlayer(Provider.clients[i]), true, false);
+                {
+                    UCPlayer? pl = UCPlayer.FromSteamPlayer(Provider.clients[i]);
+                    if (pl != null)
+                        Gamemode.OnPlayerJoined(pl, true, false);
+                }
                 L.Log("Loaded " + Gamemode.DisplayName, ConsoleColor.Cyan);
                 L.Log("Initialized gamemode.", ConsoleColor.Magenta);
             } else

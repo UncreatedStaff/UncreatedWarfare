@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -18,7 +19,6 @@ namespace Uncreated.Warfare.Components
         public bool isInVehiclebay { get; private set; }
         public EDamageOrigin lastDamageOrigin;
         public ulong lastDamager;
-        public ulong lastDriver;
         public Dictionary<ulong, Vector3> TransportTable { get; private set; }
         public Dictionary<ulong, double> UsageTable { get; private set; }
         private Dictionary<ulong, DateTime> TimeEnteredTable;
@@ -28,18 +28,13 @@ namespace Uncreated.Warfare.Components
         private float _requiredQuota;
         public float Quota { get => _quota; set => _quota = value; }
         public float RequiredQuota { get => _requiredQuota; set => _requiredQuota = value; }
-
         private bool IsResupplied;
-
-        private Coroutine quotaLoop;
-        private Coroutine autoSupplyLoop;
-        public Coroutine forceSupplyLoop { get; private set; }
+        private Coroutine? quotaLoop;
+        private Coroutine? autoSupplyLoop;
+        public Coroutine? forceSupplyLoop { get; private set; }
         public void Initialize(InteractableVehicle vehicle)
         {
             Vehicle = vehicle;
-
-            lastDamager = 0;
-            lastDriver = 0;
             TransportTable = new Dictionary<ulong, Vector3>();
             UsageTable = new Dictionary<ulong, double>();
             TimeEnteredTable = new Dictionary<ulong, DateTime>();
@@ -50,28 +45,46 @@ namespace Uncreated.Warfare.Components
             _quota = 0;
             _requiredQuota = -1;
 
-            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out var data))
+            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 Data = data;
                 isInVehiclebay = true;
             }
+            lastPos = this.transform.position;
 
             countermeasures = new List<Transform>();
         }
         public void OnPlayerEnteredVehicle(Player nelsonplayer, InteractableVehicle vehicle)
         {
-            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
-            
+                
+            // todo i changed this not sure if it messed it up but idk how it worked before
+
             byte toSeat = 0;
             for (byte i = 0; i < vehicle.passengers.Length; i++)
             {
-                if (vehicle.passengers[i].player == null)
+                /*if (vehicle.passengers[i].player == null)
+                    toSeat = i;*/
+                if (vehicle.passengers[i] != null && vehicle.passengers[i].player != null &&
+                    vehicle.passengers[i].player.playerID.steamID.m_SteamID == nelsonplayer.channel.owner.playerID.steamID.m_SteamID)
+                {
                     toSeat = i;
+                    break;
+                }
+            }
+            if (toSeat == 0)
+            {
+                // new driver
+                LastDriver = nelsonplayer.channel.owner.playerID.steamID.m_SteamID;
+                totalDistance = 0;
             }
 
-            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out var data))
+            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 bool isCrewSeat = data.CrewSeats.Contains(toSeat);
 
@@ -95,10 +108,12 @@ namespace Uncreated.Warfare.Components
                 }
             }
         }
-
         public void OnPlayerExitedVehicle(Player nelsonplayer, InteractableVehicle vehicle)
         {
-            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
 
@@ -114,12 +129,13 @@ namespace Uncreated.Warfare.Components
                 Tips.TryGiveTip(player, ETip.PLACE_RADIO);
             }
 
-            if (vehicle.passengers[0].player == null)
+            if (vehicle.passengers[0] == null || vehicle.passengers[0].player == null || 
+                vehicle.passengers[0].player.player.channel.owner.playerID.steamID.m_SteamID == player.Steam64)
+            {
+                if (LastDriver == player.Steam64)
+                    LastDriverDistance = totalDistance;
                 return;
-
-            if (vehicle.passengers[0].player.player.channel.owner.playerID.steamID == player.CSteamID)
-                return;
-
+            }
             if (TransportTable.TryGetValue(player.Steam64, out Vector3 original))
             {
                 float distance = (player.Position - original).magnitude;
@@ -148,12 +164,19 @@ namespace Uncreated.Warfare.Components
         }
         public void OnPlayerSwapSeatRequested(Player nelsonplayer, InteractableVehicle vehicle, byte toSeatIndex)
         {
-            UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
             if (player == null)
                 return;
 
             if (toSeatIndex == 0)
-                lastDriver = nelsonplayer.channel.owner.playerID.steamID.m_SteamID;
+            {
+                // new driver
+                LastDriver = nelsonplayer.channel.owner.playerID.steamID.m_SteamID;
+                totalDistance = 0;
+            }
 
             if (isInVehiclebay)
             {
@@ -170,6 +193,9 @@ namespace Uncreated.Warfare.Components
         }
         public void EvaluateUsage(SteamPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             byte currentSeat = player.player.movement.getSeat();
             bool isCrewSeat = Data.CrewSeats.Contains(currentSeat);
 
@@ -267,10 +293,13 @@ namespace Uncreated.Warfare.Components
         }
         private IEnumerator<WaitForSeconds> ForceSupplyLoop(UCPlayer caller, ESupplyType type, int amount)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Guid buildGUID = Guid.Empty;
             Guid ammoGUID = Guid.Empty;
 
-            ItemAsset supplyAsset;
+            ItemAsset? supplyAsset;
 
             if (Team == 1)
             {
@@ -298,13 +327,17 @@ namespace Uncreated.Warfare.Components
                 caller.Message("load_e_itemassetnotfound");
                 yield break;
             }
-
+            if (supplyAsset == null)
+            {
+                caller.Message("load_e_itemassetnotfound");
+                yield break;
+            }
             int existingCount = 0;
             int addedBackCount = 0;
             int addedNewCount = 0;
             int loaderBreak = 0;
 
-            var oldTrunkItems = new List<ItemJar>();
+            List<ItemJar> oldTrunkItems = new List<ItemJar>();
             for (int i = Vehicle.trunkItems.items.Count - 1; i >= 0; i--)
             {
                 if (Vehicle.trunkItems.items[i].item.id == supplyAsset.id)
@@ -316,11 +349,11 @@ namespace Uncreated.Warfare.Components
             }
 
             bool shouldAddMoreItems = true;
-            foreach (var item in oldTrunkItems)
+            foreach (ItemJar item in oldTrunkItems)
             {
                 if (item.item.id == supplyAsset.id)
                 {
-                    var newItem = new Item(item.item.id, true) { metadata = item.item.metadata };
+                    Item newItem = new Item(item.item.id, true) { metadata = item.item.metadata };
                     if (Vehicle.trunkItems.tryAddItem(newItem))
                     {
                         addedBackCount++;
@@ -369,7 +402,7 @@ namespace Uncreated.Warfare.Components
                     }
                 }
             }
-            foreach (var item in oldTrunkItems)
+            foreach (ItemJar item in oldTrunkItems)
             {
                 if (item.item.id != supplyAsset.id)
                 {
@@ -386,6 +419,9 @@ namespace Uncreated.Warfare.Components
         }
         private IEnumerator<WaitForSeconds> AutoSupplyLoop()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Guid buildGUID = Guid.Empty;
             Guid ammoGUID = Guid.Empty;
 
@@ -400,45 +436,50 @@ namespace Uncreated.Warfare.Components
                 ammoGUID = Gamemode.Config.Items.T2Ammo;
             }
 
-            ItemAsset build = Assets.find(buildGUID) as ItemAsset;
-            ItemAsset ammo = Assets.find(ammoGUID) as ItemAsset;
+            ItemAsset? build = Assets.find(buildGUID) as ItemAsset;
+            ItemAsset? ammo = Assets.find(ammoGUID) as ItemAsset;
 
-            UCPlayer driver = UCPlayer.FromID(lastDriver);
+            UCPlayer? driver = UCPlayer.FromID(LastDriver);
 
             int loaderCount = 0;
 
             bool shouldMessagePlayer = false;
 
-            var trunk = Data.Metadata.TrunkItems;
-            for (int i = 0; i < trunk.Count; i++)
+            if (Data.Metadata != null && Data.Metadata.TrunkItems != null)
             {
-                ItemAsset asset = null;
-                if (trunk[i].id == buildGUID) asset = build;
-                else if (trunk[i].id == ammoGUID) asset = ammo;
-                else asset = Assets.find(trunk[i].id) as ItemAsset;
-
-                if (asset != null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x, asset.size_y, trunk[i].rotation))
+                List<KitItem> trunk = Data.Metadata.TrunkItems;
+                for (int i = 0; i < trunk.Count; i++)
                 {
-                    var item = new Item(asset.id, true) { state = Convert.FromBase64String(trunk[i].metadata) };
-                    Vehicle.trunkItems.addItem(trunk[i].x, trunk[i].y, trunk[i].rotation, item);
-                    loaderCount++;
+                    ItemAsset? asset = null;
+                    if (trunk[i].id == buildGUID) asset = build;
+                    else if (trunk[i].id == ammoGUID) asset = ammo;
+                    else asset = Assets.find(trunk[i].id) as ItemAsset;
 
-                    if (loaderCount >= 3)
+                    if (asset != null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x,
+                            asset.size_y, trunk[i].rotation))
                     {
-                        loaderCount = 0;
-                        if (asset.GUID == buildGUID)
-                            EffectManager.sendEffect(25997, EffectManager.MEDIUM, Vehicle.transform.position);
-                        else
-                            EffectManager.sendEffect(25998, EffectManager.MEDIUM, Vehicle.transform.position);
+                        Item item = new Item(asset.id, true) { state = Convert.FromBase64String(trunk[i].metadata) };
+                        Vehicle.trunkItems.addItem(trunk[i].x, trunk[i].y, trunk[i].rotation, item);
+                        loaderCount++;
 
-                        shouldMessagePlayer = true;
+                        if (loaderCount >= 3)
+                        {
+                            loaderCount = 0;
+                            if (asset.GUID == buildGUID)
+                                EffectManager.sendEffect(25997, EffectManager.MEDIUM, Vehicle.transform.position);
+                            else
+                                EffectManager.sendEffect(25998, EffectManager.MEDIUM, Vehicle.transform.position);
 
-                        yield return new WaitForSeconds(1);
-                        while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
+                            shouldMessagePlayer = true;
+
                             yield return new WaitForSeconds(1);
+                            while (!(Vehicle.speed >= -1 && Vehicle.speed <= 1))
+                                yield return new WaitForSeconds(1);
+                        }
                     }
                 }
             }
+
             IsResupplied = true;
             autoSupplyLoop = null;
 
@@ -455,6 +496,9 @@ namespace Uncreated.Warfare.Components
             {
                 yield return new WaitForSeconds(3);
 
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (F.IsInMain(Vehicle.transform.position))
                 {
                     //var ammoCrate = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.AmmoCrateGUID, 30, Vehicle.transform.position, true).FirstOrDefault();
@@ -474,6 +518,26 @@ namespace Uncreated.Warfare.Components
                     _quota += 0.5F;
                     tick = 0;
                 }
+            }
+        }
+        private Vector3 lastPos;
+        private float totalDistance;
+        public float TotalDistanceTravelled => totalDistance;
+        private float lastCheck;
+        public ulong LastDriver;
+        public float LastDriverDistance;
+        private void Update()
+        {
+            if (Time.time - lastCheck > 3f)
+            {
+                lastCheck = Time.time;
+                if (Vehicle.passengers[0] == null || Vehicle.passengers[0].player == null) return;
+                Vector3 pos = this.transform.position;
+                if (pos == lastPos) return;
+                float old = totalDistance;
+                totalDistance += (lastPos - pos).magnitude;
+                QuestManager.OnDistanceUpdated(LastDriver, totalDistance, totalDistance - old, this);
+                lastPos = pos;
             }
         }
     }

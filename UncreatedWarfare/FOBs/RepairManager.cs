@@ -14,6 +14,9 @@ namespace Uncreated.Warfare.FOBs
 
         public static void OnBarricadePlaced(BarricadeDrop drop, BarricadeRegion region)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
@@ -23,6 +26,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void OnBarricadeDestroyed(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
             {
                 TryDeleteRepairStation(instanceID);
@@ -31,6 +37,9 @@ namespace Uncreated.Warfare.FOBs
 
         public static void LoadRepairStations()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             stations.Clear();
             foreach (var barricade in UCBarricadeManager.AllBarricades)
             {
@@ -44,6 +53,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void TryDeleteRepairStation(uint instanceID)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < stations.Count; i++)
             {
                 if (stations[i].structure.instanceID == instanceID)
@@ -57,6 +69,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public static void RegisterNewRepairStation(SDG.Unturned.BarricadeData data, BarricadeDrop drop)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!stations.Exists(r => r.structure.instanceID == data.instanceID))
             {
                 RepairStation station = new RepairStation(data, drop);
@@ -74,7 +89,7 @@ namespace Uncreated.Warfare.FOBs
     {
         public SDG.Unturned.BarricadeData structure; // physical barricade structure of the rallypoint
         public BarricadeDrop drop;
-        public InteractableStorage storage;
+        public InteractableStorage? storage;
         public Dictionary<uint, int> VehiclesRepairing;
         public bool IsActive;
 
@@ -89,6 +104,9 @@ namespace Uncreated.Warfare.FOBs
         }
         public void RepairVehicle(InteractableVehicle vehicle)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (vehicle.health >= vehicle.asset.health)
                 return;
 
@@ -110,6 +128,9 @@ namespace Uncreated.Warfare.FOBs
 
         public void RefuelVehicle(InteractableVehicle vehicle)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (vehicle.fuel >= vehicle.asset.fuel)
                 return;
 
@@ -136,6 +157,9 @@ namespace Uncreated.Warfare.FOBs
         {
             while (parent.IsActive)
             {
+#if DEBUG
+                IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 List<InteractableVehicle> nearby = new List<InteractableVehicle>();
                 VehicleManager.getVehiclesInRadius(parent.structure.point, (float)Math.Pow(25, 2), nearby);
 
@@ -190,14 +214,17 @@ namespace Uncreated.Warfare.FOBs
                                 {
                                     fob.ReduceBuild(1);
 
-                                    UCPlayer stationPlacer = UCPlayer.FromID(parent.structure.owner);
-                                    if (stationPlacer != null && stationPlacer.CSteamID != nearby[i].lockedOwner )
+                                    UCPlayer? stationPlacer = UCPlayer.FromID(parent.structure.owner);
+                                    if (stationPlacer != null)
                                     {
-                                        Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, Translation.Translate("xp_repaired_vehicle", stationPlacer));
-                                        Points.AwardTW(stationPlacer, Points.TWConfig.RepairVehiclePoints);
+                                        if (stationPlacer.CSteamID != nearby[i].lockedOwner)
+                                        {
+                                            Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, Translation.Translate("xp_repaired_vehicle", stationPlacer));
+                                            Points.AwardTW(stationPlacer, Points.TWConfig.RepairVehiclePoints);
+                                        }
+                                        if (!(stationPlacer.Steam64 == fob.Creator || stationPlacer.Steam64 == fob.Placer))
+                                            Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), "xp_fob_repaired_vehicle");
                                     }
-                                    if (!(stationPlacer.Steam64 == fob.Creator || stationPlacer.Steam64 == fob.Placer))
-                                        Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), "xp_fob_repaired_vehicle");
                                 }
                             }
                         }
@@ -208,7 +235,9 @@ namespace Uncreated.Warfare.FOBs
 
                 if (counter >= 3)
                     counter = 0;
-
+#if DEBUG
+                profiler.Dispose();
+#endif
                 yield return new WaitForSeconds(1.5F);
             }
         }

@@ -15,10 +15,11 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.range" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
-            if (!Data.Is(out ISquads ctf))
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
+            if (!Data.Is<ISquads>(out _))
             {
-                int distance = Mathf.RoundToInt((player.Position - player.Squad.Leader.Player.quests.markerPosition).magnitude / 10) * 10;
+                int distance = Mathf.RoundToInt((player.Position - player.Player.quests.markerPosition).magnitude / 10) * 10;
                 player.Message("range", distance.ToString(Data.Locale));
                 return;
             }

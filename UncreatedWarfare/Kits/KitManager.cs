@@ -4,10 +4,12 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using Item = SDG.Unturned.Item;
 
@@ -26,6 +28,9 @@ namespace Uncreated.Warfare.Kits
         }
         private void PlayerLife_OnPreDeath(PlayerLife life)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (HasKit(life.player.channel.owner.playerID.steamID, out Kit kit))
             {
                 for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
@@ -56,6 +61,7 @@ namespace Uncreated.Warfare.Kits
             }
         }
 
+
         protected override string LoadDefaults()
         {
             return "[]";
@@ -68,6 +74,9 @@ namespace Uncreated.Warfare.Kits
         public static bool KitExists(string kitName, out Kit kit) => ObjectExists(i => i != default && kitName != default && i.Name.ToLower() == kitName.ToLower(), out kit);
         public static bool OverwriteKitItems(string kitName, List<KitItem> newItems, List<KitClothing> newClothes, bool save = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitExists(kitName, out Kit kit))
             {
                 kit.Items = newItems ?? kit.Items;
@@ -77,15 +86,18 @@ namespace Uncreated.Warfare.Kits
             }
             return false;
         }
-        public static List<KitItem> ItemsFromInventory(UnturnedPlayer player)
+        public static List<KitItem> ItemsFromInventory(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<KitItem> items = new List<KitItem>();
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
             {
-                for (byte i = 0; i < player.Inventory.getItemCount(page); i++)
+                for (byte i = 0; i < player.Player.inventory.getItemCount(page); i++)
                 {
-                    ItemJar jar = player.Inventory.getItem(page, i);
+                    ItemJar jar = player.Player.inventory.getItem(page, i);
                     if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
                     {
                         items.Add(new KitItem(
@@ -103,10 +115,12 @@ namespace Uncreated.Warfare.Kits
 
             return items;
         }
-        public static List<KitClothing> ClothesFromInventory(UnturnedPlayer player)
+        public static List<KitClothing> ClothesFromInventory(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             PlayerClothing playerClothes = player.Player.clothing;
-
             List<KitClothing> clothes = new List<KitClothing>(7);
 
             if (playerClothes.shirtAsset != null)
@@ -126,10 +140,71 @@ namespace Uncreated.Warfare.Kits
             
             return clothes;
         }
+        public static void OnPlayerJoinedQuestHandling(UCPlayer player)
+        {
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                if (!ActiveObjects[i].IsLoadout && !ActiveObjects[i].IsPremium && ActiveObjects[i].RequiredQuests != null && ActiveObjects[i].RequiredQuests.Length > 0)
+                {
+                    Kit kit = ActiveObjects[i];
+                    bool isCompleted = true;
+                    for (int j = 0; j < kit.RequiredQuests.Length; j++)
+                    {
+                        bool ic = player.QuestComplete(kit.RequiredQuests[j]);
+                        isCompleted &= ic;
+                        if (!ic)
+                        {
+                            QuestManager.CreateTracker(player, kit.RequiredQuests[j]);
+                        }
+                    }
+                    if (isCompleted) continue;
+                    if (kit.QuestID != default)
+                    {
+                        QuestAsset? asset = Assets.find<QuestAsset>(kit.QuestID);
+                        if (asset != null)
+                            player.Player.quests.sendAddQuest(asset.id);
+                    }
+                }
+            }
+
+            RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
+        }
+        public static bool OnQuestCompleted(UCPlayer player, Guid presetKey)
+        {
+            bool affectedKit = false;
+            for (int i = 0; i < ActiveObjects.Count; i++)
+            {
+                if (!ActiveObjects[i].IsLoadout && !ActiveObjects[i].IsPremium && ActiveObjects[i].RequiredQuests != null && ActiveObjects[i].RequiredQuests.Length > 0)
+                {
+                    Kit kit = ActiveObjects[i];
+                    for (int j = 0; j < kit.RequiredQuests.Length; j++)
+                        if (kit.RequiredQuests[j] == presetKey)
+                            goto next;
+
+                    continue;
+                next:
+                    bool isCompleted = true;
+                    affectedKit = true;
+                    for (int j = 0; j < kit.RequiredQuests.Length; j++)
+                        isCompleted &= player.QuestComplete(kit.RequiredQuests[j]);
+                    if (isCompleted)
+                    {
+                        if (Assets.find(kit.QuestID) is QuestAsset asset)
+                        {
+                            player.Player.quests.sendRemoveQuest(asset.id);
+                        }
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(player.Player.channel.owner, kit.Name);
+                    }
+                }
+            }
+            return affectedKit;
+        }
+
         public static void GiveKit(UCPlayer player, Kit kit)
         {
-            //DateTime start = DateTime.Now;
-
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (kit == null)
                 return;
 
@@ -195,10 +270,12 @@ namespace Uncreated.Warfare.Kits
             if (oldkit != null && oldkit != string.Empty)
                 RequestSigns.InvokeLangUpdateForSignsOfKit(oldkit);
             RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
-
         }
         public static void ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<ItemJar> nonKitItems = new List<ItemJar>();
 
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
@@ -302,6 +379,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool TryGiveUnarmedKit(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string unarmedKit = "";
             if (player.IsTeam1())
                 unarmedKit = TeamManager.Team1UnarmedKit;
@@ -317,6 +397,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool TryGiveRiflemanKit(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Kit rifleman = GetKitsWhere(k =>
                     k.Team == player.GetTeam() &&
                     k.Class == EClass.RIFLEMAN &&
@@ -335,11 +418,20 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool HasKit(ulong steamID, out Kit kit)
         {
-            var player = UCPlayer.FromID(steamID);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromID(steamID);
 
-            if (player is null)
+            if (player == null)
             {
-                kit = GetObject(k => k.Name == PlayerManager.GetSave(steamID).KitName);
+                PlayerSave? save = PlayerManager.GetSave(steamID);
+                if (save == null)
+                {
+                    kit = null!;
+                    return false;
+                }
+                kit = GetObject(k => k.Name == save.KitName);
                 return kit != null;
             }
             else
@@ -350,6 +442,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool HasKit(UCPlayer player, out Kit kit)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             kit = GetObject(k => k.Name == player.KitName);
             return kit != null;
         }
@@ -366,6 +461,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static bool UpdateText(string kitname, string SignName, string language = JSONMethods.DEFAULT_LANGUAGE)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitExists(kitname, out Kit kit))
             {
                 IEnumerable<Kit> matches = GetObjectsWhere(k => k.Name == kit.Name);
@@ -382,6 +480,9 @@ namespace Uncreated.Warfare.Kits
         public static IEnumerable<Kit> GetAccessibleKits(ulong playerID) => GetObjectsWhere(k => k.AllowedUsers.Contains(playerID));
         public static void GiveAccess(ulong playerID, string kitName)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitExists(kitName, out Kit kit))
             {
                 if (!kit.AllowedUsers.Contains(playerID))
@@ -395,6 +496,9 @@ namespace Uncreated.Warfare.Kits
         }
         public static void RemoveAccess(ulong playerID, string kitName)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitExists(kitName, out Kit kit))
             {
                 kit.AllowedUsers.RemoveAll(i => i == playerID);
@@ -419,7 +523,7 @@ namespace Uncreated.Warfare.Kits
         }
 
         public static void WriteKitJson(Kit kit, Utf8JsonWriter writer) => kit.WriteJson(writer);
-        public static Kit Construct(string name, List<KitItem> items, List<KitClothing> clothes, Action<Kit> modifiers = null)
+        public static Kit Construct(string name, List<KitItem> items, List<KitClothing> clothes, Action<Kit>? modifiers = null)
         {
             Kit kit = new Kit(true)
             {
@@ -454,6 +558,9 @@ namespace Uncreated.Warfare.Kits
         public static bool HasItemOfID(this Kit kit, Guid ID) => kit.Items.Exists(i => i.id == ID);
         public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong Team = team == 1 || team == 2 ? team : kit.Team;
             currentPlayers = 0;
             allowedPlayers = 24;
@@ -469,6 +576,9 @@ namespace Uncreated.Warfare.Kits
 
         public static bool IsClassLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong Team = team == 1 || team == 2 ? team : kit.Team;
             currentPlayers = 0;
             allowedPlayers = 24;

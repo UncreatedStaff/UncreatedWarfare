@@ -10,8 +10,11 @@ namespace Uncreated.Warfare.Vehicles
 {
     public static class UCVehicleManager
     {
-        public static InteractableVehicle VehicleFromPlayerLook(UnturnedPlayer player)
+        public static InteractableVehicle? VehicleFromPlayerLook(UnturnedPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Transform look = player.Player.look.aim;
             Ray ray = new Ray
             {
@@ -28,8 +31,11 @@ namespace Uncreated.Warfare.Vehicles
                 return null;
             }
         }
-        public static VehicleBarricadeRegion FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out ushort index, int subvehicleIndex = 0)
+        public static VehicleBarricadeRegion? FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out ushort index, int subvehicleIndex = 0)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (vehicle == null)
             {
                 index = ushort.MaxValue;
@@ -49,6 +55,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static IEnumerable<InteractableVehicle> GetNearbyVehicles(Guid id, float radius, Vector3 origin)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float sqrRadius = radius * radius;
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
@@ -63,6 +72,9 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<Guid> ids, float radius, Vector3 origin)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float sqrRadius = radius * radius;
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
@@ -77,10 +89,13 @@ namespace Uncreated.Warfare.Vehicles
         }
         public static InteractableVehicle GetNearestLogi(Vector3 point, float radius, ulong team = 0)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             VehicleManager.getVehiclesInRadius(point, Mathf.Pow(radius, 2), vehicles);
             return vehicles.FirstOrDefault(v => v.lockedGroup.m_SteamID == team &&
-            VehicleBay.VehicleExists(v.asset.GUID, out var vehicleData) &&
+            VehicleBay.VehicleExists(v.asset.GUID, out VehicleData vehicleData) &&
             (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT));
         }
 }

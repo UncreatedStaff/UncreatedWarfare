@@ -1,6 +1,7 @@
 ﻿using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Structures;
@@ -49,6 +50,8 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         {
             if (this._state == EState.FINISHED) return;
             this._state = EState.FINISHED;
+
+            QuestManager.OnGameOver(winner);
         }
         public override void StartNextGame(bool onLoad = false)
         {

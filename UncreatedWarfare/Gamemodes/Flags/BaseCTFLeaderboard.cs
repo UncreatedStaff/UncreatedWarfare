@@ -15,16 +15,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags
     public class BaseCTFLeaderboard<Stats, StatTracker> : Leaderboard<Stats, StatTracker> where Stats : BaseCTFStats where StatTracker : BaseCTFTracker<Stats>
     {
         protected override Guid GUID => Gamemode.Config.UI.CTFLeaderboardGUID;
-        private List<Stats> statsT1;
-        private List<Stats> statsT2;
+        private List<Stats>? statsT1;
+        private List<Stats>? statsT2;
         private bool longestShotTaken = false;
         private FPlayerName longestShotTaker = FPlayerName.Nil;
         private ulong longestShotTakerTeam = 0;
         private float longestShotDistance = 0;
-        internal EffectAsset asset;
+        internal EffectAsset? asset;
         private string longestShotWeapon = string.Empty;
         public override void Calculate()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             tracker.GetTopStats(14, out statsT1, out statsT2);
 
             longestShotTaken = tracker.LongestShot.Player != 0;
@@ -58,10 +61,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void SendLeaderboard()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string teamcolor = TeamManager.GetTeamHexColor(_winner);
             if (Assets.find(GUID) is not EffectAsset asset) return;
             this.asset = asset;
-            states = new bool[2][] { new bool[Math.Min(14, statsT1.Count - 1)], new bool[Math.Min(14, statsT2.Count - 1)] };
+            states = new bool[2][] { new bool[Math.Min(14, statsT1!.Count - 1)], new bool[Math.Min(14, statsT2!.Count - 1)] };
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 SendLeaderboard(PlayerManager.OnlinePlayers[i], teamcolor);
@@ -69,6 +75,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public virtual void SendLeaderboard(UCPlayer player, string teamcolor)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 ulong team = player.GetTeam();
@@ -98,9 +107,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 if (stats == null) stats = BasePlayerStats.New<Stats>(player.Player);
                 FPlayerName originalNames = F.GetPlayerOriginalNames(player);
                 
-                EffectManager.sendUIEffect(this.asset.id, LeaderboardEx.leaderboardKey, channel, true);
+                EffectManager.sendUIEffect(this.asset!.id, LeaderboardEx.leaderboardKey, channel, true);
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TitleWinner", Translation.Translate("winner", player, TeamManager.TranslateName(_winner, player.Player), teamcolor));
-                if (shuttingDown)
+                if (shuttingDown && shuttingDownMessage != null)
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label_shutting_down", player, shuttingDownMessage));
                 else
                     EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "NextGameStartsIn", Translation.Translate("next_game_start_label", player));
@@ -115,7 +124,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 /*
                  * LEADERBOARD
                  */
-                for (int i = 0; i < Math.Min(15, statsT1.Count); i++)
+                for (int i = 0; i < Math.Min(15, statsT1!.Count); i++)
                 {
                     string n = i == 0 ? TeamManager.TranslateShortName(1, player.Steam64, true).ToUpper() : statsT1[i].Player.channel.owner.playerID.nickName;
                     string k = statsT1[i].kills.ToString(Data.Locale);
@@ -147,7 +156,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, channel, true, "1VC" + i, false);
                     
                 }
-                for (int i = 0; i < Math.Min(15, statsT2.Count); i++)
+                for (int i = 0; i < Math.Min(15, statsT2!.Count); i++)
                 {
                     string n = i == 0 ? TeamManager.TranslateShortName(2, player.Steam64, true).ToUpper() : statsT2[i].Player.channel.owner.playerID.nickName;
                     string k = statsT2[i].kills.ToString(Data.Locale);
@@ -251,14 +260,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 L.LogError(ex);
             }
         }
-        bool[][] states;
+        bool[][]? states;
         protected override void Update()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float rt = Time.realtimeSinceStartup;
-            for (int i = 1; i < Math.Min(15, statsT1.Count); i++)
+            for (int i = 1; i < Math.Min(15, statsT1!.Count); i++)
             {
-                UCPlayer pl = statsT1[i].Player == null ? null : UCPlayer.FromPlayer(statsT1[i].Player);
-                if (states[0][i - 1])
+                UCPlayer? pl = statsT1[i].Player == null ? null : UCPlayer.FromPlayer(statsT1[i].Player);
+                if (states![0][i - 1])
                 {
                     if (pl == null || rt - pl.LastSpoken > 1f)
                     {
@@ -270,10 +282,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     UpdateStateT1(true, i);
                 }
             }
-            for (int i = 1; i < Math.Min(15, statsT2.Count); i++)
+            for (int i = 1; i < Math.Min(15, statsT2!.Count); i++)
             {
-                UCPlayer pl = statsT2[i].Player == null ? null : UCPlayer.FromPlayer(statsT2[i].Player);
-                if (states[1][i - 1])
+                UCPlayer? pl = statsT2[i].Player == null ? null : UCPlayer.FromPlayer(statsT2[i].Player);
+                if (states![1][i - 1])
                 {
                     if (pl == null || rt - pl.LastSpoken > 1f)
                     {
@@ -288,13 +300,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         private void UpdateStateT1(bool newval, int index)
         {
-            states[0][index - 1] = newval;
+            states![0][index - 1] = newval;
             for (int i = 0; i < Provider.clients.Count; i++)
                 EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, Provider.clients[i].transportConnection, false, "1VC" + index.ToString(), newval);
         }
         private void UpdateStateT2(bool newval, int index)
         {
-            states[1][index - 1] = newval;
+            states![1][index - 1] = newval;
             for (int i = 0; i < Provider.clients.Count; i++)
                 EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, Provider.clients[i].transportConnection, false, "2VC" + index.ToString(), newval);
         }
@@ -369,6 +381,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public virtual void GetTopStats(int count, out List<T> statsT1, out List<T> statsT2)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<T> stats = this.stats.Values.ToList();
 
             stats.RemoveAll(p =>

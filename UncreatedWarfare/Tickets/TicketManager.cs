@@ -11,6 +11,7 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -37,22 +38,20 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (TeamManager.IsTeam1(eventArgs.dead))
                 AddTeam1Tickets(-1);
             else if (TeamManager.IsTeam2(eventArgs.dead))
                 AddTeam2Tickets(-1);
 
         }
-        public static void OnPlayerDeathOffline(ulong deadteam)
-        {
-            if (deadteam == 1)
-                AddTeam1Tickets(-1);
-            else if (deadteam == 2)
-                AddTeam2Tickets(-1);
-
-        }
         public static void OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (TeamManager.IsTeam1(eventArgs.dead))
                 AddTeam1Tickets(-1);
             else if (TeamManager.IsTeam2(eventArgs.dead))
@@ -60,6 +59,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnEnemyKilled(UCWarfare.KillEventArgs parameters)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out Insurgency insurgency))
             {
                 if (parameters.dead.quests.groupID.m_SteamID == insurgency.DefendingTeam)
@@ -81,7 +83,7 @@ namespace Uncreated.Warfare.Tickets
                 ulong killerID = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
                 ulong victimID = parameters.dead.channel.owner.playerID.steamID.m_SteamID;
 
-                var assister = UCPlayer.FromID(component.secondLastAttacker.Key);
+                UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
                 if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
                 {
                     Points.AwardXP(
@@ -96,6 +98,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Points.AwardXP(
                 parameters.killer,
                 Points.XPConfig.FriendlyKilledXP,
@@ -103,6 +108,9 @@ namespace Uncreated.Warfare.Tickets
         }
         private static void OnVehicleExploded(InteractableVehicle vehicle)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
@@ -114,13 +122,14 @@ namespace Uncreated.Warfare.Tickets
 
                 if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
                 {
+                    UCPlayer? owner = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
                     if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
-                        UCPlayer player = UCPlayer.FromID(vc.lastDamager);
+                        UCPlayer? player = UCPlayer.FromID(vc.lastDamager);
                         bool wasCrashed = false;
 
                         if (player == null)
-                            player = UCPlayer.FromID(vc.lastDriver);
+                            player = UCPlayer.FromID(vc.LastDriver);
                         if (player == null)
                             return;
                         else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID && vc.lastDamageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage)
@@ -173,8 +182,8 @@ namespace Uncreated.Warfare.Tickets
                         }
 
 
-                        double totalDamage = 0;
-                        foreach (var entry in vc.DamageTable)
+                        float totalDamage = 0;
+                        foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
                         {
                             if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
                                 totalDamage += entry.Value.Key;
@@ -197,14 +206,18 @@ namespace Uncreated.Warfare.Tickets
                             else
                                 Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason);
 
-                            foreach (var entry in vc.DamageTable)
+                            QuestManager.OnVehicleDestroyed(owner, player, data, vc);
+
+                            float resMax = 0f;
+                            UCPlayer? resMaxPl = null;
+                            foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
                             {
                                 if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
                                 {
-                                    float responsibleness = (float)(entry.Value.Key / totalDamage);
+                                    float responsibleness = entry.Value.Key / totalDamage;
                                     int reward = Mathf.RoundToInt(responsibleness * fullXP);
 
-                                    var attacker = UCPlayer.FromID(entry.Key);
+                                    UCPlayer? attacker = UCPlayer.FromID(entry.Key);
                                     if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
                                     {
                                         if (attacker.CSteamID.m_SteamID == vc.lastDamager)
@@ -214,9 +227,19 @@ namespace Uncreated.Warfare.Tickets
                                         }
                                         else if (responsibleness > 0.1F)
                                             Points.AwardXP(attacker, reward, Translation.Translate("xp_vehicle_assist", attacker));
+                                        if (responsibleness > resMax)
+                                        {
+                                            resMax = responsibleness;
+                                            resMaxPl = attacker;
+                                        }
                                     }
                                 }
-                            }                            
+                            }
+
+                            if (resMaxPl != null && resMax > 0 && player.Steam64 != resMaxPl.Steam64)
+                            {
+                                QuestManager.OnVehicleDestroyed(owner, resMaxPl, data, vc);
+                            }
                             
                             Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
                             Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
@@ -238,7 +261,7 @@ namespace Uncreated.Warfare.Tickets
                             {
                                 for (byte i = 0; i < vehicle.passengers.Length; i++)
                                 {
-                                    var passenger = vehicle.passengers[i];
+                                    Passenger passenger = vehicle.passengers[i];
 
                                     if (passenger.player is not null)
                                     {
@@ -247,10 +270,10 @@ namespace Uncreated.Warfare.Tickets
                                 }
 
                                 double totalTime = 0;
-                                foreach (var entry in vc.UsageTable)
+                                foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
                                     totalTime += entry.Value;
 
-                                foreach (var entry in vc.UsageTable)
+                                foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
                                 {
                                     float responsibleness = (float)(entry.Value / totalTime);
                                     int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
@@ -272,6 +295,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnRoundWin(ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float winMultiplier = 0.15f;
 
             List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team).ToList();
@@ -292,6 +318,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             int team1bleed = GetTeamBleed(1);
             int team2bleed = GetTeamBleed(2);
 
@@ -340,21 +369,22 @@ namespace Uncreated.Warfare.Tickets
 
             foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
-                UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+                UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
 
+                if (player == null) continue;
                 int xp = Points.XPConfig.FlagCapturedXP;
 
                 Points.AwardXP(player, player.NearbyMemberBonus(xp, 60), Translation.Translate("xp_flag_captured", player.Steam64));
 
                 if (player.IsNearSquadLeader(50))
                 {
-                    if (alreadyUpdated.TryGetValue(player.Squad, out int amount))
+                    if (alreadyUpdated.TryGetValue(player.Squad!, out int amount))
                     {
                         amount += Points.TWConfig.MemberFlagCapturePoints;
                     }
                     else
                     {
-                        alreadyUpdated.Add(player.Squad, Points.TWConfig.MemberFlagCapturePoints);
+                        alreadyUpdated.Add(player.Squad!, Points.TWConfig.MemberFlagCapturePoints);
                     }
                 }
             }
@@ -369,12 +399,16 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
 
             foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
             {
-                UCPlayer player = UCPlayer.FromPlayer(nelsonplayer);
+                UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
 
+                if (player == null) continue;
                 int xp = Points.XPConfig.FlagNeutralizedXP;
 
                 Points.AwardXP(player, xp, Translation.Translate("xp_flag_neutralized", player.Steam64));
@@ -386,6 +420,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnFlag10Seconds()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out IFlagRotation fg))
             {
                 for (int i = 0; i < fg.Rotation.Count; i++)
@@ -424,9 +461,12 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnCache10Seconds()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out Insurgency ins))
             {
-                foreach (var cache in ins.ActiveCaches)
+                foreach (Insurgency.CacheData cache in ins.ActiveCaches)
                 {
                     if (cache.IsActive && !cache.IsDestroyed)
                     {
@@ -440,6 +480,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnPlayerJoined(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = player.GetTeam();
             int bleed = GetTeamBleed(player.GetTeam());
             GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
@@ -447,6 +490,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
             EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
             int bleed = GetTeamBleed(player.GetTeam());
@@ -459,6 +505,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void OnNewGameStarting()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out Invasion invasion))
             {
                 int attack = Gamemode.Config.Invasion.AttackStartingTickets;
@@ -503,6 +552,9 @@ namespace Uncreated.Warfare.Tickets
 
         public static void AddTeam1Tickets(int number)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == 1)
                 return;
 
@@ -516,6 +568,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void AddTeam2Tickets(int number)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == 2)
                 return;
 
@@ -529,6 +584,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void GetUIDisplayerInfo(ulong team, int bleed, out ushort UIID, out string tickets, out string message)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             UIID = 0;
             tickets = "";
             message = "";
@@ -569,6 +627,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void UpdateUI(ITransportConnection connection, ushort UIID, string tickets, string message)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
                 tickets.ToString(Data.Locale),
                 string.Empty,
@@ -578,9 +639,12 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void UpdateUITeam1(int bleed = 0)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             GetUIDisplayerInfo(1, bleed, out ushort UIID, out string tickets, out string message);
 
-            var players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam1()).ToList();
+            List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam1()).ToList();
 
             for (int i = 0; i < players.Count; i++)
             {
@@ -589,9 +653,12 @@ namespace Uncreated.Warfare.Tickets
         }
         public static void UpdateUITeam2(int bleed = 0)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             GetUIDisplayerInfo(2, bleed, out ushort UIID, out string tickets, out string message);
 
-            var players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam2()).ToList();
+            List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam2()).ToList();
 
             for (int i = 0; i < players.Count; i++)
             {
@@ -600,6 +667,9 @@ namespace Uncreated.Warfare.Tickets
         }
         public static int GetTeamBleed(ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out IFlagRotation fg))
             {
                 if (Data.Is(out Invasion invasion) && team == invasion.AttackingTeam)

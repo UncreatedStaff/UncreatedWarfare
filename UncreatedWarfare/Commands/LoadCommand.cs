@@ -22,7 +22,10 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.load" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
 
             if (player is null)
                 return;

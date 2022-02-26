@@ -1,5 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Uncreated.Warfare
 {
@@ -31,6 +33,7 @@ namespace Uncreated.Warfare
                 }
             }
         }
+        [Conditional("DEBUG")]
         public static void LogDebug(string info, ConsoleColor color = ConsoleColor.DarkGray)
         {
             if (UCWarfare.Config.Debug)
@@ -57,7 +60,8 @@ namespace Uncreated.Warfare
                 LogError(ex);
             }
         }
-        public static void LogWarning(string warning, ConsoleColor color = ConsoleColor.Yellow)
+        internal static void LogWarningEventCall(string warning, ConsoleColor color) => LogWarning(warning, color, "UncreatedNetworking Source");
+        public static void LogWarning(string warning, ConsoleColor color = ConsoleColor.Yellow, [CallerMemberName] string method = "")
         {
             try
             {
@@ -67,7 +71,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    AddLine(warning, color);
+                    AddLine("[" + method.ToUpper() + "] " + warning, color);
                     UnturnedLog.warn($"[WA] {warning}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = warning, RCON = true, Severity = Rocket.Core.Logging.ELogType.Warning });
                 }
@@ -78,7 +82,8 @@ namespace Uncreated.Warfare
                 LogError(ex);
             }
         }
-        public static void LogError(string error, ConsoleColor color = ConsoleColor.Red)
+        internal static void LogErrorEventCall(string error, ConsoleColor color) => LogError(error, color, "UncreatedNetworking Source");
+        public static void LogError(string error, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "")
         {
             try
             {
@@ -88,7 +93,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    AddLine(error, color);
+                    AddLine("[" + method.ToUpper() + "] " + error, color);
                     UnturnedLog.warn($"[ER] {error}");
                     Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = error, RCON = true, Severity = Rocket.Core.Logging.ELogType.Error });
                 }
@@ -99,9 +104,10 @@ namespace Uncreated.Warfare
                 UnturnedLog.error(ex);
             }
         }
-        public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
+        internal static void LogErrorEventCall(Exception ex, ConsoleColor color) => LogError(ex, color, "UncreatedNetworking Source");
+        public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "", [CallerFilePath] string filepath = "", [CallerLineNumber] int ln = 0)
         {
-            string message = $"EXCEPTION - {ex.GetType().Name}\n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
+            string message = $"EXCEPTION - {ex.GetType().Name}\nSource: {filepath}::{method}( ... ) LN# {ln}\n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
             try
             {
                 if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.AppendConsoleMethod == default)

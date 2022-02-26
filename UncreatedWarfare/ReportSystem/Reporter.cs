@@ -53,15 +53,18 @@ namespace Uncreated.Warfare.ReportSystem
             { EDamageOrigin.Zombie_Swipe, "Zombie Swipe" },
         };
         public static readonly Dictionary<EDeathCause, string> DeathCauseLocalization = new Dictionary<EDeathCause, string>(30);
-        public Report CreateReport(ulong reporter, ulong violator, string message)
+        public Report? CreateReport(ulong reporter, ulong violator, string message)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (data.TryGetValue(violator, out PlayerData pd))
             {
                 return pd.CustomReport(message, reporter);
             }
             return null;
         }
-        public ChatAbuseReport CreateChatAbuseReport(ulong reporter, ulong violator, string message)
+        public ChatAbuseReport? CreateChatAbuseReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -69,7 +72,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public VoiceChatAbuseReport CreateVoiceChatAbuseReport(ulong reporter, ulong violator, string message)
+        public VoiceChatAbuseReport? CreateVoiceChatAbuseReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -77,7 +80,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public SoloingReport CreateSoloingReport(ulong reporter, ulong violator, string message)
+        public SoloingReport? CreateSoloingReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -85,7 +88,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public WasteingAssetsReport CreateWasteingAssetsReport(ulong reporter, ulong violator, string message)
+        public WasteingAssetsReport? CreateWasteingAssetsReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -93,7 +96,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public IntentionalTeamkillReport CreateIntentionalTeamkillReport(ulong reporter, ulong violator, string message)
+        public IntentionalTeamkillReport? CreateIntentionalTeamkillReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -101,7 +104,7 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
-        public GreifingFOBsReport CreateGreifingFOBsReport(ulong reporter, ulong violator, string message)
+        public GreifingFOBsReport? CreateGreifingFOBsReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
             {
@@ -171,6 +174,9 @@ namespace Uncreated.Warfare.ReportSystem
         float lastTick = 0;
         private void Update()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             float dt = Time.deltaTime;
             float time = Time.realtimeSinceStartup;
             bool tickTime = time - lastTick > 5f;
@@ -221,6 +227,9 @@ namespace Uncreated.Warfare.ReportSystem
         }
         internal void OnVehicleRequest(ulong player, Guid vehicle, uint bayInstID)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (data.TryGetValue(player, out PlayerData playerData))
             {
                 playerData.recentRequests.Add(new VehicleLifeData()
@@ -235,6 +244,9 @@ namespace Uncreated.Warfare.ReportSystem
         }
         internal void OnVehicleDied(ulong owner, uint bayInstId, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (bayInstId != uint.MaxValue && data.TryGetValue(owner, out PlayerData playerData))
             {
                 for (int i = 0; i < playerData.recentRequests.Count; i++)
@@ -262,6 +274,9 @@ namespace Uncreated.Warfare.ReportSystem
         }
         internal void OnPlayerJoin(SteamPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (KeyValuePair<ulong, PlayerData> pkv in data)
             {
                 if (pkv.Key == player.playerID.steamID.m_SteamID)
@@ -285,6 +300,9 @@ namespace Uncreated.Warfare.ReportSystem
         /// <summary>Slow, use rarely.</summary>
         public ulong RecentPlayerNameCheck(string name, UCPlayer.ENameSearchType type)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (type == UCPlayer.ENameSearchType.CHARACTER_NAME)
             {
                 foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.characterName.Length))
@@ -346,6 +364,9 @@ namespace Uncreated.Warfare.ReportSystem
         }
         internal void OnTeamkill(ulong killer, Guid weapon, ulong dead, EDeathCause cause)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (data.TryGetValue(killer, out PlayerData playerData))
             {
                 playerData.teamkills.Add(new Teamkill()
@@ -359,11 +380,17 @@ namespace Uncreated.Warfare.ReportSystem
         }
         internal void OnPlayerChat(ulong player, string message)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (data.TryGetValue(player, out PlayerData playerData))
                 playerData.InsertChat(message);
         }
         internal void OnDamagedStructure(ulong player, StructureDamageData data)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (this.data.TryGetValue(player, out PlayerData playerData))
             {
                 for (int i = 0; i < playerData.recentFriendlyDamages.Count; i++)
@@ -383,6 +410,9 @@ namespace Uncreated.Warfare.ReportSystem
         }
         internal void OnDestroyedStructure(ulong player, uint instId)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (this.data.TryGetValue(player, out PlayerData playerData))
             {
                 for (int i = 0; i < playerData.recentFriendlyDamages.Count; i++)
@@ -430,6 +460,9 @@ namespace Uncreated.Warfare.ReportSystem
             
             public void InsertChat(string message)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (message.Length < 1 || message[0] == '/') return;
                 if (chatLogs.Count > 0 && chatLogs[0].Value.Key == message && (DateTime.Now - chatLogs[0].Value.Value).TotalSeconds < 10d)
                 {

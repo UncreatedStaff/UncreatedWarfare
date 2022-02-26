@@ -17,6 +17,9 @@ namespace Uncreated.Warfare.Stats
         {
             while (true)
             {
+#if DEBUG
+                IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 try
                 {
                     /* PLAYTIME COUNTER */
@@ -44,8 +47,8 @@ namespace Uncreated.Warfare.Stats
                         else
                             StatsManager.ModifyStats(players.Current.playerID.steamID.m_SteamID, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
                         /* ON DUTY AWARDER */
-                        UCPlayer player = UCPlayer.FromSteamPlayer(players.Current);
-                        if (Points.XPConfig.OnDutyXP > 0 && player.OnDuty())
+                        UCPlayer? player = UCPlayer.FromSteamPlayer(players.Current);
+                        if (player != null && Points.XPConfig.OnDutyXP > 0 && player.OnDuty())
                         {
                             Points.AwardXP(player.Player, Points.XPConfig.OnDutyXP, Translation.Translate("xp_on_duty", player));
                         }
@@ -104,7 +107,9 @@ namespace Uncreated.Warfare.Stats
                     L.LogError("Error in Stats Coroutine:");
                     L.LogError(ex);
                 }
-
+#if DEBUG
+                profiler.Dispose();
+#endif
                 // stats interval is in minutes here
                 yield return new WaitForSeconds(UCWarfare.Config.StatsInterval * 60f);
             }

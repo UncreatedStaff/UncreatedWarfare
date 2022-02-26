@@ -30,6 +30,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         public static int FromMax(int cap, int max) => Math.Abs(cap) >= max ? Gamemode.Config.UI.ProgressChars.Length - 1 : ((Gamemode.Config.UI.ProgressChars.Length - 1) / max) * Math.Abs(cap);
         public static SendUIParameters ComputeUI(ulong team, Flag flag, bool inVehicle)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (flag.LastDeltaPoints == 0)
             {
                 if (flag.IsContested(out _))
@@ -192,6 +195,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public static void SendFlagList(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player == null) return;
             ulong team = player.GetTeam();
             if (team < 1 || team > 3) return;
@@ -277,6 +283,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public static void ReplicateFlagUpdate(Flag flag, bool ownerChanged = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Is(out IFlagRotation gm))
             {
                 List<Flag> rotation = gm.Rotation;
@@ -337,6 +346,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         public static SendUIParameters RefreshStaticUI(ulong team, Flag flag, bool inVehicle)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (team != 1 && team != 2) return SendUIParameters.Nil;
             if (flag.IsAnObj)
             {
@@ -428,7 +440,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 p.sendChat, p.sendUI, p.absoluteCap, p.overrideChatConfig, p.formatting, p.team1count, p.team2count);
         public static void UIOrChat(char charactericon, bool useui, ushort uiid, bool pts, ulong team, EFlagStatus type, string translation_key, Color color, ITransportConnection PlayerConnection, SteamPlayer player,
             int c, ulong playerID = 0, bool SendChatIfConfiged = true, bool SendUIIfConfiged = true,
-            bool absolute = true, bool sendChatOverride = false, string[] formatting = null, int team1count = 0, int team2count = 0)
+            bool absolute = true, bool sendChatOverride = false, string[]? formatting = null, int team1count = 0, int team2count = 0)
         {
             if (type == EFlagStatus.DONT_DISPLAY)
             {

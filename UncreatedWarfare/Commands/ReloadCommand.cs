@@ -29,11 +29,14 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.reload" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UnturnedPlayer player = caller as UnturnedPlayer;
-            bool isConsole = caller.DisplayName == "Console";
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            bool isConsole = player == null;
             string cmd = command.Length == 0 ? string.Empty : command[0].ToLower();
             if (command.Length == 0 || (command.Length == 1 && cmd == "all"))
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 if (isConsole || player.HasPermission("uc.reload.all"))
                 {
                     ReloadTranslations();
@@ -46,24 +49,27 @@ namespace Uncreated.Warfare.Commands
                     ReloadSQLServer();
 
                     if (isConsole) L.Log(Translation.Translate("reload_reloaded_all", 0, out _));
-                    else player.SendChat("reload_reloaded_all");
+                    else player!.SendChat("reload_reloaded_all");
                 }
                 else
-                    player.Player.SendChat("no_permissions");
+                    player!.Player.SendChat("no_permissions");
             }
             else
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking(cmd + "_Execute");
+#endif
                 if (cmd == "config")
                 {
                     if (isConsole || player.HasPermission("uc.reload.config") || player.HasPermission("uc.reload.all"))
                     {
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_config", 0, out _));
-                        else player.SendChat("reload_reloaded_config");
+                        else player!.SendChat("reload_reloaded_config");
                         if (command.Length > 1 && command[1].ToLower() == "all") ReloadAllConfigFiles();
                         else ReloadConfig();
                     }
                     else
-                        player.Player.SendChat("no_permissions");
+                        player!.Player.SendChat("no_permissions");
                 }
                 else if (cmd == "translations" || cmd == "lang")
                 {
@@ -71,10 +77,10 @@ namespace Uncreated.Warfare.Commands
                     {
                         ReloadTranslations();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_lang", 0, out _));
-                        else player.SendChat("reload_reloaded_lang");
+                        else player!.SendChat("reload_reloaded_lang");
                     }
                     else
-                        player.Player.SendChat("no_permissions");
+                        player!.Player.SendChat("no_permissions");
                 }
                 else if (cmd == "flags")
                 {
@@ -82,10 +88,10 @@ namespace Uncreated.Warfare.Commands
                     {
                         ReloadFlags();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_flags", 0, out _));
-                        else player.SendChat("reload_reloaded_flags");
+                        else player!.SendChat("reload_reloaded_flags");
                     }
                     else
-                        player.Player.SendChat("no_permissions");
+                        player!.Player.SendChat("no_permissions");
                 }
                 else if (cmd == "gameconfig")
                 {
@@ -93,10 +99,10 @@ namespace Uncreated.Warfare.Commands
                     {
                         ReloadGamemodeConfig();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_gameconfig", 0, out _));
-                        else player.SendChat("reload_reloaded_gameconfig");
+                        else player!.SendChat("reload_reloaded_gameconfig");
                     }
                     else
-                        player.Player.SendChat("no_permissions");
+                        player!.Player.SendChat("no_permissions");
                 }
                 else if (cmd == "tcp")
                 {
@@ -104,10 +110,10 @@ namespace Uncreated.Warfare.Commands
                     {
                         ReloadTCPServer();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_tcp", 0, out _));
-                        else player.SendChat("reload_reloaded_tcp");
+                        else player!.SendChat("reload_reloaded_tcp");
                     }
                     else
-                        player.Player.SendChat("no_permissions");
+                        player!.Player.SendChat("no_permissions");
                 }
                 else if (cmd == "sql")
                 {
@@ -115,10 +121,10 @@ namespace Uncreated.Warfare.Commands
                     {
                         ReloadSQLServer();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_sql", 0, out _));
-                        else player.SendChat("reload_reloaded_sql");
+                        else player!.SendChat("reload_reloaded_sql");
                     }
                     else
-                        player.Player.SendChat("no_permissions");
+                        player!.Player.SendChat("no_permissions");
                 }
                 else if (cmd == "kits")
                 {
@@ -126,10 +132,10 @@ namespace Uncreated.Warfare.Commands
                     {
                         ReloadKits();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_kits", 0, out _));
-                        else player.SendChat("reload_reloaded_kits");
+                        else player!.SendChat("reload_reloaded_kits");
                     }
                     else
-                        player.Player.SendChat("no_permissions");
+                        player!.Player.SendChat("no_permissions");
                 }
                 else if (cmd == "config")
                 {
@@ -137,15 +143,18 @@ namespace Uncreated.Warfare.Commands
                     {
                         ReloadAllConfigFiles();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_config", 0, out _));
-                        else player.SendChat("reload_reloaded_config");
+                        else player!.SendChat("reload_reloaded_config");
                     }
                     else
-                        player.Player.SendChat("no_permissions");
+                        player!.Player.SendChat("no_permissions");
                 }
             }
         }
         internal static void ReloadConfig()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 Gamemode.ConfigObj.Reload();
@@ -177,6 +186,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadTranslations()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 Data.LanguageAliases = JSONMethods.LoadLangAliases();
@@ -194,6 +206,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadGamemodeConfig()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Gamemode.ConfigObj.Reload();
             SquadManager.TempCacheEffectIDs();
             Gamemodes.Flags.TeamCTF.CTFUI.TempCacheEffectIDs();
@@ -203,6 +218,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadFlags()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 Gamemode.ConfigObj.Reload();
@@ -225,6 +243,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadKits()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Kits.KitManager.Reload();
             foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
             {
@@ -233,6 +254,9 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadAllConfigFiles()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 UCWarfare.I.Announcer.Reload();
@@ -271,10 +295,16 @@ namespace Uncreated.Warfare.Commands
         }
         internal static void ReloadTCPServer()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Data.ReloadTCP();
         }
         internal static void ReloadSQLServer()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Data.DatabaseManager.Close();
             Data.DatabaseManager.Open();
         }

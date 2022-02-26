@@ -15,108 +15,54 @@ using UnityEngine;
 
 namespace Uncreated.Warfare
 {
-    public class PlayerManager
+    public static class PlayerManager
     {
-        public readonly static RawByteIO<List<PlayerSave>> IO = new RawByteIO<List<PlayerSave>>(PlayerSave.ReadList, PlayerSave.WriteList, directory + FILE, 4);
-        internal SemaphoreSlim threadLocker = new SemaphoreSlim(1, 1);
         public static List<UCPlayer> OnlinePlayers;
         private static Dictionary<ulong, UCPlayer> _dict;
-        /*
-        public static List<UCPlayer> Team1Players;
-        public static List<UCPlayer> Team2Players;
-        */
-        public static List<PlayerSave> ActiveObjects;
-        private static readonly string directory = Data.KitsStorage;
         public static readonly Type Type = typeof(PlayerSave);
         private static readonly FieldInfo[] fields = Type.GetFields();
-        private const string FILE = "playersaves.dat";
-        private static readonly string Path = directory + FILE;
-        public PlayerManager()
+        static PlayerManager()
         {
-            Load();
             OnlinePlayers = new List<UCPlayer>(50);
             _dict = new Dictionary<ulong, UCPlayer>(50);
-            /*
-            Team1Players = new List<UCPlayer>();
-            Team2Players = new List<UCPlayer>();*/
         }
-        private void Load()
-        {
-            threadLocker.Wait();
-            try
-            {
-                if (!Directory.Exists(directory))
-                    Directory.CreateDirectory(directory);
-                if (File.Exists(directory + FILE))
-                {
-                    if (IO.ReadFrom(Path, out List<PlayerSave> saves))
-                    {
-                        ActiveObjects = saves;
-                        L.Log($"Read {saves.Count} saves.", ConsoleColor.Magenta);
-                    }
-                    else
-                    {
-                        ActiveObjects = new List<PlayerSave>();
-                        L.LogError("Failed to read saves!!!");
-                    }
-                    bool needwrite = ActiveObjects.Count == 0;
-                    for (int i = 0; i < ActiveObjects.Count; i++)
-                    {
-                        if (ActiveObjects[i].DATA_VERSION < PlayerSave.CURRENT_DATA_VERSION)
-                        {
-                            ActiveObjects[i].DATA_VERSION = PlayerSave.CURRENT_DATA_VERSION;
-                            needwrite = true;
-                        }
-                        if (needwrite)
-                        {
-                            IO.WriteTo(ActiveObjects, Path);
-                        }
-                    }
-                }
-                else
-                {
-                    ActiveObjects = new List<PlayerSave>();
-                    IO.WriteTo(ActiveObjects, Path);
-                }
-            }
-            finally
-            {
-                threadLocker.Release();
-            }
-        }
-        protected static List<PlayerSave> GetObjectsWhere(Func<PlayerSave, bool> predicate, bool readFile = false) => ActiveObjects.Where(predicate).ToList();
-        protected static PlayerSave GetObject(Func<PlayerSave, bool> predicate, bool readFile = false) => ActiveObjects.FirstOrDefault(predicate);
-        protected static bool ObjectExists(Func<PlayerSave, bool> match, out PlayerSave item, bool readFile = false)
-        {
-            item = GetObject(match);
-            return item != null;
-        }
-        public static UCPlayer FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
-        public static bool HasSave(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, false);
-        public static bool HasSaveRead(ulong playerID, out PlayerSave save) => ObjectExists(ks => ks.Steam64 == playerID, out save, true);
-        public static PlayerSave GetSave(ulong playerID) => GetObject(ks => ks.Steam64 == playerID, true);
+        public static UCPlayer? FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
+        public static bool HasSave(ulong playerID, out PlayerSave save) => PlayerSave.TryReadSaveFile(playerID, out save!);
+        public static PlayerSave? GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave? save) ? save : null;
         public static void ApplyToOnline()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             for (int i = 0; i < OnlinePlayers.Count; i++)
             {
-                for (int p = 0; p < ActiveObjects.Count; p++)
-                {
-                    if (ActiveObjects[p].Steam64 == OnlinePlayers[i].Steam64)
-                    {
-                        ActiveObjects[p].Team = OnlinePlayers[i].GetTeam();
-                        ActiveObjects[p].KitName = OnlinePlayers[i].KitName;
-                        ActiveObjects[p].SquadName = OnlinePlayers[i].Squad != null ? OnlinePlayers[i].Squad.Name : "";
-                    }
-                }
+                UCPlayer player = OnlinePlayers[i];
+                if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave? save) || save == null)
+                    save = new PlayerSave(player.Steam64);
+                save.Team = player.GetTeam();
+                save.KitName = player.KitName;
+                save.SquadName = player.Squad?.Name ?? string.Empty;
+                save.LastGame = Data.Gamemode.GameID;
+                PlayerSave.WriteToSaveFile(save);
             }
-            IO.WriteTo(ActiveObjects, Path);
         }
-        public static void Write() =>
-                IO.WriteTo(ActiveObjects, Path);
+        public static void ApplyTo(UCPlayer player)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave? save) || save == null)
+                save = new PlayerSave(player.Steam64);
+            save.Team = player.GetTeam();
+            save.KitName = player.KitName;
+            save.SquadName = player.Squad?.Name ?? string.Empty;
+            save.LastGame = Data.Gamemode.GameID;
+            PlayerSave.WriteToSaveFile(save);
+        }
         public static FPlayerList[] GetPlayerList()
         {
             FPlayerList[] rtn = new FPlayerList[OnlinePlayers.Count];
-            for (int i = 0; i < OnlinePlayers.Count; i++)
+            for (int i = 0; i < OnlinePlayers!.Count; i++)
             {
                 if (OnlinePlayers == null) continue;
                 rtn[i] = new FPlayerList
@@ -131,27 +77,17 @@ namespace Uncreated.Warfare
         }
         public static void InvokePlayerConnected(UnturnedPlayer player) => OnPlayerConnected(player);
         public static void InvokePlayerDisconnected(UnturnedPlayer player) => OnPlayerDisconnected(player);
-        public static void AddSave(PlayerSave save)
-        {
-            ActiveObjects.Add(save);
-            IO.WriteTo(ActiveObjects, Path);
-        }
+        public static void AddSave(PlayerSave save) => PlayerSave.WriteToSaveFile(save);
         private static void OnPlayerConnected(UnturnedPlayer rocketplayer)
         {
-            PlayerSave save;
-
-            if (!HasSave(rocketplayer.CSteamID.m_SteamID, out var existingSave))
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            if (!PlayerSave.TryReadSaveFile(rocketplayer.CSteamID.m_SteamID, out PlayerSave? save) || save == null)
             {
                 save = new PlayerSave(rocketplayer.CSteamID.m_SteamID);
-                AddSave(save);
+                PlayerSave.WriteToSaveFile(save);
             }
-            else
-            {
-                save = existingSave;
-            }
-
-            
-
             UCPlayer player = new UCPlayer(
                     rocketplayer.CSteamID,
                     save.KitName,
@@ -165,64 +101,54 @@ namespace Uncreated.Warfare
 
             OnlinePlayers.Add(player);
             _dict.Add(player.Steam64, player);
-            /*
-            if (player.IsTeam1())
-                Team1Players.Add(player);
-            else if (player.IsTeam2())
-                Team2Players.Add(player);*/
 
             SquadManager.OnPlayerJoined(player, save.SquadName);
             FOBManager.SendFOBList(player);
         }
         private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
         {
-            UCPlayer player = UCPlayer.FromUnturnedPlayer(rocketplayer);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromUnturnedPlayer(rocketplayer);
+            if (player == null) return;
             player.IsOnline = false;
 
             OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
             _dict.Remove(player.Steam64);
-            /*
-            if (TeamManager.IsTeam1(rocketplayer))
-                Team1Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
-            else if (TeamManager.IsTeam2(rocketplayer))
-                Team2Players.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);*/
-
             SquadManager.OnPlayerDisconnected(player);
         }
-        public static List<UCPlayer> GetNearbyPlayers(float range, Vector3 point) => OnlinePlayers.Where(p => !p.Player.life.isDead && (p.Position - point).sqrMagnitude < range * range).ToList();
-        public static bool IsPlayerNearby(ulong playerID, float range, Vector3 point) => OnlinePlayers.Find(p => p.Steam64 == playerID && !p.Player.life.isDead && (p.Position - point).sqrMagnitude < range * range) != null;
-
-        public static void VerifyTeam(Player nelsonplayer)
-        {/*
-            if (nelsonplayer == default) return;
-
-            UCPlayer player = OnlinePlayers.Find(p => p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
-            if (player == default)
+        public static IEnumerable<UCPlayer> GetNearbyPlayers(float range, Vector3 point)
+        {
+            float sqrRange = range * range;
+            for (int i = 0; i < OnlinePlayers.Count; i++)
             {
-                L.LogError("Failed to get UCPlayer instance of " + nelsonplayer.name);
-                return;
+                UCPlayer current = OnlinePlayers[i];
+                if (!current.Player.life.isDead && (current.Position - point).sqrMagnitude < sqrRange)
+                    yield return current;
             }
-
-            if (TeamManager.IsTeam1(nelsonplayer))
-            {
-                Team2Players.RemoveAll(p => p == default || p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
-                if (!Team1Players.Exists(p => p == default || p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
-                {
-                    Team1Players.Add(player);
-                }
-            }
-            else if (TeamManager.IsTeam2(nelsonplayer))
-            {
-                Team1Players.RemoveAll(p => p == default || p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
-                if (!Team2Players.Exists(p => p == default || p.Steam64 == nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
-                {
-                    Team2Players.Add(player);
-                }
-            }*/
         }
-
+        public static bool IsPlayerNearby(ulong playerID, float range, Vector3 point)
+        {
+            float sqrRange = range * range;
+            for (int i = 0; i < OnlinePlayers.Count; i++)
+            {
+                UCPlayer current = OnlinePlayers[i];
+                if (current.Steam64 == playerID && !current.Player.life.isDead && (current.Position - point).sqrMagnitude < sqrRange)
+                    return true;
+            }
+            return false;
+        }
+        public static bool IsPlayerNearby(UCPlayer player, float range, Vector3 point)
+        {
+            float sqrRange = range * range;
+            return !player.Player.life.isDead && (player.Position - point).sqrMagnitude < sqrRange;
+        }
         internal static void PickGroupAfterJoin(UCPlayer ucplayer)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong oldGroup = ucplayer.Player.quests.groupID.m_SteamID;
             if (HasSave(ucplayer.Steam64, out PlayerSave save))
             {
@@ -250,9 +176,8 @@ namespace Uncreated.Warfare
             GroupManager.save();
         }
 
-
         /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-        private static FieldInfo GetField(string property, out byte reason)
+        private static FieldInfo? GetField(string property, out byte reason)
         {
             for (int i = 0; i < fields.Length; i++)
             {
@@ -277,7 +202,7 @@ namespace Uncreated.Warfare
             reason = 1;
             return default;
         }
-        private static object ParseInput(string input, Type type, out bool parsed)
+        private static object? ParseInput(string input, Type type, out bool parsed)
         {
             if (input == default || type == default)
             {
@@ -446,7 +371,7 @@ namespace Uncreated.Warfare
         /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
         public static PlayerSave SetProperty(PlayerSave obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
         {
-            FieldInfo field = GetField(property, out byte reason);
+            FieldInfo? field = GetField(property, out byte reason);
             if (reason != 0)
             {
                 if (reason == 1 || reason == 2)
@@ -468,39 +393,39 @@ namespace Uncreated.Warfare
             }
             found = true;
             allowedToChange = true;
-            object parsedValue = ParseInput(value, field.FieldType, out parsed);
+            if (field == null)
+            {
+                found = false;
+                allowedToChange = false;
+                set = false;
+                parsed = false;
+                return obj;
+            }
+            object? parsedValue = ParseInput(value, field.FieldType, out parsed);
             if (parsed)
             {
-                if (field != default)
+                try
                 {
-                    try
-                    {
-                        field.SetValue(obj, parsedValue);
-                        set = true;
-                        Write();
-                        return obj;
-                    }
-                    catch (FieldAccessException ex)
-                    {
-                        L.LogError(ex);
-                        set = false;
-                        return obj;
-                    }
-                    catch (TargetException ex)
-                    {
-                        L.LogError(ex);
-                        set = false;
-                        return obj;
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        L.LogError(ex);
-                        set = false;
-                        return obj;
-                    }
+                    field.SetValue(obj, parsedValue);
+                    set = true;
+                    PlayerSave.WriteToSaveFile(obj);
+                    return obj;
                 }
-                else
+                catch (FieldAccessException ex)
                 {
+                    L.LogError(ex);
+                    set = false;
+                    return obj;
+                }
+                catch (TargetException ex)
+                {
+                    L.LogError(ex);
+                    set = false;
+                    return obj;
+                }
+                catch (ArgumentException ex)
+                {
+                    L.LogError(ex);
                     set = false;
                     return obj;
                 }
@@ -552,45 +477,9 @@ namespace Uncreated.Warfare
             reason = 0;
             return true;
         }
-        /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
-        public static bool SetProperty(Func<PlayerSave, bool> selector, string property, string value, out bool foundObject, out bool setSuccessfully, out bool parsed, out bool found, out bool allowedToChange)
-        {
-            if (ObjectExists(selector, out PlayerSave selected))
-            {
-                foundObject = true;
-                SetProperty(selected, property, value, out setSuccessfully, out parsed, out found, out allowedToChange);
-                return setSuccessfully;
-            }
-            else
-            {
-                foundObject = false;
-                setSuccessfully = false;
-                parsed = false;
-                found = false;
-                allowedToChange = false;
-                return false;
-            }
-        }
-        public static bool SetProperty<V>(Func<PlayerSave, bool> selector, string property, V value, out bool foundObject, out bool setSuccessfully, out bool foundproperty, out bool allowedToChange)
-        {
-            if (ObjectExists(selector, out PlayerSave selected))
-            {
-                foundObject = true;
-                SetProperty(selected, property, value, out setSuccessfully, out foundproperty, out allowedToChange);
-                return setSuccessfully;
-            }
-            else
-            {
-                foundObject = false;
-                setSuccessfully = false;
-                foundproperty = false;
-                allowedToChange = false;
-                return false;
-            }
-        }
         public static PlayerSave SetProperty<V>(PlayerSave obj, string property, V value, out bool success, out bool found, out bool allowedToChange)
         {
-            FieldInfo field = GetField(property, out byte reason);
+            FieldInfo? field = GetField(property, out byte reason);
             if (reason != 0)
             {
                 if (reason == 1 || reason == 2)
@@ -618,7 +507,7 @@ namespace Uncreated.Warfare
                     {
                         field.SetValue(obj, value);
                         success = true;
-                        Write();
+                        PlayerSave.WriteToSaveFile(obj);
                         return obj;
                     }
                     catch (FieldAccessException ex)

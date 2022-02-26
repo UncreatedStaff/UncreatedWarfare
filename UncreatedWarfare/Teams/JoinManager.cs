@@ -23,6 +23,9 @@ namespace Uncreated.Warfare.Teams
         private TimeSpan countdown;
         public void Initialize()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             LobbyPlayers = new List<LobbyPlayer>();
             countdown = TimeSpan.FromTicks(0);
 
@@ -37,13 +40,28 @@ namespace Uncreated.Warfare.Teams
         }
         public void UpdatePlayer(Player player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = player.GetTeam();
-            LobbyPlayer pl = LobbyPlayers.FirstOrDefault(x => x.Steam64 == player.channel.owner.playerID.steamID.m_SteamID);
+            int ind = LobbyPlayers.FindIndex(x => x.Steam64 == player.channel.owner.playerID.steamID.m_SteamID);
+            if (ind == -1)
+            {
+                UCPlayer? pl2 = UCPlayer.FromPlayer(player);
+                if (pl2 != null)
+                    LobbyPlayers.Add(LobbyPlayer.CreateNew(pl2, team));
+                return;
+            }
+            LobbyPlayer pl = LobbyPlayers[ind];
             if (pl != null)
             {
                 if (!pl.Reset())
                 {
-                    pl = LobbyPlayer.CreateNew(UCPlayer.FromPlayer(player), team);
+                    UCPlayer? pl2 = UCPlayer.FromPlayer(player);
+                    if (pl2 != null)
+                        LobbyPlayers[ind] = LobbyPlayer.CreateNew(pl2, team);
+                    else
+                        LobbyPlayers.RemoveAt(ind);
                 }
                 else
                 {
@@ -52,11 +70,17 @@ namespace Uncreated.Warfare.Teams
             }
             else
             {
-                pl = LobbyPlayer.CreateNew(UCPlayer.FromPlayer(player), team);
+                UCPlayer? pl2 = UCPlayer.FromPlayer(player);
+                if (pl2 != null)
+                    LobbyPlayers.Add(LobbyPlayer.CreateNew(pl2, team));
+                return;
             }
         }
         public bool IsInLobby(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (LobbyPlayer lobbyPlayer in LobbyPlayers)
             {
                 if (lobbyPlayer.IsInLobby && lobbyPlayer.Player == player)
@@ -68,6 +92,9 @@ namespace Uncreated.Warfare.Teams
         }
         public void OnPlayerConnected(UCPlayer player, bool isNewPlayer)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!isNewPlayer)
             {
                 LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());
@@ -84,6 +111,9 @@ namespace Uncreated.Warfare.Teams
 
         public void OnPlayerDisconnected(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             bool x = false;
             for (int i = 0; i < LobbyPlayers.Count; i++)
             {
@@ -115,6 +145,9 @@ namespace Uncreated.Warfare.Teams
 
         public void JoinLobby(UCPlayer player, bool showX)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player.Steam64 == player.Steam64);
             if (lobbyPlayer == null)
             {
@@ -151,6 +184,9 @@ namespace Uncreated.Warfare.Teams
 
         public void ShowUI(LobbyPlayer player, bool showX)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             showX = false;
 
             player.Player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.None);
@@ -213,6 +249,9 @@ namespace Uncreated.Warfare.Teams
 
         public void UpdateUITeams(LobbyPlayer player, ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!player.IsInLobby) return;
 
             //L.Log($"UI teams updated: T1: {Team1Players.Count} - T2: {Team2Players.Count}");
@@ -269,6 +308,9 @@ namespace Uncreated.Warfare.Teams
 
         public void UpdateUICountDown(LobbyPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!player.IsInLobby) return;
 
             if (countdown.Seconds > 0)
@@ -284,6 +326,9 @@ namespace Uncreated.Warfare.Teams
 
         public void OnButtonClicked(Player nelsonplayer, string buttonName)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             LobbyPlayer lobbyPlayer = LobbyPlayers.Find(p => p.Player.CSteamID == nelsonplayer.channel.owner.playerID.steamID);
 
             if (buttonName == "Team1Button")
@@ -319,6 +364,9 @@ namespace Uncreated.Warfare.Teams
 
         private void JoinTeam(UCPlayer player, ulong newTeam)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string teamName = TeamManager.TranslateName(newTeam, player.CSteamID);
 
             GroupInfo group = GroupManager.getGroupInfo(new CSteamID(newTeam));
@@ -363,6 +411,9 @@ namespace Uncreated.Warfare.Teams
 
         public void CloseUI(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player == null) return;
             LobbyPlayer lp = LobbyPlayers.Find(x => x.Steam64 == player.Steam64);
             if (lp == null || lp.Player == null) return;
@@ -370,6 +421,9 @@ namespace Uncreated.Warfare.Teams
         }
         public void CloseUI(LobbyPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             player.IsInLobby = false;
             player.Team = player.Player.GetTeam();
             player.Player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.None);
@@ -383,6 +437,9 @@ namespace Uncreated.Warfare.Teams
 
         public bool IsTeamFull(LobbyPlayer player, ulong team)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!UCWarfare.Config.TeamSettings.BalanceTeams)
                 return false;
             if (player.Team == team)
@@ -429,6 +486,9 @@ namespace Uncreated.Warfare.Teams
 
         public void OnNewGameStarting()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             //StartCoroutine(CountdownTick());
             LobbyPlayers.RemoveAll(x => !x.Reset());
 
@@ -471,7 +531,7 @@ namespace Uncreated.Warfare.Teams
             public bool IsInLobby;
             public bool IsDonatorT1;
             public bool IsDonatorT2;
-            public Coroutine current = null;
+            public Coroutine? current = null;
 
             public LobbyPlayer(UCPlayer player, ulong team)
             {
@@ -487,7 +547,7 @@ namespace Uncreated.Warfare.Teams
                 Team = 0;
                 current = null;
                 if (Player == null || PlayerTool.getSteamPlayer(Player.Steam64) == null)
-                    Player = PlayerManager.OnlinePlayers.Find(x => x.Steam64 == Steam64) ?? null;
+                    Player = PlayerManager.OnlinePlayers.Find(x => x.Steam64 == Steam64);
                 return Player != null;
             }
             public void CheckKits()

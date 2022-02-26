@@ -22,6 +22,9 @@ namespace Uncreated.Warfare
     {
         public static string ObjectTranslate(string key, string language, params object[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
             {
                 if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
@@ -85,6 +88,9 @@ namespace Uncreated.Warfare
         }
         public static string ObjectTranslate(string key, ulong player, params object[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (key == null)
             {
                 string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
@@ -219,6 +225,9 @@ namespace Uncreated.Warfare
         /// <returns>A translation structure.</returns>
         public static TranslationData GetTranslation(string key, ulong player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (key == null)
             {
                 L.LogError($"Message to be sent to {player} was null.");
@@ -305,6 +314,9 @@ namespace Uncreated.Warfare
         /// <returns>A localized string based on the player's language.</returns>
         public static string Translate(string key, ulong player, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (key == null)
             {
                 string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
@@ -425,6 +437,9 @@ namespace Uncreated.Warfare
         /// <returns>A localized string based on the player's language.</returns>
         public static string Translate(string key, ulong player, out Color color, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (key == null)
             {
                 string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
@@ -558,6 +573,9 @@ namespace Uncreated.Warfare
         /// <returns>A localized string based on <paramref name="language"/>.</returns>
         public static string Translate(string key, string language, out Color color, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
             {
                 if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
@@ -634,6 +652,9 @@ namespace Uncreated.Warfare
         /// <returns>A localized string based on <paramref name="language"/>.</returns>
         public static string Translate(string key, string language, params string[] formatting)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
             {
                 if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
@@ -698,6 +719,9 @@ namespace Uncreated.Warfare
 
         public static string GetTimeFromSeconds(this uint seconds, ulong player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (seconds < 60) // < 1 minute
             {
                 return (seconds + 1).ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), player);
@@ -730,6 +754,9 @@ namespace Uncreated.Warfare
         }
         public static string GetTimeFromSeconds(this uint seconds, string language)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (seconds < 60) // < 1 minute
             {
                 return (seconds + 1).ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), language);
@@ -762,6 +789,9 @@ namespace Uncreated.Warfare
         }
         public static string GetTimeFromMinutes(this uint minutes, ulong player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (minutes < 60) // < 1 hour
             {
                 return minutes.ToString(Data.Locale) + ' ' + Translate("time_minute" + minutes.S(), player);
@@ -789,6 +819,9 @@ namespace Uncreated.Warfare
         }
         public static string GetTimeFromMinutes(this uint minutes, string language)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (minutes < 60) // < 1 hour
             {
                 return minutes.ToString(Data.Locale) + ' ' + Translate("time_minute" + minutes.S(), language);
@@ -816,6 +849,9 @@ namespace Uncreated.Warfare
         }
         public static string TranslateSign(string key, string language, UCPlayer ucplayer, bool important = false)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             try
             {
                 if (key == null) return string.Empty;
@@ -982,6 +1018,9 @@ namespace Uncreated.Warfare
         }
         public static string DecideLanguage<TVal>(ulong player, Dictionary<string, TVal> searcher)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player == 0)
             {
                 if (!searcher.ContainsKey(JSONMethods.DEFAULT_LANGUAGE))
@@ -1009,6 +1048,9 @@ namespace Uncreated.Warfare
         }
         public static string TranslateLimb(string language, ELimb limb)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if ((!Data.LimbLocalization.TryGetValue(language, out Dictionary<ELimb, string> loc) || !loc.ContainsKey(limb)) && !Data.LimbLocalization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out loc))
             {
                 return limb.ToString().ToLower().Replace('_', ' ');
@@ -1019,6 +1061,9 @@ namespace Uncreated.Warfare
         }
         public static string TranslateLimb(ulong player, ELimb limb)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player == 0)
             {
                 if (!Data.LimbLocalization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<ELimb, string> loc))
@@ -1072,6 +1117,9 @@ namespace Uncreated.Warfare
         /// <param name="backupcause">Used in case the key can not be found.</param>
         public static string TranslateDeath(string language, string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, ELimb limb, string itemName, float distance, bool usePlayerName = false, bool translateKillerName = false, bool colorize = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string deadname = usePlayerName ? dead.PlayerName : dead.CharacterName;
             if (colorize) deadname = F.ColorizeName(deadname, deadTeam);
             string murderername = translateKillerName ? Translate(killerName.PlayerName, language) : (usePlayerName ? killerName.PlayerName : killerName.CharacterName);
@@ -1094,6 +1142,9 @@ namespace Uncreated.Warfare
         }
         public static string TranslateLandmineDeath(string language, string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, bool usePlayerName = false, bool colorize = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string deadname = usePlayerName ? dead.PlayerName : dead.CharacterName;
             if (colorize) deadname = F.ColorizeName(deadname, deadTeam);
             string murderername = usePlayerName ? killerName.PlayerName : killerName.CharacterName;
@@ -1118,6 +1169,9 @@ namespace Uncreated.Warfare
         }
         public static string TranslateBranch(EBranch branch, UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string branchName = "team";
             ulong team = player.GetTeam();
             if (team == 1)
@@ -1130,6 +1184,9 @@ namespace Uncreated.Warfare
         }
         public static string TranslateBranch(EBranch branch, ulong player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string branchName = "team";
             ulong team = player.GetTeamFromPlayerSteam64ID();
             if (team == 1)
@@ -1142,6 +1199,9 @@ namespace Uncreated.Warfare
         }
         public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, ulong player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (player == 0)
             {
                 return TranslateVBS(spawn, data, JSONMethods.DEFAULT_LANGUAGE);
@@ -1155,6 +1215,9 @@ namespace Uncreated.Warfare
         }
         public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, string language)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             VehicleSpawnComponent comp;
             if (spawn.type == Structures.EStructType.STRUCTURE)
                 if (spawn.StructureDrop != null)
@@ -1365,7 +1428,8 @@ namespace Uncreated.Warfare
                     languages.Clear();
                 while (players.MoveNext())
                 {
-                    UCPlayer pl = UCPlayer.FromSteamPlayer(players.Current);
+                    UCPlayer? pl = UCPlayer.FromSteamPlayer(players.Current);
+                    if (pl == null) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                         lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
@@ -1397,7 +1461,8 @@ namespace Uncreated.Warfare
                     languages.Clear();
                 while (players.MoveNext())
                 {
-                    UCPlayer pl = UCPlayer.FromPlayer(players.Current);
+                    UCPlayer? pl = UCPlayer.FromPlayer(players.Current);
+                    if (pl == null) continue;
                     if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                         lang = JSONMethods.DEFAULT_LANGUAGE;
                     bool found = false;
@@ -1600,14 +1665,14 @@ namespace Uncreated.Warfare
             this.Language = lang;
             this.Players = new List<UCPlayer>(Provider.clients.Count);
             this.nextIndex = 0;
-            this.Next = null;
+            this.Next = null!;
         }
         public LanguageSet(string lang, UCPlayer first)
         {
             this.Language = lang;
             this.Players = new List<UCPlayer>(lang == JSONMethods.DEFAULT_LANGUAGE ? Provider.clients.Count : 4) { first };
             this.nextIndex = 0;
-            this.Next = null;
+            this.Next = null!;
         }
         public void Add(UCPlayer pl) => this.Players.Add(pl);
         /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
@@ -1625,7 +1690,7 @@ namespace Uncreated.Warfare
         /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
         public void Reset()
         {
-            Next = null;
+            Next = null!;
             nextIndex = 0;
         }
 

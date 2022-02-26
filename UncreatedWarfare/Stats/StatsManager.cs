@@ -29,6 +29,9 @@ namespace Uncreated.Warfare.Stats
         private static int minsCounter = 0;
         public static void LoadTeams()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             WarfareTeam.IO.InitializeTo(
                 () => new WarfareTeam()
                 {
@@ -100,6 +103,9 @@ namespace Uncreated.Warfare.Stats
                 minsCounter++;
                 return;
             }
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (weaponCounter >= Weapons.Count)
                 weaponCounter = 0;
             if (vehicleCounter >= Vehicles.Count)
@@ -148,6 +154,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static void ModifyTeam(byte team, Action<WarfareTeam> modification, bool save = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return;
             if (team == 1)
             {
@@ -162,6 +171,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static void ModifyTeam(ulong team, Action<WarfareTeam> modification, bool save = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return;
             if (team == 1)
             {
@@ -176,11 +188,17 @@ namespace Uncreated.Warfare.Stats
         }
         public static void SaveTeams()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             WarfareTeam.IO.WriteTo(Team1Stats, SaveDirectory + "team1.dat");
             WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
         }
         public static void LoadWeapons()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Directory.Exists(WeaponsDirectory))
                 Directory.CreateDirectory(WeaponsDirectory);
             string[] weapons = Directory.GetFiles(WeaponsDirectory);
@@ -205,6 +223,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static void LoadVehicles()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Directory.Exists(VehiclesDirectory))
                 Directory.CreateDirectory(VehiclesDirectory);
             string[] vehicles = Directory.GetFiles(VehiclesDirectory);
@@ -229,6 +250,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static void LoadKits()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Directory.Exists(KitsDirectory))
                 Directory.CreateDirectory(KitsDirectory);
             string[] kits = Directory.GetFiles(KitsDirectory);
@@ -254,6 +278,9 @@ namespace Uncreated.Warfare.Stats
         private static string GetWeaponName(ushort ID, string KitID) => $"{ID}_{KitID.RemoveMany(false, Data.BAD_FILE_NAME_CHARACTERS)}.dat";
         public static bool ModifyWeapon(ushort ID, string KitID, Action<WarfareWeapon> modification, bool save = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return false;
             string dir = WeaponsDirectory + GetWeaponName(ID, KitID);
             for (int i = 0; i < Weapons.Count; i++)
@@ -286,6 +313,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static bool ModifyVehicle(ushort ID, Action<WarfareVehicle> modification, bool save = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return false;
             string dir = VehiclesDirectory + ID.ToString(Data.Locale) + ".dat";
             for (int i = 0; i < Vehicles.Count; i++)
@@ -317,6 +347,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static bool ModifyStats(ulong Steam64, Action<WarfareStats> modification, bool save = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return false;
             string dir = StatsDirectory + Steam64.ToString(Data.Locale) + ".dat";
             for (int i = 0; i < OnlinePlayers.Count; i++)
@@ -347,6 +380,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static bool ModifyKit(string KitID, Action<WarfareKit> modification, bool save = true)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Data.TrackStats) return false;
             string dir = KitsDirectory + KitID + ".dat";
             for (int i = 0; i < Kits.Count; i++)
@@ -378,6 +414,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static void RegisterPlayer(ulong Steam64)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!Directory.Exists(StatsDirectory))
                 Directory.CreateDirectory(StatsDirectory);
             string dir = StatsDirectory + Steam64.ToString(Data.Locale) + ".dat";
@@ -432,6 +471,9 @@ namespace Uncreated.Warfare.Stats
         }
         public static void DeregisterPlayer(ulong Steam64)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             WarfareStats stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == Steam64);
             if (stats == default) return;
             WarfareStats.IO.WriteTo(stats, StatsDirectory + Steam64.ToString(Data.Locale) + ".dat");

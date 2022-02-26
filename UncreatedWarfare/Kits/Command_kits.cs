@@ -17,7 +17,8 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>() { "uc.kits" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
 
             if (!Data.Is(out IKitRequests ctf))
             {

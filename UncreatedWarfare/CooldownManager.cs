@@ -15,6 +15,9 @@ namespace Uncreated.Warfare
 
         public static void StartCooldown(UCPlayer player, ECooldownType type, float seconds, params object[] data)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (HasCooldown(player, type, out Cooldown existing))
                 existing.timeAdded = DateTime.Now;
             else
@@ -22,6 +25,9 @@ namespace Uncreated.Warfare
         }
         public static bool HasCooldown(UCPlayer player, ECooldownType type, out Cooldown cooldown, params object[] data)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             cooldowns.RemoveAll(c => c.player == null || c.Timeleft.TotalSeconds <= 0);
             cooldown = cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && c.data.Equals(data));
             return cooldown != null;

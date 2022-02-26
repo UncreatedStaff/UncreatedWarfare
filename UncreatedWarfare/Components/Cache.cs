@@ -56,8 +56,8 @@ namespace Uncreated.Warfare.Components
                 (LevelNodes.nodes
                 .Where(n => n.type == ENodeType.LOCATION)
                 .Aggregate((n1, n2) =>
-                    (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)
-                .name;
+                    (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)?
+                .name ?? string.Empty;
 
             if (Data.Is(out IFlagRotation fg))
             {
@@ -109,7 +109,10 @@ namespace Uncreated.Warfare.Components
 
                 if (IsDestroyed) yield break;
 
-                foreach (var player in PlayerManager.OnlinePlayers)
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+                foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
                     if (player.GetTeam() == Team)
                     {
@@ -161,9 +164,12 @@ namespace Uncreated.Warfare.Components
         }
         public void Destroy()
         {
-            foreach (var player in NearbyDefenders)
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            foreach (UCPlayer player in NearbyDefenders)
                 OnDefenderLeft(player);
-            foreach (var player in NearbyAttackers)
+            foreach (UCPlayer player in NearbyAttackers)
                 OnAttackerLeft(player);
 
             NearbyAttackers.Clear();

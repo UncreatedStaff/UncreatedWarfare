@@ -31,22 +31,25 @@ namespace Uncreated.Warfare.Gamemodes
         private Coroutine endGameUpdateTimer;
         private float secondsLeft;
         protected bool shuttingDown;
-        protected string shuttingDownMessage = null;
+        protected string? shuttingDownMessage = null;
         protected ushort id;
         private void Awake()
         {
             if (Assets.find(GUID) is EffectAsset lbAsset)
                 id = lbAsset.id;
         }
-        public void SetShutdownConfig(bool isShuttingDown, string reason = null)
+        public void SetShutdownConfig(bool isShuttingDown, string? reason = null)
         {
             shuttingDown = isShuttingDown;
             shuttingDownMessage = reason;
         }
-        public VoidDelegate OnLeaderboardExpired;
+        public VoidDelegate? OnLeaderboardExpired;
         protected abstract Guid GUID { get; }
         public void StartLeaderboard(ulong winner, StatTracker tracker)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             this._winner = winner;
             this.tracker = tracker;
             Calculate();
@@ -83,6 +86,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public virtual void UpdateLeaderboard()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             foreach (SteamPlayer player in Provider.clients)
             {
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, player.transportConnection, true, "NextGameSeconds", Translation.ObjectTranslate("next_game_starting_format",
@@ -108,6 +114,9 @@ namespace Uncreated.Warfare.Gamemodes
         public void Awake() => Reset();
         public virtual void Reset()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (stats == null)
                 stats = new Dictionary<ulong, IndividualStats>();
             coroutinect = 0;
@@ -138,6 +147,9 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void OnPlayerJoin(Player player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (!stats.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out IndividualStats s))
             {
                 s = BasePlayerStats.New<IndividualStats>(player);
@@ -155,12 +167,18 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public virtual void StartTracking()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             start = DateTime.Now;
             coroutinect = 0;
             StartTicking();
         }
         protected virtual void OnTick()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             coroutinect++;
         }
         protected void StopTicking()

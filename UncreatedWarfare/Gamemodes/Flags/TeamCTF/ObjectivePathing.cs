@@ -1,4 +1,5 @@
 ﻿//#define NONADJACENCIES
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -9,13 +10,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
     {
         public static List<Flag> PathWithAdjacents(List<Flag> Selection, AdjacentFlagData[] T1Adjacents, AdjacentFlagData[] T2Adjacents)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             List<Flag> path = new List<Flag>();
             StartAdjacentsLoop(path, Selection, T1Adjacents, T2Adjacents);
             return path;
         }
         private static void StartAdjacentsLoop(List<Flag> flags, List<Flag> selection, AdjacentFlagData[] t1adjacents, AdjacentFlagData[] t2adjacents)
         {
-            Flag first = PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null));
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            Flag? first = PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null));
             if (first == null)
             {
                 L.LogError("Unable to pick the first flag.");
@@ -27,6 +34,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         private static void AdjacentsFlagLoop(List<Flag> flags, List<Flag> selection, AdjacentFlagData[] t2adjacents)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Flag lastFlag = flags.Last();
             if (lastFlag == null)
             {
@@ -44,7 +54,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             if (float.IsNaN(mainBias))
             {
-                Flag pick = PickRandomFlagWithSpecifiedBias(initBiases);
+                Flag? pick = PickRandomFlagWithSpecifiedBias(initBiases);
                 if (pick != null)
                 {
                     pick.index = flags.Count;
@@ -57,15 +67,21 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 }
                 AdjacentsFlagLoop(flags, selection, t2adjacents);
             }
-            else if (!PickRandomFlagOrMainWithSpecifiedBias(initBiases, mainBias, out Flag newFlag))
+            else if (!PickRandomFlagOrMainWithSpecifiedBias(initBiases, mainBias, out Flag? newFlag))
             {
-                newFlag.index = flags.Count;
-                flags.Add(newFlag);
+                if (newFlag != null)
+                {
+                    newFlag.index = flags.Count;
+                    flags.Add(newFlag);
+                }
                 AdjacentsFlagLoop(flags, selection, t2adjacents);
             }
         }
-        public static Dictionary<Flag, float> InstantiateFlags(AdjacentFlagData[] flags, List<Flag> selection, List<Flag> toNotRemove, Flag current)
+        public static Dictionary<Flag, float> InstantiateFlags(AdjacentFlagData[] flags, List<Flag> selection, List<Flag>? toNotRemove, Flag? current)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Dictionary<Flag, float> rtn = new Dictionary<Flag, float>();
             for (int i = 0; i < flags.Length; i++)
             {
@@ -88,8 +104,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             return rtn;
         }
 
-        private static Flag PickRandomFlagWithSpecifiedBias(Dictionary<Flag, float> biases)
+        private static Flag? PickRandomFlagWithSpecifiedBias(Dictionary<Flag, float> biases)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (biases.Count < 1)
             {
                 L.LogError("Biases was empty.");
@@ -100,7 +119,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             {
                 total += flag.Value;
             }
-            float pick = Random.Range(0, total);
+            float pick = UnityEngine.Random.Range(0, total);
             float counter = 0;
             foreach (KeyValuePair<Flag, float> flag in biases)
             {
@@ -109,15 +128,20 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
             }
             return biases.ElementAt(0).Key;
         }
-        private static bool PickRandomFlagOrMainWithSpecifiedBias(Dictionary<Flag, float> biases, float mainBias, out Flag output)
+        private static bool PickRandomFlagOrMainWithSpecifiedBias(Dictionary<Flag, float> biases, float mainBias, out Flag? output)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (biases.Count < 1)
             {
                 output = default;
                 return true;
             }
-            List<FlagMainTuple> tuples = new List<FlagMainTuple>();
-            tuples.Add(new FlagMainTuple(null, true, mainBias));
+            List<FlagMainTuple> tuples = new List<FlagMainTuple>
+            {
+                new FlagMainTuple(null, true, mainBias)
+            };
             float total = mainBias;
             foreach (KeyValuePair<Flag, float> flag in biases)
             {
@@ -140,10 +164,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
         }
         private struct FlagMainTuple
         {
-            public Flag flag;
+            public Flag? flag;
             public bool isMain;
             public float bias;
-            public FlagMainTuple(Flag flag, bool isMain, float bias)
+            public FlagMainTuple(Flag? flag, bool isMain, float bias)
             {
                 this.flag = flag;
                 this.isMain = isMain;

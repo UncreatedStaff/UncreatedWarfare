@@ -7,6 +7,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -31,8 +32,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         protected int _objectiveT2Index;
         public int ObjectiveT1Index => _objectiveT1Index;
         public int ObjectiveT2Index => _objectiveT2Index;
-        public Flag ObjectiveTeam1 => _objectiveT1Index >= 0 && _objectiveT1Index < _rotation.Count ? _rotation[_objectiveT1Index] : null;
-        public Flag ObjectiveTeam2 => _objectiveT2Index >= 0 && _objectiveT2Index < _rotation.Count ? _rotation[_objectiveT2Index] : null;
+        public Flag? ObjectiveTeam1 => _objectiveT1Index >= 0 && _objectiveT1Index < _rotation.Count ? _rotation[_objectiveT1Index] : null;
+        public Flag? ObjectiveTeam2 => _objectiveT2Index >= 0 && _objectiveT2Index < _rotation.Count ? _rotation[_objectiveT2Index] : null;
         public override bool EnableAMC => true;
         public override bool ShowOFPUI => true;
         public override bool ShowXPUI => true;
@@ -61,8 +62,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         // leaderboard
         protected Leaderboard _endScreen;
         Leaderboard<Stats, StatTracker> IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
-        protected Transform _blockerBarricadeT1 = null;
-        protected Transform _blockerBarricadeT2 = null;
+        protected Transform? _blockerBarricadeT1 = null;
+        protected Transform? _blockerBarricadeT2 = null;
         private bool _isScreenUp = false;
         public bool isScreenUp => _isScreenUp;
         private StatTracker _gameStats;
@@ -76,6 +77,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void Init()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             base.Init();
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
@@ -86,6 +90,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void OnLevelLoaded()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             _structureSaver = new StructureSaver();
             _vehicleSpawner = new VehicleSpawner();
             _vehicleSigns = new VehicleSigns();
@@ -98,6 +105,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override bool TimeToCheck()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (_counter > Config.TeamCTF.FlagTickInterval)
             {
                 _counter = 0;
@@ -111,6 +121,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override bool TimeToTicket()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (_counter2 > 1 / Config.TeamCTF.EvaluateTime)
             {
                 _counter2 = 0;
@@ -124,6 +137,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override void EvaluateTickets()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (_state == EState.ACTIVE)
             {
                 if (EveryMinute)
@@ -151,6 +167,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void DeclareWin(ulong winner)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (this._state == EState.FINISHED) return;
             this._state = EState.FINISHED;
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
@@ -170,6 +189,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             else
                 L.LogWarning("WinToast UI not found. GUID: " + Gamemode.Config.UI.WinToastGUID);
+
+            QuestManager.OnGameOver(winner);
 
             foreach (SteamPlayer client in Provider.clients)
             {
@@ -210,6 +231,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
 
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ReplaceBarricadesAndStructures();
             Commands.ClearCommand.WipeVehiclesAndRespawn();
             Commands.ClearCommand.ClearItems();
@@ -223,6 +247,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         private void OnShouldStartNewGame()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (_endScreen != null)
             {
                 _endScreen.OnLeaderboardExpired = null;
@@ -233,6 +260,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void StartNextGame(bool onLoad = false)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             LoadRotation();
             base.StartNextGame(onLoad);
             GameStats.Reset();
@@ -241,6 +271,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected void LoadFlagsIntoRotation()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ResetFlags();
             _onFlag.Clear();
 
@@ -248,10 +281,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 _rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
             }
-            while (_rotation.Count < 4 && _rotation.Count > Config.UI.FlagUICount);
+            while (_rotation.Count < 4 || _rotation.Count > Config.UI.FlagUICount);
         }
         public override void LoadRotation()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (_allFlags == null || _allFlags.Count == 0) return;
             LoadFlagsIntoRotation();
             if (_rotation.Count < 1)
@@ -296,6 +332,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected virtual void InvokeOnObjectiveChanged(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Team != 0)
             {
                 if (GameStats != null)
@@ -332,6 +371,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected virtual void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
             StatsManager.ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
             StatsManager.ModifyTeam(lostTeam, t => t.FlagsLost++, false);
@@ -374,6 +416,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected virtual void InvokeOnNewGameStarting(bool onLoad)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             TicketManager.OnNewGameStarting();
             if (!onLoad)
             {
@@ -385,6 +430,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ulong team = player.GetTeam();
             L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
             player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
@@ -422,6 +470,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override void PlayerLeftFlagRadius(Flag flag, Player player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             ITransportConnection channel = player.channel.owner.transportConnection;
             ulong team = player.GetTeam();
             L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
@@ -460,6 +511,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (NewOwner == 1)
             {
                 if (_objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
@@ -560,6 +614,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (NewPoints == 0)
                 flag.SetOwner(0);
             SendUIParameters t1 = SendUIParameters.Nil;
@@ -585,6 +642,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (State == EState.STAGING)
             {
                 if (newteam != 1 && newteam != 2)
@@ -596,6 +656,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (KitManager.KitExists(player.KitName, out Kit kit))
             {
                 if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
@@ -646,6 +709,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void OnPlayerLeft(UCPlayer player)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (_onFlag.TryGetValue(player.Steam64, out int id))
             {
                 for (int i = 0; i < _rotation.Count; i++)
@@ -668,6 +734,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public override void Dispose()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             EffectManager.ClearEffectByID_AllPlayers(CTFUI.headerID);
             if (_stagingPhaseTimer != null)
                 StopCoroutine(_stagingPhaseTimer);

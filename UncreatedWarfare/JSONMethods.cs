@@ -82,7 +82,6 @@ namespace Uncreated.Warfare
             this.z = z;
         }
     }
-
     public struct SerializableVector3 : IJsonReadWrite
     {
         public static readonly SerializableVector3 Zero = new SerializableVector3(0, 0, 0);
@@ -145,7 +144,7 @@ namespace Uncreated.Warfare
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string val = reader.GetString();
+                    string val = reader.GetString()!;
                     if (val != null && reader.Read())
                     {
                         switch (val)
@@ -233,7 +232,7 @@ namespace Uncreated.Warfare
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string val = reader.GetString();
+                    string val = reader.GetString()!;
                     if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                     {
                         switch (val)
@@ -273,12 +272,12 @@ namespace Uncreated.Warfare
                 if (reader.TokenType == JsonTokenType.EndObject) return;
                 else if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string prop = reader.GetString();
+                    string prop = reader.GetString()!;
                     if (!reader.Read()) continue;
                     if (prop == nameof(key))
-                        this.key = reader.GetString();
+                        this.key = reader.GetString()!;
                     else if (prop == nameof(display_name))
-                        this.display_name = reader.GetString();
+                        this.display_name = reader.GetString()!;
                     else if (prop == nameof(values) && reader.TokenType == JsonTokenType.StartArray)
                     {
                         List<string> tlist = new List<string>(24);
@@ -286,7 +285,7 @@ namespace Uncreated.Warfare
                         {
                             if (reader.TokenType == JsonTokenType.String)
                             {
-                                tlist.Add(reader.GetString());
+                                tlist.Add(reader.GetString()!);
                             }
                         }
                         this.values = tlist.ToArray();
@@ -307,13 +306,15 @@ namespace Uncreated.Warfare
             writer.WriteEndArray();
         }
     }
-    
     public static partial class JSONMethods
     {
         public const string DEFAULT_LANGUAGE = "en-us";
 
         public static List<FlagData> LoadFlags()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.FlagStorage, out bool dirExists);
             if (dirExists)
             {
@@ -388,6 +389,9 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.DATA_DIRECTORY, out bool fileExists);
             if (fileExists)
             {
@@ -436,11 +440,11 @@ namespace Uncreated.Warfare
                                 else if (reader.TokenType == JsonTokenType.EndObject) break;
                                 else if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string key = reader.GetString();
+                                    string key = reader.GetString()!;
                                     if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                     {
-                                        string color = reader.GetString();
-                                        string value = reader.GetString();
+                                        string color = reader.GetString()!;
+                                        string value = reader.GetString()!;
                                         if (read.ContainsKey(key))
                                             L.LogWarning("Duplicate color key \"" + key + "\" in chat_colors.json");
                                         else
@@ -481,6 +485,9 @@ namespace Uncreated.Warfare
         public static Dictionary<string, Dictionary<string, TranslationData>> LoadTranslations(
             out Dictionary<string, Dictionary<string, string>> deathloc, out Dictionary<string, Dictionary<ELimb, string>> limbloc)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             string[] langDirs = Directory.GetDirectories(Data.LangStorage, "*", SearchOption.TopDirectoryOnly);
             Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
             deathloc = new Dictionary<string, Dictionary<string, string>>();
@@ -584,10 +591,10 @@ namespace Uncreated.Warfare
                                             else if (reader.TokenType == JsonTokenType.EndObject) break;
                                             else if (reader.TokenType == JsonTokenType.PropertyName)
                                             {
-                                                string key = reader.GetString();
+                                                string key = reader.GetString()!;
                                                 if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                                 {
-                                                    string value = reader.GetString();
+                                                    string value = reader.GetString()!;
                                                     if (local.ContainsKey(key))
                                                         L.LogWarning("Duplicate key \"" + key + "\" in localization file for " + lang);
                                                     else
@@ -671,6 +678,9 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<int, Zone> LoadExtraZones()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.FlagStorage, out bool dirExists);
             if (dirExists)
             {
@@ -758,6 +768,9 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, Vector3> LoadExtraPoints()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.FlagStorage, out bool dirExists);
             if (dirExists)
             {
@@ -809,7 +822,7 @@ namespace Uncreated.Warfare
                                 else if (reader.TokenType == JsonTokenType.EndObject) break;
                                 else if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string key = reader.GetString();
+                                    string key = reader.GetString()!;
                                     if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                                     {
                                         float x = 0f;
@@ -820,7 +833,7 @@ namespace Uncreated.Warfare
                                             if (reader.TokenType == JsonTokenType.EndObject) break;
                                             else if (reader.TokenType == JsonTokenType.PropertyName)
                                             {
-                                                string prop = reader.GetString();
+                                                string prop = reader.GetString()!;
                                                 if (reader.Read())
                                                 {
                                                     switch (prop)
@@ -872,6 +885,9 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<ulong, string> LoadLanguagePreferences()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.LangStorage, out bool dirExists);
             if (dirExists)
             {
@@ -908,14 +924,14 @@ namespace Uncreated.Warfare
                                 else if (reader.TokenType == JsonTokenType.EndObject) break;
                                 else if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string input = reader.GetString();
+                                    string input = reader.GetString()!;
                                     if (!ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steam64))
                                     {
                                         L.LogWarning("Invalid Steam64 ID: \"" + input + "\" in Lang\\preferences.json");
                                     }
                                     else if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                     {
-                                        string language = reader.GetString();
+                                        string language = reader.GetString()!;
                                         prefs.Add(steam64, language);
                                     }
                                 }
@@ -940,6 +956,9 @@ namespace Uncreated.Warfare
         }
         public static void SaveLangs(Dictionary<ulong, string> languages)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (languages == null) return;
             using (FileStream stream = new FileStream(Data.LangStorage + "preferences.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
             {
@@ -959,6 +978,9 @@ namespace Uncreated.Warfare
         }
         public static void SetLanguage(ulong player, string language)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (Data.Languages.ContainsKey(player))
             {
                 Data.Languages[player] = language;
@@ -972,6 +994,9 @@ namespace Uncreated.Warfare
         }
         public static Dictionary<string, LanguageAliasSet> LoadLangAliases()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             F.CheckDir(Data.LangStorage, out bool dirExists);
             if (dirExists)
             {
@@ -1022,7 +1047,8 @@ namespace Uncreated.Warfare
                                 {
                                     LanguageAliasSet set = new LanguageAliasSet();
                                     set.ReadJson(ref reader);
-                                    languageAliasSets.Add(set.key, set);
+                                    if (set.key != null)
+                                        languageAliasSets.Add(set.key, set);
                                 }
                             }
 

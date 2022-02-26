@@ -30,6 +30,9 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.request" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             // dont allow requesting between game end and leaderboard
             if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
             {
@@ -41,7 +44,7 @@ namespace Uncreated.Warfare.Commands
                 player.Message("command_e_gamemode");
                 return;
             }
-            UCPlayer ucplayer = UCPlayer.FromIRocketPlayer(caller);
+            UCPlayer? ucplayer = UCPlayer.FromIRocketPlayer(caller);
             if (player == null || ucplayer == null) return;
             if (ucplayer.Position == Vector3.zero) return;
             ulong team = ucplayer.GetTeam();
@@ -51,7 +54,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.request.save"))
                     {
-                        InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
+                        InteractableSign? sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
                         if (sign == default) player.Message("request_not_looking");
                         else
                         {
@@ -72,7 +75,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.request.remove"))
                     {
-                        InteractableSign sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
+                        InteractableSign? sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
                         if (sign == default) player.Message("request_not_looking");
                         else
                         {
@@ -91,8 +94,8 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
             }
-            InteractableVehicle vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
-            InteractableSign signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
+            InteractableVehicle? vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+            InteractableSign? signlook = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(player.Player.look);
             if (signlook != null)
             {
                 if (!RequestSigns.SignExists(signlook, out RequestSign requestsign))

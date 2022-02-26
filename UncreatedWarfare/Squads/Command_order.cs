@@ -20,7 +20,10 @@ namespace Uncreated.Warfare.Squads
         public List<string> Permissions => new List<string>() { "uc.order" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller) ?? throw new ArgumentNullException(nameof(caller));
             if (!Data.Is(out ISquads ctf))
             {
                 player.SendChat("command_e_gamemode");
@@ -70,17 +73,17 @@ namespace Uncreated.Warfare.Squads
                                             if (Data.Is(out FlagGamemode flags))
                                             {
                                                 Gamemodes.Flags.Flag flag = flags.Rotation.Find(f => f.ZoneData.IsInside(new Vector2(marker.x, marker.z)));
-                                                bool useFlag = false;
+                                                //bool useFlag = false;
 
                                                 if (flag != null && player.Player.quests.isMarkerPlaced)
                                                 {
                                                     if (type == EOrder.ATTACK && flag.IsAttackable(player.GetTeam()))
                                                     {
-                                                        useFlag = true;
+                                                        //useFlag = true;
                                                     }
                                                     if (type == EOrder.DEFEND && flag.IsAttackable(player.GetTeam()))
                                                     {
-                                                        useFlag = true;
+                                                        //useFlag = true;
                                                     }
                                                 }
                                             }

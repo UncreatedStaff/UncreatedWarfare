@@ -17,11 +17,17 @@ namespace Uncreated.Warfare.Point
         protected override string LoadDefaults() => "[]";
         public static bool IsOfficer(ulong playerID, ulong team, out OfficerData officer)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             officer = GetObject(o => o.Steam64 == playerID && o.Team == team, true);
             return officer != null;
         }
         public static void ChangeOfficerRank(ulong playerID, int newOfficerTier, ulong newTeam)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             bool isNewOfficer = false;
 
             if (ObjectExists(o => o.Steam64 == playerID && o.Team == newTeam, out var officer))
@@ -37,7 +43,7 @@ namespace Uncreated.Warfare.Point
                 isNewOfficer = true;
             }
 
-            UCPlayer player = UCPlayer.FromID(playerID);
+            UCPlayer? player = UCPlayer.FromID(playerID);
             if (player != null)
             {
                 player.RedownloadRanks();
@@ -73,9 +79,12 @@ namespace Uncreated.Warfare.Point
         }
         public static void DischargeOfficer(ulong playerID)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             RemoveWhere(o => o.Steam64 == playerID);
 
-            UCPlayer player = UCPlayer.FromID(playerID);
+            UCPlayer? player = UCPlayer.FromID(playerID);
             if (player != null)
             {
                 player.Message("officer_discharged", player.CurrentRank.Name);

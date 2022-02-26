@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -58,12 +59,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public static FlagData ReadFlagData(ref Utf8JsonReader reader)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             FlagData data = new FlagData();
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string val = reader.GetString();
+                    string val = reader.GetString()!;
                     if (!reader.Read()) continue;
                     switch (val)
                     {
@@ -71,10 +75,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                             data.id = reader.GetInt32();
                             break;
                         case nameof(name):
-                            data.name = reader.GetString();
+                            data.name = reader.GetString()!;
                             break;
                         case nameof(short_name):
-                            data.short_name = reader.GetString();
+                            data.short_name = reader.GetString()!;
                             break;
                         case nameof(x):
                             data.x = (float)reader.GetDecimal();
@@ -87,16 +91,16 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                             {
                                 while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
                                 {
-                                    val = reader.GetString();
+                                    val = reader.GetString()!;
                                     if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                     {
                                         if (val == nameof(ZoneData.type))
                                         {
-                                            data.zone.type = reader.GetString();
+                                            data.zone.type = reader.GetString()!;
                                         }
                                         else if (val == nameof(ZoneData.data))
                                         {
-                                            data.zone.data = reader.GetString();
+                                            data.zone.data = reader.GetString()!;
                                         }
                                     }
                                 }
@@ -135,6 +139,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public void WriteFlagData(Utf8JsonWriter writer)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             writer.WriteProperty(nameof(id), id);
             writer.WriteProperty(nameof(name), name);
             writer.WriteProperty(nameof(short_name), short_name);
@@ -183,7 +190,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 if (reader.TokenType == JsonTokenType.EndObject) return;
                 if (reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    string prop = reader.GetString();
+                    string prop = reader.GetString()!;
                     if (!reader.Read()) return;
                     switch (prop)
                     {

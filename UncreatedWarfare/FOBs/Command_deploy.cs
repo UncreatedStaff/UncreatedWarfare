@@ -1,4 +1,5 @@
 ﻿using Rocket.API;
+using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
@@ -19,7 +20,11 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.deploy" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UCPlayer player = UCPlayer.FromIRocketPlayer(caller);
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
+            if (player == null) return;
 
             if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(player.Steam64))
             {
@@ -35,7 +40,7 @@ namespace Uncreated.Warfare.Commands
 
             if (command.Length == 1)
             {
-                PlaytimeComponent c = player.Player.GetPlaytimeComponent(out _);
+                PlaytimeComponent? c = player.Player.GetPlaytimeComponent(out _);
 
                 ulong team = player.GetTeam();
                 bool IsInMain = player.Player.IsInMain();
@@ -55,21 +60,21 @@ namespace Uncreated.Warfare.Commands
                         player.Message("deploy_e_incombat", combatlog.ToString());
                         return;
                     }
-                    if (!(player.IsOnFOB(out _) || UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.InsurgencyCacheGUID, 10, player.Position, false) != null))
+                    if (!(player.IsOnFOB(out _) || 
+                          UCBarricadeManager.CountNearbyBarricades(Gamemode.Config.Barricades.InsurgencyCacheGUID, 10, player.Position, player.GetTeam()) != 0))
                     {
                         if (Data.Is(out Insurgency ins))
                             player.Message("deploy_e_notnearfob_ins");
                         else
                             player.Message("deploy_e_notnearfob");
-
                         return;
                     }
                 }
 
-                if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object deployable))
+                if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object? deployable))
                 {
                     if (command[0].ToLower() == "main")
-                        c.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
+                        c?.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.config.data.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
                     else if (command[0].ToLower() == "lobby")
                         player.SendChat("deploy_lobby_removed");
                     else
@@ -95,12 +100,12 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
 
-                    c.TeleportTo(FOB, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
+                    c?.TeleportTo(FOB, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
  
                 }
                 else if (deployable is SpecialFOB special)
                 {
-                    c.TeleportTo(special, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
+                    c?.TeleportTo(special, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
                 }
                 else if (deployable is Cache cache)
                 {
@@ -110,7 +115,7 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
 
-                    c.TeleportTo(cache, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
+                    c?.TeleportTo(cache, FOBManager.config.data.DeloyFOBDelay, shouldCancelOnMove);
                 }
 #if false
                 else if (command[0].ToLower() == "lobby")
@@ -122,8 +127,6 @@ namespace Uncreated.Warfare.Commands
                 {
                     player.Message("deploy_e_fobnotfound", command[0]);
                 }
-
-
             }
             else
             {

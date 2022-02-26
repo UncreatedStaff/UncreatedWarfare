@@ -20,7 +20,11 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.duty" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UnturnedPlayer player = caller as UnturnedPlayer;
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            UnturnedPlayer? player = caller as UnturnedPlayer;
+            if (player == null) return;
             FPlayerName names = F.GetPlayerOriginalNames(player.Player);
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
             if (groups.Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup))
