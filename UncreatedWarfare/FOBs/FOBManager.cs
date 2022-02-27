@@ -139,6 +139,8 @@ namespace Uncreated.Warfare.FOBs
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            if (drop.model.TryGetComponent(out BuiltBuildableComponent comp))
+                UnityEngine.Object.Destroy(comp);
             if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
             if (data.barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID)
             {

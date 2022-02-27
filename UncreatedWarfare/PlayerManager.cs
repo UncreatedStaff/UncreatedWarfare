@@ -36,14 +36,7 @@ namespace Uncreated.Warfare
 #endif
             for (int i = 0; i < OnlinePlayers.Count; i++)
             {
-                UCPlayer player = OnlinePlayers[i];
-                if (!PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave? save) || save == null)
-                    save = new PlayerSave(player.Steam64);
-                save.Team = player.GetTeam();
-                save.KitName = player.KitName;
-                save.SquadName = player.Squad?.Name ?? string.Empty;
-                save.LastGame = Data.Gamemode.GameID;
-                PlayerSave.WriteToSaveFile(save);
+                ApplyTo(OnlinePlayers[i]);
             }
         }
         public static void ApplyTo(UCPlayer player)

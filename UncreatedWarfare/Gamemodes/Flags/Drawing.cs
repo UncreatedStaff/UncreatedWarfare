@@ -161,15 +161,25 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 int next = (step - 1) * 3; //3
                 if (zones.Count <= next) complete = true;
                 System.Random r = new System.Random();
+                
                 for (int e = z; e < (zones.Count > next ? next : zones.Count); e++)
                 {
-                    Color zonecolor = $"{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}{r.Next(0, 10)}".Hex();
+                    Zone zone = zones[e].InverseZone;
+                    Color zonecolor = $"{UnityEngine.Random.Range(0, 16)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}".Hex();
                     for (int i = 0; i < PointsToTest.Count; i++)
                     {
-                        if (zones[e].InverseZone.IsInside(new Vector2(PointsToTest[i].x, PointsToTest[i].y)))
+                        if (zone.IsInside(PointsToTest[i]))
                         {
-                            img.SetPixelClamp((int)Math.Round(PointsToTest[i].x + img.width / 2), (int)Math.Round(PointsToTest[i].y + img.height / 2), zonecolor);
+                            img.SetPixelClamp(Mathf.RoundToInt(PointsToTest[i].x + img.width / 2), Mathf.RoundToInt(PointsToTest[i].y + img.height / 2), zonecolor);
                         }
+                    }
+                    for (int i = 0; i < 4; i++)
+                    {
+                        ref Vector4 bounds = ref zone.Bounds;
+                        DrawLine(img, new Line(new Vector2(bounds.x, bounds.y), new Vector2(bounds.x, bounds.w)), Color.gray, false, 1);
+                        DrawLine(img, new Line(new Vector2(bounds.x, bounds.y), new Vector2(bounds.z, bounds.y)), Color.gray, false, 1);
+                        DrawLine(img, new Line(new Vector2(bounds.z, bounds.w), new Vector2(bounds.x, bounds.w)), Color.gray, false, 1);
+                        DrawLine(img, new Line(new Vector2(bounds.z, bounds.w), new Vector2(bounds.z, bounds.y)), Color.gray, false, 1);
                     }
                 }
                 //player.SendChat("Completed step " + (step + 1).ToString(Data.Locale), UCWarfare.GetColor("default"));

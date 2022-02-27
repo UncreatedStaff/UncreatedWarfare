@@ -196,12 +196,12 @@ namespace Uncreated.Warfare.Commands
                 if (command.Length == 1)
                     player.Message($"Please specify a vehicle name.".Colorize("ebd491"));
 
-                var asset = UCAssetManager.FindVehicleAsset(command[1]);
+                VehicleAsset? asset = UCAssetManager.FindVehicleAsset(command[1]);
 
                 if (asset is not null)
                 {
-                    var vehicle = VehicleBay.SpawnLockedVehicle(asset.GUID, player.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), out _);
-                    player.Message($"Successfully spawned AA target: {vehicle.asset.vehicleName}".Colorize("ebd491"));
+                    InteractableVehicle? vehicle = VehicleBay.SpawnLockedVehicle(asset.GUID, player.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), out _);
+                    player.Message($"Successfully spawned AA target: {(vehicle == null ? asset.GUID.ToString("N") : vehicle.asset.vehicleName)}".Colorize("ebd491"));
                 }
                 else
                     player.Message($"A vehicle called '{command[1]} does not exist".Colorize("ebd491"));

@@ -32,8 +32,7 @@ namespace Uncreated.Warfare
         protected int perline = 10;
         public Vector2[] _particleSpawnPoints;
         public readonly string Name;
-        public Vector2 BoundsTLPos;
-        public Vector2 BoundsSize;
+        public Vector4 Bounds;
         public float BoundsArea;
         public abstract bool IsInside(Vector2 location);
         public abstract bool IsInside(Vector3 location);
@@ -62,11 +61,11 @@ namespace Uncreated.Warfare
         }
         public bool IsInsideBounds(Vector2 location)
         {
-            return location.x > BoundsTLPos.x && location.x < BoundsTLPos.x + BoundsSize.x && location.y > BoundsTLPos.y && location.y < BoundsTLPos.y + BoundsSize.y;
+            return location.x >= Bounds.x && location.x <= Bounds.z && location.y >= Bounds.y && location.y <= Bounds.w;
         }
         public bool IsInsideBounds(Vector3 location)
         {
-            return location.x > BoundsTLPos.x && location.x < BoundsTLPos.x + BoundsSize.x && location.z > BoundsTLPos.y && location.z < BoundsTLPos.y + BoundsSize.y;
+            return location.x >= Bounds.x && location.x <= Bounds.z && location.z >= Bounds.y && location.z <= Bounds.w;
         }
     }
     public class RectZone : Zone
@@ -134,8 +133,7 @@ namespace Uncreated.Warfare
                         new Vector2(Center.x + Size.x / 2, Center.y + Size.y / 2), //br
                         new Vector2(Center.x - Size.x / 2, Center.y + Size.y / 2)  //bl
                     };
-                    BoundsTLPos = Corners[0];
-                    BoundsSize = Size;
+                    Bounds = new Vector4(Corners[0].x, Corners[0].y, Corners[2].x, Corners[2].y);
                     BoundsArea = Size.x * Size.y;
                     lines = new Line[4]
                     {
@@ -234,9 +232,9 @@ namespace Uncreated.Warfare
                 {
                     this.Radius = Rad * _multiplier;
                     GetParticleSpawnPoints(out _, out _, 36, 15); // every 10 degrees
-                    BoundsTLPos = new Vector2(Center.x - Radius, Center.y - Radius);
-                    BoundsSize = new Vector2(Radius * 2, Radius * 2);
-                    BoundsArea = BoundsSize.x * BoundsSize.y;
+                    float r2 = Radius * 2;
+                    BoundsArea = r2 * r2;
+                    Bounds = new Vector4(Center.x - Radius, Center.y - Radius, Center.x + Radius, Center.y + Radius);
                     SucessfullyParsed = true;
                 }
                 else
@@ -355,7 +353,7 @@ namespace Uncreated.Warfare
         public PolygonZone PolygonInverseZone { get => (PolygonZone)InverseZone; }
         /// <param name="size">Size of bounds rectangle</param>
         /// <returns>Top left corner of bounds rectangle</returns>
-        public static Vector2 GetBounds(Vector2[] points, out Vector2 size)
+        public static Vector4 GetBounds(Vector2[] points)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -364,21 +362,19 @@ namespace Uncreated.Warfare
             if ((points ?? throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN")).Length == 0) throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
             if (points.Length == 1)
             {
-                size = new Vector2(0, 0);
-                return new Vector2(points[0].x, points[0].y);
+                return new Vector4(points[0].x, points[0].y, points[0].x, points[0].y);
             }
             for (int i = 0; i < points.Length; i++)
             {
                 ref Vector2 point = ref points[i];
-                if (!maxX.HasValue || maxX.Value > point.x) maxX = point.x;
-                if (!maxY.HasValue || maxY.Value > point.y) maxY = point.y;
-                if (!minX.HasValue || minX.Value < point.x) minX = point.x;
-                if (!minY.HasValue || minY.Value < point.y) minY = point.y;
+                if (!maxX.HasValue || maxX.Value < point.x) maxX = point.x;
+                if (!maxY.HasValue || maxY.Value < point.y) maxY = point.y;
+                if (!minX.HasValue || minX.Value > point.x) minX = point.x;
+                if (!minY.HasValue || minY.Value > point.y) minY = point.y;
             }
             if (maxX.HasValue && maxY.HasValue && minX.HasValue && minY.HasValue)
             {
-                size = new Vector2(maxX.Value - minX.Value, maxY.Value - minY.Value);
-                return new Vector2(minX.Value, minY.Value);
+                return new Vector4(minX.Value, minY.Value, maxX.Value, maxY.Value);
             }
             else throw new NullReferenceException("EXCEPTION_NO_POINTS_GIVEN");
         }
@@ -448,16 +444,8 @@ namespace Uncreated.Warfare
             for (int i = 0; i < Points.Length; i++)
                 Lines[i] = new Line(Points[i], Points[i == Points.Length - 1 ? 0 : i + 1]);
             GetParticleSpawnPoints(out _, out _, 5, 15);
-            try
-            {
-                BoundsTLPos = GetBounds(Points, out BoundsSize);
-            }
-            catch (NullReferenceException)
-            {
-                BoundsSize = new Vector2(0, 0);
-                BoundsTLPos = Center;
-            }
-            BoundsArea = BoundsSize.x * BoundsSize.y;
+            Bounds = GetBounds(Points);
+            BoundsArea = (Bounds.z - Bounds.x) * (Bounds.w - Bounds.y);
             SucessfullyParsed = true;
         }
 
@@ -492,7 +480,7 @@ namespace Uncreated.Warfare
                 L.LogError(Name + " DIDN'T PARSE CORRECTLY");
                 return false;
             }
-            //if (!IsInsideBounds(location)) return false;
+            if (!IsInsideBounds(location)) return false;
             int intersects = 0;
             for (int i = 0; i < Lines.Length; i++)
             {

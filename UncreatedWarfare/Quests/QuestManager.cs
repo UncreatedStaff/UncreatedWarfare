@@ -640,7 +640,7 @@ public static class QuestManager
         foreach (INotifyRallyActive tracker in RegisteredTrackers.OfType<INotifyRallyActive>())
             tracker.OnRallyActivated(rally);
     }
-    public static void OnPlayerSpawnedAtBunker(BuildableComponent bunker, FOB fob, UCPlayer spawner)
+    public static void OnPlayerSpawnedAtBunker(FOBs.BuiltBuildableComponent bunker, FOB fob, UCPlayer spawner)
     {
         foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
             tracker.OnPlayerSpawnedAtBunker(bunker, fob, spawner);

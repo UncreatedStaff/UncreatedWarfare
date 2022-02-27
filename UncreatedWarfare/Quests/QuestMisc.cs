@@ -2716,7 +2716,7 @@ public interface INotifyRallyActive : INotifyTracker
 }
 public interface INotifyBunkerSpawn : INotifyTracker
 {
-    public void OnPlayerSpawnedAtBunker(BuildableComponent bunker, FOB fob, UCPlayer spawner);
+    public void OnPlayerSpawnedAtBunker(FOBs.BuiltBuildableComponent bunker, FOB fob, UCPlayer spawner);
 }
 public interface INotifyGainedXP : INotifyTracker
 {

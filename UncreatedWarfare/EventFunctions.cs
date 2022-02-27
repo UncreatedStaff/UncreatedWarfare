@@ -4,6 +4,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
@@ -410,11 +411,11 @@ namespace Uncreated.Warfare
             {
                 L.LogError("Error in the main OnPostPlayerConnected loading player into OnlinePlayers:");
                 L.LogError(ex);
+                Provider.kick(player.CSteamID, "There was a fatal error connecting you to the server.");
             }
             try
             {
                 // reset the player to spawn if they have joined in a different game as they last played in.
-
                 UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
 
                 bool g = Data.Is(out ITeams t);
@@ -440,7 +441,8 @@ namespace Uncreated.Warfare
                     player.Player.teleportToLocation(F.GetBaseSpawn(player.Player, out ulong team), team.GetBaseAngle());
                 }
 
-                PlayerManager.ApplyToOnline();
+                if (ucplayer != null)
+                    PlayerManager.ApplyTo(ucplayer);
 
                 FPlayerName names = F.GetPlayerOriginalNames(player);
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
@@ -451,25 +453,32 @@ namespace Uncreated.Warfare
                 PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
                 pt.StartTracking(player.Player);
                 Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
-                Data.DatabaseManager.CheckUpdateUsernames(names);
-                bool FIRST_TIME = !Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
-                Data.DatabaseManager.RegisterLogin(player.Player);
+                Task.Run(async () =>
+                {
+                    bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                    Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
+                    await UCWarfare.ToUpdate();
+                    if (Data.Gamemode is ITeams)
+                    {
+                        ulong team = player.GetTeam();
+                        ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                            UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO));
+                    }
+                    else
+                    {
+                        ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
+                            UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO));
+                    }
+                    await UCWarfare.ToPool();
+                    await Data.DatabaseManager.RegisterLogin(player.Player);
+                    await t1;
+                }).ConfigureAwait(false);
 
                 if (ucplayer != null)
                     Data.Gamemode.OnPlayerJoined(ucplayer, false, shouldRespawn);
-                for (int i = 0; i < Vehicles.VehicleSpawner.ActiveObjects.Count; i++)
+                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                 {
-                    Vehicles.VehicleSpawner.ActiveObjects[i].UpdateSign(player.Player.channel.owner);
-                }
-                if (Data.Gamemode is ITeams)
-                {
-                    ulong team = player.GetTeam();
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO));
-                } else
-                {
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO));
+                    VehicleSpawner.ActiveObjects[i].UpdateSign(player.Player.channel.owner);
                 }
                 Chat.Broadcast("player_connected", names.CharacterName);
                 Data.Reporter.OnPlayerJoin(player.Player.channel.owner);
@@ -1286,12 +1295,11 @@ namespace Uncreated.Warfare
                 r.ReviveManager.GiveUp(player);
             }
 
-            var vehicle = player.movement.getVehicle();
-            if (vehicle != null && player.movement.getSeat() == 0 && (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.HELICOPTER) && vehicle.transform.TryGetComponent(out VehicleComponent component))
+            InteractableVehicle? vehicle = player.movement.getVehicle();
+            if (vehicle != null && player.movement.getSeat() == 0 && (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && vehicle.transform.TryGetComponent(out VehicleComponent component))
             {
                 component.TrySpawnCountermeasures();
             }
-
         }
     }
 #pragma warning restore IDE0060 // Remove unused parameter

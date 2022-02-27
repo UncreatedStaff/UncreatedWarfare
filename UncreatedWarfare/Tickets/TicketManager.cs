@@ -111,6 +111,8 @@ namespace Uncreated.Warfare.Tickets
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            if (vehicle.gameObject.TryGetComponent(out FOBs.BuiltBuildableComponent comp))
+                UnityEngine.Object.Destroy(comp);
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
@@ -278,7 +280,7 @@ namespace Uncreated.Warfare.Tickets
                                     float responsibleness = (float)(entry.Value / totalTime);
                                     int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
 
-                                    var assetWaster = UCPlayer.FromID(entry.Key);
+                                    UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
                                     if (assetWaster != null)
                                         Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
                                 }

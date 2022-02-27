@@ -79,6 +79,8 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
                 _kills++;
                 if (_kills >= KillThreshold)
                     TellCompleted();
+                else
+                    TellUpdated();
             }
         }
         public override void ResetToDefaults() => _kills = 0;
