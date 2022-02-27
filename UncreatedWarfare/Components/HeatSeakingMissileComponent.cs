@@ -138,9 +138,9 @@ namespace Uncreated.Warfare.Components
                     {
                         float angleBetween = Vector3.Angle(v.transform.position - lookOrigin.position, lookOrigin.forward);
                         L.Log(v.asset.vehicleName + ": " + angleBetween.ToString());
-                        if (angleBetween < 5)
+                        if (angleBetween < 10)
                         {
-                            maxTurnDegrees *= (1 - angleBetween / 5);
+                            maxTurnDegrees *= Mathf.Clamp(1 - angleBetween / 10, 0.4F, 1);
                             vehicleLockedOn = v;
                             SetVehicleData(v);
                             return;
