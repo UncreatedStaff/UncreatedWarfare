@@ -63,14 +63,16 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         public readonly int _reqLevel;
         public readonly ulong _team;
         public readonly ushort _flag;
+        public readonly Guid _prerequisite;
         public readonly TState _state;
-        public Preset(Guid key, int requiredLevel, TState state, ulong team, ushort flag)
+        public Preset(Guid key, int requiredLevel, TState state, ulong team, ushort flag, Guid prerequisite)
         {
             this._key = key;
             this._reqLevel = requiredLevel;
             this._state = state;
             this._team = team;
             this._flag = flag;
+            this._prerequisite = prerequisite;
         }
         public Guid Key => _key;
         public int RequiredLevel => _reqLevel;
@@ -147,6 +149,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
             if (reader.TokenType == JsonTokenType.StartObject)
             {
                 Guid key = default;
+                Guid prereq = default;
                 ulong varTeam = default;
                 int reqLvl = default;
                 TState? state = default;
@@ -164,6 +167,16 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                         }
                         else
                             L.LogWarning("Failed to parse 'key' GUID from " + QuestType + " preset.");
+                    }
+                    else if (reqLvl == default && prop.Equals("required_level"))
+                    {
+                        if (reader.TokenType == JsonTokenType.String)
+                        {
+                            if (!reader.TryGetGuid(out prereq))
+                                L.LogWarning("Failed to parse 'prerequisite' GUID from " + QuestType + " preset.");
+                        }
+                        else
+                            L.LogWarning("Failed to parse 'prerequisite' GUID from " + QuestType + " preset.");
                     }
                     else if (reqLvl == default && prop.Equals("required_level"))
                     {
@@ -236,7 +249,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     if (pr.Key == key && varTeam == pr.Team)
                         goto next;
                 }
-                presets.Add(new Preset(key, reqLvl, state!, varTeam, flag));
+                presets.Add(new Preset(key, reqLvl, state!, varTeam, flag, prereq));
                 next:
                 while (reader.TokenType != JsonTokenType.EndObject && reader.Read()) ;
             }
