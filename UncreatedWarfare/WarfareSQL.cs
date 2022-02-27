@@ -97,12 +97,12 @@ namespace Uncreated.Warfare
             usernames = FPlayerName.Nil;
             return false;
         }
-        public void CheckUpdateUsernames(FPlayerName player)
+        public async Task CheckUpdateUsernames(FPlayerName player)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            FPlayerName oldNames = GetUsernames(player.Steam64);
+            FPlayerName oldNames = await GetUsernamesAsync(player.Steam64);
             bool updatePlayerName = false;
             bool updateCharacterName = false;
             bool updateNickName = false;
@@ -140,7 +140,7 @@ namespace Uncreated.Warfare
                 sb.Append('`').Append(valueNames[i]).Append("` = VALUES(`").Append(valueNames[i]).Append("`)");
             }
             string updates = sb.ToString();
-            NonQuery(
+            await NonQueryAsync(
                 $"INSERT INTO `usernames` " +
                 $"(`Steam64`, `PlayerName`, `CharacterName`, `NickName`) VALUES(@0, @1, @2, @3) " +
                 $"ON DUPLICATE KEY UPDATE " +
@@ -161,23 +161,15 @@ namespace Uncreated.Warfare
                     "`xp` = `xp`;",
                     new object[] { Steam64, (int)EBranch.INFANTRY, (int)EBranch.ARMOR, (int)EBranch.AIRFORCE });
         }
-        public int GetXP(ulong Steam64, EBranch branch)
+        public Task<int> GetXP(ulong Steam64)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            int xp = 0;
-            Query(
+            return ScalarAsync(
                 "SELECT `XP` " +
                 "FROM `xp` " +
                 "WHERE `Steam64` = @0 AND `Branch` = @1 " +
                 "LIMIT 1;",
-                new object[] { Steam64, branch },
-                (R) =>
-                {
-                    xp = R.GetInt32(0);
-                });
-            return xp;
+                new object[] { Steam64 },
+                (o) => (int)o);
         }
         public Dictionary<EBranch, int> GetAllXP(ulong Steam64)
         {
@@ -335,12 +327,12 @@ namespace Uncreated.Warfare
             });
         }
         /// <returns>New XP Value</returns>
-        public int AddXP(ulong Steam64, EBranch branch, int amount)
+        public async Task<int> AddXP(ulong Steam64, EBranch branch, int amount)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            int oldBalance = GetXP(Steam64, branch);
+            int oldBalance = await GetXP(Steam64);
 
             if (amount == 0) return oldBalance;
             if (amount > 0)
@@ -351,7 +343,7 @@ namespace Uncreated.Warfare
                     "VALUES(@0, @1, @2) " +
                     "ON DUPLICATE KEY UPDATE " +
                     "`xp` = `xp` + @2;",
-                    new object[] { Steam64, (int)branch, amount });
+                    new object[] { Steam64, amount });
                 return oldBalance + amount;
             }
             else
@@ -364,7 +356,7 @@ namespace Uncreated.Warfare
                         "VALUES(@0, @1, 0) " +
                         "ON DUPLICATE KEY UPDATE " +
                         "`XP` = 0;", // clamp to 0
-                        new object[] { Steam64, (int)branch });
+                        new object[] { Steam64 });
                     return 0;
                 }
                 else
@@ -373,7 +365,7 @@ namespace Uncreated.Warfare
                         "UPDATE `xp` SET " +
                         "`XP` = @2 " +
                         "WHERE `Steam64` = @0 AND `Branch` = @1;",
-                        new object[] { Steam64, (int)branch, amount + oldBalance });
+                        new object[] { Steam64, amount + oldBalance });
                     return amount + oldBalance;
                 }
             }
@@ -540,12 +532,12 @@ namespace Uncreated.Warfare
                 "(`Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4, @5, @6);",
                 new object[] { Teamkiller, Teamkilled, Cause, ItemName, Item, Distance, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public bool HasPlayerJoined(ulong Steam64)
+        public async Task<bool> HasPlayerJoined(ulong Steam64)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            int amt = Scalar(
+            int amt = await ScalarAsync(
                 $"SELECT COUNT(*) " +
                 $"FROM `logindata` " +
                 $"WHERE `Steam64` = @0;",
@@ -553,7 +545,7 @@ namespace Uncreated.Warfare
                 o => Convert.ToInt32(o));
             return amt > 0;
         }
-        public void RegisterLogin(Player player)
+        public async Task RegisterLogin(Player player)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -569,7 +561,7 @@ namespace Uncreated.Warfare
             else if (SteamGameServer.GetPublicIP().TryGetIPv4Address(out ipnum))
                 ipaddress = Parser.getIPFromUInt32(ipnum);
             else ipaddress = LOCAL_IP;
-            NonQuery(
+            await NonQueryAsync(
                 $"INSERT INTO `logindata` " +
                 $"(`Steam64`, `IP`, `LastLoggedIn`) " +
                 $"VALUES(@0, @1, @2) " +

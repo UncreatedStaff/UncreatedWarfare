@@ -26,6 +26,9 @@ namespace Uncreated.Warfare.Components
 
         public void Initialize(GameObject projectile, Player firer, float projectileSpeed, float responsiveness, float cutoffDistance = 1000)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             this.projectile = projectile;
             this.firer = firer;
             this.maxTurnDegrees = responsiveness;
@@ -71,6 +74,9 @@ namespace Uncreated.Warfare.Components
         {
             if (isActive)
             {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 // update the distance of the guider position so that it stays in front of the projectile
                 guiderDistance += Time.fixedDeltaTime * projectileSpeed;
 

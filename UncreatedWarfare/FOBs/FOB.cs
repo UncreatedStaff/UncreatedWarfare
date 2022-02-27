@@ -17,7 +17,6 @@ namespace Uncreated.Warfare.Components
     {
         public FOB parent { get; private set; }
         private Coroutine loop;
-        
 
         public void Initialize(FOB parent)
         {
@@ -91,7 +90,6 @@ namespace Uncreated.Warfare.Components
 
                         BarricadeManager.damage(transform, loss, 1, false, default, EDamageOrigin.Useable_Melee);
                     }
-                   
                 }
 
                 count ++;

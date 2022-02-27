@@ -340,7 +340,7 @@ namespace Uncreated.Warfare.Vehicles
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
-            if (FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID)) return;
+            if (ucplayer == null || FOBManager.config.data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID)) return;
             if (!ucplayer.OnDuty() && pendingLocation.y - F.GetHeightAt2DPoint(pendingLocation.x, pendingLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
             {
                 player.SendChat("vehicle_too_high");

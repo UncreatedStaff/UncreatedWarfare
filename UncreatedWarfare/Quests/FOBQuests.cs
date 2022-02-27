@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Teams;
 
@@ -438,5 +439,74 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
             }
         }
         public override string Translate() => QuestData!.Translate(_player, _built, Amount, BaseIDs.GetCommaList(), BuildableType);
+    }
+}
+[QuestData(EQuestType.TEAMMATES_DEPLOY_ON_FOB)]
+public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State, FOBUseQuest>
+{
+    public DynamicIntegerValue UseCount;
+    public override int TickFrequencySeconds => 0;
+    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
+    {
+        if (propertyname.Equals("deployments", StringComparison.Ordinal))
+        {
+            if (!reader.TryReadIntegralValue(out UseCount))
+                UseCount = new DynamicIntegerValue(10);
+        }
+    }
+    public struct State : IQuestState<Tracker, FOBUseQuest>
+    {
+        public IDynamicValue<int>.IChoice UseCount;
+        public void Init(FOBUseQuest data)
+        {
+            this.UseCount = data.UseCount.GetValue();
+        }
+        public bool IsEligable(UCPlayer player) => true;
+
+        public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
+        {
+            if (prop.Equals("deployments", StringComparison.Ordinal))
+                UseCount = DynamicIntegerValue.ReadChoice(ref reader);
+        }
+        public void WriteQuestState(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("deployments", UseCount);
+        }
+    }
+    public class Tracker : BaseQuestTracker, INotifyBunkerSpawn
+    {
+        private readonly int UseCount = 0;
+        private int _fobUses;
+        protected override bool CompletedCheck => _fobUses >= UseCount;
+        public override short FlagValue => (short)_fobUses;
+        public Tracker(UCPlayer target, ref State questState) : base(target)
+        {
+            UseCount = questState.UseCount.InsistValue();
+        }
+        public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
+        {
+            if (reader.TokenType == JsonTokenType.Number && prop.Equals("deployments", StringComparison.Ordinal))
+                _fobUses = reader.GetInt32();
+        }
+        public override void WriteQuestProgress(Utf8JsonWriter writer)
+        {
+            writer.WriteProperty("deployments", _fobUses);
+        }
+        public override void ResetToDefaults() => _fobUses = 0;
+        public void OnPlayerSpawnedAtBunker(BuiltBuildableComponent bunker, FOB fob, UCPlayer spawner)
+        {
+            if (/*spawner.Steam64 != _player.Steam64 && */spawner.GetTeam() == _player.GetTeam()
+                && bunker != null &&
+                bunker.GetPlayerContribution(_player.Steam64) >= 0.25f)
+            {
+                _fobUses++;
+                if (_fobUses >= UseCount)
+                    TellCompleted();
+                else
+                    TellUpdated();
+            }
+        }
+        public override string Translate() => QuestData!.Translate(_player, _fobUses, UseCount);
     }
 }

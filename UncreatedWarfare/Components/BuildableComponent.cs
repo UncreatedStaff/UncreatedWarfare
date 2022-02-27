@@ -68,7 +68,7 @@ namespace Uncreated.Warfare.Components
 
             //XPManager.AddXP(builder.Player, XPManager.config.Data.ShovelXP, Math.Round((float)Hits / Buildable.requiredHits * 100F).ToString() + "%", true);
 
-            if (builder.Player.TryGetPlaytimeComponent(out var component))
+            if (builder.Player.TryGetPlaytimeComponent(out PlaytimeComponent component))
             {
                 component.QueueMessage(new Players.ToastMessage(Points.GetProgressBar(Hits, Buildable.requiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
             }
@@ -90,7 +90,7 @@ namespace Uncreated.Warfare.Components
 #endif
             SDG.Unturned.BarricadeData data = Foundation.GetServersideData();
 
-            string structureName = "";
+            string structureName;
 
             if (Buildable.type != EBuildableType.EMPLACEMENT)
             {
@@ -98,7 +98,13 @@ namespace Uncreated.Warfare.Components
                 Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
                 BarricadeDrop structure = BarricadeManager.FindBarricadeByRootTransform(transform);
 
-                structureName = Assets.find<ItemBarricadeAsset>(Buildable.foundationID).itemName;
+                BuiltBuildableComponent comp = transform.gameObject.AddComponent<BuiltBuildableComponent>();
+                comp.Initialize(structure, Buildable, PlayerHits);
+
+                if (Assets.find(Buildable.foundationID) is ItemAsset asset)
+                    structureName = asset.itemName;
+                else
+                    structureName = Buildable.foundationID.ToString("N");
 
                 if (Buildable.type == EBuildableType.FOB_BUNKER)
                 {
@@ -106,7 +112,6 @@ namespace Uncreated.Warfare.Components
                     if (fob != null)
                     {
                         fob.UpdateBunker(structure);
-
                         FOBManager.SendFOBListToTeam(fob.Team);
 
                         Orders.OnFOBBunkerBuilt(fob, this);
@@ -137,6 +142,9 @@ namespace Uncreated.Warfare.Components
                 InteractableVehicle vehicle = VehicleManager.spawnVehicleV2(vehicleasset.id, new Vector3(data.point.x, data.point.y + 1, data.point.z), rotation);
 
                 structureName = vehicle.asset.vehicleName;
+
+                BuiltBuildableComponent comp = transform.gameObject.AddComponent<BuiltBuildableComponent>();
+                comp.Initialize(vehicle, Buildable, PlayerHits);
 
                 if (vehicle.asset.canBeLocked)
                 {
@@ -185,8 +193,8 @@ namespace Uncreated.Warfare.Components
             if (Regions.tryGetCoordinate(Foundation.model.position, out byte x, out byte y))
             {
                 BarricadeManager.destroyBarricade(Foundation, x, y, ushort.MaxValue);
-                Destroy(this);
             }
+            Destroy(this);
         }
         public void Destroy()
         {
@@ -305,7 +313,7 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                var closeEnemyFOB = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 5, point, false).FirstOrDefault();
+                BarricadeDrop? closeEnemyFOB = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 5, point, false).FirstOrDefault();
                 if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
                 {
                     // buildable too close to enemy bunker
@@ -313,7 +321,7 @@ namespace Uncreated.Warfare.Components
                     return false;
                 }
 
-                if (!(placer.KitClass == EClass.COMBAT_ENGINEER && KitManager.KitExists(placer.KitName, out var kit) && kit.Items.Exists(i => i.id == buildable.foundationID)))
+                if (!(placer.KitClass == EClass.COMBAT_ENGINEER && KitManager.KitExists(placer.KitName, out Kit kit) && kit.Items.Exists(i => i.id == buildable.foundationID)))
                 {
                     if (fob == null)
                     {

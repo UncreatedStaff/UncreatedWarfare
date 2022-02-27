@@ -298,7 +298,7 @@ namespace Uncreated.Warfare.Kits
 
                     if (target is null)
                     {
-                        hasPlayerJoined = Data.DatabaseManager.HasPlayerJoined(steam64);
+                        hasPlayerJoined = Data.DatabaseManager.HasPlayerJoined(steam64).Result; // todo
                     }
 
                     // error - player is not online and has never joined the server
@@ -351,7 +351,7 @@ namespace Uncreated.Warfare.Kits
 
                     if (target is null)
                     {
-                        hasPlayerJoined = Data.DatabaseManager.HasPlayerJoined(steam64);
+                        hasPlayerJoined = Data.DatabaseManager.HasPlayerJoined(steam64).Result; // todo
                     }
 
                     // error - player is not online and has never joined the server
@@ -450,7 +450,7 @@ namespace Uncreated.Warfare.Kits
                         Reply(ucplayer, "kit_l_e_invalid_steamid", steamid_s);
                         return;
                     }
-                    if (!Data.DatabaseManager.HasPlayerJoined(steamid))
+                    if (!Data.DatabaseManager.HasPlayerJoined(steamid).Result) // todo
                     {
                         Reply(ucplayer, "kit_l_e_playernotfound", steamid.ToString());
                         return;

@@ -414,7 +414,7 @@ namespace Uncreated.Warfare.Components
 
                 Points.TryAwardFOBCreatorXP(fob, Points.XPConfig.FOBDeployedXP, "xp_fob_in_use");
 
-                if (fob!.Bunker!.model.TryGetComponent(out BuildableComponent comp))
+                if (fob!.Bunker!.model.TryGetComponent(out BuiltBuildableComponent comp))
                     Quests.QuestManager.OnPlayerSpawnedAtBunker(comp, fob!, player);
             }
             else if (isSpecialFOB)

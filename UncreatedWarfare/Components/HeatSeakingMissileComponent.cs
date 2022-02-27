@@ -28,11 +28,11 @@ namespace Uncreated.Warfare.Components
 
         private DateTime start;
 
-        private InteractableVehicle vehicleLockedOn;
-        private Transform countermeasureLockedOn;
+        private InteractableVehicle? vehicleLockedOn;
+        private Transform? countermeasureLockedOn;
         private Vector3 alternativePointLockedOn;
 
-        private VehicleData vehicleLockedOnData;
+        private VehicleData? vehicleLockedOnData;
 
         public static List<Transform> ActiveCountermeasures = new List<Transform>();
 
@@ -67,6 +67,9 @@ namespace Uncreated.Warfare.Components
 
         public void Initialize(GameObject projectile, Player firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float guidanceDelay)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             this.projectile = projectile;
             this.firer = firer;
             this.maxTurnDegrees = responsiveness;
@@ -87,7 +90,7 @@ namespace Uncreated.Warfare.Components
 
             if (projectile.TryGetComponent(out rigidbody))
             {
-                var vehicle = firer.movement.getVehicle();
+                InteractableVehicle? vehicle = firer.movement.getVehicle();
                 if (vehicle != null)
                 {
                     foreach (var turret in vehicle.turrets)
@@ -119,7 +122,10 @@ namespace Uncreated.Warfare.Components
 
         private void TryAcquireTarget(Transform lookOrigin, float range)
         {
-            Transform target = Physics.Raycast(lookOrigin.position, lookOrigin.forward, out RaycastHit hit, range, RayMasks.VEHICLE) ? hit.transform : default;
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            Transform? target = Physics.Raycast(lookOrigin.position, lookOrigin.forward, out RaycastHit hit, range, RayMasks.VEHICLE) ? hit.transform : default;
             if (target != null && target.TryGetComponent(out InteractableVehicle vehicle))
             {
                 if ((vehicle.asset.engine == EEngine.PLANE || vehicle.asset.engine == EEngine.HELICOPTER) && !vehicle.isDead)
@@ -130,7 +136,7 @@ namespace Uncreated.Warfare.Components
                 }
             }
 
-            foreach (var v in VehicleManager.vehicles)
+            foreach (InteractableVehicle v in VehicleManager.vehicles)
             {
                 if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead)
                 {
@@ -138,9 +144,9 @@ namespace Uncreated.Warfare.Components
                     {
                         float angleBetween = Vector3.Angle(v.transform.position - lookOrigin.position, lookOrigin.forward);
                         L.Log(v.asset.vehicleName + ": " + angleBetween.ToString());
-                        if (angleBetween < 5)
+                        if (angleBetween < 10)
                         {
-                            maxTurnDegrees *= (1 - angleBetween / 5);
+                            maxTurnDegrees *= Mathf.Clamp(1 - angleBetween / 10, 0.4f, 1.0f);
                             vehicleLockedOn = v;
                             SetVehicleData(v);
                             return;
@@ -166,12 +172,15 @@ namespace Uncreated.Warfare.Components
         }
         private void VerifyPrimaryTarget(Transform lookOrigin)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (vehicleLockedOn != null && !vehicleLockedOn.isDead)
             {
                 Vector3 idealDirection = target - lookOrigin.position;
 
                 float angleBetween = Vector3.Angle(idealDirection, lookOrigin.forward);
-                if (angleBetween < 30)
+                if (angleBetween < 60)
                 {
                     return;
                 }
@@ -182,6 +191,9 @@ namespace Uncreated.Warfare.Components
         }
         private void VerifyAltTargets(Transform lookOrigin)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             countermeasureLockedOn = null;
 
             float minAngle = 30;
@@ -205,6 +217,9 @@ namespace Uncreated.Warfare.Components
         }
         private void TrySendWarning()
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             if (vehicleLockedOnData is null || vehicleLockedOn is null || vehicleLockedOn.isDead)
                 return;
 
@@ -238,6 +253,9 @@ namespace Uncreated.Warfare.Components
         {
             if (isActive)
             {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
                 guiderDistance += Time.fixedDeltaTime * projectileSpeed;
 
                 if (guiderDistance > 30 + armingDistance && !armed)

@@ -213,12 +213,10 @@ namespace Uncreated.Warfare.Components
                 }
             }
         }
-        Coroutine countermeasureRoutine;
+        Coroutine? countermeasureRoutine;
         List<Transform> countermeasures;
         public void TrySpawnCountermeasures()
         {
-            
-
             if (countermeasureRoutine != null)
                 return;
 
@@ -242,11 +240,11 @@ namespace Uncreated.Warfare.Components
                 {
                     angle += i * (360 / flareCount) + Random.Range(-35f, 35f);
 
-                    var countermeasure = VehicleManager.spawnVehicleV2(countermeasureAsset.id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
+                    InteractableVehicle? countermeasure = VehicleManager.spawnVehicleV2(countermeasureAsset.id, Vehicle.transform.TransformPoint(0, -4, 0), Vehicle.transform.rotation);
 
                     countermeasure.transform.Rotate(Vector3.up, angle, Space.Self);
 
-                    var rigidbody = countermeasure.transform.GetComponent<Rigidbody>();
+                    Rigidbody? rigidbody = countermeasure.transform.GetComponent<Rigidbody>();
                     rigidbody.velocity = Vehicle.transform.GetComponent<Rigidbody>().velocity;
                     rigidbody.AddForce(countermeasure.transform.forward * 5, ForceMode.Impulse);
 
@@ -265,7 +263,7 @@ namespace Uncreated.Warfare.Components
         {
             yield return new WaitForSeconds(15);    
 
-            foreach (var countermeasure in countermeasures)
+            foreach (Transform countermeasure in countermeasures)
             {
                 HeatSeakingMissileComponent.ActiveCountermeasures.RemoveAll(t => t.GetInstanceID() == countermeasure.GetInstanceID());
 

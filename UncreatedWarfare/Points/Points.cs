@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -11,6 +12,8 @@ namespace Uncreated.Warfare.Point
 {
     public class Points
     {
+        private const int XPUI_KEY = 26969;
+        private const int TWUI_KEY = 26970;
         private static readonly Config<XPConfig> _xpconfig = new Config<XPConfig>(Data.PointsStorage, "xp.json");
         private static readonly Config<TWConfig> _twconfig = new Config<TWConfig>(Data.PointsStorage, "tw.json");
         public static XPConfig XPConfig => _xpconfig.data;
@@ -76,7 +79,7 @@ namespace Uncreated.Warfare.Point
 
             UpdateXPUI(player);
         }
-        public static void AwardXP(UCPlayer player, int amount, string message = "")
+        public static void AwardXP(UCPlayer player, int amount, string? message = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -88,65 +91,68 @@ namespace Uncreated.Warfare.Point
 
             amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
 
-            int newBalance = Data.DatabaseManager.AddXP(player.Steam64, player.Branch, amount);
-
-            player.UpdateRank(player.Branch, newBalance);
-
-
-            if (!(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
+            Task.Run(async () =>
             {
-                string number = Translation.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale));
+                int newBalance = await Data.DatabaseManager.AddXP(player.Steam64, player.Branch, amount);
+                await UCWarfare.ToUpdate();
+                player.UpdateRank(player.Branch, newBalance);
 
-                if (amount > 0)
-                    number = number.Colorize("e3e3e3");
-                else
-                    number = number.Colorize("d69898");
 
-                if (message != "")
-                    ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message.Colorize("adadad"), EToastMessageSeverity.MINI));
-                else
-                    ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
-            }
-
-            UpdateXPUI(player);
-
-            RankData newRank = player.CurrentRank;
-
-            if (newRank.Level > oldLevel)
-            {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, Translation.TranslateBranch(newRank.Branch, player).ToUpper(), newRank.Level.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.BIG));
-
-                if (newRank.RankTier > oldTier)
+                if (!(Data.Gamemode is IEndScreen lb && lb.isScreenUp))
                 {
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
-                    Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                    string number = Translation.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale));
+
+                    if (amount > 0)
+                        number = number.Colorize("e3e3e3");
+                    else
+                        number = number.Colorize("d69898");
+
+                    if (!string.IsNullOrEmpty(message))
+                        ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message!.Colorize("adadad"), EToastMessageSeverity.MINI));
+                    else
+                        ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
                 }
 
-                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
-                    VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
-                for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                    Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
-            }
-            else if (newRank.Level < oldLevel)
-            {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.BIG));
+                UpdateXPUI(player);
 
-                if (newRank.RankTier < oldTier)
+                RankData newRank = player.CurrentRank;
+
+                if (newRank.Level > oldLevel)
                 {
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
-                    Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, Translation.TranslateBranch(newRank.Branch, player).ToUpper(), newRank.Level.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.BIG));
+
+                    if (newRank.RankTier > oldTier)
+                    {
+                        ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
+                        Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_promoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                    }
+
+                    for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                        VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
+                    for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                        Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
+                }
+                else if (newRank.Level < oldLevel)
+                {
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.BIG));
+
+                    if (newRank.RankTier < oldTier)
+                    {
+                        ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp", player), newRank.Name.ToUpper(), EToastMessageSeverity.BIG));
+                        Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "xp_announce_demoted", F.GetPlayerOriginalNames(player).CharacterName, newRank.Name);
+                    }
+
+                    for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                        VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
+                    for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                        Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
                 }
 
-                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
-                    VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
-                for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                    Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
-            }
-
-            if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IExperienceStats ex)
-            {
-                ex.AddXP(amount);
-            }
+                if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IExperienceStats ex)
+                {
+                    ex.AddXP(amount);
+                }
+            });
         }
         public static void AwardXP(Player player, int amount, string message = "")
         {
@@ -222,44 +228,27 @@ namespace Uncreated.Warfare.Point
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             if ((Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
-            {
-                if (UCWarfare.Config.Debug)
-                {
-                    L.Log("UpdateXPUI returned early");
-
-                    bool islb = Data.Is(out IEndScreen lb2);
-                    L.Log($"     Is IEndScreen: {islb}");
-                    if (islb)
-                        L.Log($"        Is screen up: {lb2.isScreenUp}");
-
-                    bool isteams = Data.Is(out ITeams t);
-                    L.Log($"     Is ITeams: {isteams}");
-                    if (isteams)
-                        L.Log($"        Is player in lobby: {t.JoinManager.IsInLobby(player)}");
-                }
                 return;
-            }
 
-            short key = 26969;
             RankData current = player.CurrentRank;
 
-            EffectManager.sendUIEffect(XPConfig.RankUI, key, player.connection, true);
-            EffectManager.sendUIEffectText(key, player.connection, true,
+            EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.connection, true);
+            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
                 "Rank", current.Name
             );
-            EffectManager.sendUIEffectText(key, player.connection, true,
+            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
                 "Level", current.Level == 0 ? "" : Translation.Translate("ui_xp_level", player, current.Level.ToString(Data.Locale))
             );
-            EffectManager.sendUIEffectText(key, player.connection, true,
+            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
                 "XP", current.CurrentXP + "/" + current.RequiredXP
             );
-            EffectManager.sendUIEffectText(key, player.connection, true,
+            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
                 "Next", Translation.Translate("ui_xp_next_level", player, (current.Level + 1).ToString(Data.Locale))
             );
-            EffectManager.sendUIEffectText(key, player.connection, true,
+            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
                 "Progress", GetProgressBar(current.CurrentXP, current.RequiredXP)
             );
-            EffectManager.sendUIEffectText(key, player.connection, true,
+            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
                 "Division", Translation.TranslateBranch(player.Branch, player)
             );
         }
@@ -271,27 +260,26 @@ namespace Uncreated.Warfare.Point
             if (Data.Is(out IEndScreen lb) && lb.isScreenUp || Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player))
                 return;
 
-            short key = 26970;
-            EffectManager.sendUIEffect(TWConfig.MedalsUI, key, player.connection, true);
+            EffectManager.sendUIEffect(TWConfig.MedalsUI, TWUI_KEY, player.connection, true);
             
             if (player.Medals.NumberOfMedals <= 0)
             {
-                EffectManager.sendUIEffectVisibility(key, player.connection, true, "Icon", false);
-                EffectManager.sendUIEffectVisibility(key, player.connection, true, "Icon_Grey", true);
+                EffectManager.sendUIEffectVisibility(TWUI_KEY, player.connection, true, "Icon", false);
+                EffectManager.sendUIEffectVisibility(TWUI_KEY, player.connection, true, "Icon_Grey", true);
             }
             else
             {
-                EffectManager.sendUIEffectVisibility(key, player.connection, true, "Icon", true);
-                EffectManager.sendUIEffectVisibility(key, player.connection, true, "Icon_Grey", false);
+                EffectManager.sendUIEffectVisibility(TWUI_KEY, player.connection, true, "Icon", true);
+                EffectManager.sendUIEffectVisibility(TWUI_KEY, player.connection, true, "Icon_Grey", false);
             }
 
-            EffectManager.sendUIEffectText(key, player.connection, true, "Count",
+            EffectManager.sendUIEffectText(TWUI_KEY, player.connection, true, "Count",
                 player.Medals.NumberOfMedals < 2 ? string.Empty : player.Medals.NumberOfMedals.ToString()
             );
-            EffectManager.sendUIEffectText(key, player.connection, true, "Points",
+            EffectManager.sendUIEffectText(TWUI_KEY, player.connection, true, "Points",
                 player.Medals.CurrentTW + "/" + player.Medals.RequiredTW
             );
-            EffectManager.sendUIEffectText(key, player.connection, true, "Progress",
+            EffectManager.sendUIEffectText(TWUI_KEY, player.connection, true, "Progress",
                 GetProgressBar(player.Medals.CurrentTW, player.Medals.RequiredTW)
             );
         }

@@ -110,7 +110,7 @@ namespace Uncreated.Warfare.Components
                 if (IsDestroyed) yield break;
 
 #if DEBUG
-                using IDisposable profiler = ProfilingUtils.StartTracking();
+                IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 {
@@ -159,6 +159,9 @@ namespace Uncreated.Warfare.Components
 
                 if (time >= 60)
                     time = 0;
+#if DEBUG
+                profiler.Dispose();
+#endif
                 yield return new WaitForSeconds(tickFrequency);
             }
         }
