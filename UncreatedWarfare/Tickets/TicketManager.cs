@@ -650,7 +650,8 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].connection, UIID, tickets, message);
+                if (!players[i].HasUIHidden)
+                    UpdateUI(players[i].connection, UIID, tickets, message);
             }
         }
         public static void UpdateUITeam2(int bleed = 0)
@@ -664,7 +665,8 @@ namespace Uncreated.Warfare.Tickets
 
             for (int i = 0; i < players.Count; i++)
             {
-                UpdateUI(players[i].connection, UIID, tickets, message);
+                if (!players[i].HasUIHidden)
+                    UpdateUI(players[i].connection, UIID, tickets, message);
             }
         }
         public static int GetTeamBleed(ulong team)

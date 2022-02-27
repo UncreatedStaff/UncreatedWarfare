@@ -161,15 +161,20 @@ namespace Uncreated.Warfare
                     "`xp` = `xp`;",
                     new object[] { Steam64, (int)EBranch.INFANTRY, (int)EBranch.ARMOR, (int)EBranch.AIRFORCE });
         }
-        public Task<int> GetXP(ulong Steam64)
+        public int GetXP(ulong Steam64, EBranch branch)
         {
-            return ScalarAsync(
+            int i = 0;
+            Query(
                 "SELECT `XP` " +
                 "FROM `xp` " +
                 "WHERE `Steam64` = @0 AND `Branch` = @1 " +
                 "LIMIT 1;",
-                new object[] { Steam64 },
-                (o) => (int)o);
+                new object[] { Steam64, branch },
+                R =>
+                {
+                    i = R.GetInt32(0);
+                });
+            return i;
         }
         public Dictionary<EBranch, int> GetAllXP(ulong Steam64)
         {
@@ -327,12 +332,12 @@ namespace Uncreated.Warfare
             });
         }
         /// <returns>New XP Value</returns>
-        public async Task<int> AddXP(ulong Steam64, EBranch branch, int amount)
+        public int AddXP(ulong Steam64, EBranch branch, int amount)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            int oldBalance = await GetXP(Steam64);
+            int oldBalance = GetXP(Steam64, branch);
 
             if (amount == 0) return oldBalance;
             if (amount > 0)
@@ -343,7 +348,7 @@ namespace Uncreated.Warfare
                     "VALUES(@0, @1, @2) " +
                     "ON DUPLICATE KEY UPDATE " +
                     "`xp` = `xp` + @2;",
-                    new object[] { Steam64, amount });
+                    new object[] { Steam64, branch, amount });
                 return oldBalance + amount;
             }
             else
@@ -356,7 +361,7 @@ namespace Uncreated.Warfare
                         "VALUES(@0, @1, 0) " +
                         "ON DUPLICATE KEY UPDATE " +
                         "`XP` = 0;", // clamp to 0
-                        new object[] { Steam64 });
+                        new object[] { Steam64, branch });
                     return 0;
                 }
                 else
@@ -365,7 +370,7 @@ namespace Uncreated.Warfare
                         "UPDATE `xp` SET " +
                         "`XP` = @2 " +
                         "WHERE `Steam64` = @0 AND `Branch` = @1;",
-                        new object[] { Steam64, amount + oldBalance });
+                        new object[] { Steam64, branch, amount + oldBalance });
                     return amount + oldBalance;
                 }
             }

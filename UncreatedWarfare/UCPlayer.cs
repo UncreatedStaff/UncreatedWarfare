@@ -34,6 +34,7 @@ namespace Uncreated.Warfare
         public CSteamID CSteamID { get; internal set; }
         public string CharacterName;
         public string NickName;
+        public bool HasUIHidden = false;
         public ITransportConnection connection => Player.channel.owner.transportConnection;
         public Coroutine? StorageCoroutine;
         public Ranks.RankStatus[]? RankData;

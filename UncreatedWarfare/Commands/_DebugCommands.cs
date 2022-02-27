@@ -702,6 +702,8 @@ namespace Uncreated.Warfare.Commands
         private void clearui(string[] command, Player player)
         {
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.channel.owner.transportConnection });
+            UCPlayer? pl = UCPlayer.FromPlayer(player);
+            if (pl != null) pl.HasUIHidden = !pl.HasUIHidden;
         }
         private void reloadui(string[] command, Player player)
         {
