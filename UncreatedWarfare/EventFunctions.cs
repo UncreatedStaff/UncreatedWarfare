@@ -195,11 +195,11 @@ namespace Uncreated.Warfare
             }
 
             if (VehicleBay.Config.TOWMissileWeapons.Contains(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, gun.player, 90, 0.3f, 700);
+                projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, gun.player, 90, 0.33f, 800);
             else if (VehicleBay.Config.GroundAAWeapons.Contains(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 140, 0.75f, 700, 4, 0.66f);
+                projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 4, 0.33f);
             else if (VehicleBay.Config.AirAAWeapons.Contains(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 140, 0.75f, 700, 10, 0.25F);
+                projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
 
 
             Patches.DeathsPatches.lastProjected = projectile;

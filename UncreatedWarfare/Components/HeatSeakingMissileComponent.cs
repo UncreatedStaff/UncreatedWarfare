@@ -171,7 +171,7 @@ namespace Uncreated.Warfare.Components
                 Vector3 idealDirection = target - lookOrigin.position;
 
                 float angleBetween = Vector3.Angle(idealDirection, lookOrigin.forward);
-                if (angleBetween < 30)
+                if (angleBetween < 45)
                 {
                     return;
                 }
@@ -208,15 +208,6 @@ namespace Uncreated.Warfare.Components
             if (vehicleLockedOnData is null || vehicleLockedOn is null || vehicleLockedOn.isDead)
                 return;
 
-            //if (vehicleLockedOn.transform.TryGetComponent(out VehicleComponent vehicleComponent))
-            //{
-            //    var center = vehicleLockedOn.transform.Find("Center");
-            //    if (center is null)
-            //        center = vehicleLockedOn.transform;
-
-            //    vehicleComponent.TrySpawnCountermeasures();
-            //}
-
             for (byte seat = 0; seat < vehicleLockedOn.passengers.Length; seat++)
             {
                 if (vehicleLockedOn.passengers[seat].player != null && vehicleLockedOnData.CrewSeats.Contains(seat))
@@ -231,7 +222,7 @@ namespace Uncreated.Warfare.Components
         }
         private Vector3 GetRandomTarget(Transform lookOrigin)
         {
-            return lookOrigin.TransformPoint(new Vector3(Random.Range(-5f, 5f), Random.Range(-5f, 5f), 300));
+            return lookOrigin.TransformPoint(new Vector3(Random.Range(-10f, 10f), Random.Range(-10f, 10f), 300));
         }
         int count = 0;
         private void FixedUpdate()
@@ -260,16 +251,16 @@ namespace Uncreated.Warfare.Components
 
                 Vector3 idealDirection = target - projectile.transform.position;
 
-                float multiplier = 1;
-                if (lockedOnToVehicle)
+                float turnDegrees = 0.2f;
+                if (lockedOn)
                 {
-                    if (lockedOn)
-                        multiplier = 0.65f;
+                    if (lockedOnToVehicle)
+                        turnDegrees = maxTurnDegrees;
                     else
-                        multiplier = 0.15f;
+                        turnDegrees = 0.5f;
                 }
 
-                Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, Mathf.Deg2Rad * maxTurnDegrees * multiplier, Mathf.Deg2Rad * maxTurnDegrees * multiplier);
+                Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, Mathf.Deg2Rad * turnDegrees, Mathf.Deg2Rad * turnDegrees);
 
                 projectile.transform.forward = targetDirection;
                 rigidbody.velocity = projectile.transform.forward * projectileSpeed;
