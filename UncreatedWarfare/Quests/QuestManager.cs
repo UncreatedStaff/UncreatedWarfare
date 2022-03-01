@@ -93,6 +93,7 @@ public static class QuestManager
                 }
             }
         }
+        L.LogWarning("Failed to find a preset from key " + key.ToString("N"));
         return null;
     }
     public static IQuestPreset? GetPreset(Guid key, ulong team)
@@ -197,7 +198,7 @@ public static class QuestManager
         for (int i = 0; i < RegisteredTrackers.Count; i++)
         {
             if (RegisteredTrackers[i].Player.Steam64 == player.Steam64)
-                L.Log("    Tracker type " + RegisteredTrackers[i].QuestData!.QuestType + " - \"" + RegisteredTrackers[i].Translate() + "\".");
+                L.Log("    Tracker type " + RegisteredTrackers[i].QuestData!.QuestType + " - \"" + RegisteredTrackers[i].GetDisplayString() + "\".");
         }
     }
     /// <summary>Ticks any <see cref="BaseQuestTracker"/> that's data has overridden <see cref="BaseQuestData.TickFrequencySeconds"/> and has set it > 0.</summary>
@@ -230,6 +231,10 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (UCWarfare.Config.Debug)
+        {
+            L.LogDebug(tracker.Player.Name.PlayerName + " finished a quest: " + tracker.GetDisplayString());
+        }
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestCompleted(tracker);
         else
@@ -250,6 +255,10 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (UCWarfare.Config.Debug)
+        {
+            L.LogDebug(tracker.Player.Name.PlayerName + " updated a quest: " + tracker.GetDisplayString());
+        }
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestUpdated(tracker);
         else
@@ -262,7 +271,7 @@ public static class QuestManager
                 L.LogDebug("Flag quest updated: " + tracker.FlagValue);
             }
         }
-        L.LogDebug("Quest updated: " + tracker.Translate());
+        L.LogDebug("Quest updated: " + tracker.GetDisplayString());
     }
 
     public static bool QuestComplete(this UCPlayer player, Guid key)

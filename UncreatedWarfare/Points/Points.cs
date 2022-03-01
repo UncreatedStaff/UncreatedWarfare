@@ -57,6 +57,7 @@ namespace Uncreated.Warfare.Point
                 EffectManager.askEffectClearByID(TWConfig.MedalsUI, player.Player.channel.owner.transportConnection);
             }
         }
+        /*
         public static void OnBranchChanged(UCPlayer player, EBranch oldBranch, EBranch newBranch)
         {
 #if DEBUG
@@ -78,8 +79,89 @@ namespace Uncreated.Warfare.Point
             }
 
             UpdateXPUI(player);
+        }*/
+
+        private const float XP_STRETCH = 7883.735f;
+        private const float XP_STRETCH_3 = XP_STRETCH * XP_STRETCH * XP_STRETCH;
+        private const float XP_MULTIPLIER_SQR = 490000f;
+        private const float ONE_THIRD = 1f / 3f;
+        /// <summary>Get the current level given an amount of <paramref name="xp"/>.</summary>
+        public static int GetLevel(int xp) => Mathf.FloorToInt(Mathf.Pow(xp * xp * XP_MULTIPLIER_SQR, ONE_THIRD) / XP_STRETCH);
+        /// <summary>Get the given <paramref name="level"/>'s starting xp.</summary>
+        public static int GetLevelXP(int level) => Mathf.RoundToInt(Mathf.Sqrt(XP_STRETCH_3 * level * level * level / XP_MULTIPLIER_SQR));
+        /// <summary>Get the level after the given <paramref name="level"/>'s starting xp (or the given <paramref name="level"/>'s end xp.</summary>
+        public static int GetNextLevelXP(int level) => Mathf.RoundToInt(Mathf.Sqrt(XP_STRETCH_3 * ++level * level * level / XP_MULTIPLIER_SQR));
+        /// <summary>Get the percentage from 0-1 a player is through their current level at the given <paramref name="xp"/>.</summary>
+        public static float GetLevelProgressXP(int xp)
+        {
+            int lvl = GetLevel(xp);
+            int end = GetNextLevelXP(lvl);
+            return (float)(end - GetLevelXP(lvl)) / (end - xp);
+        }
+        /// <summary>Get the percentage from 0-1 a player is through their current level at the given <paramref name="xp"/> and <paramref name="lvl"/>.</summary>
+        public static float GetLevelProgressXP(int xp, int lvl)
+        {
+            int end = GetNextLevelXP(lvl);
+            return (float)(end - GetLevelXP(lvl)) / (end - xp);
         }
         public static void AwardXP(UCPlayer player, int amount, string? message = null)
+        {
+            if (!Data.TrackStats || amount == 0 || _xpconfig.data.XPMultiplier == 0f) return;
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
+            Task.Run(async () =>
+            {
+                int oldAmt = player.CachedXP;
+                int currentAmount = await Data.DatabaseManager.AddXP(player.Steam64, amount);
+                await UCWarfare.ToUpdate();
+
+                player.CachedXP = currentAmount;
+
+                if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
+                {
+                    string number = Translation.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale));
+
+                    if (amount > 0)
+                        number = number.Colorize("e3e3e3");
+                    else
+                        number = number.Colorize("d69898");
+
+                    if (!string.IsNullOrEmpty(message))
+                        ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message!.Colorize("adadad"), EToastMessageSeverity.MINI));
+                    else
+                        ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
+                    UpdateXPUI(player);
+                }
+
+                int oldLvl = GetLevel(oldAmt);
+                int newLvl = GetLevel(currentAmount);
+
+                if (newLvl > oldLvl)
+                {
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_up_xp_1", player), Translation.Translate("level_up_xp_2", player, newLvl.ToString(Data.Locale).ToUpper()), EToastMessageSeverity.BIG));
+                    
+                    for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                        VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
+                    for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                        Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
+                }
+                else if (newLvl < oldLvl)
+                {
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("level_down_xp", player), EToastMessageSeverity.BIG));
+                    
+                    for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                        VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
+                    for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
+                        Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
+                }
+            });
+
+        }
+        /*
+        [Obsolete]
+        public static void AwardXPOld(UCPlayer player, int amount, string? message = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -149,7 +231,8 @@ namespace Uncreated.Warfare.Point
             {
                 ex.AddXP(amount);
             }
-        }
+        }*/
+        
         public static void AwardXP(Player player, int amount, string message = "")
         {
             UCPlayer? pl = UCPlayer.FromPlayer(player);
@@ -218,6 +301,8 @@ namespace Uncreated.Warfare.Point
             if (pl != null)
                 AwardTW(pl, amount, message);
         }
+        /*
+        [Obsolete]
         public static void UpdateXPUI(UCPlayer player)
         {
 #if DEBUG
@@ -247,6 +332,39 @@ namespace Uncreated.Warfare.Point
             EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
                 "Division", Translation.TranslateBranch(player.Branch, player)
             );
+        }*/
+        public static void UpdateXPUI(UCPlayer player)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
+                return;
+
+            ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out bool success);
+            if (success)
+            {
+                int xp = player.CachedXP;
+                int level = GetLevel(xp);
+                int reqXp = GetNextLevelXP(level);
+
+                EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.connection, true);
+                EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
+                    "Rank", rankdata.GetName(player.Steam64)
+                );
+                EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
+                    "Level", level == 0 ? string.Empty : Translation.Translate("ui_xp_level", player, level.ToString(Data.Locale))
+                );
+                EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
+                    "XP", xp + "/" + reqXp
+                );
+                EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
+                    "Next", Translation.Translate("ui_xp_next_level", player, (level + 1).ToString(Data.Locale))
+                );
+                EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
+                    "Progress", GetProgressBar(xp, reqXp)
+                );
+            }
         }
         public static void UpdateTWUI(UCPlayer player)
         {

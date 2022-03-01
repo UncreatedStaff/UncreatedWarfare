@@ -53,38 +53,6 @@ namespace Uncreated.Warfare
         private FPlayerName cachedName = FPlayerName.Nil;
         /// <summary>[Unreliable]</summary>
         private MedalData _medals = MedalData.Nil;
-        private Dictionary<EBranch, RankData>? _ranks;
-        public Dictionary<EBranch, RankData> Ranks
-        {
-            get
-            {
-                if (_ranks == null)
-                {
-                    _ranks = new Dictionary<EBranch, RankData>(6);
-                    RedownloadRanks();
-                }
-                return _ranks;
-            }
-        }
-        public RankData CurrentRank
-        {
-            get
-            {
-                if (_ranks == null)
-                {
-                    _ranks = new Dictionary<EBranch, RankData>(6);
-                    RedownloadRanks();
-                }
-                if (_ranks.TryGetValue(Branch, out RankData rank))
-                    return rank;
-                else
-                {
-                    RankData data = new RankData(Steam64, 0, Branch, this.GetTeam());
-                    _ranks.Add(Branch, data);
-                    return data;
-                }
-            }
-        }
         public MedalData Medals
         {
             get
@@ -94,46 +62,18 @@ namespace Uncreated.Warfare
                 return _medals;
             }
         }
-        public bool IsOfficer { get => CurrentRank.OfficerTier > 0; }
-        public void RedownloadRanks()
+        /// <summary><see langword="True"/> if rank order <see cref="OfficerStorage.OFFICER_RANK_ORDER"/> has been completed (Receiving officer pass from discord server).</summary>
+        public bool IsOfficer => RankData != null && RankData.Length > OfficerStorage.OFFICER_RANK_ORDER && RankData[OfficerStorage.OFFICER_RANK_ORDER].IsCompelete;
+        private int _cachedXP;
+        public int CachedXP
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            Dictionary<EBranch, int> xplevels = Data.DatabaseManager.GetAllXP(Steam64);
-            if (_ranks != null)
-                _ranks.Clear();
-            else _ranks = new Dictionary<EBranch, RankData>(6);
-            foreach (KeyValuePair<EBranch, int> entry in xplevels)
-            {
-                if (_ranks.ContainsKey(entry.Key))
-                    _ranks.Remove(entry.Key);
-                _ranks.Add(entry.Key, new RankData(Steam64, entry.Value, entry.Key, this.GetTeam()));
-            }
+            get => _cachedXP;
+            internal set => _cachedXP = value;
         }
         internal List<Guid>? _completedQuests;
         public void RedownloadMedals()
         {
             _medals.Update(Data.DatabaseManager.GetTeamwork(Steam64));
-        }
-        public void UpdateRank(EBranch branch, int newXP)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (Ranks.TryGetValue(branch, out RankData data))
-                data.Update(newXP);
-            else
-                Ranks.Add(branch, new RankData(Steam64, newXP, branch, this.GetTeam()));
-                
-        }
-        public void UpdateRankTeam(ulong team)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            _ranks = new Dictionary<EBranch, RankData>(6);
-            RedownloadRanks();
         }
         public void UpdateMedals(int newTW) => _medals.Update(newTW);
         public float LastSpoken = 0f;

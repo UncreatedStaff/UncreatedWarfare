@@ -331,6 +331,40 @@ namespace Uncreated.Warfare
                 report.Message
             });
         }
+        public async Task<int> GetXP(ulong player)
+        {
+            int xp = 0;
+            await QueryAsync("SELECT `Experience` FROM `s2_levels` WHERE `Steam64` = @0 LIMIT 1;",
+                new object[1] { player },
+                R =>
+                {
+                    xp = R.GetInt32(0);
+                });
+            return xp;
+        }
+        public async Task<int> AddXP(ulong player, int amount)
+        {
+            int old = await GetXP(player);
+            int ttl = amount + old;
+            if (ttl >= 0)
+            {
+                await NonQueryAsync(
+                    "INSERT INTO `s2_levels` (`Steam64`, `XP`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `XP` = `XP` + @1;",
+                    new object[2] { player, amount });
+                return ttl;
+            }
+            else if (amount != 0)
+            {
+                await NonQueryAsync(
+                    "INSERT INTO `s2_levels` (`Steam64`, `XP`) VALUES (@0, 0) ON DUPLICATE KEY UPDATE `XP` = 0;",
+                    new object[1] { player });
+                return 0;
+            }
+            else return old;
+        }
+
+
+
         /// <returns>New XP Value</returns>
         public int AddXP(ulong Steam64, EBranch branch, int amount)
         {

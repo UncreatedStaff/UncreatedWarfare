@@ -9,6 +9,7 @@ namespace Uncreated.Warfare.Point
 {
     public class OfficerStorage : JSONSaver<OfficerData>
     {
+        internal const int OFFICER_RANK_ORDER = 9;
         public OfficerStorage()
             : base(Data.PointsStorage + "officers.json")
         {
@@ -23,6 +24,7 @@ namespace Uncreated.Warfare.Point
             officer = GetObject(o => o.Steam64 == playerID && o.Team == team, true);
             return officer != null;
         }
+        // Are we still using this?
         public static void ChangeOfficerRank(ulong playerID, int newOfficerTier, ulong newTeam)
         {
 #if DEBUG
@@ -46,32 +48,32 @@ namespace Uncreated.Warfare.Point
             UCPlayer? player = UCPlayer.FromID(playerID);
             if (player != null)
             {
-                player.RedownloadRanks();
-
                 if (isNewOfficer || newOfficerTier >= officer.OfficerTier)
                 {
-                    player.Message("officer_promoted", player.CurrentRank.Name, Translation.Translate("team_" + newTeam, player));
+                    ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
+                    player.Message("officer_promoted", rankdata.GetName(playerID), Translation.Translate("team_" + newTeam, player));
 
                     FPlayerName names = F.GetPlayerOriginalNames(player);
-                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                    foreach (LanguageSet set in Translation.EnumerateLanguageSets(player.Steam64))
                     {
-                        if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
-                        {
-                            PlayerManager.OnlinePlayers[i].Message("officer_announce_promoted", names.CharacterName, player.CurrentRank.Name, Translation.Translate("team_" + newTeam, PlayerManager.OnlinePlayers[i]));
-                        }
+                        string name = rankdata.GetName(set.Language);
+                        string team = Translation.Translate("team_" + newTeam, set.Language);
+                        while (set.MoveNext())
+                            set.Next.SendChat("officer_announce_promoted", names.CharacterName, name, team);
                     }
                 }
                 else
                 {
-                    player.Message("officer_demoted", player.CurrentRank.Name, Translation.Translate("team_" + newTeam, player));
+                    ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
+                    player.Message("officer_demoted", rankdata.GetName(playerID), Translation.Translate("team_" + newTeam, player));
 
                     FPlayerName names = F.GetPlayerOriginalNames(player);
-                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                    foreach (LanguageSet set in Translation.EnumerateLanguageSets(player.Steam64))
                     {
-                        if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
-                        {
-                            PlayerManager.OnlinePlayers[i].Message("officer_announce_demoted", names.CharacterName, player.CurrentRank.Name, Translation.Translate("team_" + newTeam, PlayerManager.OnlinePlayers[i]));
-                        }
+                        string name = rankdata.GetName(set.Language);
+                        string team = Translation.Translate("team_" + newTeam, set.Language);
+                        while (set.MoveNext())
+                            set.Next.SendChat("officer_announce_promoted", names.CharacterName, name, team);
                     }
                 }
                 Points.UpdateXPUI(player);
@@ -87,14 +89,14 @@ namespace Uncreated.Warfare.Point
             UCPlayer? player = UCPlayer.FromID(playerID);
             if (player != null)
             {
-                player.Message("officer_discharged", player.CurrentRank.Name);
+                ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
+                player.Message("officer_discharged", rankdata.GetName(playerID));
                 FPlayerName names = F.GetPlayerOriginalNames(player);
-                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                foreach (LanguageSet set in Translation.EnumerateLanguageSets(player.Steam64))
                 {
-                    if (PlayerManager.OnlinePlayers[i].Steam64 != player.Steam64)
-                    {
-                        PlayerManager.OnlinePlayers[i].Message("officer_announce_discharged", names.CharacterName, player.CurrentRank.Name);
-                    }
+                    string name = rankdata.GetName(set.Language);
+                    while (set.MoveNext())
+                        set.Next.SendChat("officer_announce_discharged", names.CharacterName, name);
                 }
                 Points.UpdateXPUI(player);
             }

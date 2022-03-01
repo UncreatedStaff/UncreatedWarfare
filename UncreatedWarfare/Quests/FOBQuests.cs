@@ -75,7 +75,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
     }
 }
 [QuestData(EQuestType.BUILD_FOBS_NEAR_OBJECTIVES)]
@@ -183,7 +183,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
             else
                 TellUpdated();
         }
-        public override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
     }
 }
 [QuestData(EQuestType.BUILD_FOB_ON_ACTIVE_OBJECTIVE)]
@@ -277,7 +277,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
             else
                 TellUpdated();
         }
-        public override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
     }
 }
 [QuestData(EQuestType.DELIVER_SUPPLIES)]
@@ -343,7 +343,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _suppliesDelivered, SupplyCount);
+        protected override string Translate() => QuestData!.Translate(_player, _suppliesDelivered, SupplyCount);
     }
     public enum ESupplyType : byte { AMMO, BUILD }
 }
@@ -438,7 +438,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _built, Amount, BaseIDs.GetCommaList(), BuildableType);
+        protected override string Translate() => QuestData!.Translate(_player, _built, Amount, BaseIDs.GetCommaList(), BuildableType);
     }
 }
 [QuestData(EQuestType.TEAMMATES_DEPLOY_ON_FOB)]
@@ -507,6 +507,6 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _fobUses, UseCount);
+        protected override string Translate() => QuestData!.Translate(_player, _fobUses, UseCount);
     }
 }

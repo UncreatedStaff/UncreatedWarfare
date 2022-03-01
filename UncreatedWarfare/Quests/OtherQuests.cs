@@ -126,7 +126,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, ItemName);
+        protected override string Translate() => QuestData!.Translate(_player, ItemName);
     }
 }
 
@@ -151,6 +151,6 @@ public class PlaceholderQuest : BaseQuestData<PlaceholderQuest.Tracker, Placehol
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader) { }
         public override void WriteQuestProgress(Utf8JsonWriter writer) { }
         public override void ResetToDefaults() { }
-        public override string Translate() => QuestData!.Translate(_player);
+        protected override string Translate() => QuestData!.Translate(_player);
     }
 }

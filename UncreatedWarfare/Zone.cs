@@ -459,8 +459,7 @@ namespace Uncreated.Warfare
                 L.LogError(Name + " DIDN'T PARSE CORRECTLY");
                 return false;
             }
-            // TODO: Bounds check
-            //if (!IsInsideBounds(location)) return false;
+            if (!IsInsideBounds(location)) return false;
             int intersects = 0;
             for (int i = 0; i < Lines.Length; i++)
             {

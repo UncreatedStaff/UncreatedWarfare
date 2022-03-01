@@ -1098,7 +1098,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
         }
         public override string ToString()
         {
-            if (_type == EDynamicValueType.CONSTANT)
+            if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.ToString(Data.Locale);
             else if (_type == EDynamicValueType.RANGE)
                 return (_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + _minVal.ToString(Data.Locale) +
@@ -1403,7 +1403,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         }
         public override string ToString()
         {
-            if (_type == EDynamicValueType.CONSTANT)
+            if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.ToString(Data.Locale);
             else if (_type == EDynamicValueType.RANGE)
                 return (_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + _minVal.ToString(Data.Locale) +
@@ -1672,7 +1672,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         }
         public override string ToString()
         {
-            if (_type == EDynamicValueType.CONSTANT)
+            if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value!;
             else if (_type == EDynamicValueType.ANY)
                 return _behavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
@@ -2062,7 +2062,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         }
         public override string ToString()
         {
-            if (_type == EDynamicValueType.CONSTANT)
+            if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.ToString("N");
             else if (_type == EDynamicValueType.ANY)
                 return _behavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
@@ -2419,7 +2419,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         }
         public override string ToString()
         {
-            if (_type == EDynamicValueType.CONSTANT)
+            if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.ToString();
             else if (_type == EDynamicValueType.RANGE)
                 return (_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + _minVal.ToString() +

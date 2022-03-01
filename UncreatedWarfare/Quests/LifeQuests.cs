@@ -73,6 +73,6 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
             }
         }
 
-        public override string Translate() => QuestData.Translate(_player, _revives, ReviveCount);
+        protected override string Translate() => QuestData.Translate(_player, _revives, ReviveCount);
     }
 }

@@ -925,80 +925,7 @@ namespace Uncreated.Warfare
                 }
                 else if (KitManager.KitExists(key2, out Kit kit))
                 {
-                    ulong playerteam = 0;
-                    RankData playerrank;
-                    if (ucplayer != null)
-                    {
-                        playerteam = ucplayer.GetTeam();
-                        playerrank = ucplayer.CurrentRank;
-                    }
-                    else playerrank = RankData.Nil;
-
-                    if (!kit.SignTexts.TryGetValue(language, out string name))
-                        if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
-                            if (kit.SignTexts.Count > 0)
-                                name = kit.SignTexts.First().Value;
-                            else
-                                name = kit.DisplayName ?? kit.Name;
-
-                    bool keepline = false;
-                    foreach (char @char in name)
-                    {
-                        if (@char == '\n')
-                        {
-                            keepline = true;
-                            break;
-                        }
-                    }
-                    name = Translate("kit_name", language, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
-                    string weapons = kit.Weapons ?? string.Empty;
-                    if (weapons != string.Empty)
-                        weapons = Translate("kit_weapons", language, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
-                    string cost = "";
-                    string playercount;
-                    if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
-                    {
-                        if (ucplayer != null)
-                            if (kit.AllowedUsers.Contains(ucplayer.Steam64))
-                                cost = ObjectTranslate("kit_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
-                            else if (kit.PremiumCost == -1)
-                                cost = Translate("kit_price_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
-                            else
-                                cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
-                    }
-                    else if (kit.UnlockLevel > 0)
-                    {
-                        if (playerrank.IsNil || (playerrank.Level < kit.UnlockLevel))
-                        {
-                            cost = Translate("kit_required_level", language, kit.UnlockLevel.ToString(Data.Locale), UCWarfare.GetColorHex("kit_level_unavailable"),
-                                RankData.GetRankAbbreviation(RankData.GetRankTier(kit.UnlockLevel)), UCWarfare.GetColorHex("kit_level_unavailable_abbr"));
-                        }
-                        else
-                        {
-                            cost = Translate("kit_required_level", language, kit.UnlockLevel.ToString(Data.Locale), (UCWarfare.GetColorHex("kit_level_available")),
-                                RankData.GetRankAbbreviation(RankData.GetRankTier(kit.UnlockLevel)), UCWarfare.GetColorHex("kit_level_available_abbr"));
-                        }
-                    }
-                    else
-                    {
-                        cost = string.Empty;
-                    }
-                    if (!keepline) cost = "\n" + cost;
-                    if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
-                    {
-                        playercount = Translate("kit_unlimited", language).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
-                    }
-                    else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
-                    {
-                        playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                            .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
-                    }
-                    else
-                    {
-                        playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                            .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
-                    }
-                    return Translate("sign_kit_request", language, name, cost, weapons, playercount);
+                    return TranslateKitSign(language, kit, ucplayer);
                 }
                 else return key;
             }
@@ -1008,6 +935,70 @@ namespace Uncreated.Warfare
                 L.LogError(ex);
                 return ex.GetType().Name;
             }
+        }
+        public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
+        {
+            ulong playerteam = 0;
+            ref Ranks.RankData playerrank = ref Ranks.RankManager.GetRank(ucplayer, out bool success);
+
+            if (!kit.SignTexts.TryGetValue(language, out string name))
+                if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
+                    if (kit.SignTexts.Count > 0)
+                        name = kit.SignTexts.First().Value;
+                    else
+                        name = kit.DisplayName ?? kit.Name;
+
+            bool keepline = false;
+            foreach (char @char in name)
+            {
+                if (@char == '\n')
+                {
+                    keepline = true;
+                    break;
+                }
+            }
+            name = Translate("kit_name", language, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
+            string weapons = kit.Weapons ?? string.Empty;
+            if (weapons != string.Empty)
+                weapons = Translate("kit_weapons", language, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
+            string cost = string.Empty;
+            string playercount;
+            if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
+            {
+                if (ucplayer != null)
+                    if (kit.AllowedUsers.Contains(ucplayer.Steam64))
+                        cost = ObjectTranslate("kit_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                    else if (kit.PremiumCost == -1)
+                        cost = Translate("kit_price_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
+                    else
+                        cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+            }
+            else if (kit.UnlockRequirements.Length != 0)
+            {
+                for (int i = 0; i < kit.UnlockRequirements.Length; i++)
+                {
+                    BaseUnlockRequirement req = kit.UnlockRequirements[i];
+                    if (req.CanAccess(ucplayer)) continue;
+                    cost = req.GetSignText(ucplayer);
+                    break;
+                }
+            }
+            if (!keepline) cost = "\n" + cost;
+            if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+            {
+                playercount = Translate("kit_unlimited", language).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+            }
+            else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
+            {
+                playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                    .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
+            }
+            else
+            {
+                playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                    .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
+            }
+            return Translate("sign_kit_request", language, name, cost, weapons, playercount);
         }
         public static string TranslateSign(string key, UCPlayer player, bool important = true)
         {
@@ -1446,6 +1437,40 @@ namespace Uncreated.Warfare
                         languages.Add(new LanguageSet(lang, pl));
                 }
                 players.Dispose();
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSets(params ulong[] exclude)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    for (int j = 0; j < exclude.Length; j++)
+                        if (pl.Steam64 == exclude[j]) goto next;
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                    next: ;
+                }
                 for (int i = 0; i < languages.Count; i++)
                 {
                     yield return languages[i];

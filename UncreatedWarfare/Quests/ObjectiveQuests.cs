@@ -79,7 +79,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _captures, ObjectiveCount);
+        protected override string Translate() => QuestData!.Translate(_player, _captures, ObjectiveCount);
     }
 }
 
@@ -191,7 +191,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
                     _currentXp = gameTotal;
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _currentXp, XPCount);
+        protected override string Translate() => QuestData!.Translate(_player, _currentXp, XPCount);
     }
 }
 [QuestData(EQuestType.TEAMMATES_DEPLOY_ON_RALLY)]
@@ -258,7 +258,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _rallyUses, UseCount);
+        protected override string Translate() => QuestData!.Translate(_player, _rallyUses, UseCount);
     }
 }
 [QuestData(EQuestType.WIN_GAMEMODE)]
@@ -345,7 +345,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, Gamemode.ToString());
+        protected override string Translate() => QuestData!.Translate(_player, _wins, WinCount, Gamemode.ToString());
     }
 }
 
@@ -421,6 +421,6 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _neutralizations, Neutralizations);
+        protected override string Translate() => QuestData!.Translate(_player, _neutralizations, Neutralizations);
     }
 }

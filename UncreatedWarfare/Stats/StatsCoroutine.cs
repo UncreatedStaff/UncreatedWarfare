@@ -17,7 +17,6 @@ namespace Uncreated.Warfare.Stats
         {
             while (true)
             {
-                // TODO: optimize
 #if DEBUG
                 IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

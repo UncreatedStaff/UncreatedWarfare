@@ -13,8 +13,6 @@
     <DebugType>pdbonly</DebugType>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\..\..\..\..\..\..\Libraries\UncreatedNetworking.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\UncreatedNetworking\UncreatedNetworking.csproj" />
   </ItemGroup>
 </Project>

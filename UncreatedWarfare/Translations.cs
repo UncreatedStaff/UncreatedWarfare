@@ -697,7 +697,11 @@ namespace Uncreated.Warfare
                 { "kit_price_tickets", "{0} Tickets" },
                 { "kit_price_dollars", "$ {0:N2}" },
                 { "kit_price_exclusive", "EXCLUSIVE" },
-                { "kit_required_level", "<color=#{3}>{2}</color> <color=#{1}>lvl {0}</color>" }, // {0} = level number
+                { "kit_required_level", "<color=#{1}>lvl {0}</color>" }, // {0} = level number
+                { "kit_required_rank", "<color=#{1}>{0}</color>" },
+                { "kit_required_quest", "<color=#{1}>Finish <color=#ffffff>{0}</color> quest</color>" },
+                { "kit_required_quest_unknown", "<color=#{1}>Finish <color=#ffffff>{0}</color> quest{2}</color>" },
+                { "kit_required_quest_done", "<color=#ff974d>Kit Unlocked</color>" },
                 { "kit_owned", "OWNED" },
                 { "kit_unlimited", "unlimited" },
                 { "kit_not_owned", "NOT OWNED" },
@@ -853,7 +857,7 @@ namespace Uncreated.Warfare
                 { "gain_xp", "+{0} XP" },
                 { "loss_xp", "-{0} XP" },
                 { "level_up_xp_1", "YOU HAVE REACHED" },
-                { "level_up_xp_2", "{0} - <color=#f7b88b>Level {1}</color>" },
+                { "level_up_xp_2", "<color=#f7b88b>Level {1}</color>" },
                 { "level_down_xp", "<color=#e08675>LEVEL LOST</color>" },
                 { "promoted_xp", "YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO" },
                 { "demoted_xp", "YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO" },

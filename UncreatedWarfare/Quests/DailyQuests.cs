@@ -96,8 +96,8 @@ public static class DailyQuests
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (tracker.QuestData != null)
-            L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.Translate() + "\"", ConsoleColor.Cyan);
-        ToastMessage.QueueMessage(tracker.Player, new ToastMessage("Daily Quest Completed!", tracker.Translate(), "good job man idk does this need filled?", EToastMessageSeverity.PROGRESS));
+            L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.GetDisplayString() + "\"", ConsoleColor.Cyan);
+        ToastMessage.QueueMessage(tracker.Player, new ToastMessage("Daily Quest Completed!", tracker.GetDisplayString(), "good job man idk does this need filled?", EToastMessageSeverity.PROGRESS));
         // todo UI or something, xp reward?
         tracker.Player.SendChat("Daily Quest Completed!");
     }
@@ -111,7 +111,7 @@ public static class DailyQuests
         {
             SaveProgress(t2);
         }
-        tracker.Player.SendChat("Daily Quest updated: " + tracker.Translate());
+        tracker.Player.SendChat("Daily Quest updated: " + tracker.GetDisplayString());
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>
     public static void CreateNewDailyQuests()

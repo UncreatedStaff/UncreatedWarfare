@@ -202,7 +202,13 @@ public static class RankManager
             for (int i = 0; i < nextRank.UnlockRequirements.Length; i++)
             {
                 if (!player.RankData[index + 1].Completions[i])
-                    QuestManager.CreateTracker(player, nextRank.UnlockRequirements[i]);
+                {
+                    BaseQuestTracker? tracker = QuestManager.CreateTracker(player, nextRank.UnlockRequirements[i]);
+                    if (tracker == null)
+                        L.LogDebug("Failed to create tracker " + (i + 1) + " for " + player.Steam64);
+                    else
+                        L.LogDebug(tracker.PresetKey + (i + 1).ToString() + " created for " + player.Steam64);
+                }
             }
         }
     }
@@ -334,11 +340,27 @@ public struct RankData
             return rtn;
         return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }
+    public string GetName(string lang)
+    {
+        if (NameTranslations == null) return "L" + Order.ToString(Data.Locale);
+        if (lang == null) lang = JSONMethods.DEFAULT_LANGUAGE;
+        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && NameTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+            return rtn;
+        return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
+    }
     public string GetAbbreviation(ulong player)
     {
         if (AbbreviationTranslations == null) return "L" + Order.ToString(Data.Locale);
         if (!Data.Languages.TryGetValue(player, out string lang))
             lang = JSONMethods.DEFAULT_LANGUAGE;
+        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+            return rtn;
+        return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
+    }
+    public string GetAbbreviation(string lang)
+    {
+        if (AbbreviationTranslations == null) return "L" + Order.ToString(Data.Locale);
+        if (lang == null) lang = JSONMethods.DEFAULT_LANGUAGE;
         if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
             return rtn;
         return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));

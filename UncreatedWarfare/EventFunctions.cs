@@ -39,7 +39,6 @@ namespace Uncreated.Warfare
             UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
             if (ucplayer != null)
             {
-                ucplayer.UpdateRankTeam(newteam);
                 PlayerManager.ApplyTo(ucplayer);
                 Data.Gamemode?.OnGroupChanged(ucplayer, oldGroup, newGroup, oldteam, newteam);
 
@@ -457,6 +456,7 @@ namespace Uncreated.Warfare
                 {
                     bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                     Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
+                    Task<int> t2 = Data.DatabaseManager.GetXP(player.Player.channel.owner.playerID.steamID.m_SteamID);
                     await UCWarfare.ToUpdate();
                     if (Data.Gamemode is ITeams)
                     {
@@ -472,6 +472,12 @@ namespace Uncreated.Warfare
                     await UCWarfare.ToPool();
                     await Data.DatabaseManager.RegisterLogin(player.Player);
                     await t1;
+                    if (ucplayer != null)
+                    {
+                        ucplayer.CachedXP = await t2;
+                        await UCWarfare.ToUpdate();
+                        Points.UpdateXPUI(ucplayer);
+                    }
                 }).ConfigureAwait(false);
 
                 if (ucplayer != null)

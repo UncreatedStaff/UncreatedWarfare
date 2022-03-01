@@ -98,7 +98,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
                 return;
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _vehDest, VehicleCount, VehicleType.ToString());
+        protected override string Translate() => QuestData!.Translate(_player, _vehDest, VehicleCount, VehicleType.ToString());
     }
 }
 
@@ -205,7 +205,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _travelled, Distance, Vehicles.GetCommaList());
+        protected override string Translate() => QuestData!.Translate(_player, _travelled, Distance, Vehicles.GetCommaList());
     }
 }
 [QuestData(EQuestType.TRANSPORT_PLAYERS)]
@@ -311,6 +311,6 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _travelled, Distance, Vehicles.GetCommaList());
+        protected override string Translate() => QuestData!.Translate(_player, _travelled, Distance, Vehicles.GetCommaList());
     }
 }

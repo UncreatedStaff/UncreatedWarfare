@@ -86,7 +86,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         public override void ResetToDefaults() => _kills = 0;
         // translate the description of the quest, pass any data that will show up in the description once we make them
         //                                         in this case, "Kill {_kills}/{KillThreshold} enemies."
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
     }
 }
 
@@ -166,7 +166,7 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON)]
@@ -250,7 +250,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
     }
 }
 [QuestData(EQuestType.KILL_FROM_RANGE_WITH_WEAPON)]
@@ -347,7 +347,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_KIT)]
@@ -427,7 +427,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
                     TellUpdated();
             }
         }
-        public override string Translate()
+        protected override string Translate()
         {
             return QuestData!.Translate(_player, _kills, KillThreshold, Kit.ToString());
         }
@@ -523,7 +523,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
                     TellUpdated();
             }
         }
-        public override string Translate()
+        protected override string Translate()
         {
             return QuestData!.Translate(_player, _kills, KillThreshold, Kit.ToString());
         }
@@ -610,7 +610,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
                 return;
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
     }
 }
 [QuestData(EQuestType.KILL_FROM_RANGE_WITH_CLASS)]
@@ -707,7 +707,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
                 return;
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON_CLASS)]
@@ -790,7 +790,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
                 return;
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_BRANCH)]
@@ -873,7 +873,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
                 return;
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Branch.ToString());
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Branch.ToString());
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_TURRET)]
@@ -966,7 +966,7 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_IN_SQUAD)]
@@ -1032,7 +1032,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_IN_FULL_SQUAD)]
@@ -1098,7 +1098,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
                     TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_ON_POINT_DEFENSE)]
@@ -1207,7 +1207,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
             else
                 TellUpdated();
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_ON_POINT_ATTACK)]
@@ -1316,7 +1316,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
             else
                 TellUpdated();
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
     }
 }
 [QuestData(EQuestType.KING_SLAYER)]
@@ -1386,11 +1386,10 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
                 {
                     if (PlayerManager.OnlinePlayers[i].GetTeam() == other)
                     {
-                        Point.RankData data = PlayerManager.OnlinePlayers[i].CurrentRank;
-                        if (data.CurrentXP > maxXp)
+                        if (PlayerManager.OnlinePlayers[i].CachedXP > maxXp)
                         {
                             ind = i;
-                            maxXp = data.CurrentXP;
+                            maxXp = PlayerManager.OnlinePlayers[i].CachedXP;
                         }
                     }
                 }
@@ -1415,7 +1414,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
                 }
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, _kingSlayer != null ? F.GetPlayerOriginalNames(_kingSlayer).CharacterName : "Unknown");
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, _kingSlayer != null ? F.GetPlayerOriginalNames(_kingSlayer).CharacterName : "Unknown");
     }
 }
 [QuestData(EQuestType.KILL_STREAK)]
@@ -1524,6 +1523,6 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
                 TellUpdated();
             }
         }
-        public override string Translate() => QuestData!.Translate(_player, _streakProgress, StreakLength, StreakCount);
+        protected override string Translate() => QuestData!.Translate(_player, _streakProgress, StreakLength, StreakCount);
     }
 }

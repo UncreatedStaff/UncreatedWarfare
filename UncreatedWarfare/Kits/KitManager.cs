@@ -266,7 +266,7 @@ namespace Uncreated.Warfare.Kits
 
             if (oldBranch != player.Branch)
             {
-                Points.OnBranchChanged(player, oldBranch, kit.Branch);
+                //Points.OnBranchChanged(player, oldBranch, kit.Branch);
             }
 
             OnKitChanged?.Invoke(player, kit, oldkit);

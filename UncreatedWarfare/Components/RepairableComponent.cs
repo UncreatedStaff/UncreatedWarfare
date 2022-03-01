@@ -104,7 +104,7 @@ namespace Uncreated.Warfare.Components
 
                     if (amount != 0)
                     {
-                        Points.AwardXP(player, amount, message.ToUpper());
+                        Points.AwardXPOld(player, amount, message.ToUpper());
                         Points.TryAwardDriverAssist(player.Player, amount, vehicleQuota);
                     }
                 }

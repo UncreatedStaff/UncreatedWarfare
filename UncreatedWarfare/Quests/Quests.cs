@@ -27,6 +27,11 @@ public abstract class BaseQuestData
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (Translations == null)
+        {
+            L.LogWarning("No translations for " + QuestType.ToString() + " quest.");
+            return QuestType.ToString() + " - " + string.Join("|", formatting);
+        }
         if (Translations.TryGetValue(language, out string v) || (!language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && Translations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out v)))
         {
             try
@@ -267,6 +272,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public UCPlayer Player => _player;
     public BaseQuestData QuestData;
     public IQuestPreset? Preset;
+    private string? _translationCache;
     protected bool isDisposed;
     //private bool _isComplete;
     protected abstract bool CompletedCheck { get; }
@@ -282,7 +288,25 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public virtual void Tick() { }
     protected virtual void Cleanup() { }
     public virtual void ResetToDefaults() { }
-    public abstract string Translate();
+
+    public string GetDisplayString()
+    {
+        try
+        {
+            if (_translationCache == null)
+                _translationCache = Translate();
+            return _translationCache;
+        }
+        catch (Exception ex)
+        {
+            _translationCache = null;
+            L.LogError("Error getting translation for quest " + QuestData.QuestType);
+            L.LogError(ex);
+            return QuestData.QuestType.ToString();
+        }
+    }
+
+    protected abstract string Translate();
     public abstract void WriteQuestProgress(Utf8JsonWriter writer);
     public abstract void OnReadProgressSaveProperty(string property, ref Utf8JsonReader reader);
     public void OnGameEnd()
@@ -300,6 +324,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     }
     public void TellUpdated(bool skipFlagUpdate = false)
     {
+        _translationCache = null;
         QuestManager.OnQuestUpdated(this, skipFlagUpdate);
     }
     public void Dispose()
