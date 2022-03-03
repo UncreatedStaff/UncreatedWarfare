@@ -192,7 +192,7 @@ namespace Uncreated.Warfare.Kits
                     Kit kit = ActiveObjects[i];
                     for (int j = 0; j < kit.UnlockRequirements.Length; j++)
                     {
-                        if (kit.UnlockRequirements[i] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
+                        if (kit.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
                         {
                             for (int r = 0; r < req.UnlockPresets.Length; r++)
                             {

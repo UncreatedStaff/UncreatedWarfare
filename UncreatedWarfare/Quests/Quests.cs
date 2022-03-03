@@ -311,7 +311,6 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public abstract void OnReadProgressSaveProperty(string property, ref Utf8JsonReader reader);
     public virtual void ManualComplete()
     {
-        TellUpdated();
         TellCompleted();
     }
     public void OnGameEnd()

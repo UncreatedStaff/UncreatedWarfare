@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Uncreated.Players;
 using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Ranks;
@@ -285,7 +286,6 @@ public static class RankManager
                 if (nextRank.UnlockRequirements[i] == key)
                 {
                     status.Completions[i] = true;
-                    // TODO: popup
                     L.Log("Finished rank requirement " + i.ToString());
                     write = true;
                     break;
@@ -299,13 +299,14 @@ public static class RankManager
             {
                 status.IsCompelete = true;
                 L.Log("Finished rank " + nextRank.GetName(0));
+                WriteRankData(player, player.RankData);
                 if (Assets.find(nextRank.QuestID) is QuestAsset quest)
                 {
                     player.Player.quests.sendRemoveQuest(quest.id);
+                    ToastMessage.QueueMessage(player, new ToastMessage("Quest complete: " + quest.questName, EToastMessageSeverity.BIG));
                     OnPlayerJoin(player);
                 }
             }
-            WriteRankData(player, player.RankData);
             return true;
         }
         return false;
