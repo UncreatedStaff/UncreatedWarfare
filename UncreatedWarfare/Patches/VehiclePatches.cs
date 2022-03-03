@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare

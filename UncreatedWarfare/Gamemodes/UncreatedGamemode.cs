@@ -535,7 +535,6 @@ namespace Uncreated.Warfare.Gamemodes
                     total += iter.Current.Value;
                     if (sel < total)
                     {
-                        L.Log($"    Chosen: {iter.Current.Key.Name}");
                         return iter.Current.Key;
                     }
                 }

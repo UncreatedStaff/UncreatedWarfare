@@ -638,7 +638,7 @@ namespace Uncreated.Warfare.Vehicles
                     {
                         try
                         {
-                            string val2 = string.Format(val, UCWarfare.GetColorHex(set.Next.CurrentRank.Level >= data.UnlockLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                            string val2 = string.Format(val, data.GetCostLine(set.Next));
                             Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val2);
                         }
                         catch (FormatException)
@@ -666,10 +666,7 @@ namespace Uncreated.Warfare.Vehicles
                 {
                     UCPlayer? pl = UCPlayer.FromSteamPlayer(player);
                     if (pl == null) return;
-                    string val2 = string.Format(val,
-                        UCWarfare.GetColorHex(pl.CurrentRank.Level >= data.UnlockLevel
-                            ? "vbs_level_low_enough"
-                            : "vbs_level_too_high"));
+                    string val2 = string.Format(val, data.GetCostLine(pl));
                     Data.SendChangeText.Invoke(spawn.LinkedSign.SignInteractable.GetNetId(), ENetReliability.Unreliable,
                         player.transportConnection, val2);
                 }

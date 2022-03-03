@@ -363,9 +363,9 @@ namespace Uncreated.Warfare.Networking
                     R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.HelperGroup, pl);
                 }
             }
-            internal static readonly NetCallRaw<Kit> CreateKit = new NetCallRaw<Kit>(ReceiveCreateKit, Kit.Read, Kit.Write);
+            internal static readonly NetCallRaw<Kit?> CreateKit = new NetCallRaw<Kit?>(ReceiveCreateKit, Kit.Read, Kit.Write);
             [NetCall(ENetCall.FROM_SERVER, 1109)]
-            internal static void ReceiveCreateKit(IConnection connection, Kit kit) => KitManager.CreateKit(kit);
+            internal static void ReceiveCreateKit(IConnection connection, Kit? kit) => KitManager.CreateKit(kit);
 
             internal static readonly NetCall RequestRankInfo = new NetCall(ReceiveRequestRankInfo);
 
@@ -439,7 +439,7 @@ namespace Uncreated.Warfare.Networking
             ReceiveKits.Invoke(connection, kits);
         }
         internal static readonly NetCallRaw<Kit?> ReceiveKit = new NetCallRaw<Kit?>(1117, Kit.Read, Kit.Write);
-        internal static readonly NetCallRaw<Kit[]> ReceiveKits = new NetCallRaw<Kit[]>(1118, Kit.ReadMany, Kit.WriteMany);
+        internal static readonly NetCallRaw<Kit?[]> ReceiveKits = new NetCallRaw<Kit?[]>(1118, Kit.ReadMany, Kit.WriteMany);
 
         internal static readonly NetCall<ushort> RequestItemInfo = new NetCall<ushort>(ReceiveItemInfoRequest);
         [NetCall(ENetCall.FROM_SERVER, 1119)]

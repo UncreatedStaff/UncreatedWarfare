@@ -127,6 +127,11 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, ItemName);
+        public override void ManualComplete()
+        {
+            _hasReceivedKey = true;
+            base.ManualComplete();
+        }
     }
 }
 

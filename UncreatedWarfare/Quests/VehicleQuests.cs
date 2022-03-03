@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.Quests.Types;
 public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, DestroyVehiclesQuest.State, DestroyVehiclesQuest>
 {
     public DynamicIntegerValue VehicleCount;
-    public DynamicEnumValue<EVehicleType> VehicleType;
+    public DynamicEnumValue<EVehicleType> VehicleType = new DynamicEnumValue<EVehicleType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
     public DynamicAssetValue<VehicleAsset> VehicleIDs = new DynamicAssetValue<VehicleAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
@@ -99,6 +99,11 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _vehDest, VehicleCount, VehicleType.ToString());
+        public override void ManualComplete()
+        {
+            _vehDest = VehicleCount;
+            base.ManualComplete();
+        }
     }
 }
 
@@ -206,6 +211,11 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _travelled, Distance, Vehicles.GetCommaList());
+        public override void ManualComplete()
+        {
+            _travelled = Distance;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.TRANSPORT_PLAYERS)]
@@ -312,5 +322,10 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _travelled, Distance, Vehicles.GetCommaList());
+        public override void ManualComplete()
+        {
+            _travelled = Distance;
+            base.ManualComplete();
+        }
     }
 }

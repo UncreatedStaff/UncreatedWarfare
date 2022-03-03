@@ -76,6 +76,11 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        public override void ManualComplete()
+        {
+            _fobsBuilt = BuildCount;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.BUILD_FOBS_NEAR_OBJECTIVES)]
@@ -184,6 +189,11 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
                 TellUpdated();
         }
         protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        public override void ManualComplete()
+        {
+            _fobsBuilt = BuildCount;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.BUILD_FOB_ON_ACTIVE_OBJECTIVE)]
@@ -278,6 +288,11 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
                 TellUpdated();
         }
         protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        public override void ManualComplete()
+        {
+            _fobsBuilt = BuildCount;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.DELIVER_SUPPLIES)]
@@ -344,6 +359,11 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _suppliesDelivered, SupplyCount);
+        public override void ManualComplete()
+        {
+            _suppliesDelivered = SupplyCount;
+            base.ManualComplete();
+        }
     }
     public enum ESupplyType : byte { AMMO, BUILD }
 }
@@ -426,7 +446,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
             writer.WriteProperty("buildables_built", _built);
         }
         // TODO redo this
-        [Obsolete("redo this function plz", error: true)]
+        [Obsolete("redo this function plz")]
         public void OnBuildableBuilt(UCPlayer player, BuildableData buildable)
         {
             if (player.Steam64 == _player.Steam64 && BuildableType.IsMatch(buildable.type) && BaseIDs.IsMatch(buildable.foundationID))
@@ -439,6 +459,11 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _built, Amount, BaseIDs.GetCommaList(), BuildableType);
+        public override void ManualComplete()
+        {
+            _built = Amount;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.TEAMMATES_DEPLOY_ON_FOB)]
@@ -508,5 +533,10 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _fobUses, UseCount);
+        public override void ManualComplete()
+        {
+            _fobUses = UseCount;
+            base.ManualComplete();
+        }
     }
 }

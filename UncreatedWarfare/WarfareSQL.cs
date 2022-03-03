@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.SQL;
+using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare
 {
@@ -147,53 +148,6 @@ namespace Uncreated.Warfare
                 updates +
                 $";",
                 parameters);
-        }
-        public void TryInitializeXP(ulong Steam64)
-        {
-            NonQuery(
-                    "INSERT INTO `xp` " +
-                    "(`Steam64`, `Branch`, `XP`) " +
-                    "VALUES" +
-                    "(@0, @1, 0), " +
-                    "(@0, @2, 0), " +
-                    "(@0, @3, 0) " +
-                    "ON DUPLICATE KEY UPDATE " +
-                    "`xp` = `xp`;",
-                    new object[] { Steam64, (int)EBranch.INFANTRY, (int)EBranch.ARMOR, (int)EBranch.AIRFORCE });
-        }
-        public int GetXP(ulong Steam64, EBranch branch)
-        {
-            int i = 0;
-            Query(
-                "SELECT `XP` " +
-                "FROM `xp` " +
-                "WHERE `Steam64` = @0 AND `Branch` = @1 " +
-                "LIMIT 1;",
-                new object[] { Steam64, branch },
-                R =>
-                {
-                    i = R.GetInt32(0);
-                });
-            return i;
-        }
-        public Dictionary<EBranch, int> GetAllXP(ulong Steam64)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            Dictionary<EBranch, int> levels = new Dictionary<EBranch, int>(6);
-            Query(
-                "SELECT `Branch`, `XP` " +
-                "FROM `xp` " +
-                "WHERE `Steam64` = @0;",
-                new object[] { Steam64 },
-                (R) =>
-                {
-                    levels.Add((EBranch)R.GetInt32(0), R.GetInt32(1));
-                });
-            if (levels.Count == 0)
-                levels.Add(EBranch.DEFAULT, 0);
-            return levels;
         }
         public int GetTeamwork(ulong Steam64)
         {
@@ -349,65 +303,18 @@ namespace Uncreated.Warfare
             if (ttl >= 0)
             {
                 await NonQueryAsync(
-                    "INSERT INTO `s2_levels` (`Steam64`, `XP`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `XP` = `XP` + @1;",
+                    "INSERT INTO `s2_levels` (`Steam64`, `Experience`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `Experience` = `Experience` + @1;",
                     new object[2] { player, amount });
                 return ttl;
             }
             else if (amount != 0)
             {
                 await NonQueryAsync(
-                    "INSERT INTO `s2_levels` (`Steam64`, `XP`) VALUES (@0, 0) ON DUPLICATE KEY UPDATE `XP` = 0;",
+                    "INSERT INTO `s2_levels` (`Steam64`, `Experience`) VALUES (@0, 0) ON DUPLICATE KEY UPDATE `Experience` = 0;",
                     new object[1] { player });
                 return 0;
             }
             else return old;
-        }
-
-
-
-        /// <returns>New XP Value</returns>
-        public int AddXP(ulong Steam64, EBranch branch, int amount)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            int oldBalance = GetXP(Steam64, branch);
-
-            if (amount == 0) return oldBalance;
-            if (amount > 0)
-            {
-                NonQuery(
-                    "INSERT INTO `xp` " +
-                    "(`Steam64`, `Branch`, `XP`) " +
-                    "VALUES(@0, @1, @2) " +
-                    "ON DUPLICATE KEY UPDATE " +
-                    "`xp` = `xp` + @2;",
-                    new object[] { Steam64, branch, amount });
-                return oldBalance + amount;
-            }
-            else
-            {
-                if (amount + oldBalance < 0)
-                {
-                    NonQuery(
-                        "INSERT INTO `xp` " +
-                        "(`Steam64`, `Branch`, `XP`) " +
-                        "VALUES(@0, @1, 0) " +
-                        "ON DUPLICATE KEY UPDATE " +
-                        "`XP` = 0;", // clamp to 0
-                        new object[] { Steam64, branch });
-                    return 0;
-                }
-                else
-                {
-                    NonQuery(
-                        "UPDATE `xp` SET " +
-                        "`XP` = @2 " +
-                        "WHERE `Steam64` = @0 AND `Branch` = @1;",
-                        new object[] { Steam64, branch, amount + oldBalance });
-                    return amount + oldBalance;
-                }
-            }
         }
         public void AddKill(ulong Steam64, ulong Team, int amount = 1)
         {

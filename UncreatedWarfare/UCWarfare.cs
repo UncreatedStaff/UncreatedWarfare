@@ -327,9 +327,6 @@ namespace Uncreated.Warfare
         }
         private void Update()
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             while (ThreadActionRequests.Count > 0)
             {
                 MainThreadTask.MainThreadResult? res = null;

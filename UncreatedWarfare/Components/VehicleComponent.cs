@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;

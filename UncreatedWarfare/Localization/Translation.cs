@@ -1219,13 +1219,11 @@ namespace Uncreated.Warfare
                 comp = spawn.BarricadeDrop.model.gameObject.GetComponent<VehicleSpawnComponent>();
             else return spawn.VehicleID.ToString("N");
             if (comp == null) return spawn.VehicleID.ToString("N");
-
-
             string finalformat =
                 $"<color=#{UCWarfare.GetColorHex("vbs_name")}>{(Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N"))}</color>\n" +
                 $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{Translate("vbs_branch_" + data.Branch.ToString().ToLower(), language)}</color>\n" +
                 (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>" : string.Empty) +
-                $"\n<color=#{{0}}>{(data.UnlockLevel <= 0 ? string.Empty : Translate("vbs_level_prefix", language) + " " + data.UnlockLevel.ToString(Data.Locale))}</color>\n";
+                $"\n{{0}}\n";
             if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle) || !vehicle.TryGetComponent(out SpawnedVehicleComponent vehcomp)) // vehicle is dead
             {
                 return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_dead")}>{Translate("vbs_state_dead", language, Mathf.FloorToInt(comp.respawnTimeRemaining / 60f).ToString(), (Mathf.FloorToInt(comp.respawnTimeRemaining) % 60).ToString("D2"))}</color>";

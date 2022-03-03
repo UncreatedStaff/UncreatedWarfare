@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Quests.Types;
@@ -80,6 +81,11 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _captures, ObjectiveCount);
+        public override void ManualComplete()
+        {
+            _captures = ObjectiveCount;
+            base.ManualComplete();
+        }
     }
 }
 
@@ -183,7 +189,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
                 }
             }
         }
-        public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal, EBranch branch)
+        public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal)
         {
             if (Gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
@@ -192,6 +198,12 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _currentXp, XPCount);
+        public override void ManualComplete()
+        {
+            _currentXp = 0;
+            _gamesCompleted = GameCount;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.TEAMMATES_DEPLOY_ON_RALLY)]
@@ -259,6 +271,11 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _rallyUses, UseCount);
+        public override void ManualComplete()
+        {
+            _rallyUses = UseCount;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.WIN_GAMEMODE)]
@@ -346,6 +363,11 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _wins, WinCount, Gamemode.ToString());
+        public override void ManualComplete()
+        {
+            _wins = WinCount;
+            base.ManualComplete();
+        }
     }
 }
 
@@ -422,5 +444,10 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _neutralizations, Neutralizations);
+        public override void ManualComplete()
+        {
+            _neutralizations = Neutralizations;
+            base.ManualComplete();
+        }
     }
 }

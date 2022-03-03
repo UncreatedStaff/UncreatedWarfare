@@ -185,7 +185,7 @@ namespace Uncreated.Warfare.Components
                     else
                         amount = entry.Value * Points.XPConfig.ShovelXP;
 
-                    Points.AwardXPOld(player, amount, structureName.ToUpper() + " BUILT");
+                    Points.AwardXP(player, amount, structureName.ToUpper() + " BUILT");
                     if (contribution > 0.3333f)
                         QuestManager.OnBuildableBuilt(player, Buildable);
                 }

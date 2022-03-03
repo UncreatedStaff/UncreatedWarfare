@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Networking.Encoding;
+using Uncreated.Warfare.Kits;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Point

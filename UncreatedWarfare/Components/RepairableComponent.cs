@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using UnityEngine;
 
@@ -104,7 +105,7 @@ namespace Uncreated.Warfare.Components
 
                     if (amount != 0)
                     {
-                        Points.AwardXPOld(player, amount, message.ToUpper());
+                        Points.AwardXP(player, amount, message.ToUpper());
                         Points.TryAwardDriverAssist(player.Player, amount, vehicleQuota);
                     }
                 }

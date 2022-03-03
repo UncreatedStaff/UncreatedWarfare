@@ -197,30 +197,55 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                     {
-                        RankData currentRank = ucplayer.CurrentRank;
-
-                        if (currentRank.Level < kit.UnlockLevel && !UCWarfare.Config.OverrideKitRequirements)
+                        for (int i = 0; i < kit.UnlockRequirements.Length; i++)
                         {
-                            ucplayer.Message("request_kit_e_wronglevel", Translation.TranslateBranch(kit.UnlockBranch, ucplayer).ToUpper(), kit.UnlockLevel.ToString(Data.Locale));
-                        }
-                        else
-                        {
-                            if (kit.Class == EClass.SQUADLEADER && ucplayer.Squad is null)
+                            BaseUnlockRequirement req = kit.UnlockRequirements[i];
+                            if (req.CanAccess(ucplayer))
+                                continue;
+                            if (req is LevelUnlockRequirement level)
                             {
-                                if (SquadManager.Squads.Count(x => x.Team == team) < 8)
+                                ucplayer.Message("request_kit_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
+                            }
+                            else if (req is RankUnlockRequirement rank)
+                            {
+                                ref Ranks.RankData data = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
+                                if (!success)
+                                    L.LogWarning("Invalid rank order in kit requirement: " + kit.Name + " :: " + rank.UnlockRank + ".");
+                                ucplayer.Message("request_kit_e_wrongrank", data.GetName(ucplayer.Steam64), data.Color ?? UCWarfare.GetColorHex("default"));
+                            }
+                            else if (req is QuestUnlockRequirement quest)
+                            {
+                                if (Assets.find(quest.QuestID) is QuestAsset asset)
                                 {
-                                    var squad = SquadManager.CreateSquad(ucplayer, ucplayer.GetTeam(), ucplayer.Branch);
-                                    ucplayer.Message("squad_created", squad.Name);
+                                    ucplayer.Message("request_kit_e_quest_incomplete", asset.questName);
+                                    ucplayer.Player.quests.sendAddQuest(asset.id);
                                 }
                                 else
                                 {
-                                    player.SendChat("squad_too_many");
-                                    return;
+                                    ucplayer.Message("request_kit_e_quest_incomplete", kit.Name);
                                 }
                             }
-
-                            GiveKit(ucplayer, kit);
+                            else
+                            {
+                                L.LogWarning("Unhandled kit requirement type: " + req.GetType().Name);
+                            }
+                            return;
                         }
+                        if (kit.Class == EClass.SQUADLEADER && ucplayer.Squad == null)
+                        {
+                            if (SquadManager.Squads.Count(x => x.Team == team) < 8)
+                            {
+                                // create a squad automatically if someone requests a squad leader kit.
+                                Squad squad = SquadManager.CreateSquad(ucplayer, ucplayer.GetTeam(), ucplayer.Branch);
+                                ucplayer.Message("squad_created", squad.Name);
+                            }
+                            else
+                            {
+                                player.SendChat("squad_too_many");
+                                return;
+                            }
+                        }
+                        GiveKit(ucplayer, kit);
                     }
                 }
             }
@@ -254,7 +279,7 @@ namespace Uncreated.Warfare.Commands
             }
             CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.data.RequestKitCooldown);
 
-            PlayerManager.ApplyToOnline();
+            PlayerManager.ApplyTo(ucplayer);
         }
         private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle) => RequestVehicle(ucplayer, vehicle, ucplayer.GetTeam());
         private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, ulong team)
@@ -317,32 +342,50 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
             }
-            
             if (data.IsDelayed(out Delay delay) && delay.type != EDelayType.NONE)
             {
                 RequestVehicleIsDelayed(ucplayer, ref delay, team, data);
                 return;
             }
-
-            RankData currentRank = ucplayer.Ranks[data.UnlockBranch == EBranch.DEFAULT ? EBranch.INFANTRY : data.UnlockBranch];
-
-            if (currentRank.Level < data.UnlockLevel && !UCWarfare.Config.OverrideKitRequirements)
+            for (int i = 0; i < data.UnlockRequirements.Length; i++)
             {
-                ucplayer.Message("request_vehicle_e_wronglevel", Translation.TranslateBranch(data.UnlockBranch, ucplayer).ToUpper(), data.UnlockLevel.ToString(Data.Locale));
+                BaseUnlockRequirement req = data.UnlockRequirements[i];
+                if (req.CanAccess(ucplayer))
+                    continue;
+                if (req is LevelUnlockRequirement level)
+                {
+                    ucplayer.Message("request_vehicle_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
+                }
+                else if (req is RankUnlockRequirement rank)
+                {
+                    ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
+                    if (!success)
+                        L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + rank.UnlockRank + ".");
+                    ucplayer.Message("request_vehicle_e_wrongrank", rankData.GetName(ucplayer.Steam64), rankData.Color ?? UCWarfare.GetColorHex("default"));
+                }
+                else if (req is QuestUnlockRequirement quest)
+                {
+                    if (Assets.find(quest.QuestID) is QuestAsset asset)
+                    {
+                        ucplayer.Message("request_vehicle_e_quest_incomplete", asset.questName);
+                        ucplayer.Player.quests.sendAddQuest(asset.id);
+                    }
+                    else
+                    {
+                        ucplayer.Message("request_vehicle_e_quest_incomplete", vehicle.asset.name);
+                    }
+                }
+                else
+                {
+                    L.LogWarning("Unhandled vehicle requirement type: " + req.GetType().Name);
+                }
                 return;
             }
-            if (ucplayer.CurrentRank.Level < data.UnlockLevel)
-            {
-                ucplayer.Message("request_vehicle_e_wronglevel", data.UnlockLevel.ToString(Data.Locale));
-                return;
-            }
-            else if (vehicle.asset != default && vehicle.asset.canBeLocked)
+            if (vehicle.asset != default && vehicle.asset.canBeLocked)
             {
                 vehicle.tellLocked(ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
 
                 VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
-
-                VehicleBay.IncrementRequestCount(vehicle.asset.GUID, true);
 
                 if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
                 {
@@ -379,7 +422,6 @@ namespace Uncreated.Warfare.Commands
             else
             {
                 ucplayer.Message("request_vehicle_e_alreadyrequested");
-                return;
             }
         }
         private void RequestVehicleIsDelayed(UCPlayer ucplayer, ref Delay delay, ulong team, VehicleData data)

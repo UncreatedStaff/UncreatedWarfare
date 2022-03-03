@@ -67,7 +67,12 @@ namespace Uncreated.Warfare.Kits
             return "[]";
         }
         public static Kit CreateKit(string kitName, List<KitItem> items, List<KitClothing> clothes) => AddObjectToSave(KitEx.Construct(kitName, items, clothes));
-        public static Kit CreateKit(Kit kit) => AddObjectToSave(kit);
+        public static Kit? CreateKit(Kit? kit)
+        {
+            if (kit != null)
+                AddObjectToSave(kit);
+            return kit;
+        }
         public static void DeleteKit(string kitName) => RemoveWhere(k => k.Name.ToLower() == kitName.ToLower());
         public static void DeleteAllKits() => RemoveAllObjectsFromSave();
         public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate) => GetObjectsWhere(predicate);
@@ -147,25 +152,30 @@ namespace Uncreated.Warfare.Kits
 #endif
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
-                if (!ActiveObjects[i].IsLoadout && !ActiveObjects[i].IsPremium && ActiveObjects[i].RequiredQuests != null && ActiveObjects[i].RequiredQuests.Length > 0)
+                if (!ActiveObjects[i].IsLoadout && ActiveObjects[i].UnlockRequirements != null)
                 {
                     Kit kit = ActiveObjects[i];
-                    bool isCompleted = true;
-                    for (int j = 0; j < kit.RequiredQuests.Length; j++)
+                    for (int j = 0; j < kit.UnlockRequirements.Length; j++)
                     {
-                        bool ic = player.QuestComplete(kit.RequiredQuests[j]);
-                        isCompleted &= ic;
-                        if (!ic)
+                        if (kit.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
                         {
-                            QuestManager.CreateTracker(player, kit.RequiredQuests[j]);
+                            if (Assets.find(req.QuestID) is QuestAsset quest)
+                            {
+                                player.Player.quests.sendAddQuest(quest.id);
+                            }
+                            else
+                            {
+                                L.LogWarning("Unknown quest id " + req.QuestID + " in kit requirement for " + kit.Name);
+                            }
+                            for (int r = 0; r < req.UnlockPresets.Length; r++)
+                            {
+                                BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
+                                if (tracker == null)
+                                {
+                                    L.LogWarning("Failed to create tracker for kit " + kit.Name + ", player " + player.Name.PlayerName);
+                                }
+                            }
                         }
-                    }
-                    if (isCompleted) continue;
-                    if (kit.QuestID != default)
-                    {
-                        QuestAsset? asset = Assets.find<QuestAsset>(kit.QuestID);
-                        if (asset != null)
-                            player.Player.quests.sendAddQuest(asset.id);
                     }
                 }
             }
@@ -177,26 +187,21 @@ namespace Uncreated.Warfare.Kits
             bool affectedKit = false;
             for (int i = 0; i < ActiveObjects.Count; i++)
             {
-                if (!ActiveObjects[i].IsLoadout && !ActiveObjects[i].IsPremium && ActiveObjects[i].RequiredQuests != null && ActiveObjects[i].RequiredQuests.Length > 0)
+                if (!ActiveObjects[i].IsLoadout && ActiveObjects[i].UnlockRequirements != null)
                 {
                     Kit kit = ActiveObjects[i];
-                    for (int j = 0; j < kit.RequiredQuests.Length; j++)
-                        if (kit.RequiredQuests[j] == presetKey)
-                            goto next;
-
-                    continue;
-                next:
-                    bool isCompleted = true;
-                    affectedKit = true;
-                    for (int j = 0; j < kit.RequiredQuests.Length; j++)
-                        isCompleted &= player.QuestComplete(kit.RequiredQuests[j]);
-                    if (isCompleted)
+                    for (int j = 0; j < kit.UnlockRequirements.Length; j++)
                     {
-                        if (Assets.find(kit.QuestID) is QuestAsset asset)
+                        if (kit.UnlockRequirements[i] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
                         {
-                            player.Player.quests.sendRemoveQuest(asset.id);
+                            for (int r = 0; r < req.UnlockPresets.Length; r++)
+                            {
+                                if (req.UnlockPresets[r] == presetKey)
+                                {
+                                    return true;
+                                }
+                            }
                         }
-                        RequestSigns.InvokeLangUpdateForSignsOfKit(player.Player.channel.owner, kit.Name);
                     }
                 }
             }
@@ -205,12 +210,45 @@ namespace Uncreated.Warfare.Kits
 
         public static void GiveKit(UCPlayer player, Kit kit)
         {
+            if (kit == null)
+                return;
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (kit == null)
-                return;
-
+            if (HasKit(player, out Kit oldKit))
+            {
+                if (oldKit.Skillsets != null)
+                {
+                    for (int i = 0; i < oldKit.Skillsets.Length; i++)
+                    {
+                        ref Skillset skillset = ref kit.Skillsets[i];
+                        for (int j = 0; j < Skillset.DEFAULT_SKILLSETS.Length; j++)
+                        {
+                            ref Skillset skillset2 = ref Skillset.DEFAULT_SKILLSETS[j];
+                            if (skillset2.TypeEquals(ref skillset))
+                            {
+                                for (int k = 0; k < kit.Skillsets.Length; k++)
+                                {
+                                    ref Skillset skillset3 = ref kit.Skillsets[j];
+                                    if (skillset2 == skillset3) goto next;
+                                }
+                                skillset2.ServerSet(player);
+                                goto next;
+                            }
+                        }
+                        player.Player.skills.ServerSetSkillLevel(skillset.SpecialityIndex, skillset.SkillIndex, 0);
+                        next:;
+                    }
+                }
+            }
+            if (kit.Skillsets != null)
+            {
+                for (int i = 0; i < kit.Skillsets.Length; i++)
+                {
+                    ref Skillset skillset = ref kit.Skillsets[i];
+                    skillset.ServerSet(player);
+                }
+            }
             UCInventoryManager.ClearInventory(player);
             foreach (KitClothing clothing in kit.Clothes)
             {
@@ -409,7 +447,7 @@ namespace Uncreated.Warfare.Kits
                     !k.IsPremium &&
                     !k.IsLoadout &&
                     k.TeamLimit == 1 &&
-                    k.UnlockLevel == 0
+                    k.UnlockRequirements.Length == 0
                 ).FirstOrDefault();
 
             if (rifleman != null)
@@ -536,7 +574,8 @@ namespace Uncreated.Warfare.Kits
                 Class = EClass.NONE,
                 Branch = EBranch.DEFAULT,
                 Team = 0,
-                UnlockLevel = 0,
+                UnlockRequirements = new BaseUnlockRequirement[0],
+                Skillsets = new Skillset[0],
                 TicketCost = 1,
                 IsPremium = false,
                 PremiumCost = 0,

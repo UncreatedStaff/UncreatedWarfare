@@ -54,8 +54,6 @@ public class Kit
     public float TeamLimit;
     [JsonSettable]
     public float Cooldown;
-    public Guid[] RequiredQuests;
-    public Guid QuestID;
     public List<KitItem> Items;
     public List<KitClothing> Clothes;
     public List<ulong> AllowedUsers;
@@ -81,7 +79,6 @@ public class Kit
         AllowedUsers = new List<ulong>();
         SignTexts = new Dictionary<string, string> { { "en-us", "Default" } };
         Weapons = string.Empty;
-        RequiredQuests = new Guid[0];
     }
     /// <summary>empty constructor</summary>
     public Kit(bool dummy) { }
@@ -143,13 +140,13 @@ public class Kit
         kit.TicketCost = R.ReadUInt16();
         return kit;
     }
-    public static void WriteMany(ByteWriter W, Kit[] kits)
+    public static void WriteMany(ByteWriter W, Kit?[] kits)
     {
         W.Write(kits.Length);
         for (int i = 0; i < kits.Length; i++)
             Write(W, kits[i]);
     }
-    public static void Write(ByteWriter W, Kit kit)
+    public static void Write(ByteWriter W, Kit? kit)
     {
         if (kit == null)
         {
@@ -245,9 +242,6 @@ public class Kit
         writer.WritePropertyName(nameof(Cooldown));
         writer.WriteNumberValue(Cooldown);
 
-        writer.WritePropertyName(nameof(QuestID));
-        writer.WriteStringValue(QuestID.ToString());
-
         writer.WritePropertyName(nameof(Items));
         writer.WriteStartArray();
         for (int i = 0; i < Items.Count; i++)
@@ -275,15 +269,7 @@ public class Kit
             writer.WriteNumberValue(AllowedUsers[i]);
         }
         writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(RequiredQuests));
-        writer.WriteStartArray();
-        for (int i = 0; i < RequiredQuests.Length; i++)
-        {
-            writer.WriteStringValue(RequiredQuests[i].ToString());
-        }
-        writer.WriteEndArray();
-
+        
         writer.WritePropertyName(nameof(SignTexts));
         writer.WriteStartObject();
         foreach (KeyValuePair<string, string> kvp in SignTexts)
@@ -363,9 +349,6 @@ public class Kit
                         case nameof(IsLoadout):
                             IsLoadout = reader.GetBoolean();
                             break;
-                        case nameof(QuestID):
-                            reader.TryGetGuid(out QuestID);
-                            break;
                         case nameof(TeamLimit):
                             TeamLimit = reader.GetSingle();
                             break;
@@ -396,16 +379,6 @@ public class Kit
                                     Items.Add(item);
                                 }
                                 while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(RequiredQuests):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                List<Guid> guids = new List<Guid>(3);
-                                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                                    if (reader.TryGetGuid(out Guid guid))
-                                        guids.Add(guid);
-                                RequiredQuests = guids.ToArray();
                             }
                             break;
                         case nameof(Clothes):
@@ -440,12 +413,21 @@ public class Kit
         }
     }
 }
-public readonly struct Skillset
+public readonly struct Skillset : IEquatable<Skillset>
 {
     public readonly EPlayerSpeciality Speciality;
     public readonly EPlayerOffense Offense;
     public readonly EPlayerDefense Defense;
     public readonly EPlayerSupport Support;
+
+    public static readonly Skillset[] DEFAULT_SKILLSETS = new Skillset[]
+    {
+        new Skillset(EPlayerOffense.SHARPSHOOTER, 7),
+        new Skillset(EPlayerOffense.PARKOUR, 2),
+        new Skillset(EPlayerOffense.EXERCISE, 1),
+        new Skillset(EPlayerOffense.CARDIO, 5),
+        new Skillset(EPlayerDefense.VITALITY, 5),
+    };
     public readonly int SpecialityIndex => (int)Speciality;
     public readonly int SkillIndex => Speciality switch
     {
@@ -483,7 +465,6 @@ public readonly struct Skillset
         player.Player.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
     public static Skillset Read(ref Utf8JsonReader reader)
     {
-        bool f1 = false;
         bool f2 = false;
         bool f3 = false;
         EPlayerSpeciality spec = default;
@@ -498,39 +479,31 @@ public readonly struct Skillset
             {
                 switch (property)
                 {
-                    case "speciality":
-                        string? value = reader.GetString();
-                        if (value != null)
-                        {
-                            Enum.TryParse(value, true, out spec);
-                            f1 = true;
-                        }
-                        break;
                     case "offense":
+                        spec = EPlayerSpeciality.OFFENSE;
                         string? value2 = reader.GetString();
                         if (value2 != null)
                         {
                             Enum.TryParse(value2, true, out offense);
-                            if (!f1 || spec == EPlayerSpeciality.OFFENSE)
-                                f2 = true;
+                            f2 = true;
                         }
                         break;
                     case "defense":
+                        spec = EPlayerSpeciality.DEFENSE;
                         string? value3 = reader.GetString();
                         if (value3 != null)
                         {
                             Enum.TryParse(value3, true, out defense);
-                            if (!f1 || spec == EPlayerSpeciality.DEFENSE)
-                                f2 = true;
+                            f2 = true;
                         }
                         break;
                     case "support":
+                        spec = EPlayerSpeciality.SUPPORT;
                         string? value4 = reader.GetString();
                         if (value4 != null)
                         {
                             Enum.TryParse(value4, true, out support);
-                            if (!f1 || spec == EPlayerSpeciality.SUPPORT)
-                                f2 = true;
+                            f2 = true;
                         }
                         break;
                     case "level":
@@ -542,7 +515,7 @@ public readonly struct Skillset
                 }
             }
         }
-        if (f1 && f2 && f3)
+        if (f2 && f3)
         {
             switch (spec)
             {
@@ -559,21 +532,71 @@ public readonly struct Skillset
     }
     public static void Write(Utf8JsonWriter writer, ref Skillset skillset)
     {
-        writer.WriteString("speciality", skillset.Speciality.ToString());
         switch (skillset.Speciality)
         {
             case EPlayerSpeciality.OFFENSE:
                 writer.WriteString("offense", skillset.Offense.ToString());
                 break;
             case EPlayerSpeciality.DEFENSE:
-                writer.WriteString("offense", skillset.Defense.ToString());
+                writer.WriteString("defense", skillset.Defense.ToString());
                 break;
             case EPlayerSpeciality.SUPPORT:
-                writer.WriteString("offense", skillset.Support.ToString());
+                writer.WriteString("support", skillset.Support.ToString());
                 break;
         }
         writer.WriteNumber("level", skillset.Level);
     }
+    public override bool Equals(object? obj) => obj is Skillset skillset && EqualsHelper(ref skillset, true);
+    private bool EqualsHelper(ref Skillset skillset, bool compareLevel)
+    {
+        if (compareLevel && skillset.Level != Level) return false;
+        if (skillset.Speciality == Speciality)
+        {
+            switch (Speciality)
+            {
+                case EPlayerSpeciality.OFFENSE:
+                    return skillset.Offense == Offense;
+                case EPlayerSpeciality.DEFENSE:
+                    return skillset.Defense == Defense;
+                case EPlayerSpeciality.SUPPORT:
+                    return skillset.Support == Support;
+            }
+        }
+        return false;
+    }
+    public override string ToString()
+    {
+        return Speciality switch
+        {
+            EPlayerSpeciality.OFFENSE => "Offense: " + Offense.ToString(),
+            EPlayerSpeciality.DEFENSE => "Defense: " + Defense.ToString(),
+            EPlayerSpeciality.SUPPORT => "Support: " + Support.ToString(),
+            _ => "Invalid object."
+        };
+    }
+    public override int GetHashCode()
+    {
+        int hashCode = 1232939970;
+        hashCode = hashCode * -1521134295 + Speciality.GetHashCode();
+        hashCode = hashCode * -1521134295 + Level.GetHashCode();
+        switch (Speciality)
+        {
+            case EPlayerSpeciality.OFFENSE:
+                hashCode = hashCode * -1521134295 + Offense.GetHashCode();
+                break;
+            case EPlayerSpeciality.DEFENSE:
+                hashCode = hashCode * -1521134295 + Defense.GetHashCode();
+                break;
+            case EPlayerSpeciality.SUPPORT:
+                hashCode = hashCode * -1521134295 + Support.GetHashCode();
+                break;
+        }
+        return hashCode;
+    }
+    public bool Equals(Skillset other) => EqualsHelper(ref other, true);
+    public bool TypeEquals(ref Skillset skillset) => EqualsHelper(ref skillset, false);
+    public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(ref b, true);
+    public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(ref b, true);
 }
 
 public abstract class BaseUnlockRequirement
@@ -599,7 +622,7 @@ public abstract class BaseUnlockRequirement
     {
         if (!hasReflected) Reflect();
         BaseUnlockRequirement? t = null;
-        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        while (reader.TokenType == JsonTokenType.PropertyName || (reader.Read() && reader.TokenType == JsonTokenType.PropertyName))
         {
             string? property = reader.GetString();
             if (reader.Read() && property != null)
@@ -656,7 +679,6 @@ public class LevelUnlockRequirement : BaseUnlockRequirement
         int lvl = Point.Points.GetLevel(player.CachedXP);
         return Translation.Translate("kit_required_level", player.Steam64, UnlockLevel.ToString(Data.Locale), lvl >= UnlockLevel ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
     }
-
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
         if (property.Equals("unlock_level", StringComparison.OrdinalIgnoreCase))
@@ -681,9 +703,9 @@ public class RankUnlockRequirement : BaseUnlockRequirement
     public override string GetSignText(UCPlayer player)
     {
         ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
-        return Translation.Translate("kit_required_rank", player.Steam64, data.GetAbbreviation(player.Steam64), success && data.Order >= UnlockRank ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
+        ref Ranks.RankData reqData = ref Ranks.RankManager.GetRank(UnlockRank, out _);
+        return Translation.Translate("kit_required_rank", player.Steam64, reqData.ColorizedName(player.Steam64), success && data.Order >= reqData.Order ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
     }
-
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
         if (property.Equals("unlock_rank", StringComparison.OrdinalIgnoreCase))
@@ -711,7 +733,6 @@ public class QuestUnlockRequirement : BaseUnlockRequirement
         }
         return true;
     }
-
     public override string GetSignText(UCPlayer player)
     {
         bool access = CanAccess(player);
@@ -721,9 +742,8 @@ public class QuestUnlockRequirement : BaseUnlockRequirement
                 access ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
         }
         return Translation.Translate(access ? "kit_required_quest_done" : "kit_required_quest_unknown", player, UnlockPresets.Length.ToString(Data.Locale), 
-            access ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
+            access ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"), UnlockPresets.Length.S());
     }
-
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
         if (property.Equals("unlock_presets", StringComparison.OrdinalIgnoreCase))
@@ -739,9 +759,10 @@ public class QuestUnlockRequirement : BaseUnlockRequirement
                 UnlockPresets = ids.ToArray();
             }
         }
-        else if (property.Equals("quest_id"))
+        else if (property.Equals("quest_id", StringComparison.OrdinalIgnoreCase))
         {
-            reader.TryGetGuid(out QuestID);
+            if (!reader.TryGetGuid(out QuestID))
+                L.LogWarning("Failed to convert " + property + " with value \"" + (reader.GetString() ?? "null") + "\" to a GUID.");
         }
     }
     protected override void WriteProperties(Utf8JsonWriter writer)

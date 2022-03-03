@@ -497,8 +497,10 @@ namespace Uncreated.Warfare
                         Steam64 = ucplayer.Steam64,
                         Team = player.GetTeamByte()
                     });
-                    Ranks.RankManager.OnPlayerJoin(ucplayer);
                     Quests.DailyQuests.RegisterDailyTrackers(ucplayer);
+                    KitManager.OnPlayerJoinedQuestHandling(ucplayer);
+                    VehicleBay.OnPlayerJoinedQuestHandling(ucplayer);
+                    Ranks.RankManager.OnPlayerJoin(ucplayer);
                     IconManager.DrawNewMarkers(ucplayer, false);
                 }
             }

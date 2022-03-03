@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
@@ -1583,7 +1584,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             }
             else if (value.type == EDynamicValueType.ANY && _isKitSelector)
             {
-                IEnumerable<Kit> kits = Kits.KitManager.ActiveObjects.Where(x => !x.IsPremium && !x.IsLoadout);
+                IEnumerable<Kit> kits = KitManager.ActiveObjects.Where(x => !x.IsPremium && !x.IsLoadout);
                 int ct = kits.Count();
                 int el = UnityEngine.Random.Range(0, ct);
                 _value = kits.ElementAt(el).Name;
@@ -2720,7 +2721,7 @@ public interface INotifyBunkerSpawn : INotifyTracker
 }
 public interface INotifyGainedXP : INotifyTracker
 {
-    public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal, EBranch branch);
+    public void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal);
 }
 public interface INotifyFOBBuilt : INotifyTracker
 {

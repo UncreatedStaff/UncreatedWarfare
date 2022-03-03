@@ -5,6 +5,7 @@ using System.Linq;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;
@@ -275,7 +276,7 @@ namespace Uncreated.Warfare.Components
                                 tw *= 2;
                             }
 
-                            Points.AwardXPOld(creator, groupsUnloaded * xp, Translation.Translate("xp_supplies_unloaded", creator));
+                            Points.AwardXP(creator, groupsUnloaded * xp, Translation.Translate("xp_supplies_unloaded", creator));
                             Points.AwardTW(creator, groupsUnloaded * tw);
                         }
                     }
@@ -371,7 +372,7 @@ namespace Uncreated.Warfare.Components
                                     component.Quota += 0.33F;
                                 }
 
-                                Points.AwardXPOld(player, xp, Translation.Translate("xp_supplies_unloaded", player));
+                                Points.AwardXP(player, xp, Translation.Translate("xp_supplies_unloaded", player));
                                 Points.AwardTW(player, tw);
 
                                 player.SuppliesUnloaded = 0;

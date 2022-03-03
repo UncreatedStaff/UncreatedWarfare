@@ -249,8 +249,7 @@ namespace Uncreated.Warfare
                                                     if (VehicleSpawner.ActiveObjects[i].LinkedSign == vbsign)
                                                     {
                                                         if (VehicleBay.VehicleExists(VehicleSpawner.ActiveObjects[i].VehicleID, out VehicleData data))
-                                                            newtext = string.Format(Translation.TranslateVBS(VehicleSpawner.ActiveObjects[i], data, lang),
-                                                                UCWarfare.GetColorHex(pl.CurrentRank.Level >= data.UnlockLevel ? "vbs_level_low_enough" : "vbs_level_too_high"));
+                                                            newtext = string.Format(Translation.TranslateVBS(VehicleSpawner.ActiveObjects[i], data, lang), data.GetCostLine(pl));
                                                         else
                                                             newtext = Translation.TranslateSign(newtext, lang, pl, false);
                                                         break;

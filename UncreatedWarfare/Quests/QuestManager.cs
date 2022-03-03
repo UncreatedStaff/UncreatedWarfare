@@ -249,6 +249,7 @@ public static class QuestManager
             }
             // TODO: Update a UI and check for giving levels, etc.
         }
+        DeregisterTracker(tracker);
     }
     public static void OnQuestUpdated(BaseQuestTracker tracker, bool skipFlagUpdate = false)
     {
@@ -544,6 +545,12 @@ public static class QuestManager
 #endif
         string folder = ReadWrite.PATH + ServerSavedata.directory + "\\" + Provider.serverID + "\\Players\\" + player.Steam64.ToString(Data.Locale) +
                         "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\Quests\\";
+        if (!Directory.Exists(folder))
+        {
+            Directory.CreateDirectory(folder);
+            player._completedQuests = new List<Guid>(0);
+            return;
+        }
         string[] files = Directory.GetFiles(folder, "*.json", SearchOption.TopDirectoryOnly);
         player._completedQuests = new List<Guid>(16);
         for (int fi = 0; fi < files.Length; fi++)
@@ -639,10 +646,10 @@ public static class QuestManager
         foreach (INotifyGameOver tracker in RegisteredTrackers.OfType<INotifyGameOver>())
             tracker.OnGameOver(winner);
     }
-    public static void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal, EBranch branch)
+    public static void OnGainedXP(UCPlayer player, int amtGained, int total, int gameTotal)
     {
         foreach (INotifyGainedXP tracker in RegisteredTrackers.OfType<INotifyGainedXP>())
-            tracker.OnGainedXP(player, amtGained, total, gameTotal, branch);
+            tracker.OnGainedXP(player, amtGained, total, gameTotal);
     }
     public static void OnRallyActivated(RallyPoint rally)
     {

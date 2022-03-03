@@ -1192,8 +1192,19 @@ namespace Uncreated.Warfare.Commands
                     if (QuestManager.RegisteredTrackers[i].Player.Steam64 == player.channel.owner.playerID.steamID.m_SteamID && 
                         QuestManager.RegisteredTrackers[i].QuestData?.QuestType == type)
                     {
-                        QuestManager.OnQuestUpdated(QuestManager.RegisteredTrackers[i]);
-                        QuestManager.OnQuestCompleted(QuestManager.RegisteredTrackers[i]);
+                        QuestManager.RegisteredTrackers[i].ManualComplete();
+                        break;
+                    }
+                }
+            }
+            else if (command.Length == 2 && Guid.TryParse(command[1], out Guid key))
+            {
+                for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
+                {
+                    if (QuestManager.RegisteredTrackers[i].Player.Steam64 == player.channel.owner.playerID.steamID.m_SteamID &&
+                        QuestManager.RegisteredTrackers[i].PresetKey == key)
+                    {
+                        QuestManager.RegisteredTrackers[i].ManualComplete();
                         break;
                     }
                 }

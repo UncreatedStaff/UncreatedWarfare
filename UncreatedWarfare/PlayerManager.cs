@@ -90,7 +90,6 @@ namespace Uncreated.Warfare
                     save.IsOtherDonator
                 );
 
-            Data.DatabaseManager.TryInitializeXP(player.Steam64);
 
             OnlinePlayers.Add(player);
             _dict.Add(player.Steam64, player);

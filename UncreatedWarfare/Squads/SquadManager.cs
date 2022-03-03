@@ -422,7 +422,7 @@ namespace Uncreated.Warfare.Squads
             squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
             {
                 int o = b.Medals.TotalTW.CompareTo(a.Medals.TotalTW); // sort players by their officer status
-                return o == 0 ? b.CurrentRank.TotalXP.CompareTo(a.CurrentRank.TotalXP) : o;
+                return o == 0 ? b.CachedXP.CompareTo(a.CachedXP) : o;
             });
             if (squad.Leader != null)
             {

@@ -87,6 +87,11 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         // translate the description of the quest, pass any data that will show up in the description once we make them
         //                                         in this case, "Kill {_kills}/{KillThreshold} enemies."
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 
@@ -167,6 +172,11 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON)]
@@ -216,7 +226,8 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
     {
         private readonly int KillThreshold = 0;
         private readonly DynamicAssetValue<ItemWeaponAsset>.Choice Weapon;
-        private string translationCache1;
+        private readonly string translationCache1;
+        private readonly string translationCache2;
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
@@ -225,6 +236,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
             KillThreshold = questState.KillThreshold.InsistValue();
             Weapon = questState.Weapon;
             translationCache1 = Weapon.GetCommaList();
+            translationCache2 = Weapon.GetAssetValueSet().FirstOrDefault()?.rarity.ToString().ToLower() ?? "#ffffff";
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -250,7 +262,12 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
                 }
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1, translationCache2);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_FROM_RANGE_WITH_WEAPON)]
@@ -312,7 +329,8 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         private readonly int KillThreshold = 0;
         private readonly DynamicAssetValue<ItemWeaponAsset>.Choice Weapon;
         private readonly float Range;
-        private string translationCache1;
+        private readonly string translationCache1;
+        private readonly string translationCache2;
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
@@ -322,6 +340,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
             Weapon = questState.Weapon;
             translationCache1 = Weapon.GetCommaList();
             Range = questState.Range.InsistValue();
+            translationCache2 = Weapon.GetAssetValueSet().FirstOrDefault()?.rarity.ToString().ToLower() ?? "#ffffff";
         }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader)
         {
@@ -347,7 +366,12 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
                 }
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
+        protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Range.ToString(), translationCache1, translationCache2);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_KIT)]
@@ -430,6 +454,11 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         protected override string Translate()
         {
             return QuestData!.Translate(_player, _kills, KillThreshold, Kit.ToString());
+        }
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
         }
     }
 }
@@ -527,6 +556,11 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         {
             return QuestData!.Translate(_player, _kills, KillThreshold, Kit.ToString());
         }
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_KIT_CLASS)]
@@ -611,6 +645,11 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_FROM_RANGE_WITH_CLASS)]
@@ -708,6 +747,11 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_WEAPON_CLASS)]
@@ -791,6 +835,11 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Class.ToString());
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_BRANCH)]
@@ -874,6 +923,11 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, Branch.ToString());
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_WITH_TURRET)]
@@ -967,6 +1021,11 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, translationCache1);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_IN_SQUAD)]
@@ -1033,6 +1092,11 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_IN_FULL_SQUAD)]
@@ -1099,6 +1163,11 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_ON_POINT_DEFENSE)]
@@ -1208,6 +1277,11 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
                 TellUpdated();
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_ENEMIES_ON_POINT_ATTACK)]
@@ -1317,6 +1391,11 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
                 TellUpdated();
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold);
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KING_SLAYER)]
@@ -1415,6 +1494,11 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _kills, KillThreshold, _kingSlayer != null ? F.GetPlayerOriginalNames(_kingSlayer).CharacterName : "Unknown");
+        public override void ManualComplete()
+        {
+            _kills = KillThreshold;
+            base.ManualComplete();
+        }
     }
 }
 [QuestData(EQuestType.KILL_STREAK)]
@@ -1524,5 +1608,11 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
             }
         }
         protected override string Translate() => QuestData!.Translate(_player, _streakProgress, StreakLength, StreakCount);
+        public override void ManualComplete()
+        {
+            _streakProgress = 0;
+            _streakProgress = StreakCount;
+            base.ManualComplete();
+        }
     }
 }

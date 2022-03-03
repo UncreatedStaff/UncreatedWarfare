@@ -54,7 +54,8 @@ namespace Uncreated.Warfare.Commands
                         if (target != null)
                         {
                             OfficerStorage.ChangeOfficerRank(target.Steam64, level, team);
-                            player.Message("officer_s_changedrank", target.CharacterName, target.CurrentRank.Name, Translation.Translate(team.ToString(), player));
+                            ref Ranks.RankData data = ref Ranks.RankManager.GetRank(target, out _);
+                            player.Message("officer_s_changedrank", target.CharacterName, data.GetName(player.Steam64), Translation.Translate(team.ToString(), player));
                         }
                         else
                         {

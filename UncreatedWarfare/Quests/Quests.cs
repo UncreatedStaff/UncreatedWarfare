@@ -309,6 +309,11 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     protected abstract string Translate();
     public abstract void WriteQuestProgress(Utf8JsonWriter writer);
     public abstract void OnReadProgressSaveProperty(string property, ref Utf8JsonReader reader);
+    public virtual void ManualComplete()
+    {
+        TellUpdated();
+        TellCompleted();
+    }
     public void OnGameEnd()
     {
         if (QuestData != null && QuestData.ResetOnGameEnd)
