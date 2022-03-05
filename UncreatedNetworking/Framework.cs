@@ -2558,6 +2558,80 @@ namespace Uncreated.Warfare
             }
         }
     }
+    public struct DailyQuest : IReadWrite<DailyQuest>
+    {
+        public const int DAILY_QUEST_LENGTH = 14;
+        public const int DAILY_QUEST_CONDITION_LENGTH = 3;
+        public const string WORKSHOP_FILE_NAME = "UC_DailyQuests";
+        public static readonly Guid[] DAILY_QUEST_GUIDS = new Guid[DAILY_QUEST_LENGTH]
+        {
+            new Guid("6aada7ab-64ae-4b37-9685-5535e4c9c3d9"),
+            new Guid("fb947c8f-700e-4f74-afed-56b82c39a151"),
+            new Guid("3b8761e5-6677-48b0-9406-32e0ce23fc02"),
+            new Guid("813e8e6d-ec29-426a-a986-3b5d01d364bf"),
+            new Guid("d010bc29-3e78-40de-81f6-6d51ddd87c44"),
+            new Guid("74de669f-6eb6-42a8-a7ed-c6a3f2296ddb"),
+            new Guid("4e2c1118-f777-4496-bcfb-049008cc4b68"),
+            new Guid("44499de8-8c93-46a3-9d75-83a9ccb4f02f"),
+            new Guid("512ba1ca-6927-4c8f-9084-b0f150aea71d"),
+            new Guid("422de60e-9cfc-4b71-a6ca-a50a2316dedc"),
+            new Guid("57f03630-a9e7-40c2-a669-7f309f4001a1"),
+            new Guid("7ecce68f-e024-4b92-b497-a59e02e68d28"),
+            new Guid("be9d412d-0fc1-42c4-b005-3fbe23fc5085"),
+            new Guid("df7ba3e3-681b-4018-a819-9da34a756319")
+        };
+        public const ushort DAILY_QUEST_START_ID = 62000;
+        public const ushort DAILY_QUEST_FLAG_START_ID = 62000;
+        public Condition[] conditions;
+        public static DailyQuest[] ReadMany(ByteReader R)
+        {
+            DailyQuest[] conditions = new DailyQuest[DAILY_QUEST_LENGTH];
+            for (int i = 0; i < DAILY_QUEST_LENGTH; ++i)
+            {
+                conditions[i] = new DailyQuest();
+                ref DailyQuest dq = ref conditions[i];
+                dq.Read(R);
+            }
+            return conditions;
+        }
+        public static void WriteMany(ByteWriter W, DailyQuest[] conditions)
+        {
+            for (int i = 0; i < DAILY_QUEST_LENGTH; ++i)
+            {
+                ref DailyQuest dq = ref conditions[i];
+                dq.Write(W);
+            }
+        }
+        public void Read(ByteReader R)
+        {
+            conditions = new Condition[DAILY_QUEST_CONDITION_LENGTH];
+            for (int i = 0; i < DAILY_QUEST_CONDITION_LENGTH; ++i)
+            {
+                conditions[i] = new Condition()
+                {
+                    Key = R.ReadGUID(),
+                    FlagValue = R.ReadInt32(),
+                    Translation = R.ReadString()
+                };
+            }
+        }
+        public void Write(ByteWriter W)
+        {
+            for (int i = 0; i < DAILY_QUEST_CONDITION_LENGTH; ++i)
+            {
+                ref Condition c = ref conditions[i];
+                W.Write(c.Key);
+                W.Write(c.FlagValue);
+                W.Write(c.Translation);
+            }
+        }
+        public struct Condition
+        {
+            public Guid Key;
+            public int FlagValue;
+            public string Translation;
+        }
+    }
     public enum EReportType : byte
     {
         CUSTOM = 0,

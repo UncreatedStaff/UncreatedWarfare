@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Quests.Types;
 
@@ -248,6 +249,9 @@ public static class DailyQuests
         deleteFile:
         File.Delete(path);
     }
+
+    internal static readonly NetCallRaw<DailyQuest[]> SendNextQuests = new NetCallRaw<DailyQuest[]>(1125, DailyQuest.ReadMany, DailyQuest.WriteMany);
+    internal static readonly NetCall AckNextQuestsUploaded = new NetCall(1126, true);
 }
 public class DailyQuestTracker
 {
