@@ -68,8 +68,14 @@ namespace Uncreated.Warfare
         public int CachedXP
         {
             get => _cachedXP;
-            internal set => _cachedXP = value;
+            internal set
+            {
+                _cachedXP = value;
+                Rank = new RankData(_cachedXP);
+            }
         }
+        public RankData Rank { get; private set; }
+
         internal List<Guid>? _completedQuests;
         public void RedownloadMedals()
         {

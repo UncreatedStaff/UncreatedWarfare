@@ -60,7 +60,7 @@ namespace Uncreated.Warfare.Commands
                         else
                         {
                             OfficerStorage.ChangeOfficerRank(Steam64, level, team);
-                            player.Message("officer_s_changedrank", characterName, RankData.GetOfficerRankName(level), Translation.Translate(team.ToString(), player));
+                            player.Message("officer_s_changedrank", characterName, RankDataOLD.GetOfficerRankName(level), Translation.Translate(team.ToString(), player));
                         }
                     }
                     else
