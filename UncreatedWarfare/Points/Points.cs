@@ -95,8 +95,9 @@ namespace Uncreated.Warfare.Point
         public static float GetLevelProgressXP(int xp)
         {
             int lvl = GetLevel(xp);
-            int end = GetNextLevelXP(lvl);
-            return (float)(end - GetLevelXP(lvl)) / (end - xp);
+            int start = GetLevelXP(lvl);
+            xp -= start;
+            return (float)(GetNextLevelXP(lvl) - start) / xp;
         }
         /// <summary>Get the percentage from 0-1 a player is through their current level at the given <paramref name="xp"/> and <paramref name="lvl"/>.</summary>
         public static float GetLevelProgressXP(int xp, int lvl)
@@ -157,7 +158,6 @@ namespace Uncreated.Warfare.Point
                         Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
                 }
             });
-
         }
         /*
         [Obsolete]
@@ -346,6 +346,7 @@ namespace Uncreated.Warfare.Point
             {
                 int xp = player.CachedXP;
                 int level = GetLevel(xp);
+                int sub = GetLevelXP(level);
                 int reqXp = GetNextLevelXP(level);
 
                 EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.connection, true);
@@ -356,13 +357,13 @@ namespace Uncreated.Warfare.Point
                     "Level", level == 0 ? string.Empty : Translation.Translate("ui_xp_level", player, level.ToString(Data.Locale))
                 );
                 EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
-                    "XP", xp + "/" + reqXp
+                    "XP", (xp - sub) + "/" + (reqXp - sub)
                 );
                 EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
                     "Next", Translation.Translate("ui_xp_next_level", player, (level + 1).ToString(Data.Locale))
                 );
                 EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
-                    "Progress", GetProgressBar(xp, reqXp)
+                    "Progress", GetProgressBar(xp - sub, reqXp - sub)
                 );
             }
         }

@@ -593,9 +593,6 @@ public static class QuestManager
     }
     #endregion
     #region events
-
-    // put all interface events here
-
     public static void OnKill(UCWarfare.KillEventArgs kill)
     {
         foreach (INotifyOnKill tracker in RegisteredTrackers.OfType<INotifyOnKill>())
