@@ -125,16 +125,7 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            Transform? target = Physics.Raycast(lookOrigin.position, lookOrigin.forward, out RaycastHit hit, range, RayMasks.VEHICLE) ? hit.transform : default;
-            if (target != null && target.TryGetComponent(out InteractableVehicle vehicle))
-            {
-                if ((vehicle.asset.engine == EEngine.PLANE || vehicle.asset.engine == EEngine.HELICOPTER) && !vehicle.isDead)
-                {
-                    vehicleLockedOn = vehicle;
-                    SetVehicleData(vehicle);
-                    return;
-                }
-            }
+            float minAngle = 10;
 
             foreach (InteractableVehicle v in VehicleManager.vehicles)
             {
@@ -143,13 +134,12 @@ namespace Uncreated.Warfare.Components
                     if ((v.transform.position - aim.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
                     {
                         float angleBetween = Vector3.Angle(v.transform.position - lookOrigin.position, lookOrigin.forward);
-                        L.Log(v.asset.vehicleName + ": " + angleBetween.ToString());
-                        if (angleBetween < 10)
+                        if (angleBetween < minAngle)
                         {
-                            maxTurnDegrees *= Mathf.Clamp(1 - angleBetween / 10, 0.4F, 1);
+                            minAngle = angleBetween;
+                            maxTurnDegrees *= Mathf.Clamp(1 - angleBetween / 10, 0.2F, 1);
                             vehicleLockedOn = v;
                             SetVehicleData(v);
-                            return;
                         }
                     }
                 }
@@ -255,7 +245,10 @@ namespace Uncreated.Warfare.Components
                     armed = true;
                 }
 
-                ushort id = 26031;
+                ushort id = 26036;
+                if (count % 10 == 0 && armed)
+                    id = 26037;
+
                 if (count == 0)
                 {
                     TrySendWarning();
@@ -283,7 +276,7 @@ namespace Uncreated.Warfare.Components
                 projectile.transform.forward = targetDirection;
                 rigidbody.velocity = projectile.transform.forward * projectileSpeed;
 
-                EffectManager.sendEffect(id, 700, projectile.transform.position, projectile.transform.forward);
+                EffectManager.sendEffect(id, 1200, projectile.transform.position, projectile.transform.forward);
 
                 count++;
                 if (count >= 20)

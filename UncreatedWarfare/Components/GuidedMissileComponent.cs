@@ -107,7 +107,7 @@ namespace Uncreated.Warfare.Components
                     id = 26032; // this one has a sound effect, so we will play it only after around 20 loops (1 second) have passed
 
                 yield return new WaitForSeconds(0.05f);
-                EffectManager.sendEffect(id, 600, projectile.transform.position, projectile.transform.forward); // send the effect to all clients here
+                EffectManager.sendEffect(id, 1000, projectile.transform.position, projectile.transform.forward); // send the effect to all clients here
 
                 count++;
                 if (count >= 20)
