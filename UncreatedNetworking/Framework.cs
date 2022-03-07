@@ -2559,6 +2559,7 @@ namespace Uncreated.Warfare
             }
         }
     }
+
     public struct DailyQuest : IReadWrite<DailyQuest>
     {
         public const int DAILY_QUEST_LENGTH = 14;
@@ -2668,6 +2669,21 @@ namespace Uncreated.Warfare
                 }
             }
             else throw new DirectoryNotFoundException();
+        }
+        public readonly void WriteToDisk(string directory)
+        {
+            string b = Directory.CreateDirectory(Path.Combine(directory, name)).FullName;
+            for (int i = 0; i < folders.Length; ++i)
+            {
+                Directory.CreateDirectory(Path.Combine(b, folders[i]));
+            }
+            for (int i = 0; i < files.Length; i++)
+            {
+                ref File file = ref files[i];
+                string path = Path.Combine(b, file.path);
+                using FileStream stream = new FileStream(path, System.IO.File.Exists(path) ? FileMode.Truncate : FileMode.Create, FileAccess.Write, FileShare.Read);
+                stream.Write(file.content, 0, file.content.Length);
+            }
         }
         public static Folder Read(ByteReader R)
         {

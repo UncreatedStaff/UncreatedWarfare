@@ -16,7 +16,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
 {
     public DynamicIntegerValue BuildCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("fobs_required", StringComparison.Ordinal))
@@ -28,6 +28,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
     public struct State : IQuestState<Tracker, BuildFOBsQuest>
     {
         public IDynamicValue<int>.IChoice BuildCount;
+        public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsQuest data)
         {
             this.BuildCount = data.BuildCount.GetValue();
@@ -51,7 +52,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
         public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
         protected override bool CompletedCheck => _fobsBuilt >= BuildCount;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             BuildCount = questState.BuildCount.InsistValue();
         }
@@ -75,7 +76,7 @@ public class BuildFOBsQuest : BaseQuestData<BuildFOBsQuest.Tracker, BuildFOBsQue
                     TellUpdated();
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _fobsBuilt, BuildCount);
         public override void ManualComplete()
         {
             _fobsBuilt = BuildCount;
@@ -89,7 +90,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
     public DynamicIntegerValue BuildCount;
     public DynamicFloatValue BuildRange;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("fobs_required", StringComparison.Ordinal))
@@ -107,6 +108,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
     {
         public IDynamicValue<int>.IChoice BuildCount;
         public IDynamicValue<float>.IChoice BuildRange;
+        public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsNearObjQuest data)
         {
             this.BuildCount = data.BuildCount.GetValue();
@@ -134,7 +136,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
         protected override bool CompletedCheck => _fobsBuilt >= BuildCount;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             BuildCount = questState.BuildCount.InsistValue();
             SqrBuildRange = questState.BuildRange.InsistValue();
@@ -188,7 +190,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
             else
                 TellUpdated();
         }
-        protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _fobsBuilt, BuildCount);
         public override void ManualComplete()
         {
             _fobsBuilt = BuildCount;
@@ -201,7 +203,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
 {
     public DynamicIntegerValue BuildCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("fobs_required", StringComparison.Ordinal))
@@ -213,6 +215,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
     public struct State : IQuestState<Tracker, BuildFOBsOnObjQuest>
     {
         public IDynamicValue<int>.IChoice BuildCount;
+        public IDynamicValue<int>.IChoice FlagValue => BuildCount;
         public void Init(BuildFOBsOnObjQuest data)
         {
             this.BuildCount = data.BuildCount.GetValue();
@@ -235,7 +238,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
         public override short FlagValue => (short)_fobsBuilt;
         public override void ResetToDefaults() => _fobsBuilt = 0;
         protected override bool CompletedCheck => _fobsBuilt >= BuildCount;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             BuildCount = questState.BuildCount.InsistValue();
         }
@@ -287,7 +290,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
             else
                 TellUpdated();
         }
-        protected override string Translate() => QuestData!.Translate(_player, _fobsBuilt, BuildCount);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _fobsBuilt, BuildCount);
         public override void ManualComplete()
         {
             _fobsBuilt = BuildCount;
@@ -300,7 +303,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
 {
     public DynamicIntegerValue SupplyCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("supply_count", StringComparison.Ordinal))
@@ -312,6 +315,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
     public struct State : IQuestState<Tracker, DeliverSuppliesQuest>
     {
         public IDynamicValue<int>.IChoice SupplyCount;
+        public IDynamicValue<int>.IChoice FlagValue => SupplyCount;
         public void Init(DeliverSuppliesQuest data)
         {
             this.SupplyCount = data.SupplyCount.GetValue();
@@ -334,7 +338,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
         public override short FlagValue => (short)_suppliesDelivered;
         public override void ResetToDefaults() => _suppliesDelivered = 0;
         protected override bool CompletedCheck => _suppliesDelivered >= SupplyCount;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             SupplyCount = questState.SupplyCount.InsistValue();
         }
@@ -358,7 +362,7 @@ public class DeliverSuppliesQuest : BaseQuestData<DeliverSuppliesQuest.Tracker, 
                     TellUpdated();
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _suppliesDelivered, SupplyCount);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _suppliesDelivered, SupplyCount);
         public override void ManualComplete()
         {
             _suppliesDelivered = SupplyCount;
@@ -374,7 +378,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
     public DynamicAssetValue<ItemBarricadeAsset> BaseIDs = new DynamicAssetValue<ItemBarricadeAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
     public DynamicEnumValue<EBuildableType> BuildableType = new DynamicEnumValue<EBuildableType>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("buildables_required", StringComparison.Ordinal))
@@ -398,6 +402,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         public IDynamicValue<int>.IChoice Amount;
         public DynamicAssetValue<ItemBarricadeAsset>.Choice BaseIDs;
         public IDynamicValue<EBuildableType>.IChoice BuildableType;
+        public IDynamicValue<int>.IChoice FlagValue => Amount;
         public void Init(HelpBuildQuest data)
         {
             this.Amount = data.Amount.GetValue();
@@ -430,7 +435,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         protected override bool CompletedCheck => _built >= Amount;
         public override short FlagValue => (short)_built;
         public override void ResetToDefaults() => _built = 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             Amount = questState.Amount.InsistValue();
             BaseIDs = questState.BaseIDs;
@@ -458,7 +463,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
                     TellUpdated();
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _built, Amount, BaseIDs.GetCommaList(), BuildableType);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _built, Amount, BaseIDs.GetCommaList(), BuildableType);
         public override void ManualComplete()
         {
             _built = Amount;
@@ -471,7 +476,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
 {
     public DynamicIntegerValue UseCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("deployments", StringComparison.Ordinal))
@@ -483,6 +488,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
     public struct State : IQuestState<Tracker, FOBUseQuest>
     {
         public IDynamicValue<int>.IChoice UseCount;
+        public IDynamicValue<int>.IChoice FlagValue => UseCount;
         public void Init(FOBUseQuest data)
         {
             this.UseCount = data.UseCount.GetValue();
@@ -505,7 +511,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         private int _fobUses;
         protected override bool CompletedCheck => _fobUses >= UseCount;
         public override short FlagValue => (short)_fobUses;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             UseCount = questState.UseCount.InsistValue();
         }
@@ -532,7 +538,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
                     TellUpdated();
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _fobUses, UseCount);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _fobUses, UseCount);
         public override void ManualComplete()
         {
             _fobUses = UseCount;

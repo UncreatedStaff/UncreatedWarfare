@@ -118,6 +118,12 @@ namespace Uncreated.Warfare.Networking
             [NetCall(ENetCall.FROM_SERVER, 1025)]
             internal static void ReceiveRequestAssetName(IConnection connection, ushort id, EAssetType type)
             {
+                Asset a = Assets.find(type, id);
+                if (a == null)
+                {
+                    SendAssetName.Invoke(connection, id, type, string.Empty);
+                    return;
+                }
                 switch (type)
                 {
                     default:
@@ -125,34 +131,42 @@ namespace Uncreated.Warfare.Networking
                         SendAssetName.Invoke(connection, id, type, string.Empty);
                         return;
                     case EAssetType.ITEM:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is ItemAsset iasset ? iasset.itemName : string.Empty);
                         return;
                     case EAssetType.VEHICLE:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is VehicleAsset vasset ? vasset.vehicleName : string.Empty);
+                        SendAssetName.Invoke(connection, id, type, a is VehicleAsset vasset ? vasset.vehicleName : a.name);
                         return;
                     case EAssetType.OBJECT:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is ObjectAsset oasset ? oasset.objectName : string.Empty);
+                        SendAssetName.Invoke(connection, id, type, a is ObjectAsset oasset ? oasset.objectName : a.name);
                         return;
                     case EAssetType.ANIMAL:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is AnimalAsset aasset ? aasset.animalName : string.Empty);
+                        SendAssetName.Invoke(connection, id, type, a is AnimalAsset aasset ? aasset.animalName : a.name);
                         return;
                     case EAssetType.EFFECT:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is EffectAsset easset ? easset.GUID.ToString() : string.Empty);
+                        SendAssetName.Invoke(connection, id, type, a is EffectAsset easset ? easset.name : a.name);
                         return;
                     case EAssetType.MYTHIC:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is MythicAsset masset ? masset.GUID.ToString() : string.Empty);
+                        SendAssetName.Invoke(connection, id, type, a is MythicAsset masset ? masset.name : a.name);
                         return;
                     case EAssetType.NPC:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is ObjectNPCAsset npcasset ? npcasset.objectName : string.Empty);
+                        string name;
+                        if (a is QuestAsset qasset)
+                            name = qasset.questName;
+                        else if (a is VendorAsset veasset)
+                            name = veasset.vendorName;
+                        else if (a is DialogueAsset dasset)
+                            name = dasset.name;
+                        else
+                            name = a.name;
+                        SendAssetName.Invoke(connection, id, type, name);
                         return;
                     case EAssetType.RESOURCE:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is ResourceAsset rasset ? rasset.resourceName : string.Empty);
+                        SendAssetName.Invoke(connection, id, type, a.name);
                         return;
                     case EAssetType.SKIN:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is SkinAsset sasset ? sasset.GUID.ToString() : string.Empty);
+                        SendAssetName.Invoke(connection, id, type, a.name);
                         return;
                     case EAssetType.SPAWN:
-                        SendAssetName.Invoke(connection, id, type, Assets.find(type, id) is SpawnAsset spasset ? spasset.GUID.ToString() : string.Empty);
+                        SendAssetName.Invoke(connection, id, type, a.name);
                         return;
                 }
             }

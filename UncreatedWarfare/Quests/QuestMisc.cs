@@ -825,6 +825,9 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
     internal readonly IntegralSet set;
     public readonly EDynamicValueType type;
     private readonly EChoiceBehavior _choiceBehavior = EChoiceBehavior.ALLOW_ONE;
+    public static readonly IDynamicValue<int>.IChoice Zero = new Choice(new DynamicIntegerValue(0, EChoiceBehavior.ALLOW_ONE));
+    public static readonly IDynamicValue<int>.IChoice One = new Choice(new DynamicIntegerValue(1, EChoiceBehavior.ALLOW_ONE));
+    public static readonly IDynamicValue<int>.IChoice Any = new Choice(new DynamicIntegerValue(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL));
     public int Constant => constant;
     public IDynamicValue<int>.IRange Range => range;
     public IDynamicValue<int>.ISet Set => set;
@@ -2672,7 +2675,7 @@ public readonly struct GuidSet : IEnumerable<Guid>, IDynamicValue<Guid>.ISet
 }
 public interface INotifyTracker
 {
-    public UCPlayer Player { get; }
+    public UCPlayer? Player { get; }
 }
 public enum EPresetType
 {
@@ -2683,7 +2686,6 @@ public enum EPresetType
 public interface IQuestPreset
 {
     public Guid Key { get; }
-    public int RequiredLevel { get; }
     public IQuestState State { get; }
     public ulong Team { get; }
     public ushort Flag { get; }
@@ -2751,6 +2753,7 @@ public interface INotifyVehicleDistanceUpdates : INotifyTracker
 /// <summary>Stores information about the values of variations of <see cref="BaseQuestData"/>.</summary>
 public interface IQuestState
 {
+    public IDynamicValue<int>.IChoice FlagValue { get; }
     public void WriteQuestState(Utf8JsonWriter writer);
     public void OnPropertyRead(ref Utf8JsonReader reader, string property);
 }

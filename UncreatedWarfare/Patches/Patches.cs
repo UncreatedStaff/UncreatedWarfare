@@ -57,7 +57,7 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static void ConsolePatch(string value)
             {
-                if (value.StartsWith("Sent over TCP server on")) return;
+                if (value.StartsWith("Sent over TCP server on") || value.StartsWith("Error writing to")) return;
                 string[] splits = value.Split('\n');
                 for (int i = 0; i < splits.Length; i++)
                 {

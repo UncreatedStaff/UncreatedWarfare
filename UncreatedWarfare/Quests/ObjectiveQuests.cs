@@ -18,7 +18,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
 {
     public DynamicIntegerValue ObjectiveCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("objective_count", StringComparison.Ordinal))
@@ -30,6 +30,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
     public struct State : IQuestState<Tracker, CaptureObjectivesQuest>
     {
         public IDynamicValue<int>.IChoice ObjectiveCount;
+        public IDynamicValue<int>.IChoice FlagValue => ObjectiveCount;
         public bool IsEligable(UCPlayer player) => true;
         public void Init(CaptureObjectivesQuest data)
         {
@@ -51,7 +52,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
         private int _captures;
         public override short FlagValue => (short)_captures;
         protected override bool CompletedCheck => _captures >= ObjectiveCount;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             ObjectiveCount = questState.ObjectiveCount.InsistValue();
         }
@@ -80,7 +81,7 @@ public class CaptureObjectivesQuest : BaseQuestData<CaptureObjectivesQuest.Track
                 }
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _captures, ObjectiveCount);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _captures, ObjectiveCount);
         public override void ManualComplete()
         {
             _captures = ObjectiveCount;
@@ -96,7 +97,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
     public DynamicEnumValue<EGamemode> Gamemode;
     public DynamicIntegerValue NumberOfGames;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("xp_goal", StringComparison.Ordinal))
@@ -120,6 +121,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         public IDynamicValue<int>.IChoice XPCount;
         public IDynamicValue<EGamemode>.IChoice Gamemode;
         public IDynamicValue<int>.IChoice GameCount;
+        public IDynamicValue<int>.IChoice FlagValue => GameCount;
         public bool IsEligable(UCPlayer player) => true;
         public void Init(XPInGamemodeQuest data)
         {
@@ -151,7 +153,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         private int _currentXp;
         private int _gamesCompleted;
         public override short FlagValue => (short)_gamesCompleted;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             XPCount = questState.XPCount.InsistValue();
             Gamemode = questState.Gamemode;
@@ -197,7 +199,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
                     _currentXp = gameTotal;
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _currentXp, XPCount);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _currentXp, XPCount);
         public override void ManualComplete()
         {
             _currentXp = 0;
@@ -211,7 +213,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
 {
     public DynamicIntegerValue UseCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("deployments", StringComparison.Ordinal))
@@ -223,6 +225,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
     public struct State : IQuestState<Tracker, RallyUseQuest>
     {
         public IDynamicValue<int>.IChoice UseCount;
+        public IDynamicValue<int>.IChoice FlagValue => UseCount;
         public void Init(RallyUseQuest data)
         {
             this.UseCount = data.UseCount.GetValue();
@@ -245,7 +248,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         private int _rallyUses;
         protected override bool CompletedCheck => _rallyUses >= UseCount;
         public override short FlagValue => (short)_rallyUses;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             UseCount = questState.UseCount.InsistValue();
         }
@@ -270,7 +273,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
                     TellUpdated();
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _rallyUses, UseCount);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _rallyUses, UseCount);
         public override void ManualComplete()
         {
             _rallyUses = UseCount;
@@ -284,7 +287,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
     public DynamicIntegerValue WinCount;
     public DynamicEnumValue<EGamemode> Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, EGamemode.INSURGENCY), EChoiceBehavior.ALLOW_ALL);
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("gamemode", StringComparison.Ordinal))
@@ -302,6 +305,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
     {
         public IDynamicValue<int>.IChoice Wins;
         public IDynamicValue<EGamemode>.IChoice Gamemode;
+        public IDynamicValue<int>.IChoice FlagValue => Wins;
         public void Init(WinGamemodeQuest data)
         {
             this.Gamemode = data.Gamemode.GetValue();
@@ -329,7 +333,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         private int _wins;
         protected override bool CompletedCheck => _wins >= WinCount;
         public override short FlagValue => (short)_wins;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             Gamemode = questState.Gamemode;
             WinCount = questState.Wins.InsistValue();
@@ -362,7 +366,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
                 }
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _wins, WinCount, Gamemode.ToString());
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _wins, WinCount, Gamemode.ToString());
         public override void ManualComplete()
         {
             _wins = WinCount;
@@ -376,7 +380,7 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
 {
     public DynamicIntegerValue Neutralizations;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("neutralizations", StringComparison.Ordinal))
@@ -388,6 +392,7 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
     public struct State : IQuestState<Tracker, NeutralizeFlagsQuest>
     {
         public IDynamicValue<int>.IChoice Neutralizations;
+        public IDynamicValue<int>.IChoice FlagValue => Neutralizations;
         public void Init(NeutralizeFlagsQuest data)
         {
             this.Neutralizations = data.Neutralizations.GetValue();
@@ -410,7 +415,7 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
         private int _neutralizations;
         protected override bool CompletedCheck => _neutralizations >= Neutralizations;
         public override short FlagValue => (short)_neutralizations;
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             Neutralizations = questState.Neutralizations.InsistValue();
         }
@@ -443,7 +448,7 @@ public class NeutralizeFlagsQuest : BaseQuestData<NeutralizeFlagsQuest.Tracker, 
                 }
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, _neutralizations, Neutralizations);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _neutralizations, Neutralizations);
         public override void ManualComplete()
         {
             _neutralizations = Neutralizations;

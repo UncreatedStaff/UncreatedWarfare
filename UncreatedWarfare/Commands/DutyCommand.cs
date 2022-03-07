@@ -6,6 +6,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using Uncreated.Players;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 
 namespace Uncreated.Warfare.Commands
@@ -22,9 +23,9 @@ namespace Uncreated.Warfare.Commands
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
+
 #endif
-            UnturnedPlayer? player = caller as UnturnedPlayer;
-            if (player == null) return;
+            if (caller is not UnturnedPlayer player) return;
             FPlayerName names = F.GetPlayerOriginalNames(player.Player);
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
             if (groups.Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup))
@@ -53,6 +54,7 @@ namespace Uncreated.Warfare.Commands
             player.Player.look.sendWorkzoneAllowed(true);
             player.SendChat("duty_on_feedback");
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
+            RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         }
         public static void AdminOnToOff(UnturnedPlayer player, FPlayerName names)
@@ -61,8 +63,6 @@ namespace Uncreated.Warfare.Commands
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, player);
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_off_broadcast", names.CharacterName);
-            if (player == null)
-                return;
             if (player.Features != null && player.Features.gameObject != null)
             {
                 player.Features.GodMode = false;
@@ -73,6 +73,7 @@ namespace Uncreated.Warfare.Commands
                 player.Player.look.sendFreecamAllowed(false);
                 player.Player.look.sendWorkzoneAllowed(false);
                 player.SendChat("duty_off_feedback");
+                RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             }
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
         }
@@ -83,6 +84,7 @@ namespace Uncreated.Warfare.Commands
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             player.SendChat("duty_on_feedback");
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
+            RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         }
         public static void InternOnToOff(UnturnedPlayer player, FPlayerName names)
@@ -91,16 +93,15 @@ namespace Uncreated.Warfare.Commands
             R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, player);
             R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, player);
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_off_broadcast", names.CharacterName);
-            if (player == null)
-                return;
             if (player.Features != null && player.Features.gameObject != null)
             {
                 player.Features.GodMode = false;
                 player.Features.VanishMode = false;
             }
-            if (player.Player != null && player.Player.look != null)
+            if (player.Player != null)
             {
                 player.SendChat("duty_off_feedback");
+                RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             }
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
         }
