@@ -857,71 +857,9 @@ namespace Uncreated.Warfare
                 if (key == null) return string.Empty;
                 if (!key.StartsWith("sign_")) return Translate(key, language);
                 string key2 = key.Substring(5);
-                if (key2.StartsWith("loadout_") && key2.Length > 8 && ushort.TryParse(key2.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
+                if (key2.StartsWith("loadout_"))
                 {
-                    if (ucplayer != null)
-                    {
-                        ulong team = ucplayer.GetTeam();
-                        List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
-                        loadouts.Sort((k1, k2) => k1.Name.CompareTo(k2.Name));
-
-                        if (loadouts.Count > 0)
-                        {
-                            if (loadoutid > 0 && loadoutid <= loadouts.Count)
-                            {
-                                Kit kit = loadouts[loadoutid - 1];
-
-                                if (!kit.SignTexts.TryGetValue(language, out string name))
-                                    if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
-                                        if (kit.SignTexts.Count > 0)
-                                            name = kit.SignTexts.First().Value;
-                                        else
-                                            name = kit.DisplayName ?? kit.Name;
-                                bool keepline = false;
-                                foreach (char @char in name)
-                                {
-                                    if (@char == '\n')
-                                    {
-                                        keepline = true;
-                                        break;
-                                    }
-                                }
-                                string cost = Translate("loadout_name_owned", language, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
-                                if (!keepline) cost = "\n" + cost;
-
-                                string playercount = string.Empty;
-
-                                if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
-                                {
-                                    playercount = Translate("kit_unlimited", language).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
-                                }
-                                else if (kit.IsClassLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
-                                {
-                                    playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                                        .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
-                                }
-                                else
-                                {
-                                    playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                                        .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
-                                }
-
-                                return Translate("sign_kit_request", language,
-                                    name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
-                                    cost,
-                                    kit.Weapons == "" ? " " : Translate("kit_weapons", language, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
-                                    playercount
-                                    );
-                            }
-                        }
-                    }
-
-                    return Translate("sign_kit_request", language,
-                                Translate("loadout_name", language, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_public_header")),
-                                string.Empty,
-                                ObjectTranslate("kit_price_dollars", language, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
-                                string.Empty
-                                );
+                    return TranslateLoadoutSign(key2, language, ucplayer);
                 }
                 else if (KitManager.KitExists(key2, out Kit kit))
                 {
@@ -936,26 +874,112 @@ namespace Uncreated.Warfare
                 return ex.GetType().Name;
             }
         }
+        public static string TranslateLoadoutSign(string key, string language, UCPlayer ucplayer)
+        {
+            if (ucplayer != null && key.Length > 8 && ushort.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
+            {
+                ulong team = ucplayer.GetTeam();
+                List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
+                loadouts.Sort((k1, k2) => k1.Name.CompareTo(k2.Name));
+
+                if (loadouts.Count > 0)
+                {
+                    if (loadoutid > 0 && loadoutid <= loadouts.Count)
+                    {
+                        Kit kit = loadouts[loadoutid - 1];
+
+                        string name;
+                        bool keepline = false;
+                        if (!ucplayer.OnDuty())
+                        {
+                            if (!kit.SignTexts.TryGetValue(language, out name))
+                                if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
+                                    if (kit.SignTexts.Count > 0)
+                                        name = kit.SignTexts.First().Value;
+                                    else
+                                        name = kit.DisplayName ?? kit.Name;
+                            foreach (char @char in name)
+                            {
+                                if (@char == '\n')
+                                {
+                                    keepline = true;
+                                    break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            name = kit.Name;
+                            if (name.Length > 18 && ulong.TryParse(name.Substring(0, 17), System.Globalization.NumberStyles.Any, Data.Locale, out ulong id) && OffenseManager.IsValidSteam64ID(id) && id == ucplayer.Steam64)
+                            {
+                                name = "PL #" + (name.Substring(17)[1] - 48).ToString(Data.Locale);
+                            }
+                        }
+                        string cost = Translate("loadout_name_owned", language, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                        if (!keepline) cost = "\n" + cost;
+
+                        string playercount = string.Empty;
+
+                        if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
+                        {
+                            playercount = Translate("kit_unlimited", language).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+                        }
+                        else if (kit.IsClassLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
+                        {
+                            playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                                .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
+                        }
+                        else
+                        {
+                            playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
+                                .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
+                        }
+
+                        return Translate("sign_kit_request", language,
+                            name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
+                            cost,
+                            string.IsNullOrEmpty(kit.Weapons) ? " " : Translate("kit_weapons", language, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
+                            playercount
+                            );
+                    }
+                }
+                return Translate("sign_kit_request", language,
+                    Translate("loadout_name", language, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_public_header")),
+                    string.Empty,
+                    ObjectTranslate("kit_price_dollars", language, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
+                    string.Empty
+                );
+            }
+            return key;
+        }
         public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
         {
             ulong playerteam = 0;
             ref Ranks.RankData playerrank = ref Ranks.RankManager.GetRank(ucplayer, out bool success);
 
-            if (!kit.SignTexts.TryGetValue(language, out string name))
-                if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
-                    if (kit.SignTexts.Count > 0)
-                        name = kit.SignTexts.First().Value;
-                    else
-                        name = kit.DisplayName ?? kit.Name;
-
             bool keepline = false;
-            foreach (char @char in name)
+            string name;
+            if (!ucplayer.OnDuty())
             {
-                if (@char == '\n')
+                if (!kit.SignTexts.TryGetValue(language, out name))
+                    if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
+                        if (kit.SignTexts.Count > 0)
+                            name = kit.SignTexts.First().Value;
+                        else
+                            name = kit.DisplayName ?? kit.Name;
+
+                foreach (char @char in name)
                 {
-                    keepline = true;
-                    break;
+                    if (@char == '\n')
+                    {
+                        keepline = true;
+                        break;
+                    }
                 }
+            }
+            else
+            {
+                name = kit.Name;
             }
             name = Translate("kit_name", language, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
             string weapons = kit.Weapons ?? string.Empty;

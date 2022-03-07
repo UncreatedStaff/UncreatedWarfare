@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -93,18 +94,9 @@ namespace Uncreated.Networking
                     Close();
                 }
             }
-            catch (System.IO.IOException)
+            catch (IOException)
             {
-                Logging.Log("TCP Server was shutdown, looping reconnect request.", ConsoleColor.DarkYellow);
-                try
-                {
-                    ResetConnectionAndStartReconnecting();
-                }
-                catch (Exception ex)
-                {
-                    Logging.LogError("Error reconnecting: ");
-                    Logging.LogError(ex);
-                }
+                LogAndReconnect();
             }
             catch (ArgumentException ex)
             {
@@ -119,7 +111,19 @@ namespace Uncreated.Networking
                 Close();
             }
         }
-
+        private void LogAndReconnect()
+        {
+            Logging.Log("TCP Server was shutdown, looping reconnect request.", ConsoleColor.DarkYellow);
+            try
+            {
+                ResetConnectionAndStartReconnecting();
+            }
+            catch (Exception ex)
+            {
+                Logging.LogError("Error reconnecting: ");
+                Logging.LogError(ex);
+            }
+        }
         #region buffer extension
         public byte[] CurrentMessage;
         public int CurrentSize;
@@ -166,7 +170,6 @@ namespace Uncreated.Networking
         {
             OnDisconnect?.Invoke(Identity);
             _isActive = false;
-            _socket.Close();
             _socket.Dispose();
             _socket = new TcpClient()
             {
@@ -194,11 +197,23 @@ namespace Uncreated.Networking
                 _stream = _socket.GetStream();
             _stream.BeginWrite(data, 0, data.Length, WriteComplete, data);
         }
-        public void WriteComplete(IAsyncResult ar)
+        public unsafe void WriteComplete(IAsyncResult ar)
         {
             try
             {
                 _stream.EndWrite(ar);
+            }
+            catch (IOException ex)
+            {
+                ushort? id = null;
+                if (ar.AsyncState is byte[] bytes && bytes.Length >= sizeof(ushort))
+                {
+                    fixed (byte* b = bytes)
+                        id = *(ushort*)b;
+                }
+                Logging.LogWarning("Unexpected error writing message: " + (id?.ToString() ?? "* unknown message * ") + "!");
+                Logging.LogError(ex);
+                LogAndReconnect();
             }
             catch (Exception ex)
             {

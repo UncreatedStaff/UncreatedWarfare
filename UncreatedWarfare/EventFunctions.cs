@@ -498,9 +498,9 @@ namespace Uncreated.Warfare
                         Team = player.GetTeamByte()
                     });
                     Quests.DailyQuests.RegisterDailyTrackers(ucplayer);
-                    KitManager.OnPlayerJoinedQuestHandling(ucplayer);
-                    VehicleBay.OnPlayerJoinedQuestHandling(ucplayer);
-                    Ranks.RankManager.OnPlayerJoin(ucplayer);
+                    //KitManager.OnPlayerJoinedQuestHandling(ucplayer);
+                    //VehicleBay.OnPlayerJoinedQuestHandling(ucplayer);
+                    //Ranks.RankManager.OnPlayerJoin(ucplayer);
                     IconManager.DrawNewMarkers(ucplayer, false);
                 }
             }

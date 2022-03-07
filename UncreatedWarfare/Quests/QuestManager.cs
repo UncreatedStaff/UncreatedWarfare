@@ -23,8 +23,8 @@ public static class QuestManager
     public static List<BaseQuestData> Quests = new List<BaseQuestData>();
     /// <summary>Complete list of all registered quest trackers (1 per player).</summary>
     public static List<BaseQuestTracker> RegisteredTrackers = new List<BaseQuestTracker>(128);
-    public const string QUEST_LOCATION = Data.DATA_DIRECTORY + "Quests\\quest_data.json";
-    public const string PROGRESSION_LOCATION = Data.DATA_DIRECTORY + "Quests\\progression.json";
+    public const string QUEST_FOLDER = Data.DATA_DIRECTORY + "Quests\\";
+    public const string QUEST_LOCATION = QUEST_FOLDER + "quest_data.json";
     public static void Init()
     {
 #if DEBUG
@@ -150,7 +150,7 @@ public static class QuestManager
 #endif
         for (int i = RegisteredTrackers.Count - 1; i >= 0; i--)
         {
-            if (RegisteredTrackers[i].Player.Steam64 == player.Steam64)
+            if (RegisteredTrackers[i].Player!.Steam64 == player.Steam64)
             {
                 RegisteredTrackers[i].Dispose();
                 RegisteredTrackers.RemoveAt(i);
@@ -197,7 +197,7 @@ public static class QuestManager
         L.Log("  All trackers:");
         for (int i = 0; i < RegisteredTrackers.Count; i++)
         {
-            if (RegisteredTrackers[i].Player.Steam64 == player.Steam64)
+            if (RegisteredTrackers[i].Player!.Steam64 == player.Steam64)
                 L.Log("    Tracker type " + RegisteredTrackers[i].QuestData!.QuestType + " - \"" + RegisteredTrackers[i].GetDisplayString() + "\".");
         }
     }
@@ -222,7 +222,7 @@ public static class QuestManager
 #endif
         if (!tracker.IsDailyQuest && tracker.Flag != 0)
         {
-            tracker.Player.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
+            tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
             L.LogDebug("Flag quest started: " + (tracker.QuestData?.QuestType.ToString() ?? "null"));
         }
     }
@@ -233,7 +233,7 @@ public static class QuestManager
 #endif
         if (UCWarfare.Config.Debug)
         {
-            L.LogDebug(tracker.Player.Name.PlayerName + " finished a quest: " + tracker.GetDisplayString());
+            L.LogDebug(tracker.Player!.Name.PlayerName + " finished a quest: " + tracker.GetDisplayString());
         }
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestCompleted(tracker);
@@ -241,7 +241,7 @@ public static class QuestManager
         {
             if (tracker.PresetKey != default)
             {
-                if (tracker.Player._completedQuests == null) GetCompletedQuests(tracker.Player);
+                if (tracker.Player!._completedQuests == null) GetCompletedQuests(tracker.Player);
                 tracker.Player._completedQuests!.Add(tracker.PresetKey);
                 if (!RankManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
                     if (!KitManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
@@ -258,7 +258,7 @@ public static class QuestManager
 #endif
         if (UCWarfare.Config.Debug)
         {
-            L.LogDebug(tracker.Player.Name.PlayerName + " updated a quest: " + tracker.GetDisplayString());
+            L.LogDebug(tracker.Player!.Name.PlayerName + " updated a quest: " + tracker.GetDisplayString());
         }
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestUpdated(tracker);
@@ -268,7 +268,7 @@ public static class QuestManager
                 SaveProgress(tracker, tracker.Preset.Team);
             if (tracker.Flag != 0 && !skipFlagUpdate)
             {
-                tracker.Player.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
+                tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
                 L.LogDebug("Flag quest updated: " + tracker.FlagValue);
             }
         }
@@ -460,7 +460,7 @@ public static class QuestManager
     public static void SaveProgress(BaseQuestTracker t, ulong team)
     {
         if (t.PresetKey == default) return;
-        string savePath = GetSavePath(t.Player.Steam64, t.PresetKey, team);
+        string savePath = GetSavePath(t.Player!.Steam64, t.PresetKey, team);
         SaveProgress(t, savePath);
     }
     internal static void SaveProgress(ulong playerS64Override, BaseQuestTracker t, ulong team)
@@ -488,7 +488,7 @@ public static class QuestManager
     public static void ReadProgress(BaseQuestTracker t, ulong team)
     {
         if (t.PresetKey == default) return;
-        string savePath = GetSavePath(t.Player.Steam64, t.PresetKey, team);
+        string savePath = GetSavePath(t.Player!.Steam64, t.PresetKey, team);
         ReadProgress(t, savePath);
     }
     public static void ReadProgress(ulong playerS64Override, BaseQuestTracker t, ulong team)
@@ -593,9 +593,6 @@ public static class QuestManager
     }
     #endregion
     #region events
-
-    // put all interface events here
-
     public static void OnKill(UCWarfare.KillEventArgs kill)
     {
         foreach (INotifyOnKill tracker in RegisteredTrackers.OfType<INotifyOnKill>())

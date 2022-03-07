@@ -1189,7 +1189,7 @@ namespace Uncreated.Warfare.Commands
             {
                 for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
                 {
-                    if (QuestManager.RegisteredTrackers[i].Player.Steam64 == player.channel.owner.playerID.steamID.m_SteamID && 
+                    if (QuestManager.RegisteredTrackers[i].Player!.Steam64 == player.channel.owner.playerID.steamID.m_SteamID && 
                         QuestManager.RegisteredTrackers[i].QuestData?.QuestType == type)
                     {
                         QuestManager.RegisteredTrackers[i].ManualComplete();
@@ -1201,7 +1201,7 @@ namespace Uncreated.Warfare.Commands
             {
                 for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
                 {
-                    if (QuestManager.RegisteredTrackers[i].Player.Steam64 == player.channel.owner.playerID.steamID.m_SteamID &&
+                    if (QuestManager.RegisteredTrackers[i].Player!.Steam64 == player.channel.owner.playerID.steamID.m_SteamID &&
                         QuestManager.RegisteredTrackers[i].PresetKey == key)
                     {
                         QuestManager.RegisteredTrackers[i].ManualComplete();

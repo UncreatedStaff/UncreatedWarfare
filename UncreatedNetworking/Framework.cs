@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -2558,6 +2559,7 @@ namespace Uncreated.Warfare
             }
         }
     }
+
     public struct DailyQuest : IReadWrite<DailyQuest>
     {
         public const int DAILY_QUEST_LENGTH = 14;
@@ -2630,6 +2632,87 @@ namespace Uncreated.Warfare
             public Guid Key;
             public int FlagValue;
             public string Translation;
+        }
+    }
+    public struct Folder
+    {
+        public string name;
+        public string[] folders;
+        public File[] files;
+        public struct File
+        {
+            public byte[] content;
+            public string path;
+        }
+        public Folder(string directoryPath)
+        {
+            DirectoryInfo info = new DirectoryInfo(directoryPath);
+            if (info.Exists)
+            {
+                Uri parent = new Uri(Path.GetFullPath(directoryPath));
+                name = Path.GetDirectoryName(directoryPath);
+                DirectoryInfo[] dirs = info.EnumerateDirectories("*", SearchOption.AllDirectories).ToArray();
+                FileInfo[] files = info.EnumerateFiles("*", SearchOption.AllDirectories).ToArray();
+                folders = new string[dirs.Length];
+                for (int i = 0; i < dirs.Length; i++)
+                {
+                    folders[i] = new Uri(dirs[i].FullName).MakeRelativeUri(parent).ToString();
+                }
+                this.files = new File[files.Length];
+                for (int i = 0; i < files.Length; i++)
+                {
+                    this.files[i] = new File()
+                    {
+                        path = new Uri(files[i].FullName).MakeRelativeUri(parent).ToString(),
+                        content = System.IO.File.ReadAllBytes(files[i].FullName)
+                    };
+                }
+            }
+            else throw new DirectoryNotFoundException();
+        }
+        public readonly void WriteToDisk(string directory)
+        {
+            string b = Directory.CreateDirectory(Path.Combine(directory, name)).FullName;
+            for (int i = 0; i < folders.Length; ++i)
+            {
+                Directory.CreateDirectory(Path.Combine(b, folders[i]));
+            }
+            for (int i = 0; i < files.Length; i++)
+            {
+                ref File file = ref files[i];
+                string path = Path.Combine(b, file.path);
+                using FileStream stream = new FileStream(path, System.IO.File.Exists(path) ? FileMode.Truncate : FileMode.Create, FileAccess.Write, FileShare.Read);
+                stream.Write(file.content, 0, file.content.Length);
+            }
+        }
+        public static Folder Read(ByteReader R)
+        {
+            Folder folder = new Folder();
+            folder.name = R.ReadString();
+            folder.folders = R.ReadStringArray();
+            int len = R.ReadInt32();
+            folder.files = new File[len];
+            for (int i = 0; i < len; ++i)
+            {
+                folder.files[i] = new File()
+                {
+                    path = R.ReadString(),
+                    content = R.ReadLongBytes()
+                };
+            }
+            return folder;
+        }
+        public static void Write(ByteWriter W, Folder folder)
+        {
+            W.Write(folder.name);
+            W.Write(folder.folders);
+            W.Write(folder.files.Length);
+            for (int i = 0; i < folder.files.Length; ++i)
+            {
+                ref File file = ref folder.files[i];
+                W.Write(file.path);
+                W.WriteLong(file.content);
+            }
         }
     }
     public enum EReportType : byte

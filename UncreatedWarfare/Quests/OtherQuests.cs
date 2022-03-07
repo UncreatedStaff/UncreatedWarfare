@@ -15,7 +15,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
     public DynamicStringValue ItemDisplayName;
     public DynamicStringValue ItemKey;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("item_name", StringComparison.Ordinal))
@@ -33,6 +33,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
     {
         public IDynamicValue<string>.IChoice ItemDisplayName;
         public IDynamicValue<string>.IChoice ItemKey;
+        public IDynamicValue<int>.IChoice FlagValue => DynamicIntegerValue.One;
         public void Init(DiscordKeySetQuest data)
         {
             this.ItemDisplayName = data.ItemDisplayName.GetValue();
@@ -60,7 +61,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
         private bool _hasReceivedKey;
         protected override bool CompletedCheck => _hasReceivedKey;
         public override short FlagValue => (short)(_hasReceivedKey ? 1 : 0);
-        public Tracker(UCPlayer target, ref State questState) : base(target)
+        public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             ItemName = questState.ItemDisplayName.InsistValue();
             ItemKey = questState.ItemKey.InsistValue();
@@ -94,7 +95,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
                 List<(Guid, ulong)> alreadyUpdated = new List<(Guid, ulong)>(1);
                 foreach (Tracker tracker in QuestManager.RegisteredTrackers.OfType<Tracker>())
                 {
-                    if (tracker.Player.Steam64 == player && key.Equals(tracker.ItemKey, StringComparison.Ordinal))
+                    if (tracker.Player!.Steam64 == player && key.Equals(tracker.ItemKey, StringComparison.Ordinal))
                     {
                         tracker.OnKeyStateReceived(state);
                         alreadyUpdated.Add((tracker.PresetKey, tracker.QuestData?.Presets.FirstOrDefault(x => x.Key == tracker.PresetKey).Team ?? 0));
@@ -126,7 +127,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
                 }
             }
         }
-        protected override string Translate() => QuestData!.Translate(_player, ItemName);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, ItemName);
         public override void ManualComplete()
         {
             _hasReceivedKey = true;
@@ -139,10 +140,11 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
 public class PlaceholderQuest : BaseQuestData<PlaceholderQuest.Tracker, PlaceholderQuest.State, PlaceholderQuest>
 {
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader) { }
     public struct State : IQuestState<Tracker, PlaceholderQuest>
     {
+        public IDynamicValue<int>.IChoice FlagValue => DynamicIntegerValue.One;
         public void Init(PlaceholderQuest data) { }
         public bool IsEligable(UCPlayer player) => true;
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop) { }
@@ -152,10 +154,10 @@ public class PlaceholderQuest : BaseQuestData<PlaceholderQuest.Tracker, Placehol
     {
         protected override bool CompletedCheck => false;
         public override short FlagValue => 0;
-        public Tracker(UCPlayer target, ref State questState) : base(target) { }
+        public Tracker(UCPlayer? target, ref State questState) : base(target) { }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader) { }
         public override void WriteQuestProgress(Utf8JsonWriter writer) { }
         public override void ResetToDefaults() { }
-        protected override string Translate() => QuestData!.Translate(_player);
+        protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player);
     }
 }

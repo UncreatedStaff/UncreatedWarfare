@@ -95,8 +95,9 @@ namespace Uncreated.Warfare.Point
         public static float GetLevelProgressXP(int xp)
         {
             int lvl = GetLevel(xp);
-            int end = GetNextLevelXP(lvl);
-            return (float)(end - GetLevelXP(lvl)) / (end - xp);
+            int start = GetLevelXP(lvl);
+            xp -= start;
+            return (float)(GetNextLevelXP(lvl) - start) / xp;
         }
         /// <summary>Get the percentage from 0-1 a player is through their current level at the given <paramref name="xp"/> and <paramref name="lvl"/>.</summary>
         public static float GetLevelProgressXP(int xp, int lvl)
@@ -162,7 +163,6 @@ namespace Uncreated.Warfare.Point
                         Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
                 }
             });
-
         }
         /*
         [Obsolete]
