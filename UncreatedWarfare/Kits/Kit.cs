@@ -412,6 +412,58 @@ public class Kit
             }
         }
     }
+    public void AddSimpleLevelUnlock(int level)
+    {
+        int index = -1;
+        for (int i = 0; i < UnlockRequirements.Length; i++)
+        {
+            BaseUnlockRequirement unlock = UnlockRequirements[i];
+            if (unlock is LevelUnlockRequirement unlockLevel)
+            {
+                unlockLevel.UnlockLevel = level;
+                index = i;
+                break;
+            }
+        }
+        if (index == -1)
+        {
+            LevelUnlockRequirement unlock = new LevelUnlockRequirement();
+            unlock.UnlockLevel = level;
+            BaseUnlockRequirement[] old = UnlockRequirements;
+            UnlockRequirements = new BaseUnlockRequirement[old.Length + 1];
+            if (old.Length > 0)
+            {
+                Array.Copy(old, 0, UnlockRequirements, 0, old.Length);
+                UnlockRequirements[UnlockRequirements.Length - 1] = unlock;
+            }
+            else
+            {
+                UnlockRequirements[0] = unlock;
+            }
+        }
+    }
+    public bool RemoveLevelUnlock()
+    {
+        if (UnlockRequirements.Length == 0) return false;
+        int index = -1;
+        for (int i = 0; i < UnlockRequirements.Length; i++)
+        {
+            LevelUnlockRequirement unlock = new LevelUnlockRequirement();
+            if (unlock is LevelUnlockRequirement unlockLevel)
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) return false;
+        BaseUnlockRequirement[] old = UnlockRequirements;
+        UnlockRequirements = new BaseUnlockRequirement[old.Length - 1];
+        if (old.Length == 1) return true;
+        if (index != 0)
+            Array.Copy(old, 0, UnlockRequirements, 0, index);
+        Array.Copy(old, index + 1, UnlockRequirements, index, old.Length - index - 1);
+        return true;
+    }
 }
 public readonly struct Skillset : IEquatable<Skillset>
 {

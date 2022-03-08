@@ -238,6 +238,23 @@ namespace Uncreated.Warfare.Kits
                         KitManager.SetProperty(kit, property, newValue, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
                         if (!allowedToChange) // error - invalid argument value
                         {
+                            if (property == "level")
+                            {
+                                if (int.TryParse(newValue, out int level) && level >= 0)
+                                {
+                                    if (level == 0)
+                                        kit.RemoveLevelUnlock();
+                                    else
+                                        kit.AddSimpleLevelUnlock(level);
+
+                                    KitManager.Save();
+                                    goto SUCCESS;
+                                }
+
+                                Reply(ucplayer, "kit_e_invalidarg", newValue, property);
+                                return;
+                            }
+
                             Reply(ucplayer, "kit_e_invalidarg_not_allowed", property);
                             return;
                         }
@@ -251,6 +268,10 @@ namespace Uncreated.Warfare.Kits
                             Reply(ucplayer, "kit_e_invalidprop", property);
                             return;
                         }
+                        goto SUCCESS;
+
+
+                        SUCCESS:
                         // success
                         Reply(ucplayer, "kit_setprop", property, kitName, newValue);
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);

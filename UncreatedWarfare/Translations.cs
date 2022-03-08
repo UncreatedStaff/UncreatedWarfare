@@ -115,7 +115,7 @@ namespace Uncreated.Warfare
                 { "kit_e_set_sign_syntax", "<color=#ff8c69>Syntax: /kit set sign <kitname> <language> <sign text...></color>" },
                 { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'Class', 'Cost', 'IsPremium', etc.</color>" },
                 { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
-                { "kit_e_invalidarg_not_allowed", "<color=#ff8c69>You are not allowed to change {0}.</color>" },
+                { "kit_e_invalidarg_not_allowed", "<color=#ff8c69>{0} is not a valid property, or it cannot be changed.</color>" },
                 { "kit_e_noplayer", "<color=#ff8c69>No player found by the name of '{0}'.</color>" },
                 { "kit_e_alreadyaccess", "<color=#dbc48f>Player {0} already has access to the kit: {1}.</color>" },
                 { "kit_e_noaccess", "<color=#dbc48f>Player {0} already does not have access to that: {1}.</color>" },
@@ -701,7 +701,7 @@ namespace Uncreated.Warfare
                 { "kit_price_tickets", "{0} Tickets" },
                 { "kit_price_dollars", "$ {0:N2}" },
                 { "kit_price_exclusive", "EXCLUSIVE" },
-                { "kit_required_level", "<color=#{1}>Level: {0}</color>" }, // {0} = level number
+                { "kit_required_level", "<color=#{1}>lvl {0}</color>" }, // {0} = level number
                 { "kit_required_rank", "<color=#{1}>Rank: {0}</color>" },
                 { "kit_required_quest", "<color=#{1}>Quest: <color=#ffffff>{0}</color></color>" },
                 { "kit_required_quest_unknown", "<color=#{1}>Finish <color=#ffffff>{0}</color> quest{2}</color>" },
@@ -1097,7 +1097,7 @@ namespace Uncreated.Warfare
             { "kit_public_header", "ffffff" },
             { "kit_level_available", "ff974d" },
             { "kit_level_available_abbr", "999999" },
-            { "kit_level_unavailable", "ad9380" },
+            { "kit_level_unavailable", "ff974d" },
             { "kit_level_unavailable_abbr", "999999" },
             { "kit_level_dollars", "7878ff" },
             { "kit_level_dollars_owned", "769fb5" },

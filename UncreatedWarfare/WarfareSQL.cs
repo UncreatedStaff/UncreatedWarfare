@@ -303,8 +303,8 @@ namespace Uncreated.Warfare
             if (ttl >= 0)
             {
                 await NonQueryAsync(
-                    "INSERT INTO `s2_levels` (`Steam64`, `Experience`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `Experience` = `Experience` + @1;",
-                    new object[2] { player, amount });
+                    "INSERT INTO `s2_levels` (`Steam64`, `Experience`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `Experience` = @1;",
+                    new object[2] { player, ttl });
                 return ttl;
             }
             else if (amount != 0)
