@@ -110,7 +110,7 @@ namespace Uncreated
                         }
 
                         writer.WriteEndArray();
-                        writer.Flush();
+                        writer.Dispose();
                         rs.Close();
                         rs.Dispose();
                     }

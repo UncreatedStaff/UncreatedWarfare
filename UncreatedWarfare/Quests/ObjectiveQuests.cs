@@ -119,14 +119,14 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
     public struct State : IQuestState<Tracker, XPInGamemodeQuest>
     {
         public IDynamicValue<int>.IChoice XPCount;
-        public IDynamicValue<EGamemode>.IChoice Gamemode;
+        internal DynamicEnumValue<EGamemode>.Choice Gamemode;
         public IDynamicValue<int>.IChoice GameCount;
         public IDynamicValue<int>.IChoice FlagValue => GameCount;
         public bool IsEligable(UCPlayer player) => true;
         public void Init(XPInGamemodeQuest data)
         {
             this.XPCount = data.XPCount.GetValue();
-            this.Gamemode = data.Gamemode.GetValue();
+            this.Gamemode = data.Gamemode.GetValueIntl();
             this.GameCount = data.NumberOfGames.GetValue();
         }
         public void OnPropertyRead(ref Utf8JsonReader reader, string prop)
@@ -134,7 +134,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
             if (prop.Equals("xp_goal", StringComparison.Ordinal))
                 XPCount = DynamicIntegerValue.ReadChoice(ref reader);
             else if (prop.Equals("gamemode", StringComparison.Ordinal))
-                Gamemode = DynamicEnumValue<EGamemode>.ReadChoice(ref reader);
+                Gamemode = DynamicEnumValue<EGamemode>.ReadChoiceIntl(ref reader);
             else if (prop.Equals("game_count", StringComparison.Ordinal))
                 GameCount = DynamicIntegerValue.ReadChoice(ref reader);
         }
@@ -148,7 +148,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
     public class Tracker : BaseQuestTracker, INotifyGameOver, INotifyGainedXP
     {
         private readonly int XPCount = 0;
-        public IDynamicValue<EGamemode>.IChoice Gamemode;
+        private readonly DynamicEnumValue<EGamemode>.Choice Gamemode;
         private readonly int GameCount = 0;
         private int _currentXp;
         private int _gamesCompleted;
@@ -284,8 +284,9 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
 [QuestData(EQuestType.WIN_GAMEMODE)]
 public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamemodeQuest.State, WinGamemodeQuest>
 {
+    private const EGamemode MAX_GAMEMODE = EGamemode.INSURGENCY;
     public DynamicIntegerValue WinCount;
-    public DynamicEnumValue<EGamemode> Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, EGamemode.INSURGENCY), EChoiceBehavior.ALLOW_ALL);
+    public DynamicEnumValue<EGamemode> Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, MAX_GAMEMODE), EChoiceBehavior.ALLOW_ONE);
     public override int TickFrequencySeconds => 0;
     protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
@@ -293,7 +294,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
         if (propertyname.Equals("gamemode", StringComparison.Ordinal))
         {
             if (!reader.TryReadEnumValue(out Gamemode))
-                Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, EGamemode.INSURGENCY), EChoiceBehavior.ALLOW_ALL);
+                Gamemode = new DynamicEnumValue<EGamemode>(new EnumRange<EGamemode>(EGamemode.TEAM_CTF, MAX_GAMEMODE), EChoiceBehavior.ALLOW_ONE);
         }
         else if (propertyname.Equals("wins", StringComparison.Ordinal))
         {

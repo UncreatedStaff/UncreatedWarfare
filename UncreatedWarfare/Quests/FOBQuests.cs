@@ -435,6 +435,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         protected override bool CompletedCheck => _built >= Amount;
         public override short FlagValue => (short)_built;
         public override void ResetToDefaults() => _built = 0;
+        public override int Reward => Amount * 10;
         public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             Amount = questState.Amount.InsistValue();
@@ -511,6 +512,7 @@ public class FOBUseQuest : BaseQuestData<FOBUseQuest.Tracker, FOBUseQuest.State,
         private int _fobUses;
         protected override bool CompletedCheck => _fobUses >= UseCount;
         public override short FlagValue => (short)_fobUses;
+        public override int Reward => UseCount * 10;
         public Tracker(UCPlayer? target, ref State questState) : base(target)
         {
             UseCount = questState.UseCount.InsistValue();

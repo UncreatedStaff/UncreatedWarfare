@@ -13,6 +13,7 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests;
 
+[Translatable]
 public enum EWeaponClass : byte
 {
     UNKNOWN,
@@ -26,6 +27,7 @@ public enum EWeaponClass : byte
     ROCKET,
     SMG
 }
+[Translatable]
 public enum EQuestType : byte
 {
     INVALID,
@@ -132,8 +134,26 @@ public static class QuestJsonEx
             {
                 return EWeaponClass.ROCKET;
             }
-
-            // TODO more checks
+            else if (weapon.itemDescription.IndexOf("smg", StringComparison.OrdinalIgnoreCase) != -1)
+            {
+                return EWeaponClass.SMG;
+            }
+            else if (weapon.itemDescription.IndexOf("pistol", StringComparison.OrdinalIgnoreCase) != -1)
+            {
+                return EWeaponClass.PISTOL;
+            }
+            else if (weapon.itemDescription.IndexOf("marksman", StringComparison.OrdinalIgnoreCase) != -1)
+            {
+                return EWeaponClass.MARKSMAN_RIFLE;
+            }
+            else if (weapon.itemDescription.IndexOf("rifle", StringComparison.OrdinalIgnoreCase) != -1)
+            {
+                return EWeaponClass.BATTLE_RIFLE;
+            }
+            else if (weapon.itemDescription.IndexOf("machine", StringComparison.OrdinalIgnoreCase) != -1 || weapon.itemDescription.IndexOf("lmg", StringComparison.OrdinalIgnoreCase) != -1)
+            {
+                return EWeaponClass.MACHINE_GUN;
+            }
         }
 
         return EWeaponClass.UNKNOWN;
@@ -1481,11 +1501,13 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         this._choiceBehavior = choiceBehavior;
         this.IsKitSelector = isKitSelector;
     }
-    public readonly IDynamicValue<string>.IChoice GetValue()
+    IDynamicValue<string>.IChoice IDynamicValue<string>.GetValue() => GetValue();
+    internal readonly Choice GetValue()
     {
         return new Choice(this);
     }
-    public static IDynamicValue<string>.IChoice ReadChoice(ref Utf8JsonReader reader)
+    public static IDynamicValue<string>.IChoice ReadChoice(ref Utf8JsonReader reader) => ReadChoiceIntl(ref reader);
+    internal static Choice ReadChoiceIntl(ref Utf8JsonReader reader)
     {
         Choice choice = new Choice();
         choice.Read(ref reader);
@@ -1549,6 +1571,8 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         private EDynamicValueType _type;
         private string? _value;
         private string[]? _values;
+        private string? _kitName;
+        private string[]? _kitNames;
         private bool _isKitSelector;
         public bool IsKitSelector => _isKitSelector;
         public EChoiceBehavior Behavior => _behavior;
@@ -1560,6 +1584,8 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             _type = default;
             _behavior = default;
             _isKitSelector = default;
+            _kitName = null;
+            _kitNames = null;
             FromValue(ref value);
         }
         private void FromValue(ref DynamicStringValue value)
@@ -1695,6 +1721,75 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             }
             else
                 return _value!;
+        }
+        public string GetKitNames(ulong player = 0)
+        {
+            if (_isKitSelector)
+            {
+                if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
+                {
+                    if (_kitName == null)
+                    {
+                        if (KitManager.KitExists(_value!, out Kit kit))
+                            _kitName = GetKitName(kit, player);
+                        else
+                            _kitName = _value!;
+                    }
+                    return _kitName;
+                }
+                else if (_type == EDynamicValueType.ANY)
+                {
+                    return "any";
+                }
+                else if (_type == EDynamicValueType.SET)
+                {
+                    if (_kitNames == null)
+                    {
+                        _kitNames = new string[_values!.Length];
+                        for (int i = 0; i < _values.Length; ++i)
+                        {
+                            if (KitManager.KitExists(_values[i], out Kit kit))
+                                _kitNames[i] = GetKitName(kit, player);
+                            else
+                                _kitNames[i] = _values[i];
+                        }
+                    }
+
+                    StringBuilder builder = new StringBuilder();
+                    for (int i = 0; i < _kitNames.Length; ++i)
+                    {
+                        if (i != 0)
+                        {
+                            if (i != _kitNames.Length - 1)
+                                builder.Append(", ");
+                            else if (_kitNames.Length > 2)
+                                builder.Append(", " + (_behavior == EChoiceBehavior.ALLOW_ONE ? "or" : "and") + " ");
+                            else if (_kitNames.Length == 2)
+                                builder.Append(" " + (_behavior == EChoiceBehavior.ALLOW_ONE ? "or" : "and") + " ");
+                        }
+
+                        builder.Append(_kitNames[i]);
+                    }
+
+                    return builder.ToString();
+                }
+                else return _value!;
+            }
+            else
+            {
+                return ToString();
+            }
+        }
+        private static string GetKitName(Kit kit, ulong player)
+        {
+            if (player == 0 || !Data.Languages.TryGetValue(player, out string language))
+                language = JSONMethods.DEFAULT_LANGUAGE;
+            if (kit.SignTexts.TryGetValue(language, out string v))
+                return v;
+            else if (!language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) &&
+                     kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out v))
+                return v;
+            else return kit.SignTexts.Values.FirstOrDefault();
         }
     }
 }
@@ -1955,9 +2050,9 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                         if (i != _valuesCache.Length - 1)
                             builder.Append(", ");
                         else if (_valuesCache.Length > 2)
-                            builder.Append(", and ");
+                            builder.Append(", " + (_behavior == EChoiceBehavior.ALLOW_ONE ? "or" : "and") + " ");
                         else if (_valuesCache.Length == 2)
-                            builder.Append(" and ");
+                            builder.Append(" " + (_behavior == EChoiceBehavior.ALLOW_ONE ? "or" : "and") + " ");
                     }
                     builder.Append(GetName(_valuesCache[i], _assetType) ?? "null");
                 }
@@ -2186,11 +2281,15 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         this.type = EDynamicValueType.RANGE;
         _choiceBehavior = choiceBehavior;
     }
-    public readonly IDynamicValue<TEnum>.IChoice GetValue()
+
+    public readonly IDynamicValue<TEnum>.IChoice GetValue() => GetValueIntl();
+    internal readonly Choice GetValueIntl()
     {
         return new Choice(this);
     }
-    public static IDynamicValue<TEnum>.IChoice ReadChoice(ref Utf8JsonReader reader)
+
+    public static IDynamicValue<TEnum>.IChoice ReadChoice(ref Utf8JsonReader reader) => ReadChoiceIntl(ref reader);
+    internal static Choice ReadChoiceIntl(ref Utf8JsonReader reader)
     {
         Choice choice = new Choice();
         choice.Read(ref reader);
@@ -2253,7 +2352,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         }
     }
 
-    private struct Choice : IDynamicValue<TEnum>.IChoice
+    internal struct Choice : IDynamicValue<TEnum>.IChoice
     {
         private EChoiceBehavior _behavior;
         private EDynamicValueType _type;
@@ -2444,6 +2543,38 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             }
             else
                 return _value.ToString();
+        }
+        public string GetCommaList(ulong player)
+        {
+            if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
+            {
+                return Translation.TranslateEnum(_value, player);
+            }
+            else if (_type == EDynamicValueType.ANY)
+            {
+                return "any";
+            }
+            else if (_type == EDynamicValueType.SET)
+            {
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < _values!.Length; ++i)
+                {
+                    if (i != 0)
+                    {
+                        if (i != _values.Length - 1)
+                            builder.Append(", ");
+                        else if (_values.Length > 2)
+                            builder.Append(", " + (_behavior == EChoiceBehavior.ALLOW_ONE ? "or" : "and") + " ");
+                        else if (_values.Length == 2)
+                            builder.Append(" " + (_behavior == EChoiceBehavior.ALLOW_ONE ? "or" : "and") + " ");
+                    }
+
+                    builder.Append(Translation.TranslateEnum(_values[i], player));
+                }
+
+                return builder.ToString();
+            }
+            else return Translation.TranslateEnum(_value!, player);
         }
     }
 }

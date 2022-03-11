@@ -18,6 +18,7 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Gamemodes
 {
+    [Translatable]
     public enum EGamemode : byte
     {
         UNDEFINED,

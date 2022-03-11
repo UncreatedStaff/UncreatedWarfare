@@ -195,6 +195,7 @@ namespace Uncreated.Warfare.Commands
                 Data.Languages = JSONMethods.LoadLanguagePreferences();
                 Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
                 Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+                Translation.ReadEnumTranslations();
                 if (OnTranslationsReloaded != null)
                     OnTranslationsReloaded.Invoke();
             }

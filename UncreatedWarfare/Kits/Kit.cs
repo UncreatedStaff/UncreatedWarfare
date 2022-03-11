@@ -917,6 +917,7 @@ public class KitClothing : IJsonReadWrite
         }
     }
 }
+[Translatable]
 public enum EBranch : byte
 {
     DEFAULT,
@@ -936,6 +937,7 @@ public enum EClothingType : byte
     BACKPACK,
     GLASSES
 }
+[Translatable]
 public enum EClass : byte
 {
     NONE, //0 

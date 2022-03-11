@@ -418,20 +418,10 @@ public readonly struct RankData : IComparable<RankData>
     }
     public RankData(int order, Dictionary<string, string> names, Dictionary<string, string> abbreviations, string color, Guid questID, params Guid[] unlockRequirements)
     {
-        // convert rarity colors to hexadecimal colors
-        string f1 = "color=" + color;
-        string f2 = ItemTool.filterRarityRichText(f1);
-        if (f2.Equals(f1) || f2.Length <= 7)
-            this.Color = color;
-        else
-            this.Color = f2.Substring(7); // 7 is "color=#" length
-        if (!int.TryParse(this.Color, System.Globalization.NumberStyles.HexNumber, Data.Locale, out _))
-            this.Color = UCWarfare.GetColorHex("default");
-
+        this.Color = F.FilterRarityToHex(color);
         this.Order = order;
         this.NameTranslations = names;
         this.AbbreviationTranslations = abbreviations;
-        this.Color = UCWarfare.GetColorHex("default");
         this.QuestID = questID;
         this.UnlockRequirements = unlockRequirements;
     }

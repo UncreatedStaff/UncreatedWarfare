@@ -579,10 +579,8 @@ namespace Uncreated.Networking.Encoding
                 Logging.LogWarning(Environment.StackTrace);
                 return;
             }
-            fixed (byte* ptr = buffer)
-            {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
-            }
+
+            Write((ushort)n.Length);
             for (int i = 0; i < n.Length; i++)
             {
                 byte[] str = System.Text.Encoding.UTF8.GetBytes(n[i]);

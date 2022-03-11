@@ -197,6 +197,8 @@ namespace Uncreated.Warfare
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
 
+            Translation.ReadEnumTranslations();
+
             /* CONSTRUCT FRAMEWORK */
             L.Log("Instantiating Framework...", ConsoleColor.Magenta);
             DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
@@ -330,6 +332,7 @@ namespace Uncreated.Warfare
             StatsManager.LoadVehicles();
             for (int i = 0; i < Provider.clients.Count; i++)
                 StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
+            Quests.DailyQuests.OnLoad();
         }
         public static List<Log> ReadRocketLog()
         {

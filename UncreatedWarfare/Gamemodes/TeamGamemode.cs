@@ -169,54 +169,62 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void DestroyBlockers()
         {
-            bool backup = false;
-            if (_blockerBarricadeT1 != null && Regions.tryGetCoordinate(_blockerBarricadeT1.position, out byte x, out byte y))
+            try
             {
-                BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT1);
-                if (drop != null)
+                bool backup = false;
+                if (_blockerBarricadeT1 != null && Regions.tryGetCoordinate(_blockerBarricadeT1.position, out byte x, out byte y))
                 {
-                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                }
-                else
-                {
-                    backup = true;
-                }
-                _blockerBarricadeT1 = null;
-            }
-            else backup = true;
-            if (_blockerBarricadeT2 != null && Regions.tryGetCoordinate(_blockerBarricadeT2.position, out x, out y))
-            {
-                BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT2);
-                if (drop != null)
-                {
-                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                }
-                else
-                {
-                    backup = true;
-                }
-                _blockerBarricadeT2 = null;
-            }
-            else backup = true;
-            if (backup)
-            {
-                bool l = false;
-                for (x = 0; x < Regions.WORLD_SIZE; x++)
-                {
-                    for (y = 0; y < Regions.WORLD_SIZE; y++)
+                    BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT1);
+                    if (drop != null)
                     {
-                        for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
+                        BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                    }
+                    else
+                    {
+                        backup = true;
+                    }
+                    _blockerBarricadeT1 = null;
+                }
+                else backup = true;
+                if (_blockerBarricadeT2 != null && Regions.tryGetCoordinate(_blockerBarricadeT2.position, out x, out y))
+                {
+                    BarricadeDrop drop = BarricadeManager.regions[x, y].FindBarricadeByRootTransform(_blockerBarricadeT2);
+                    if (drop != null)
+                    {
+                        BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                    }
+                    else
+                    {
+                        backup = true;
+                    }
+                    _blockerBarricadeT2 = null;
+                }
+                else backup = true;
+                if (backup)
+                {
+                    bool l = false;
+                    for (x = 0; x < Regions.WORLD_SIZE; x++)
+                    {
+                        for (y = 0; y < Regions.WORLD_SIZE; y++)
                         {
-                            BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
-                            if (d.asset.GUID == Config.MapConfig.T1ZoneBlocker || d.asset.GUID == Config.MapConfig.T2ZoneBlocker)
+                            for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
                             {
-                                BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
-                                if (l) return;
-                                else l = true;
+                                BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
+                                if (d.asset.GUID == Config.MapConfig.T1ZoneBlocker || d.asset.GUID == Config.MapConfig.T2ZoneBlocker)
+                                {
+                                    BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
+                                    if (l) return;
+                                    else l = true;
+                                }
                             }
                         }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Failed to destroy zone blockers in gamemode " + Name);
+                L.LogError(ex);
             }
         }
         public void SpawnBlockers()

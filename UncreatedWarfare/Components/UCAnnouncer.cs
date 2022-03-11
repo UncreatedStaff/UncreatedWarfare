@@ -74,6 +74,7 @@ namespace Uncreated.Warfare.Components
                         writer.WriteEndObject();
                         writer.WriteEndObject();
                         writer.WriteEndObject();
+                        writer.Dispose();
                         Messages.Add(JSONMethods.DEFAULT_LANGUAGE, enUs);
                     }
                     return;
