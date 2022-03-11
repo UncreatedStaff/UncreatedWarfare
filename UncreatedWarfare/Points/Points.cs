@@ -81,16 +81,16 @@ namespace Uncreated.Warfare.Point
             UpdateXPUI(player);
         }*/
 
-        private const float XP_STRETCH = 7883.735f;
-        private const float XP_STRETCH_3 = XP_STRETCH * XP_STRETCH * XP_STRETCH;
-        private const float XP_MULTIPLIER_SQR = 490000f;
-        private const float ONE_THIRD = 1f / 3f;
+        private const float XP_STRETCH = 420;
+        private const float XP_MULTIPLIER_SQR = 4f;
+        private const float EXPONENT = 2.5f;
+        private const float ROOT = 1 / EXPONENT;
         /// <summary>Get the current level given an amount of <paramref name="xp"/>.</summary>
-        public static int GetLevel(int xp) => Mathf.FloorToInt(Mathf.Pow(xp * xp * XP_MULTIPLIER_SQR, ONE_THIRD) / XP_STRETCH);
+        public static int GetLevel(int xp) => Mathf.FloorToInt(Mathf.Pow(xp * xp * XP_MULTIPLIER_SQR, ROOT) / XP_STRETCH); 
         /// <summary>Get the given <paramref name="level"/>'s starting xp.</summary>
-        public static int GetLevelXP(int level) => Mathf.RoundToInt(Mathf.Sqrt(XP_STRETCH_3 * level * level * level / XP_MULTIPLIER_SQR));
+        public static int GetLevelXP(int level) => Mathf.RoundToInt(Mathf.Sqrt(Mathf.Pow(XP_STRETCH, EXPONENT) * Mathf.Pow(level, EXPONENT) / XP_MULTIPLIER_SQR));
         /// <summary>Get the level after the given <paramref name="level"/>'s starting xp (or the given <paramref name="level"/>'s end xp.</summary>
-        public static int GetNextLevelXP(int level) => Mathf.RoundToInt(Mathf.Sqrt(XP_STRETCH_3 * ++level * level * level / XP_MULTIPLIER_SQR));
+        public static int GetNextLevelXP(int level) => Mathf.RoundToInt(Mathf.Sqrt(Mathf.Pow(XP_STRETCH, EXPONENT) * Mathf.Pow(++level, EXPONENT) / XP_MULTIPLIER_SQR));
         /// <summary>Get the percentage from 0-1 a player is through their current level at the given <paramref name="xp"/>.</summary>
         public static float GetLevelProgressXP(int xp)
         {
