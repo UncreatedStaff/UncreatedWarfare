@@ -14,36 +14,65 @@ namespace Uncreated.Warfare.Quests;
 
 public static class DailyQuests
 {
-    private static DateTime LastRefresh;
     public static BaseQuestData[] DailyQuestDatas = new BaseQuestData[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
     public static IQuestState[] States = new IQuestState[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
     public static Dictionary<ulong, DailyQuestTracker> DailyTrackers = new Dictionary<ulong, DailyQuestTracker>();
     private static DailyQuestSave[] _quests;
     private static DailyQuest[] _sendQuests;
+    private static DateTime _nextRefresh;
     private static int index = 0;
+    private volatile static bool sentCurrent = false;
+    public static TimeSpan TimeLeftForQuests => DateTime.Now - _nextRefresh;
+    public static void OnConnectedToServer()
+    {
+        if (!sentCurrent)
+        {
+            ReplicateQuestChoices();
+        }
+    }
     public static void OnLoad()
     {
+        string p = QuestManager.QUEST_FOLDER + "DailyQuests\\";
+        if (Directory.Exists(p))
+        {
+            L.Log("Loading DailyQuests mod");
+            Assets.load(p, true, EAssetOrigin.WORKSHOP, true, 2773379635ul);
+        }
         ReadQuests();
         CreateNewDailyQuests();
+        _nextRefresh = _quests[index + 1].StartDate;
+        if (sentCurrent)
+        {
+            for (int i = 0; i < _quests.Length; i++)
+            {
+                ref DailyQuestSave save = ref _quests[i];
+                if (Assets.find(save.guid) is not QuestAsset asset)
+                {
+                    L.LogWarning("Cannot find asset for day " + i + "quest.");
+                }
+            }
+        }
     }
-    /// <summary>Checks if a day has passed.</summary>
     public static void Tick()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         DateTime now = DateTime.Now;
-        if ((now - LastRefresh).TotalDays >= 1d)
+        if (_nextRefresh <= now)
         {
-            L.Log("Generating new Daily Quests.", ConsoleColor.Magenta);
-            LastRefresh = now;
+            L.Log("Loading new Daily Quests.", ConsoleColor.Magenta);
             index++;
             if (index > DailyQuest.DAILY_QUEST_LENGTH / 2)
             {
+                L.Log("Generating new Daily Quests.", ConsoleColor.Magenta);
                 CreateNextModContent();
                 index = 0;
             }
             CreateNewDailyQuests();
+
+            _nextRefresh = _quests[index + 1].StartDate;
+            SaveQuests();
 
             foreach (KeyValuePair<ulong, DailyQuestTracker> tracker in DailyTrackers)
             {
@@ -73,7 +102,7 @@ public static class DailyQuests
             ref DailyQuestSave save = ref _quests[day];
             GetConditions(ref dq, ref save, day, now);
         }
-
+        SaveQuests();
         ReplicateQuestChoices();
     }
     public static void CreateNextModContent()
@@ -83,8 +112,6 @@ public static class DailyQuests
             L.LogError("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
             return;
         }
-
-
         int half = DailyQuest.DAILY_QUEST_LENGTH / 2;
         DailyQuest[] quests = _sendQuests;
         _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
@@ -110,11 +137,13 @@ public static class DailyQuests
             ref DailyQuestSave save = ref _quests[day];
             GetConditions(ref dq, ref save, day, now);
         }
-
+        SaveQuests();
         ReplicateQuestChoices();
     }
     private static void GetConditions(ref DailyQuest dq, ref DailyQuestSave save, int day, DateTime now)
     {
+        dq.guid = Guid.NewGuid();
+        save.guid = dq.guid;
         dq.conditions = new DailyQuest.Condition[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
         save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
         save.StartDate = day == 0 ? now : now.AddDays(day);
@@ -147,7 +176,7 @@ public static class DailyQuests
                 pset.PresetObj = preset;
                 pset.Type = data.QuestType;
                 cond.FlagValue = preset.State.FlagValue.InsistValue();
-                cond.Translation = tempTracker.GetDisplayString(true);
+                cond.Translation = tempTracker.GetDisplayString(true) ?? data.QuestType.ToString();
                 cond.Key = preset.Key;
             }
             else
@@ -179,6 +208,11 @@ public static class DailyQuests
         }
 
         DailyQuestTracker tr = new DailyQuestTracker(player, trackers);
+        ref DailyQuestSave save = ref _quests[index];
+        if (Assets.find(save.guid) is QuestAsset quest)
+        {
+            player.Player.quests.sendAddQuest(quest.id);
+        }
         LoadSave(tr);
         if (DailyTrackers.TryGetValue(player.Steam64, out DailyQuestTracker tr2))
         {
@@ -233,8 +267,6 @@ public static class DailyQuests
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        LastRefresh = DateTime.Now;
-
         ref DailyQuestSave save = ref _quests[index];
         for (int i = 0; i < DailyQuest.DAILY_QUEST_CONDITION_LENGTH; ++i)
         {
@@ -251,18 +283,17 @@ public static class DailyQuests
     }
     public static void ReplicateQuestChoices()
     {
-        NetTask task = SendNextQuests.Request(AckNextQuestsUploaded, Data.NetClient.connection, _sendQuests);
-        Task.Run(async () =>
-        {
-            NetTask.Response response = await task;
-            if (response.Responded && response.Parameters.Length > 0 && response.Parameters[0] is Folder folder)
-            {
-                string p = QuestManager.QUEST_FOLDER + "DailyQuests\\";
-                folder.WriteToDisk(p);
-                await UCWarfare.ToUpdate();
-                Assets.load(p, true, EAssetOrigin.WORKSHOP, true, 2773379635ul);
-            }
-        });
+        SendNextQuests.NetInvoke(_sendQuests);
+    }
+    [NetCall(ENetCall.FROM_SERVER, 1126)]
+    public static async Task ReceiveQuestData(IConnection connection, Folder folder)
+    {
+        string p = QuestManager.QUEST_FOLDER + "DailyQuests\\";
+        folder.WriteToDisk(p);
+        await UCWarfare.ToUpdate();
+        L.Log("Received mod folder: " + folder.name);
+        Assets.load(p, true, EAssetOrigin.WORKSHOP, true, 2773379635ul);
+        sentCurrent = true;
     }
     public static void SaveQuests()
     {
@@ -272,6 +303,8 @@ public static class DailyQuests
             writer.WriteStartObject();
             writer.WritePropertyName("index");
             writer.WriteNumberValue(index);
+            writer.WritePropertyName("sent_quests");
+            writer.WriteBooleanValue(sentCurrent);
             writer.WritePropertyName("quest_schedule");
             writer.WriteStartArray();
             for (int i = 0; i < _quests.Length; ++i)
@@ -280,6 +313,8 @@ public static class DailyQuests
                 writer.WriteStartObject();
                 writer.WritePropertyName("start_time");
                 writer.WriteNumberValue(quest.StartDate.Ticks);
+                writer.WritePropertyName("asset_guid");
+                writer.WriteStringValue(quest.guid);
                 writer.WritePropertyName("presets");
                 writer.WriteStartArray();
                 for (int j = 0; j < quest.Presets.Length; ++j)
@@ -300,6 +335,8 @@ public static class DailyQuests
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();
+            writer.WriteEndObject();
+            writer.Dispose();
         }
     }
     public static void ReadQuests()
@@ -336,6 +373,9 @@ public static class DailyQuests
                                     reader.TryGetInt32(out index);
                                 }
                                 break;
+                            case "sent_quests":
+                                sentCurrent = reader.TokenType == JsonTokenType.True;
+                                break;
                             case "quest_schedule":
                                 if (reader.TokenType == JsonTokenType.StartArray)
                                 {
@@ -364,6 +404,10 @@ public static class DailyQuests
                                                                 if (v != null) 
                                                                     DateTime.TryParse(v, Data.Locale, System.Globalization.DateTimeStyles.AssumeLocal, out save.StartDate);
                                                             }
+                                                            break;
+                                                        case "asset_guid":
+                                                            if (reader.TokenType == JsonTokenType.String)
+                                                                reader.TryGetGuid(out save.guid);
                                                             break;
                                                         case "presets":
                                                             save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
@@ -430,8 +474,8 @@ public static class DailyQuests
         {
             Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
             writer.WriteStartObject();
-            writer.WritePropertyName("time");
-            writer.WriteNumberValue(LastRefresh.Ticks);
+            writer.WritePropertyName("guid");
+            writer.WriteStringValue(_quests[index].guid);
             writer.WritePropertyName("daily_challenges");
             writer.WriteStartArray();
             for (int i = 0; i < DailyQuest.DAILY_QUEST_CONDITION_LENGTH; i++)
@@ -464,15 +508,16 @@ public static class DailyQuests
             {
                 while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
                 {
-                    if (reader.GetString()!.Equals("time", StringComparison.OrdinalIgnoreCase))
+                    string prop = reader.GetString()!;
+                    if (prop.Equals("guid", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (reader.Read() && reader.TokenType == JsonTokenType.Number && reader.TryGetInt64(out long time))
+                        if (reader.Read() && reader.TokenType == JsonTokenType.String && reader.TryGetGuid(out Guid time))
                         {
-                            if (time != LastRefresh.Ticks)
+                            if (time != _quests[index].guid)
                                 goto deleteFile; // expired progress file from another day, delete the file and load default values
                         }
                     }
-                    else if (reader.GetString()!.Equals("daily_challenges", StringComparison.OrdinalIgnoreCase))
+                    else if (prop.Equals("daily_challenges", StringComparison.OrdinalIgnoreCase))
                     {
                         if (reader.Read() && reader.TokenType == JsonTokenType.StartArray)
                         {
@@ -486,7 +531,7 @@ public static class DailyQuests
                                 }
                                 else if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
-                                    string prop = reader.GetString()!;
+                                    prop = reader.GetString()!;
                                     if (reader.Read() && i != -1)
                                     {
                                         try
@@ -519,7 +564,7 @@ public static class DailyQuests
     }
 
     internal static readonly NetCallRaw<DailyQuest[]> SendNextQuests = new NetCallRaw<DailyQuest[]>(1125, DailyQuest.ReadMany, DailyQuest.WriteMany);
-    internal static readonly NetCallRaw<Folder> AckNextQuestsUploaded = new NetCallRaw<Folder>(1126, Folder.Read, Folder.Write, 65536, true);
+    internal static readonly NetCallRaw<Folder> AckNextQuestsUploaded = new NetCallRaw<Folder>(ReceiveQuestData, Folder.Read, Folder.Write, 65536);
 }
 public class DailyQuestTracker
 {
@@ -539,6 +584,7 @@ public struct DailyQuestSave
 {
     public DateTime StartDate;
     public Preset[] Presets;
+    public Guid guid;
 
     public struct Preset
     {

@@ -2565,26 +2565,10 @@ namespace Uncreated.Warfare
         public const int DAILY_QUEST_LENGTH = 14;
         public const int DAILY_QUEST_CONDITION_LENGTH = 3;
         public const string WORKSHOP_FILE_NAME = "UC_DailyQuests";
-        public static readonly Guid[] DAILY_QUEST_GUIDS = new Guid[DAILY_QUEST_LENGTH]
-        {
-            new Guid("6aada7ab-64ae-4b37-9685-5535e4c9c3d9"),
-            new Guid("fb947c8f-700e-4f74-afed-56b82c39a151"),
-            new Guid("3b8761e5-6677-48b0-9406-32e0ce23fc02"),
-            new Guid("813e8e6d-ec29-426a-a986-3b5d01d364bf"),
-            new Guid("d010bc29-3e78-40de-81f6-6d51ddd87c44"),
-            new Guid("74de669f-6eb6-42a8-a7ed-c6a3f2296ddb"),
-            new Guid("4e2c1118-f777-4496-bcfb-049008cc4b68"),
-            new Guid("44499de8-8c93-46a3-9d75-83a9ccb4f02f"),
-            new Guid("512ba1ca-6927-4c8f-9084-b0f150aea71d"),
-            new Guid("422de60e-9cfc-4b71-a6ca-a50a2316dedc"),
-            new Guid("57f03630-a9e7-40c2-a669-7f309f4001a1"),
-            new Guid("7ecce68f-e024-4b92-b497-a59e02e68d28"),
-            new Guid("be9d412d-0fc1-42c4-b005-3fbe23fc5085"),
-            new Guid("df7ba3e3-681b-4018-a819-9da34a756319")
-        };
         public const ushort DAILY_QUEST_START_ID = 62000;
         public const ushort DAILY_QUEST_FLAG_START_ID = 62000;
         public Condition[] conditions;
+        public Guid guid;
         public static DailyQuest[] ReadMany(ByteReader R)
         {
             DailyQuest[] conditions = new DailyQuest[DAILY_QUEST_LENGTH];
@@ -2606,6 +2590,7 @@ namespace Uncreated.Warfare
         }
         public void Read(ByteReader R)
         {
+            guid = R.ReadGUID();
             conditions = new Condition[DAILY_QUEST_CONDITION_LENGTH];
             for (int i = 0; i < DAILY_QUEST_CONDITION_LENGTH; ++i)
             {
@@ -2619,6 +2604,7 @@ namespace Uncreated.Warfare
         }
         public void Write(ByteWriter W)
         {
+            W.Write(guid);
             for (int i = 0; i < DAILY_QUEST_CONDITION_LENGTH; ++i)
             {
                 ref Condition c = ref conditions[i];
@@ -2649,21 +2635,21 @@ namespace Uncreated.Warfare
             DirectoryInfo info = new DirectoryInfo(directoryPath);
             if (info.Exists)
             {
-                Uri parent = new Uri(Path.GetFullPath(directoryPath));
-                name = Path.GetDirectoryName(directoryPath);
+                string parentPath = info.FullName;
+                name = info.Name;
                 DirectoryInfo[] dirs = info.EnumerateDirectories("*", SearchOption.AllDirectories).ToArray();
                 FileInfo[] files = info.EnumerateFiles("*", SearchOption.AllDirectories).ToArray();
                 folders = new string[dirs.Length];
                 for (int i = 0; i < dirs.Length; i++)
                 {
-                    folders[i] = new Uri(dirs[i].FullName).MakeRelativeUri(parent).ToString();
+                    folders[i] = GetRelativePath(parentPath, dirs[i].FullName);
                 }
                 this.files = new File[files.Length];
                 for (int i = 0; i < files.Length; i++)
                 {
                     this.files[i] = new File()
                     {
-                        path = new Uri(files[i].FullName).MakeRelativeUri(parent).ToString(),
+                        path = GetRelativePath(parentPath, files[i].FullName),
                         content = System.IO.File.ReadAllBytes(files[i].FullName)
                     };
                 }
@@ -2713,6 +2699,17 @@ namespace Uncreated.Warfare
                 W.Write(file.path);
                 W.WriteLong(file.content);
             }
+        }
+        // https://stackoverflow.com/questions/51179331/is-it-possible-to-use-path-getrelativepath-net-core2-in-winforms-proj-targeti
+        private static string GetRelativePath(string relativeTo, string path)
+        {
+            Uri uri = new Uri(relativeTo);
+            string rel = Uri.UnescapeDataString(uri.MakeRelativeUri(new Uri(path)).ToString()).Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            if (!rel.Contains(Path.DirectorySeparatorChar.ToString()))
+            {
+                rel = $"." + Path.DirectorySeparatorChar + rel;
+            }
+            return rel;
         }
     }
     public enum EReportType : byte

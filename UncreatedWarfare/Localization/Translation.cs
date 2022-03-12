@@ -6,7 +6,10 @@ using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -1716,6 +1719,142 @@ namespace Uncreated.Warfare
                 languages.Clear();
             }
         }
+        public static string TranslateEnum<TEnum>(TEnum value, string language) where TEnum : struct, Enum
+        {
+            if (enumTranslations.TryGetValue(typeof(TEnum), out Dictionary<string, Dictionary<string, string>> t))
+            {
+                if (!t.TryGetValue(language, out Dictionary<string, string> v) &&
+                    (JSONMethods.DEFAULT_LANGUAGE.Equals(language, StringComparison.Ordinal) ||
+                     !t.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out v)))
+                    v = t.Values.FirstOrDefault();
+                string strRep = value.ToString();
+                if (v == null || !v.TryGetValue(strRep, out string v2))
+                    return strRep.ToProperCase();
+                else return v2;
+            }
+            else return value.ToString().ToProperCase();
+        }
+        public static string TranslateEnum<TEnum>(TEnum value, ulong player) where TEnum : struct, Enum
+        {
+            if (player != 0 && Data.Languages.TryGetValue(player, out string language))
+                return TranslateEnum(value, language);
+            else return TranslateEnum(value, JSONMethods.DEFAULT_LANGUAGE);
+        }
+        private const string ENUM_NAME_PLACEHOLDER = "%NAME%";
+        public static string TranslateEnumName<TEnum>(string language) where TEnum : struct, Enum
+        {
+            Type t2 = typeof(TEnum);
+            if (enumTranslations.TryGetValue(t2, out Dictionary<string, Dictionary<string, string>> t))
+            {
+                if (!t.TryGetValue(language, out Dictionary<string, string> v) &&
+                    (JSONMethods.DEFAULT_LANGUAGE.Equals(language, StringComparison.Ordinal) ||
+                     !t.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out v)))
+                    v = t.Values.FirstOrDefault();
+                if (v == null || !v.TryGetValue(ENUM_NAME_PLACEHOLDER, out string v2))
+                    return ENUM_NAME_PLACEHOLDER.ToProperCase();
+                else return v2;
+            }
+            else
+            {
+                string name = t2.Name;
+                if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
+                    name = name.Substring(1);
+                return name.ToProperCase();
+            }
+        }
+        public static string TranslateEnumName<TEnum>(ulong player) where TEnum : struct, Enum
+        {
+            if (player != 0 && Data.Languages.TryGetValue(player, out string language))
+                return TranslateEnumName<TEnum>(language);
+            else return TranslateEnumName<TEnum>(JSONMethods.DEFAULT_LANGUAGE);
+        }
+        private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> enumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
+        private const string ENUM_TRANSLATION_FILE_NAME = "Enums\\";
+        public static void ReadEnumTranslations()
+        {
+            enumTranslations.Clear();
+            string def = Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE + "\\";
+            if (!Directory.Exists(def))
+                Directory.CreateDirectory(def);
+            DirectoryInfo info = new DirectoryInfo(Data.LangStorage);
+            DirectoryInfo[] langDirs = info.EnumerateDirectories(Data.LangStorage, SearchOption.TopDirectoryOnly).ToArray();
+            for (int i = 0; i < langDirs.Length; ++i)
+            {
+                if (langDirs[i].Name.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                {
+                    string p = Path.Combine(langDirs[i].FullName, ENUM_TRANSLATION_FILE_NAME);
+                    if (!Directory.Exists(p))
+                        Directory.CreateDirectory(p);
+                }
+            }
+            foreach (Type enumType in UCWarfare.Instance.Assembly.GetTypes().Where(t => t.IsEnum && Attribute.GetCustomAttribute(t, typeof(TranslatableAttribute)) != null))
+            {
+                if (enumTranslations.ContainsKey(enumType)) continue;
+                Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
+                enumTranslations[enumType] = k;
+                string fn = def + ENUM_TRANSLATION_FILE_NAME + enumType.FullName + ".json";
+                string[] values = enumType.GetEnumNames();
+                if (!File.Exists(fn))
+                {
+                    Dictionary<string, string> k2 = new Dictionary<string, string>(values.Length + 1);
+                    using (FileStream stream = new FileStream(fn, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    {
+                        Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                        writer.WriteStartObject();
+                        writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
+                        string name = enumType.Name;
+                        if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
+                            name = name.Substring(1);
+                        writer.WriteStringValue(name.ToProperCase());
+                        for (int i = 0; i < values.Length; ++i)
+                        {
+                            string k0 = values[i];
+                            string k1 = k0.ToProperCase();
+                            k2.Add(k0, k1);
+                            writer.WritePropertyName(k0);
+                            writer.WriteStringValue(k1);
+                        }
+                        writer.WriteEndObject();
+                        writer.Dispose();
+                    }
+
+                    k.Add(JSONMethods.DEFAULT_LANGUAGE, k2);
+                }
+                for (int i = 0; i < langDirs.Length; ++i)
+                {
+                    DirectoryInfo dir = langDirs[i];
+                    if (k.ContainsKey(dir.Name)) continue;
+                    fn = Path.Combine(dir.FullName, ENUM_TRANSLATION_FILE_NAME, enumType.FullName + ".json");
+                    if (!File.Exists(fn)) continue;
+                    Dictionary<string, string> k2 = new Dictionary<string, string>(values.Length + 1);
+                    k.Add(dir.Name, k2);
+                    using (FileStream stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        if (stream.Length > int.MaxValue)
+                        {
+                            L.LogWarning("Enum file \"" + fn + "\" is too big to read.");
+                            continue;
+                        }
+                        byte[] bytes = new byte[stream.Length];
+                        stream.Read(bytes, 0, bytes.Length);
+                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                        while (reader.Read())
+                        {
+                            if (reader.TokenType == JsonTokenType.PropertyName)
+                            {
+                                string? key = reader.GetString();
+                                if (reader.Read() && key != null)
+                                {
+                                    string? value = reader.GetString();
+                                    if (value != null)
+                                        k2.Add(key, value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     /// <summary>Disposing does nothing.</summary>
     public struct LanguageSet : IEnumerator<UCPlayer>
@@ -1765,5 +1904,11 @@ namespace Uncreated.Warfare
         }
 
         public void Dispose() { }
+    }
+
+    [AttributeUsage(AttributeTargets.Enum, Inherited = false, AllowMultiple = false)]
+    public sealed class TranslatableAttribute : Attribute
+    {
+        public TranslatableAttribute() { }
     }
 }

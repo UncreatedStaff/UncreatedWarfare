@@ -41,6 +41,21 @@ namespace Uncreated.Warfare
                 return color;
             else return Color.white;
         }
+        public static string FilterRarityToHex(string color)
+        {
+            if (color == null)
+                return UCWarfare.GetColorHex("default");
+            string f1 = "color=" + color;
+            string f2 = ItemTool.filterRarityRichText(f1);
+            string rtn;
+            if (f2.Equals(f1) || f2.Length <= 7)
+                rtn = color;
+            else
+                rtn = f2.Substring(7); // 7 is "color=#" length
+            if (!int.TryParse(rtn, System.Globalization.NumberStyles.HexNumber, Data.Locale, out _))
+                return UCWarfare.GetColorHex("default");
+            else return rtn;
+        }
         public static string MakeRemainder(this string[] array, int startIndex = 0, int length = -1, string deliminator = " ")
         {
             StringBuilder builder = new StringBuilder();
@@ -146,6 +161,29 @@ namespace Uncreated.Warfare
                 }
             }
             return perms;
+        }
+        public static unsafe string ToProperCase(this string input)
+        {
+            char[] output = new char[input.Length];
+            fixed (char* p = input)
+            {
+                char last = ' ';
+                for (int i = 0; i < input.Length; ++i)
+                {
+                    char current = *(p + i);
+                    if (current == '_') output[i] = ' ';
+                    else if (last == ' ' || last == '_')
+                    {
+                        output[i] = char.ToUpperInvariant(current);
+                    }
+                    else
+                    {
+                        output[i] = char.ToLowerInvariant(current);
+                    }
+                    last = current;
+                }
+            }
+            return new string(output);
         }
         public static bool OnDutyOrAdmin(this IRocketPlayer player) => (player is UnturnedPlayer pl && pl.Player.channel.owner.isAdmin) || (player is UCPlayer upl && upl.Player.channel.owner.isAdmin) || player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
         public static bool OnDuty(this IRocketPlayer player) => player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);

@@ -51,8 +51,8 @@ public abstract class BaseQuestData
         }
         return string.Join(", ", formatting);
     }
-    public string Translate(bool forAsset, UCPlayer player, params object[] formatting) =>
-        Translate(forAsset, Data.Languages.TryGetValue(player.Steam64, out string language) ? language : JSONMethods.DEFAULT_LANGUAGE, formatting);
+    public string Translate(bool forAsset, UCPlayer player, params object[] formatting) => 
+        Translate(forAsset, Data.Languages.TryGetValue(player == null ? 0 : player.Steam64, out string language) ? language : JSONMethods.DEFAULT_LANGUAGE, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
@@ -258,12 +258,14 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
 {
     protected readonly UCPlayer _player;
     public UCPlayer? Player => _player;
+    public bool IsTemperary => _player == null;
     public BaseQuestData QuestData;
     public IQuestPreset? Preset;
     private string? _translationCache;
     protected bool isDisposed;
     //private bool _isComplete;
     protected abstract bool CompletedCheck { get; }
+    public virtual int Reward => 0;
     public bool IsDailyQuest = false;
     public ushort Flag = 0;
     public bool IsCompleted { get => /*_isComplete ||*/ CompletedCheck; }
@@ -283,7 +285,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
         {
             if (_translationCache == null)
                 _translationCache = Translate(forAsset);
-            return _translationCache;
+            return _translationCache ?? QuestData.QuestType.ToString();
         }
         catch (Exception ex)
         {

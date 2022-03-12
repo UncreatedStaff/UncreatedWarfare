@@ -333,9 +333,7 @@ namespace Uncreated.Warfare.Vehicles
                 {
                     return true;
                 }
-                
             }
-
             return false;
         }
         public static int CountCrewmen(InteractableVehicle vehicle, VehicleData data)
@@ -1366,6 +1364,7 @@ namespace Uncreated.Warfare.Vehicles
         }
     }
 
+    [Translatable]
     public enum EVehicleType
     {
         NONE,
