@@ -23,8 +23,8 @@ public static class QuestManager
     public static List<BaseQuestData> Quests = new List<BaseQuestData>();
     /// <summary>Complete list of all registered quest trackers (1 per player).</summary>
     public static List<BaseQuestTracker> RegisteredTrackers = new List<BaseQuestTracker>(128);
-    public const string QUEST_FOLDER = Data.DATA_DIRECTORY + "Quests\\";
-    public const string QUEST_LOCATION = QUEST_FOLDER + "quest_data.json";
+    public static readonly string QUEST_FOLDER = Data.DATA_DIRECTORY + "Quests\\";
+    public static readonly string QUEST_LOCATION = QUEST_FOLDER + "quest_data.json";
     public static void Init()
     {
 #if DEBUG
