@@ -543,20 +543,6 @@ namespace Uncreated.Warfare.Vehicles
             VehicleManager.onSwapSeatRequested -= OnVehicleSwapSeatRequested;
             VehicleManager.onExitVehicleRequested -= OnVehicleExitRequested;
         }
-
-        public enum EVehicleProperty
-        {
-            TEAM,
-            RESPAWNTIME,
-            COST,
-            LEVEL,
-            TICKETS,
-            BRANCH,
-            COOLDOWN,
-            CLASS,
-            REARMCOST,
-            REPAIRCOST
-        }
     }
     public enum EDelayType
     {
@@ -630,6 +616,8 @@ namespace Uncreated.Warfare.Vehicles
         [JsonSettable]
         public ushort TicketCost;
         [JsonSettable]
+        public ushort CreditCost;
+        [JsonSettable]
         public ushort Cooldown;
         [JsonSettable]
         public EBranch Branch;
@@ -641,6 +629,8 @@ namespace Uncreated.Warfare.Vehicles
         public EVehicleType Type;
         [JsonSettable]
         public bool RequiresSL;
+        [JsonSettable]
+        public ushort UnlockLevel;
         public BaseUnlockRequirement[] UnlockRequirements;
         public Guid[] Items;
         public Delay[] Delays;
@@ -652,6 +642,7 @@ namespace Uncreated.Warfare.Vehicles
             Team = 0;
             RespawnTime = 600;
             TicketCost = 0;
+            CreditCost = 0;
             Cooldown = 0;
             if (Assets.find(vehicleID) is VehicleAsset va)
             {
@@ -669,6 +660,7 @@ namespace Uncreated.Warfare.Vehicles
             RearmCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
+            UnlockLevel = 0;
             Items = new Guid[0];
             CrewSeats = new List<byte>();
             Metadata = null;
@@ -682,12 +674,14 @@ namespace Uncreated.Warfare.Vehicles
             UnlockRequirements = new BaseUnlockRequirement[0];
             RespawnTime = 600;
             TicketCost = 0;
+            CreditCost = 0;
             Cooldown = 0;
             Branch = EBranch.DEFAULT;
             RequiredClass = EClass.NONE;
             RearmCost = 3;
             Type = EVehicleType.NONE;
             RequiresSL = false;
+            UnlockLevel = 0;
             Items = new Guid[0];
             CrewSeats = new List<byte>();
             Metadata = null;
@@ -1009,6 +1003,8 @@ namespace Uncreated.Warfare.Vehicles
             writer.WriteNumber(nameof(RearmCost), RearmCost);
             writer.WriteNumber(nameof(Type), (int)Type);
             writer.WriteBoolean(nameof(RequiresSL), RequiresSL);
+            writer.WriteNumber(nameof(CreditCost), CreditCost);
+            writer.WriteNumber(nameof(UnlockLevel), UnlockLevel);
 
             writer.WritePropertyName(nameof(UnlockRequirements));
             writer.WriteStartArray();
@@ -1079,6 +1075,9 @@ namespace Uncreated.Warfare.Vehicles
                             case nameof(TicketCost):
                                 TicketCost = reader.GetUInt16();
                                 break;
+                            case nameof(CreditCost):
+                                CreditCost = reader.GetUInt16();
+                                break;
                             case nameof(Cooldown):
                                 Cooldown = reader.GetUInt16();
                                 break;
@@ -1096,6 +1095,9 @@ namespace Uncreated.Warfare.Vehicles
                                 break;
                             case nameof(RequiresSL):
                                 RequiresSL = reader.TokenType == JsonTokenType.True;
+                                break;
+                            case nameof(UnlockLevel):
+                                UnlockLevel = reader.GetUInt16();
                                 break;
                             case nameof(UnlockRequirements):
                                 if (reader.TokenType == JsonTokenType.StartArray)

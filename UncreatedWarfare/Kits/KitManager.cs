@@ -576,7 +576,7 @@ namespace Uncreated.Warfare.Kits
                 Team = 0,
                 UnlockRequirements = new BaseUnlockRequirement[0],
                 Skillsets = new Skillset[0],
-                TicketCost = 1,
+                CreditCost = 1,
                 IsPremium = false,
                 PremiumCost = 0,
                 IsLoadout = false,

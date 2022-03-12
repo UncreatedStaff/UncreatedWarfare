@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Networking.Encoding;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Kits;
@@ -43,7 +44,9 @@ public class Kit
     public BaseUnlockRequirement[] UnlockRequirements;
     public Skillset[] Skillsets;
     [JsonSettable]
-    public ushort TicketCost;
+    public ushort CreditCost;
+    [JsonSettable]
+    public ushort UnlockLevel;
     [JsonSettable]
     public bool IsPremium;
     [JsonSettable]
@@ -70,7 +73,8 @@ public class Kit
         Team = 0;
         UnlockRequirements = new BaseUnlockRequirement[0];
         Skillsets = new Skillset[0];
-        TicketCost = 1;
+        CreditCost = 0;
+        UnlockLevel = 0;
         IsPremium = false;
         PremiumCost = 0;
         IsLoadout = false;
@@ -137,7 +141,8 @@ public class Kit
         kit.PremiumCost = R.ReadFloat();
         kit.Team = R.ReadUInt64();
         kit.TeamLimit = R.ReadFloat();
-        kit.TicketCost = R.ReadUInt16();
+        kit.CreditCost = R.ReadUInt16();
+        kit.UnlockLevel = R.ReadUInt16();
         return kit;
     }
     public static void WriteMany(ByteWriter W, Kit?[] kits)
@@ -186,7 +191,8 @@ public class Kit
         W.Write(kit.PremiumCost);
         W.Write(kit.Team);
         W.Write(kit.TeamLimit);
-        W.Write(kit.TicketCost);
+        W.Write(kit.CreditCost);
+        W.Write(kit.UnlockLevel);
     }
 
 
@@ -224,8 +230,11 @@ public class Kit
         }
         writer.WriteEndArray();
 
-        writer.WritePropertyName(nameof(TicketCost));
-        writer.WriteNumberValue(TicketCost);
+        writer.WritePropertyName(nameof(CreditCost));
+        writer.WriteNumberValue(CreditCost);
+
+        writer.WritePropertyName(nameof(UnlockLevel));
+        writer.WriteNumberValue(UnlockLevel);
 
         writer.WritePropertyName(nameof(IsPremium));
         writer.WriteBooleanValue(IsPremium);
@@ -337,8 +346,11 @@ public class Kit
                                 while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
                             }
                             break;
-                        case nameof(TicketCost):
-                            TicketCost = reader.GetUInt16();
+                        case nameof(CreditCost):
+                            CreditCost = reader.GetUInt16();
+                            break;
+                        case nameof(UnlockLevel):
+                            UnlockLevel = reader.GetUInt16();
                             break;
                         case nameof(IsPremium):
                             IsPremium = reader.GetBoolean();
@@ -728,8 +740,11 @@ public class LevelUnlockRequirement : BaseUnlockRequirement
     }
     public override string GetSignText(UCPlayer player)
     {
-        int lvl = Point.Points.GetLevel(player.CachedXP);
-        return Translation.Translate("kit_required_level", player.Steam64, UnlockLevel.ToString(Data.Locale), lvl >= UnlockLevel ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
+        if (UnlockLevel == 0)
+            return string.Empty;
+
+        int lvl = Points.GetLevel(player.CachedXP);
+        return Translation.Translate("kit_required_level", player.Steam64, RankData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {

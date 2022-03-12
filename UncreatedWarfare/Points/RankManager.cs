@@ -24,7 +24,7 @@ public static class RankManager
         }
         catch (Exception ex)
         {
-            L.LogError(ex);
+            L.LogError(ex); 
         }
     }
     private static string GetSavePath(ulong steam64) => "\\Players\\" + steam64.ToString(Data.Locale) + "_0\\Uncreated_S" + 

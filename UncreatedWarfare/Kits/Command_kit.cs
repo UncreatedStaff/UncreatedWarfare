@@ -423,7 +423,7 @@ namespace Uncreated.Warfare.Kits
                                 Team = existing.Team,
                                 Skillsets = existing.Skillsets,
                                 UnlockRequirements = existing.UnlockRequirements,
-                                TicketCost = existing.TicketCost,
+                                CreditCost = existing.CreditCost,
                                 IsPremium = existing.IsPremium,
                                 PremiumCost = existing.PremiumCost,
                                 IsLoadout = existing.IsLoadout,

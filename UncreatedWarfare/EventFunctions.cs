@@ -456,7 +456,9 @@ namespace Uncreated.Warfare
                 {
                     bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                     Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
-                    Task<int> t2 = Data.DatabaseManager.GetXP(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                    Task<int> t2 = Data.DatabaseManager.GetXP(player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam());
+                    Task<int> t3 = Data.DatabaseManager.GetCredits(player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam());
+                    Task<List<string>> t4 = Data.DatabaseManager.GetAccessibleKits(player.Player.channel.owner.playerID.steamID.m_SteamID);
                     await UCWarfare.ToUpdate();
                     if (Data.Gamemode is ITeams)
                     {
@@ -475,8 +477,9 @@ namespace Uncreated.Warfare
                     if (ucplayer != null)
                     {
                         ucplayer.CachedXP = await t2;
+                        ucplayer.CachedCredits = await t3;
+                        ucplayer.AccessibleKits = await t4;
                         await UCWarfare.ToUpdate();
-                        Points.UpdateXPUI(ucplayer);
                     }
                 }).ConfigureAwait(false);
 

@@ -128,14 +128,11 @@ namespace Uncreated.Warfare.Tickets
                     if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
                     {
                         UCPlayer? player = UCPlayer.FromID(vc.lastDamager);
-                        bool wasCrashed = false;
 
                         if (player == null)
                             player = UCPlayer.FromID(vc.LastDriver);
                         if (player == null)
                             return;
-                        else if (player.GetTeam() == vehicle.lockedGroup.m_SteamID && vc.lastDamageOrigin == EDamageOrigin.Vehicle_Collision_Self_Damage)
-                            wasCrashed = true;
 
                         ulong dteam = player.GetTeam();
                         bool vehicleWasEnemy = (dteam == 1 && lteam == 2) || (dteam == 2 && lteam == 1);
@@ -251,41 +248,41 @@ namespace Uncreated.Warfare.Tickets
                             Chat.Broadcast("VEHICLE_TEAMKILLED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), "", vehicle.asset.vehicleName);
 
                             if (message != string.Empty) message = "xp_friendly_" + message;
-                            Points.AwardXP(player.Player, -fullXP, Translation.Translate(message, player.Steam64));
+                            Points.AwardCredits(player, Mathf.Clamp(data.CreditCost, 5, 1000), Translation.Translate(message, player.Steam64), true);
                             Invocations.Warfare.LogFriendlyVehicleKill.NetInvoke(player.Steam64, vehicle.id, vehicle.asset.vehicleName ?? vehicle.id.ToString(), DateTime.Now);
                         }
 
-                        float missingQuota = vc.Quota - vc.RequiredQuota;
-                        if (missingQuota < 0)
-                        {
-                            // give quota penalty
-                            if (vc.RequiredQuota != -1 && (vehicleWasEnemy || wasCrashed))
-                            {
-                                for (byte i = 0; i < vehicle.passengers.Length; i++)
-                                {
-                                    Passenger passenger = vehicle.passengers[i];
+                        //float missingQuota = vc.Quota - vc.RequiredQuota;
+                        //if (missingQuota < 0)
+                        //{
+                        //    // give quota penalty
+                        //    if (vc.RequiredQuota != -1 && (vehicleWasEnemy || wasCrashed))
+                        //    {
+                        //        for (byte i = 0; i < vehicle.passengers.Length; i++)
+                        //        {
+                        //            Passenger passenger = vehicle.passengers[i];
 
-                                    if (passenger.player is not null)
-                                    {
-                                        vc.EvaluateUsage(passenger.player);
-                                    }
-                                }
+                        //            if (passenger.player is not null)
+                        //            {
+                        //                vc.EvaluateUsage(passenger.player);
+                        //            }
+                        //        }
 
-                                double totalTime = 0;
-                                foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
-                                    totalTime += entry.Value;
+                        //        double totalTime = 0;
+                        //        foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
+                        //            totalTime += entry.Value;
 
-                                foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
-                                {
-                                    float responsibleness = (float)(entry.Value / totalTime);
-                                    int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
+                        //        foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
+                        //        {
+                        //            float responsibleness = (float)(entry.Value / totalTime);
+                        //            int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
 
-                                    UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
-                                    if (assetWaster != null)
-                                        Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
-                                }
-                            }
-                        }
+                        //            UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
+                        //            if (assetWaster != null)
+                        //                Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
+                        //        }
+                        //    }
+                        //}
 
                         if (vehicle.TryGetComponent(out SpawnedVehicleComponent svc))
                             Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, svc.spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
@@ -420,7 +417,7 @@ namespace Uncreated.Warfare.Tickets
             UpdateUITeam1(GetTeamBleed(1));
             UpdateUITeam2(GetTeamBleed(2));
         }
-        public static void OnFlag10Seconds()
+        public static void OnFlag20Seconds()
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -461,7 +458,7 @@ namespace Uncreated.Warfare.Tickets
                 }
             }
         }
-        public static void OnCache10Seconds()
+        public static void OnCache20Seconds()
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

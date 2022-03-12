@@ -134,7 +134,7 @@ namespace Uncreated.Warfare.Point
                 0 => "Rec.",
                 1 => "Pvt.",
                 2 => "Pfc.",
-                3 => "Col.",
+                3 => "Cpl.",
                 4 => "Spec.",
                 5 => "Sgt.",
                 6 => "Ssg.",
@@ -177,9 +177,10 @@ namespace Uncreated.Warfare.Point
         public int CurrentXP { get; private set; }
         public int RequiredXP { get; private set; }
         public int Level { get; private set; }
-        public int Tier { get; private set; }
         public string Name { get; private set; }
         public string Abbreviation { get; private set; }
+        public string NextName { get; private set; }
+        public string NextAbbreviation { get; private set; }
         public string ProgressBar { get; private set; }
         public RankData(int xp)
         {
@@ -188,28 +189,15 @@ namespace Uncreated.Warfare.Point
             int startXP = Points.GetLevelXP(Level);
             CurrentXP = xp - startXP;
             RequiredXP = Points.GetNextLevelXP(Level) - startXP;
-            Tier = GetRankTier(Level);
-            Name = GetRankName(Tier);
-            Abbreviation = GetRankAbbreviation(Tier);
+            Name = GetRankName(Level);
+            Abbreviation = GetRankAbbreviation(Level);
+            NextName = GetRankName(Level + 1);
+            NextAbbreviation = GetRankAbbreviation(Level + 1);
             ProgressBar = Points.GetProgressBar(CurrentXP, RequiredXP);
         }
-        public static int GetRankTier(int level)
+        public static string GetRankName(int level)
         {
-            if (level < 1) return 0;
-            else if (level < 3) return 1;
-            else if (level < 5) return 2;
-            else if (level < 7) return 3;
-            else if (level < 9) return 4;
-            else if (level < 11) return 5;
-            else if (level < 14) return 6;
-            else if (level < 17) return 7;
-            else if (level < 20) return 8;
-            else if (level < 25) return 9;
-            else return 10;
-        }
-        public static string GetRankName(int rankTier)
-        {
-            return rankTier switch
+            return level switch
             {
                 0 => "Recruit",
                 1 => "Private",
@@ -218,29 +206,25 @@ namespace Uncreated.Warfare.Point
                 4 => "Specialist",
                 5 => "Sergeant",
                 6 => "Staff Sergeant",
-                7 => "Sergeant 1st Class",
-                8 => "Sergeant Major",
-                9 => "Warrant Officer",
-                10 => "Chief Warrant Officer",
-                _ => "unknown",
+                7 => "Sergeant Major",
+                8 => "Warrant Officer",
+                _ => "###",
             };
         }
-        public static string GetRankAbbreviation(int rankTier)
+        public static string GetRankAbbreviation(int level)
         {
-            return rankTier switch
+            return level switch
             {
                 0 => "Rec.",
                 1 => "Pvt.",
                 2 => "Pfc.",
-                3 => "Col.",
+                3 => "Cpl.",
                 4 => "Spec.",
                 5 => "Sgt.",
                 6 => "Ssg.",
-                7 => "Sfc.",
-                8 => "S.M.",
-                9 => "W.O.",
-                10 => "C.W.O.",
-                _ => "###",
+                7 => "S.M.",
+                8 => "W.O.",
+                _ => "",
             };
         }
     }

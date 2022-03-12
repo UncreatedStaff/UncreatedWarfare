@@ -152,9 +152,9 @@ namespace Uncreated.Warfare.Components
                     }
                 }
 
-                if (time % 10 == 0)
+                if (time % 20 == 0)
                 {
-                    Tickets.TicketManager.OnCache10Seconds();
+                    Tickets.TicketManager.OnCache20Seconds();
                 }
 
                 if (time >= 60)

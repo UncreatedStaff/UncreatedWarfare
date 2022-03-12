@@ -994,9 +994,9 @@ namespace Uncreated.Warfare
             {
                 if (ucplayer != null)
                     if (kit.AllowedUsers.Contains(ucplayer.Steam64))
-                        cost = ObjectTranslate("kit_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                        cost = ObjectTranslate("kit_premium_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
                     else if (kit.PremiumCost == -1)
-                        cost = Translate("kit_price_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
+                        cost = Translate("kit_premium_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
                     else
                         cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
             }
@@ -1010,6 +1010,13 @@ namespace Uncreated.Warfare
                     break;
                 }
             }
+            if (cost == string.Empty && kit.CreditCost > 0)
+            {
+                if (ucplayer != null)
+                    if (!ucplayer.AccessibleKits.Contains(kit.Name))
+                        cost = ObjectTranslate("kit_cost", language, kit.CreditCost);
+            }
+
             if (!keepline) cost = "\n" + cost;
             if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
             {
@@ -1246,11 +1253,27 @@ namespace Uncreated.Warfare
                 comp = spawn.BarricadeDrop.model.gameObject.GetComponent<VehicleSpawnComponent>();
             else return spawn.VehicleID.ToString("N");
             if (comp == null) return spawn.VehicleID.ToString("N");
+
+            string unlock = "";
+            if (data.UnlockLevel > 0)
+                unlock += RankData.GetRankAbbreviation(data.UnlockLevel).Colorize("f0b589");
+            if (data.CreditCost > 0)
+            {
+                if (unlock != "")
+                    unlock += "    ";
+
+                unlock += $"<color=#b8ffc1>C</color> {data.CreditCost.ToString(Data.Locale)}";
+            }
+
             string finalformat =
-                $"<color=#{UCWarfare.GetColorHex("vbs_name")}>{(Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N"))}</color>\n" +
+                $"{(Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N"))}\n" +
                 $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{Translate("vbs_branch_" + data.Branch.ToString().ToLower(), language)}</color>\n" +
-                (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>" : string.Empty) +
-                $"\n{{0}}\n";
+                (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>\n" : "\n") +
+                (unlock) +
+                $"{{0}}\n";
+
+            finalformat = finalformat.Colorize("ffffff");
+
             if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle) || !vehicle.TryGetComponent(out SpawnedVehicleComponent vehcomp)) // vehicle is dead
             {
                 return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_dead")}>{Translate("vbs_state_dead", language, Mathf.FloorToInt(comp.respawnTimeRemaining / 60f).ToString(), (Mathf.FloorToInt(comp.respawnTimeRemaining) % 60).ToString("D2"))}</color>";

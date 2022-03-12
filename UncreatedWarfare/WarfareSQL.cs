@@ -285,36 +285,84 @@ namespace Uncreated.Warfare
                 report.Message
             });
         }
-        public async Task<int> GetXP(ulong player)
+        public async Task<int> GetXP(ulong player, ulong team)
         {
             int xp = 0;
-            await QueryAsync("SELECT `Experience` FROM `s2_levels` WHERE `Steam64` = @0 LIMIT 1;",
-                new object[1] { player },
+            await QueryAsync("SELECT `Experience` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                new object[2] { player, team },
                 R =>
                 {
                     xp = R.GetInt32(0);
                 });
             return xp;
         }
-        public async Task<int> AddXP(ulong player, int amount)
+        public async Task<int> GetCredits(ulong player, ulong team)
         {
-            int old = await GetXP(player);
+            int xp = Point.Points.CreditsConfig.StartingCredits;
+            await QueryAsync("SELECT `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                new object[2] { player, team },
+                R =>
+                {
+                    xp = R.GetInt32(0);
+                });
+            return xp;
+        }
+        public async Task<int> AddXP(ulong player, ulong team, int amount)
+        {
+            int old = await GetXP(player, team);
+            int total = amount + old;
+            if (total >= 0)
+            {
+                await NonQueryAsync(
+                    "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Experience` = @2;",
+                    new object[3] { player, team, total });
+                return total;
+            }
+            else if (amount != 0)
+            {
+                await NonQueryAsync(
+                    "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`) VALUES (@0, @1, 0) ON DUPLICATE KEY UPDATE `Experience` = 0;",
+                    new object[2] { player, team });
+                return 0;
+            }
+            else return old;
+        }
+        public async Task<int> AddCredits(ulong player, ulong team, int amount)
+        {
+            int old = await GetCredits(player, team);
             int ttl = amount + old;
             if (ttl >= 0)
             {
                 await NonQueryAsync(
-                    "INSERT INTO `s2_levels` (`Steam64`, `Experience`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `Experience` = @1;",
-                    new object[2] { player, ttl });
+                    "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Credits` = @2;",
+                    new object[3] { player, team, ttl });
                 return ttl;
             }
             else if (amount != 0)
             {
                 await NonQueryAsync(
-                    "INSERT INTO `s2_levels` (`Steam64`, `Experience`) VALUES (@0, 0) ON DUPLICATE KEY UPDATE `Experience` = 0;",
-                    new object[1] { player });
+                    "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, 0) ON DUPLICATE KEY UPDATE `Credits` = 0;",
+                    new object[2] { player, team});
                 return 0;
             }
             else return old;
+        }
+        public async Task<List<string>> GetAccessibleKits(ulong player)
+        {
+            List<string> kitNames = new List<string>();
+            await QueryAsync("SELECT `KitName` FROM `kitaccess` WHERE `Steam64` = @0;",
+                new object[1] { player },
+                R =>
+                {
+                    kitNames.Add(R.GetString(0));
+                });
+            return kitNames;
+        }
+        public async Task AddAccessibleKit(ulong player, string kitName)
+        {
+            await NonQueryAsync(
+                    "INSERT INTO `kitaccess` (`Steam64`, `KitName`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `KitName` = @1;",
+                    new object[2] { player, kitName });
         }
         public void AddKill(ulong Steam64, ulong Team, int amount = 1)
         {

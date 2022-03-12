@@ -238,6 +238,7 @@ namespace Uncreated.Warfare.Kits
                                     }
                                 }
                             }
+                            VehicleBay.Save();
                         }
                     }
                     // add or remove crew seats
