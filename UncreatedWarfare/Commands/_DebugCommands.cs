@@ -156,6 +156,39 @@ namespace Uncreated.Warfare.Commands
             else
                 player.SendChat("test_giveof_invalid_amount", command[2]);
         }
+        private void givecredits(string[] command, Player player)
+        {
+            if (command.Length < 3)
+            {
+                if (player == null)
+                    L.LogWarning(Translation.Translate("test_givecredits_syntax", 0, out _));
+                else
+                    player.SendChat("test_givecredits_syntax");
+                return;
+            }
+            if (int.TryParse(command[2], out int amount))
+            {
+                UCPlayer? target = UCPlayer.FromName(command[1]);
+                if (target == default)
+                {
+                    if (player == null)
+                        L.LogWarning(Translation.Translate("test_givecredits_player_not_found", 0, out _, command[1]));
+                    else
+                        player.SendChat("test_givecredits_player_not_found", command[1]);
+                    return;
+                }
+                Points.AwardCredits(target, amount, player == null ? Translation.Translate("credits_from_operator", target.Steam64) :
+                    Translation.Translate("credits_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
+                if (player == null)
+                    L.Log(Translation.Translate("test_givecredits_success", 0, out _, amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName));
+                else
+                    player.SendChat("test_givecredits_success", amount.ToString(Data.Locale), F.GetPlayerOriginalNames(target).CharacterName);
+            }
+            else if (player == null)
+                L.LogWarning(Translation.Translate("test_givecredits_invalid_amount", 0, out _, command[2]));
+            else
+                player.SendChat("test_givecredits_invalid_amount", command[2]);
+        }
         private void quickcap(string[] command, Player player)
         {
             if (player == null)

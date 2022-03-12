@@ -28,12 +28,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         protected virtual void EvaluateTickets()
         {
-            if (Every10Seconds)
+            if (EveryXSeconds(20))
             {
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                TicketManager.OnFlag10Seconds();
+                TicketManager.OnFlag20Seconds();
             }
         }
         public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)

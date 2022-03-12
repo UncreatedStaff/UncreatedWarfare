@@ -179,6 +179,17 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_notallowed");
                     }
+                    else if (ucplayer.Rank.Level < kit.UnlockLevel)
+                    {
+                        ucplayer.Message("request_kit_e_wronglevel", RankData.GetRankName(kit.UnlockLevel));
+                    }
+                    else if (!kit.IsPremium && kit.CreditCost > 0 && !ucplayer.AccessibleKits.Contains(kit.Name) && !UCWarfare.Config.OverrideKitRequirements)
+                    {
+                        if (ucplayer.CachedCredits >= kit.CreditCost)
+                            ucplayer.Message("request_kit_e_notboughtcredits", kit.CreditCost.ToString());
+                        else
+                            ucplayer.Message("request_kit_e_notenoughcredits", (kit.CreditCost - ucplayer.CachedCredits).ToString());
+                    }
                     else if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()))
                     {
                         ucplayer.Message("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
@@ -197,40 +208,40 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                     {
-                        for (int i = 0; i < kit.UnlockRequirements.Length; i++)
-                        {
-                            BaseUnlockRequirement req = kit.UnlockRequirements[i];
-                            if (req.CanAccess(ucplayer))
-                                continue;
-                            if (req is LevelUnlockRequirement level)
-                            {
-                                ucplayer.Message("request_kit_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
-                            }
-                            else if (req is RankUnlockRequirement rank)
-                            {
-                                ref Ranks.RankData data = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
-                                if (!success)
-                                    L.LogWarning("Invalid rank order in kit requirement: " + kit.Name + " :: " + rank.UnlockRank + ".");
-                                ucplayer.Message("request_kit_e_wrongrank", data.GetName(ucplayer.Steam64), data.Color ?? UCWarfare.GetColorHex("default"));
-                            }
-                            else if (req is QuestUnlockRequirement quest)
-                            {
-                                if (Assets.find(quest.QuestID) is QuestAsset asset)
-                                {
-                                    ucplayer.Message("request_kit_e_quest_incomplete", asset.questName);
-                                    ucplayer.Player.quests.sendAddQuest(asset.id);
-                                }
-                                else
-                                {
-                                    ucplayer.Message("request_kit_e_quest_incomplete", kit.Name);
-                                }
-                            }
-                            else
-                            {
-                                L.LogWarning("Unhandled kit requirement type: " + req.GetType().Name);
-                            }
-                            return;
-                        }
+                        //for (int i = 0; i < kit.UnlockRequirements.Length; i++)
+                        //{
+                        //    BaseUnlockRequirement req = kit.UnlockRequirements[i];
+                        //    if (req.CanAccess(ucplayer))
+                        //        continue;
+                        //    if (req is LevelUnlockRequirement level)
+                        //    {
+                        //        ucplayer.Message("request_kit_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
+                        //    }
+                        //    else if (req is RankUnlockRequirement rank)
+                        //    {
+                        //        ref Ranks.RankData data = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
+                        //        if (!success)
+                        //            L.LogWarning("Invalid rank order in kit requirement: " + kit.Name + " :: " + rank.UnlockRank + ".");
+                        //        ucplayer.Message("request_kit_e_wrongrank", data.GetName(ucplayer.Steam64), data.Color ?? UCWarfare.GetColorHex("default"));
+                        //    }
+                        //    else if (req is QuestUnlockRequirement quest)
+                        //    {
+                        //        if (Assets.find(quest.QuestID) is QuestAsset asset)
+                        //        {
+                        //            ucplayer.Message("request_kit_e_quest_incomplete", asset.questName);
+                        //            ucplayer.Player.quests.sendAddQuest(asset.id);
+                        //        }
+                        //        else
+                        //        {
+                        //            ucplayer.Message("request_kit_e_quest_incomplete", kit.Name);
+                        //        }
+                        //    }
+                        //    else
+                        //    {
+                        //        L.LogWarning("Unhandled kit requirement type: " + req.GetType().Name);
+                        //    }
+                        //    return;
+                        //}
                         if (kit.Class == EClass.SQUADLEADER && ucplayer.Squad == null)
                         {
                             if (SquadManager.Squads.Count(x => x.Team == team) < 8)
@@ -319,6 +330,16 @@ namespace Uncreated.Warfare.Commands
                 ucplayer.Message("request_vehicle_e_wrongkit", requiredKit != null ? requiredKit.DisplayName.ToUpper() : data.RequiredClass.ToString().Replace('_', ' ').ToUpper());
                 return;
             }
+            else if (ucplayer.Rank.Level < data.UnlockLevel)
+            {
+                ucplayer.Message("request_vehicle_e_wronglevel", RankData.GetRankName(data.UnlockLevel));
+                return;
+            }
+            else if (ucplayer.CachedCredits < data.CreditCost)
+            {
+                ucplayer.Message("request_vehicle_e_notenoughcredits", (data.CreditCost - ucplayer.CachedCredits).ToString());
+                return;
+            }
             else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
             {
                 ucplayer.Message("request_vehicle_e_cooldown", unchecked((uint)Math.Round(cooldown.Timeleft.TotalSeconds)).GetTimeFromSeconds(ucplayer.Steam64));
@@ -347,40 +368,40 @@ namespace Uncreated.Warfare.Commands
                 RequestVehicleIsDelayed(ucplayer, ref delay, team, data);
                 return;
             }
-            for (int i = 0; i < data.UnlockRequirements.Length; i++)
-            {
-                BaseUnlockRequirement req = data.UnlockRequirements[i];
-                if (req.CanAccess(ucplayer))
-                    continue;
-                if (req is LevelUnlockRequirement level)
-                {
-                    ucplayer.Message("request_vehicle_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
-                }
-                else if (req is RankUnlockRequirement rank)
-                {
-                    ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
-                    if (!success)
-                        L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + rank.UnlockRank + ".");
-                    ucplayer.Message("request_vehicle_e_wrongrank", rankData.GetName(ucplayer.Steam64), rankData.Color ?? UCWarfare.GetColorHex("default"));
-                }
-                else if (req is QuestUnlockRequirement quest)
-                {
-                    if (Assets.find(quest.QuestID) is QuestAsset asset)
-                    {
-                        ucplayer.Message("request_vehicle_e_quest_incomplete", asset.questName);
-                        ucplayer.Player.quests.sendAddQuest(asset.id);
-                    }
-                    else
-                    {
-                        ucplayer.Message("request_vehicle_e_quest_incomplete", vehicle.asset.name);
-                    }
-                }
-                else
-                {
-                    L.LogWarning("Unhandled vehicle requirement type: " + req.GetType().Name);
-                }
-                return;
-            }
+            //for (int i = 0; i < data.UnlockRequirements.Length; i++)
+            //{
+            //    BaseUnlockRequirement req = data.UnlockRequirements[i];
+            //    if (req.CanAccess(ucplayer))
+            //        continue;
+            //    if (req is LevelUnlockRequirement level)
+            //    {
+            //        ucplayer.Message("request_vehicle_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
+            //    }
+            //    else if (req is RankUnlockRequirement rank)
+            //    {
+            //        ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
+            //        if (!success)
+            //            L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + rank.UnlockRank + ".");
+            //        ucplayer.Message("request_vehicle_e_wrongrank", rankData.GetName(ucplayer.Steam64), rankData.Color ?? UCWarfare.GetColorHex("default"));
+            //    }
+            //    else if (req is QuestUnlockRequirement quest)
+            //    {
+            //        if (Assets.find(quest.QuestID) is QuestAsset asset)
+            //        {
+            //            ucplayer.Message("request_vehicle_e_quest_incomplete", asset.questName);
+            //            ucplayer.Player.quests.sendAddQuest(asset.id);
+            //        }
+            //        else
+            //        {
+            //            ucplayer.Message("request_vehicle_e_quest_incomplete", vehicle.asset.name);
+            //        }
+            //    }
+            //    else
+            //    {
+            //        L.LogWarning("Unhandled vehicle requirement type: " + req.GetType().Name);
+            //    }
+            //    return;
+            //}
             if (vehicle.asset != default && vehicle.asset.canBeLocked)
             {
                 vehicle.tellLocked(ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
@@ -418,6 +439,8 @@ namespace Uncreated.Warfare.Commands
                 Stats.StatsManager.ModifyStats(ucplayer.Steam64, x => x.VehiclesRequested++, false);
                 Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
                 Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
+
+                Points.AwardCredits(ucplayer, -data.CreditCost);
             }
             else
             {

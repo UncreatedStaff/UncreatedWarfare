@@ -38,8 +38,8 @@ namespace Uncreated.Warfare
         public ITransportConnection connection => Player.channel.owner.transportConnection;
         public Coroutine? StorageCoroutine;
         public Ranks.RankStatus[]? RankData;
-        public FPlayerName Name 
-        { 
+        public FPlayerName Name
+        {
             get
             {
                 if (cachedName == FPlayerName.Nil)
@@ -64,17 +64,32 @@ namespace Uncreated.Warfare
         }
         /// <summary><see langword="True"/> if rank order <see cref="OfficerStorage.OFFICER_RANK_ORDER"/> has been completed (Receiving officer pass from discord server).</summary>
         public bool IsOfficer => RankData != null && RankData.Length > OfficerStorage.OFFICER_RANK_ORDER && RankData[OfficerStorage.OFFICER_RANK_ORDER].IsCompelete;
-        private int _cachedXP;
+        public int CachedCredits;
         public int CachedXP
         {
-            get => _cachedXP;
-            internal set
+            get
             {
-                _cachedXP = value;
-                Rank = new RankData(_cachedXP);
+                if (_rank is not null)
+                    return _rank.Value.TotalXP;
+                else
+                    return 0;
+            }
+            set
+            {
+                _rank = new RankData(value);
             }
         }
-        public RankData Rank { get; private set; }
+        private RankData? _rank;
+        public RankData Rank
+        {
+            get
+            {
+                if (_rank is null)
+                    _rank = new RankData(CachedXP);
+                return _rank.Value;
+            }
+        }
+        public List<string> AccessibleKits;
 
         internal List<Guid>? _completedQuests;
         public void RedownloadMedals()
@@ -271,6 +286,7 @@ namespace Uncreated.Warfare
             _otherDonator = donator;
             LifeCounter = 0;
             SuppliesUnloaded = 0;
+            AccessibleKits = new List<string>();
         }
         public char Icon
         {
