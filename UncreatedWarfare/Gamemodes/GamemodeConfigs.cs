@@ -502,7 +502,7 @@ public struct TEAM_CTF_CONFIG
             AllowVehicleCapture = false;
             DiscoveryForesight = 2;
             FlagTickInterval = 4;
-            TicketsFlagCaptured = 30;
+            TicketsFlagCaptured = 40;
             TicketsFlagLost = -10;
             RequiredPlayerDifferenceToCapture = 2;
         }
@@ -548,8 +548,8 @@ public struct TEAM_CTF_CONFIG
             FirstCacheSpawnTime = 240;
             AttackStartingTickets = 180;
             CacheDiscoverRange = 75;
-            IntelPointsToDiscovery = 12;
-            IntelPointsToSpawn = 12;
+            IntelPointsToDiscovery = 20;
+            IntelPointsToSpawn = 20;
             XPCacheDestroyed = 800;
             XPCacheTeamkilled = -8000;
             TicketsCache = 70;
