@@ -1777,12 +1777,13 @@ namespace Uncreated.Warfare
             if (!Directory.Exists(def))
                 Directory.CreateDirectory(def);
             DirectoryInfo info = new DirectoryInfo(Data.LangStorage);
-            DirectoryInfo[] langDirs = info.EnumerateDirectories(Data.LangStorage, SearchOption.TopDirectoryOnly).ToArray();
+            if (!info.Exists) info.Create();
+            DirectoryInfo[] langDirs = info.GetDirectories("*", SearchOption.TopDirectoryOnly);
             for (int i = 0; i < langDirs.Length; ++i)
             {
                 if (langDirs[i].Name.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
                 {
-                    string p = Path.Combine(langDirs[i].FullName, ENUM_TRANSLATION_FILE_NAME);
+                    string p = langDirs[i].FullName + "\\" + ENUM_TRANSLATION_FILE_NAME;
                     if (!Directory.Exists(p))
                         Directory.CreateDirectory(p);
                 }
@@ -1824,7 +1825,7 @@ namespace Uncreated.Warfare
                 {
                     DirectoryInfo dir = langDirs[i];
                     if (k.ContainsKey(dir.Name)) continue;
-                    fn = Path.Combine(dir.FullName, ENUM_TRANSLATION_FILE_NAME, enumType.FullName + ".json");
+                    fn = dir.FullName + "\\" +  ENUM_TRANSLATION_FILE_NAME + enumType.FullName + ".json";
                     if (!File.Exists(fn)) continue;
                     Dictionary<string, string> k2 = new Dictionary<string, string>(values.Length + 1);
                     k.Add(dir.Name, k2);

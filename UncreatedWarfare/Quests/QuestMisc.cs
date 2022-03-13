@@ -2204,17 +2204,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         private static string? GetName(Asset asset, EAssetType type)
         {
             if (asset == null) return null;
-            if (type == EAssetType.ITEM)
-            {
-                if (asset is ItemAsset iasset)
-                    return iasset.itemName;
-            }
-            else if (type == EAssetType.VEHICLE)
-            {
-                if (asset is VehicleAsset iasset)
-                    return iasset.vehicleName;
-            }
-            return asset.name;
+            else return asset.FriendlyName;
         }
     }
 }

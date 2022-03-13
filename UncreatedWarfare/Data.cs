@@ -27,9 +27,7 @@ namespace Uncreated.Warfare
     {
         public const int MAX_LOGS = 1000;
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
-        public const string DATA_DIRECTORY = @"Plugins\UncreatedWarfare\";
-        public static readonly string StatsDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Players\";
-        public static readonly string MatchDirectory = System.Environment.GetEnvironmentVariable("APPDATA") + @"\Uncreated\Matches\";
+        public static readonly string DATA_DIRECTORY = System.Environment.CurrentDirectory + @"\Plugins\UncreatedWarfare\";
         private static readonly string _flagStorage = DATA_DIRECTORY + @"Maps\{0}\Flags\";
         private static string? _flagStorageTemp;
         public static string FlagStorage
@@ -164,7 +162,6 @@ namespace Uncreated.Warfare
 
             /* CREATE DIRECTORIES */
             L.Log("Validating directories...", ConsoleColor.Magenta);
-            F.CheckDir(StatsDirectory, out _, true);
             F.CheckDir(DATA_DIRECTORY, out _, true);
             F.CheckDir(LangStorage, out _, true);
             F.CheckDir(KitsStorage, out _, true);
