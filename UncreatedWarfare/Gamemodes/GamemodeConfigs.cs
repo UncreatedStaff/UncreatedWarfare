@@ -495,7 +495,7 @@ public struct TEAM_CTF_CONFIG
         public void SetDefaults()
         {
             StagingTime = 90;
-            StartingTickets = 200;
+            StartingTickets = 300;
             EvaluateTime = 0.25f;
             TicketXPInterval = 10;
             OverrideContestDifference = 2;
