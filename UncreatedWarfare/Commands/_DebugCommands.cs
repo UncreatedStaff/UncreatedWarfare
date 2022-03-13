@@ -1247,6 +1247,22 @@ namespace Uncreated.Warfare.Commands
         {
             F.SaveProfilingData();
         }
+        private void questtest(string[] command, Player player)
+        {
+            UCPlayer? pl = UCPlayer.FromPlayer(player);
+            if (pl == null) return;
+            foreach (BaseQuestData data in QuestManager.Quests)
+            {
+                try
+                {
+                    QuestManager.CreateTracker(data, pl);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError(ex);
+                }
+            }
+        }
     }
 #pragma warning restore IDE0051
 #pragma warning restore IDE0060

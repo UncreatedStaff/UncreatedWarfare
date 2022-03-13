@@ -519,7 +519,6 @@ public static class QuestManager
                     {
                         try
                         {
-                            L.LogDebug("Reading property " + prop);
                             if (prop != null)
                                 t.OnReadProgressSaveProperty(prop, ref reader);
                         }

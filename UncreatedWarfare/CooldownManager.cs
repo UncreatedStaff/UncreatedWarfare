@@ -107,6 +107,7 @@ namespace Uncreated.Warfare
         COMMAND_WARN,
         WARNINGS,
         AMMO_VEHICLE,
-        CHANGE_TEAMS
+        CHANGE_TEAMS,
+        REPORT
     }
 }

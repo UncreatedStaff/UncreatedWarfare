@@ -358,22 +358,22 @@ namespace Uncreated.Warfare
                 });
             return kitNames;
         }
-        public async Task AddAccessibleKit(ulong player, string kitName)
+        public Task AddAccessibleKit(ulong player, string kitName)
         {
-            await NonQueryAsync(
+            return NonQueryAsync(
                     "INSERT INTO `kitaccess` (`Steam64`, `KitName`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `KitName` = @1;",
                     new object[2] { player, kitName });
         }
-        public void AddKill(ulong Steam64, ulong Team, int amount = 1)
+        public Task AddKill(ulong Steam64, ulong Team, int amount = 1)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!Data.TrackStats) return;
-            if (amount == 0) return;
+            if (!Data.TrackStats) return Task.CompletedTask;
+            if (amount == 0) return Task.CompletedTask;
             if (amount > 0)
             {
-                NonQuery(
+                return NonQueryAsync(
                     $"INSERT INTO `playerstats` " +
                     $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                     $"VALUES(@0, @1, @2, '0', '0') " +
@@ -386,7 +386,7 @@ namespace Uncreated.Warfare
                 uint oldkills = GetKills(Steam64, Team);
                 if (amount >= oldkills)
                 {
-                    NonQuery(
+                    return NonQueryAsync(
                         $"INSERT INTO `playerstats` " +
                         $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                         $"VALUES(@0, @1, '0', '0', '0') " +
@@ -396,7 +396,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    NonQuery(
+                    return NonQueryAsync(
                         $"UPDATE `playerstats` SET " +
                         $"`Kills` = `Kills` - @2 " +
                         $"WHERE `Steam64` = @0 AND `Team` = @1;",
@@ -404,16 +404,16 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public void AddDeath(ulong Steam64, ulong Team, int amount = 1)
+        public Task AddDeath(ulong Steam64, ulong Team, int amount = 1)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!Data.TrackStats) return;
-            if (amount == 0) return;
+            if (!Data.TrackStats) return Task.CompletedTask;
+            if (amount == 0) return Task.CompletedTask;
             if (amount > 0)
             {
-                NonQuery(
+                return NonQueryAsync(
                     $"INSERT INTO `playerstats` " +
                     $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                     $"VALUES(@0, @1, '0', @2, '0') " +
@@ -426,7 +426,7 @@ namespace Uncreated.Warfare
                 uint oldDeaths = GetDeaths(Steam64, Team);
                 if (amount >= oldDeaths)
                 {
-                    NonQuery(
+                    return NonQueryAsync(
                         $"INSERT INTO `playerstats` " +
                         $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                         $"VALUES(@0, @1, '0', '0', '0') " +
@@ -436,7 +436,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    NonQuery(
+                    return NonQueryAsync(
                         $"UPDATE `playerstats` SET " +
                         $"`Deaths` = `Deaths` - @2 " +
                         $"WHERE `Steam64` = @0 AND `Team` = @1;",
@@ -444,16 +444,16 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public void AddTeamkill(ulong Steam64, ulong Team, int amount = 1)
+        public Task AddTeamkill(ulong Steam64, ulong Team, int amount = 1)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!Data.TrackStats) return;
-            if (amount == 0) return;
+            if (!Data.TrackStats) return Task.CompletedTask;
+            if (amount == 0) return Task.CompletedTask;
             if (amount > 0)
             {
-                NonQuery(
+                return NonQueryAsync(
                     $"INSERT INTO `playerstats` " +
                     $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                     $"VALUES(@0, @1, '0', '0', @2) " +
@@ -466,7 +466,7 @@ namespace Uncreated.Warfare
                 uint oldTeamkills = GetTeamkills(Steam64, Team);
                 if (amount >= oldTeamkills)
                 {
-                    NonQuery(
+                    return NonQueryAsync(
                         $"INSERT INTO `playerstats` " +
                         $"(`Steam64`, `Team`, `Kills`, `Deaths`, `Teamkills`) " +
                         $"VALUES(@0, @1, '0', '0', '0') " +
@@ -476,7 +476,7 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    NonQuery(
+                    return NonQueryAsync(
                         $"UPDATE `playerstats` SET " +
                         $"`Teamkills` = `Teamkills` - @2 " +
                         $"WHERE `Steam64` = @0 AND `Team` = @1;",
@@ -484,44 +484,44 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public void AddUnban(ulong Pardoned, ulong Pardoner)
-            => NonQuery(
+        public Task AddUnban(ulong Pardoned, ulong Pardoner)
+            => NonQueryAsync(
                 "INSERT INTO `unbans` " +
                 "(`Pardoned`, `Pardoner`, `Timestamp`) " +
                 "VALUES(@0, @1, @2);",
                 new object[] { Pardoned, Pardoner, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public void AddBan(ulong Banned, ulong Banner, uint Duration, string Reason)
-            => NonQuery(
+        public Task AddBan(ulong Banned, ulong Banner, uint Duration, string Reason)
+            => NonQueryAsync(
                 "INSERT INTO `bans` " +
                 "(`Banned`, `Banner`, `Duration`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4);",
                 new object[] { Banned, Banner, Duration, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public void AddBan(ulong Banned, ulong Banner, uint Duration, string Reason, DateTime time)
-            => NonQuery(
+        public Task AddBan(ulong Banned, ulong Banner, uint Duration, string Reason, DateTime time)
+            => NonQueryAsync(
                 "INSERT INTO `bans` " +
                 "(`Banned`, `Banner`, `Duration`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4);",
                 new object[] { Banned, Banner, Duration, Reason, string.Format(TIME_FORMAT_SQL, time) });
-        public void AddKick(ulong Kicked, ulong Kicker, string Reason)
-            => NonQuery(
+        public Task AddKick(ulong Kicked, ulong Kicker, string Reason)
+            => NonQueryAsync(
                 "INSERT INTO `kicks` " +
                 "(`Kicked`, `Kicker`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3);",
                 new object[] { Kicked, Kicker, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public void AddWarning(ulong Warned, ulong Warner, string Reason)
-            => NonQuery(
+        public Task AddWarning(ulong Warned, ulong Warner, string Reason)
+            => NonQueryAsync(
                 "INSERT INTO `warnings` " +
                 "(`Warned`, `Warner`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3);",
                 new object[] { Warned, Warner, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public void AddBattleyeKick(ulong Kicked, string Reason)
-            => NonQuery(
+        public Task AddBattleyeKick(ulong Kicked, string Reason)
+            => NonQueryAsync(
                 "INSERT INTO `battleye_kicks` " +
                 "(`Kicked`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2);",
                 new object[] { Kicked, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public void AddTeamkill(ulong Teamkiller, ulong Teamkilled, string Cause, string ItemName = "", ushort Item = 0, float Distance = 0f)
-            => NonQuery(
+        public Task AddTeamkill(ulong Teamkiller, ulong Teamkilled, string Cause, string ItemName = "", ushort Item = 0, float Distance = 0f)
+            => NonQueryAsync(
                 "INSERT INTO `teamkills` " +
                 "(`Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4, @5, @6);",
@@ -539,7 +539,7 @@ namespace Uncreated.Warfare
                 o => Convert.ToInt32(o));
             return amt > 0;
         }
-        public async Task RegisterLogin(Player player)
+        public Task RegisterLogin(Player player)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -555,7 +555,7 @@ namespace Uncreated.Warfare
             else if (SteamGameServer.GetPublicIP().TryGetIPv4Address(out ipnum))
                 ipaddress = Parser.getIPFromUInt32(ipnum);
             else ipaddress = LOCAL_IP;
-            await NonQueryAsync(
+            return NonQueryAsync(
                 $"INSERT INTO `logindata` " +
                 $"(`Steam64`, `IP`, `LastLoggedIn`) " +
                 $"VALUES(@0, @1, @2) " +

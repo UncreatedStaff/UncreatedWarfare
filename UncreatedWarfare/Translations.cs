@@ -916,7 +916,6 @@ namespace Uncreated.Warfare
                 { "injured_chat", "<color=#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.</color>" },
 
                 // Insurgency
-
                 { "insurgency_ui_unknown_attack", "<color=#696969>Undiscovered</color>" },
                 { "insurgency_ui_unknown_defense", "<color=#696969>Unknown</color>" },
                 { "insurgency_ui_destroyed_attack", "<color=#5a6e5c>Destroyed</color>" },
@@ -942,6 +941,9 @@ namespace Uncreated.Warfare
                 { "report_console", "{0} ({1}) reported {2} ({3}) for \"{4}\" as a {5} report." },
                 { "report_console_record", "Report against {0} ({1}) record: \"{2}\"" },
                 { "report_console_record_failed", "Report against {0} ({1}) failed to send to UCDB." },
+                { "report_cooldown", "You've already reported {0} in the past hour." },
+                { "report_cancelled", "You did not confirm your report in time." },
+                { "report_confirm", "Did you mean to report {1} <i><color=#444444>{0}</color></i>? Type <color=#ff8c69>/confirm</color> to continue." },
 
                 // Tips
                 { "tip_place_radio", "Place a <color=#ababab>FOB RADIO</color>." },

@@ -12,9 +12,6 @@ namespace Uncreated.Warfare.Networking;
 
 public sealed class SpyTask
 {
-    internal const int DEFAULT_TIMEOUT_MS = 10000;
-    internal const int POLL_SPEED_MS = 25;
-    public static Dictionary<ulong, SpyTask> awaiters = new Dictionary<ulong, SpyTask>(1);
     private readonly SpyTaskAwaiter _awaiter;
     public SpyTask(SteamPlayer target)
     {
@@ -55,6 +52,7 @@ public sealed class SpyTask
         }
         public byte[] GetResult()
         {
+            /*
             L.Log("getting result");
             int counter = 0;
             int maxloop = DEFAULT_TIMEOUT_MS / POLL_SPEED_MS;
@@ -65,6 +63,7 @@ public sealed class SpyTask
                 counter++;
             }
             L.Log("got result " + counter);
+            return rtn ?? new byte[0];*/
             return rtn ?? new byte[0];
         }
     }

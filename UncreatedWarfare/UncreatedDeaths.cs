@@ -4,6 +4,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -41,7 +42,7 @@ namespace Uncreated.Warfare
             if (team == 1 || team == 2)
             {
                 TicketManager.OnFriendlyKilled(parameters);
-                Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
+                Task.Run(() => Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team));
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s => s.Teamkills++, false);
                 StatsManager.ModifyTeam(team, t => t.Teamkills++, false);
                 if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is ITeamPVPModeStats tpvp)
@@ -126,8 +127,8 @@ namespace Uncreated.Warfare
             byte team = parameters.killer.GetTeamByte();
             if (team == 1 || team == 2)
             {
+                Task.Run(() => Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team));
                 TicketManager.OnEnemyKilled(parameters);
-                Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team);
                 if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c))
                 {
                     if (c.stats is IPVPModeStats kd)
@@ -321,7 +322,7 @@ namespace Uncreated.Warfare
             if (team == 1 || team == 2)
             {
                 TicketManager.OnPlayerSuicide(parameters);
-                Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+                Task.Run(() => Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team));
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
                 QuestManager.OnDeath(parameters);
                 if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
@@ -443,7 +444,7 @@ namespace Uncreated.Warfare
                 TicketManager.OnPlayerDeath(parameters);
                 if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
                     kd.AddDeath();
-                Data.DatabaseManager?.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team);
+                Task.Run(() => Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team));
                 QuestManager.OnDeath(parameters);
                 StatsManager.ModifyTeam(team, t => t.Deaths++, false);
                 if (KitManager.HasKit(parameters.dead, out Kit kit))

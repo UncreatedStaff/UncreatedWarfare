@@ -656,11 +656,10 @@ public static class QuestJsonEx
                             value = new DynamicEnumValue<TEnum>(default);
                             return false;
                         }
-                        int n1 = (int)(object)e1;
-                        int n2 = (int)(object)e2;
-                        if (n1 > n2)
+                        int a = e1.CompareTo(e2);
+                        if (a > 0)
                             (e2, e1) = (e1, e2);
-                        if (n1 == n2)
+                        if (a == 0)
                             value = new DynamicEnumValue<TEnum>(e1);
                         else
                             value = new DynamicEnumValue<TEnum>(new EnumRange<TEnum>(e1, e2), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
@@ -690,7 +689,7 @@ public static class QuestJsonEx
             {
                 try
                 {
-                    value = new DynamicEnumValue<TEnum>((TEnum)Convert.ChangeType(v2, typeof(TEnum)));
+                    value = new DynamicEnumValue<TEnum>((TEnum)(object)v2);
                     return true;
                 }
                 catch { }
