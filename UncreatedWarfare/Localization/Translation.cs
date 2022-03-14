@@ -868,7 +868,7 @@ namespace Uncreated.Warfare
                 {
                     return TranslateKitSign(language, kit, ucplayer);
                 }
-                else return key;
+                else return Translate(key, language);
             }
             catch (Exception ex)
             {

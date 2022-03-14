@@ -43,7 +43,7 @@ namespace Uncreated.Warfare.Point
             {
                 UpdateXPUI(player);
                 UpdateCreditsUI(player);
-                UpdateTWUI(player);
+                //UpdateTWUI(player);
             }
         }
         public static void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup)
@@ -61,7 +61,7 @@ namespace Uncreated.Warfare.Point
                 {
                     UpdateXPUI(player);
                     UpdateCreditsUI(player);
-                    UpdateTWUI(player);
+                    //UpdateTWUI(player);
                 }
                 else
                 {
@@ -161,6 +161,12 @@ namespace Uncreated.Warfare.Point
                     else
                         ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
 
+                    if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    {
+                        if (c.stats is IExperienceStats kd)
+                            kd.AddCredits(amount);
+                    }
+
                     UpdateCreditsUI(player);
                 }
             });
@@ -179,6 +185,12 @@ namespace Uncreated.Warfare.Point
                 await UCWarfare.ToUpdate();
 
                 player.CachedXP = currentAmount;
+
+                if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                {
+                    if (c.stats is IExperienceStats kd)
+                        kd.AddXP(amount);
+                }
 
                 if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
                 {
@@ -229,9 +241,11 @@ namespace Uncreated.Warfare.Point
             else
                 L.LogWarning("Unable to find player.");
         }
+        [Obsolete]
         public static void AwardTW(UCPlayer player, int amount, string message = "")
         {
         }
+        [Obsolete]
         public static void AwardTW(Player player, int amount, string message = "")
         {
         }
@@ -268,12 +282,13 @@ namespace Uncreated.Warfare.Point
 
             if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
                 return;
-            
+
             EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CREDITSUI_KEY, player.connection, true);
             EffectManager.sendUIEffectText(CREDITSUI_KEY, player.connection, true,  
                 "Credits", "<color=#b8ffc1>C</color>  " + player.CachedCredits
             );
         }
+        [Obsolete]
         public static void UpdateTWUI(UCPlayer player)
         {
 
@@ -387,7 +402,7 @@ namespace Uncreated.Warfare.Point
             ShovelXP = 2;
             BuiltFOBXP = 100;
             ResupplyFriendlyXP = 20;
-            RepairVehicleXP = 20;
+            RepairVehicleXP = 3;
             OnDutyXP = 5;
             UnloadSuppliesXP = 20;
 

@@ -480,6 +480,11 @@ namespace Uncreated.Warfare
                         ucplayer.CachedCredits = await t3;
                         ucplayer.AccessibleKits = await t4;
                         await UCWarfare.ToUpdate();
+                        RequestSigns.InvokeLangUpdateForAllSigns(ucplayer.Player.channel.owner);
+                        foreach (Vehicles.VehicleSpawn spawn in VehicleSpawner.ActiveObjects)
+                            spawn.UpdateSign(ucplayer.Player.channel.owner);
+                        Points.UpdateCreditsUI(ucplayer);
+                        Points.UpdateXPUI(ucplayer);
                     }
                 }).ConfigureAwait(false);
 

@@ -509,6 +509,8 @@ namespace Uncreated.Warfare
                     new Permission("uc.rally"),
                     new Permission("uc.teams"),
                     new Permission("uc.unstuck"),
+                    new Permission("uc.confirm"),
+                    new Permission("uc.buy"),
                     new Permission("uc.report")
                 };
         }

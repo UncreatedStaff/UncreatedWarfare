@@ -133,6 +133,7 @@ namespace Uncreated.Warfare.Vehicles
             return false;
         }
     }
+    [JsonSerializable(typeof(VehicleSign))]
     public class VehicleSign
     {
         [JsonIgnore]

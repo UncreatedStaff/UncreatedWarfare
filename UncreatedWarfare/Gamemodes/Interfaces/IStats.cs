@@ -41,9 +41,9 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     public interface IExperienceStats : IStats
     {
         int XPGained { get; }
-        int OFPGained { get; }
+        int Credits { get; }
         void AddXP(int amount);
-        void AddOfficerPoints(int amount);
+        void AddCredits(int amount);
     }
     public interface IFlagStats : IStats
     {

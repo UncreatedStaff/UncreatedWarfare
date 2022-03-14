@@ -115,7 +115,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     await UCWarfare.ToUpdate();
                     FPlayerName targetNames = F.GetPlayerOriginalNames(target);
-                    if (CooldownManager.HasCooldown(player, ECooldownType.REPORT, out _, target))
+                    if (CooldownManager.HasCooldownNoStateCheck(player, ECooldownType.REPORT, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
                     {
                         player.SendChat("report_cooldown", targetNames.CharacterName);
                         return;
@@ -225,39 +225,47 @@ namespace Uncreated.Warfare.Commands
             player.SendChat("report_reasons");
             return;
         }
-        public Dictionary<string, EReportType> types = new Dictionary<string, EReportType>(20)
+
+        public KeyValuePair<string, EReportType>[] types = new KeyValuePair<string, EReportType>[]
         {
-            { "custom", EReportType.CUSTOM },
-            { "none", EReportType.CUSTOM },
-            { "chat abuse", EReportType.CHAT_ABUSE },
-            { "racism", EReportType.CHAT_ABUSE },
-            { "n word", EReportType.CHAT_ABUSE },
-            { "chat", EReportType.CHAT_ABUSE },
-            { "chat racism", EReportType.CHAT_ABUSE },
-            { "voice chat abuse", EReportType.VOICE_CHAT_ABUSE },
-            { "voice chat", EReportType.VOICE_CHAT_ABUSE },
-            { "voice chat racism", EReportType.VOICE_CHAT_ABUSE },
-            { "vc abuse", EReportType.VOICE_CHAT_ABUSE },
-            { "vc racism", EReportType.VOICE_CHAT_ABUSE },
-            { "vc", EReportType.VOICE_CHAT_ABUSE },
-            { "soloing", EReportType.SOLOING_VEHICLE },
-            { "soloing vehicles", EReportType.SOLOING_VEHICLE },
-            { "asset waste", EReportType.WASTEING_ASSETS },
-            { "asset wasteing", EReportType.WASTEING_ASSETS },
-            { "wasteing assets", EReportType.WASTEING_ASSETS },
-            { "intentional teamkilling", EReportType.INTENTIONAL_TEAMKILL },
-            { "teamkilling", EReportType.INTENTIONAL_TEAMKILL },
-            { "fob greifing", EReportType.GREIFING_FOBS },
-            { "structure greifing", EReportType.GREIFING_FOBS },
-            { "base greifing", EReportType.GREIFING_FOBS },
-            { "hab greifing", EReportType.GREIFING_FOBS },
-            { "greifing", EReportType.GREIFING_FOBS }
+            new KeyValuePair<string, EReportType>("custom", EReportType.CUSTOM),
+            new KeyValuePair<string, EReportType>("none", EReportType.CUSTOM),
+            new KeyValuePair<string, EReportType>("chat abuse", EReportType.CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("racism", EReportType.CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("n word", EReportType.CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("chat", EReportType.CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("chat racism", EReportType.CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("voice chat abuse", EReportType.VOICE_CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("voice chat", EReportType.VOICE_CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("voice chat racism", EReportType.VOICE_CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("vc abuse", EReportType.VOICE_CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("vc racism", EReportType.VOICE_CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("vc", EReportType.VOICE_CHAT_ABUSE),
+            new KeyValuePair<string, EReportType>("soloing", EReportType.SOLOING_VEHICLE),
+            new KeyValuePair<string, EReportType>("soloing vehicles", EReportType.SOLOING_VEHICLE),
+            new KeyValuePair<string, EReportType>("asset waste", EReportType.WASTEING_ASSETS),
+            new KeyValuePair<string, EReportType>("asset wasteing", EReportType.WASTEING_ASSETS),
+            new KeyValuePair<string, EReportType>("wasteing assets", EReportType.WASTEING_ASSETS),
+            new KeyValuePair<string, EReportType>("intentional teamkilling", EReportType.INTENTIONAL_TEAMKILL),
+            new KeyValuePair<string, EReportType>("teamkilling", EReportType.INTENTIONAL_TEAMKILL),
+            new KeyValuePair<string, EReportType>("fob greifing", EReportType.GREIFING_FOBS),
+            new KeyValuePair<string, EReportType>("structure greifing", EReportType.GREIFING_FOBS),
+            new KeyValuePair<string, EReportType>("base greifing", EReportType.GREIFING_FOBS),
+            new KeyValuePair<string, EReportType>("hab greifing", EReportType.GREIFING_FOBS),
+            new KeyValuePair<string, EReportType>("greifing", EReportType.GREIFING_FOBS),
+            new KeyValuePair<string, EReportType>("cheating", EReportType.CHEATING),
+            new KeyValuePair<string, EReportType>("hacking", EReportType.CHEATING),
+            new KeyValuePair<string, EReportType>("wallhacks", EReportType.CHEATING),
+            new KeyValuePair<string, EReportType>("hacks", EReportType.CHEATING),
+            new KeyValuePair<string, EReportType>("cheats", EReportType.CHEATING),
+            new KeyValuePair<string, EReportType>("hacker", EReportType.CHEATING),
+            new KeyValuePair<string, EReportType>("cheater", EReportType.CHEATING)
         };
         public UCPlayer.ENameSearchType GetNameType(EReportType type)
         {
             return type switch
             {
-                EReportType.CUSTOM or EReportType.INTENTIONAL_TEAMKILL or EReportType.GREIFING_FOBS or EReportType.SOLOING_VEHICLE or EReportType.VOICE_CHAT_ABUSE or EReportType.WASTEING_ASSETS => UCPlayer.ENameSearchType.NICK_NAME,
+                EReportType.CUSTOM or EReportType.INTENTIONAL_TEAMKILL or EReportType.GREIFING_FOBS or EReportType.SOLOING_VEHICLE or EReportType.VOICE_CHAT_ABUSE or EReportType.WASTEING_ASSETS or EReportType.CHEATING => UCPlayer.ENameSearchType.NICK_NAME,
                 EReportType.CHAT_ABUSE => UCPlayer.ENameSearchType.CHARACTER_NAME,
                 _ => UCPlayer.ENameSearchType.CHARACTER_NAME,
             };
@@ -272,14 +280,19 @@ namespace Uncreated.Warfare.Commands
                 EReportType.WASTEING_ASSETS => "Wasteing Assets / Vehicle Greifing",
                 EReportType.INTENTIONAL_TEAMKILL => "Intentional Teamkilling",
                 EReportType.GREIFING_FOBS => "FOB / Friendly Structure Greifing",
+                EReportType.CHEATING => "Cheating",
                 _ => "Custom",
             };
         }
         public EReportType GetReportType(string input)
         {
-            if (!types.TryGetValue(input, out EReportType reportType))
-                reportType = EReportType.CUSTOM;
-            return reportType;
+            for (int i = 0; i < types.Length; ++i)
+            {
+                ref KeyValuePair<string, EReportType> type = ref types[i];
+                if (type.Key.Equals(input, StringComparison.OrdinalIgnoreCase))
+                    return type.Value;
+            }
+            return EReportType.CUSTOM;
         }
         public bool CheckLinked(UCPlayer player) => Data.DatabaseManager.GetDiscordID(player.Steam64, out ulong discordID) && discordID != 0;
         public void NotifyAdminsOfReport(FPlayerName violator, FPlayerName reporter, Report report, EReportType type, string typename)

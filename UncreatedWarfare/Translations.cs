@@ -357,7 +357,7 @@ namespace Uncreated.Warfare
                 { "lblTimeInVehicle", "Damage Dealt: " },
                 { "lblTeamkills", "Teamkills: " },
                 { "lblFOBsDestroyed", "FOBs Destroyed: " },
-                { "lblOfficerPointsGained", "Officer Points Gained: " },
+                { "lblOfficerPointsGained", "Credits Gained: " },
                 { "lblDuration", "Duration: " },
                 { "lblDeathsT1", "US Casualties: " },
                 { "lblDeathsT2", "MEC Casualties: " },
@@ -376,7 +376,7 @@ namespace Uncreated.Warfare
 
                 // SIGNS - must prefix with "sign_" for them to work
                 { "sign_rules", "Rules\nNo suicide vehicles.\netc." },
-                { "sign_kitdelay", "<color=#e6e6e6>All <color=#3bede1>Elite Kits</color> and <color=#32a852>Loadouts</color> are locked for the first week of the season.\nThey will be available again after <color=#d8addb>February 9th</color></color>" },
+                { "sign_kitdelay", "<color=#e6e6e6>All <color=#3bede1>Elite Kits</color> and <color=#32a852>Loadouts</color> are locked for the two weeks of the season.\nThey will be available again after <color=#d8addb>April 1st</color></color>" },
 
                 // Admin Commands
                 { "server_not_running", "<color=#9cffb3>This is not a server.</color>" },
@@ -951,6 +951,8 @@ namespace Uncreated.Warfare
                 { "tip_unload_supplies", "<color=#d9c69a>DROP SUPPLIES</color> onto the FOB." },
                 { "tip_help_build", "<color=#d9c69a>{0} needs help building!</color>" },
                 { "tip_logi_resupplied", "Your {0} has been auto resupplied." },
+
+                
             };
         }
 

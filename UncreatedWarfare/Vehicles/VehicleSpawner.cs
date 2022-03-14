@@ -247,6 +247,7 @@ namespace Uncreated.Warfare.Vehicles
             }
         }
     }
+    [JsonSerializable(typeof(VehicleSpawn))]
     public class VehicleSpawn
     {
         public uint SpawnPadInstanceID;

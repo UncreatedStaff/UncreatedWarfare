@@ -132,7 +132,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     string k = statsT1[i].kills.ToString(Data.Locale);
                     string d = statsT1[i].deaths.ToString(Data.Locale);
                     string x = statsT1[i].XPGained.ToString(Data.Locale);
-                    string f = statsT1[i].OFPGained.ToString(Data.Locale);
+                    string f = statsT1[i].Credits.ToString(Data.Locale);
                     string c = statsT1[i].KDR.ToString("N2", Data.Locale);
                     string t = statsT1[i].DamageDone.ToString(Data.Locale);
 
@@ -161,7 +161,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     string k = statsT2[i].kills.ToString(Data.Locale);
                     string d = statsT2[i].deaths.ToString(Data.Locale);
                     string x = statsT2[i].XPGained.ToString(Data.Locale);
-                    string f = statsT2[i].OFPGained.ToString(Data.Locale);
+                    string f = statsT2[i].Credits.ToString(Data.Locale);
                     string c = statsT2[i].KDR.ToString("N2", Data.Locale);
                     string t = statsT2[i].DamageDone.ToString(Data.Locale);
 
@@ -216,7 +216,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "CachesDestroyedValue", Translation.ObjectTranslate("stats_player_value", language, stats._cachesDestroyed, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TeamkillsValue", Translation.ObjectTranslate("stats_player_value", language, stats.teamkills, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "EnemyFOBsDestroyedValue", Translation.ObjectTranslate("stats_player_value", language, stats.FOBsDestroyed, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "OfficerPointsGainedValue", Translation.ObjectTranslate("stats_player_value", language, stats.OFPGained, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "OfficerPointsGainedValue", Translation.ObjectTranslate("stats_player_value", language, stats.Credits, defaultColor));
 
                 /*
                  *  WAR
@@ -362,7 +362,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     totalT1.kills += stat.kills;
                     totalT1.deaths += stat.deaths;
                     totalT1.AddXP(stat.XPGained);
-                    totalT1.AddOfficerPoints(stat.OFPGained);
+                    totalT1.AddCredits(stat.Credits);
                     totalT1.AddDamage(stat.DamageDone);
                 }
                 else if (stat.Steam64.GetTeamFromPlayerSteam64ID() == 2)
@@ -370,7 +370,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                     totalT2.kills += stat.kills;
                     totalT2.deaths += stat.deaths;
                     totalT2.AddXP(stat.XPGained);
-                    totalT2.AddOfficerPoints(stat.OFPGained);
+                    totalT2.AddCredits(stat.Credits);
                     totalT2.AddDamage(stat.DamageDone);
                 }
             }
@@ -393,7 +393,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         public InsurgencyPlayerStats(ulong player) : base(player) { }
 
         protected int _xp;
-        protected int _ofp;
+        protected int _credits;
         protected int _fobsDestroyed;
         protected int _fobsPlaced;
         protected int _revives;
@@ -403,7 +403,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         //internal int _cachesDiscovered;
         internal int _intelligencePointsCollected;
         public int XPGained => _xp;
-        public int OFPGained => _ofp;
+        public int Credits => _credits;
         public int FOBsDestroyed => _fobsDestroyed;
         public int FOBsPlaced => _fobsPlaced;
         public int Revives => _revives;
@@ -411,14 +411,14 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         public int KillsDefense => _killsDefense;
         public void AddFOBDestroyed() => _fobsDestroyed++;
         public void AddFOBPlaced() => _fobsPlaced++;
-        public void AddOfficerPoints(int amount) => _ofp += amount;
+        public void AddCredits(int amount) => _credits += amount;
         public void AddXP(int amount) => _xp += amount;
         public void AddRevive() => _revives++;
         public override void Reset()
         {
             base.Reset();
             _xp = 0;
-            _ofp = 0;
+            _credits = 0;
             _fobsDestroyed = 0;
             _fobsPlaced = 0;
             _revives = 0;

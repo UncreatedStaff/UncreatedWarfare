@@ -75,9 +75,7 @@ namespace Uncreated
                     try
                     {
                         writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                        writer.WriteStartObject();
                         customSerializer!.Invoke(data, writer);
-                        writer.WriteEndObject();
                     }
                     catch (Exception ex)
                     {
@@ -187,9 +185,7 @@ namespace Uncreated
                     try
                     {
                         writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                        writer.WriteStartObject();
                         customSerializer!.Invoke(data, writer);
-                        writer.WriteEndObject();
                     }
                     catch (Exception ex)
                     {

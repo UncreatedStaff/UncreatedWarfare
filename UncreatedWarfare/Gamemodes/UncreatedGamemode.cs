@@ -103,8 +103,6 @@ namespace Uncreated.Warfare.Gamemodes
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            for (int i = 0; i < Provider.clients.Count; i++)
-                PlayerManager.InvokePlayerConnected(UnturnedPlayer.FromSteamPlayer(Provider.clients[i]));
             Cooldowns = new CooldownManager();
             if (UseWhitelist)
                 Whitelister = new Whitelister();
@@ -270,7 +268,7 @@ namespace Uncreated.Warfare.Gamemodes
         { }
         public virtual void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
         {
-            Points.OnPlayerJoined(player, wasAlreadyOnline);
+            //Points.OnPlayerJoined(player, wasAlreadyOnline);
         }
         public virtual void OnPlayerLeft(UCPlayer player)
         { }

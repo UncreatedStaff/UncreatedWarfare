@@ -160,7 +160,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
                     totalT1.kills += stat.kills;
                     totalT1.deaths += stat.deaths;
                     totalT1.xpgained += stat.xpgained;
-                    totalT1.officerpointsgained += stat.officerpointsgained;
+                    totalT1.creditsgained += stat.creditsgained;
                     totalT1.captures += stat.captures;
                     totalT1.damagedone += stat.damagedone;
                 }
@@ -169,7 +169,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
                     totalT2.kills += stat.kills;
                     totalT2.deaths += stat.deaths;
                     totalT2.xpgained += stat.xpgained;
-                    totalT2.officerpointsgained += stat.officerpointsgained;
+                    totalT2.creditsgained += stat.creditsgained;
                     totalT2.captures += stat.captures;
                     totalT2.damagedone += stat.damagedone;
                 }
@@ -213,13 +213,13 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
                     for (int i = 0; i < a.Members.Count; i++)
                     {
                         if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats xp)
-                            totalopgaina += xp.OFPGained;
+                            totalopgaina += xp.Credits;
                     }
                     int totalopgainb = 0;
                     for (int i = 0; i < b.Members.Count; i++)
                     {
                         if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats xp)
-                            totalopgainb += xp.OFPGained;
+                            totalopgainb += xp.Credits;
                     }
                     if (totalxpgaina == totalxpgainb)
                     {
@@ -276,7 +276,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         public int deaths;
         public float KDR { get => deaths == 0 ? kills : (float)kills / deaths; }
         public int xpgained;
-        public int officerpointsgained;
+        public int creditsgained;
         public TimeSpan TimeDeployed { get => TimeSpan.FromSeconds(timeDeployedCounter); }
         public int Teamkills => teamkills;
         public int Kills => kills;
@@ -284,7 +284,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         public float DamageDone => damagedone;
         public int Revives => revives;
         public int XPGained => xpgained;
-        public int OFPGained => officerpointsgained;
+        public int Credits => creditsgained;
         private float timeDeployedCounter;
         public int captures;
         public int teamkills;
@@ -315,7 +315,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
             this.fobsplaced = 0;
             this.damagedone = 0;
             this.xpgained = 0;
-            this.officerpointsgained = 0;
+            this.creditsgained = 0;
             this.onlineCount1 = 0;
             this.onlineCount2 = 0;
             this.revives = 0;
@@ -327,7 +327,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         public void AddDeath() => deaths++;
         public void AddTeamkill() => teamkills++;
         public void AddXP(int amount) => xpgained += amount;
-        public void AddOfficerPoints(int amount) => officerpointsgained += amount;
+        public void AddCredits(int amount) => creditsgained += amount;
         public void AddToTimeDeployed(float amount) => timeDeployedCounter += amount;
         public void AddDamage(float amount) => damagedone += amount;
         public void AddRevive() => revives++;

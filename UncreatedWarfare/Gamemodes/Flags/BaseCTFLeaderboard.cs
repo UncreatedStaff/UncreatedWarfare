@@ -130,7 +130,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     string k = statsT1[i].kills.ToString(Data.Locale);
                     string d = statsT1[i].deaths.ToString(Data.Locale);
                     string x = statsT1[i].XPGained.ToString(Data.Locale);
-                    string f = statsT1[i].OFPGained.ToString(Data.Locale);
+                    string f = statsT1[i].Credits.ToString(Data.Locale);
                     string c = statsT1[i].Captures.ToString(Data.Locale);
                     string t = statsT1[i].DamageDone.ToString(Data.Locale);
 
@@ -162,7 +162,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     string k = statsT2[i].kills.ToString(Data.Locale);
                     string d = statsT2[i].deaths.ToString(Data.Locale);
                     string x = statsT2[i].XPGained.ToString(Data.Locale);
-                    string f = statsT2[i].OFPGained.ToString(Data.Locale);
+                    string f = statsT2[i].Credits.ToString(Data.Locale);
                     string c = statsT2[i].Captures.ToString(Data.Locale);
                     string t = statsT2[i].DamageDone.ToString(Data.Locale);
 
@@ -219,7 +219,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TimeInVehicleValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.DamageDone, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "TeamkillsValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.teamkills, defaultColor));
                 EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "EnemyFOBsDestroyedValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.FOBsDestroyed, defaultColor));
-                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "OfficerPointsGainedValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.OFPGained, defaultColor));
+                EffectManager.sendUIEffectText(LeaderboardEx.leaderboardKey, channel, true, "OfficerPointsGainedValue", Translation.ObjectTranslate("stats_player_value", player.Steam64, stats.Credits, defaultColor));
 
                 /*
                  *  WAR
@@ -326,14 +326,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public BaseCTFStats(ulong player) : base(player) { }
 
         protected int _xp;
-        protected int _ofp;
+        protected int _credits;
         protected int _caps;
         protected int _fobsDestroyed;
         protected int _fobsPlaced;
         protected int _revives;
         protected int _killsOnPoint;
         public int XPGained => _xp;
-        public int OFPGained => _ofp;
+        public int Credits => _credits;
         public int Captures => _caps;
         public int FOBsDestroyed => _fobsDestroyed;
         public int FOBsPlaced => _fobsPlaced;
@@ -343,7 +343,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public void AddCaptures(int amount) => _caps += amount;
         public void AddFOBDestroyed() => _fobsDestroyed++;
         public void AddFOBPlaced() => _fobsPlaced++;
-        public void AddOfficerPoints(int amount) => _ofp += amount;
+        public void AddCredits(int amount) => _credits += amount;
         public void AddXP(int amount) => _xp += amount;
         public void AddRevive() => _revives++;
         public void AddKillOnPoint() => _killsOnPoint++;
@@ -351,7 +351,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         {
             base.Reset();
             _xp = 0;
-            _ofp = 0;
+            _credits = 0;
             _caps = 0;
             _fobsDestroyed = 0;
             _fobsPlaced = 0;
@@ -411,7 +411,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     totalT1.kills += stat.kills;
                     totalT1.deaths += stat.deaths;
                     totalT1.AddXP(stat.XPGained);
-                    totalT1.AddOfficerPoints(stat.OFPGained);
+                    totalT1.AddCredits(stat.Credits);
                     totalT1.AddCaptures(stat.Captures);
                     totalT1.AddDamage(stat.DamageDone);
                 }
@@ -420,7 +420,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     totalT2.kills += stat.kills;
                     totalT2.deaths += stat.deaths;
                     totalT2.AddXP(stat.XPGained);
-                    totalT2.AddOfficerPoints(stat.OFPGained);
+                    totalT2.AddCredits(stat.Credits);
                     totalT2.AddCaptures(stat.Captures);
                     totalT2.AddDamage(stat.DamageDone);
                 }

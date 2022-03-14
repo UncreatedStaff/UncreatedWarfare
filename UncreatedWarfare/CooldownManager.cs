@@ -32,6 +32,15 @@ namespace Uncreated.Warfare
             cooldown = cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && c.data.Equals(data));
             return cooldown != null;
         }
+        public static bool HasCooldownNoStateCheck(UCPlayer player, ECooldownType type, out Cooldown cooldown)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            cooldowns.RemoveAll(c => c.player == null || c.Timeleft.TotalSeconds <= 0);
+            cooldown = cooldowns.Find(c => c.player.CSteamID == player.CSteamID);
+            return cooldown != null;
+        }
         public static void RemoveCooldown(UCPlayer player, ECooldownType type) => cooldowns.RemoveAll(c => c.player == null || c.player.CSteamID == player.CSteamID && c.type == type);
         public static void RemoveCooldown(UCPlayer player) => cooldowns.RemoveAll(c => c.player.CSteamID == player.CSteamID);
         public static void RemoveCooldown(ECooldownType type) => cooldowns.RemoveAll(x => x.player == null || x.type == type);

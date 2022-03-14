@@ -291,7 +291,7 @@ namespace Uncreated.Warfare.Commands
             else
             {
                 if (!violator.transportConnection.TryGetIPv4Address(out uint ip)) ip = 0;
-                Provider.requestBanPlayer(violator.playerID.steamID, admin == null ? new CSteamID(Admin) : admin.playerID.steamID, ip, Reason, DurationMins * 60);
+                Provider.requestBanPlayer(admin == null ? new CSteamID(Admin) : admin.playerID.steamID, violator.playerID.steamID, ip, Reason, DurationMins * 60);
                 if (UCWarfare.Config.AdminLoggerSettings.LogBans)
                 {
                     Data.DatabaseManager.AddBan(Violator, Admin, DurationMins, Reason);
