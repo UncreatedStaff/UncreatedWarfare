@@ -1004,7 +1004,7 @@ namespace Uncreated.Warfare.FOBs
                     foundationID = new Guid("a68ae466fb804829a0eb0d4556071801"),
                     type = EBuildableType.EMPLACEMENT,
                     requiredHits = 25,
-                    requiredBuild = 15,
+                    requiredBuild = 14,
                     team = 1,
                     emplacementData = new EmplacementData
                     {
@@ -1022,7 +1022,7 @@ namespace Uncreated.Warfare.FOBs
                     foundationID = new Guid("37811b1847744c958fcb30a0b759874b"),
                     type = EBuildableType.EMPLACEMENT,
                     requiredHits = 25,
-                    requiredBuild = 15,
+                    requiredBuild = 14,
                     team = 2,
                     emplacementData = new EmplacementData
                     {
@@ -1040,7 +1040,7 @@ namespace Uncreated.Warfare.FOBs
                     foundationID = new Guid("3c2dd7febc854b7f8859852b8c736c8e"),
                     type = EBuildableType.EMPLACEMENT,
                     requiredHits = 25,
-                    requiredBuild = 15,
+                    requiredBuild = 14,
                     team = 2,
                     emplacementData = new EmplacementData
                     {
@@ -1058,7 +1058,7 @@ namespace Uncreated.Warfare.FOBs
                     foundationID = new Guid("b50cb548734946ffa5f88d6691a2c7ce"),
                     type = EBuildableType.EMPLACEMENT,
                     requiredHits = 25,
-                    requiredBuild = 15,
+                    requiredBuild = 14,
                     team = 2,
                     emplacementData = new EmplacementData
                     {
@@ -1075,8 +1075,8 @@ namespace Uncreated.Warfare.FOBs
                     structureID = Guid.Empty,
                     foundationID = new Guid("6ff4826eaeb14c7cac1cf25a55d24bd3"),
                     type = EBuildableType.EMPLACEMENT,
-                    requiredHits = 20,
-                    requiredBuild = 8,
+                    requiredHits = 22,
+                    requiredBuild = 10,
                     team = 0,
                     emplacementData = new EmplacementData
                     {
