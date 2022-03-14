@@ -114,7 +114,6 @@ namespace Uncreated.Warfare.Teams
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            bool x = false;
             for (int i = 0; i < LobbyPlayers.Count; i++)
             {
                 if (LobbyPlayers[i].Steam64 == player.Steam64)
@@ -126,21 +125,17 @@ namespace Uncreated.Warfare.Teams
                         else
                             save.ShouldRespawnOnJoin = false;
                     }
-
-
                     if (LobbyPlayers[i].current != null)
                     {
                         StopCoroutine(LobbyPlayers[i].current);
                         LobbyPlayers[i].current = null;
                     }
                     LobbyPlayers.RemoveAt(i);
-                    x = true;
+                    foreach (LobbyPlayer p in LobbyPlayers)
+                        UpdateUITeams(p, p.Team);
                     break;
                 }
             }
-            if (x)
-                foreach (LobbyPlayer p in LobbyPlayers)
-                    UpdateUITeams(p, p.Team);
         }
 
         public void JoinLobby(UCPlayer player, bool showX)
@@ -516,6 +511,7 @@ namespace Uncreated.Warfare.Teams
             player.IsInLobby = false;
             JoinTeam(player.Player, player.Team);
             CloseUI(player);
+            player.current = null;
         }
 
         public void Dispose()

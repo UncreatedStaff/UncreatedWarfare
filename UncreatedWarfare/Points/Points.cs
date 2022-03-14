@@ -129,7 +129,7 @@ namespace Uncreated.Warfare.Point
             int end = GetNextLevelXP(lvl);
             return (float)(end - GetLevelXP(lvl)) / (end - xp);
         }
-        public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false)
+        public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -161,7 +161,7 @@ namespace Uncreated.Warfare.Point
                     else
                         ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
 
-                    if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (!isPurchase && player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                     {
                         if (c.stats is IExperienceStats kd)
                             kd.AddCredits(amount);

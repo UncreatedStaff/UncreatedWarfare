@@ -387,8 +387,6 @@ namespace Uncreated.Warfare.Gamemodes
             Whitelister?.Dispose();
             if (_state == EState.STAGING)
             {
-                if (_stagingPhaseTimer != null)
-                    StopCoroutine(_stagingPhaseTimer);
                 _stagingSeconds = 0;
                 EndStagingPhase();
                 _stagingPhaseTimer = null;

@@ -228,7 +228,6 @@ namespace Uncreated.Warfare.Commands
                 if (Data.Gamemode is FlagGamemode flaggm)
                 {
                     flaggm.LoadAllFlags();
-                    flaggm.StartNextGame(false);
                 }
                 Data.ExtraZones = JSONMethods.LoadExtraZones();
                 Data.ExtraPoints = JSONMethods.LoadExtraPoints();
