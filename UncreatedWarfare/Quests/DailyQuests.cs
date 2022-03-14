@@ -17,8 +17,8 @@ public static class DailyQuests
     public static BaseQuestData[] DailyQuestDatas = new BaseQuestData[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
     public static IQuestState[] States = new IQuestState[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
     public static Dictionary<ulong, DailyQuestTracker> DailyTrackers = new Dictionary<ulong, DailyQuestTracker>();
-    private static DailyQuestSave[] _quests;
-    private static DailyQuest[] _sendQuests;
+    private static DailyQuestSave[] _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
+    private static DailyQuest[] _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
     private static DateTime _nextRefresh;
     private static int index = 0;
     private volatile static bool sentCurrent = false;
@@ -66,13 +66,14 @@ public static class DailyQuests
             if (index > DailyQuest.DAILY_QUEST_LENGTH / 2)
             {
                 L.Log("Generating new Daily Quests.", ConsoleColor.Magenta);
-                CreateNextModContent();
                 index = 0;
+                CreateNextModContent();
             }
             CreateNewDailyQuests();
 
             _nextRefresh = _quests[index + 1].StartDate;
-            SaveQuests();
+            if (index != 0)
+                SaveQuests();
 
             foreach (KeyValuePair<ulong, DailyQuestTracker> tracker in DailyTrackers)
             {
@@ -94,8 +95,6 @@ public static class DailyQuests
             return;
         }
         DateTime now = DateTime.Today;
-        _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
-        _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
         for (int day = 0; day < DailyQuest.DAILY_QUEST_LENGTH; ++day)
         {
             ref DailyQuest dq = ref _sendQuests[day];
@@ -213,6 +212,10 @@ public static class DailyQuests
         {
             player.Player.quests.sendAddQuest(quest.id);
         }
+        else
+        {
+            L.LogWarning("Couldn't find asset for " + save.guid);
+        }
         LoadSave(tr);
         if (DailyTrackers.TryGetValue(player.Steam64, out DailyQuestTracker tr2))
         {
@@ -273,11 +276,18 @@ public static class DailyQuests
             ref DailyQuestSave.Preset preset = ref save.Presets[i];
 
             EQuestType type = preset.Type;
-            BaseQuestData? data = QuestManager.Quests.Find(x => x.QuestType == type);
+            BaseQuestData? data = QuestManager.Quests.Find(x => x != null && x.QuestType == type);
             if (data != null)
             {
                 DailyQuestDatas[i] = data;
-                States[i] = preset.PresetObj.State;
+                if (preset.PresetObj != null)
+                {
+                    States[i] = preset.PresetObj.State;
+                }
+                else
+                {
+                    States[i] = data.GetState();
+                }
             }
         }
     }
@@ -356,7 +366,7 @@ public static class DailyQuests
             }
             byte[] buffer = new byte[stream.Length];
             stream.Read(buffer, 0, buffer.Length);
-            Utf8JsonReader reader = new Utf8JsonReader();
+            Utf8JsonReader reader = new Utf8JsonReader(buffer, JsonEx.readerOptions);
             while (reader.Read())
             {
                 if (reader.TokenType == JsonTokenType.EndObject) break;
@@ -411,7 +421,7 @@ public static class DailyQuests
                                                             break;
                                                         case "presets":
                                                             save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
-                                                            int j = 0;
+                                                            int j = -1;
                                                             if (reader.TokenType == JsonTokenType.StartArray)
                                                             {
                                                                 while (reader.Read())
@@ -429,7 +439,7 @@ public static class DailyQuests
                                                                                 {
                                                                                     case "quest_type":
                                                                                         string? v = reader.GetString();
-                                                                                        ref DailyQuestSave.Preset preset = ref save.Presets[i];
+                                                                                        ref DailyQuestSave.Preset preset = ref save.Presets[j];
                                                                                         if (v != null && Enum.TryParse(v, true, out preset.Type))
                                                                                         {
                                                                                             EQuestType type = preset.Type;

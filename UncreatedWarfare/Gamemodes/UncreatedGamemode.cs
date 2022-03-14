@@ -178,7 +178,7 @@ namespace Uncreated.Warfare.Gamemodes
                     L.LogError(ex);
                 }
 
-                Quests.QuestManager.OnGameTick();
+                //Quests.QuestManager.OnGameTick();
 #if DEBUG
                 profiler.Dispose();
                 if (EveryXSeconds(150))

@@ -34,11 +34,12 @@ namespace Uncreated.Warfare.Commands
                 L.LogWarning("This command can't be called from console.");
                 return;
             }
+            /*
             if (player.Steam64 != 76561198267927009)
             {
                 player.SendChat("Reports are currently disabled.");
                 return;
-            }
+            }*/
             if (command.Length < 2)
             {
                 goto Help;
@@ -108,74 +109,112 @@ namespace Uncreated.Warfare.Commands
 
 
         Report:
-            Report? report;
-            report = type switch
+            Task.Run(async () =>
             {
-                EReportType.CHAT_ABUSE => Data.Reporter.CreateChatAbuseReport(player.Steam64, target, message),
-                EReportType.VOICE_CHAT_ABUSE => Data.Reporter.CreateVoiceChatAbuseReport(player.Steam64, target, message),
-                EReportType.SOLOING_VEHICLE => Data.Reporter.CreateSoloingReport(player.Steam64, target, message),
-                EReportType.WASTEING_ASSETS => Data.Reporter.CreateWasteingAssetsReport(player.Steam64, target, message),
-                EReportType.INTENTIONAL_TEAMKILL => Data.Reporter.CreateIntentionalTeamkillReport(player.Steam64, target, message),
-                EReportType.GREIFING_FOBS => Data.Reporter.CreateGreifingFOBsReport(player.Steam64, target, message),
-                _ => Data.Reporter.CreateReport(player.Steam64, target, message),
-            };
-            if (report == null)
-                goto UnknownError;
-            SteamPlayer? targetPl = PlayerTool.getSteamPlayer(target);
-            Data.DatabaseManager.AddReport(report);
-            FPlayerName targetNames = F.GetPlayerOriginalNames(target);
-            string typename = GetName(type);
-            NotifyAdminsOfReport(targetNames, player.Name, report, type, typename);
-            player.SendChat("report_success_p1", targetNames.CharacterName, string.IsNullOrEmpty(message) ? "---" : message, typename);
-            player.SendChat("report_success_p2");
-            if (targetPl != null)
-            {
-                ToastMessage.QueueMessage(targetPl, new ToastMessage(Translation.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE));
-                targetPl.SendChat("report_notify_violator_chat_p1", typename, message);
-                targetPl.SendChat("report_notify_violator_chat_p2");
-            }
-            L.Log(Translation.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
-                player.Player.channel.owner.playerID.playerName, player.Steam64.ToString(Data.Locale),
-                targetNames.PlayerName, target.ToString(Data.Locale), report.Message, typename), ConsoleColor.Cyan);
-            Task.Run(
-            async () =>
-            {
-                byte[] jpgData = targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE) ? new byte[0] : await SpyTask.RequestScreenshot(targetPl);
-                L.Log(report.JpgData.Length.ToString());
-                report.JpgData = jpgData;
-                NetTask.Response res = await Reporter.SendReportInvocation.Request(Reporter.ReceiveInvocationResponse, Data.NetClient.connection, report, targetPl != null);
-                if (targetPl == null)
+                try
                 {
-                    if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success2 && success2 && res.Parameters[1] is string messageUrl2)
+                    await UCWarfare.ToUpdate();
+                    FPlayerName targetNames = F.GetPlayerOriginalNames(target);
+                    if (CooldownManager.HasCooldown(player, ECooldownType.REPORT, out _, target))
+                    {
+                        player.SendChat("report_cooldown", targetNames.CharacterName);
+                        return;
+                    }
+
+                    player.SendChat("report_confirm", target.ToString(Data.Locale), targetNames.CharacterName);
+                    bool didConfirm = await CommandWaitTask.WaitForCommand(player, "confirm", 10000);
+                    await UCWarfare.ToUpdate();
+                    if (!didConfirm)
+                    {
+                        player.SendChat("report_cancelled", targetNames.CharacterName);
+                        return;
+                    }
+                    CooldownManager.StartCooldown(player, ECooldownType.REPORT, 3600f, target);
+                    Report? report;
+                    report = type switch
+                    {
+                        EReportType.CHAT_ABUSE => Data.Reporter.CreateChatAbuseReport(player.Steam64, target, message),
+                        EReportType.VOICE_CHAT_ABUSE => Data.Reporter.CreateVoiceChatAbuseReport(player.Steam64, target, message),
+                        EReportType.SOLOING_VEHICLE => Data.Reporter.CreateSoloingReport(player.Steam64, target, message),
+                        EReportType.WASTEING_ASSETS => Data.Reporter.CreateWasteingAssetsReport(player.Steam64, target, message),
+                        EReportType.INTENTIONAL_TEAMKILL => Data.Reporter.CreateIntentionalTeamkillReport(player.Steam64, target, message),
+                        EReportType.GREIFING_FOBS => Data.Reporter.CreateGreifingFOBsReport(player.Steam64, target, message),
+                        _ => Data.Reporter.CreateReport(player.Steam64, target, message),
+                    };
+                    if (report == null)
+                    {
+                        player.SendChat("report_unknown_error");
+                        return;
+                    }
+                    SteamPlayer? targetPl = PlayerTool.getSteamPlayer(target);
+                    Data.DatabaseManager.AddReport(report);
+                    string typename = GetName(type);
+                    NotifyAdminsOfReport(targetNames, player.Name, report, type, typename);
+                    player.SendChat("report_success_p1", targetNames.CharacterName, string.IsNullOrEmpty(message) ? "---" : message, typename);
+                    player.SendChat("report_success_p2");
+                    if (targetPl != null)
+                    {
+                        ToastMessage.QueueMessage(targetPl, new ToastMessage(Translation.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE));
+                        targetPl.SendChat("report_notify_violator_chat_p1", typename, message);
+                        targetPl.SendChat("report_notify_violator_chat_p2");
+                    }
+                    L.Log(Translation.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
+                        player.Player.channel.owner.playerID.playerName, player.Steam64.ToString(Data.Locale),
+                        targetNames.PlayerName, target.ToString(Data.Locale), report.Message, typename), ConsoleColor.Cyan);
+                    byte[] jpgData =
+                        targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE)
+                            ? new byte[0]
+                            : await SpyTask.RequestScreenshot(targetPl);
+                    report.JpgData = jpgData;
+                    L.Log(report.JpgData.Length.ToString());
+                    NetTask.Response res = await Reporter.SendReportInvocation.Request(
+                        Reporter.ReceiveInvocationResponse, Data.NetClient.connection, report, targetPl != null);
+                    if (targetPl == null)
+                    {
+                        if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success2 &&
+                            success2 && res.Parameters[1] is string messageUrl2)
+                        {
+                            L.Log(
+                                Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
+                                    string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
+                        }
+                        else
+                        {
+                            L.Log(
+                                Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
+                                    string.Empty, "0"), ConsoleColor.Cyan);
+                        }
+
+                        return;
+                    }
+
+                    if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success &&
+                        success && res.Parameters[1] is string messageUrl)
                     {
                         //await UCWarfare.ToUpdate();
                         //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
-                        L.Log(Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE, string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
+                        L.Log(
+                            Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
+                                targetPl.playerID.playerName,
+                                targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl),
+                            ConsoleColor.Cyan);
                     }
                     else
                     {
-                        L.Log(Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE, string.Empty, "0"), ConsoleColor.Cyan);
+                        L.Log(
+                            Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
+                                targetPl.playerID.playerName,
+                                targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                     }
-
-                    return;
                 }
-                if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success && success && res.Parameters[1] is string messageUrl)
+                catch (Exception ex)
                 {
-                    //await UCWarfare.ToUpdate();
-                    //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
-                    L.Log(Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl), ConsoleColor.Cyan);
+                    L.LogError(ex);
                 }
-                else
-                {
-                    L.Log(Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE, targetPl.playerID.playerName, targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                }
-            }).ConfigureAwait(false);
+            });
             return;
         PlayerNotFound:
             player.SendChat("report_player_not_found", player.Steam64.ToString(Data.Locale));
-            return;
-        UnknownError:
-            player.SendChat("report_unknown_error");
             return;
         DiscordNotLinked:
             player.SendChat("report_discord_not_linked", player.Steam64.ToString(Data.Locale));
@@ -192,6 +231,7 @@ namespace Uncreated.Warfare.Commands
             { "none", EReportType.CUSTOM },
             { "chat abuse", EReportType.CHAT_ABUSE },
             { "racism", EReportType.CHAT_ABUSE },
+            { "n word", EReportType.CHAT_ABUSE },
             { "chat", EReportType.CHAT_ABUSE },
             { "chat racism", EReportType.CHAT_ABUSE },
             { "voice chat abuse", EReportType.VOICE_CHAT_ABUSE },
@@ -199,6 +239,7 @@ namespace Uncreated.Warfare.Commands
             { "voice chat racism", EReportType.VOICE_CHAT_ABUSE },
             { "vc abuse", EReportType.VOICE_CHAT_ABUSE },
             { "vc racism", EReportType.VOICE_CHAT_ABUSE },
+            { "vc", EReportType.VOICE_CHAT_ABUSE },
             { "soloing", EReportType.SOLOING_VEHICLE },
             { "soloing vehicles", EReportType.SOLOING_VEHICLE },
             { "asset waste", EReportType.WASTEING_ASSETS },
@@ -214,41 +255,25 @@ namespace Uncreated.Warfare.Commands
         };
         public UCPlayer.ENameSearchType GetNameType(EReportType type)
         {
-            switch (type)
+            return type switch
             {
-                case EReportType.CUSTOM:
-                case EReportType.INTENTIONAL_TEAMKILL:
-                case EReportType.GREIFING_FOBS:
-                case EReportType.SOLOING_VEHICLE:
-                case EReportType.VOICE_CHAT_ABUSE:
-                case EReportType.WASTEING_ASSETS:
-                    return UCPlayer.ENameSearchType.NICK_NAME;
-                case EReportType.CHAT_ABUSE:
-                    return UCPlayer.ENameSearchType.CHARACTER_NAME;
-                default:
-                    return UCPlayer.ENameSearchType.CHARACTER_NAME;
-            }
+                EReportType.CUSTOM or EReportType.INTENTIONAL_TEAMKILL or EReportType.GREIFING_FOBS or EReportType.SOLOING_VEHICLE or EReportType.VOICE_CHAT_ABUSE or EReportType.WASTEING_ASSETS => UCPlayer.ENameSearchType.NICK_NAME,
+                EReportType.CHAT_ABUSE => UCPlayer.ENameSearchType.CHARACTER_NAME,
+                _ => UCPlayer.ENameSearchType.CHARACTER_NAME,
+            };
         }
         public string GetName(EReportType type)
         {
-            switch (type)
+            return type switch
             {
-                default:
-                case EReportType.CUSTOM:
-                    return "Custom";
-                case EReportType.CHAT_ABUSE:
-                    return "Chat Abuse / Racism";
-                case EReportType.VOICE_CHAT_ABUSE:
-                    return "Voice Chat Abuse / Racism";
-                case EReportType.SOLOING_VEHICLE:
-                    return "Soloing Vehicle";
-                case EReportType.WASTEING_ASSETS:
-                    return "Wasteing Assets / Vehicle Greifing";
-                case EReportType.INTENTIONAL_TEAMKILL:
-                    return "Intentional Teamkilling";
-                case EReportType.GREIFING_FOBS:
-                    return "FOB / Friendly Structure Greifing";
-            }
+                EReportType.CHAT_ABUSE => "Chat Abuse / Racism",
+                EReportType.VOICE_CHAT_ABUSE => "Voice Chat Abuse / Racism",
+                EReportType.SOLOING_VEHICLE => "Soloing Vehicle",
+                EReportType.WASTEING_ASSETS => "Wasteing Assets / Vehicle Greifing",
+                EReportType.INTENTIONAL_TEAMKILL => "Intentional Teamkilling",
+                EReportType.GREIFING_FOBS => "FOB / Friendly Structure Greifing",
+                _ => "Custom",
+            };
         }
         public EReportType GetReportType(string input)
         {

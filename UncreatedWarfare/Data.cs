@@ -329,7 +329,7 @@ namespace Uncreated.Warfare
             StatsManager.LoadVehicles();
             for (int i = 0; i < Provider.clients.Count; i++)
                 StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
-            Quests.DailyQuests.OnLoad();
+            //Quests.DailyQuests.OnLoad();
         }
         public static List<Log> ReadRocketLog()
         {
