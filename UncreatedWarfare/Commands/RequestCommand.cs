@@ -410,14 +410,9 @@ namespace Uncreated.Warfare.Commands
 
                 if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
                 {
-                    if (vehicle.TryGetComponent(out SpawnedVehicleComponent c))
-                    {
-                        c.hasBeenRequested = true;
-                        c.nextIdleSecond = data.RespawnTime - 10f;
-                        c.StartIdleRespawnTimer();
-                        c.isIdle = false;
-                    }
-                    spawn.UpdateSign();
+                    VehicleBayComponent? comp = spawn.Component;
+                    if (comp != null)
+                        comp.OnRequest();
                     Data.Reporter.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.SpawnPadInstanceID);
                 }
                 vehicle.updateVehicle();

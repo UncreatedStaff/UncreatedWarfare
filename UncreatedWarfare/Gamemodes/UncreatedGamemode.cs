@@ -406,26 +406,29 @@ namespace Uncreated.Warfare.Gamemodes
                     {
                         try
                         {
-                            for (int i = BarricadeManager.regions[x, y].drops.Count - 1; i >= 0; i--)
+                            BarricadeRegion barricadeRegion = BarricadeManager.regions[x, y];
+                            for (int i = barricadeRegion.drops.Count - 1; i >= 0; i--)
                             {
-                                uint instid = BarricadeManager.regions[x, y].drops[i].instanceID;
+                                BarricadeDrop drop = barricadeRegion.drops[i];
+                                uint instid = drop.instanceID;
                                 if (!(isStruct && (StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) || RequestSigns.SignExists(instid, out _))))
                                 {
-                                    if (BarricadeManager.regions[x, y].drops[i].model.TryGetComponent(out Components.FOBComponent fob))
+                                    if (drop.model.TryGetComponent(out FOBComponent fob))
                                     {
                                         fob.parent.IsWipedByAuthority = true;
                                     }
-
-                                    if (BarricadeManager.regions[x, y].drops[i].model.transform.TryGetComponent(out InteractableStorage storage))
+                                    if (drop.model.transform.TryGetComponent(out InteractableStorage storage))
                                         storage.despawnWhenDestroyed = true;
-                                    BarricadeManager.destroyBarricade(BarricadeManager.regions[x, y].drops[i], x, y, ushort.MaxValue);
+                                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                                 }
                             }
-                            for (int i = StructureManager.regions[x, y].drops.Count - 1; i >= 0; i--)
+                            StructureRegion structureRegion = StructureManager.regions[x, y];
+                            for (int i = structureRegion.drops.Count - 1; i >= 0; i--)
                             {
-                                uint instid = StructureManager.regions[x, y].drops[i].instanceID;
+                                StructureDrop drop = structureRegion.drops[i];
+                                uint instid = drop.instanceID;
                                 if (!(isStruct && StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _)))
-                                    StructureManager.destroyStructure(StructureManager.regions[x, y].drops[i], x, y, Vector3.zero);
+                                    StructureManager.destroyStructure(drop, x, y, Vector3.zero);
                             }
                         }
                         catch (Exception ex)

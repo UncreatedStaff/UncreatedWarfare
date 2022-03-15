@@ -1083,15 +1083,18 @@ namespace Uncreated.Warfare.Commands
                     if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
                     {
                         BarricadeDrop? oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
-                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
-                            UnityEngine.Object.Destroy(vsc);
+                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleBayComponent vbc))
+                            UnityEngine.Object.Destroy(vbc);
                         spawn.SpawnPadInstanceID = bd.instanceID;
                         spawn.SpawnpadLocation = new SerializableTransform(bd.model);
                         spawn.BarricadeData = bd.GetServersideData();
                         spawn.BarricadeDrop = bd;
                         spawn.initialized = true;
                         spawn.IsActive = true;
-                        bd.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                        if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                            bd.model.gameObject.AddComponent<VehicleBayComponent>().Init(spawn, data);
+                        else
+                            L.LogError("Failed to get vehicle data for " + spawn.VehicleID.ToString("N"));
                         player.SendChat("Modified inst id from existing barricade.");
                         VehicleSpawner.Save();
                     }
@@ -1103,8 +1106,8 @@ namespace Uncreated.Warfare.Commands
                 else if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
                 {
                     BarricadeDrop? oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
-                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
-                        UnityEngine.Object.Destroy(vsc);
+                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleBayComponent vbc))
+                        UnityEngine.Object.Destroy(vbc);
                     StructureSaver.AddStructure(bd, bd.GetServersideData(), out _);
                     spawn.SpawnPadInstanceID = bd.instanceID;
                     spawn.SpawnpadLocation = new SerializableTransform(bd.model);
@@ -1112,7 +1115,10 @@ namespace Uncreated.Warfare.Commands
                     spawn.BarricadeDrop = bd;
                     spawn.initialized = true;
                     spawn.IsActive = true;
-                    bd.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                    if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                        bd.model.gameObject.AddComponent<VehicleBayComponent>().Init(spawn, data);
+                    else
+                        L.LogError("Failed to get vehicle data for " + spawn.VehicleID.ToString("N"));
                     player.SendChat("Modified inst id from new barricade.");
                     VehicleSpawner.Save();
                 }
@@ -1128,15 +1134,18 @@ namespace Uncreated.Warfare.Commands
                     if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
                     {
                         StructureDrop? oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
-                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
-                            UnityEngine.Object.Destroy(vsc);
+                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleBayComponent vbc))
+                            UnityEngine.Object.Destroy(vbc);
                         spawn.SpawnPadInstanceID = dp.instanceID;
                         spawn.SpawnpadLocation = new SerializableTransform(dp.model);
                         spawn.StructureData = dp.GetServersideData();
                         spawn.StructureDrop = dp;
                         spawn.initialized = true;
                         spawn.IsActive = true;
-                        dp.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                        if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                            dp.model.gameObject.AddComponent<VehicleBayComponent>().Init(spawn, data);
+                        else
+                            L.LogError("Failed to get vehicle data for " + spawn.VehicleID.ToString("N"));
                         player.SendChat("Modified inst id from existing barricade.");
                         VehicleSpawner.Save();
                     }
@@ -1148,8 +1157,8 @@ namespace Uncreated.Warfare.Commands
                 else if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
                 {
                     StructureDrop? oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
-                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
-                        UnityEngine.Object.Destroy(vsc);
+                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleBayComponent vbc))
+                        UnityEngine.Object.Destroy(vbc);
                     StructureSaver.AddStructure(dp, dp.GetServersideData(), out _);
                     spawn.SpawnPadInstanceID = dp.instanceID;
                     spawn.SpawnpadLocation = new SerializableTransform(dp.model);
@@ -1157,7 +1166,10 @@ namespace Uncreated.Warfare.Commands
                     spawn.StructureDrop = dp;
                     spawn.initialized = true;
                     spawn.IsActive = true;
-                    dp.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                    if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                        dp.model.gameObject.AddComponent<VehicleBayComponent>().Init(spawn, data);
+                    else
+                        L.LogError("Failed to get vehicle data for " + spawn.VehicleID.ToString("N"));
                     player.SendChat("Modified inst id from new barricade.");
                     VehicleSpawner.Save();
                 }

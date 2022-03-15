@@ -283,9 +283,9 @@ namespace Uncreated.Warfare.Tickets
                         //        }
                         //    }
                         //}
-
-                        if (vehicle.TryGetComponent(out SpawnedVehicleComponent svc))
-                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, svc.spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+                        
+                        if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
+                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
                         else
                             Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
                     }

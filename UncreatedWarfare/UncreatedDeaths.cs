@@ -1133,9 +1133,9 @@ namespace Uncreated.Warfare
             vehicle = 0;
             if (killer == null || dead == null)
             {
-                killernames = dead == null ? FPlayerName.Nil : F.GetPlayerOriginalNames(dead);
+                killernames = killer == null ? FPlayerName.Nil : F.GetPlayerOriginalNames(killer);
                 distance = 0;
-                KillerTeam = dead == null ? 0 : dead.GetTeam();
+                KillerTeam = killer == null ? 0 : killer.GetTeam();
                 kitname = KillerTeam == 0 ? string.Empty : (KillerTeam == 1 ? TeamManager.Team1UnarmedKit : (KillerTeam == 2 ? TeamManager.Team2UnarmedKit : string.Empty));
             }
             else
@@ -1180,17 +1180,22 @@ namespace Uncreated.Warfare
                         if (Config.Debug)
                             L.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                     }
-                    else item = killer.player.equipment.asset.GUID;
+                    else if (killer.player.equipment.asset != null) item = killer.player.equipment.asset.GUID;
+                    else item = default;
                 }
+                else if (cause == EDeathCause.LANDMINE)
+                    item = c.LastLandmineExploded.barricadeGUID;
                 else if (cause == EDeathCause.MISSILE && c.lastProjected != default)
                     item = c.lastProjected;
                 else if (cause == EDeathCause.VEHICLE && c.lastExplodedVehicle != default)
                     item = c.lastExplodedVehicle;
                 else if (cause == EDeathCause.ROADKILL && c.lastRoadkilled != default)
                     item = c.lastRoadkilled;
-                else item = killer.player.equipment.asset.GUID;
+                else if (killer.player.equipment.asset != null) item = killer.player.equipment.asset.GUID;
+                else item = default;
             }
-            else if (killer != null) item = killer.player.equipment.asset.GUID;
+            else if (killer != null && killer.player.equipment.asset != null)
+                item = killer.player.equipment.asset.GUID;
             else item = default;
         }
     }

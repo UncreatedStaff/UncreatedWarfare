@@ -322,8 +322,6 @@ namespace Uncreated.Warfare
                 FOBManager.SendFOBList(ucplayer);
             if (Data.Gamemode.ShowXPUI)
                 Points.UpdateXPUI(ucplayer);
-            if (Data.Gamemode.ShowOFPUI)
-                Points.UpdateTWUI(ucplayer);
         }
         private void Update()
         {

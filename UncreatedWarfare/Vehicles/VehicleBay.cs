@@ -932,6 +932,14 @@ namespace Uncreated.Warfare.Vehicles
             }
             return -1;
         }
+        public IEnumerable<VehicleSpawn> EnumerateSpawns()
+        {
+            for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+            {
+                if (VehicleSpawner.ActiveObjects[i].VehicleID == VehicleID)
+                    yield return VehicleSpawner.ActiveObjects[i];
+            }
+        }
         public List<VehicleSpawn> GetSpawners()
         {
             List<VehicleSpawn> rtn = new List<VehicleSpawn>();

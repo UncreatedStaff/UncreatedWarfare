@@ -139,7 +139,11 @@ namespace Uncreated.Warfare.Kits
                         data.AddDelay(type, val, gamemode);
                         VehicleBay.Save();
                         VehicleSpawner.UpdateSigns(data.VehicleID);
-                        if (data.IsDelayedType(EDelayType.TIME) && vehicle.TryGetComponent(out SpawnedVehicleComponent svc)) svc.OnAddedTimeDelay();
+                        foreach (VehicleSpawn spawn in data.EnumerateSpawns())
+                        {
+                            VehicleBayComponent? svc = spawn.Component;
+                            if (svc != null) svc.UpdateTimeDelay();
+                        }
                         player.SendChat("vehiclebay_delay_added", type.ToString().ToLower(), val.ToString(Data.Locale), string.IsNullOrEmpty(gamemode) ? "any" : gamemode!);
                     }
                     else
@@ -422,7 +426,6 @@ namespace Uncreated.Warfare.Kits
                                 {
                                     asset = Assets.find(spawn.VehicleID) as VehicleAsset;
                                 }
-                                spawn.CancelVehicleRespawnTimer();
                                 spawn.SpawnVehicle();
                                 player.SendChat("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString("N") : asset.vehicleName);
                             }
@@ -602,7 +605,6 @@ namespace Uncreated.Warfare.Kits
                                     {
                                         asset = Assets.find(spawn.VehicleID) as VehicleAsset;
                                     }
-                                    spawn.CancelVehicleRespawnTimer();
                                     spawn.SpawnVehicle();
                                     player.SendChat("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString("N") : asset.vehicleName);
                                 }

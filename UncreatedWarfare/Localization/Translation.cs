@@ -1243,14 +1243,14 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            VehicleSpawnComponent comp;
+            VehicleBayComponent comp;
             if (spawn.type == Structures.EStructType.STRUCTURE)
                 if (spawn.StructureDrop != null)
-                    comp = spawn.StructureDrop.model.gameObject.GetComponent<VehicleSpawnComponent>();
+                    comp = spawn.StructureDrop.model.gameObject.GetComponent<VehicleBayComponent>();
                 else
                     return spawn.VehicleID.ToString("N");
             else if (spawn.BarricadeDrop != null)
-                comp = spawn.BarricadeDrop.model.gameObject.GetComponent<VehicleSpawnComponent>();
+                comp = spawn.BarricadeDrop.model.gameObject.GetComponent<VehicleBayComponent>();
             else return spawn.VehicleID.ToString("N");
             if (comp == null) return spawn.VehicleID.ToString("N");
 
@@ -1274,17 +1274,19 @@ namespace Uncreated.Warfare
 
             finalformat = finalformat.Colorize("ffffff");
 
-            if (!spawn.HasLinkedVehicle(out InteractableVehicle vehicle) || !vehicle.TryGetComponent(out SpawnedVehicleComponent vehcomp)) // vehicle is dead
+            if (comp.State == EVehicleBayState.DEAD) // vehicle is dead
             {
-                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_dead")}>{Translate("vbs_state_dead", language, Mathf.FloorToInt(comp.respawnTimeRemaining / 60f).ToString(), (Mathf.FloorToInt(comp.respawnTimeRemaining) % 60).ToString("D2"))}</color>";
+                float rem = data.RespawnTime - comp.DeadTime;
+                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_dead")}>{Translate("vbs_state_dead", language, Mathf.FloorToInt(rem / 60f).ToString(), (Mathf.FloorToInt(rem) % 60).ToString("D2"))}</color>";
             }
-            else if (vehcomp.hasBeenRequested)
+            else if (comp.State == EVehicleBayState.IN_USE)
             {
-                if (vehcomp.isIdle)
-                {
-                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_idle")}>{Translate("vbs_state_idle", language, Mathf.FloorToInt(vehcomp.idleSecondsRemaining / 60f).ToString(), (Mathf.FloorToInt(vehcomp.idleSecondsRemaining) % 60).ToString("D2"))}</color>";
-                }
-                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_active")}>{Translate("vbs_state_active", language, F.GetClosestLocation(vehicle.transform.position))}</color>";
+                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_active")}>{Translate("vbs_state_active", language, comp.CurrentLocation)}</color>";
+            }
+            else if (comp.State == EVehicleBayState.IDLE)
+            {
+                float rem = data.RespawnTime - comp.IdleTime;
+                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_idle")}>{Translate("vbs_state_idle", language, Mathf.FloorToInt(rem / 60f).ToString(), (Mathf.FloorToInt(rem) % 60).ToString("D2"))}</color>";
             }
             else
             {

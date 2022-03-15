@@ -161,8 +161,6 @@ namespace Uncreated.Warfare.Commands
                             VehicleBay.DeleteVehicle(veh);
 
                             player.SendChat("structure_popped", veh.asset.vehicleName);
-                            if (Vehicles.VehicleSpawner.HasLinkedSpawn(veh.instanceID, out Vehicles.VehicleSpawn spawn))
-                                spawn.StartVehicleRespawnTimer();
                         }
                         else player.Player.SendChat("structure_pop_not_poppable");
                         return;
