@@ -449,7 +449,11 @@ namespace Uncreated.Warfare.Commands
         }
         private void RequestVehicleIsDelayed(UCPlayer ucplayer, ref Delay delay, ulong team, VehicleData data)
         {
-            if (delay.type == EDelayType.OUT_OF_STAGING)
+            if (delay.type == EDelayType.OUT_OF_STAGING &&
+                (delay.gamemode is null || 
+                (Data.Is(out Insurgency ins1) && delay.gamemode == "Insurgency" && team == ins1.AttackingTeam) ||
+                (Data.Is(out Invasion inv2) && delay.gamemode == "Invasion" && team == inv2.AttackingTeam))
+                )
             {
                 ucplayer.Message("request_vehicle_e_staging_delay");
                 return;
