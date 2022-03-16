@@ -791,7 +791,29 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-            return closest;
+            int index = GetClosestLocationIndex(point);
+            return index == -1 ? string.Empty : ((LocationNode)LevelNodes.nodes[index]).name;
+        }
+        public static int GetClosestLocationIndex(Vector3 point)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            int index = -1;
+            float smallest = -1f;
+            for (int i = 0; i < LevelNodes.nodes.Count; i++)
+            {
+                if (LevelNodes.nodes[i] is LocationNode node)
+                {
+                    float amt = (point - node.point).sqrMagnitude;
+                    if (smallest == -1 || amt < smallest)
+                    {
+                        index = i;
+                        smallest = amt;
+                    }
+                }
+            }
+            return index;
         }
         public static void NetInvoke(this NetCall call) =>
             call.Invoke(Data.NetClient.connection);

@@ -502,18 +502,33 @@ namespace Uncreated.Warfare.Commands
                         return;
                     }
                     if (zone.Key == 0)
-                        player.teleportToLocationUnsafe(Teams.TeamManager.LobbySpawn, Teams.TeamManager.LobbySpawnAngle);
+                    {
+                        ActionLog.Add(EActionLogType.TELEPORT, "LOBBY", player.channel.owner.playerID.steamID.m_SteamID);
+                        player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
+                    }
                     else if (Physics.Raycast(new Ray(new Vector3(zone.Value.Center.x, Level.HEIGHT, zone.Value.Center.y), Vector3.down), out RaycastHit hit2, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+                    {
+                        ActionLog.Add(EActionLogType.TELEPORT, zone.Value.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
                         player.teleportToLocationUnsafe(hit2.point + new Vector3(0, 1, 0), 90f);
-                    else 
+                    }
+                    else
+                    {
+                        ActionLog.Add(EActionLogType.TELEPORT, zone.Value.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
                         player.teleportToLocationUnsafe(zone.Value.Center3DAbove, 90f);
+                    }
                     player.SendChat("test_go_success_zone", zone.Value.Name);
                     return;
                 }
                 if (Physics.Raycast(new Ray(new Vector3(flag.ZoneData.Center.x, Level.HEIGHT, flag.ZoneData.Center.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+                {
+                    ActionLog.Add(EActionLogType.TELEPORT, flag.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
                     player.teleportToLocationUnsafe(hit.point + new Vector3(0, 1, 0), 90f);
+                }
                 else
+                {
+                    ActionLog.Add(EActionLogType.TELEPORT, flag.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
                     player.teleportToLocationUnsafe(flag.ZoneData.Center3DAbove, 90f);
+                }
                 player.SendChat("test_go_success_flag", flag.Name, flag.TeamSpecificHexColor);
                 return;
             }
@@ -526,6 +541,7 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("test_go_no_zone", arg);
                     return;
                 }
+                ActionLog.Add(EActionLogType.TELEPORT, zone.Value.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
                 player.teleportToLocation(zone.Value.Center3DAbove, 90f);
                 player.SendChat("test_go_success_zone", zone.Value.Name);
                 return;
@@ -595,6 +611,7 @@ namespace Uncreated.Warfare.Commands
                 if (player != default)
                     player.SendChat("test_zonearea_started");
                 else L.Log(Translation.Translate("test_zonearea_started", 0, out _));
+                ActionLog.Add(EActionLogType.BUILD_ZONE_MAP, "ZONEAREA", player == null ? 0 : player.channel.owner.playerID.steamID.m_SteamID);
                 ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, path, range, drawIn, drawAngles, true);
             }
             else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
@@ -626,6 +643,7 @@ namespace Uncreated.Warfare.Commands
                     zoneColor = flag.TeamSpecificHexColor;
                 }
                 List<Zone> zones = new List<Zone>(1) { zone };
+                ActionLog.Add(EActionLogType.BUILD_ZONE_MAP, "DRAWZONE", player == null ? 0 : player.channel.owner.playerID.steamID.m_SteamID);
                 ZoneDrawing.CreateFlagTestAreaOverlay(fg, player, zones, false, true, false, true, true, Data.FlagStorage + "zonerange_" + zoneName);
             }
             else player.SendChat("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
@@ -634,6 +652,7 @@ namespace Uncreated.Warfare.Commands
         {
             if (Data.Gamemode is FlagGamemode fg)
             {
+                ActionLog.Add(EActionLogType.BUILD_ZONE_MAP, "DRAWMAP", player == null ? 0 : player.channel.owner.playerID.steamID.m_SteamID);
                 ZoneDrawing.DrawZoneMap(fg, null);
             }
             else if (player == null) L.LogError(Translation.Translate("gamemode_not_flag_gamemode", 0, out _, Data.Gamemode == null ? "null" : Data.Gamemode.Name));
@@ -873,6 +892,7 @@ namespace Uncreated.Warfare.Commands
             {
                 if (newGamemode != null)
                 {
+                    ActionLog.Add(EActionLogType.CHANGE_GAMEMODE_COMMAND, newGamemode.DisplayName, player != null ? player.channel.owner.playerID.steamID.m_SteamID : 0);
                     if (Data.Gamemode != null)
                     {
                         Data.Gamemode.Dispose();
@@ -1083,15 +1103,18 @@ namespace Uncreated.Warfare.Commands
                     if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
                     {
                         BarricadeDrop? oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
-                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
-                            UnityEngine.Object.Destroy(vsc);
+                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleBayComponent vbc))
+                            UnityEngine.Object.Destroy(vbc);
                         spawn.SpawnPadInstanceID = bd.instanceID;
                         spawn.SpawnpadLocation = new SerializableTransform(bd.model);
                         spawn.BarricadeData = bd.GetServersideData();
                         spawn.BarricadeDrop = bd;
                         spawn.initialized = true;
                         spawn.IsActive = true;
-                        bd.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                        if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                            bd.model.gameObject.AddComponent<VehicleBayComponent>().Init(spawn, data);
+                        else
+                            L.LogError("Failed to get vehicle data for " + spawn.VehicleID.ToString("N"));
                         player.SendChat("Modified inst id from existing barricade.");
                         VehicleSpawner.Save();
                     }
@@ -1103,8 +1126,8 @@ namespace Uncreated.Warfare.Commands
                 else if (VehicleSpawner.SpawnExists(instanceid, EStructType.BARRICADE, out Vehicles.VehicleSpawn spawn))
                 {
                     BarricadeDrop? oldd = UCBarricadeManager.GetBarricadeFromInstID(instanceid);
-                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
-                        UnityEngine.Object.Destroy(vsc);
+                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleBayComponent vbc))
+                        UnityEngine.Object.Destroy(vbc);
                     StructureSaver.AddStructure(bd, bd.GetServersideData(), out _);
                     spawn.SpawnPadInstanceID = bd.instanceID;
                     spawn.SpawnpadLocation = new SerializableTransform(bd.model);
@@ -1112,7 +1135,10 @@ namespace Uncreated.Warfare.Commands
                     spawn.BarricadeDrop = bd;
                     spawn.initialized = true;
                     spawn.IsActive = true;
-                    bd.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                    if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                        bd.model.gameObject.AddComponent<VehicleBayComponent>().Init(spawn, data);
+                    else
+                        L.LogError("Failed to get vehicle data for " + spawn.VehicleID.ToString("N"));
                     player.SendChat("Modified inst id from new barricade.");
                     VehicleSpawner.Save();
                 }
@@ -1128,15 +1154,18 @@ namespace Uncreated.Warfare.Commands
                     if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
                     {
                         StructureDrop? oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
-                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
-                            UnityEngine.Object.Destroy(vsc);
+                        if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleBayComponent vbc))
+                            UnityEngine.Object.Destroy(vbc);
                         spawn.SpawnPadInstanceID = dp.instanceID;
                         spawn.SpawnpadLocation = new SerializableTransform(dp.model);
                         spawn.StructureData = dp.GetServersideData();
                         spawn.StructureDrop = dp;
                         spawn.initialized = true;
                         spawn.IsActive = true;
-                        dp.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                        if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                            dp.model.gameObject.AddComponent<VehicleBayComponent>().Init(spawn, data);
+                        else
+                            L.LogError("Failed to get vehicle data for " + spawn.VehicleID.ToString("N"));
                         player.SendChat("Modified inst id from existing barricade.");
                         VehicleSpawner.Save();
                     }
@@ -1148,8 +1177,8 @@ namespace Uncreated.Warfare.Commands
                 else if (VehicleSpawner.SpawnExists(instanceid, EStructType.STRUCTURE, out Vehicles.VehicleSpawn spawn))
                 {
                     StructureDrop? oldd = UCBarricadeManager.GetStructureFromInstID(instanceid);
-                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleSpawnComponent vsc))
-                        UnityEngine.Object.Destroy(vsc);
+                    if (oldd != null && oldd.model.gameObject.TryGetComponent(out VehicleBayComponent vbc))
+                        UnityEngine.Object.Destroy(vbc);
                     StructureSaver.AddStructure(dp, dp.GetServersideData(), out _);
                     spawn.SpawnPadInstanceID = dp.instanceID;
                     spawn.SpawnpadLocation = new SerializableTransform(dp.model);
@@ -1157,7 +1186,10 @@ namespace Uncreated.Warfare.Commands
                     spawn.StructureDrop = dp;
                     spawn.initialized = true;
                     spawn.IsActive = true;
-                    dp.model.transform.gameObject.AddComponent<VehicleSpawnComponent>().Initialize(spawn);
+                    if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                        dp.model.gameObject.AddComponent<VehicleBayComponent>().Init(spawn, data);
+                    else
+                        L.LogError("Failed to get vehicle data for " + spawn.VehicleID.ToString("N"));
                     player.SendChat("Modified inst id from new barricade.");
                     VehicleSpawner.Save();
                 }

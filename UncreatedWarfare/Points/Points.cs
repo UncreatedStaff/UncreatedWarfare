@@ -129,7 +129,7 @@ namespace Uncreated.Warfare.Point
             int end = GetNextLevelXP(lvl);
             return (float)(end - GetLevelXP(lvl)) / (end - xp);
         }
-        public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false)
+        public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -140,9 +140,12 @@ namespace Uncreated.Warfare.Point
             Task.Run(async () =>
             {
                 int currentAmount = await Data.DatabaseManager.AddCredits(player.Steam64, player.GetTeam(), amount);
+                int oldamt = currentAmount - amount;
                 await UCWarfare.ToUpdate();
 
                 player.CachedCredits = currentAmount;
+
+                ActionLog.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, player);
 
                 if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
                 {
@@ -161,7 +164,7 @@ namespace Uncreated.Warfare.Point
                     else
                         ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
 
-                    if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (!isPurchase && player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                     {
                         if (c.stats is IExperienceStats kd)
                             kd.AddCredits(amount);
@@ -207,6 +210,8 @@ namespace Uncreated.Warfare.Point
                         ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
                     UpdateXPUI(player);
                 }
+
+                ActionLog.Add(EActionLogType.XP_CHANGED, oldRank.CurrentXP + " >> " + currentAmount, player);
 
                 if (awardCredits)
                     AwardCredits(player, Mathf.RoundToInt(0.15f * amount), null, true);

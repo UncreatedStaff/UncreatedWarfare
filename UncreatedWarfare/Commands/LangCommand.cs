@@ -68,19 +68,16 @@ namespace Uncreated.Warfare.Commands
                     }
                     else
                         alias = new LanguageAliasSet(fullname, fullname, new string[0]);
-                    if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+                    if (Data.Languages.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out string oldLang))
                     {
-                        string OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
-                        LanguageAliasSet oldSet;
-                        if (Data.LanguageAliases.ContainsKey(OldLanguage))
-                            oldSet = Data.LanguageAliases[OldLanguage];
-                        else
-                            oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new string[0]);
-                        if (OldLanguage == JSONMethods.DEFAULT_LANGUAGE)
+                        if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
+                            oldSet = new LanguageAliasSet(oldLang, oldLang, new string[0]);
+                        if (oldLang == JSONMethods.DEFAULT_LANGUAGE)
                             player.SendChat("reset_language_not_needed", fullname);
                         else
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, JSONMethods.DEFAULT_LANGUAGE);
+                            ActionLog.Add(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + JSONMethods.DEFAULT_LANGUAGE, player.CSteamID.m_SteamID);
                             if (OnPlayerChangedLanguage != null)
                                 OnPlayerChangedLanguage.Invoke(player, oldSet, alias);
                             player.SendChat("reset_language", fullname);
@@ -91,14 +88,10 @@ namespace Uncreated.Warfare.Commands
                 }
                 else
                 {
-                    string OldLanguage = JSONMethods.DEFAULT_LANGUAGE;
-                    if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-                        OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
-                    LanguageAliasSet oldSet;
-                    if (Data.LanguageAliases.ContainsKey(OldLanguage))
-                        oldSet = Data.LanguageAliases[OldLanguage];
-                    else
-                        oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new string[0]);
+                    if (!Data.Languages.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out string oldLang))
+                        oldLang = JSONMethods.DEFAULT_LANGUAGE;
+                    if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
+                        oldSet = new LanguageAliasSet(oldLang, oldLang, new string[0]);
                     string langInput = op.Trim();
                     bool found = false;
                     if (!Data.LanguageAliases.TryGetValue(langInput, out LanguageAliasSet aliases))
@@ -120,11 +113,12 @@ namespace Uncreated.Warfare.Commands
 
                     if (found && aliases.key != null && aliases.values != null && aliases.display_name != null)
                     {
-                        if (OldLanguage == aliases.key)
+                        if (oldLang == aliases.key)
                             player.SendChat("change_language_not_needed", aliases.display_name);
                         else
                         {
                             JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, aliases.key);
+                            ActionLog.Add(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + aliases.key, player.CSteamID.m_SteamID);
                             if (OnPlayerChangedLanguage != null)
                                 OnPlayerChangedLanguage.Invoke(player, oldSet, aliases);
                             player.SendChat("changed_language", aliases.display_name);

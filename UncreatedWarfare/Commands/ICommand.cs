@@ -149,7 +149,7 @@ namespace Uncreated.Warfare.Commands
                 message += $" ({similarNamesCount} similarly named items exist)".Colorize("7f8182");
 
             player.Message(message);
-
+            ActionLog.Add(EActionLogType.GIVE_ITEM, $"GAVE {amount}x {asset.itemName} / {asset.id} / {asset.GUID}", player);
         }
     }
 }

@@ -46,6 +46,7 @@ namespace Uncreated.Warfare.Commands
                         Kits.UCInventoryManager.ClearInventory(player!);
                         if (isConsole) L.LogError(Translation.Translate("clear_inventory_self", 0, out _));
                         else player!.SendChat("clear_inventory_self");
+                        ActionLog.Add(EActionLogType.CLEAR_INVENTORY, "CLEARED PERSONAL INVENTORY", player!);
                     }
                 }
                 else
@@ -60,6 +61,7 @@ namespace Uncreated.Warfare.Commands
                         n = isConsole ? F.GetPlayerOriginalNames(splayer).PlayerName : F.GetPlayerOriginalNames(splayer).CharacterName;
                         if (isConsole) L.LogError(Translation.Translate("clear_inventory_others", 0, out _, n));
                         else player!.SendChat("clear_inventory_others", n);
+                        ActionLog.Add(EActionLogType.CLEAR_INVENTORY, "CLEARED INVENTORY OF " + splayer.playerID.steamID.m_SteamID.ToString(Data.Locale), isConsole ? 0ul : player!);
                     }
                     else
                     {
@@ -73,12 +75,14 @@ namespace Uncreated.Warfare.Commands
                 ClearItems();
                 if (isConsole) L.LogError(Translation.Translate("clear_items_cleared", 0, out _));
                 else player!.SendChat("clear_items_cleared");
+                ActionLog.Add(EActionLogType.CLEAR_ITEMS, null, isConsole ? 0ul : player!);
             }
             else if (operation == "v" || operation == "vehicles" || operation == "vehicle")
             {
                 WipeVehiclesAndRespawn();
                 if (isConsole) L.LogError(Translation.Translate("clear_vehicles_cleared", 0, out _));
                 else player!.SendChat("clear_vehicles_cleared");
+                ActionLog.Add(EActionLogType.CLEAR_VEHICLES, null, isConsole ? 0ul : player!);
             }
             else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" ||
                 operation == "struct" || operation == "barricades" || operation == "barricade")
@@ -86,6 +90,7 @@ namespace Uncreated.Warfare.Commands
                 Data.Gamemode.ReplaceBarricadesAndStructures();
                 if (isConsole) L.LogError(Translation.Translate("clear_structures_cleared", 0, out _));
                 else player!.SendChat("clear_structures_cleared");
+                ActionLog.Add(EActionLogType.CLEAR_STRUCTURES, null, isConsole ? 0ul : player!);
             }
             else
             {

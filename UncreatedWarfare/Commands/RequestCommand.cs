@@ -63,6 +63,7 @@ namespace Uncreated.Warfare.Commands
                                 string teamcolor = TeamManager.NeutralColorHex;
                                 if (KitManager.KitExists(signadded.kit_name, out Kit kit)) teamcolor = TeamManager.GetTeamHexColor(kit.Team);
                                 player.Message("request_saved_sign", signadded.kit_name, teamcolor);
+                                ActionLog.Add(EActionLogType.SAVE_REQUEST_SIGN, signadded.kit_name, ucplayer);
                             }
                             else player.Message("request_already_saved"); // sign already registered
                         }
@@ -85,6 +86,7 @@ namespace Uncreated.Warfare.Commands
                                 if (KitManager.KitExists(requestsign.kit_name, out Kit kit)) teamcolor = TeamManager.GetTeamHexColor(kit.Team);
                                 player.Message("request_removed_sign", requestsign.kit_name, teamcolor);
                                 RequestSigns.RemoveRequestSign(requestsign);
+                                ActionLog.Add(EActionLogType.UNSAVE_REQUEST_SIGN, requestsign.kit_name, ucplayer);
                             }
                             else player.Message("request_already_removed");
                         }
@@ -143,6 +145,7 @@ namespace Uncreated.Warfare.Commands
                                     return;
                                 }
 
+                                ActionLog.Add(EActionLogType.REQUEST_KIT, $"Loadout #{loadoutNumber}: {kit.Name}, Team {kit.Team}, Class: {Translation.TranslateEnum(kit.Class, 0)}", ucplayer);
                                 GiveKit(ucplayer, kit);
                                 Stats.StatsManager.ModifyKit(kit.Name, x => x.TimesRequested++, true);
                                 Stats.StatsManager.ModifyStats(player.CSteamID.m_SteamID, s =>
@@ -256,6 +259,7 @@ namespace Uncreated.Warfare.Commands
                                 return;
                             }
                         }
+                        ActionLog.Add(EActionLogType.REQUEST_KIT, $"Kit {kit.Name}, Team {kit.Team}, Class: {Translation.TranslateEnum(kit.Class, 0)}", ucplayer);
                         GiveKit(ucplayer, kit);
                     }
                 }
@@ -410,16 +414,19 @@ namespace Uncreated.Warfare.Commands
 
                 if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
                 {
-                    if (vehicle.TryGetComponent(out SpawnedVehicleComponent c))
+                    VehicleBayComponent? comp = spawn.Component;
+                    if (comp != null)
                     {
-                        c.hasBeenRequested = true;
-                        c.nextIdleSecond = data.RespawnTime - 10f;
-                        c.StartIdleRespawnTimer();
-                        c.isIdle = false;
+                        comp.OnRequest();
+                        ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset} at spawn {comp.gameObject.transform.position.ToString("N2")}", ucplayer);
                     }
-                    spawn.UpdateSign();
+                    else
+                        ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset}", ucplayer);
                     Data.Reporter.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.SpawnPadInstanceID);
                 }
+                else
+                    ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset}", ucplayer);
+
                 vehicle.updateVehicle();
                 vehicle.updatePhysics();
                 

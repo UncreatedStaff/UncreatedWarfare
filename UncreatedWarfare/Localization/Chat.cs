@@ -381,6 +381,50 @@ namespace Uncreated.Warfare
                 }
             }
         }
+        /// <summary>
+        /// Send a message in chat to everyone in <paramref name="players"/>.
+        /// </summary>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para>
+        /// <para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
+        public static void Broadcast(LanguageSet set, string text, params string[] formatting)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
+            bool isRich = localizedString.Contains("</");
+            if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+            {
+                L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
+                if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
+                    localizedString = text;
+                else
+                {
+                    try
+                    {
+                        localizedString = string.Format(localizedString, formatting);
+                    }
+                    catch (FormatException)
+                    {
+                        localizedString += formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "";
+                        L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
+                    }
+                }
+                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                {
+                    L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
+                        + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
+                    localizedString = text;
+                }
+                else
+                    isRich = localizedString.Contains("</");
+            }
+            while (set.MoveNext())
+            {
+                SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
+            }
+        }
         private static void BroadcastToPlayers(IEnumerable<LanguageSet> players, string text, params string[] formatting)
         {
 #if DEBUG

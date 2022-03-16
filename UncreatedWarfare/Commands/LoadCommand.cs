@@ -1,6 +1,7 @@
 ﻿
 using Rocket.API;
 using Rocket.Unturned.Player;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -37,7 +38,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (int.TryParse(command[1], out int amount) && amount > 0)
                     {
-                        var vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
+                        InteractableVehicle? vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
                         if (vehicle is not null)
                         {
                             if (vehicle.lockedOwner == CSteamID.Nil || vehicle.lockedGroup == CSteamID.Nil)
@@ -49,8 +50,7 @@ namespace Uncreated.Warfare.Commands
                                 {
                                     if (vehicle.speed >= -1 && vehicle.speed <= 1)
                                     {
-                                        VehicleComponent c;
-                                        if (!vehicle.transform.TryGetComponent(out c))
+                                        if (!vehicle.transform.TryGetComponent(out VehicleComponent c))
                                         {
                                             c = vehicle.transform.gameObject.AddComponent<VehicleComponent>();
                                             c.Initialize(vehicle);
@@ -62,6 +62,7 @@ namespace Uncreated.Warfare.Commands
 
                                         if (c.forceSupplyLoop == null)
                                             c.StartForceLoadSupplies(player, type, amount);
+                                        ActionLog.Add(EActionLogType.LOAD_SUPPLIES, type.ToString(), player);
                                     }
                                     else
                                         player.Message("load_e_toofast");
@@ -83,9 +84,6 @@ namespace Uncreated.Warfare.Commands
             }
             else
                 player.Message("load_e_usage");
-
-            
-
         }
     }
 }

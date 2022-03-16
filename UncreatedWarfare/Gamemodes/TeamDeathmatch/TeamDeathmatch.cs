@@ -52,6 +52,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
             this._state = EState.FINISHED;
 
             QuestManager.OnGameOver(winner);
+            ActionLog.Add(EActionLogType.TEAM_WON, Teams.TeamManager.TranslateName(winner, 0));
         }
         public override void StartNextGame(bool onLoad = false)
         {

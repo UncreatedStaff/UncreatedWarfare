@@ -140,7 +140,12 @@ namespace Uncreated.Warfare
                 return team == 1 || team == 2;
             }
         }
-       
+
+        public static implicit operator ulong(UCPlayer player) => player.Steam64;
+        public static implicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
+        public static implicit operator Player(UCPlayer player) => player.Player;
+        public static implicit operator SteamPlayer(UCPlayer player) => player.Player.channel.owner;
+        public static explicit operator UnturnedPlayer(UCPlayer player) => UnturnedPlayer.FromPlayer(player.Player);
         public static UCPlayer? FromID(ulong steamID)
         {
             return PlayerManager.FromID(steamID);
@@ -163,7 +168,6 @@ namespace Uncreated.Warfare
                 else return null;
             else return FromUnturnedPlayer(pl);
         }
-
         public static UCPlayer? FromName(string name, bool includeContains = false)
         {
             if (name == null) return null;

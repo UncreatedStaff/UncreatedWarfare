@@ -113,6 +113,32 @@ namespace Uncreated.Warfare
                     }
                 }
             }
+            private static readonly string[] dontLogCommands = new string[]
+            {
+                "request",
+                "req",
+                "buy",
+                "deploy",
+                "dep",
+                "ammo",
+                "i",
+                "lang",
+                "kit",
+                "kits",
+                "vehiclebay",
+                "vb",
+                "whitelist",
+                "wl"
+            };
+            private static bool ShouldLog(string message)
+            {
+                if (message == null || message.Length < 2) return false;
+                if (message[0] != '/') return true;
+                string cmd = message.Substring(1).Split(' ')[0];
+                for (int i = 0; i < dontLogCommands.Length; ++i)
+                    if (cmd.Equals(dontLogCommands[i], StringComparison.OrdinalIgnoreCase)) return false;
+                return true;
+            }
             // SDG.Unturned.ChatManager
             /// <summary>
             /// Postfix of <see cref="ChatManager.ReceiveChatRequest(in ServerInvocationContext, byte, string)"/> to reroute local chats to squad.
@@ -157,12 +183,18 @@ namespace Uncreated.Warfare
                     {
                         case EChatMode.GLOBAL:
                             L.Log($"[ALL]  {name} \"{text}\"", ConsoleColor.DarkGray);
+                            if (ShouldLog(text))
+                                ActionLog.Add(EActionLogType.CHAT_GLOBAL, text, callingPlayer.playerID.steamID.m_SteamID);
                             break;
                         case EChatMode.LOCAL:
                             L.Log($"[A/S]  {name} \"{text}\"", ConsoleColor.DarkGray);
+                            if (ShouldLog(text))
+                                ActionLog.Add(EActionLogType.CHAT_AREA_OR_SQUAD, text, callingPlayer.playerID.steamID.m_SteamID);
                             break;
                         case EChatMode.GROUP:
                             L.Log($"[TEAM] {name} \"{text}\"", ConsoleColor.DarkGray);
+                            if (ShouldLog(text))
+                                ActionLog.Add(EActionLogType.CHAT_GROUP, text, callingPlayer.playerID.steamID.m_SteamID);
                             break;
                         default:
                             return false;
@@ -186,7 +218,8 @@ namespace Uncreated.Warfare
                 }
                 else
                 {
-                    text = "%SPEAKER%: " + text;
+                    text = text.Replace('>', '<');
+                    text = "<color=#" + Teams.TeamManager.GetTeamColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
                     if (mode != EChatMode.LOCAL)
                     {
                         if (mode == EChatMode.GROUP)

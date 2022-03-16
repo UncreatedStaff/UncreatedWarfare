@@ -72,6 +72,14 @@ namespace Uncreated.Warfare.ReportSystem
             }
             return null;
         }
+        public CheatingReport? CreateCheatingReport(ulong reporter, ulong violator, string message)
+        {
+            if (data.TryGetValue(violator, out PlayerData pd))
+            {
+                return pd.CheatingReport(message, reporter);
+            }
+            return null;
+        }
         public VoiceChatAbuseReport? CreateVoiceChatAbuseReport(ulong reporter, ulong violator, string message)
         {
             if (data.TryGetValue(violator, out PlayerData pd))
@@ -500,6 +508,14 @@ namespace Uncreated.Warfare.ReportSystem
                 new ChatAbuseReport()
                 {
                     ChatRecords = ConvertChatLogs(),
+                    Message = message,
+                    Reporter = reporter,
+                    Time = DateTime.Now,
+                    Violator = Steam64
+                };
+            public CheatingReport CheatingReport(string message, ulong reporter) =>
+                new CheatingReport()
+                {
                     Message = message,
                     Reporter = reporter,
                     Time = DateTime.Now,

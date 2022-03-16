@@ -57,6 +57,8 @@ public class Kit
     public float TeamLimit;
     [JsonSettable]
     public float Cooldown;
+    [JsonSettable]
+    public bool Disabled;
     public List<KitItem> Items;
     public List<KitClothing> Clothes;
     public List<ulong> AllowedUsers;
@@ -83,6 +85,7 @@ public class Kit
         AllowedUsers = new List<ulong>();
         SignTexts = new Dictionary<string, string> { { "en-us", "Default" } };
         Weapons = string.Empty;
+        Disabled = false;
     }
     /// <summary>empty constructor</summary>
     public Kit(bool dummy) { }
@@ -143,6 +146,7 @@ public class Kit
         kit.TeamLimit = R.ReadFloat();
         kit.CreditCost = R.ReadUInt16();
         kit.UnlockLevel = R.ReadUInt16();
+        kit.Disabled = R.ReadBool();
         return kit;
     }
     public static void WriteMany(ByteWriter W, Kit?[] kits)
@@ -193,6 +197,7 @@ public class Kit
         W.Write(kit.TeamLimit);
         W.Write(kit.CreditCost);
         W.Write(kit.UnlockLevel);
+        W.Write(kit.Disabled);
     }
 
 
@@ -232,6 +237,9 @@ public class Kit
 
         writer.WritePropertyName(nameof(CreditCost));
         writer.WriteNumberValue(CreditCost);
+
+        writer.WritePropertyName(nameof(Disabled));
+        writer.WriteBooleanValue(Disabled);
 
         writer.WritePropertyName(nameof(UnlockLevel));
         writer.WriteNumberValue(UnlockLevel);
@@ -354,6 +362,9 @@ public class Kit
                             break;
                         case nameof(IsPremium):
                             IsPremium = reader.GetBoolean();
+                            break;
+                        case nameof(Disabled):
+                            Disabled = reader.GetBoolean();
                             break;
                         case nameof(PremiumCost):
                             PremiumCost = reader.GetSingle();

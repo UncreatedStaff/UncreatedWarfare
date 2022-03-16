@@ -36,6 +36,7 @@ namespace Uncreated.Warfare.Commands
                             if (!Whitelister.IsWhitelisted(asset.GUID, out _))
                             {
                                 Whitelister.AddItem(asset.GUID);
+                                ActionLog.Add(EActionLogType.ADD_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}", player.CSteamID.m_SteamID);
                                 player.SendChat("whitelist_added", arguments[1]);
                             }
                             else
@@ -49,13 +50,14 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (arguments[0].ToLower() == "remove")
                 {
-                    if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out var itemID))
+                    if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out ushort itemID))
                     {
                         if (Assets.find(EAssetType.ITEM, itemID) is ItemAsset asset)
                         {
                             if (Whitelister.IsWhitelisted(asset.GUID, out _))
                             {
                                 Whitelister.RemoveItem(asset.GUID);
+                                ActionLog.Add(EActionLogType.REMOVE_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}", player.CSteamID.m_SteamID);
                                 player.SendChat("whitelist_removed", arguments[1]);
                             }
                             else
@@ -85,6 +87,7 @@ namespace Uncreated.Warfare.Commands
                                     if (Whitelister.IsWhitelisted(asset.GUID, out _))
                                     {
                                         Whitelister.SetAmount(asset.GUID, amount);
+                                        ActionLog.Add(EActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}", player.CSteamID.m_SteamID);
                                         player.SendChat("whitelist_removed", arguments[2]);
                                     }
                                     else

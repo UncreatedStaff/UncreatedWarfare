@@ -20,7 +20,7 @@ namespace Uncreated.Warfare.Commands
         public List<string> Permissions => new List<string>(1) { "uc.kick" };
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            if (caller.DisplayName == "Console")
+            if (caller is ConsolePlayer)
             {
                 if (!Provider.isServer)
                     L.LogError(Translation.Translate("server_not_running", 0, out _));
@@ -48,6 +48,7 @@ namespace Uncreated.Warfare.Commands
                                 }
                                 L.Log(Translation.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
                                     player.playerID.steamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
+                                ActionLog.Add(EActionLogType.KICK_PLAYER, $"KICKED {player.playerID.steamID.m_SteamID.ToString(Data.Locale)} FOR \"{reason}\"");
                                 Chat.Broadcast("kick_kicked_broadcast_operator", names.PlayerName);
                             }
                         }
@@ -80,12 +81,13 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(steamplayer.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                 {
-                                    Invocations.Shared.LogKicked.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
-                                    Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
+                                    Invocations.Shared.LogKicked.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.Steam64, reason, DateTime.Now);
+                                    Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.Steam64, reason);
                                 }
                                 L.LogWarning(Translation.Translate("kick_kicked_console", 0, out _,
                                     names.PlayerName, steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale),
                                     callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale), reason), ConsoleColor.Cyan);
+                                ActionLog.Add(EActionLogType.KICK_PLAYER, $"KICKED {steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale)} FOR \"{reason}\"", player.Steam64);
                                 Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
                                 player.CSteamID.SendChat("kick_kicked_feedback", names.CharacterName);
                             }
@@ -123,6 +125,7 @@ namespace Uncreated.Warfare.Commands
                 L.LogWarning(Translation.Translate("kick_kicked_console", 0, out _,
                     names.PlayerName, Violator.ToString(Data.Locale),
                     callerName.PlayerName, Admin.ToString(Data.Locale), Reason), ConsoleColor.Cyan);
+                ActionLog.Add(EActionLogType.KICK_PLAYER, $"KICKED {Violator.ToString(Data.Locale)} FOR \"{Reason}\"", Admin);
                 Chat.BroadcastToAllExcept(new ulong[1] { Admin }, "kick_kicked_broadcast", names.CharacterName, callerName.CharacterName);
                 if (admin != null)
                     admin.SendChat("kick_kicked_feedback", names.CharacterName);

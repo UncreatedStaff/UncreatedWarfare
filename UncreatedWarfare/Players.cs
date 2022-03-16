@@ -21,6 +21,14 @@ namespace Uncreated.Players
             this.NickName = player.nickName;
             this.Steam64 = player.steamID.m_SteamID;
         }
+        public FPlayerName(ulong player)
+        {
+            string ts = player.ToString();
+            this.PlayerName = ts;
+            this.CharacterName = ts;
+            this.NickName = ts;
+            this.Steam64 = player;
+        }
         public FPlayerName(SteamPlayer player)
         {
             this.PlayerName = player.playerID.playerName;

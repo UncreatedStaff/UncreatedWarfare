@@ -56,6 +56,7 @@ namespace Uncreated.Warfare.Commands
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
             RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
+            ActionLog.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
         }
         public static void AdminOnToOff(UnturnedPlayer player, FPlayerName names)
         {
@@ -76,6 +77,7 @@ namespace Uncreated.Warfare.Commands
                 RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             }
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
+            ActionLog.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
         }
         public static void InternOffToOn(UnturnedPlayer player, FPlayerName names)
         {
@@ -86,6 +88,7 @@ namespace Uncreated.Warfare.Commands
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
             RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
+            ActionLog.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
         }
         public static void InternOnToOff(UnturnedPlayer player, FPlayerName names)
         {
@@ -104,6 +107,7 @@ namespace Uncreated.Warfare.Commands
                 RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             }
             Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
+            ActionLog.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
         }
     }
 }

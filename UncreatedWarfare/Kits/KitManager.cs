@@ -441,8 +441,10 @@ namespace Uncreated.Warfare.Kits
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            ulong t = player.GetTeam();
             Kit rifleman = GetKitsWhere(k =>
-                    k.Team == player.GetTeam() &&
+                    !k.Disabled && 
+                    k.Team == t &&
                     k.Class == EClass.RIFLEMAN &&
                     !k.IsPremium &&
                     !k.IsLoadout &&

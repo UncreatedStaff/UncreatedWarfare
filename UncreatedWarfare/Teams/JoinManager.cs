@@ -114,7 +114,6 @@ namespace Uncreated.Warfare.Teams
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            bool x = false;
             for (int i = 0; i < LobbyPlayers.Count; i++)
             {
                 if (LobbyPlayers[i].Steam64 == player.Steam64)
@@ -126,21 +125,17 @@ namespace Uncreated.Warfare.Teams
                         else
                             save.ShouldRespawnOnJoin = false;
                     }
-
-
                     if (LobbyPlayers[i].current != null)
                     {
                         StopCoroutine(LobbyPlayers[i].current);
                         LobbyPlayers[i].current = null;
                     }
                     LobbyPlayers.RemoveAt(i);
-                    x = true;
+                    foreach (LobbyPlayer p in LobbyPlayers)
+                        UpdateUITeams(p, p.Team);
                     break;
                 }
             }
-            if (x)
-                foreach (LobbyPlayer p in LobbyPlayers)
-                    UpdateUITeams(p, p.Team);
         }
 
         public void JoinLobby(UCPlayer player, bool showX)
@@ -369,7 +364,7 @@ namespace Uncreated.Warfare.Teams
 #endif
             string teamName = TeamManager.TranslateName(newTeam, player.CSteamID);
 
-            GroupInfo group = GroupManager.getGroupInfo(new CSteamID(newTeam));
+            GroupInfo group = GroupManager.getGroupInfo(new CSteamID(TeamManager.GetGroupID(newTeam)));
             if (group == null)
             {
                 player.SendChat("join_e_groupnoexist", TeamManager.TranslateName(newTeam, player.CSteamID, true));
@@ -400,6 +395,7 @@ namespace Uncreated.Warfare.Teams
             player.SendChat("teams_join_success", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "teams_join_announce", names.CharacterName, teamName);
+            ActionLog.Add(EActionLogType.CHANGE_GROUP_WITH_UI, "GROUP: " + TeamManager.TranslateName(newTeam, 0).ToUpper(), player);
 
             if (player.Squad != null)
                 Squads.SquadManager.LeaveSquad(player, player.Squad);
@@ -516,6 +512,7 @@ namespace Uncreated.Warfare.Teams
             player.IsInLobby = false;
             JoinTeam(player.Player, player.Team);
             CloseUI(player);
+            player.current = null;
         }
 
         public void Dispose()

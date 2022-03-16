@@ -208,7 +208,7 @@ namespace Uncreated.Warfare.Point
                 6 => "Staff Sergeant",
                 7 => "Sergeant Major",
                 8 => "Warrant Officer",
-                _ => "###",
+                _ => "Level " + level.ToString(Data.Locale),
             };
         }
         public static string GetRankAbbreviation(int level)
@@ -224,7 +224,7 @@ namespace Uncreated.Warfare.Point
                 6 => "Ssg.",
                 7 => "S.M.",
                 8 => "W.O.",
-                _ => "",
+                _ => "L " + level.ToString(Data.Locale),
             };
         }
     }

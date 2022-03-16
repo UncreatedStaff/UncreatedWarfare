@@ -109,6 +109,16 @@ namespace Uncreated.Warfare
         {
             if (!UCWarfare.Config.AllowCosmetics) state = false;
         }
+        internal static void OnCommandExecuted(Rocket.API.IRocketPlayer player, Rocket.API.IRocketCommand command, ref bool cancel)
+        {
+            if (cancel) return;
+            CommandWaitTask.OnCommandExecuted(player, command);
+        }
+        internal static void OnStructurePlaced(StructureRegion region, StructureDrop drop)
+        {
+            SDG.Unturned.StructureData data = drop.GetServersideData();
+            ActionLog.Add(EActionLogType.PLACE_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}", data.owner);
+        }
         internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
         {
 #if DEBUG
@@ -123,6 +133,8 @@ namespace Uncreated.Warfare
             SteamPlayer player = PlayerTool.getSteamPlayer(data.owner);
             owner.Player = player?.player;
             owner.BarricadeGUID = data.barricade.asset.GUID;
+
+            ActionLog.Add(EActionLogType.PLACE_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}", data.owner);
 
             RallyManager.OnBarricadePlaced(drop, region);
 
@@ -430,6 +442,7 @@ namespace Uncreated.Warfare
                     }
                 }
 
+
                 save.LastGame = Data.Gamemode.GameID;
 
                 if (player.Player.life.isDead)
@@ -489,7 +502,10 @@ namespace Uncreated.Warfare
                 }).ConfigureAwait(false);
 
                 if (ucplayer != null)
+                {
                     Data.Gamemode.OnPlayerJoined(ucplayer, false, shouldRespawn);
+                    ActionLog.Add(EActionLogType.CONNECT, null, ucplayer);
+                }
                 for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
                 {
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.Player.channel.owner);
@@ -639,7 +655,7 @@ namespace Uncreated.Warfare
                     {
                         if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
                         {
-                            weapon = c.lastProjected;
+                            weapon = c.lastShot;
                         }
                         else if (pl.player.equipment.asset != null)
                         {
@@ -687,11 +703,11 @@ namespace Uncreated.Warfare
                         weapon = weapon
                     });
                 }
-            }
-
-            if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeComponent c2))
-            {
-                c2.LastDamager = instigatorSteamID.m_SteamID;
+                if (shouldAllow && pendingTotalDamage > 0 && barricadeTransform.TryGetComponent(out BarricadeComponent c2))
+                {
+                    c2.LastDamager = instigatorSteamID.m_SteamID;
+                    L.LogDebug(instigatorSteamID.m_SteamID + " damaged " + drop.asset.FriendlyName);
+                }
             }
         }
         internal static void OnStructureDamaged(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
@@ -1042,7 +1058,9 @@ namespace Uncreated.Warfare
                     component.OnPlayerExitedVehicle(player, vehicle);
                 }
 
-                Vehicles.VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
+                VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
+                ActionLog.Add(EActionLogType.LEAVE_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
+                                                                 $"ID: ({vehicle.instanceID})", player.channel.owner.playerID.steamID.m_SteamID);
             }
         }
         internal static void OnVehicleSwapSeatRequested(Player player, InteractableVehicle vehicle, ref bool shouldAllow, byte fromSeatIndex, ref byte toSeatIndex)
@@ -1057,7 +1075,10 @@ namespace Uncreated.Warfare
                     component.OnPlayerSwapSeatRequested(player, vehicle, toSeatIndex);
                 }
 
-                Vehicles.VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
+                VehicleSpawner.OnPlayerLeaveVehicle(player, vehicle);
+                ActionLog.Add(EActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
+                                                                 $"ID: ({vehicle.instanceID}) Seat move: {fromSeatIndex.ToString(Data.Locale)} >> " +
+                                                                 $"{toSeatIndex.ToString(Data.Locale)}", player.channel.owner.playerID.steamID.m_SteamID);
             }
         }
         internal static void BatteryStolen(SteamPlayer theif, ref bool allow)
@@ -1124,9 +1145,12 @@ namespace Uncreated.Warfare
                 Chat.Broadcast("player_disconnected", names.CharacterName);
                 if (c != null)
                 {
+                    ActionLog.Add(EActionLogType.DISCONNECT, "PLAYED FOR " + ((uint)Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime)).GetTimeFromSeconds(0).ToUpper(), player.CSteamID.m_SteamID);
                     UnityEngine.Object.Destroy(c);
                     Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
                 }
+                else
+                    ActionLog.Add(EActionLogType.DISCONNECT, null, player.CSteamID.m_SteamID);
                 Invocations.Shared.PlayerLeft.NetInvoke(player.CSteamID.m_SteamID);
             }
             catch (Exception ex)
@@ -1165,6 +1189,7 @@ namespace Uncreated.Warfare
             if (player == null) return;
             try
             {
+                ActionLog.Add(EActionLogType.TRY_CONNECT, $"Steam Name: {player.playerID.playerName}, Public Name: {player.playerID.characterName}, Private Name: {player.playerID.nickName}, Character ID: {player.playerID.characterID}.", ticket.m_SteamID.m_SteamID);
                 int remainingDuration = 0;
                 OffenseManager.EBanResponse response = OffenseManager.VerifyJoin(player, ref explanation, ref remainingDuration);
                 if (response > OffenseManager.EBanResponse.ALL_GOOD)
@@ -1246,6 +1271,7 @@ namespace Uncreated.Warfare
             if (drop.model.TryGetComponent(out BarricadeComponent c))
             {
                 SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
+                ActionLog.Add(EActionLogType.DESTROY_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}.", c.LastDamager);
                 if (damager != null && data.group.GetTeam() == damager.GetTeam())
                 {
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
@@ -1282,6 +1308,7 @@ namespace Uncreated.Warfare
             if (drop.model.TryGetComponent(out BarricadeComponent c))
             {
                 SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
+                ActionLog.Add(EActionLogType.DESTROY_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}.", c.LastDamager);
                 if (damager != null && data.group.GetTeam() == damager.GetTeam())
                 {
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);

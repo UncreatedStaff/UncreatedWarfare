@@ -16,13 +16,8 @@ public sealed class CommandWaitTask
     private readonly CommandWaitTaskAwaiter _awaiter;
     private readonly UCPlayer player;
     private readonly string command;
-    static CommandWaitTask()
+    internal static void OnCommandExecuted(Rocket.API.IRocketPlayer player, Rocket.API.IRocketCommand command)
     {
-        Rocket.Core.R.Commands.OnExecuteCommand += OnCommandExecuted;
-    }
-    private static void OnCommandExecuted(Rocket.API.IRocketPlayer player, Rocket.API.IRocketCommand command, ref bool cancel)
-    {
-        if (cancel) return;
         for (int i = 0; i < awaiters.Count; ++i)
         {
             if (awaiters[i].command.Equals(command.Name, StringComparison.OrdinalIgnoreCase) && player is UnturnedPlayer pl &&
