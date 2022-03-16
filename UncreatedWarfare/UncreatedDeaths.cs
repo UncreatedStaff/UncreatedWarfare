@@ -318,6 +318,8 @@ namespace Uncreated.Warfare
             OnPlayerDeathGlobal?.Invoke(args);
             Data.Gamemode?.OnPlayerDeath(args);
 
+            ActionLog.Add(EActionLogType.DEATH, args.ToStringIDs(), parameters.dead.channel.owner.playerID.steamID.m_SteamID);
+
             byte team = parameters.dead.GetTeamByte();
             if (team == 1 || team == 2)
             {
@@ -418,6 +420,60 @@ namespace Uncreated.Warfare
                 }
                 return msg;
             }
+            public string ToStringIDs()
+            {
+                string msg;
+                FPlayerName name = new FPlayerName(dead.channel.owner.playerID.steamID.m_SteamID);
+                ulong team = dead.GetTeam();
+                if (cause == EDeathCause.LANDMINE)
+                {
+                    if (killerargs == default)
+                    {
+                        Chat.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
+                    }
+                    else
+                    {
+                        if (killerargs.LandmineLinkedAssistant == default)
+                        {
+                            if (killerargs.killer != default)
+                            {
+                                FPlayerName name2 = new FPlayerName(killerargs.killer.channel.owner.playerID.steamID.m_SteamID);
+                                ulong team2 = killerargs.killer.GetTeam();
+                                Chat.BroadcastLandmineDeath(key, name, team, name2, team2, name2, team2, limb, itemName, out msg, false);
+                            }
+                            else
+                            {
+                                Chat.BroadcastLandmineDeath(key, name, team, name, team, name, team, limb, itemName, out msg, false);
+                            }
+                        }
+                        else if (killerargs.killer != default)
+                        {
+                            FPlayerName name2 = new FPlayerName(killerargs.killer.channel.owner.playerID.steamID.m_SteamID);
+                            FPlayerName name3 = new FPlayerName(killerargs.LandmineLinkedAssistant.channel.owner.playerID.steamID.m_SteamID);
+                            Chat.BroadcastLandmineDeath(key, name, team, name2, killerargs.killer.GetTeam(),
+                                name3, killerargs.LandmineLinkedAssistant.GetTeam(), limb, itemName, out msg, false);
+                        }
+                        else
+                        {
+                            FPlayerName name3 = new FPlayerName(killerargs.LandmineLinkedAssistant.channel.owner.playerID.steamID.m_SteamID);
+                            Chat.BroadcastLandmineDeath(key, name, team, name, team, name3, killerargs.LandmineLinkedAssistant.GetTeam(), limb, itemName, out msg, false);
+                        }
+                    }
+                }
+                else
+                {
+                    if (killerargs == default || killerargs.killer == default)
+                    {
+                        Chat.BroadcastDeath(key, cause, name, team, name, false, team, limb, itemName, distance, out msg, false);
+                    }
+                    else
+                    {
+                        FPlayerName name2 = new FPlayerName(killerargs.killer.channel.owner.playerID.steamID.m_SteamID);
+                        Chat.BroadcastDeath(key, cause, name, team, name2, false, killerargs.killer.GetTeam(), limb, itemName, distance, out msg, false);
+                    }
+                }
+                return msg;
+            }
         }
         public void DeathNotSuicide(DeathEventArgs parameters)
         {
@@ -428,6 +484,8 @@ namespace Uncreated.Warfare
 
             byte team = parameters.dead.GetTeamByte();
             Data.Gamemode?.OnPlayerDeath(parameters);
+            bool isTeamkill = parameters.killerargs != null && parameters.killerargs.killer != null && parameters.killerargs.teamkill;
+            ActionLog.Add(EActionLogType.DEATH, isTeamkill ? "TEAMKILLED: " + parameters.ToStringIDs() : parameters.ToStringIDs(), parameters.dead.channel.owner.playerID.steamID.m_SteamID);
             if (team == 1 || team == 2)
             {
                 if (Data.Gamemode is TeamCTF ctf)

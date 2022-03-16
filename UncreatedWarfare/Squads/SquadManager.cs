@@ -375,6 +375,8 @@ namespace Uncreated.Warfare.Squads
 
             UpdateUIMemberCount(team);
 
+            ActionLog.Add(EActionLogType.CREATED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(team, 0), leader);
+
             return squad;
         }
         private static void SortSquadListABC()
@@ -408,6 +410,8 @@ namespace Uncreated.Warfare.Squads
             SendSquadListToTeam(squad.Team);
             UpdateMemberList(squad);
             UpdateUIMemberCount(squad.Team);
+
+            ActionLog.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.Locale), player);
 
             if (RallyManager.HasRally(squad, out RallyPoint rally))
                 rally.ShowUIForSquad();
@@ -454,6 +458,8 @@ namespace Uncreated.Warfare.Squads
 
                 UpdateUIMemberCount(squad.Team);
 
+                ActionLog.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
+
                 if (RallyManager.HasRally(squad, out RallyPoint rally1))
                 {
                     if (rally1.drop != null && Regions.tryGetCoordinate(rally1.drop.model.position, out byte x, out byte y))
@@ -468,7 +474,9 @@ namespace Uncreated.Warfare.Squads
 
                 return;
             }
-            
+
+            ActionLog.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.Locale)), player);
+
             if (willNeedNewLeader)
             {   
                 squad.Leader = null!; // need to set leader to null before sorting, otherwise old leader will get added back
@@ -504,6 +512,8 @@ namespace Uncreated.Warfare.Squads
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             Squads.RemoveAll(s => s.Name == squad.Name);
+
+            ActionLog.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
 
             for (int i = 0; i < squad.Members.Count; i++)
             {
@@ -611,6 +621,7 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            ActionLog.Add(value ? EActionLogType.LOCKED_SQUAD : EActionLogType.UNLOCKED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
             squad.IsLocked = value;
             ReplicateLockSquad(squad);
         }

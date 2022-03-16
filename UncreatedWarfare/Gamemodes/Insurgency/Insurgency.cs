@@ -192,6 +192,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 L.LogWarning("WinToast UI not found. GUID: " + Config.UI.WinToastGUID);
 
             QuestManager.OnGameOver(winner);
+            ActionLog.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
 
             foreach (SteamPlayer client in Provider.clients)
             {
@@ -542,6 +543,8 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             QuestManager.OnObjectiveCaptured(Provider.clients
                 .Where(x => x.GetTeam() == _attackTeam && (x.player.transform.position - cache.Position).sqrMagnitude < 10000f)
                 .Select(x => x.playerID.steamID.m_SteamID).ToArray());
+
+            ActionLog.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(AttackingTeam, 0) + " DESTROYED CACHE");
 
             if (CachesLeft == 0)
             {

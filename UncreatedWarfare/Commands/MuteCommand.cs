@@ -59,7 +59,13 @@ namespace Uncreated.Warfare.Commands
             string reason = string.Join(" ", command, 3, command.Length - 3);
 
             if (player != null)
+            {
+                if (duration == -1)
+                    ActionLog.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: PERMANENT");
+                else
+                    ActionLog.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + ((uint)duration).GetTimeFromMinutes(0));
                 OffenseManager.MutePlayer(player, target, admin, type, duration, reason).ConfigureAwait(false);
+            }
 
             return;
 

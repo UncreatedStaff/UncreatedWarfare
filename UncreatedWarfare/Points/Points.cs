@@ -140,9 +140,12 @@ namespace Uncreated.Warfare.Point
             Task.Run(async () =>
             {
                 int currentAmount = await Data.DatabaseManager.AddCredits(player.Steam64, player.GetTeam(), amount);
+                int oldamt = currentAmount - amount;
                 await UCWarfare.ToUpdate();
 
                 player.CachedCredits = currentAmount;
+
+                ActionLog.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, player);
 
                 if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
                 {
@@ -207,6 +210,8 @@ namespace Uncreated.Warfare.Point
                         ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
                     UpdateXPUI(player);
                 }
+
+                ActionLog.Add(EActionLogType.XP_CHANGED, oldRank.CurrentXP + " >> " + currentAmount, player);
 
                 if (awardCredits)
                     AwardCredits(player, Mathf.RoundToInt(0.15f * amount), null, true);

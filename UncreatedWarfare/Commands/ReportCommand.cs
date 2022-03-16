@@ -34,12 +34,6 @@ namespace Uncreated.Warfare.Commands
                 L.LogWarning("This command can't be called from console.");
                 return;
             }
-            /*
-            if (player.Steam64 != 76561198267927009)
-            {
-                player.SendChat("Reports are currently disabled.");
-                return;
-            }*/
             if (command.Length < 2)
             {
                 goto Help;
@@ -122,6 +116,7 @@ namespace Uncreated.Warfare.Commands
                     }
 
                     player.SendChat("report_confirm", target.ToString(Data.Locale), targetNames.CharacterName);
+                    ActionLog.Add(EActionLogType.START_REPORT, string.Join(", ", command), player);
                     bool didConfirm = await CommandWaitTask.WaitForCommand(player, "confirm", 10000);
                     await UCWarfare.ToUpdate();
                     if (!didConfirm)
@@ -139,6 +134,7 @@ namespace Uncreated.Warfare.Commands
                         EReportType.WASTEING_ASSETS => Data.Reporter.CreateWasteingAssetsReport(player.Steam64, target, message),
                         EReportType.INTENTIONAL_TEAMKILL => Data.Reporter.CreateIntentionalTeamkillReport(player.Steam64, target, message),
                         EReportType.GREIFING_FOBS => Data.Reporter.CreateGreifingFOBsReport(player.Steam64, target, message),
+                        EReportType.CHEATING => Data.Reporter.CreateCheatingReport(player.Steam64, target, message),
                         _ => Data.Reporter.CreateReport(player.Steam64, target, message),
                     };
                     if (report == null)
@@ -152,12 +148,6 @@ namespace Uncreated.Warfare.Commands
                     NotifyAdminsOfReport(targetNames, player.Name, report, type, typename);
                     player.SendChat("report_success_p1", targetNames.CharacterName, string.IsNullOrEmpty(message) ? "---" : message, typename);
                     player.SendChat("report_success_p2");
-                    if (targetPl != null)
-                    {
-                        ToastMessage.QueueMessage(targetPl, new ToastMessage(Translation.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE));
-                        targetPl.SendChat("report_notify_violator_chat_p1", typename, message);
-                        targetPl.SendChat("report_notify_violator_chat_p2");
-                    }
                     L.Log(Translation.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
                         player.Player.channel.owner.playerID.playerName, player.Steam64.ToString(Data.Locale),
                         targetNames.PlayerName, target.ToString(Data.Locale), report.Message, typename), ConsoleColor.Cyan);
@@ -169,7 +159,14 @@ namespace Uncreated.Warfare.Commands
                     L.Log(report.JpgData.Length.ToString());
                     NetTask.Response res = await Reporter.SendReportInvocation.Request(
                         Reporter.ReceiveInvocationResponse, Data.NetClient.connection, report, targetPl != null);
-                    if (targetPl == null)
+                    await UCWarfare.ToUpdate();
+                    if (targetPl != null)
+                    {
+                        ToastMessage.QueueMessage(targetPl, new ToastMessage(Translation.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE));
+                        targetPl.SendChat("report_notify_violator_chat_p1", typename, message);
+                        targetPl.SendChat("report_notify_violator_chat_p2");
+                    }
+                    else
                     {
                         if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success2 &&
                             success2 && res.Parameters[1] is string messageUrl2)
@@ -177,14 +174,15 @@ namespace Uncreated.Warfare.Commands
                             L.Log(
                                 Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
                                     string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
+                            ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl2, player);
                         }
                         else
                         {
                             L.Log(
                                 Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
                                     string.Empty, "0"), ConsoleColor.Cyan);
+                            ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", player);
                         }
-
                         return;
                     }
 
@@ -198,6 +196,7 @@ namespace Uncreated.Warfare.Commands
                                 targetPl.playerID.playerName,
                                 targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl),
                             ConsoleColor.Cyan);
+                        ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl, player);
                     }
                     else
                     {
@@ -205,6 +204,7 @@ namespace Uncreated.Warfare.Commands
                             Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
                                 targetPl.playerID.playerName,
                                 targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                        ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", player);
                     }
                 }
                 catch (Exception ex)

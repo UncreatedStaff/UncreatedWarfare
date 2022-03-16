@@ -40,6 +40,7 @@ namespace Uncreated.Warfare.Commands
                         SerializableTransform transform = new SerializableTransform(cache.model);
                         Gamemode.Config.MapConfig.AddCacheSpawn(transform);
                         player.Message("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
+                        ActionLog.Add(EActionLogType.ADD_CACHE, "ADDED CACHE SPAWN AT " + transform.ToString(), player);
                     }
                     else
                         player.Message("You must be looking at a CACHE barricade.".Colorize("c7a29f"));
@@ -90,6 +91,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         insurgency.AddIntelligencePoints(points);
 
+                        ActionLog.Add(EActionLogType.ADD_INTEL, "ADDED " + points.ToString(Data.Locale) + " OF INTEL", player);
                         player.Message($"Added {points} intelligence points.".Colorize("ebd491"));
                     }
                     else

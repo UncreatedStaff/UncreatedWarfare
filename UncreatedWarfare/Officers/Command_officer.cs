@@ -53,12 +53,14 @@ namespace Uncreated.Warfare.Commands
                     {
                         if (target != null)
                         {
+                            ActionLog.Add(EActionLogType.SET_OFFICER_RANK, target.Steam64.ToString(Data.Locale) + " to " + level + " on team " + team, player);
                             OfficerStorage.ChangeOfficerRank(target.Steam64, level, team);
                             ref Ranks.RankData data = ref Ranks.RankManager.GetRank(target, out _);
                             player.Message("officer_s_changedrank", target.CharacterName, data.GetName(player.Steam64), Translation.Translate(team.ToString(), player));
                         }
                         else
                         {
+                            ActionLog.Add(EActionLogType.SET_OFFICER_RANK, Steam64.ToString(Data.Locale) + " to " + level + " on team " + team, player);
                             OfficerStorage.ChangeOfficerRank(Steam64, level, team);
                             player.Message("officer_s_changedrank", characterName, RankDataOLD.GetOfficerRankName(level), Translation.Translate(team.ToString(), player));
                         }
@@ -96,14 +98,13 @@ namespace Uncreated.Warfare.Commands
                 DischargePlayer:
                 if (target != null)
                 {
+                    ActionLog.Add(EActionLogType.DISCHARGE_OFFICER, target.Steam64.ToString(Data.Locale), player);
                     OfficerStorage.DischargeOfficer(target.Steam64);
                     player.Message("officer_s_discharged", target.CharacterName);
                 }
             }
             else
                 player.SendChat("correct_usage", "/officer <setrank|discharge <player name> <level or rank> <branch>");
-
-
         }
     }
 }

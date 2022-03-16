@@ -180,6 +180,7 @@ namespace Uncreated.Warfare
             UseableThrowable.onThrowableSpawned += EventFunctions.ThrowableSpawned;
             PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
             BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
+            StructureManager.onStructureSpawned += EventFunctions.OnStructurePlaced;
             Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global += EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global += EventFunctions.BatteryStolen;
@@ -201,6 +202,7 @@ namespace Uncreated.Warfare
             Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
             PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
             PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice;
+            R.Commands.OnExecuteCommand += EventFunctions.OnCommandExecuted;
         }
         private void UnsubscribeFromEvents()
         {
@@ -221,6 +223,7 @@ namespace Uncreated.Warfare
             UseableThrowable.onThrowableSpawned -= EventFunctions.ThrowableSpawned;
             PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
             BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
+            StructureManager.onStructureSpawned -= EventFunctions.OnStructurePlaced;
             Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
             Patches.OnPlayerSetsCosmetics_Global -= EventFunctions.StopCosmeticsSetStateEvent;
             Patches.OnBatterySteal_Global -= EventFunctions.BatteryStolen;
@@ -242,6 +245,7 @@ namespace Uncreated.Warfare
             Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
             PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
             PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice;
+            R.Commands.OnExecuteCommand -= EventFunctions.OnCommandExecuted;
             if (!InitialLoadEventSubscription)
             {
                 Level.onLevelLoaded -= OnLevelLoaded;

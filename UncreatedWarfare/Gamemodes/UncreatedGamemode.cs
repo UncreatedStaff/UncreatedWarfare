@@ -212,6 +212,7 @@ namespace Uncreated.Warfare.Gamemodes
                 Gamemode? gamemode = UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode;
                 if (gamemode != null)
                 {
+                    ActionLog.Add(EActionLogType.GAMEMODE_CHANGED_AUTO, gamemode.DisplayName);
                     this.Dispose();
                     Data.Gamemode = gamemode;
                     gamemode.Init();

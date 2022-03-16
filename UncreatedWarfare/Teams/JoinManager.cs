@@ -364,7 +364,7 @@ namespace Uncreated.Warfare.Teams
 #endif
             string teamName = TeamManager.TranslateName(newTeam, player.CSteamID);
 
-            GroupInfo group = GroupManager.getGroupInfo(new CSteamID(newTeam));
+            GroupInfo group = GroupManager.getGroupInfo(new CSteamID(TeamManager.GetGroupID(newTeam)));
             if (group == null)
             {
                 player.SendChat("join_e_groupnoexist", TeamManager.TranslateName(newTeam, player.CSteamID, true));
@@ -395,6 +395,7 @@ namespace Uncreated.Warfare.Teams
             player.SendChat("teams_join_success", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "teams_join_announce", names.CharacterName, teamName);
+            ActionLog.Add(EActionLogType.CHANGE_GROUP_WITH_UI, "GROUP: " + TeamManager.TranslateName(newTeam, 0).ToUpper(), player);
 
             if (player.Squad != null)
                 Squads.SquadManager.LeaveSquad(player, player.Squad);

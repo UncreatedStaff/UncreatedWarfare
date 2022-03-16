@@ -120,6 +120,7 @@ namespace Uncreated.Warfare.Commands
                 EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
                 ucplayer.Message("request_kit_boughtcredits", kit.CreditCost.ToString());
                 Points.AwardCredits(ucplayer, -kit.CreditCost, isPurchase: true);
+                ActionLog.Add(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS", ucplayer);
             }
             else
             {

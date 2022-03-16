@@ -35,7 +35,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.structure.save"))
                     {
-                        if (!(Data.Gamemode is IStructureSaving))
+                        if (Data.Gamemode is not IStructureSaving)
                         {
                             player.Message("command_e_gamemode");
                             return;
@@ -49,8 +49,18 @@ namespace Uncreated.Warfare.Commands
                             {
                                 if (StructureSaver.AddStructure(structure, structure.GetServersideData(), out Structure? structureadded))
                                 {
-                                    if (structureadded != null && structureadded.Asset != null)
-                                        player.SendChat("structure_saved", structureadded.Asset.itemName);
+                                    if (structureadded != null)
+                                    {
+                                        ItemAsset? asset = structureadded.Asset;
+                                        if (asset != null)
+                                        {
+                                            player.SendChat("structure_saved", asset.itemName);
+                                            ActionLog.Add(EActionLogType.SAVE_STRUCTURE, $"{structureadded.type}: {asset.itemName} / {asset.id} / {asset.GUID:N} at {structureadded.transform} ({structureadded.instance_id})",
+                                                player.CSteamID.m_SteamID);
+                                        }
+                                        else
+                                            ActionLog.Add(EActionLogType.SAVE_STRUCTURE, $"{structureadded.type}: {structureadded.id:N} at {structureadded.transform} ({structureadded.instance_id})", player.CSteamID.m_SteamID);
+                                    }
                                 }
                                 else
                                 {
@@ -72,8 +82,18 @@ namespace Uncreated.Warfare.Commands
                             {
                                 if (StructureSaver.AddStructure(barricade, barricade.GetServersideData(), out Structure structureadded))
                                 {
-                                    if (structureadded != null && structureadded.Asset != null)
-                                        player.Player.SendChat("structure_saved", structureadded.Asset!.itemName);
+                                    if (structureadded != null)
+                                    {
+                                        ItemAsset? asset = structureadded.Asset;
+                                        if (asset != null)
+                                        {
+                                            player.Player.SendChat("structure_saved", asset.itemName);
+                                            ActionLog.Add(EActionLogType.SAVE_STRUCTURE, $"{structureadded.type}: {asset.itemName} / {asset.id} / {asset.GUID:N} at {structureadded.transform} ({structureadded.instance_id})",
+                                                player.CSteamID.m_SteamID);
+                                        }
+                                        else
+                                            ActionLog.Add(EActionLogType.SAVE_STRUCTURE, $"{structureadded.type}: {structureadded.id:N} at {structureadded.transform} ({structureadded.instance_id})", player.CSteamID.m_SteamID);
+                                    }
                                 }
                                 else
                                 {
@@ -98,7 +118,7 @@ namespace Uncreated.Warfare.Commands
                 {
                     if (player.HasPermission("uc.structure.remove"))
                     {
-                        if (!(Data.Gamemode is IStructureSaving))
+                        if (Data.Gamemode is not IStructureSaving)
                         {
                             player.Message("command_e_gamemode");
                             return;
@@ -108,9 +128,12 @@ namespace Uncreated.Warfare.Commands
                         StructureDrop structure = StructureManager.FindStructureByRootTransform(hit);
                         if (structure != null)
                         {
-                            if (StructureSaver.StructureExists(structure.instanceID, EStructType.STRUCTURE, out Structure structureaded))
+                            if (StructureSaver.StructureExists(structure.instanceID, EStructType.STRUCTURE, out Structure structureRemoved))
                             {
-                                StructureSaver.RemoveStructure(structureaded);
+                                ActionLog.Add(EActionLogType.SAVE_STRUCTURE, $"{structureRemoved.type}: {structure.asset.itemName} / {structure.asset.id} /" +
+                                                                             $" {structure.asset.GUID:N} at {structureRemoved.transform} ({structureRemoved.instance_id})", 
+                                                                             player.CSteamID.m_SteamID);
+                                StructureSaver.RemoveStructure(structureRemoved);
                                 player.Player.SendChat("structure_unsaved", structure.asset.itemName);
                             }
                             else
@@ -122,9 +145,12 @@ namespace Uncreated.Warfare.Commands
                         BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(hit);
                         if (barricade != null)
                         {
-                            if (StructureSaver.StructureExists(barricade.instanceID, EStructType.BARRICADE, out Structure structureaded))
+                            if (StructureSaver.StructureExists(barricade.instanceID, EStructType.BARRICADE, out Structure structureRemoved))
                             {
-                                StructureSaver.RemoveStructure(structureaded);
+                                ActionLog.Add(EActionLogType.SAVE_STRUCTURE, $"{structureRemoved.type}: {barricade.asset.itemName} / {barricade.asset.id} /" +
+                                                                             $" {barricade.asset.GUID:N} at {structureRemoved.transform} ({structureRemoved.instance_id})",
+                                    player.CSteamID.m_SteamID);
+                                StructureSaver.RemoveStructure(structureRemoved);
                                 player.Player.SendChat("structure_unsaved", barricade.asset.itemName);
                             }
                             else
@@ -148,18 +174,30 @@ namespace Uncreated.Warfare.Commands
                         if (structure != null)
                         {
                             DestroyStructure(structure, player.Player);
+                            ActionLog.Add(EActionLogType.POP_STRUCTURE,
+                                $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
+                                $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2")} ({structure.instanceID})",
+                                player.CSteamID.m_SteamID);
                             return;
                         }
                         BarricadeDrop barricade = BarricadeManager.FindBarricadeByRootTransform(hit);
                         if (barricade != null)
                         {
                             DestroyBarricade(barricade, player.Player);
+                            ActionLog.Add(EActionLogType.POP_STRUCTURE,
+                                $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
+                                $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2")} ({barricade.instanceID})",
+                                player.CSteamID.m_SteamID);
                             return;
                         }
                         if (hit.TryGetComponent(out InteractableVehicle veh))
                         {
                             VehicleBay.DeleteVehicle(veh);
 
+                            ActionLog.Add(EActionLogType.POP_STRUCTURE,
+                                $"VEHICLE: {veh.asset.vehicleName} / {veh.asset.id} /" +
+                                $" {veh.asset.GUID:N} at {veh.transform.position.ToString("N2")} ({veh.instanceID})",
+                                player.CSteamID.m_SteamID);
                             player.SendChat("structure_popped", veh.asset.vehicleName);
                         }
                         else player.Player.SendChat("structure_pop_not_poppable");

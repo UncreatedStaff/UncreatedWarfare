@@ -191,6 +191,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 L.LogWarning("WinToast UI not found. GUID: " + Gamemode.Config.UI.WinToastGUID);
 
             QuestManager.OnGameOver(winner);
+            ActionLog.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
 
             foreach (SteamPlayer client in Provider.clients)
             {
@@ -516,6 +517,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
 #endif
             if (NewOwner == 1)
             {
+                ActionLog.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
                 if (_objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
                 {
                     DeclareWin(1);
@@ -536,6 +538,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
             else if (NewOwner == 2)
             {
+                ActionLog.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
                 if (_objectiveT2Index < 1) // if t2 just capped the last flag
                 {
                     DeclareWin(2);

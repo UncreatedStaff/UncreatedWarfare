@@ -106,27 +106,30 @@ namespace Uncreated.Warfare.Commands
                             if (team == 0) team = player.Player.quests.groupID.m_SteamID;
                             if (team == 1)
                             {
-                                player.SendChat("joined_group", TeamManager.TranslateName(TeamManager.Team1ID, player, true),
+                                player.SendChat("joined_group", TeamManager.TranslateName(1, player, true),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale));
                                 L.Log(Translation.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), TeamManager.TranslateName(TeamManager.Team1ID, 0),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                ActionLog.Add(EActionLogType.CHANGE_GROUP_WITH_COMMAND, "GROUP: " + TeamManager.TranslateName(1, 0).ToUpper(), player);
                             }
                             else if (team == 2)
                             {
-                                player.SendChat("joined_group", TeamManager.TranslateName(TeamManager.Team2ID, player, true),
+                                player.SendChat("joined_group", TeamManager.TranslateName(2, player, true),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale));
                                 L.Log(Translation.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), TeamManager.TranslateName(TeamManager.Team2ID, 0),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                ActionLog.Add(EActionLogType.CHANGE_GROUP_WITH_COMMAND, "GROUP: " + TeamManager.TranslateName(2, 0).ToUpper(), player);
                             }
                             else if (team == 3)
                             {
-                                player.SendChat("joined_group", TeamManager.TranslateName(TeamManager.AdminID, player, true),
+                                player.SendChat("joined_group", TeamManager.TranslateName(3, player, true),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale));
                                 L.Log(Translation.Translate("joined_group_console", 0, out _, player.Player.channel.owner.playerID.playerName,
                                     player.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), TeamManager.TranslateName(TeamManager.AdminID, 0),
                                     groupInfo.groupID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                                ActionLog.Add(EActionLogType.CHANGE_GROUP_WITH_COMMAND, "GROUP: " + TeamManager.TranslateName(3, 0).ToUpper(), player);
                             }
                             else
                             {

@@ -75,6 +75,7 @@ namespace Uncreated.Warfare
         public static readonly string FOBStorage = DATA_DIRECTORY + @"FOBs\";
         public static readonly string LangStorage = DATA_DIRECTORY + @"Lang\";
         public static readonly string ElseWhereSQLPath = @"C:\sql.json";
+        public static readonly string LOG_DIRECTORY = System.Environment.CurrentDirectory + @"\Logs\ActionLogs\";
         public static readonly CultureInfo Locale = new CultureInfo("en-US");
         public static Dictionary<string, Color> Colors;
         public static Dictionary<string, string> ColorsHex;
@@ -152,6 +153,9 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            UCWarfare.I.gameObject.AddComponent<ActionLog>();
+            
+            ActionLog.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Locale)}");
 
             /* INITIALIZE UNCREATED NETWORKING */
             Logging.OnLog += L.Log;

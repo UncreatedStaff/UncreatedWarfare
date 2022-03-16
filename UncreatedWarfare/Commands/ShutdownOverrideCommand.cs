@@ -20,10 +20,11 @@ namespace Uncreated.Warfare.Commands
         public static Coroutine? Messager = null;
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            if (caller.DisplayName == "Console")
+            if (caller is ConsolePlayer)
             {
                 if (command.Length == 0)
                 {
+                    ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT");
                     Invocations.Shared.ShuttingDown.NetInvoke(0UL, "None specified.");
                     Provider.shutdown(0);
                     return;
@@ -43,14 +44,16 @@ namespace Uncreated.Warfare.Commands
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
+                    ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason);
                     Invocations.Shared.ShuttingDown.NetInvoke(0UL, reason);
                     Provider.shutdown(0, reason);
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
                 {
+                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
                     Chat.Broadcast("shutdown_broadcast_after_game", reason);
                     L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
-                    Data.Gamemode.ShutdownAfterGame(reason, 0);
+                    Data.Gamemode?.ShutdownAfterGame(reason, 0);
                     if (Messager != null)
                     {
                         try
@@ -64,6 +67,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (option == "cancel" || option == "abort")
                 {
+                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"CANCELLED");
                     Data.Gamemode.CancelShutdownAfterGame();
                     Chat.Broadcast("shutdown_broadcast_after_game_canceled");
                     L.Log(Translation.Translate("shutdown_broadcast_after_game_canceled_console", 0, out _), ConsoleColor.Cyan);
@@ -87,6 +91,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     time = seconds.GetTimeFromSeconds(0);
                     L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
+                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason);
                     Invocations.Shared.ShuttingDownTime.NetInvoke(0UL, reason, seconds);
                     Provider.shutdown(unchecked((int)seconds), reason);
                 }
@@ -101,6 +106,7 @@ namespace Uncreated.Warfare.Commands
                 SteamPlayer player = ((UnturnedPlayer)caller).Player.channel.owner;
                 if (command.Length == 0)
                 {
+                    ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT", player.playerID.steamID.m_SteamID);
                     Invocations.Shared.ShuttingDown.NetInvoke(0UL, "None specified.");
                     Provider.shutdown(0);
                     return;
@@ -120,12 +126,14 @@ namespace Uncreated.Warfare.Commands
                 string reason = sb.ToString();
                 if (option == "instant" || option == "inst" || option == "now")
                 {
+                    ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason, player.playerID.steamID.m_SteamID);
                     Invocations.Shared.ShuttingDown.NetInvoke(0UL, reason);
                     Provider.shutdown(0, reason);
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
                 {
-                    Data.Gamemode.ShutdownAfterGame(reason, player.playerID.steamID.m_SteamID);
+                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason, player.playerID.steamID.m_SteamID);
+                    Data.Gamemode?.ShutdownAfterGame(reason, player.playerID.steamID.m_SteamID);
                     Chat.Broadcast("shutdown_broadcast_after_game", reason);
                     L.Log(Translation.Translate("shutdown_broadcast_after_game_console_player", 0, out _, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
                     if (Messager != null)
@@ -141,6 +149,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (option == "cancel" || option == "abort")
                 {
+                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"CANCELLED", player.playerID.steamID.m_SteamID);
                     Data.Gamemode.CancelShutdownAfterGame();
                     Chat.Broadcast("shutdown_broadcast_after_game_canceled");
                     L.Log(Translation.Translate("shutdown_broadcast_after_game_canceled_console_player", 0, out _, F.GetPlayerOriginalNames(player).PlayerName), ConsoleColor.Cyan);
@@ -164,6 +173,7 @@ namespace Uncreated.Warfare.Commands
                     }
                     time = seconds.GetTimeFromSeconds(0);
                     L.Log(Translation.Translate("shutdown_broadcast_after_time_console_player", 0, out _, time, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
+                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, player.playerID.steamID.m_SteamID);
                     Invocations.Shared.ShuttingDownTime.NetInvoke(0UL, reason, seconds);
                     Provider.shutdown(unchecked((int)seconds), reason);
                 }

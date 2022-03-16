@@ -55,6 +55,7 @@ namespace Uncreated.Warfare.Commands
                                 player.playerID.steamID.SendChat("warn_warned_private_operator", reason);
                                 ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("warn_warned_private_operator", player, out _, reason), EToastMessageSeverity.WARNING));
                                 Chat.BroadcastToAllExcept(new ulong[1] { player.playerID.steamID.m_SteamID }, "warn_warned_broadcast_operator", name.CharacterName);
+                                ActionLog.Add(EActionLogType.WARN_PLAYER, $"WARNED {player.playerID.steamID.m_SteamID.ToString(Data.Locale)} FOR \"{reason}\"");
                             }
                         }
                     }
@@ -97,6 +98,7 @@ namespace Uncreated.Warfare.Commands
                                     new ToastMessage(Translation.Translate("warn_warned_private", player, out _, callerName.CharacterName, reason),
                                     EToastMessageSeverity.WARNING));
                                 steamplayer.playerID.steamID.SendChat("warn_warned_private", callerName.CharacterName, reason);
+                                ActionLog.Add(EActionLogType.WARN_PLAYER, $"WARNED {steamplayer.playerID.steamID.m_SteamID.ToString(Data.Locale)} FOR \"{reason}\"", player);
                                 Chat.BroadcastToAllExcept(new ulong[2] { steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID }, "warn_warned_broadcast", name.CharacterName, callerName.CharacterName);
                             }
                         }

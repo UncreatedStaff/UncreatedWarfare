@@ -31,6 +31,7 @@ namespace Uncreated.Warfare.Commands
         {
             UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
             bool isConsole = player == null;
+            ulong s64 = isConsole ? 0 : player!.Steam64;
             string cmd = command.Length == 0 ? string.Empty : command[0].ToLower();
             if (command.Length == 0 || (command.Length == 1 && cmd == "all"))
             {
@@ -47,7 +48,7 @@ namespace Uncreated.Warfare.Commands
                     ReloadFlags();
                     ReloadTCPServer();
                     ReloadSQLServer();
-
+                    ActionLog.Add(EActionLogType.RELOAD_COMPONENT, "ALL COMPONENTS", s64);
                     if (isConsole) L.Log(Translation.Translate("reload_reloaded_all", 0, out _));
                     else player!.SendChat("reload_reloaded_all");
                 }
@@ -67,6 +68,7 @@ namespace Uncreated.Warfare.Commands
                         else player!.SendChat("reload_reloaded_config");
                         if (command.Length > 1 && command[1].ToLower() == "all") ReloadAllConfigFiles();
                         else ReloadConfig();
+                        ActionLog.Add(EActionLogType.RELOAD_COMPONENT, "ALL CONFIG FILES", s64);
                     }
                     else
                         player!.Player.SendChat("no_permissions");
@@ -78,6 +80,7 @@ namespace Uncreated.Warfare.Commands
                         ReloadTranslations();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_lang", 0, out _));
                         else player!.SendChat("reload_reloaded_lang");
+                        ActionLog.Add(EActionLogType.RELOAD_COMPONENT, "TRANSLATIONS", s64);
                     }
                     else
                         player!.Player.SendChat("no_permissions");
@@ -89,6 +92,7 @@ namespace Uncreated.Warfare.Commands
                         ReloadFlags();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_flags", 0, out _));
                         else player!.SendChat("reload_reloaded_flags");
+                        ActionLog.Add(EActionLogType.RELOAD_COMPONENT, "FLAGS", s64);
                     }
                     else
                         player!.Player.SendChat("no_permissions");
@@ -100,6 +104,7 @@ namespace Uncreated.Warfare.Commands
                         ReloadGamemodeConfig();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_gameconfig", 0, out _));
                         else player!.SendChat("reload_reloaded_gameconfig");
+                        ActionLog.Add(EActionLogType.RELOAD_COMPONENT, "GAMEMODE CONFIG FILE", s64);
                     }
                     else
                         player!.Player.SendChat("no_permissions");
@@ -111,6 +116,7 @@ namespace Uncreated.Warfare.Commands
                         ReloadTCPServer();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_tcp", 0, out _));
                         else player!.SendChat("reload_reloaded_tcp");
+                        ActionLog.Add(EActionLogType.RELOAD_COMPONENT, "UC DISCORD TCP CONNECTION", s64);
                     }
                     else
                         player!.Player.SendChat("no_permissions");
@@ -122,6 +128,7 @@ namespace Uncreated.Warfare.Commands
                         ReloadSQLServer();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_sql", 0, out _));
                         else player!.SendChat("reload_reloaded_sql");
+                        ActionLog.Add(EActionLogType.RELOAD_COMPONENT, "MYSQL CONNECTION", s64);
                     }
                     else
                         player!.Player.SendChat("no_permissions");
@@ -133,17 +140,7 @@ namespace Uncreated.Warfare.Commands
                         ReloadKits();
                         if (isConsole) L.Log(Translation.Translate("reload_reloaded_kits", 0, out _));
                         else player!.SendChat("reload_reloaded_kits");
-                    }
-                    else
-                        player!.Player.SendChat("no_permissions");
-                }
-                else if (cmd == "config")
-                {
-                    if (isConsole || player.HasPermission("uc.reload.kits") || player.HasPermission("uc.reload.all"))
-                    {
-                        ReloadAllConfigFiles();
-                        if (isConsole) L.Log(Translation.Translate("reload_reloaded_config", 0, out _));
-                        else player!.SendChat("reload_reloaded_config");
+                        ActionLog.Add(EActionLogType.RELOAD_COMPONENT, "KITS FILE", s64);
                     }
                     else
                         player!.Player.SendChat("no_permissions");

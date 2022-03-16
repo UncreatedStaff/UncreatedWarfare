@@ -40,6 +40,7 @@ namespace Uncreated.Warfare.Components
     public class PlaytimeComponent : MonoBehaviour
     {
         public float CurrentTimeSeconds;
+        public float JoinTime = 0f;
         public Gamemodes.Interfaces.IStats stats;
         public Player player;
         public Guid lastShot;
@@ -178,6 +179,7 @@ namespace Uncreated.Warfare.Components
         {
             this.player = player;
             CurrentTimeSeconds = 0.0f;
+            JoinTime = Time.realtimeSinceStartup;
             this.thrown = new List<ThrowableOwner>();
             byte max = 0;
             bool cont0 = false;
@@ -385,20 +387,24 @@ namespace Uncreated.Warfare.Components
                 {
                     position = fob.Bunker.model.position;
                     rotation = fob.Bunker.model.eulerAngles.y;
+                    ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "FOB BUNKER " + fob.Name + " TEAM " + Teams.TeamManager.TranslateName(fob.Team, 0), player);
                 }
             }
             else if (isCache)
             {
                 position = cache!.Structure.model.TransformPoint(new Vector3(3, 0, 0));
                 rotation = cache.Structure.model.eulerAngles.y;
+                ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "CACHE " + cache.Name + " TEAM " + Teams.TeamManager.TranslateName(cache.Team, 0), player);
             }
             else if (isSpecialFOB)
             {
                 position = special!.Point;
+                ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + special.Name + " TEAM " + Teams.TeamManager.TranslateName(special.Team, 0), player);
             }
             else if (structure is Vector3 vector)
             {
                 position = vector;
+                ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "MAIN BASE " + Teams.TeamManager.TranslateName(player.GetTeam(), 0), player);
             }
 
             if (yawOverride != -1)

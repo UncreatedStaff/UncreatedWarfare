@@ -26,7 +26,7 @@ namespace Uncreated.Warfare.Commands
 
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            if (!(caller is UnturnedPlayer player))
+            if (caller is not UnturnedPlayer player)
             {
                 if (!Provider.isServer)
                     L.LogError(Translation.Translate("server_not_running", 0, out _));
@@ -48,6 +48,7 @@ namespace Uncreated.Warfare.Commands
                                 Invocations.Shared.LogUnbanned.NetInvoke(steamplayer.m_SteamID, 0UL, DateTime.Now);
                             }
                             FPlayerName names = Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
+                            ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {steamplayer.m_SteamID.ToString(Data.Locale)}");
                             if (names.Steam64.ToString(Data.Locale) == names.PlayerName)
                             {
                                 L.Log(Translation.Translate("unban_unbanned_console_id_operator", 0, out _, steamplayer.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
@@ -85,6 +86,7 @@ namespace Uncreated.Warfare.Commands
                             }
                             FPlayerName names = Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
                             FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
+                            ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {steamplayer.m_SteamID.ToString(Data.Locale)}", player.CSteamID.m_SteamID);
                             if (names.Steam64.ToString(Data.Locale) == names.PlayerName)
                             {
                                 L.Log(Translation.Translate("unban_unbanned_console_id", 0, out _, steamplayer.m_SteamID.ToString(Data.Locale), callerNames.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
@@ -133,6 +135,7 @@ namespace Uncreated.Warfare.Commands
                         L.Log(Translation.Translate("unban_unbanned_console_id", 0, out _, Violator.ToString(Data.Locale), callerName.PlayerName, Admin.ToString(Data.Locale)), ConsoleColor.Cyan);
                         if (admin != null)
                             admin.SendChat("unban_unbanned_feedback_id", Violator.ToString(Data.Locale));
+                        ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {Violator.ToString(Data.Locale)}", Admin);
                         Chat.BroadcastToAllExcept(new ulong[1] { Admin }, "unban_unbanned_broadcast_id", Violator.ToString(Data.Locale), callerName.CharacterName);
                     }
                     else
@@ -140,6 +143,7 @@ namespace Uncreated.Warfare.Commands
                         L.Log(Translation.Translate("unban_unbanned_console_name", 0, out _, names.PlayerName, Violator.ToString(Data.Locale), callerName.PlayerName, Admin.ToString(Data.Locale)), ConsoleColor.Cyan);
                         if (admin != null)
                             admin.SendChat("unban_unbanned_feedback_name", names.CharacterName);
+                        ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {Violator.ToString(Data.Locale)}", Admin);
                         Chat.BroadcastToAllExcept(new ulong[1] { Admin }, "unban_unbanned_broadcast_name", names.CharacterName, callerName.CharacterName);
                     }
                 }

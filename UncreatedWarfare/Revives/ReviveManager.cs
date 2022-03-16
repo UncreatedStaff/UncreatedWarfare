@@ -152,6 +152,7 @@ namespace Uncreated.Warfare.Revives
 #endif
             if (target.TryGetComponent(out Reviver r) && DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
             {
+                ActionLog.Add(EActionLogType.REVIVED_PLAYER, target.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), medic.channel.owner.playerID.steamID.m_SteamID);
                 r.RevivePlayer(null);
                 byte team = medic.GetTeamByte();
                 byte tteam = target.GetTeamByte();
@@ -296,6 +297,8 @@ namespace Uncreated.Warfare.Revives
             EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, key, parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player), string.Empty);
             EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", Translation.Translate("injured_ui_give_up", parameters.player));
             parameters.player.SendChat("injured_chat");
+
+            ActionLog.Add(EActionLogType.INJURED, "by " + (killer == null ? "self" : killer.playerID.steamID.m_SteamID.ToString(Data.Locale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
             DownedPlayers.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, new DownedPlayerData(parameters));
             SpawnInjuredMarker(parameters.player.transform.position, team);

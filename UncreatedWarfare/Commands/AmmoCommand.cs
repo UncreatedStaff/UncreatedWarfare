@@ -123,12 +123,13 @@ namespace Uncreated.Warfare.Commands
                 {
                     fob!.ReduceAmmo(vehicleData.RearmCost);
                     player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), fob.Ammo.ToString());
+                    ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR VEHICLE", player.Steam64);
                 }
                 else
                 {
                     player.SendChat("ammo_success_vehicle_main", vehicleData.RearmCost.ToString(Data.Locale));
+                    ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN", player.Steam64);
                 }
-
                 return;
             }
             else if (barricade != null && drop != null && barricade.barricade != null)
@@ -192,6 +193,7 @@ namespace Uncreated.Warfare.Commands
                     if (isInMain)
                     {
                         player.SendChat("ammo_success_main", ammoCost.ToString());
+                        ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT IN MAIN", player.Steam64);
 
                         if (FOBManager.config.data.AmmoCommandCooldown > 0)
                             CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.data.AmmoCommandCooldown);
@@ -199,6 +201,7 @@ namespace Uncreated.Warfare.Commands
                     else
                     {
                         fob.ReduceAmmo(1);
+                        ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BOX", player.Steam64);
                         player.SendChat("ammo_success", ammoCost.ToString(), fob.Ammo.ToString());
                     }
                         
@@ -222,6 +225,7 @@ namespace Uncreated.Warfare.Commands
                         ammobag.ResupplyPlayer(player, kit, ammoCost);
 
                         EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
+                        ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BAG", player.Steam64);
 
                         WipeDroppedItems(player.Player.inventory);
                     }

@@ -84,6 +84,9 @@ namespace Uncreated.Warfare.Components
                 LastDriver = nelsonplayer.channel.owner.playerID.steamID.m_SteamID;
                 totalDistance = 0;
             }
+            ActionLog.Add(EActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
+                                                             $"ID: ({vehicle.instanceID}) Seat move: >> " +
+                                                             $"{toSeat.ToString(Warfare.Data.Locale)}", nelsonplayer.channel.owner.playerID.steamID.m_SteamID);
 
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
