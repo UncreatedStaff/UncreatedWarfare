@@ -679,13 +679,16 @@ namespace Uncreated.Warfare.Tickets
 #endif
             if (Data.Is(out IFlagRotation fg))
             {
-                if (Data.Is(out Invasion invasion) && team == invasion.AttackingTeam)
+                if (Data.Is(out Invasion invasion))
                 {
-                    int defenderFlags = fg.Rotation.Where(f => f.Owner == invasion.DefendingTeam).Count();
-
-                    if (defenderFlags == fg.Rotation.Count)
+                    if (team == invasion.AttackingTeam)
                     {
-                        return -1;
+                        int defenderFlags = fg.Rotation.Where(f => f.Owner == invasion.DefendingTeam).Count();
+
+                        if (defenderFlags == fg.Rotation.Count)
+                        {
+                            return -1;
+                        }
                     }
                 }
                 else
