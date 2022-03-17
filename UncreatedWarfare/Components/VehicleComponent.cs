@@ -421,9 +421,6 @@ namespace Uncreated.Warfare.Components
         }
         private IEnumerator<WaitForSeconds> AutoSupplyLoop()
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             Guid buildGUID = Guid.Empty;
             Guid ammoGUID = Guid.Empty;
 

@@ -2354,7 +2354,7 @@ namespace Uncreated.Warfare
             W.Write(Message);
             W.WriteLong(JpgData ?? new byte[0]);
         }
-        public override string ToString() => $"Report on {Violator} made by {Reporter} at {Time:s}: \"{Message}\" (" + (JpgData == null || JpgData.Length == 0 ? "No Screenshot Attached)." : "Screenshot Attached).";
+        public override string ToString() => $"Report on {Violator} made by {Reporter} at {Time:s}: \"{Message}\" (" + (JpgData == null || JpgData.Length == 0 ? "No Screenshot Attached)." : "Screenshot Attached).");
     }
     public class CheatingReport : Report
     {

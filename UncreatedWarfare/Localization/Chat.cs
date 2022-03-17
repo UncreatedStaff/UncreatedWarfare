@@ -592,6 +592,7 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             message = Translation.TranslateDeath(JSONMethods.DEFAULT_LANGUAGE, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, true, translateKillerName, false);
+            if (!broadcast) return;
             foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
                 string killer = translateKillerName ? Translation.Translate(killerName.CharacterName, set.Language) : killerName.CharacterName;
@@ -631,6 +632,7 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             message = Translation.TranslateLandmineDeath(JSONMethods.DEFAULT_LANGUAGE, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
+            if (!broadcast) return;
             foreach (LanguageSet set in Translation.EnumerateLanguageSets())
             {
                 string localizedString = Translation.TranslateLandmineDeath(set.Language, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);

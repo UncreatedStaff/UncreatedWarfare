@@ -28,6 +28,7 @@ using Uncreated.Warfare.Teams;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Quests;
+using System.Diagnostics;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -1294,6 +1295,35 @@ namespace Uncreated.Warfare.Commands
                     L.LogError(ex);
                 }
             }
+        }
+
+        private const long TEST_CASES = 1000000000;
+        private void zonecheckspeed(string[] command, Player player)
+        {
+            Vector3 outsideBoundsPos = new Vector3(-749, 36, -312);
+            Vector3 insideBoundsPos = new Vector3(841, 48, -487);
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            for (int i = 0; i < TEST_CASES; ++i)
+            {
+                TeamManager.Team1Main.IsInside(outsideBoundsPos);
+            }
+
+            decimal msPer = ((decimal)stopwatch.Elapsed.TotalMilliseconds) / TEST_CASES;
+            stopwatch.Stop();
+            L.Log("Outside bounds: " + stopwatch.Elapsed.TotalMilliseconds.ToString() + " (" + msPer.ToString("N50") + "ms) per check");
+            
+
+            stopwatch.Reset();
+            stopwatch.Start();
+            for (int i = 0; i < TEST_CASES; ++i)
+            {
+                TeamManager.Team1Main.IsInside(insideBoundsPos);
+            }
+            stopwatch.Stop();
+            msPer = ((decimal)stopwatch.Elapsed.TotalMilliseconds) / TEST_CASES;
+            L.Log("Inside bounds: " + stopwatch.Elapsed.TotalMilliseconds.ToString() + " (" + msPer.ToString("N50") + "ms) per check");
         }
     }
 #pragma warning restore IDE0051

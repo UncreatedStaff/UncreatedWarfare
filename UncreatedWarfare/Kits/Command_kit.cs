@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         if (ucplayer.GetTeam() == kit.Team)
                         {
-                            if (!CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out var cooldown, kit.Name))
+                            if (!CooldownManager.HasCooldown(ucplayer, ECooldownType.PREMIUM_KIT, out Cooldown? cooldown, kit.Name))
                             {
                                 bool branchChanged = false;
                                 if (KitManager.HasKit(ucplayer, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
@@ -161,12 +161,14 @@ namespace Uncreated.Warfare.Kits
                     if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
                     {
                         KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
+                        ActionLog.Add(EActionLogType.CREATE_KIT, kitName, ucplayer);
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         Reply(ucplayer, "kit_created", kitName);
                         return;
                     }
                     else // overwrite kit
                     {
+                        ActionLog.Add(EActionLogType.EDIT_KIT, kitName, ucplayer);
                         KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         Reply(ucplayer, "kit_overwritten", kitName);
@@ -180,6 +182,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         KitManager.DeleteKit(kitName);
 
+                        ActionLog.Add(EActionLogType.DELETE_KIT, kitName, ucplayer ?? 0ul);
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         RequestSigns.RemoveRequestSigns(kitName);
                         Reply(ucplayer, "kit_deleted", kitName);
@@ -203,6 +206,8 @@ namespace Uncreated.Warfare.Kits
                         bool branchChanged = false;
                         if (KitManager.HasKit(ucplayer, out Kit oldkit) && kit.Branch != EBranch.DEFAULT && oldkit.Branch != kit.Branch)
                             branchChanged = true;
+
+                        ActionLog.Add(EActionLogType.GIVE_KIT, kitName, ucplayer);
 
                         KitManager.GiveKit(ucplayer, kit);
                         Reply(ucplayer, "request_kit_given", kit.DisplayName.ToUpper());
@@ -274,6 +279,7 @@ namespace Uncreated.Warfare.Kits
                         SUCCESS:
                         // success
                         Reply(ucplayer, "kit_setprop", property, kitName, newValue);
+                        ActionLog.Add(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper(), ucplayer ?? 0ul);
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                         if (wasloadout && !kit.IsLoadout)
                         {
@@ -346,6 +352,7 @@ namespace Uncreated.Warfare.Kits
 
                     //success
                     Reply(ucplayer, "kit_accessgiven", targetPlayer, kitName);
+                    ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, steam64.ToString(Data.Locale) + " GIVEN ACCESS TO " + kitName, ucplayer ?? 0ul);
                     KitManager.GiveAccess(steam64, kit.Name);
                     if (target != null)
                         RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
@@ -399,6 +406,7 @@ namespace Uncreated.Warfare.Kits
 
                     //success
                     Reply(ucplayer, "kit_accessremoved", targetPlayer, kitName);
+                    ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, steam64.ToString(Data.Locale) + " DENIED ACCESS TO " + kitName, ucplayer ?? 0ul);
                     KitManager.RemoveAccess(steam64, kit.Name);
                     if (target != null)
                         RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
@@ -434,6 +442,7 @@ namespace Uncreated.Warfare.Kits
                                 Weapons = existing.Weapons
                             };
 
+                            ActionLog.Add(EActionLogType.CREATE_KIT, kitName + " COPIED FROM " + existingName, ucplayer ?? 0ul);
                             KitManager.CreateKit(newKit);
 
                             Reply(ucplayer, "kit_copied", existing.Name, newKit.Name);
@@ -527,6 +536,8 @@ namespace Uncreated.Warfare.Kits
 
                         });
 
+                        ActionLog.Add(EActionLogType.CREATE_KIT, loadoutName, ucplayer);
+
                         Reply(ucplayer, "kit_l_created", kitClass.ToString().ToUpper(), Data.DatabaseManager.GetUsernames(steamid).CharacterName, steamid.ToString(), loadoutName);
                     }
                     else
@@ -554,6 +565,7 @@ namespace Uncreated.Warfare.Kits
                                 Reply(ucplayer, "kit_setprop", "sign text", command[2], command[3] + " : " + text);
                             else
                                 Reply(ucplayer, "kit_e_noexist", command[2]);
+                            ActionLog.Add(EActionLogType.SET_KIT_PROPERTY, command[2] + ": SIGN TEXT >> \"" + text + "\"", ucplayer ?? 0ul);
                             return;
                         }
                         else

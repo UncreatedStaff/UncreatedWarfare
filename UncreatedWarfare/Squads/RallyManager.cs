@@ -153,6 +153,8 @@ namespace Uncreated.Warfare.Squads
                         BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                 }
 
+                ActionLog.Add(EActionLogType.PLACED_RALLY, "AT " + data.point.ToString(), squad.Leader);
+
                 RallyPoint rallypoint = new RallyPoint(data, UCBarricadeManager.GetDropFromBarricadeData(data), squad);
                 rallypoint.drop.model.transform.gameObject.AddComponent<RallyComponent>().Initialize(rallypoint);
 
@@ -271,6 +273,8 @@ namespace Uncreated.Warfare.Squads
             if (player.Player.life.isDead || player.Player.movement.getVehicle() != null)
                 return;
 
+            ActionLog.Add(EActionLogType.TELEPORTED_TO_RALLY, "AT " + drop.model.position.ToString() + " PLACED BY " + squad.Leader.Steam64.ToString(), player);
+
             player.Player.teleportToLocation(new Vector3(structure.point.x, structure.point.y + RallyManager.TELEPORT_HEIGHT_OFFSET, structure.point.z), structure.angle_y);
 
             player.Message("rally_success");
@@ -342,6 +346,9 @@ namespace Uncreated.Warfare.Squads
                             foreach (UCPlayer member in parent.squad.Members)
                                 member.Message("rally_cancelled");
 
+#if DEBUG
+                            profiler.Dispose();
+#endif
                             yield break;
                         }
                     }

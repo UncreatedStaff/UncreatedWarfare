@@ -52,7 +52,7 @@ namespace Uncreated.Warfare.Squads
                     {
                         if (Enum.TryParse(command[1].ToUpper(), out EOrder type))
                         {
-                            if (Orders.HasOrder(squad, out var order) && order.Commander != player)
+                            if (Orders.HasOrder(squad, out Order order) && order.Commander != player)
                             {
                                 // TODO: check if order can be overwritten
                                 player.Message("order_e_alreadyhasorder", squad.Name, order.Commander.CharacterName);
@@ -88,6 +88,8 @@ namespace Uncreated.Warfare.Squads
                                                 }
                                             }
 
+                                            ActionLog.Add(EActionLogType.CREATED_ORDER, type.ToString() + " " + marker.ToString("N2"), player);
+
                                             Orders.GiveOrder(squad, player, type, marker, message);
                                         }
                                         if (type == EOrder.BUILDFOB)
@@ -99,6 +101,9 @@ namespace Uncreated.Warfare.Squads
                                             else
                                             {
                                                 message = $"Build FOB near the marker";
+
+                                                ActionLog.Add(EActionLogType.CREATED_ORDER, "BUILD A FOB AT " + marker.ToString("N2"), player);
+
                                                 Orders.GiveOrder(squad, player, type, marker, message);
                                             }
                                         }
@@ -114,6 +119,9 @@ namespace Uncreated.Warfare.Squads
                                             if (distanceToMarker >= 100)
                                             {
                                                 message = $"Move squad to the marker position";
+
+                                                ActionLog.Add(EActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"), player);
+
                                                 Orders.GiveOrder(squad, player, type, marker, message);
                                             }
                                             else
@@ -143,7 +151,6 @@ namespace Uncreated.Warfare.Squads
                     else
                         player.Message("order_e_squadnoexist", command[0].ToUpper());
                 }
-
             }
         }
     }

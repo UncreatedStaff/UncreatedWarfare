@@ -118,9 +118,9 @@ namespace Uncreated.Warfare.Tickets
                 ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
 
                 if (lteam == 1)
-                    AddTeam1Tickets(-1 * data.TicketCost);
+                    AddTeam1Tickets(-data.TicketCost);
                 else if (lteam == 2)
-                    AddTeam2Tickets(-1 * data.TicketCost);
+                    AddTeam2Tickets(-data.TicketCost);
 
                 if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
                 {
@@ -191,7 +191,7 @@ namespace Uncreated.Warfare.Tickets
                         if (vehicleWasEnemy)
                         {
                             Asset asset = Assets.find(vc.item);
-                            string reason = "";
+                            string reason = string.Empty;
                             if (asset != null)
                             {
                                 if (asset is ItemAsset item)
@@ -204,6 +204,9 @@ namespace Uncreated.Warfare.Tickets
                                 Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
                             else
                                 Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason);
+
+                            ActionLog.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
+                                                                             $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
 
                             QuestManager.OnVehicleDestroyed(owner, player, data, vc);
 
@@ -246,6 +249,9 @@ namespace Uncreated.Warfare.Tickets
                         else if (vehicleWasFriendly)
                         {
                             Chat.Broadcast("VEHICLE_TEAMKILLED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), "", vehicle.asset.vehicleName);
+
+                            ActionLog.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
+                                                                             $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
 
                             if (message != string.Empty) message = "xp_friendly_" + message;
                             Points.AwardCredits(player, Mathf.Clamp(data.CreditCost, 5, 1000), Translation.Translate(message, player.Steam64), true);

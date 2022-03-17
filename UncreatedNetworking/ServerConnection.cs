@@ -23,6 +23,7 @@ namespace Uncreated.Networking
         public event MessageParsedDelegate OnParsed;
         public event MessageSentDelegate OnAutoSent;
         public event IdentityDelegate OnDisconnect;
+        public event IdentityDelegate OnServerConnectionEstablished;
         public readonly int Port;
         public readonly string Host;
         private IAsyncResult connectingAr;
@@ -248,6 +249,7 @@ namespace Uncreated.Networking
             {
                 _socket.EndConnect(ar);
                 _isActive = true;
+                OnServerConnectionEstablished?.Invoke(this.Identity);
                 Listen();
                 SharedInvocations.RequestVerify.Invoke(this, Identity);
             }
@@ -286,6 +288,7 @@ namespace Uncreated.Networking
             {
                 _socket.EndConnect(ar);
                 _isActive = true;
+                OnServerConnectionEstablished?.Invoke(this.Identity);
                 Listen();
                 SharedInvocations.RequestVerify.Invoke(this, Identity);
             }

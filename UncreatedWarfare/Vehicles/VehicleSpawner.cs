@@ -667,6 +667,7 @@ namespace Uncreated.Warfare.Vehicles
     {
         private VehicleSpawn spawnData;
         private VehicleData vehicleData;
+        public VehicleSpawn Spawn => spawnData;
         private EVehicleBayState state = EVehicleBayState.NOT_INITIALIZED;
         private InteractableVehicle? vehicle;
         public EVehicleBayState State => state;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Networking;
@@ -32,36 +33,59 @@ public class ActionLog : MonoBehaviour
     {
         if (items.Count > 0)
         {
-            FileInfo info = new FileInfo(Data.LOG_DIRECTORY + "current.txt");
-            if (info.Exists)
+            F.CheckDir(Data.LOG_DIRECTORY, out bool success);
+            if (success)
             {
-                DateTime creation = info.CreationTime;
-                if ((DateTime.Now - creation).TotalHours > 1d)
+                string path2 = Data.LOG_DIRECTORY + "current.txt";
+                FileInfo info = new FileInfo(path2);
+                bool replaced = false;
+                if (info.Exists)
                 {
-                    info.CopyTo(Data.LOG_DIRECTORY + creation.ToString(DATE_HEADER_FORMAT));
-                    if (Data.NetClient != null && Data.NetClient.connection != null && Data.NetClient.connection.IsActive)
+                    DateTime creation = info.CreationTime;
+                    if ((DateTime.Now - creation).TotalHours > 1d)
                     {
-                        using (FileStream str = info.OpenRead())
+                        string path = Data.LOG_DIRECTORY + creation.ToString(DATE_HEADER_FORMAT) + ".txt";
+                        try
                         {
-                            if (str.Length <= int.MaxValue)
+                            info.CopyTo(path);
+                            File.SetCreationTime(path, creation);
+                            File.SetLastAccessTime(path, creation);
+                            File.SetLastWriteTime(path, creation);
+
+                            if (Data.NetClient != null && Data.NetClient.connection != null && Data.NetClient.connection.IsActive)
                             {
-                                int len = (int)str.Length;
-                                byte[] bytes = new byte[len];
-                                str.Read(bytes, 0, len);
-                                SendLog.NetInvoke(bytes, creation);
+                                using (FileStream str = info.OpenRead())
+                                {
+                                    if (str.Length <= int.MaxValue)
+                                    {
+                                        int len = (int)str.Length;
+                                        byte[] bytes = new byte[len];
+                                        str.Read(bytes, 0, len);
+                                        SendLog.NetInvoke(bytes, creation);
+                                    }
+                                }
                             }
                         }
+                        catch (Exception ex)
+                        {
+                            L.LogError(ex);
+                        }
+                        info.Delete();
+                        replaced = true;
                     }
-                    info.Delete();
                 }
-            }
-            using (FileStream stream = new FileStream(info.FullName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
-            {
-                while (items.Count > 0)
+                using (FileStream stream = new FileStream(info.FullName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
                 {
-                    ActionLogItem item = items.Dequeue();
-                    WriteItem(ref item, stream);
+                    stream.Seek(0, SeekOrigin.End);
+                    while (items.Count > 0)
+                    {
+                        ActionLogItem item = items.Dequeue();
+                        WriteItem(ref item, stream);
+                    }
                 }
+
+                if (replaced)
+                    File.SetCreationTime(path2, DateTime.Now);
             }
         }
     }
@@ -82,19 +106,71 @@ public class ActionLog : MonoBehaviour
             else return v;
         }
     }
-    internal static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, R => R.ReadLongBytes(), null, (W, bytes) => W.WriteLong(bytes), null);
+    internal static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, R => R.ReadLongBytes(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
     internal static readonly NetCall<DateTime> AckLog = new NetCall<DateTime>(ReceiveAckLog);
+    internal static readonly NetCall RequestCurrentLog = new NetCall(1129);
+    internal static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes(), null, (W, bytes) => W.WriteLong(bytes), null, 65535, registerWithoutMethod: true);
 
     [NetCall(ENetCall.FROM_SERVER, 1128)]
     internal static void ReceiveAckLog(IConnection connection, DateTime fileReceived)
     {
-        string path = Data.LOG_DIRECTORY + fileReceived.ToString(DATE_HEADER_FORMAT);
+        string path = Data.LOG_DIRECTORY + fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt";
         if (File.Exists(path))
             File.Delete(path);
     }
+    [NetCall(ENetCall.FROM_SERVER, 1129)]
+    internal static void ReceiveCurrentLogRequest(IConnection connection)
+    {
+        string path2 = Data.LOG_DIRECTORY + "current.txt";
+        FileInfo info = new FileInfo(path2);
+        if (!info.Exists)
+        {
+            SendCurrentLog.Invoke(connection, new byte[0], default);
+            return;
+        }
+        using (FileStream str = info.OpenRead())
+        {
+            if (str.Length <= int.MaxValue)
+            {
+                int len = (int)str.Length;
+                byte[] bytes = new byte[len];
+                str.Read(bytes, 0, len);
+                SendCurrentLog.Invoke(connection, bytes, info.CreationTime);
+            }
+            else
+            {
+                byte[] bytes = new byte[int.MaxValue];
+                str.Read(bytes, 0, int.MaxValue);
+                SendCurrentLog.Invoke(connection, bytes, info.CreationTime);
+                return;
+            }
+        }
+    }
+
+    internal static void OnConnected()
+    {
+        F.CheckDir(Data.LOG_DIRECTORY, out bool success);
+        if (success)
+        {
+            foreach (string file in Directory.EnumerateFiles(Data.LOG_DIRECTORY))
+            {
+                try
+                {
+                    FileInfo info = new FileInfo(file);
+                    if (info.Name != "current.txt")
+                    {
+                        SendLog.NetInvoke(File.ReadAllBytes(file), info.CreationTime);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    L.LogError(ex);
+                }
+            }
+        }
+    }
 }
 
-[Translatable]
 public enum EActionLogType : byte
 {
     NONE,
@@ -168,17 +244,24 @@ public enum EActionLogType : byte
     DISBANDED_SQUAD,
     LOCKED_SQUAD,
     UNLOCKED_SQUAD,
-    // todo
     PLACED_RALLY,
     TELEPORTED_TO_RALLY,
     CREATED_ORDER,
     FUFILLED_ORDER,
     OWNED_VEHICLE_DIED,
     SERVER_STARTUP,
-    SERVER_GRACEFUL_SHUTDOWN,
     CREATE_KIT,
+    DELETE_KIT,
+    GIVE_KIT,
+    CHANGE_KIT_ACCESS,
     EDIT_KIT,
     SET_KIT_PROPERTY,
     CREATE_VEHICLE_DATA,
-    SET_VEHICLE_DATA_PROPERTY
+    DELETE_VEHICLE_DATA,
+    REGISTERED_SPAWN,
+    DEREGISTERED_SPAWN,
+    LINKED_VEHICLE_BAY_SIGN,
+    UNLINKED_VEHICLE_BAY_SIGN,
+    SET_VEHICLE_DATA_PROPERTY,
+    VEHICLE_BAY_FORCE_SPAWN
 }

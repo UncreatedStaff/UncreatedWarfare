@@ -128,7 +128,9 @@ namespace Uncreated.Warfare
                 "vehiclebay",
                 "vb",
                 "whitelist",
-                "wl"
+                "wl",
+                "struct",
+                "structure"
             };
             private static bool ShouldLog(string message)
             {
@@ -207,7 +209,7 @@ namespace Uncreated.Warfare
                 Color chatted = Teams.TeamManager.GetTeamColor(team);
                 if (callingPlayer.isAdmin && !Provider.hideAdmins)
                     chatted = Palette.ADMIN;
-                bool isRich = false;
+                bool isRich = true;
                 bool isVisible = true;
                 ChatManager.onChatted?.Invoke(callingPlayer, mode, ref chatted, ref isRich, text, ref isVisible);
                 if (!(ChatManager.process(callingPlayer, text, fromUnityEvent) && isVisible))
@@ -219,7 +221,7 @@ namespace Uncreated.Warfare
                 else
                 {
                     text = text.Replace('>', '<');
-                    text = "<color=#" + Teams.TeamManager.GetTeamColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
+                    text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
                     if (mode != EChatMode.LOCAL)
                     {
                         if (mode == EChatMode.GROUP)

@@ -136,6 +136,8 @@ namespace Uncreated.Warfare.Kits
 
                     if (adding)
                     {
+                        ActionLog.Add(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "ADDED DELAY " + type.ToString() + " VALUE: " + val.ToString() 
+                            + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()), player);
                         data.AddDelay(type, val, gamemode);
                         VehicleBay.Save();
                         VehicleSpawner.UpdateSigns(data.VehicleID);
@@ -154,6 +156,8 @@ namespace Uncreated.Warfare.Kits
                         {
                             VehicleSpawner.UpdateSigns(data.VehicleID);
                             VehicleBay.Save();
+                            ActionLog.Add(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.Locale) + " DELAY(S) " + type.ToString() + " VALUE: " + val.ToString()
+                                + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()), player);
                         }
                         player.SendChat("vehiclebay_delay_removed", rem.ToString(Data.Locale));
                     }
@@ -167,6 +171,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out _))
                         {
+                            ActionLog.Add(EActionLogType.CREATE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}", player);
                             VehicleBay.AddRequestableVehicle(vehicle);
                             player.SendChat("vehiclebay_added", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
                         }
@@ -178,6 +183,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         if (VehicleBay.VehicleExists(vehicle.asset.GUID, out _))
                         {
+                            ActionLog.Add(EActionLogType.DELETE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}", player);
                             VehicleBay.RemoveRequestableVehicle(vehicle.asset.GUID);
                             player.SendChat("vehiclebay_removed", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
                         }
@@ -188,6 +194,7 @@ namespace Uncreated.Warfare.Kits
                     {
                         if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
                         {
+                            ActionLog.Add(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA", player);
                             data.SaveMetaData(vehicle);
                             VehicleBay.Save();
                             player.SendChat("vehiclebay_savemeta", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
@@ -230,6 +237,7 @@ namespace Uncreated.Warfare.Kits
                         }
                         else
                         {
+                            ActionLog.Add(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SET " + property.ToUpper() + " >> " + newValue.ToUpper(), player);
                             player.SendChat("vehiclebay_setprop", property.ToUpper(), vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName, newValue.ToUpper());
                             if (vehicle.asset == null) return;
                             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
@@ -259,6 +267,7 @@ namespace Uncreated.Warfare.Kits
                                     if (!vehicleData.CrewSeats.Contains(index))
                                     {
                                         // success
+                                        ActionLog.Add(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - ADDED CREW SEAT {seat}.", player);
                                         VehicleBay.AddCrewmanSeat(vehicle.asset.GUID, index);
                                         player.SendChat("vehiclebay_seatadded", seat);
                                     }
@@ -284,6 +293,7 @@ namespace Uncreated.Warfare.Kits
                                     if (vehicleData.CrewSeats.Contains(index))
                                     {
                                         // success
+                                        ActionLog.Add(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - REMOVED CREW SEAT {seat}.", player);
                                         VehicleBay.RemoveCrewmanSeat(vehicle.asset.GUID, index);
                                         player.SendChat("vehiclebay_seatadded", seat);
                                     }
@@ -331,6 +341,7 @@ namespace Uncreated.Warfare.Kits
                                 }
                             }
 
+                            ActionLog.Add(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SET ITEMS", player);
                             VehicleBay.SetItems(vehicle.asset.GUID, items.ToArray());
 
                             if (items.Count == 0)
@@ -366,6 +377,8 @@ namespace Uncreated.Warfare.Kits
                                 {
                                     if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                                     {
+                                        ActionLog.Add(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                            $"REGISTERED SPAWN AT {barricade.point:N2} ID: {barricade.instanceID}", player);
                                         VehicleSpawner.CreateSpawn(barricadeDrop!, barricade, asset.GUID);
                                         player.SendChat("vehiclebay_spawn_registered", asset.vehicleName);
                                     }
@@ -400,11 +413,16 @@ namespace Uncreated.Warfare.Kits
                                 }
                             }
                         }
-                        else
-                        if (op == "deregister" || op == "dereg" || op == "unregister" || op == "unreg")
+                        else if (op == "deregister" || op == "dereg" || op == "unregister" || op == "unreg")
                         {
-                            if (VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
+                            if (VehicleSpawner.IsRegistered(barricade.instanceID, out VehicleSpawn spawn, EStructType.BARRICADE))
                             {
+                                if (Assets.find(spawn.VehicleID) is VehicleAsset asset)
+                                    ActionLog.Add(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                                                               $"UNREGISTERED SPAWN AT {barricade.point:N2} ID: {barricade.instanceID}", player);
+                                else
+                                    ActionLog.Add(EActionLogType.REGISTERED_SPAWN, $"{spawn.VehicleID:N} - " +
+                                        $"UNREGISTERED SPAWN AT {barricade.point:N2} ID: {barricade.instanceID}", player);
                                 VehicleSpawner.DeleteSpawn(barricade.instanceID, EStructType.BARRICADE);
                                 player.SendChat("vehiclebay_spawn_deregistered");
                             }
@@ -426,6 +444,12 @@ namespace Uncreated.Warfare.Kits
                                 {
                                     asset = Assets.find(spawn.VehicleID) as VehicleAsset;
                                 }
+                                if (asset != null)
+                                    ActionLog.Add(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                                                               $"FORCED VEHICLE TO SPAWN AT {barricade.point:N2} ID: {barricade.instanceID}", player);
+                                else
+                                    ActionLog.Add(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleID:N} - " +
+                                        $"FORCED VEHICLE TO SPAWN AT {barricade.point:N2} ID: {barricade.instanceID}", player);
                                 spawn.SpawnVehicle();
                                 player.SendChat("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString("N") : asset.vehicleName);
                             }
@@ -466,6 +490,13 @@ namespace Uncreated.Warfare.Kits
                                         if (VehicleSigns.SignExists(sign, out _))
                                         {
                                             VehicleSigns.UnlinkSign(sign);
+                                        }
+
+                                        VehicleBayComponent? c2 = c.currentlylinking.Component;
+                                        if (c2 != null)
+                                        {
+                                            ActionLog.Add(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{barricadeDrop.asset.itemName} / {barricadeDrop.asset.id} / {barricadeDrop.asset.GUID:N} ID: {barricadeDrop.instanceID}- " +
+                                                $"LINKED TO SPAWN AT {c2.transform.position:N2} ID: {c.currentlylinking.SpawnPadInstanceID}", player);
                                         }
                                         VehicleSigns.LinkSign(sign, c.currentlylinking);
                                         player.SendChat("vehiclebay_link_finished");
@@ -548,6 +579,8 @@ namespace Uncreated.Warfare.Kits
                                     {
                                         if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
                                         {
+                                            ActionLog.Add(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                                $"REGISTERED SPAWN AT {structure.point:N2} ID: {structure.instanceID}", player);
                                             VehicleSpawner.CreateSpawn(structureDrop!, structure, asset.GUID);
                                             player.SendChat("vehiclebay_spawn_registered", asset.vehicleName);
                                         }
@@ -582,8 +615,14 @@ namespace Uncreated.Warfare.Kits
                             }
                             else if (op == "deregister" || op == "dereg")
                             {
-                                if (VehicleSpawner.IsRegistered(structureDrop!.instanceID, out _, EStructType.STRUCTURE))
+                                if (VehicleSpawner.IsRegistered(structureDrop!.instanceID, out VehicleSpawn spawn, EStructType.STRUCTURE))
                                 {
+                                    if (Assets.find(spawn.VehicleID) is VehicleAsset asset)
+                                        ActionLog.Add(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                            $"UNREGISTERED SPAWN AT {structure.point:N2} ID: {structure.instanceID}", player);
+                                    else
+                                        ActionLog.Add(EActionLogType.REGISTERED_SPAWN, $"{spawn.VehicleID:N} - " +
+                                            $"UNREGISTERED SPAWN AT {structure.point:N2} ID: {structure.instanceID}", player);
                                     VehicleSpawner.DeleteSpawn(structureDrop.instanceID, EStructType.STRUCTURE);
                                     player.SendChat("vehiclebay_spawn_deregistered");
                                 }
@@ -605,6 +644,12 @@ namespace Uncreated.Warfare.Kits
                                     {
                                         asset = Assets.find(spawn.VehicleID) as VehicleAsset;
                                     }
+                                    if (asset != null)
+                                        ActionLog.Add(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                            $"FORCED VEHICLE TO SPAWN AT {structure.point:N2} ID: {structure.instanceID}", player);
+                                    else
+                                        ActionLog.Add(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleID:N} - " +
+                                            $"FORCED VEHICLE TO SPAWN AT {structure.point:N2} ID: {structure.instanceID}", player);
                                     spawn.SpawnVehicle();
                                     player.SendChat("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString("N") : asset.vehicleName);
                                 }

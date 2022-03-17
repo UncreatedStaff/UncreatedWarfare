@@ -117,15 +117,13 @@ namespace Uncreated.Warfare
         internal static void OnStructurePlaced(StructureRegion region, StructureDrop drop)
         {
             SDG.Unturned.StructureData data = drop.GetServersideData();
-            ActionLog.Add(EActionLogType.PLACE_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}", data.owner);
+            ActionLog.Add(EActionLogType.PLACE_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
         }
         internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            // replacing barricade...
-
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
             BarricadeComponent owner = drop.model.gameObject.AddComponent<BarricadeComponent>();
@@ -134,7 +132,7 @@ namespace Uncreated.Warfare
             owner.Player = player?.player;
             owner.BarricadeGUID = data.barricade.asset.GUID;
 
-            ActionLog.Add(EActionLogType.PLACE_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}", data.owner);
+            ActionLog.Add(EActionLogType.PLACE_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
 
             RallyManager.OnBarricadePlaced(drop, region);
 
@@ -1271,7 +1269,7 @@ namespace Uncreated.Warfare
             if (drop.model.TryGetComponent(out BarricadeComponent c))
             {
                 SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
-                ActionLog.Add(EActionLogType.DESTROY_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}.", c.LastDamager);
+                ActionLog.Add(EActionLogType.DESTROY_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", c.LastDamager);
                 if (damager != null && data.group.GetTeam() == damager.GetTeam())
                 {
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
@@ -1308,7 +1306,7 @@ namespace Uncreated.Warfare
             if (drop.model.TryGetComponent(out BarricadeComponent c))
             {
                 SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
-                ActionLog.Add(EActionLogType.DESTROY_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}.", c.LastDamager);
+                ActionLog.Add(EActionLogType.DESTROY_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", c.LastDamager);
                 if (damager != null && data.group.GetTeam() == damager.GetTeam())
                 {
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);

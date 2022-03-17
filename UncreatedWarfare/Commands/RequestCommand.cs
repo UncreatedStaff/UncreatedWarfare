@@ -418,14 +418,14 @@ namespace Uncreated.Warfare.Commands
                     if (comp != null)
                     {
                         comp.OnRequest();
-                        ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset} at spawn {comp.gameObject.transform.position.ToString("N2")}", ucplayer);
+                        ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2")}", ucplayer);
                     }
                     else
-                        ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset}", ucplayer);
+                        ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
                     Data.Reporter.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.SpawnPadInstanceID);
                 }
                 else
-                    ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset}", ucplayer);
+                    ActionLog.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
 
                 vehicle.updateVehicle();
                 vehicle.updatePhysics();
