@@ -93,7 +93,7 @@ namespace Uncreated.Warfare.Components
                 InteractableVehicle? vehicle = firer.movement.getVehicle();
                 if (vehicle != null)
                 {
-                    foreach (var turret in vehicle.turrets)
+                    foreach (Passenger turret in vehicle.turrets)
                     {
                         if (turret.player != null && turret.player.player == firer)
                         {
