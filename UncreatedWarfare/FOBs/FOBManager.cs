@@ -199,10 +199,6 @@ namespace Uncreated.Warfare.FOBs
 
             if (fob.Team == 1)
             {
-                byte[] state = Convert.FromBase64String(config.data.T1RadioState);
-                fob.Radio.GetServersideData().barricade.state = state;
-                fob.Radio.ReceiveUpdateState(state);
-
                 int number = 1;
                 bool placed = false;
                 for (int i = 0; i < Team1FOBs.Count; i++)
@@ -228,10 +224,6 @@ namespace Uncreated.Warfare.FOBs
             }
             else if (fob.Team == 2)
             {
-                byte[] state = Convert.FromBase64String(config.data.T2RadioState);
-                fob.Radio.GetServersideData().barricade.state = state;
-                fob.Radio.ReceiveUpdateState(state);
-
                 int number = 1;
                 bool placed = false;
                 for (int i = 0; i < Team2FOBs.Count; i++)
