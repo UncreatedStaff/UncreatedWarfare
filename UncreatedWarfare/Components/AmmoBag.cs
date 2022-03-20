@@ -46,6 +46,7 @@ namespace Uncreated.Warfare.FOBs
             if (Ammo <= 0 && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             {
                 BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                Destroy(gameObject);
             }
         }
     }
