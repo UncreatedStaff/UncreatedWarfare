@@ -408,7 +408,7 @@ namespace Uncreated.Warfare.FOBs
 #endif
             if (!Data.Is(out Insurgency ins)) return;
 
-            ulong team = cache.GetServersideData().group;
+            ulong team = cache.GetServersideData().group.GetTeam();
 
             UCPlayer? killer = null;
             if (cache.model.TryGetComponent(out BarricadeComponent component))

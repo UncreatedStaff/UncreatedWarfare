@@ -21,18 +21,16 @@ namespace Uncreated.Warfare
             StructureDrop.OnSalvageRequested_Global += OnStructureSalvageRequested;
             StructureManager.onDeployStructureRequested += OnStructurePlaceRequested;
             BarricadeManager.onModifySignRequested += OnEditSignRequest;
-            BarricadeManager.onDamageBarricadeRequested += OnBarricadeDamageRequested;
-            StructureManager.onDamageStructureRequested += OnStructureDamageRequested;
             Reload();
         }
-        private void OnStructureDamageRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+        internal void OnStructureDamageRequested(CSteamID instigatorSteamID, Transform structureTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
             if (F.IsInMain(structureTransform.position))
             {
                 shouldAllow = false;
             }
         }
-        private void OnBarricadeDamageRequested(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
+        internal void OnBarricadeDamageRequested(CSteamID instigatorSteamID, Transform barricadeTransform, ref ushort pendingTotalDamage, ref bool shouldAllow, EDamageOrigin damageOrigin)
         {
             if (F.IsInMain(barricadeTransform.position))
             {
