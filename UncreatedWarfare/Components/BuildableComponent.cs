@@ -352,7 +352,7 @@ namespace Uncreated.Warfare.Components
                 }
                 if (buildable.type == EBuildableType.EMPLACEMENT && buildable.emplacementData != null)
                 {
-                    int existing = UCVehicleManager.GetNearbyVehicles(buildable.structureID, fob.Radius, fob.Position).Count();
+                    int existing = UCVehicleManager.GetNearbyVehicles(buildable.emplacementData.vehicleID, fob.Radius, fob.Position).Count();
                     if (existing >= buildable.emplacementData.allowedPerFob)
                     {
                         // max emplacements of this type reached

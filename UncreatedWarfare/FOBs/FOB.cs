@@ -92,9 +92,23 @@ namespace Uncreated.Warfare.Components
                         BarricadeManager.damage(transform, loss, 1, false, default, EDamageOrigin.Useable_Melee);
                     }
                 }
+                if (count % (60 / tickFrequency) == 0)
+                {
+                    if (!parent.IsBleeding)
+                    {
+                        byte[] state = new byte[0];
+                        if (parent.Team == 1)
+                            state = Convert.FromBase64String(FOBManager.config.data.T1RadioState);
+                        else if (parent.Team == 2)
+                            state = Convert.FromBase64String(FOBManager.config.data.T2RadioState);
+
+                        parent.Radio.GetServersideData().barricade.state = state;
+                        parent.Radio.ReceiveUpdateState(state);
+                    }
+                }
 
                 count ++;
-                if (count >= (2 / tickFrequency))
+                if (count >= (60 / tickFrequency))
                     count = 0;
 #if DEBUG
                 profiler.Dispose();

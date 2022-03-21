@@ -733,9 +733,14 @@ namespace Uncreated.Warfare.Vehicles
                         UpdateSign();
                     }
                 }
-                else
+                else if (vehicle != null && spawnData.HasLinkedVehicle(out InteractableVehicle veh) && !veh.lockedOwner.IsValid())
                 {
                     state = EVehicleBayState.READY;
+                    UpdateSign();
+                }
+                else
+                {
+                    state = EVehicleBayState.IN_USE;
                     UpdateSign();
                 }
             }
