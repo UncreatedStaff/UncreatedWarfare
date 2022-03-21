@@ -430,7 +430,11 @@ namespace Uncreated.Warfare
 
         public static bool IsValidSteam64ID(ulong id)
         {
-            return (int)Math.Floor(id / 100000000000000m) == 765;
+            return id / 100000000000000ul == 765;
+        }
+        public static bool IsValidSteam64ID(CSteamID id)
+        {
+            return id.m_SteamID / 100000000000000ul == 765;
         }
     }
 }
