@@ -190,9 +190,6 @@ namespace Uncreated.Warfare.Components
 
             foreach (Transform countermeasure in ActiveCountermeasures)
             {
-                if (countermeasure.gameObject is null || !countermeasure.gameObject.activeInHierarchy)
-                    continue;
-
                 if ((countermeasure.position - projectile.transform.position).sqrMagnitude < Math.Pow(250, 2))
                 {
                     Vector3 idealDirection = countermeasure.position - lookOrigin.position;
