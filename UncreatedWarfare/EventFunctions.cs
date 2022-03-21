@@ -620,6 +620,12 @@ namespace Uncreated.Warfare
             }
             else
             {
+                if (Data.Gamemode != null && Data.Gamemode.UseWhitelist)
+                {
+                    Data.Gamemode.Whitelister.OnBarricadeDamageRequested(instigatorSteamID, barricadeTransform, ref pendingTotalDamage, ref shouldAllow, damageOrigin);
+                    if (!shouldAllow)
+                        return;
+                }
                 BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
                 if (drop == null) return;
                 if (drop.asset.GUID == Gamemode.Config.Barricades.FOBRadioDamagedGUID && instigatorSteamID != CSteamID.Nil)
@@ -719,6 +725,12 @@ namespace Uncreated.Warfare
             }
             else
             {
+                if (Data.Gamemode != null && Data.Gamemode.UseWhitelist)
+                {
+                    Data.Gamemode.Whitelister.OnStructureDamageRequested(instigatorSteamID, structureTransform, ref pendingTotalDamage, ref shouldAllow, damageOrigin);
+                    if (!shouldAllow)
+                        return;
+                }
                 StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
                 if (drop == null) return;
                 if (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure s) && s.transform == structureTransform)
@@ -822,22 +834,6 @@ namespace Uncreated.Warfare
                 if (p.status != EFlagStatus.BLANK && p.status != EFlagStatus.DONT_DISPLAY)
                     p.SendToPlayer(player.channel.owner);
             }
-#if false
-            if (Vehicles.VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
-            {
-                if (spawn.type == Structures.EStructType.BARRICADE && spawn.BarricadeDrop != null &&
-                    spawn.BarricadeDrop.model.TryGetComponent(out Vehicles.SpawnedVehicleComponent c))
-                {
-                    c.StopIdleRespawnTimer();
-                }
-                else if
-                   (spawn.type == Structures.EStructType.STRUCTURE && spawn.StructureDrop != null &&
-                    spawn.StructureDrop.model.TryGetComponent(out c))
-                {
-                    c.StopIdleRespawnTimer();
-                }
-            }
-#endif
         }
         static readonly Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
         internal static void RemoveDamageMessageTicks(ulong player)
