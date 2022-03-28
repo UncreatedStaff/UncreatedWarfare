@@ -384,13 +384,12 @@ namespace Uncreated.Warfare
                     if (Squad.Members[i].Player.transform != null && Squad.Members[i].Steam64 != Steam64 && (Position - Squad.Members[i].Position).sqrMagnitude < Math.Pow(distance, 2))
                         count++;
                 }
-                return (int)Math.Round(amount * (1 + ((float)count / 10)));
+                return Mathf.RoundToInt(amount * (1 + (float)count / 10));
             }
             catch
             {
                 return amount;
             }
-
         }
         public bool IsOnFOB(out FOB fob)
         {

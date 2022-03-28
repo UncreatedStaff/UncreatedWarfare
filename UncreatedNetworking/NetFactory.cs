@@ -405,6 +405,7 @@ namespace Uncreated.Networking
     {
         FROM_SERVER = 0,
         FROM_CLIENT = 1,
-        FROM_EITHER = 2
+        FROM_EITHER = 2,
+        NONE = 3
     }
 }

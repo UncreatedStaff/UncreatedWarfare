@@ -10,4 +10,4 @@ dotnet_style_object_initializer = false
 dotnet_diagnostic.CS8618.severity = silent
 
 # CS1591: Missing XML comment for publicly visible type or member
-dotnet_diagnostic.CS1591.severity = suggestion
+dotnet_diagnostic.CS1591.severity = none

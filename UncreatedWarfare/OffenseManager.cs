@@ -383,7 +383,7 @@ namespace Uncreated.Warfare
             await UCWarfare.ToUpdate();
         }
 
-        public static async Task MutePlayer(UCPlayer muted, ulong mutedS64, UCPlayer? admin, EMuteType type, int duration, string reason)
+        public static async Task MutePlayer(UCPlayer? muted, ulong mutedS64, ulong adminid, EMuteType type, int duration, string reason)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -392,7 +392,7 @@ namespace Uncreated.Warfare
             await Data.DatabaseManager.NonQueryAsync(
                 "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4);",
                 new object[]
-                    { mutedS64, admin == null ? 0 : admin.Steam64, reason, duration, now, (byte)type });
+                    { mutedS64, adminid, reason, duration, now, (byte)type });
             DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : now + TimeSpan.FromMinutes(duration);
             if (muted != null && muted.TimeUnmuted < unmutedTime)
             {
@@ -400,6 +400,7 @@ namespace Uncreated.Warfare
                 muted.MuteReason = reason;
                 muted.MuteType = type;
             }
+            Invocations.Shared.LogMuted.NetInvoke(mutedS64, adminid, (byte)type, duration, reason, now);
         }
         public static void ApplyMuteSettings(UCPlayer joining)
         {

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Players;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -44,31 +45,16 @@ namespace Uncreated.Warfare.Commands
                 else
                     goto CantReadDuration;
 
-            UCPlayer? player;
-            if (ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong target) && OffenseManager.IsValidSteam64ID(target))
+            if (!(ulong.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out ulong target) && OffenseManager.IsValidSteam64ID(target)))
             {
-                player = UCPlayer.FromID(target);
-            }
-            else
-            {
-                player = UCPlayer.FromName(command[1], true);
+                UCPlayer? player = UCPlayer.FromName(command[1], true);
                 if (player == null) goto NoPlayerFound;
                 target = player.Steam64;
             }
 
             string reason = string.Join(" ", command, 3, command.Length - 3);
-
-            if (player != null)
-            {
-                if (duration == -1)
-                    ActionLog.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: PERMANENT");
-                else
-                    ActionLog.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + ((uint)duration).GetTimeFromMinutes(0));
-                OffenseManager.MutePlayer(player, target, admin, type, duration, reason).ConfigureAwait(false);
-            }
-
+            MutePlayer(target, admin == null ? 0ul : admin.Steam64, type, duration, reason);
             return;
-
         Syntax:
             if (admin == null)
                 L.Log(Translation.Translate("mute_syntax", 0, out _), ConsoleColor.Yellow);
@@ -88,7 +74,96 @@ namespace Uncreated.Warfare.Commands
                 admin.SendChat("mute_cant_read_duration");
             return;
         }
+
+        public static void MutePlayer(ulong violator, ulong admin, EMuteType type, int duration, string reason)
+        {
+            UCPlayer? muted = UCPlayer.FromID(violator);
+            UCPlayer? muter = UCPlayer.FromID(admin);
+            Task.Run(async () => {
+                await OffenseManager.MutePlayer(muted, violator, admin, type, duration, reason);
+                FPlayerName names = await F.GetPlayerOriginalNamesAsync(violator);
+                FPlayerName names2 = await F.GetPlayerOriginalNamesAsync(admin);
+                await UCWarfare.ToUpdate();
+                string dur = duration == -1 ? "PERMANENT" : ((uint)duration).GetTimeFromMinutes(0);
+                ActionLog.Add(EActionLogType.MUTE_PLAYER, $"MUTED {violator} FOR \"{reason}\" DURATION: " + dur);
+
+                if (muter == null)
+                {
+                    if (duration == -1)
+                    {
+                        foreach (LanguageSet set in Translation.EnumerateLanguageSets(violator, admin))
+                        {
+                            string e = Translation.TranslateEnum(type, set.Language);
+                            while (set.MoveNext())
+                            {
+                                Chat.Broadcast(set, "mute_broadcast_operator_permanent", names.CharacterName, e);
+                            }
+                        }
+                        L.Log(Translation.Translate("mute_feedback", 0, out _, names.PlayerName, violator.ToString(),
+                            dur, Translation.TranslateEnum(type, 0), reason));
+                    }
+                    else
+                    {
+                        foreach (LanguageSet set in Translation.EnumerateLanguageSets(violator, admin))
+                        {
+                            string e = Translation.TranslateEnum(type, set.Language);
+                            while (set.MoveNext())
+                            {
+                                Chat.Broadcast(set, "mute_broadcast_operator", names.CharacterName, e, dur);
+                            }
+                        }
+                        L.Log(Translation.Translate("mute_feedback_permanent", 0, out _, names.PlayerName, violator.ToString(),
+                            Translation.TranslateEnum(type, 0), reason));
+                    }
+                }
+                else
+                {
+                    if (duration == -1)
+                    {
+                        foreach (LanguageSet set in Translation.EnumerateLanguageSets(violator, admin))
+                        {
+                            string e = Translation.TranslateEnum(type, set.Language);
+                            while (set.MoveNext())
+                            {
+                                Chat.Broadcast(set, "mute_broadcast_permanent", names.CharacterName, names2.CharacterName, e);
+                            }
+                        }
+                        muter.SendChat("mute_feedback_permanent", names.PlayerName, violator.ToString(), Translation.TranslateEnum(type, admin));
+                    }
+                    else
+                    {
+                        foreach (LanguageSet set in Translation.EnumerateLanguageSets(violator, admin))
+                        {
+                            string e = Translation.TranslateEnum(type, set.Language);
+                            while (set.MoveNext())
+                            {
+                                Chat.Broadcast(set, "mute_broadcast", names.CharacterName, names2.CharacterName, e, dur);
+                            }
+                        }
+                        muter.SendChat("mute_feedback", names.PlayerName, violator.ToString(), dur, Translation.TranslateEnum(type, admin));
+                    }
+                }
+                if (muted != null)
+                {
+                    if (admin == 0)
+                    {
+                        if (duration == -1)
+                            muted.SendChat("mute_dm_operator_permanent", reason, Translation.TranslateEnum(type, muted));
+                        else
+                            muted.SendChat("mute_dm_operator", reason, dur, Translation.TranslateEnum(type, muted));
+                    }
+                    else
+                    {
+                        if (duration == -1)
+                            muted.SendChat("mute_dm_permanent", names2.CharacterName, reason, Translation.TranslateEnum(type, muted));
+                        else
+                            muted.SendChat("mute_dm", names2.CharacterName, reason, dur, Translation.TranslateEnum(type, muted));
+                    }
+                }
+            }).ConfigureAwait(false);
+        }
     }
+    [Translatable]
     public enum EMuteType : byte
     {
         NONE = 0,

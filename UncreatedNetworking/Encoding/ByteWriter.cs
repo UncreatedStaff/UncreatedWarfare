@@ -1,8 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Uncreated.Networking.Encoding
 {
@@ -12,77 +17,110 @@ namespace Uncreated.Networking.Encoding
         public int size = 0;
         protected byte[] buffer;
         public byte[] ByteBuffer => buffer;
+        protected static byte[] emptyArray = new byte[0];
         protected bool shouldPrepend;
         public int BaseCapacity;
         public ushort message;
+        private readonly bool _isBigEndian;
         public ByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0)
         {
             this.message = message;
+            this._isBigEndian = !BitConverter.IsLittleEndian;
             this.BaseCapacity = capacity;
-            buffer = new byte[BaseCapacity];
+            if (BaseCapacity < 1)
+            {
+                buffer = emptyArray;
+            }
+            else
+            {
+                buffer = new byte[BaseCapacity];
+            }
             this.shouldPrepend = shouldPrepend;
-        }
-        /// <summary>
-        /// Returns the buffer and resets the internal buffer.
-        /// </summary>
-        public byte[] FinishWrite()
-        {
-            byte[] rtn = buffer;
-            Flush();
-            return rtn;
         }
         private void ExtendBuffer(int newsize)
         {
-            if (buffer.Length < newsize)
-            {
-                byte[] old = buffer;
-                buffer = new byte[newsize];
-                Buffer.BlockCopy(old, 0, buffer, 0, old.Length);
-            }
+            byte[] old = buffer;
+            int sz2 = old.Length;
+            int sz = sz2 + sz2 / 2;
+            if (sz < newsize) sz = newsize;
+            buffer = new byte[sz];
+            Buffer.BlockCopy(old, 0, buffer, 0, sz2);
         }
         public unsafe void PrependData(ushort MessageID)
         {
             if (!shouldPrepend) return;
             byte[] old = buffer;
             buffer = new byte[size + sizeof(ushort) + sizeof(int)];
-            Buffer.BlockCopy(old, 0, buffer, sizeof(ushort) + sizeof(int), size);
+            Buffer.BlockCopy(old, 0, buffer, sizeof(ushort) + sizeof(int), old.Length);
 
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)ptr = MessageID;
-                *(int*)(ptr + sizeof(ushort)) = size;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = MessageID;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
+                *(int*)ptr2 = size;
+                EndianCheck(ptr2, sizeof(int));
             }
         }
         public static unsafe void CopyPrependData(byte[] bytes, int index, ushort MessageID, int length)
         {
             fixed (byte* ptr = bytes)
             {
-                *(ushort*)(ptr + index) = MessageID;
-                *(int*)(ptr + index + sizeof(ushort)) = length;
+                byte* ptr2 = ptr + index;
+                *(ushort*)ptr2 = MessageID;
+                if (!BitConverter.IsLittleEndian)
+                {
+                    byte* stack = stackalloc byte[sizeof(ushort)];
+                    Buffer.MemoryCopy(ptr, stack, sizeof(ushort), sizeof(ushort));
+                    for (int i = 0; i < sizeof(ushort); i++)
+                        ptr[i] = stack[sizeof(ushort) - i - 1];
+                }
+                ptr2 += sizeof(ushort);
+                *(int*)ptr2 = length;
+                if (!BitConverter.IsLittleEndian)
+                {
+                    byte* stack = stackalloc byte[sizeof(int)];
+                    Buffer.MemoryCopy(ptr, stack, sizeof(int), sizeof(int));
+                    for (int i = 0; i < sizeof(int); i++)
+                        ptr[i] = stack[sizeof(int) - i - 1];
+                }
             }
         }
-        public unsafe void Write(int n)
+        private unsafe void EndianCheck(byte* litEndStrt, int size)
         {
-            int newsize = size + sizeof(int);
+            if (_isBigEndian && size > 1)
+            {
+                byte* stack = stackalloc byte[size];
+                Buffer.MemoryCopy(litEndStrt, stack, size, size);
+                for (int i = 0; i < size; i++)
+                    litEndStrt[i] = stack[size - i - 1];
+            }
+        }
+        private unsafe void WriteInternal<T>(T value) where T : unmanaged
+        {
+            int newsize = size + sizeof(T);
             if (newsize > buffer.Length)
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(int*)(ptr + size) = n;
+                byte* ptr2 = ptr + size;
+                *(T*)ptr2 = value;
+                EndianCheck(ptr2, sizeof(T));
             }
             size = newsize;
         }
-        public unsafe void Write(uint n)
-        {
-            int newsize = size + sizeof(uint);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(uint*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
+
+        private static readonly MethodInfo WriteInt32Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(int) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(int n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteUInt32Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(uint) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(uint n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteUInt8Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(byte) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Write(byte n)
         {
             int newsize = size + 1;
@@ -91,6 +129,9 @@ namespace Uncreated.Networking.Encoding
             buffer[size] = n;
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteInt8Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(sbyte) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Write(sbyte n)
         {
             int newsize = size + 1;
@@ -99,6 +140,9 @@ namespace Uncreated.Networking.Encoding
             buffer[size] = unchecked((byte)n);
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteBooleanMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(bool) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Write(bool n)
         {
             int newsize = size + 1;
@@ -107,95 +151,42 @@ namespace Uncreated.Networking.Encoding
             buffer[size] = (byte)(n ? 1 : 0);
             size = newsize;
         }
-        public unsafe void Write(long n)
-        {
-            int newsize = size + sizeof(long);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(long*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
-        public unsafe void Write(ulong n)
-        {
-            int newsize = size + sizeof(ulong);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(ulong*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
-        public unsafe void Write(short n)
-        {
-            int newsize = size + sizeof(short);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(short*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
-        public unsafe void Write(ushort n)
-        {
-            int newsize = size + sizeof(ushort);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(ushort*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
-        public unsafe void Write(float n)
-        {
-            int newsize = size + sizeof(float);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(float*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
-        public unsafe void Write(decimal n)
-        {
-            int newsize = size + sizeof(decimal);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(decimal*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
-        public unsafe void Write(double n)
-        {
-            int newsize = size + sizeof(double);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(double*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
-        public unsafe void Write(char n)
-        {
-            int newsize = size + sizeof(char);
-            if (newsize > buffer.Length)
-                ExtendBuffer(newsize);
-            fixed (byte* ptr = buffer)
-            {
-                *(char*)(ptr + size) = n;
-            }
-            size = newsize;
-        }
-        public void Write(string n)
+
+        private static readonly MethodInfo WriteInt64Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(long) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(long n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteUInt64Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(ulong) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(ulong n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteInt16Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(short) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(short n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteUInt16Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(ushort) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(ushort n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteFloatMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(float) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(float n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteDecimalMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(decimal) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(decimal n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteDoubleMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(double) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(double n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteCharMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(char) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(char n) => WriteInternal(n);
+
+        private static readonly MethodInfo WriteStringMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(string) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(string n)
         {
             byte[] str = System.Text.Encoding.UTF8.GetBytes(n);
             if (str.Length > ushort.MaxValue)
@@ -207,7 +198,13 @@ namespace Uncreated.Networking.Encoding
             int newsize = size + sizeof(ushort) + str.Length;
             if (newsize > buffer.Length)
                 ExtendBuffer(newsize);
-            Buffer.BlockCopy(BitConverter.GetBytes((ushort)str.Length), 0, buffer, size, sizeof(ushort));
+
+            fixed (byte* ptr = buffer)
+            {
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)str.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+            }
             Buffer.BlockCopy(str, 0, buffer, size + sizeof(ushort), str.Length);
             size = newsize;
         }
@@ -243,8 +240,17 @@ namespace Uncreated.Networking.Encoding
             Buffer.BlockCopy(str, 0, buffer, size + 1, str.Length);
             size = newsize;
         }
-        public void Write(DateTime n) => Write(n.Ticks);
-        public void Write(TimeSpan n) => Write(n.Ticks);
+
+        private static readonly MethodInfo WriteDateTimeMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(DateTime) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void Write(DateTime n) => WriteInternal(n.Ticks);
+
+        private static readonly MethodInfo WriteTimeSpanMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(TimeSpan) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public void Write(TimeSpan n) => WriteInternal(n.Ticks);
+
+        private static readonly MethodInfo WriteGUIDMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(Guid) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Write(Guid n)
         {
             byte[] guid = n.ToByteArray();
@@ -254,38 +260,148 @@ namespace Uncreated.Networking.Encoding
             Buffer.BlockCopy(guid, 0, buffer, size, guid.Length);
             size = newsize;
         }
-        public unsafe void Write<TEnum>(TEnum o) where TEnum : struct, Enum
-        {
-            Type e = typeof(TEnum);
-            if (!e.IsEnum)
-            {
-                Logging.LogWarning($"Tried to write {e.Name} as an enum.");
-                return;
-            }
 
-            Type underlying = Enum.GetUnderlyingType(e);
-            if (underlying.IsPrimitive)
+        private static readonly MethodInfo WriteVector2Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(Vector2) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(Vector2 n)
+        {
+            int newsize = size + sizeof(float) * 2;
+            if (newsize > buffer.Length)
+                ExtendBuffer(newsize);
+            fixed (byte* ptr = buffer)
             {
-                if (underlying == typeof(byte))
-                    Write((byte)Convert.ChangeType(o, underlying));
-                else if (underlying == typeof(int))
-                    Write((int)Convert.ChangeType(o, underlying));
-                else if (underlying == typeof(ulong))
-                    Write((ulong)Convert.ChangeType(o, underlying));
-                else if (underlying == typeof(long))
-                    Write((long)Convert.ChangeType(o, underlying));
-                else if (underlying == typeof(ushort))
-                    Write((ushort)Convert.ChangeType(o, underlying));
-                else if (underlying == typeof(short))
-                    Write((short)Convert.ChangeType(o, underlying));
-                else if (underlying == typeof(uint))
-                    Write((uint)Convert.ChangeType(o, underlying));
-                else if (underlying == typeof(sbyte))
-                    Write((sbyte)Convert.ChangeType(o, underlying));
-                else Logging.LogWarning($"Tried to write {e.Name} as an enum, but didn't have a proper underlying type ({underlying.Name}).");
+                byte* ptr2 = ptr + size;
+                *(float*)ptr2 = n.x;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.y;
+                EndianCheck(ptr2, sizeof(float));
             }
-            else Logging.LogWarning($"Tried to write {e.Name} as an enum, but didn't have a proper underlying type ({underlying.Name}).");
+            size = newsize;
         }
+
+        private static readonly MethodInfo WriteVector3Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(Vector3) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(Vector3 n)
+        {
+            int newsize = size + sizeof(float) * 3;
+            if (newsize > buffer.Length)
+                ExtendBuffer(newsize);
+            fixed (byte* ptr = buffer)
+            {
+                byte* ptr2 = ptr + size;
+                *(float*)ptr2 = n.x;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.y;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.z;
+                EndianCheck(ptr2, sizeof(float));
+            }
+            size = newsize;
+        }
+
+        private static readonly MethodInfo WriteVector4Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(Vector4) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(Vector4 n)
+        {
+            int newsize = size + sizeof(float) * 4;
+            if (newsize > buffer.Length)
+                ExtendBuffer(newsize);
+            fixed (byte* ptr = buffer)
+            {
+                byte* ptr2 = ptr + size;
+                *(float*)ptr2 = n.x;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.y;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.z;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.w;
+                EndianCheck(ptr2, sizeof(float));
+            }
+            size = newsize;
+        }
+
+        private static readonly MethodInfo WriteQuaternionMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(Quaternion) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(Quaternion n)
+        {
+            int newsize = size + sizeof(float) * 4;
+            if (newsize > buffer.Length)
+                ExtendBuffer(newsize);
+            fixed (byte* ptr = buffer)
+            {
+                byte* ptr2 = ptr + size;
+                *(float*)ptr2 = n.x;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.y;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.z;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.w;
+                EndianCheck(ptr2, sizeof(float));
+            }
+            size = newsize;
+        }
+
+        private static readonly MethodInfo WriteColorMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(Color) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(Color n)
+        {
+            int newsize = size + sizeof(float) * 4;
+            if (newsize > buffer.Length)
+                ExtendBuffer(newsize);
+            fixed (byte* ptr = buffer)
+            {
+                byte* ptr2 = ptr + size;
+                *(float*)ptr2 = n.r;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.g;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.b;
+                EndianCheck(ptr2, sizeof(float));
+                ptr2 += sizeof(float);
+                *(float*)ptr2 = n.a;
+                EndianCheck(ptr2, sizeof(float));
+            }
+            size = newsize;
+        }
+
+        private static readonly MethodInfo WriteColor32Method = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(Color32) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public unsafe void Write(Color32 n)
+        {
+            int newsize = size + 4;
+            if (newsize > buffer.Length)
+                ExtendBuffer(newsize);
+            fixed (byte* ptr = buffer)
+            {
+                *(ptr + size) = n.r;
+                *(ptr + size + 1) = n.g;
+                *(ptr + size + 2) = n.b;
+                *(ptr + size + 3) = n.a;
+            }
+            size = newsize;
+        }
+
+        private static readonly MethodInfo WriteEnumMethod = typeof(ByteWriter).GetMethod(nameof(WriteEnum), BindingFlags.Instance | BindingFlags.NonPublic);
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private unsafe void WriteEnum<TEnum>(TEnum o) where TEnum : unmanaged, Enum => WriteInternal(o);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Write<TEnum>(TEnum o) where TEnum : unmanaged, Enum => WriteEnum(o);
+
+        private static readonly MethodInfo WriteByteArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(byte[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(byte[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -299,7 +415,9 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
             }
             Buffer.BlockCopy(n, 0, buffer, size + sizeof(ushort), n.Length);
             size = newsize;
@@ -317,16 +435,23 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(int*)(ptr + size) = n.Length;
+                byte* ptr2 = ptr + size;
+                *(int*)ptr2 = n.Length;
+                EndianCheck(ptr2, sizeof(int));
             }
             Buffer.BlockCopy(n, 0, buffer, size + sizeof(int), n.Length);
             size = newsize;
         }
         public void Flush()
         {
-            buffer = new byte[BaseCapacity];
+            if (BaseCapacity == 0)
+                buffer = emptyArray;
+            else buffer = new byte[BaseCapacity];
             size = 0;
         }
+
+        private static readonly MethodInfo WriteInt32ArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(int[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(int[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -341,12 +466,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *((int*)(ptr + size + sizeof(ushort)) + i) = n[i];
+                {
+                    *(int*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(int));
+                    ptr2 += sizeof(int);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteUInt32ArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(uint[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(uint[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -361,12 +496,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *((uint*)(ptr + size + sizeof(ushort)) + i) = n[i];
+                {
+                    *(uint*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(uint));
+                    ptr2 += sizeof(uint);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteInt8ArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(sbyte[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(sbyte[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -380,18 +525,28 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *(sbyte*)(ptr + size + sizeof(ushort) + i) = n[i];
+                {
+                    *(sbyte*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(sbyte));
+                    ptr2 += sizeof(sbyte);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteBooleanArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(bool[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(bool[] n)
         {
             if (n.Length > ushort.MaxValue)
             {
-                Logging.LogWarning($"Boolean array too long for writing, must be below {ushort.MaxValue} elements, it was {n.Length} elements long.");
-                Logging.LogWarning(Environment.StackTrace);
+                Console.WriteLine($"Boolean array too long for writing, must be below {ushort.MaxValue} elements, it was {n.Length} elements long.");
+                Console.WriteLine(Environment.StackTrace);
                 return;
             }
             int newsize = size + (int)Math.Ceiling(n.Length / 8f) + sizeof(ushort);
@@ -400,18 +555,32 @@ namespace Uncreated.Networking.Encoding
 
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
-                int offset = size - 1 + sizeof(ushort);
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr, sizeof(ushort));
+                ptr2 += sizeof(ushort);
+                byte current = 0;
+                int cutoff = n.Length - 1;
                 for (int i = 0; i < n.Length; i++)
                 {
-                    int pos = i % 8;
-                    if (pos == 0) offset++;
-                    *(ptr + offset) <<= 8 - pos;
-                    *(ptr + offset) |= (byte)(n[i] ? 1 : 0);
+                    bool c = n[i];
+                    int mod = i % 8;
+                    if (mod == 0 && i != 0)
+                    {
+                        *ptr2 = current;
+                        ptr2++;
+                        current = (byte)(c ? 1 : 0);
+                    }
+                    else if (c) current |= (byte)(1 << mod);
+                    if (i == cutoff)
+                        *ptr2 = current;
                 }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteInt64ArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(long[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(long[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -426,12 +595,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *(long*)(ptr + size + sizeof(ushort) + i) = n[i];
+                {
+                    *(long*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(long));
+                    ptr2 += sizeof(long);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteUInt64ArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(ulong[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(ulong[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -446,12 +625,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *(ulong*)(ptr + size + sizeof(ushort) + i) = n[i];
+                {
+                    *(ulong*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(ulong));
+                    ptr2 += sizeof(ulong);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteInt16ArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(short[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(short[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -466,12 +655,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *(short*)(ptr + size + sizeof(ushort) + i) = n[i];
+                {
+                    *(short*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(short));
+                    ptr2 += sizeof(short);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteUInt16ArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(ushort[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(ushort[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -486,12 +685,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *(ushort*)(ptr + size + sizeof(ushort) + i) = n[i];
+                {
+                    *(ushort*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(ushort));
+                    ptr2 += sizeof(ushort);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteFloatArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(float[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(float[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -506,12 +715,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *(float*)(ptr + size + sizeof(ushort) + i) = n[i];
+                {
+                    *(float*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(float));
+                    ptr2 += sizeof(float);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteDecimalArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(decimal[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(decimal[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -526,12 +745,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *(decimal*)(ptr + size + sizeof(ushort) + i) = n[i];
+                {
+                    *(decimal*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(decimal));
+                    ptr2 += sizeof(decimal);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteDoubleArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(double[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(double[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -546,12 +775,22 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)n.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
+                ptr2 += sizeof(ushort);
                 for (int i = 0; i < n.Length; i++)
-                    *(double*)(ptr + size + sizeof(ushort) + i) = n[i];
+                {
+                    *(double*)ptr2 = n[i];
+                    EndianCheck(ptr2, sizeof(double));
+                    ptr2 += sizeof(double);
+                }
             }
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteCharArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(char[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(char[] n)
         {
             byte[] str = System.Text.Encoding.UTF8.GetBytes(n);
@@ -566,11 +805,16 @@ namespace Uncreated.Networking.Encoding
                 ExtendBuffer(newsize);
             fixed (byte* ptr = buffer)
             {
-                *(ushort*)(ptr + size) = (ushort)str.Length;
+                byte* ptr2 = ptr + size;
+                *(ushort*)ptr2 = (ushort)n.Length;
+                EndianCheck(ptr2, sizeof(ushort));
             }
             Buffer.BlockCopy(str, 0, buffer, size + sizeof(ushort), str.Length);
             size = newsize;
         }
+
+        private static readonly MethodInfo WriteStringArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(string[]) }, null);
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(string[] n)
         {
             if (n.Length > ushort.MaxValue)
@@ -580,7 +824,7 @@ namespace Uncreated.Networking.Encoding
                 return;
             }
 
-            Write((ushort)n.Length);
+            WriteInternal((ushort)n.Length);
             for (int i = 0; i < n.Length; i++)
             {
                 byte[] str = System.Text.Encoding.UTF8.GetBytes(n[i]);
@@ -595,654 +839,406 @@ namespace Uncreated.Networking.Encoding
                     ExtendBuffer(newsize);
                 fixed (byte* ptr = buffer)
                 {
-                    *(ushort*)(ptr + size) = (ushort)str.Length;
+                    byte* ptr2 = ptr + size;
+                    *(ushort*)ptr2 = (ushort)str.Length;
+                    EndianCheck(ptr2, sizeof(ushort));
                 }
                 Buffer.BlockCopy(str, 0, buffer, size + sizeof(ushort), str.Length);
                 size = newsize;
             }
         }
+        public byte[] FinishWrite()
+        {
+            byte[] rtn = buffer;
+            Flush();
+            return rtn;
+        }
         public void Write<T1>(Writer<T1> writer, T1 arg)
         {
             writer.Invoke(this, arg);
         }
-        public static Writer<T1> GetWriter<T1>()
+
+        private static readonly Type[] parameters = new Type[2] { typeof(ByteWriter), null };
+        public static Delegate GetWriter(Type type)
         {
-            Type type = typeof(T1);
+            DynamicMethod method;
+            lock (parameters)
+            {
+                parameters[1] = type ?? throw new ArgumentNullException(nameof(type));
+                method = new DynamicMethod("Write" + type.Name, typeof(void), parameters, typeof(ByteWriter), false);
+            }
+            ILGenerator il = method.GetILGenerator();
+            method.DefineParameter(1, ParameterAttributes.None, "writer");
+            method.DefineParameter(2, ParameterAttributes.In, "value");
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+
             if (type.IsPrimitive)
             {
                 if (type == typeof(ulong))
-                    return (a, o) => a.Write((ulong)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteUInt64Method, null);
                 else if (type == typeof(float))
-                    return (a, o) => a.Write((float)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteFloatMethod, null);
                 else if (type == typeof(long))
-                    return (a, o) => a.Write((long)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteInt64Method, null);
                 else if (type == typeof(ushort))
-                    return (a, o) => a.Write((ushort)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteUInt16Method, null);
                 else if (type == typeof(short))
-                    return (a, o) => a.Write((short)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteInt16Method, null);
                 else if (type == typeof(byte))
-                    return (a, o) => a.Write((byte)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteUInt8Method, null);
                 else if (type == typeof(int))
-                    return (a, o) => a.Write((int)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteInt32Method, null);
                 else if (type == typeof(uint))
-                    return (a, o) => a.Write((uint)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteUInt32Method, null);
                 else if (type == typeof(bool))
-                    return (a, o) => a.Write((bool)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteBooleanMethod, null);
                 else if (type == typeof(sbyte))
-                    return (a, o) => a.Write((sbyte)(object)o);
-                else if (type == typeof(decimal))
-                    return (a, o) => a.Write((decimal)(object)o);
+                    il.EmitCall(OpCodes.Call, WriteInt8Method, null);
                 else if (type == typeof(double))
-                    return (a, o) => a.Write((double)(object)o);
-                else throw new ArgumentException("Can not convert that type!", nameof(type));
+                    il.EmitCall(OpCodes.Call, WriteDoubleMethod, null);
+                else throw new ArgumentException($"Can not convert that type ({type.Name})!", nameof(type));
             }
             else if (type == typeof(string))
             {
-                return (a, o) => a.Write((string)(object)o);
+                il.EmitCall(OpCodes.Call, WriteStringMethod, null);
             }
             else if (type.IsEnum)
             {
-                Type underlying = Enum.GetUnderlyingType(type);
-                if (underlying.IsPrimitive)
-                {
-                    if (underlying == typeof(int))
-                        return (a, o) => a.Write((int)Convert.ChangeType(o, underlying));
-                    else if (underlying == typeof(byte))
-                        return (a, o) => a.Write((byte)Convert.ChangeType(o, underlying));
-                    else if (underlying == typeof(ulong))
-                        return (a, o) => a.Write((ulong)Convert.ChangeType(o, underlying));
-                    else if (underlying == typeof(long))
-                        return (a, o) => a.Write((long)Convert.ChangeType(o, underlying));
-                    else if (underlying == typeof(ushort))
-                        return (a, o) => a.Write((ushort)Convert.ChangeType(o, underlying));
-                    else if (underlying == typeof(short))
-                        return (a, o) => a.Write((short)Convert.ChangeType(o, underlying));
-                    else if (underlying == typeof(uint))
-                        return (a, o) => a.Write((uint)Convert.ChangeType(o, underlying));
-                    else if (underlying == typeof(sbyte))
-                        return (a, o) => a.Write((sbyte)Convert.ChangeType(o, underlying));
-                    else throw new ArgumentException($"Can not convert that enum type ({type.Name}.{underlying.Name}), underlying is not a primitive integral type!", nameof(type));
-                }
-                else throw new ArgumentException($"Can not convert that enum type ({type.Name}.{underlying.Name}), underlying is not primitive!", nameof(type));
+                il.EmitCall(OpCodes.Call, WriteEnumMethod.MakeGenericMethod(type), null);
+            }
+            else if (type == typeof(decimal))
+            {
+                il.EmitCall(OpCodes.Call, WriteDecimalMethod, null);
             }
             else if (type == typeof(DateTime))
             {
-                return (a, o) => a.Write((DateTime)(object)o);
+                il.EmitCall(OpCodes.Call, WriteDateTimeMethod, null);
             }
             else if (type == typeof(TimeSpan))
             {
-                return (a, o) => a.Write((TimeSpan)(object)o);
+                il.EmitCall(OpCodes.Call, WriteTimeSpanMethod, null);
             }
             else if (type == typeof(Guid))
             {
-                return (a, o) => a.Write((Guid)(object)o);
+                il.EmitCall(OpCodes.Call, WriteGUIDMethod, null);
+            }
+            else if (type == typeof(Vector2))
+            {
+                il.EmitCall(OpCodes.Call, WriteVector2Method, null);
+            }
+            else if (type == typeof(Vector3))
+            {
+                il.EmitCall(OpCodes.Call, WriteVector3Method, null);
+            }
+            else if (type == typeof(Vector4))
+            {
+                il.EmitCall(OpCodes.Call, WriteVector4Method, null);
+            }
+            else if (type == typeof(Quaternion))
+            {
+                il.EmitCall(OpCodes.Call, WriteQuaternionMethod, null);
+            }
+            else if (type == typeof(Color))
+            {
+                il.EmitCall(OpCodes.Call, WriteColorMethod, null);
+            }
+            else if (type == typeof(Color32))
+            {
+                il.EmitCall(OpCodes.Call, WriteColor32Method, null);
             }
             else if (type.IsArray)
             {
-                Type arrayType = type.GetElementType();
-                if (arrayType == typeof(ulong))
-                    return (a, o) => a.Write((ulong[])(object)o);
-                else if (arrayType == typeof(float))
-                    return (a, o) => a.Write((float[])(object)o);
-                else if (arrayType == typeof(long))
-                    return (a, o) => a.Write((long[])(object)o);
-                else if (arrayType == typeof(ushort))
-                    return (a, o) => a.Write((ushort[])(object)o);
-                else if (arrayType == typeof(short))
-                    return (a, o) => a.Write((short[])(object)o);
-                else if (arrayType == typeof(byte))
-                    return (a, o) => a.Write((byte[])(object)o);
-                else if (arrayType == typeof(int))
-                    return (a, o) => a.Write((int[])(object)o);
-                else if (arrayType == typeof(uint))
-                    return (a, o) => a.Write((uint[])(object)o);
-                else if (arrayType == typeof(bool))
-                    return (a, o) => a.Write((bool[])(object)o);
-                else if (arrayType == typeof(sbyte))
-                    return (a, o) => a.Write((sbyte[])(object)o);
-                else if (arrayType == typeof(decimal))
-                    return (a, o) => a.Write((decimal[])(object)o);
-                else if (arrayType == typeof(double))
-                    return (a, o) => a.Write((double[])(object)o);
-                else if (arrayType == typeof(string))
-                    return (a, o) => a.Write((string[])(object)o);
-                else throw new ArgumentException("Can not convert that array type!", nameof(type));
+                Type elemType = type.GetElementType();
+                if (elemType == typeof(ulong))
+                    il.EmitCall(OpCodes.Call, WriteUInt64ArrayMethod, null);
+                else if (elemType == typeof(float))
+                    il.EmitCall(OpCodes.Call, WriteFloatArrayMethod, null);
+                else if (elemType == typeof(long))
+                    il.EmitCall(OpCodes.Call, WriteInt64ArrayMethod, null);
+                else if (elemType == typeof(ushort))
+                    il.EmitCall(OpCodes.Call, WriteUInt16ArrayMethod, null);
+                else if (elemType == typeof(short))
+                    il.EmitCall(OpCodes.Call, WriteInt16ArrayMethod, null);
+                else if (elemType == typeof(byte))
+                    il.EmitCall(OpCodes.Call, WriteByteArrayMethod, null);
+                else if (elemType == typeof(int))
+                    il.EmitCall(OpCodes.Call, WriteInt32ArrayMethod, null);
+                else if (elemType == typeof(uint))
+                    il.EmitCall(OpCodes.Call, WriteUInt32ArrayMethod, null);
+                else if (elemType == typeof(bool))
+                    il.EmitCall(OpCodes.Call, WriteBooleanArrayMethod, null);
+                else if (elemType == typeof(sbyte))
+                    il.EmitCall(OpCodes.Call, WriteInt8ArrayMethod, null);
+                else if (elemType == typeof(decimal))
+                    il.EmitCall(OpCodes.Call, WriteDecimalArrayMethod, null);
+                else if (elemType == typeof(double))
+                    il.EmitCall(OpCodes.Call, WriteDoubleArrayMethod, null);
+                else if (elemType == typeof(string))
+                    il.EmitCall(OpCodes.Call, WriteStringArrayMethod, null);
+                else throw new ArgumentException($"Can not convert that array type ({type.Name})!", nameof(type));
             }
-            else throw new ArgumentException("Can not convert that type!", nameof(type));
+            else throw new ArgumentException($"Can not convert that type ({type.Name})!", nameof(type));
+
+            il.Emit(OpCodes.Ret);
+            try
+            {
+                return method.CreateDelegate(typeof(Writer<>).MakeGenericType(type));
+            }
+            catch (InvalidProgramException ex)
+            {
+                Logging.LogError(ex);
+                return null;
+            }
         }
-        public static bool TryGetWriter(Type type, out Writer<object> writer)
+        public static bool TryGetWriter(Type type, out Delegate writer)
         {
+            DynamicMethod method;
+            lock (parameters)
+            {
+                parameters[1] = type ?? throw new ArgumentNullException(nameof(type));
+                method = new DynamicMethod("Write" + type.Name, typeof(void), parameters, typeof(ByteWriter), false);
+            }
+            ILGenerator il = method.GetILGenerator();
+            method.DefineParameter(1, ParameterAttributes.None, "writer");
+            method.DefineParameter(2, ParameterAttributes.In, "value");
+
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldarg_1);
+            bool success = false;
             if (type.IsPrimitive)
             {
                 if (type == typeof(ulong))
                 {
-                    writer = (a, o) => a.Write((ulong)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteUInt64Method, null);
+                    success = true;
                 }
                 else if (type == typeof(float))
                 {
-                    writer = (a, o) => a.Write((float)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteFloatMethod, null);
+                    success = true;
                 }
                 else if (type == typeof(long))
                 {
-                    writer = (a, o) => a.Write((long)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteInt64Method, null);
+                    success = true;
                 }
                 else if (type == typeof(ushort))
                 {
-                    writer = (a, o) => a.Write((ushort)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteUInt16Method, null);
+                    success = true;
                 }
                 else if (type == typeof(short))
                 {
-                    writer = (a, o) => a.Write((short)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteInt16Method, null);
+                    success = true;
                 }
                 else if (type == typeof(byte))
                 {
-                    writer = (a, o) => a.Write((byte)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteUInt8Method, null);
+                    success = true;
                 }
                 else if (type == typeof(int))
                 {
-                    writer = (a, o) => a.Write((int)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteInt32Method, null);
+                    success = true;
                 }
                 else if (type == typeof(uint))
                 {
-                    writer = (a, o) => a.Write((uint)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteUInt32Method, null);
+                    success = true;
                 }
                 else if (type == typeof(bool))
                 {
-                    writer = (a, o) => a.Write((bool)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteBooleanMethod, null);
+                    success = true;
                 }
                 else if (type == typeof(sbyte))
                 {
-                    writer = (a, o) => a.Write((sbyte)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteInt8Method, null);
+                    success = true;
                 }
                 else if (type == typeof(decimal))
                 {
-                    writer = (a, o) => a.Write((decimal)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteDecimalMethod, null);
+                    success = true;
                 }
                 else if (type == typeof(double))
                 {
-                    writer = (a, o) => a.Write((double)o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteDoubleMethod, null);
+                    success = true;
                 }
-                else
-                {
-                    writer = null;
-                    return false;
-                }
+                else success = false;
             }
             else if (type == typeof(string))
             {
-                writer = (a, o) => a.Write((string)o);
-                return true;
+                il.EmitCall(OpCodes.Call, WriteStringMethod, null);
+                success = true;
             }
             else if (type.IsEnum)
             {
-                Type underlying = Enum.GetUnderlyingType(type);
-                if (underlying.IsPrimitive)
-                {
-                    if (underlying == typeof(int))
-                    {
-                        writer = (a, o) => a.Write((int)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(byte))
-                    {
-                        writer = (a, o) => a.Write((byte)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(ulong))
-                    {
-                        writer = (a, o) => a.Write((ulong)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(long))
-                    {
-                        writer = (a, o) => a.Write((long)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(ushort))
-                    {
-                        writer = (a, o) => a.Write((ushort)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(short))
-                    {
-                        writer = (a, o) => a.Write((short)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(uint))
-                    {
-                        writer = (a, o) => a.Write((uint)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(sbyte))
-                    {
-                        writer = (a, o) => a.Write((sbyte)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else
-                    {
-                        writer = null;
-                        return false;
-                    }
-                }
-                else
-                {
-                    writer = null;
-                    return false;
-                }
+                il.EmitCall(OpCodes.Call, WriteEnumMethod.MakeGenericMethod(type), null);
+                success = true;
             }
             else if (type == typeof(DateTime))
             {
-                writer = (a, o) => a.Write((DateTime)o);
-                return true;
+                il.EmitCall(OpCodes.Call, WriteDateTimeMethod, null);
+                success = true;
             }
             else if (type == typeof(TimeSpan))
             {
-                writer = (a, o) => a.Write((TimeSpan)o);
-                return true;
+                il.EmitCall(OpCodes.Call, WriteTimeSpanMethod, null);
+                success = true;
             }
             else if (type == typeof(Guid))
             {
-                writer = (a, o) => a.Write((Guid)o);
-                return true;
+                il.EmitCall(OpCodes.Call, WriteGUIDMethod, null);
+                success = true;
+            }
+            else if (type == typeof(Vector2))
+            {
+                il.EmitCall(OpCodes.Call, WriteVector2Method, null);
+                success = true;
+            }
+            else if (type == typeof(Vector3))
+            {
+                il.EmitCall(OpCodes.Call, WriteVector3Method, null);
+                success = true;
+            }
+            else if (type == typeof(Vector4))
+            {
+                il.EmitCall(OpCodes.Call, WriteVector4Method, null);
+                success = true;
+            }
+            else if (type == typeof(Quaternion))
+            {
+                il.EmitCall(OpCodes.Call, WriteQuaternionMethod, null);
+                success = true;
+            }
+            else if (type == typeof(Color))
+            {
+                il.EmitCall(OpCodes.Call, WriteColorMethod, null);
+                success = true;
+            }
+            else if (type == typeof(Color32))
+            {
+                il.EmitCall(OpCodes.Call, WriteColor32Method, null);
+                success = true;
             }
             else if (type.IsArray)
             {
-                Type arrayType = type.GetElementType();
-                if (arrayType == typeof(ulong))
+                Type elemType = type.GetElementType();
+                if (elemType == typeof(ulong))
                 {
-                    writer = (a, o) => a.Write((ulong[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteUInt64ArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(float))
+                else if (elemType == typeof(float))
                 {
-                    writer = (a, o) => a.Write((float[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteFloatArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(long))
+                else if (elemType == typeof(long))
                 {
-                    writer = (a, o) => a.Write((long[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteInt64ArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(ushort))
+                else if (elemType == typeof(ushort))
                 {
-                    writer = (a, o) => a.Write((ushort[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteUInt16ArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(short))
+                else if (elemType == typeof(short))
                 {
-                    writer = (a, o) => a.Write((short[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteInt16ArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(byte))
+                else if (elemType == typeof(byte))
                 {
-                    writer = (a, o) => a.Write((byte[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteByteArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(int))
+                else if (elemType == typeof(int))
                 {
-                    writer = (a, o) => a.Write((int[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteInt32ArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(uint))
+                else if (elemType == typeof(uint))
                 {
-                    writer = (a, o) => a.Write((uint[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteUInt32ArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(bool))
+                else if (elemType == typeof(bool))
                 {
-                    writer = (a, o) => a.Write((bool[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteBooleanArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(sbyte))
+                else if (elemType == typeof(sbyte))
                 {
-                    writer = (a, o) => a.Write((sbyte[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteInt8ArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(decimal))
+                else if (elemType == typeof(decimal))
                 {
-                    writer = (a, o) => a.Write((decimal[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteDecimalArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(double))
+                else if (elemType == typeof(double))
                 {
-                    writer = (a, o) => a.Write((double[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteDoubleArrayMethod, null);
+                    success = true;
                 }
-                else if (arrayType == typeof(string))
+                else if (elemType == typeof(string))
                 {
-                    writer = (a, o) => a.Write((string[])o);
-                    return true;
+                    il.EmitCall(OpCodes.Call, WriteStringArrayMethod, null);
+                    success = true;
                 }
-                else
-                {
-                    writer = null;
-                    return false;
-                }
+                else success = false;
             }
-            else
+            if (!success)
             {
+                writer = null;
+                return success;
+            }
+            il.Emit(OpCodes.Ret);
+            try
+            {
+                writer = method.CreateDelegate(typeof(Writer<>).MakeGenericType(type));
+                return true;
+            }
+            catch (InvalidProgramException ex)
+            {
+                Logging.LogError(ex);
                 writer = null;
                 return false;
             }
         }
+        public static Writer<T1> GetWriter<T1>() => (Writer<T1>)GetWriter(typeof(T1));
         public static bool TryGetWriter<T1>(out Writer<T1> writer)
         {
-            Type type = typeof(T1);
-            if (type.IsPrimitive)
+            if (TryGetWriter(typeof(T1), out Delegate writer2))
             {
-                if (type == typeof(ulong))
-                {
-                    writer = (a, o) => a.Write((ulong)(object)o);
-                    return true;
-                }
-                else if (type == typeof(float))
-                {
-                    writer = (a, o) => a.Write((float)(object)o);
-                    return true;
-                }
-                else if (type == typeof(long))
-                {
-                    writer = (a, o) => a.Write((long)(object)o);
-                    return true;
-                }
-                else if (type == typeof(ushort))
-                {
-                    writer = (a, o) => a.Write((ushort)(object)o);
-                    return true;
-                }
-                else if (type == typeof(short))
-                {
-                    writer = (a, o) => a.Write((short)(object)o);
-                    return true;
-                }
-                else if (type == typeof(byte))
-                {
-                    writer = (a, o) => a.Write((byte)(object)o);
-                    return true;
-                }
-                else if (type == typeof(int))
-                {
-                    writer = (a, o) => a.Write((int)(object)o);
-                    return true;
-                }
-                else if (type == typeof(uint))
-                {
-                    writer = (a, o) => a.Write((uint)(object)o);
-                    return true;
-                }
-                else if (type == typeof(bool))
-                {
-                    writer = (a, o) => a.Write((bool)(object)o);
-                    return true;
-                }
-                else if (type == typeof(sbyte))
-                {
-                    writer = (a, o) => a.Write((sbyte)(object)o);
-                    return true;
-                }
-                else if (type == typeof(decimal))
-                {
-                    writer = (a, o) => a.Write((decimal)(object)o);
-                    return true;
-                }
-                else if (type == typeof(double))
-                {
-                    writer = (a, o) => a.Write((double)(object)o);
-                    return true;
-                }
-                else
-                {
-                    writer = null;
-                    return false;
-                }
-            }
-            else if (type == typeof(string))
-            {
-                writer = (a, o) => a.Write((string)(object)o);
+                writer = (Writer<T1>)writer2;
                 return true;
             }
-            else if (type.IsEnum)
-            {
-                Type underlying = Enum.GetUnderlyingType(type);
-                if (underlying.IsPrimitive)
-                {
-                    if (underlying == typeof(int))
-                    {
-                        writer = (a, o) => a.Write((int)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(byte))
-                    {
-                        writer = (a, o) => a.Write((byte)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(ulong))
-                    {
-                        writer = (a, o) => a.Write((ulong)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(long))
-                    {
-                        writer = (a, o) => a.Write((long)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(ushort))
-                    {
-                        writer = (a, o) => a.Write((ushort)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(short))
-                    {
-                        writer = (a, o) => a.Write((short)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(uint))
-                    {
-                        writer = (a, o) => a.Write((uint)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else if (underlying == typeof(sbyte))
-                    {
-                        writer = (a, o) => a.Write((sbyte)Convert.ChangeType(o, underlying));
-                        return true;
-                    }
-                    else
-                    {
-                        writer = null;
-                        return false;
-                    }
-                }
-                else
-                {
-                    writer = null;
-                    return false;
-                }
-            }
-            else if (type == typeof(DateTime))
-            {
-                writer = (a, o) => a.Write((DateTime)(object)o);
-                return true;
-            }
-            else if (type == typeof(TimeSpan))
-            {
-                writer = (a, o) => a.Write((TimeSpan)(object)o);
-                return true;
-            }
-            else if (type == typeof(Guid))
-            {
-                writer = (a, o) => a.Write((Guid)(object)o);
-                return true;
-            }
-            else if (type.IsArray)
-            {
-                Type arrayType = type.GetElementType();
-                if (arrayType == typeof(ulong))
-                {
-                    writer = (a, o) => a.Write((ulong[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(float))
-                {
-                    writer = (a, o) => a.Write((float[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(long))
-                {
-                    writer = (a, o) => a.Write((long[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(ushort))
-                {
-                    writer = (a, o) => a.Write((ushort[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(short))
-                {
-                    writer = (a, o) => a.Write((short[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(byte))
-                {
-                    writer = (a, o) => a.Write((byte[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(int))
-                {
-                    writer = (a, o) => a.Write((int[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(uint))
-                {
-                    writer = (a, o) => a.Write((uint[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(bool))
-                {
-                    writer = (a, o) => a.Write((bool[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(sbyte))
-                {
-                    writer = (a, o) => a.Write((sbyte[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(decimal))
-                {
-                    writer = (a, o) => a.Write((decimal[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(double))
-                {
-                    writer = (a, o) => a.Write((double[])(object)o);
-                    return true;
-                }
-                else if (arrayType == typeof(string))
-                {
-                    writer = (a, o) => a.Write((string[])(object)o);
-                    return true;
-                }
-                else
-                {
-                    writer = null;
-                    return false;
-                }
-            }
-            else
-            {
-                writer = null;
-                return false;
-            }
+            writer = null;
+            return false;
         }
-        public static int GetMinimumSize<T1>()
+        public static int GetMinimumSize(Type type)
         {
-            Type type = typeof(T1);
-            if (type.IsPrimitive)
+            if (type.IsPointer) return IntPtr.Size;
+            try
             {
-                if (type == typeof(ulong))
-                    return sizeof(ulong);
-                else if (type == typeof(float))
-                    return sizeof(float);
-                else if (type == typeof(long))
-                    return sizeof(long);
-                else if (type == typeof(ushort))
-                    return sizeof(ushort);
-                else if (type == typeof(short))
-                    return sizeof(short);
-                else if (type == typeof(byte))
-                    return 1;
-                else if (type == typeof(int))
-                    return sizeof(int);
-                else if (type == typeof(uint))
-                    return sizeof(uint);
-                else if (type == typeof(bool))
-                    return 1;
-                else if (type == typeof(sbyte))
-                    return 1;
-                else if (type == typeof(decimal))
-                    return sizeof(double);
-                else if (type == typeof(double))
-                    return sizeof(double);
-                else throw new ArgumentException("Can not convert that type!", nameof(type));
+                return Marshal.SizeOf(type);
             }
-            else if (type == typeof(string))
+            catch (ArgumentException)
             {
-                return sizeof(ushort);
+                return 0;
             }
-            else if (type.IsEnum)
-            {
-                Type underlying = Enum.GetUnderlyingType(type);
-                if (underlying.IsPrimitive)
-                {
-                    if (underlying == typeof(int))
-                        return sizeof(int);
-                    else if (underlying == typeof(byte))
-                        return 1;
-                    else if (underlying == typeof(ulong))
-                        return sizeof(ulong);
-                    else if (underlying == typeof(long))
-                        return sizeof(long);
-                    else if (underlying == typeof(ushort))
-                        return sizeof(ushort);
-                    else if (underlying == typeof(short))
-                        return sizeof(short);
-                    else if (underlying == typeof(uint))
-                        return sizeof(uint);
-                    else if (underlying == typeof(sbyte))
-                        return 1;
-                    else throw new ArgumentException($"Can not convert that enum type ({type.Name}.{underlying.Name}), underlying is not a primitive integral type!", nameof(type));
-                }
-                else throw new ArgumentException($"Can not convert that enum type ({type.Name}.{underlying.Name}), underlying is not primitive!", nameof(type));
-            }
-            else if (type == typeof(DateTime))
-            {
-                return sizeof(long);
-            }
-            else if (type == typeof(TimeSpan))
-            {
-                return sizeof(long);
-            }
-            else if (type == typeof(Guid))
-            {
-                return 16;
-            }
-            else if (type.IsArray)
-            {
-                return sizeof(ushort);
-            }
-            else throw new ArgumentException("Can not convert that type!", nameof(type));
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetMinimumSize<T>() => GetMinimumSize(typeof(T));
     }
     public sealed class ByteWriterRaw<T> : ByteWriter
     {
