@@ -267,6 +267,16 @@ namespace Uncreated.Warfare.Components
         {
             yield return new WaitForSeconds(15);    
 
+            RemoveCountermeasures();
+
+            countermeasureRoutine = null;
+        }
+        private void OnDestroy()
+        {
+            RemoveCountermeasures();
+        }
+        private void RemoveCountermeasures()
+        {
             foreach (Transform countermeasure in countermeasures)
             {
                 HeatSeakingMissileComponent.ActiveCountermeasures.RemoveAll(t => t.GetInstanceID() == countermeasure.GetInstanceID());
@@ -276,9 +286,7 @@ namespace Uncreated.Warfare.Components
                     VehicleManager.askVehicleDestroy(vehicle);
                 }
             }
-
             countermeasures.Clear();
-            countermeasureRoutine = null;
         }
         public void StartForceLoadSupplies(UCPlayer caller, ESupplyType type, int amount)
         {
