@@ -662,13 +662,13 @@ namespace Uncreated.Warfare
             if (ip == null) return "255.255.255.255";
             else return ip;
         }
-        public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
+        protected override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
             => L.Log(message, color);
-        public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
+        protected override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
             => L.LogWarning(message, color);
-        public override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
+        protected override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
             => L.LogError(message, color);
-        public override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
+        protected override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
             => L.LogError(ex, color);
     }
 }

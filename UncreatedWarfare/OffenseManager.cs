@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Networking;
+using UnityEngine;
 
 namespace Uncreated.Warfare
 {
@@ -371,13 +372,14 @@ namespace Uncreated.Warfare
                 admin.SendChat("kick_no_player_found", offender.ToString(Data.Locale));
             await UCWarfare.ToPool();
 
+            DateTime now = DateTime.Now;
             await Data.DatabaseManager.NonQueryAsync(
                 "INSERT INTO `kicks` (`Kicked`, `Kicker`, `Reason`, `Tiemstamp`) VALUES (@0, @1, @2, @3);",
                 new object[4]
                 {
-                    offender, kicker, reason, DateTime.Now
+                    offender, kicker, reason, now
                 });
-            Invocations.Shared.LogKicked.NetInvoke(offender, kicker, reason, DateTime.Now);
+            Invocations.Shared.LogKicked.NetInvoke(offender, kicker, reason, now);
             await UCWarfare.ToUpdate();
         }
 
@@ -386,11 +388,12 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            DateTime now = DateTime.Now;
             await Data.DatabaseManager.NonQueryAsync(
                 "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4);",
                 new object[]
-                    { mutedS64, admin == null ? 0 : admin.Steam64, reason, duration, DateTime.Now, (byte)type });
-            DateTime unmutedTime = DateTime.Now + TimeSpan.FromMinutes(duration);
+                    { mutedS64, admin == null ? 0 : admin.Steam64, reason, duration, now, (byte)type });
+            DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : now + TimeSpan.FromMinutes(duration);
             if (muted != null && muted.TimeUnmuted < unmutedTime)
             {
                 muted.TimeUnmuted = unmutedTime;
@@ -422,7 +425,7 @@ namespace Uncreated.Warfare
             );
             if (type == EMuteType.NONE) return;
             DateTime now = DateTime.Now;
-            DateTime unmutedTime = timestamp + TimeSpan.FromMinutes(duration);
+            DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : timestamp + TimeSpan.FromMinutes(duration);
             joining.TimeUnmuted = unmutedTime;
             joining.MuteReason = reason;
             joining.MuteType = type;

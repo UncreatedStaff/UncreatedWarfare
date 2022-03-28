@@ -112,15 +112,22 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                Task.Run(() => Data.DatabaseManager.AddAccessibleKit(ucplayer.Steam64, kit.Name)).ConfigureAwait(false);
+                Task.Run(
+                    async () => 
+                    {
+                        await Data.DatabaseManager.AddAccessibleKit(ucplayer.Steam64, kit.Name);
 
-                ucplayer.AccessibleKits.Add(kit.Name);
+                        await UCWarfare.ToUpdate();
+                        ucplayer.AccessibleKits.Add(kit.Name);
 
-                RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
-                EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
-                ucplayer.Message("request_kit_boughtcredits", kit.CreditCost.ToString());
-                Points.AwardCredits(ucplayer, -kit.CreditCost, isPurchase: true);
-                ActionLog.Add(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS", ucplayer);
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(ucplayer.SteamPlayer, kit.Name);
+                        EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
+                        ucplayer.Message("request_kit_boughtcredits", kit.CreditCost.ToString());
+                        Points.AwardCredits(ucplayer, -kit.CreditCost, isPurchase: true);
+                        ActionLog.Add(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS", ucplayer);
+                        L.Log(F.GetPlayerOriginalNames(ucplayer).PlayerName + " (" + ucplayer.Steam64 + ") bought " + kit.Name);
+                    } );
+
             }
             else
             {
