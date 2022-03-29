@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Uncreated.Networking;
@@ -370,7 +371,10 @@ namespace Uncreated.Warfare
         }
         private static void ClientReceived(byte[] bytes, IConnection connection)
         {
-            L.LogDebug("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes));
+            if (UCWarfare.Config.Debug)
+            {
+                L.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
+            }
         }
         private static void ClientSent(byte[] bytes, IConnection connection, ref bool Allow)
         {
@@ -380,7 +384,9 @@ namespace Uncreated.Warfare
                 {
                     ushort id = BitConverter.ToUInt16(bytes, 0);
                     if (id != Invocations.Shared.SendLogMessage.ID)
+                    {
                         L.Log("Sent over TCP server on " + connection.Identity + ": " + bytes.Length, ConsoleColor.DarkGray);
+                    }
                 } 
                 catch { }
             }

@@ -107,9 +107,9 @@ public class ActionLog : MonoBehaviour
         }
     }
     internal static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, R => R.ReadLongBytes(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
-    internal static readonly NetCall<DateTime> AckLog = new NetCall<DateTime>(ReceiveAckLog);
-    internal static readonly NetCall RequestCurrentLog = new NetCall(1129);
-    internal static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes(), null, (W, bytes) => W.WriteLong(bytes), null, 65535, registerWithoutMethod: true);
+    public static readonly NetCall<DateTime> AckLog = new NetCall<DateTime>(ReceiveAckLog);
+    public static readonly NetCall RequestCurrentLog = new NetCall(1129);
+    public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
 
     [NetCall(ENetCall.FROM_SERVER, 1128)]
     internal static void ReceiveAckLog(IConnection connection, DateTime fileReceived)

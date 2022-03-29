@@ -15,7 +15,7 @@ namespace Uncreated.Networking.Encoding
     {
         public delegate void Writer<T>(ByteWriter writer, T arg1);
         public int size = 0;
-        protected byte[] buffer;
+        private byte[] buffer;
         public byte[] ByteBuffer => buffer;
         protected static byte[] emptyArray = new byte[0];
         protected bool shouldPrepend;
@@ -37,31 +37,59 @@ namespace Uncreated.Networking.Encoding
             }
             this.shouldPrepend = shouldPrepend;
         }
+        public byte[] ToArray()
+        {
+            byte[] rtn = new byte[size];
+            Buffer.BlockCopy(buffer, 0, rtn, 0, size);
+            return rtn;
+        }
+        private static readonly bool isMono = Type.GetType("Mono.Runtime") != null;
         private void ExtendBuffer(int newsize)
         {
-            byte[] old = buffer;
-            int sz2 = old.Length;
-            int sz = sz2 + sz2 / 2;
-            if (sz < newsize) sz = newsize;
-            buffer = new byte[sz];
-            Buffer.BlockCopy(old, 0, buffer, 0, sz2);
+            if (size == 0)
+            {
+                buffer = new byte[newsize];
+            }
+            else
+            {
+                byte[] old = buffer;
+                int sz2 = old.Length;
+                int sz = sz2 + sz2 / 2;
+                if (sz < newsize) sz = newsize;
+                buffer = new byte[sz];
+                Buffer.BlockCopy(old, 0, buffer, 0, size);
+            }
         }
         public unsafe void PrependData(ushort MessageID)
         {
             if (!shouldPrepend) return;
-            byte[] old = buffer;
-            buffer = new byte[size + sizeof(ushort) + sizeof(int)];
-            Buffer.BlockCopy(old, 0, buffer, sizeof(ushort) + sizeof(int), old.Length);
+            const int ttl = sizeof(ushort) + sizeof(int);
+            if (size == 0)
+            {
+                buffer = new byte[ttl];
+            }
+            else if (!isMono && size + ttl <= buffer.Length)
+            {
+                // DOESN'T WORK IN MONO
+                fixed (byte* ptr = buffer)
+                    Buffer.MemoryCopy(ptr, ptr + ttl, buffer.Length, size);
+            }
+            else
+            {
+                byte[] old = buffer;
+                buffer = new byte[size + ttl];
+                Buffer.BlockCopy(old, 0, buffer, ttl, size);
+            }
 
             fixed (byte* ptr = buffer)
             {
-                byte* ptr2 = ptr + size;
-                *(ushort*)ptr2 = MessageID;
-                EndianCheck(ptr2, sizeof(ushort));
-                ptr2 += sizeof(ushort);
+                *(ushort*)ptr = MessageID;
+                EndianCheck(ptr, sizeof(ushort));
+                byte* ptr2 = ptr + sizeof(ushort);
                 *(int*)ptr2 = size;
                 EndianCheck(ptr2, sizeof(int));
             }
+            size += ttl;
         }
         public static unsafe void CopyPrependData(byte[] bytes, int index, ushort MessageID, int length)
         {
@@ -87,6 +115,13 @@ namespace Uncreated.Networking.Encoding
                 }
             }
         }
+        public void WriteStruct<T>(ref T value) where T : unmanaged
+        {
+            if (size > IntPtr.Size)
+                WriteInternal(ref value);
+            else
+                WriteInternal(value);
+        }
         private unsafe void EndianCheck(byte* litEndStrt, int size)
         {
             if (_isBigEndian && size > 1)
@@ -98,6 +133,19 @@ namespace Uncreated.Networking.Encoding
             }
         }
         private unsafe void WriteInternal<T>(T value) where T : unmanaged
+        {
+            int newsize = size + sizeof(T);
+            if (newsize > buffer.Length)
+                ExtendBuffer(newsize);
+            fixed (byte* ptr = buffer)
+            {
+                byte* ptr2 = ptr + size;
+                *(T*)ptr2 = value;
+                EndianCheck(ptr2, sizeof(T));
+            }
+            size = newsize;
+        }
+        private unsafe void WriteInternal<T>(ref T value) where T : unmanaged
         {
             int newsize = size + sizeof(T);
             if (newsize > buffer.Length)
@@ -788,7 +836,7 @@ namespace Uncreated.Networking.Encoding
             }
             size = newsize;
         }
-
+        public void Write(IReadWrite writer) => writer.Write(this);
         private static readonly MethodInfo WriteCharArrayMethod = typeof(ByteWriter).GetMethod(nameof(Write), BindingFlags.Instance | BindingFlags.Public, null, new Type[] { typeof(char[]) }, null);
         [MethodImpl(MethodImplOptions.NoInlining)]
         public unsafe void Write(char[] n)
@@ -857,19 +905,21 @@ namespace Uncreated.Networking.Encoding
         {
             writer.Invoke(this, arg);
         }
-
-        private static readonly Type[] parameters = new Type[2] { typeof(ByteWriter), null };
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static void VerifyType<T>(int typeIndex = -1) => VerifyType(typeof(T), typeIndex);
+        protected static void VerifyType(Type type, int typeIndex = -1)
+        {
+            if (!NetFactory.IsValidAutoType(type))
+                throw new InvalidDynamicTypeException(type, typeIndex, false);
+        }
         public static Delegate GetWriter(Type type)
         {
             DynamicMethod method;
-            lock (parameters)
-            {
-                parameters[1] = type ?? throw new ArgumentNullException(nameof(type));
-                method = new DynamicMethod("Write" + type.Name, typeof(void), parameters, typeof(ByteWriter), false);
-            }
+            Type[] parameters = new Type[2] { typeof(ByteWriter), type ?? throw new ArgumentNullException(nameof(type)) };
+            method = new DynamicMethod("Write" + type.Name, typeof(void), parameters, typeof(ByteWriter), false);
             ILGenerator il = method.GetILGenerator();
             method.DefineParameter(1, ParameterAttributes.None, "writer");
-            method.DefineParameter(2, ParameterAttributes.In, "value");
+            method.DefineParameter(2, ParameterAttributes.None, "value");
 
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldarg_1);
@@ -894,6 +944,8 @@ namespace Uncreated.Networking.Encoding
                     il.EmitCall(OpCodes.Call, WriteUInt32Method, null);
                 else if (type == typeof(bool))
                     il.EmitCall(OpCodes.Call, WriteBooleanMethod, null);
+                else if (type == typeof(char))
+                    il.EmitCall(OpCodes.Call, WriteCharMethod, null);
                 else if (type == typeof(sbyte))
                     il.EmitCall(OpCodes.Call, WriteInt8Method, null);
                 else if (type == typeof(double))
@@ -973,6 +1025,8 @@ namespace Uncreated.Networking.Encoding
                     il.EmitCall(OpCodes.Call, WriteInt8ArrayMethod, null);
                 else if (elemType == typeof(decimal))
                     il.EmitCall(OpCodes.Call, WriteDecimalArrayMethod, null);
+                else if (elemType == typeof(char))
+                    il.EmitCall(OpCodes.Call, WriteCharArrayMethod, null);
                 else if (elemType == typeof(double))
                     il.EmitCall(OpCodes.Call, WriteDoubleArrayMethod, null);
                 else if (elemType == typeof(string))
@@ -991,15 +1045,18 @@ namespace Uncreated.Networking.Encoding
                 Logging.LogError(ex);
                 return null;
             }
+            catch (ArgumentException ex)
+            {
+                Logging.LogError("Failed to create writer delegate for type " + type.FullName);
+                Logging.LogError(ex);
+                return null;
+            }
         }
         public static bool TryGetWriter(Type type, out Delegate writer)
         {
             DynamicMethod method;
-            lock (parameters)
-            {
-                parameters[1] = type ?? throw new ArgumentNullException(nameof(type));
-                method = new DynamicMethod("Write" + type.Name, typeof(void), parameters, typeof(ByteWriter), false);
-            }
+            Type[] parameters = new Type[2] { typeof(ByteWriter), type ?? throw new ArgumentNullException(nameof(type)) };
+            method = new DynamicMethod("Write" + type.Name, typeof(void), parameters, typeof(ByteWriter), false);
             ILGenerator il = method.GetILGenerator();
             method.DefineParameter(1, ParameterAttributes.None, "writer");
             method.DefineParameter(2, ParameterAttributes.In, "value");
@@ -1052,6 +1109,11 @@ namespace Uncreated.Networking.Encoding
                 else if (type == typeof(bool))
                 {
                     il.EmitCall(OpCodes.Call, WriteBooleanMethod, null);
+                    success = true;
+                }
+                else if (type == typeof(char))
+                {
+                    il.EmitCall(OpCodes.Call, WriteCharMethod, null);
                     success = true;
                 }
                 else if (type == typeof(sbyte))
@@ -1184,6 +1246,11 @@ namespace Uncreated.Networking.Encoding
                     il.EmitCall(OpCodes.Call, WriteDecimalArrayMethod, null);
                     success = true;
                 }
+                else if (elemType == typeof(char))
+                {
+                    il.EmitCall(OpCodes.Call, WriteCharArrayMethod, null);
+                    success = true;
+                }
                 else if (elemType == typeof(double))
                 {
                     il.EmitCall(OpCodes.Call, WriteDoubleArrayMethod, null);
@@ -1213,6 +1280,13 @@ namespace Uncreated.Networking.Encoding
                 writer = null;
                 return false;
             }
+            catch (ArgumentException ex)
+            {
+                Logging.LogError("Failed to create writer delegate for type " + type.FullName);
+                Logging.LogError(ex);
+                writer = null;
+                return false;
+            }
         }
         public static Writer<T1> GetWriter<T1>() => (Writer<T1>)GetWriter(typeof(T1));
         public static bool TryGetWriter<T1>(out Writer<T1> writer)
@@ -1228,6 +1302,7 @@ namespace Uncreated.Networking.Encoding
         public static int GetMinimumSize(Type type)
         {
             if (type.IsPointer) return IntPtr.Size;
+            else if (type.IsArray || type == typeof(string)) return sizeof(ushort);
             try
             {
                 return Marshal.SizeOf(type);
@@ -1239,6 +1314,15 @@ namespace Uncreated.Networking.Encoding
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int GetMinimumSize<T>() => GetMinimumSize(typeof(T));
+        protected static class WriterHelper<T>
+        {
+            public static readonly Writer<T> Writer;
+            static WriterHelper()
+            {
+                VerifyType<T>();
+                Writer = GetWriter<T>();
+            }
+        }
     }
     public sealed class ByteWriterRaw<T> : ByteWriter
     {
@@ -1246,7 +1330,7 @@ namespace Uncreated.Networking.Encoding
         /// <summary>Leave <paramref name="writer"/> null to auto-fill.</summary>
         public ByteWriterRaw(ushort message, Writer<T> writer, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity)
         {
-            this.writer = writer ?? (TryGetWriter(out Writer<T> w) ? w : null);
+            this.writer = writer ?? WriterHelper<T>.Writer;
             this.message = message;
         }
         public byte[] Get(T obj)
@@ -1254,7 +1338,7 @@ namespace Uncreated.Networking.Encoding
             Flush();
             writer.Invoke(this, obj);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class ByteWriterRaw<T1, T2> : ByteWriter
@@ -1265,8 +1349,8 @@ namespace Uncreated.Networking.Encoding
         public ByteWriterRaw(ushort message, Writer<T1> writer1, Writer<T2> writer2, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity)
         {
             this.message = message;
-            this.writer1 = writer1 ?? (TryGetWriter(out Writer<T1> w1) ? w1 : null);
-            this.writer2 = writer2 ?? (TryGetWriter(out Writer<T2> w2) ? w2 : null);
+            this.writer1 = writer1 ?? WriterHelper<T1>.Writer;
+            this.writer2 = writer2 ?? WriterHelper<T2>.Writer;
         }
         public byte[] Get(T1 arg1, T2 arg2)
         {
@@ -1274,7 +1358,7 @@ namespace Uncreated.Networking.Encoding
             writer1.Invoke(this, arg1);
             writer2.Invoke(this, arg2);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class ByteWriterRaw<T1, T2, T3> : ByteWriter
@@ -1286,9 +1370,9 @@ namespace Uncreated.Networking.Encoding
         public ByteWriterRaw(ushort message, Writer<T1> writer1, Writer<T2> writer2, Writer<T3> writer3, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity)
         {
             this.message = message;
-            this.writer1 = writer1 ?? (TryGetWriter(out Writer<T1> w1) ? w1 : null);
-            this.writer2 = writer2 ?? (TryGetWriter(out Writer<T2> w2) ? w2 : null);
-            this.writer3 = writer3 ?? (TryGetWriter(out Writer<T3> w3) ? w3 : null);
+            this.writer1 = writer1 ?? WriterHelper<T1>.Writer;
+            this.writer2 = writer2 ?? WriterHelper<T2>.Writer;
+            this.writer3 = writer3 ?? WriterHelper<T3>.Writer;
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3)
         {
@@ -1297,7 +1381,7 @@ namespace Uncreated.Networking.Encoding
             writer2.Invoke(this, arg2);
             writer3.Invoke(this, arg3);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class ByteWriterRaw<T1, T2, T3, T4> : ByteWriter
@@ -1310,10 +1394,10 @@ namespace Uncreated.Networking.Encoding
         public ByteWriterRaw(ushort message, Writer<T1> writer1, Writer<T2> writer2, Writer<T3> writer3, Writer<T4> writer4, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity)
         {
             this.message = message;
-            this.writer1 = writer1 ?? (TryGetWriter(out Writer<T1> w1) ? w1 : null);
-            this.writer2 = writer2 ?? (TryGetWriter(out Writer<T2> w2) ? w2 : null);
-            this.writer3 = writer3 ?? (TryGetWriter(out Writer<T3> w3) ? w3 : null);
-            this.writer4 = writer4 ?? (TryGetWriter(out Writer<T4> w4) ? w4 : null);
+            this.writer1 = writer1 ?? WriterHelper<T1>.Writer;
+            this.writer2 = writer2 ?? WriterHelper<T2>.Writer;
+            this.writer3 = writer3 ?? WriterHelper<T3>.Writer;
+            this.writer4 = writer4 ?? WriterHelper<T4>.Writer;
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
         {
@@ -1323,34 +1407,40 @@ namespace Uncreated.Networking.Encoding
             writer3.Invoke(this, arg3);
             writer4.Invoke(this, arg4);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1> : ByteWriter
     {
-        public Writer<T1> writer;
+        static DynamicByteWriter()
+        {
+            writer = WriterHelper<T1>.Writer;
+        }
+        private static readonly Writer<T1> writer;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? GetMinimumSize<T1>() : capacity)
         {
             this.message = message;
-            writer = GetWriter<T1>();
         }
         public byte[] Get(T1 obj)
         {
             Flush();
             writer.Invoke(this, obj);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? GetMinimumSize<T1>() + GetMinimumSize<T2>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
         }
         public byte[] Get(T1 arg1, T2 arg2)
         {
@@ -1358,20 +1448,23 @@ namespace Uncreated.Networking.Encoding
             Write(writer1, arg1);
             Write(writer2, arg2);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2, T3> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
-        private readonly Writer<T3> writer3;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+            writer3 = WriterHelper<T3>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
+        private static readonly Writer<T3> writer3;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? GetMinimumSize<T1>() + GetMinimumSize<T2>() + GetMinimumSize<T3>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
-            writer3 = GetWriter<T3>();
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3)
         {
@@ -1380,24 +1473,27 @@ namespace Uncreated.Networking.Encoding
             Write(writer2, arg2);
             Write(writer3, arg3);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2, T3, T4> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
-        private readonly Writer<T3> writer3;
-        private readonly Writer<T4> writer4;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+            writer3 = WriterHelper<T3>.Writer;
+            writer4 = WriterHelper<T4>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
+        private static readonly Writer<T3> writer3;
+        private static readonly Writer<T4> writer4;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? 
                                                                                                                                    GetMinimumSize<T1>() + GetMinimumSize<T2>() + GetMinimumSize<T3>() + 
                                                                                                                                    GetMinimumSize<T4>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
-            writer3 = GetWriter<T3>();
-            writer4 = GetWriter<T4>();
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3, T4 arg4)
         {
@@ -1407,26 +1503,29 @@ namespace Uncreated.Networking.Encoding
             Write(writer3, arg3);
             Write(writer4, arg4);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2, T3, T4, T5> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
-        private readonly Writer<T3> writer3;
-        private readonly Writer<T4> writer4;
-        private readonly Writer<T5> writer5;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+            writer3 = WriterHelper<T3>.Writer;
+            writer4 = WriterHelper<T4>.Writer;
+            writer5 = WriterHelper<T5>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
+        private static readonly Writer<T3> writer3;
+        private static readonly Writer<T4> writer4;
+        private static readonly Writer<T5> writer5;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? 
                                                                                                                                    GetMinimumSize<T1>() + GetMinimumSize<T2>() + GetMinimumSize<T3>() + 
                                                                                                                                    GetMinimumSize<T4>() + GetMinimumSize<T5>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
-            writer3 = GetWriter<T3>();
-            writer4 = GetWriter<T4>();
-            writer5 = GetWriter<T5>();
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
         {
@@ -1437,28 +1536,31 @@ namespace Uncreated.Networking.Encoding
             Write(writer4, arg4);
             Write(writer5, arg5);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2, T3, T4, T5, T6> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
-        private readonly Writer<T3> writer3;
-        private readonly Writer<T4> writer4;
-        private readonly Writer<T5> writer5;
-        private readonly Writer<T6> writer6;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+            writer3 = WriterHelper<T3>.Writer;
+            writer4 = WriterHelper<T4>.Writer;
+            writer5 = WriterHelper<T5>.Writer;
+            writer6 = WriterHelper<T6>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
+        private static readonly Writer<T3> writer3;
+        private static readonly Writer<T4> writer4;
+        private static readonly Writer<T5> writer5;
+        private static readonly Writer<T6> writer6;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? 
                                                                                                                                    GetMinimumSize<T1>() + GetMinimumSize<T2>() + GetMinimumSize<T3>() +
                                                                                                                                    GetMinimumSize<T4>() + GetMinimumSize<T5>() + GetMinimumSize<T6>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
-            writer3 = GetWriter<T3>();
-            writer4 = GetWriter<T4>();
-            writer5 = GetWriter<T5>();
-            writer6 = GetWriter<T6>();
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
         {
@@ -1470,31 +1572,34 @@ namespace Uncreated.Networking.Encoding
             Write(writer5, arg5);
             Write(writer6, arg6);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
-        private readonly Writer<T3> writer3;
-        private readonly Writer<T4> writer4;
-        private readonly Writer<T5> writer5;
-        private readonly Writer<T6> writer6;
-        private readonly Writer<T7> writer7;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+            writer3 = WriterHelper<T3>.Writer;
+            writer4 = WriterHelper<T4>.Writer;
+            writer5 = WriterHelper<T5>.Writer;
+            writer6 = WriterHelper<T6>.Writer;
+            writer7 = WriterHelper<T7>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
+        private static readonly Writer<T3> writer3;
+        private static readonly Writer<T4> writer4;
+        private static readonly Writer<T5> writer5;
+        private static readonly Writer<T6> writer6;
+        private static readonly Writer<T7> writer7;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? 
                                                                                                                                    GetMinimumSize<T1>() + GetMinimumSize<T2>() + GetMinimumSize<T3>() +
                                                                                                                                    GetMinimumSize<T4>() + GetMinimumSize<T5>() + GetMinimumSize<T6>() + 
                                                                                                                                    GetMinimumSize<T7>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
-            writer3 = GetWriter<T3>();
-            writer4 = GetWriter<T4>();
-            writer5 = GetWriter<T5>();
-            writer6 = GetWriter<T6>();
-            writer7 = GetWriter<T7>();
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
         {
@@ -1507,33 +1612,36 @@ namespace Uncreated.Networking.Encoding
             Write(writer6, arg6);
             Write(writer7, arg7);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
-        private readonly Writer<T3> writer3;
-        private readonly Writer<T4> writer4;
-        private readonly Writer<T5> writer5;
-        private readonly Writer<T6> writer6;
-        private readonly Writer<T7> writer7;
-        private readonly Writer<T8> writer8;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+            writer3 = WriterHelper<T3>.Writer;
+            writer4 = WriterHelper<T4>.Writer;
+            writer5 = WriterHelper<T5>.Writer;
+            writer6 = WriterHelper<T6>.Writer;
+            writer7 = WriterHelper<T7>.Writer;
+            writer8 = WriterHelper<T8>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
+        private static readonly Writer<T3> writer3;
+        private static readonly Writer<T4> writer4;
+        private static readonly Writer<T5> writer5;
+        private static readonly Writer<T6> writer6;
+        private static readonly Writer<T7> writer7;
+        private static readonly Writer<T8> writer8;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? 
                                                                                                                                    GetMinimumSize<T1>() + GetMinimumSize<T2>() + GetMinimumSize<T3>() +
                                                                                                                                    GetMinimumSize<T4>() + GetMinimumSize<T5>() + GetMinimumSize<T6>() +
                                                                                                                                    GetMinimumSize<T7>() + GetMinimumSize<T8>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
-            writer3 = GetWriter<T3>();
-            writer4 = GetWriter<T4>();
-            writer5 = GetWriter<T5>();
-            writer6 = GetWriter<T6>();
-            writer7 = GetWriter<T7>();
-            writer8 = GetWriter<T8>();
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7 ,T8 arg8)
         {
@@ -1547,35 +1655,38 @@ namespace Uncreated.Networking.Encoding
             Write(writer7, arg7);
             Write(writer8, arg8);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
-        private readonly Writer<T3> writer3;
-        private readonly Writer<T4> writer4;
-        private readonly Writer<T5> writer5;
-        private readonly Writer<T6> writer6;
-        private readonly Writer<T7> writer7;
-        private readonly Writer<T8> writer8;
-        private readonly Writer<T9> writer9;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+            writer3 = WriterHelper<T3>.Writer;
+            writer4 = WriterHelper<T4>.Writer;
+            writer5 = WriterHelper<T5>.Writer;
+            writer6 = WriterHelper<T6>.Writer;
+            writer7 = WriterHelper<T7>.Writer;
+            writer8 = WriterHelper<T8>.Writer;
+            writer9 = WriterHelper<T9>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
+        private static readonly Writer<T3> writer3;
+        private static readonly Writer<T4> writer4;
+        private static readonly Writer<T5> writer5;
+        private static readonly Writer<T6> writer6;
+        private static readonly Writer<T7> writer7;
+        private static readonly Writer<T8> writer8;
+        private static readonly Writer<T9> writer9;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? 
                                                                                                                                    GetMinimumSize<T1>() + GetMinimumSize<T2>() + GetMinimumSize<T3>() +
                                                                                                                                    GetMinimumSize<T4>() + GetMinimumSize<T5>() + GetMinimumSize<T6>() +
                                                                                                                                    GetMinimumSize<T7>() + GetMinimumSize<T8>() + GetMinimumSize<T9>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
-            writer3 = GetWriter<T3>();
-            writer4 = GetWriter<T4>();
-            writer5 = GetWriter<T5>();
-            writer6 = GetWriter<T6>();
-            writer7 = GetWriter<T7>();
-            writer8 = GetWriter<T8>();
-            writer9 = GetWriter<T9>();
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
         {
@@ -1590,21 +1701,34 @@ namespace Uncreated.Networking.Encoding
             Write(writer8, arg8);
             Write(writer9, arg9);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
     public sealed class DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : ByteWriter
     {
-        private readonly Writer<T1> writer1;
-        private readonly Writer<T2> writer2;
-        private readonly Writer<T3> writer3;
-        private readonly Writer<T4> writer4;
-        private readonly Writer<T5> writer5;
-        private readonly Writer<T6> writer6;
-        private readonly Writer<T7> writer7;
-        private readonly Writer<T8> writer8;
-        private readonly Writer<T9> writer9;
-        private readonly Writer<T10> writer10;
+        static DynamicByteWriter()
+        {
+            writer1 = WriterHelper<T1>.Writer;
+            writer2 = WriterHelper<T2>.Writer;
+            writer3 = WriterHelper<T3>.Writer;
+            writer4 = WriterHelper<T4>.Writer;
+            writer5 = WriterHelper<T5>.Writer;
+            writer6 = WriterHelper<T6>.Writer;
+            writer7 = WriterHelper<T7>.Writer;
+            writer8 = WriterHelper<T8>.Writer;
+            writer9 = WriterHelper<T9>.Writer;
+            writer10 = WriterHelper<T10>.Writer;
+        }
+        private static readonly Writer<T1> writer1;
+        private static readonly Writer<T2> writer2;
+        private static readonly Writer<T3> writer3;
+        private static readonly Writer<T4> writer4;
+        private static readonly Writer<T5> writer5;
+        private static readonly Writer<T6> writer6;
+        private static readonly Writer<T7> writer7;
+        private static readonly Writer<T8> writer8;
+        private static readonly Writer<T9> writer9;
+        private static readonly Writer<T10> writer10;
         public DynamicByteWriter(ushort message, bool shouldPrepend = true, int capacity = 0) : base(message, shouldPrepend, capacity < 1 ? 
                                                                                                                                    GetMinimumSize<T1>() + GetMinimumSize<T2>() + GetMinimumSize<T3>() +
                                                                                                                                    GetMinimumSize<T4>() + GetMinimumSize<T5>() + GetMinimumSize<T6>() +
@@ -1612,16 +1736,6 @@ namespace Uncreated.Networking.Encoding
                                                                                                                                    GetMinimumSize<T10>() : capacity)
         {
             this.message = message;
-            writer1 = GetWriter<T1>();
-            writer2 = GetWriter<T2>();
-            writer3 = GetWriter<T3>();
-            writer4 = GetWriter<T4>();
-            writer5 = GetWriter<T5>();
-            writer6 = GetWriter<T6>();
-            writer7 = GetWriter<T7>();
-            writer8 = GetWriter<T8>();
-            writer9 = GetWriter<T9>();
-            writer10 = GetWriter<T10>();
         }
         public byte[] Get(T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
         {
@@ -1637,17 +1751,17 @@ namespace Uncreated.Networking.Encoding
             Write(writer9, arg9);
             Write(writer10, arg10);
             PrependData(message);
-            return buffer;
+            return ToArray();
         }
     }
-    public interface IReadWrite<T> where T : new()
+    public interface IReadWrite
     {
         public void Read(ByteReader R);
         public void Write(ByteWriter W);
     }
     public static class IReadWriteEx
     {
-        public static void WriteArrayShort<T>(this T[] objs, ByteWriter W) where T : IReadWrite<T>, new()
+        public static void WriteArrayShort<T>(this T[] objs, ByteWriter W) where T : IReadWrite, new()
         {
             if (objs.Length > byte.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(objs), "Array too long, must be within byte range.");
@@ -1657,7 +1771,7 @@ namespace Uncreated.Networking.Encoding
                 objs[i].Write(W);
             }
         }
-        public static T[] ReadArrayShort<T>(this ByteReader R) where T : IReadWrite<T>, new()
+        public static T[] ReadArrayShort<T>(this ByteReader R) where T : IReadWrite, new()
         {
             int len = R.ReadUInt8();
             T[] rtn = new T[len];
@@ -1669,7 +1783,7 @@ namespace Uncreated.Networking.Encoding
             }
             return rtn;
         }
-        public static void WriteArray<T>(this T[] objs, ByteWriter W) where T : IReadWrite<T>, new()
+        public static void WriteArray<T>(this T[] objs, ByteWriter W) where T : IReadWrite, new()
         {
             if (objs.Length > ushort.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(objs), "Array too long, must be within ushort range.");
@@ -1679,7 +1793,7 @@ namespace Uncreated.Networking.Encoding
                 objs[i].Write(W);
             }
         }
-        public static T[] ReadArray<T>(this ByteReader R) where T : IReadWrite<T>, new()
+        public static T[] ReadArray<T>(this ByteReader R) where T : IReadWrite, new()
         {
             int len = R.ReadUInt16();
             T[] rtn = new T[len];
@@ -1691,7 +1805,7 @@ namespace Uncreated.Networking.Encoding
             }
             return rtn;
         }
-        public static void WriteArrayLong<T>(this T[] objs, ByteWriter W) where T : IReadWrite<T>, new()
+        public static void WriteArrayLong<T>(this T[] objs, ByteWriter W) where T : IReadWrite, new()
         {
             if (objs.LongLength > uint.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(objs), "Array too long, must be within uint range.");
@@ -1701,7 +1815,7 @@ namespace Uncreated.Networking.Encoding
                 objs[i].Write(W);
             }
         }
-        public static T[] ReadArrayLong<T>(this ByteReader R) where T : IReadWrite<T>, new()
+        public static T[] ReadArrayLong<T>(this ByteReader R) where T : IReadWrite, new()
         {
             long len = R.ReadUInt32();
             T[] rtn = new T[len];
@@ -1714,7 +1828,7 @@ namespace Uncreated.Networking.Encoding
             return rtn;
         }
     }
-    public readonly struct NullableType<T> where T : IReadWrite<T>, new()
+    public readonly struct NullableType<T> where T : IReadWrite, new()
     {
         public T Value => _value;
         private readonly T _value;

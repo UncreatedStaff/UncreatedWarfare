@@ -4,12 +4,31 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Networking.Encoding;
 
+namespace Uncreated
+{
+    internal static class SizeHelper<T> where T : unmanaged
+    {
+        public static readonly int SIZE;
+        static SizeHelper()
+        {
+            try
+            {
+                SIZE = Marshal.SizeOf<T>();
+            }
+            catch (ArgumentException)
+            {
+                SIZE = -1;
+            }
+        }
+    }
+}
 namespace Uncreated.Warfare
 {
     public struct Log
@@ -2282,7 +2301,7 @@ namespace Uncreated.Warfare
         void ReadJson(ref Utf8JsonReader reader);
     }
 
-    public class Report : IReadWrite<Report>
+    public class Report : IReadWrite
     {
         public static readonly Type[] ReportTypes = new Type[]
         {
@@ -2561,7 +2580,7 @@ namespace Uncreated.Warfare
         }
     }
 
-    public struct DailyQuest : IReadWrite<DailyQuest>
+    public struct DailyQuest : IReadWrite
     {
         public const int DAILY_QUEST_LENGTH = 14;
         public const int DAILY_QUEST_CONDITION_LENGTH = 3;

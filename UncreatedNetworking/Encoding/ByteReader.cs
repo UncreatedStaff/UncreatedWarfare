@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -52,7 +53,17 @@ namespace Uncreated.Networking.Encoding
             index += length;
             return rtn;
         }
-
+        public unsafe T ReadStruct<T>() where T : unmanaged
+        {
+            int size = sizeof(T);
+            if (size == -1 || index + size > _buffer.Length)
+            {
+                failure |= true;
+                Logging.LogWarning("Failed to run " + nameof(ReadStruct) + "<" + typeof(T).Name + "> sizeof: " + size + " at index " + index.ToString());
+                return default;
+            }
+            return Read<T>();
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public byte[] ReadUInt8Array() => ReadBytes();
 
@@ -693,9 +704,22 @@ namespace Uncreated.Networking.Encoding
                 rtn[i] = ReadString();
             return rtn;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected static void VerifyType<T>(int typeIndex = -1) => VerifyType(typeof(T), typeIndex);
+        protected static void VerifyType(Type type, int typeIndex = -1)
+        {
+            if (!NetFactory.IsValidAutoType(type))
+                throw new InvalidDynamicTypeException(type, typeIndex, true);
+        }
         public T InvokeReader<T>(Reader<T> reader) => reader.Invoke(this);
         private static readonly Type[] parameters = new Type[1] { typeof(ByteReader) };
         public static Reader<T1> GetReader<T1>() => (Reader<T1>)GetReader(typeof(T1));
+        public T Read<T>(T writer) where T : IReadWrite, new()
+        {
+            T r = new T();
+            r.Read(this);
+            return r;
+        }
         public static Delegate GetReader(Type type)
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
@@ -725,6 +749,8 @@ namespace Uncreated.Networking.Encoding
                     il.EmitCall(OpCodes.Call, ReadUInt32Method, null);
                 else if (type == typeof(bool))
                     il.EmitCall(OpCodes.Call, ReadBoolMethod, null);
+                else if (type == typeof(char))
+                    il.EmitCall(OpCodes.Call, ReadCharMethod, null);
                 else if (type == typeof(sbyte))
                     il.EmitCall(OpCodes.Call, ReadInt8Method, null);
                 else if (type == typeof(double))
@@ -804,6 +830,8 @@ namespace Uncreated.Networking.Encoding
                     il.EmitCall(OpCodes.Call, ReadInt8ArrayMethod, null);
                 else if (elemType == typeof(decimal))
                     il.EmitCall(OpCodes.Call, ReadDecimalArrayMethod, null);
+                else if (elemType == typeof(char))
+                    il.EmitCall(OpCodes.Call, ReadCharArrayMethod, null);
                 else if (elemType == typeof(double))
                     il.EmitCall(OpCodes.Call, ReadDoubleArrayMethod, null);
                 else if (elemType == typeof(string))
@@ -818,6 +846,12 @@ namespace Uncreated.Networking.Encoding
             }
             catch (InvalidProgramException ex)
             {
+                Logging.LogError(ex);
+                return null;
+            }
+            catch (ArgumentException ex)
+            {
+                Logging.LogError("Failed to create reader delegate for type " + type.FullName);
                 Logging.LogError(ex);
                 return null;
             }
@@ -877,6 +911,11 @@ namespace Uncreated.Networking.Encoding
                 else if (type == typeof(bool))
                 {
                     il.EmitCall(OpCodes.Call, ReadBoolMethod, null);
+                    success = true;
+                }
+                else if (type == typeof(char))
+                {
+                    il.EmitCall(OpCodes.Call, ReadCharMethod, null);
                     success = true;
                 }
                 else if (type == typeof(sbyte))
@@ -1009,6 +1048,11 @@ namespace Uncreated.Networking.Encoding
                     il.EmitCall(OpCodes.Call, ReadDecimalArrayMethod, null);
                     success = true;
                 }
+                else if (elemType == typeof(char))
+                {
+                    il.EmitCall(OpCodes.Call, ReadCharArrayMethod, null);
+                    success = true;
+                }
                 else if (elemType == typeof(double))
                 {
                     il.EmitCall(OpCodes.Call, ReadDoubleArrayMethod, null);
@@ -1040,6 +1084,13 @@ namespace Uncreated.Networking.Encoding
                 reader = null;
                 return false;
             }
+            catch (ArgumentException ex)
+            {
+                Logging.LogError("Failed to create reader delegate for type " + type.FullName);
+                Logging.LogError(ex);
+                reader = null;
+                return false;
+            }
         }
         public static bool TryGetReader<T1>(out Reader<T1> reader)
         {
@@ -1051,6 +1102,15 @@ namespace Uncreated.Networking.Encoding
             reader = null;
             return false;
         }
+        protected static class ReaderHelper<T>
+        {
+            public static readonly Reader<T> Reader;
+            static ReaderHelper()
+            {
+                VerifyType<T>();
+                Reader = GetReader<T>();
+            }
+        }
     }
     public sealed class ByteReaderRaw<T> : ByteReader
     {
@@ -1060,7 +1120,7 @@ namespace Uncreated.Networking.Encoding
         {
             _buffer = null;
             index = 0;
-            this.reader = reader ?? (TryGetReader(out Reader<T> r) ? r : null);
+            this.reader = reader ?? ReaderHelper<T>.Reader;
             failure = false;
         }
         public bool Read(byte[] bytes, out T arg)
@@ -1083,8 +1143,8 @@ namespace Uncreated.Networking.Encoding
         {
             _buffer = null;
             index = 0;
-            this.reader1 = reader1 ?? (TryGetReader(out Reader<T1> r1) ? r1 : null);
-            this.reader2 = reader2 ?? (TryGetReader(out Reader<T2> r2) ? r2 : null);
+            this.reader1 = reader1 ?? ReaderHelper<T1>.Reader;
+            this.reader2 = reader2 ?? ReaderHelper<T2>.Reader;
             failure = false;
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2)
@@ -1109,9 +1169,9 @@ namespace Uncreated.Networking.Encoding
         {
             _buffer = null;
             index = 0;
-            this.reader1 = reader1 ?? (TryGetReader(out Reader<T1> r1) ? r1 : null);
-            this.reader2 = reader2 ?? (TryGetReader(out Reader<T2> r2) ? r2 : null);
-            this.reader3 = reader3 ?? (TryGetReader(out Reader<T3> r3) ? r3 : null);
+            this.reader1 = reader1 ?? ReaderHelper<T1>.Reader;
+            this.reader2 = reader2 ?? ReaderHelper<T2>.Reader;
+            this.reader3 = reader3 ?? ReaderHelper<T3>.Reader;
             failure = false;
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3)
@@ -1138,10 +1198,10 @@ namespace Uncreated.Networking.Encoding
         {
             _buffer = null;
             index = 0;
-            this.reader1 = reader1 ?? (TryGetReader(out Reader<T1> r1) ? r1 : null);
-            this.reader2 = reader2 ?? (TryGetReader(out Reader<T2> r2) ? r2 : null);
-            this.reader3 = reader3 ?? (TryGetReader(out Reader<T3> r3) ? r3 : null);
-            this.reader4 = reader4 ?? (TryGetReader(out Reader<T4> r4) ? r4 : null);
+            this.reader1 = reader1 ?? ReaderHelper<T1>.Reader;
+            this.reader2 = reader2 ?? ReaderHelper<T2>.Reader;
+            this.reader3 = reader3 ?? ReaderHelper<T3>.Reader;
+            this.reader4 = reader4 ?? ReaderHelper<T4>.Reader;
             failure = false;
         }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4)
@@ -1160,11 +1220,12 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
+            reader1 = ReaderHelper<T1>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1)
         {
             if (bytes != null)
@@ -1178,13 +1239,14 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2)
         {
             if (bytes != null)
@@ -1199,15 +1261,16 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2, T3> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        private readonly Reader<T3> reader3;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
-            reader3 = GetReader<T3>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
+            reader3 = ReaderHelper<T3>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        private static readonly Reader<T3> reader3;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3)
         {
             if (bytes != null)
@@ -1223,17 +1286,18 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2, T3, T4> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        private readonly Reader<T3> reader3;
-        private readonly Reader<T4> reader4;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
-            reader3 = GetReader<T3>();
-            reader4 = GetReader<T4>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
+            reader3 = ReaderHelper<T3>.Reader;
+            reader4 = ReaderHelper<T4>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        private static readonly Reader<T3> reader3;
+        private static readonly Reader<T4> reader4;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4)
         {
             if (bytes != null)
@@ -1250,19 +1314,20 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2, T3, T4, T5> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        private readonly Reader<T3> reader3;
-        private readonly Reader<T4> reader4;
-        private readonly Reader<T5> reader5;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
-            reader3 = GetReader<T3>();
-            reader4 = GetReader<T4>();
-            reader5 = GetReader<T5>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
+            reader3 = ReaderHelper<T3>.Reader;
+            reader4 = ReaderHelper<T4>.Reader;
+            reader5 = ReaderHelper<T5>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        private static readonly Reader<T3> reader3;
+        private static readonly Reader<T4> reader4;
+        private static readonly Reader<T5> reader5;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5)
         {
             if (bytes != null)
@@ -1280,21 +1345,22 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2, T3, T4, T5, T6> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        private readonly Reader<T3> reader3;
-        private readonly Reader<T4> reader4;
-        private readonly Reader<T5> reader5;
-        private readonly Reader<T6> reader6;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
-            reader3 = GetReader<T3>();
-            reader4 = GetReader<T4>();
-            reader5 = GetReader<T5>();
-            reader6 = GetReader<T6>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
+            reader3 = ReaderHelper<T3>.Reader;
+            reader4 = ReaderHelper<T4>.Reader;
+            reader5 = ReaderHelper<T5>.Reader;
+            reader6 = ReaderHelper<T6>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        private static readonly Reader<T3> reader3;
+        private static readonly Reader<T4> reader4;
+        private static readonly Reader<T5> reader5;
+        private static readonly Reader<T6> reader6;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6)
         {
             if (bytes != null)
@@ -1313,23 +1379,24 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2, T3, T4, T5, T6, T7> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        private readonly Reader<T3> reader3;
-        private readonly Reader<T4> reader4;
-        private readonly Reader<T5> reader5;
-        private readonly Reader<T6> reader6;
-        private readonly Reader<T7> reader7;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
-            reader3 = GetReader<T3>();
-            reader4 = GetReader<T4>();
-            reader5 = GetReader<T5>();
-            reader6 = GetReader<T6>();
-            reader7 = GetReader<T7>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
+            reader3 = ReaderHelper<T3>.Reader;
+            reader4 = ReaderHelper<T4>.Reader;
+            reader5 = ReaderHelper<T5>.Reader;
+            reader6 = ReaderHelper<T6>.Reader;
+            reader7 = ReaderHelper<T7>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        private static readonly Reader<T3> reader3;
+        private static readonly Reader<T4> reader4;
+        private static readonly Reader<T5> reader5;
+        private static readonly Reader<T6> reader6;
+        private static readonly Reader<T7> reader7;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7)
         {
             if (bytes != null)
@@ -1349,25 +1416,26 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        private readonly Reader<T3> reader3;
-        private readonly Reader<T4> reader4;
-        private readonly Reader<T5> reader5;
-        private readonly Reader<T6> reader6;
-        private readonly Reader<T7> reader7;
-        private readonly Reader<T8> reader8;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
-            reader3 = GetReader<T3>();
-            reader4 = GetReader<T4>();
-            reader5 = GetReader<T5>();
-            reader6 = GetReader<T6>();
-            reader7 = GetReader<T7>();
-            reader8 = GetReader<T8>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
+            reader3 = ReaderHelper<T3>.Reader;
+            reader4 = ReaderHelper<T4>.Reader;
+            reader5 = ReaderHelper<T5>.Reader;
+            reader6 = ReaderHelper<T6>.Reader;
+            reader7 = ReaderHelper<T7>.Reader;
+            reader8 = ReaderHelper<T8>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        private static readonly Reader<T3> reader3;
+        private static readonly Reader<T4> reader4;
+        private static readonly Reader<T5> reader5;
+        private static readonly Reader<T6> reader6;
+        private static readonly Reader<T7> reader7;
+        private static readonly Reader<T8> reader8;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8)
         {
             if (bytes != null)
@@ -1388,27 +1456,28 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8, T9> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        private readonly Reader<T3> reader3;
-        private readonly Reader<T4> reader4;
-        private readonly Reader<T5> reader5;
-        private readonly Reader<T6> reader6;
-        private readonly Reader<T7> reader7;
-        private readonly Reader<T8> reader8;
-        private readonly Reader<T9> reader9;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
-            reader3 = GetReader<T3>();
-            reader4 = GetReader<T4>();
-            reader5 = GetReader<T5>();
-            reader6 = GetReader<T6>();
-            reader7 = GetReader<T7>();
-            reader8 = GetReader<T8>();
-            reader9 = GetReader<T9>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
+            reader3 = ReaderHelper<T3>.Reader;
+            reader4 = ReaderHelper<T4>.Reader;
+            reader5 = ReaderHelper<T5>.Reader;
+            reader6 = ReaderHelper<T6>.Reader;
+            reader7 = ReaderHelper<T7>.Reader;
+            reader8 = ReaderHelper<T8>.Reader;
+            reader9 = ReaderHelper<T9>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        private static readonly Reader<T3> reader3;
+        private static readonly Reader<T4> reader4;
+        private static readonly Reader<T5> reader5;
+        private static readonly Reader<T6> reader6;
+        private static readonly Reader<T7> reader7;
+        private static readonly Reader<T8> reader8;
+        private static readonly Reader<T9> reader9;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9)
         {
             if (bytes != null)
@@ -1430,29 +1499,30 @@ namespace Uncreated.Networking.Encoding
     }
     public sealed class DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : ByteReader
     {
-        private readonly Reader<T1> reader1;
-        private readonly Reader<T2> reader2;
-        private readonly Reader<T3> reader3;
-        private readonly Reader<T4> reader4;
-        private readonly Reader<T5> reader5;
-        private readonly Reader<T6> reader6;
-        private readonly Reader<T7> reader7;
-        private readonly Reader<T8> reader8;
-        private readonly Reader<T9> reader9;
-        private readonly Reader<T10> reader10;
-        public DynamicByteReader()
+        static DynamicByteReader()
         {
-            reader1 = GetReader<T1>();
-            reader2 = GetReader<T2>();
-            reader3 = GetReader<T3>();
-            reader4 = GetReader<T4>();
-            reader5 = GetReader<T5>();
-            reader6 = GetReader<T6>();
-            reader7 = GetReader<T7>();
-            reader8 = GetReader<T8>();
-            reader9 = GetReader<T9>();
-            reader10 = GetReader<T10>();
+            reader1 = ReaderHelper<T1>.Reader;
+            reader2 = ReaderHelper<T2>.Reader;
+            reader3 = ReaderHelper<T3>.Reader;
+            reader4 = ReaderHelper<T4>.Reader;
+            reader5 = ReaderHelper<T5>.Reader;
+            reader6 = ReaderHelper<T6>.Reader;
+            reader7 = ReaderHelper<T7>.Reader;
+            reader8 = ReaderHelper<T8>.Reader;
+            reader9 = ReaderHelper<T9>.Reader;
+            reader10 = ReaderHelper<T10>.Reader;
         }
+        private static readonly Reader<T1> reader1;
+        private static readonly Reader<T2> reader2;
+        private static readonly Reader<T3> reader3;
+        private static readonly Reader<T4> reader4;
+        private static readonly Reader<T5> reader5;
+        private static readonly Reader<T6> reader6;
+        private static readonly Reader<T7> reader7;
+        private static readonly Reader<T8> reader8;
+        private static readonly Reader<T9> reader9;
+        private static readonly Reader<T10> reader10;
+        public DynamicByteReader() { }
         public bool Read(byte[] bytes, out T1 arg1, out T2 arg2, out T3 arg3, out T4 arg4, out T5 arg5, out T6 arg6, out T7 arg7, out T8 arg8, out T9 arg9, out T10 arg10)
         {
             if (bytes != null)
@@ -1472,5 +1542,11 @@ namespace Uncreated.Networking.Encoding
             failure = false;
             return !oldfailure;
         }
+    }
+    public sealed class InvalidDynamicTypeException : Exception
+    {
+        public InvalidDynamicTypeException() { }
+        public InvalidDynamicTypeException(Type arg, int typeNumber, bool reader) :
+            base("Generic argument " + arg.Name + ": T" + typeNumber + " is not able to be " + (reader ? "read" : "written") + " automatically.") { }
     }
 }

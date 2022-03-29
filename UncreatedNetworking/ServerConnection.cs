@@ -300,6 +300,7 @@ namespace Uncreated.Networking
             {
                 Logging.LogError("Error trying to reconnect after the connection to the server was lost.");
                 Logging.LogError(ex);
+                StartReconnect();
             }
             ar.AsyncWaitHandle.Dispose();
         }

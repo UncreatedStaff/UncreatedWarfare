@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.ReportSystem
         /// T1: report <br>T2: isOnline</br>
         /// </summary>
         public static readonly NetCallRaw<Report, bool> SendReportInvocation = new NetCallRaw<Report, bool>(4000, Report.ReadReport, null, Report.WriteReport, null, 256);
-        public static readonly NetCall<bool, string> ReceiveInvocationResponse = new NetCall<bool, string>(4001, 78, true);
+        public static readonly NetCall<bool, string> ReceiveInvocationResponse = new NetCall<bool, string>(4001, 78);
         public static readonly Dictionary<EDamageOrigin, string> DmgOriginLocalization = new Dictionary<EDamageOrigin, string>(30)
         {
             { EDamageOrigin.Animal_Attack, "Animal Attack" },

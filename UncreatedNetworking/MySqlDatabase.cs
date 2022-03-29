@@ -707,7 +707,7 @@ namespace Uncreated.SQL
     }
     /// <summary>Stores information needed to connect to a MySQL connection.</summary>
     [System.Text.Json.Serialization.JsonSerializable(typeof(MySqlData))]
-    public class MySqlData : IReadWrite<MySqlData>
+    public class MySqlData : IReadWrite
     {
         /// <summary>IP/Host Address</summary>
         public string Host;
@@ -732,7 +732,7 @@ namespace Uncreated.SQL
         public static MySqlData Read(ByteReader R)
         {
             MySqlData data = new MySqlData();
-            (data as IReadWrite<MySqlData>).Read(R);
+            (data as IReadWrite).Read(R);
             return data;
         }
         /// <summary>Write by <see cref="ByteWriter"/></summary>
@@ -746,8 +746,8 @@ namespace Uncreated.SQL
             W.Write(o.Port);
         }
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        void IReadWrite<MySqlData>.Write(ByteWriter W) => Write(W, this);
-        void IReadWrite<MySqlData>.Read(ByteReader R)
+        void IReadWrite.Write(ByteWriter W) => Write(W, this);
+        void IReadWrite.Read(ByteReader R)
         {
             Host = R.ReadString();
             Database = R.ReadString();

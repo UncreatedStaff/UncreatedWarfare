@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Networking.Encoding;
+using UnityEngine;
 
 namespace Uncreated.Networking
 {
@@ -29,35 +31,27 @@ namespace Uncreated.Networking
             {
                 if (call == null || !_registry.TryGetValue(id, out MethodInfo method) || method == null)
                 {
-                    if (!call.RequiresMethod)
+                    if (_listeners.TryGetValue(id, out List<NetTask> listeners))
                     {
-                        if (_listeners.TryGetValue(id, out List<NetTask> listeners))
+                        bool read = call.Read(data, out object[] parameters);
+                        if (!read)
                         {
-                            bool read = call.Read(data, out object[] parameters);
-                            if (!read)
-                            {
-                                Logging.LogWarning($"Unable to read incomming message for message type {id}\n{string.Join(", ", data)}.");
-                                a = false;
-                            }
-                            else
-                            {
-                                object[] newparams = new object[parameters.Length + 1];
-                                newparams[0] = connection;
-                                Array.Copy(parameters, 0, newparams, 1, parameters.Length);
-                                for (int i = 0; i < listeners.Count; i++)
-                                {
-                                    if (!listeners[i].isCompleted)
-                                        listeners[i].TellCompleted(newparams);
-                                }
-                                listeners.Clear();
-                                _listeners.Remove(id);
-                                a = true;
-                            }
+                            Logging.LogWarning($"Unable to read incomming message for message type {id}\n{string.Join(", ", data)}.");
+                            a = false;
                         }
                         else
                         {
-                            a = false;
-                            Logging.LogWarning($"Unable to find method matching ID {id}.");
+                            object[] newparams = new object[parameters.Length + 1];
+                            newparams[0] = connection;
+                            Array.Copy(parameters, 0, newparams, 1, parameters.Length);
+                            for (int i = 0; i < listeners.Count; i++)
+                            {
+                                if (!listeners[i].isCompleted)
+                                    listeners[i].TellCompleted(newparams);
+                            }
+                            listeners.Clear();
+                            _listeners.Remove(id);
+                            a = true;
                         }
                     }
                     else
@@ -155,9 +149,6 @@ namespace Uncreated.Networking
             }
         }
         public static bool Parse(byte[] message, IConnection connection) => Instance.ParseInternal(message, connection);
-        /*
-        public static bool Parse(byte[] message, IConnection connection, ref byte[] continuer, out bool NeedsContinue, bool PreviouslyContinued) => 
-            Instance.ParseInternal(message, connection, ref continuer, out NeedsContinue, PreviouslyContinued);*/
         public NetFactory(ENetCall side)
         {
             if (Instance != null)
@@ -270,10 +261,7 @@ namespace Uncreated.Networking
                                         {
                                             Logging.LogWarning($"Method \"{info.DeclaringType.FullName}.{info.Name}\" has the wrong parameters for invoker \"{fields[f].DeclaringType.FullName}.{fields[f].Name}\" " +
                                                 $"({nameof(IConnection)}, {(generics.Length > 0 ? generics[0].Name : "?")}).");
-                                            if (call.RequiresMethod)
-                                                _registry.Remove(call.ID);
-                                            else
-                                                _invokers.Add(call.ID, call);
+                                            _invokers.Add(call.ID, call);
                                         }
                                     } else if (p.Length - 1 == generics.Length)
                                     {
@@ -286,28 +274,18 @@ namespace Uncreated.Networking
                                                 break;
                                             }
                                         }
-                                        if (good)
-                                        {
-                                            _invokers.Add(call.ID, call);
-                                        }
-                                        else
+                                        _invokers.Add(call.ID, call);
+                                        if (!good)
                                         {
                                             Logging.LogWarning($"Method \"{info.DeclaringType.FullName}.{info.Name}\" has the wrong parameters for invoker \"{fields[f].DeclaringType.FullName}.{fields[f].Name}\" " +
                                                 $"({nameof(IConnection)}, {string.Join(", ", generics.Select(x => x.Name))}).");
-                                            if (call.RequiresMethod)
-                                                _registry.Remove(call.ID);
-                                            else
-                                                _invokers.Add(call.ID, call);
                                         }
                                     }
                                     else
                                     {
                                         Logging.LogWarning($"Method \"{info.DeclaringType.FullName}.{info.Name}\" has the wrong parameters for invoker \"{fields[f].DeclaringType.FullName}.{fields[f].Name}\" " +
                                             $"({nameof(IConnection)}, {(generics.Length < 1 ? "?" : string.Join(", ", generics.Select(x => x.Name)))}).");
-                                        if (call.RequiresMethod)
-                                            _registry.Remove(call.ID);
-                                        else
-                                            _invokers.Add(call.ID, call);
+                                        _invokers.Add(call.ID, call);
                                     }
                                 }
                                 else if (calltype.IsSubclassOf(typeof(DynamicNetCall)))
@@ -325,36 +303,26 @@ namespace Uncreated.Networking
                                                 break;
                                             }
                                         }
-                                        if (good)
-                                        {
-                                            _invokers.Add(call.ID, call);
-                                        }
-                                        else
+                                        _invokers.Add(call.ID, call);
+                                        if (!good)
                                         {
                                             Logging.LogWarning($"Method \"{info.DeclaringType.FullName}.{info.Name}\" has the wrong parameters for invoker \"{fields[f].DeclaringType.FullName}.{fields[f].Name}\" " +
                                                 $"({nameof(IConnection)}, {string.Join(", ", generics.Select(x => x.Name))}).");
-                                            if (call.RequiresMethod)
-                                                _registry.Remove(call.ID);
-                                            else
-                                                _invokers.Add(call.ID, call);
                                         }
                                     }
                                     else
                                     {
                                         Logging.LogWarning($"Method \"{info.DeclaringType.FullName}.{info.Name}\" has the wrong parameters for invoker \"{fields[f].DeclaringType.FullName}.{fields[f].Name}\" " +
                                             $"({nameof(IConnection)}, {string.Join(", ", generics.Select(x => x.Name))}).");
-                                        if (call.RequiresMethod)
-                                            _registry.Remove(call.ID);
-                                        else
-                                            _invokers.Add(call.ID, call);
+                                        _invokers.Add(call.ID, call);
                                     }
                                 } 
-                                else if (!call.RequiresMethod)
+                                else
                                 {
                                     _invokers.Add(call.ID, call);
                                 }
                             }
-                            else if (!call.RequiresMethod)
+                            else
                             {
                                 _invokers.Add(call.ID, call);
                             }
@@ -385,6 +353,28 @@ namespace Uncreated.Networking
         {
             Dispose(disposing: true);
             GC.SuppressFinalize(this);
+        }
+
+        internal static readonly Type[] ValidTypes = new Type[]
+        {
+            typeof(ulong), typeof(float), typeof(long), typeof(ushort), typeof(short), typeof(byte), typeof(int), typeof(uint), typeof(bool), typeof(char), typeof(sbyte), typeof(double),
+            typeof(string), typeof(decimal), typeof(DateTime), typeof(TimeSpan), typeof(Guid), typeof(Vector2), typeof(Vector3), typeof(Vector4), typeof(Quaternion), typeof(Color),
+            typeof(Color32)
+        };
+        internal static readonly Type[] ValidArrayTypes = new Type[]
+        {
+            typeof(ulong), typeof(float), typeof(long), typeof(ushort), typeof(short), typeof(byte), typeof(int), typeof(uint), typeof(bool), typeof(sbyte), typeof(decimal), typeof(char),
+            typeof(double), typeof(string)
+        };
+        internal static bool IsValidAutoType(Type type)
+        {
+            if (type.IsEnum) return true;
+            if (type.IsArray)
+            {
+                type = type.GetElementType();
+                return ValidArrayTypes.Contains(type);
+            }
+            return ValidTypes.Contains(type) || type.GetInterfaces().Contains(typeof(IReadWrite));
         }
     }
     [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
