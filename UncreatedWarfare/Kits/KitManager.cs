@@ -11,7 +11,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
-using Item = SDG.Unturned.Item;
+//using Item = SDG.Unturned.Item;
 
 namespace Uncreated.Warfare.Kits
 {
@@ -256,17 +256,17 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (clothing.type == EClothingType.SHIRT)
                         player.Player.clothing.askWearShirt(asset.id, 100, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.PANTS)
+                    else if (clothing.type == EClothingType.PANTS)
                         player.Player.clothing.askWearPants(asset.id, 100, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.VEST)
+                    else if (clothing.type == EClothingType.VEST)
                         player.Player.clothing.askWearVest(asset.id, 100, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.HAT)
+                    else if (clothing.type == EClothingType.HAT)
                         player.Player.clothing.askWearHat(asset.id, 100, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.MASK)
+                    else if (clothing.type == EClothingType.MASK)
                         player.Player.clothing.askWearMask(asset.id, 100, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.BACKPACK)
+                    else if (clothing.type == EClothingType.BACKPACK)
                         player.Player.clothing.askWearBackpack(asset.id, 100, Convert.FromBase64String(clothing.state), true);
-                    if (clothing.type == EClothingType.GLASSES)
+                    else if (clothing.type == EClothingType.GLASSES)
                         player.Player.clothing.askWearGlasses(asset.id, 100, Convert.FromBase64String(clothing.state), true);
                 }
             }

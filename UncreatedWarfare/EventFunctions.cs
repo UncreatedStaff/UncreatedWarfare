@@ -4,6 +4,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -1192,7 +1193,6 @@ namespace Uncreated.Warfare
                     L.Log("Rejecting " + player.playerID.playerName + " (" + player.playerID.steamID.m_SteamID.ToString(Data.Locale) + ") because " + response.ToString());
                     return;
                 }
-                FPlayerName names = new FPlayerName(player.playerID);
 
                 bool kick = false;
                 string? cn = null;
@@ -1239,6 +1239,26 @@ namespace Uncreated.Warfare
                     player.playerID.characterName = cn;
                     player.playerID.nickName = cn;
                 }
+
+                player.playerID.characterName = Regex.Replace(player.playerID.characterName, "<.*>", string.Empty);
+                player.playerID.nickName      = Regex.Replace(player.playerID.nickName,      "<.*>", string.Empty);
+
+                if (player.playerID.characterName.Length < 3 && player.playerID.nickName.Length < 3)
+                {
+                    isValid = false;
+                    explanation = Translation.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
+                    return;
+                }
+                else if (player.playerID.characterName.Length < 3)
+                {
+                    player.playerID.characterName = player.playerID.nickName;
+                }
+                else if (player.playerID.nickName.Length < 3)
+                {
+                    player.playerID.nickName = player.playerID.characterName;
+                }
+
+                FPlayerName names = new FPlayerName(player.playerID);
 
                 if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
                     Data.OriginalNames[player.playerID.steamID.m_SteamID] = names;

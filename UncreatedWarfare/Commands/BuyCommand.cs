@@ -115,6 +115,10 @@ namespace Uncreated.Warfare.Commands
                 Task.Run(
                     async () => 
                     {
+
+                        if (ucplayer.AccessibleKits == null)
+                            ucplayer.AccessibleKits = await Data.DatabaseManager.GetAccessibleKits(ucplayer.Steam64);
+
                         await Data.DatabaseManager.AddAccessibleKit(ucplayer.Steam64, kit.Name);
 
                         await UCWarfare.ToUpdate();

@@ -104,7 +104,7 @@ namespace Uncreated.Warfare.Commands
             if (int.TryParse(command[2], out int amount))
             {
                 UCPlayer? target = UCPlayer.FromName(command[1]);
-                if (target == default)
+                if (target == null)
                 {
                     if (player == null)
                         L.LogWarning(Translation.Translate("test_givexp_player_not_found", 0, out _, command[1]));
@@ -137,7 +137,7 @@ namespace Uncreated.Warfare.Commands
             if (int.TryParse(command[2], out int amount))
             {
                 UCPlayer? target = UCPlayer.FromName(command[1]);
-                if (target == default)
+                if (target == null)
                 {
                     if (player == null)
                         L.LogWarning(Translation.Translate("test_giveof_player_not_found", 0, out _, command[1]));
@@ -170,7 +170,7 @@ namespace Uncreated.Warfare.Commands
             if (int.TryParse(command[2], out int amount))
             {
                 UCPlayer? target = UCPlayer.FromName(command[1]);
-                if (target == default)
+                if (target == null)
                 {
                     if (player == null)
                         L.LogWarning(Translation.Translate("test_givecredits_player_not_found", 0, out _, command[1]));

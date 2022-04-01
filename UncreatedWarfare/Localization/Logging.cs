@@ -126,6 +126,11 @@ namespace Uncreated.Warfare
             {
                 CommandWindow.LogError($"{message}\nEXCEPTION LOGGING \n\n{ex2.Message}\n{ex2.StackTrace}\n\nFINISHED");
             }
+            if (ex.InnerException != null && ex.InnerException.InnerException == null)
+            {
+                LogError("INNER EXCEPTION: ", method: method);
+                LogError(ex, method: method, filepath: filepath, ln: ln);
+            }
         }
     }
 }

@@ -714,11 +714,15 @@ namespace Uncreated.Networking.Encoding
         public T InvokeReader<T>(Reader<T> reader) => reader.Invoke(this);
         private static readonly Type[] parameters = new Type[1] { typeof(ByteReader) };
         public static Reader<T1> GetReader<T1>() => (Reader<T1>)GetReader(typeof(T1));
-        public T Read<T>(T writer) where T : IReadWrite, new()
+        public T ReadObject<T>() where T : IReadWrite, new()
         {
             T r = new T();
             r.Read(this);
             return r;
+        }
+        public void ReadTo<T>(T obj) where T : IReadWrite, new()
+        {
+            obj.Read(this);
         }
         public static Delegate GetReader(Type type)
         {

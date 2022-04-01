@@ -91,30 +91,6 @@ namespace Uncreated.Networking.Encoding
             }
             size += ttl;
         }
-        public static unsafe void CopyPrependData(byte[] bytes, int index, ushort MessageID, int length)
-        {
-            fixed (byte* ptr = bytes)
-            {
-                byte* ptr2 = ptr + index;
-                *(ushort*)ptr2 = MessageID;
-                if (!BitConverter.IsLittleEndian)
-                {
-                    byte* stack = stackalloc byte[sizeof(ushort)];
-                    Buffer.MemoryCopy(ptr, stack, sizeof(ushort), sizeof(ushort));
-                    for (int i = 0; i < sizeof(ushort); i++)
-                        ptr[i] = stack[sizeof(ushort) - i - 1];
-                }
-                ptr2 += sizeof(ushort);
-                *(int*)ptr2 = length;
-                if (!BitConverter.IsLittleEndian)
-                {
-                    byte* stack = stackalloc byte[sizeof(int)];
-                    Buffer.MemoryCopy(ptr, stack, sizeof(int), sizeof(int));
-                    for (int i = 0; i < sizeof(int); i++)
-                        ptr[i] = stack[sizeof(int) - i - 1];
-                }
-            }
-        }
         public void WriteStruct<T>(ref T value) where T : unmanaged
         {
             if (size > IntPtr.Size)

@@ -81,7 +81,6 @@ namespace Uncreated.Warfare.Point
             29000,
             40000,
             55000
-
         };
         /// <summary>Get the current level given an amount of <paramref name="xp"/>.</summary>
         public static int GetLevel(int xp)
@@ -211,7 +210,7 @@ namespace Uncreated.Warfare.Point
                     UpdateXPUI(player);
                 }
 
-                ActionLog.Add(EActionLogType.XP_CHANGED, oldRank.CurrentXP + " >> " + currentAmount, player);
+                ActionLog.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, player);
 
                 if (awardCredits)
                     AwardCredits(player, Mathf.RoundToInt(0.15f * amount), null, true);
