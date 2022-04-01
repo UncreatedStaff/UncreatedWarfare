@@ -295,11 +295,29 @@ namespace Uncreated.Warfare.Components
                         }
                     }
 
-                    for (int i = nearestLogi.trunkItems.getItemCount() - 1; i >= 0; i--)
+                    int buildRemoved = 0;
+                    int ammoRemoved = 0;
+
+                    for (int i = 0; i < nearestLogi.trunkItems.getItemCount(); i++)
                     {
                         ItemJar item = nearestLogi.trunkItems.items[i];
-                        ItemManager.dropItem(new Item(item.item.id, true), nearestLogi.transform.position, false, true, true);
-                        nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
+                        bool shouldRemove = false;
+                        if (item.item.id == shortBuildID && buildRemoved < 15)
+                        {
+                            shouldRemove = true;
+                            buildRemoved++;
+                        }
+                        if (item.item.id == shortAmmoID && ammoRemoved < 12)
+                        {
+                            shouldRemove |= true;
+                            ammoRemoved++;
+                        }
+                        if (shouldRemove)
+                        {
+                            ItemManager.dropItem(new Item(item.item.id, true), nearestLogi.transform.position, false, true, true);
+                            nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
+                            i--;
+                        }
                     }
                 }
             }
