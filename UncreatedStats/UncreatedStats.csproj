@@ -15,4 +15,9 @@
   <ItemGroup>
     <ProjectReference Include="..\UncreatedNetworking\UncreatedNetworking.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 </Project>

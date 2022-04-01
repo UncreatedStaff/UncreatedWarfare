@@ -263,7 +263,7 @@ namespace Uncreated.Warfare.Components
 
                 if (!nearestLogi.isDriven)
                 {
-                    int supplyCount = nearestLogi.trunkItems.getItemCount();
+                    int supplyCount = Mathf.Clamp(nearestLogi.trunkItems.getItemCount(), 0, 26);
 
                     UCPlayer? creator = UCPlayer.FromID(Creator);
                     int groupsUnloaded = 0;
@@ -302,14 +302,14 @@ namespace Uncreated.Warfare.Components
                     {
                         ItemJar item = nearestLogi.trunkItems.items[i];
                         bool shouldRemove = false;
-                        if (item.item.id == shortBuildID && buildRemoved < 15)
+                        if (item.item.id == shortBuildID && buildRemoved < 16)
                         {
                             shouldRemove = true;
                             buildRemoved++;
                         }
                         if (item.item.id == shortAmmoID && ammoRemoved < 12)
                         {
-                            shouldRemove |= true;
+                            shouldRemove = true;
                             ammoRemoved++;
                         }
                         if (shouldRemove)
