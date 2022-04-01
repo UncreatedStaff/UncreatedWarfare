@@ -519,23 +519,33 @@ namespace Uncreated.Warfare.Kits
                         Reply(ucplayer, "kit_l_e_invalid_team", team_s);
                         return;
                     }
-                    if (!Enum.TryParse(class_s, out EClass kitClass))
+                    if (!Enum.TryParse(class_s, true, out EClass kitClass))
                     {
                         Reply(ucplayer, "kit_l_e_invalid_class", class_s);
                         return;
                     }
-
-                    
-
-                    int loadoutsCount = KitManager.GetKitsWhere(k => k.IsLoadout && k.AllowedUsers.Contains(steamid)).Count();
-
-                    char letter = LOADOUT_CHARACTERS[loadoutsCount];
-                    string loadoutName = steamid.ToString() + "_" + letter;
-
-                    if (!KitManager.KitExists(loadoutName, out _))
+                    Task.Run(async () =>
                     {
-                        Task.Run(async () =>
+                        char let = 'a';
+                        await Data.DatabaseManager.QueryAsync("SELECT `InternalName` FROM `kit_data` WHERE `InternalName` LIKE @0 ORDER BY `InternalName`;", new object[1]
                         {
+                            steamid.ToString() + "_%"
+                        }, R =>
+                        {
+                            string name = R.GetString(0);
+                            if (name.Length <= 18)
+                                return;
+                            name = name.Substring(18);
+                            char let2 = name[0];
+                            if (let2 == let)
+                                let++;
+                        });
+                        string loadoutName = steamid.ToString() + "_" + let;
+
+                        await UCWarfare.ToUpdate();
+                        if (!KitManager.KitExists(loadoutName, out _))
+                        {
+
                             Kit? loadout = new Kit(loadoutName, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
 
                             if (loadout != null)
@@ -569,12 +579,12 @@ namespace Uncreated.Warfare.Kits
                                 KitManager.UpdateText(loadout, displayName);
                                 Reply(ucplayer, "kit_l_created", kitClass.ToString().ToUpper(), Data.DatabaseManager.GetUsernames(steamid).CharacterName, steamid.ToString(), loadoutName);
                             }
-                        });
-                    }
-                    else
-                    {
-                        Reply(ucplayer, "kit_l_e_kitexists", class_s);
-                    }
+                        }
+                        else
+                        {
+                            Reply(ucplayer, "kit_l_e_kitexists", class_s);
+                        }
+                    });
                     return;
                 }
                 else if (op == "set" || op == "s")
