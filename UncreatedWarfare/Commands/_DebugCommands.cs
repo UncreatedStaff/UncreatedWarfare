@@ -29,6 +29,8 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Quests;
 using System.Diagnostics;
+using System.Text.Json;
+using DNF_Sandbox;
 
 namespace Uncreated.Warfare.Commands
 {
@@ -1324,6 +1326,162 @@ namespace Uncreated.Warfare.Commands
             stopwatch.Stop();
             msPer = ((decimal)stopwatch.Elapsed.TotalMilliseconds) / TEST_CASES;
             L.Log("Inside bounds: " + stopwatch.Elapsed.TotalMilliseconds.ToString() + " (" + msPer.ToString("N50") + "ms) per check");
+        }
+
+        public Dictionary<string, string> conversions = new Dictionary<string, string>()
+        {
+            { "fr4", "prem_frmed1" },
+            { "militia3", "prem_migre1" },
+            { "rusni2", "prem_rusni1" },
+            { "militia2", "prem_mimar1" },
+            { "uscom3", "prem_uscom1" },
+            { "militia1", "prem_misql1" },
+            { "militia4", "prem_miap1" },
+            { "rurif4", "prem_rurif1" },
+            { "mozambique", "prem_mzrif1" },
+            { "pl1", "prem_plrif1" },
+            { "fr2", "prem_frrif1" },
+            { "fr1", "prem_frbre1" },
+            { "caf3", "prem_cafar1" },
+            { "caf2", "prem_cafsni1" },
+            { "usmc2", "prem_usmcbre1" },
+            { "usmar2", "prem_usmar1" },
+            { "usmc1", "prem_usmar1" },
+            { "idf4", "prem_idfsni1" },
+            { "usrif4", "prem_usrif1" },
+            { "usmc3", "prem_usmcsni1" },
+            { "usmed4", "prem_usmed1" },
+            { "ussni2", "prem_ussni1" },
+            { "caf1", "prem_cafrif1" },
+            { "fr3", "prem_frrif1" },
+            { "ger2", "prem_gerbre1" },
+            { "ger1", "prem_gerrif1" },
+            { "rubre3", "prem_rubre1" },
+            { "rumar2", "prem_rumar1" },
+            { "rumed4", "prem_rumed1" },
+            { "pl3", "prem_plspec1" },
+            { "pl2", "prem_plrif2" },
+            { "usmc4", "prem_usmcspec1" },
+            { "idf1", "prem_idfrif1" },
+            { "ger4", "prem_gelat1" },
+            { "ger3", "prem_gesni1" },
+            { "usbre3", "prem_usbre1" },
+            { "idf2", "prem_idfgre1" },
+            { "soviet4", "prem_sovrif2" },
+            { "soviet2", "prem_sovsni1" },
+            { "soviet3", "prem_sovmar1" },
+            { "soviet1", "prem_sovrif1" },
+            { "idf3", "prem_idfspec1" },
+            { "southafrica", "prem_sasql1" },
+        };
+        private void kitmerge(string[] command, Player player)
+        {
+            OldKit[]? kitsOld = JsonSerializer.Deserialize<OldKit[]>(File.ReadAllText(@"C:\SteamCMD\steamapps\common\U3DS\Servers\UncreatedRewrite\Rocket\Plugins\UncreatedWarfare\Kits\kits_old.json"));
+            List<Kit> kitsNew = new List<Kit>();
+            Utf8JsonReader reader = new Utf8JsonReader(File.ReadAllBytes(@"C:\SteamCMD\steamapps\common\U3DS\Servers\UncreatedRewrite\Rocket\Plugins\UncreatedWarfare\Kits\kits.json"), JsonEx.readerOptions);
+            if (reader.TokenType == JsonTokenType.StartArray || (reader.Read() && reader.TokenType == JsonTokenType.StartArray))
+            {
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                {
+                    if (reader.TokenType == JsonTokenType.StartObject)
+                    {
+                        Kit next = new Kit(true);
+                        next.ReadJson(ref reader);
+                        kitsNew.Add(next);
+                        while (reader.TokenType != JsonTokenType.EndObject && reader.Read()) ;
+                    }
+                }
+            }
+            L.Log("Old: " + (kitsOld == null ? "null" : kitsOld.Length.ToString()) + ", New: " + kitsNew.Count);
+            if (kitsOld != null)
+            {
+                foreach (OldKit oldKit in kitsOld)
+                {
+                    int ind = kitsNew.FindIndex(x => x.Name.Equals(oldKit.Name, StringComparison.Ordinal));
+                    if (ind == -1)
+                    {
+                        kitsNew.Add(new Kit(true)
+                        {
+                            Branch = oldKit.Branch,
+                            Name = oldKit.Name,
+                            Class = oldKit.Class,
+                            Clothes = oldKit.Clothes.Select(x =>
+                            {
+                                KitClothing clothing = new KitClothing();
+                                Asset a = Assets.find(EAssetType.ITEM, x.ID);
+                                if (a == null) return null!;
+                                clothing.id = a.GUID;
+                                clothing.type = x.type;
+                                return clothing;
+                            }).Where(x => x != null).ToList(),
+                            Items = oldKit.Items.Select(x =>
+                            {
+                                KitItem item = new KitItem();
+                                Asset a = Assets.find(EAssetType.ITEM, x.ID);
+                                if (a == null) return null!;
+                                item.id = a.GUID;
+                                item.x = x.x;
+                                item.y = x.y;
+                                item.rotation = x.rotation;
+                                item.metadata = Convert.FromBase64String(x.metadata);
+                                item.page = x.page;
+                                item.amount = x.amount;
+                                return item;
+                            }).Where(x => x != null).ToList(),
+                            Cooldown = oldKit.Cooldown,
+                            CreditCost = 0,
+                            Disabled = false,
+                            IsLoadout = oldKit.IsLoadout,
+                            IsPremium = oldKit.IsPremium,
+                            PremiumCost = oldKit.PremiumCost,
+                            SignTexts = oldKit.SignTexts,
+                            Skillsets = new Skillset[0],
+                            Team = oldKit.Team,
+                            TeamLimit = oldKit.TeamLimit,
+                            UnlockLevel = oldKit.RequiredLevel,
+                            UnlockRequirements = oldKit.RequiredLevel == 0 ? new BaseUnlockRequirement[0] : new BaseUnlockRequirement[1] { new LevelUnlockRequirement() { UnlockLevel = oldKit.RequiredLevel } },
+                            Weapons = oldKit.Weapons,
+                            AllowedUsers = oldKit.AllowedUsers
+                        });
+                    }
+                    else
+                    {
+                        Kit kit = kitsNew[ind];
+                        kit.AllowedUsers.AddRange(oldKit.AllowedUsers);
+                        kit.AllowedUsers = kit.AllowedUsers.Distinct().ToList();
+                    }
+                }
+            }
+            for (int i = kitsNew.Count - 1; i >= 0; i--)
+            {
+                Kit kit = kitsNew[i];
+                if (conversions.TryGetValue(kit.Name, out string other))
+                {
+                    kitsNew.RemoveAll(x => x.Name.Equals(other, StringComparison.Ordinal));
+                    kit.Name = other;
+                }
+            }
+            kitsNew.Sort((a, b) => a.Name.CompareTo(b.Name));
+            kitsNew.Sort((a, b) => b.IsPremium.CompareTo(a.IsPremium));
+            kitsNew.Sort((a, b) => b.IsLoadout.CompareTo(a.IsLoadout));
+            L.Log(kitsNew.Count.ToString());
+            Task.Run(async () =>
+            {
+                int i = 0;
+                foreach (Kit kit in kitsNew)
+                {
+                    L.Log(kit.Name);
+                    try
+                    {
+                        await KitManager.AddKit(kit);
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError(ex);
+                    }
+                    L.Log(++i + " / " + kitsNew.Count);
+                }
+            });
         }
     }
 #pragma warning restore IDE0051

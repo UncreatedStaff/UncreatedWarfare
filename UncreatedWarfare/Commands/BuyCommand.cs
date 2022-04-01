@@ -101,7 +101,7 @@ namespace Uncreated.Warfare.Commands
                     ucplayer.Message("request_kit_e_notbuyablecredits");
                     return;
                 }
-                else if (kit.CreditCost == 0 || ucplayer.AccessibleKits.Contains(kit.Name))
+                else if (kit.CreditCost == 0 || KitManager.HasAccessFast(kit, ucplayer))
                 {
                     ucplayer.Message("request_kit_e_alreadyhaskit");
                     return;
@@ -115,14 +115,12 @@ namespace Uncreated.Warfare.Commands
                 Task.Run(
                     async () => 
                     {
-
                         if (ucplayer.AccessibleKits == null)
                             ucplayer.AccessibleKits = await Data.DatabaseManager.GetAccessibleKits(ucplayer.Steam64);
 
-                        await Data.DatabaseManager.AddAccessibleKit(ucplayer.Steam64, kit.Name);
+                        await KitManager.GiveAccess(kit, ucplayer, EKitAccessType.CREDITS);
 
                         await UCWarfare.ToUpdate();
-                        ucplayer.AccessibleKits.Add(kit.Name);
 
                         RequestSigns.InvokeLangUpdateForSignsOfKit(ucplayer.SteamPlayer, kit.Name);
                         EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());

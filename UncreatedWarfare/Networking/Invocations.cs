@@ -244,10 +244,22 @@ namespace Uncreated.Warfare.Networking
         {
             public static readonly NetCall<ulong, string> GiveKitAccess = new NetCall<ulong, string>(ReceiveGiveKitAccess);
             [NetCall(ENetCall.FROM_SERVER, 1100)]
-            internal static void ReceiveGiveKitAccess(IConnection connection, ulong player, string kit) => KitManager.GiveAccess(player, kit);
+            internal static void ReceiveGiveKitAccess(IConnection connection, ulong player, string kit)
+            {
+                if (KitManager.KitExists(kit, out Kit k))
+                {
+                    Task.Run(async () => await KitManager.GiveAccess(k, player, EKitAccessType.PURCHASE)).ConfigureAwait(false);
+                }
+            }
             public static readonly NetCall<ulong, string> RemoveKitAccess = new NetCall<ulong, string>(ReceiveRemoveKitAccess);
             [NetCall(ENetCall.FROM_SERVER, 1101)]
-            internal static void ReceiveRemoveKitAccess(IConnection connection, ulong player, string kit) => KitManager.RemoveAccess(player, kit);
+            internal static void ReceiveRemoveKitAccess(IConnection connection, ulong player, string kit)
+            {
+                if (KitManager.KitExists(kit, out Kit k))
+                {
+                    Task.Run(async () => await KitManager.RemoveAccess(k, player)).ConfigureAwait(false);
+                }
+            }
 
             public static readonly NetCall<ulong, int, EBranch> SetOfficerLevel = new NetCall<ulong, int, EBranch>(ReceiveSetOfficerLevel);
             [NetCall(ENetCall.FROM_SERVER, 1102)]
@@ -388,7 +400,7 @@ namespace Uncreated.Warfare.Networking
             }
             public static readonly NetCallRaw<Kit?> CreateKit = new NetCallRaw<Kit?>(ReceiveCreateKit, Kit.Read, Kit.Write);
             [NetCall(ENetCall.FROM_SERVER, 1109)]
-            internal static void ReceiveCreateKit(IConnection connection, Kit? kit) => KitManager.CreateKit(kit);
+            internal static void ReceiveCreateKit(IConnection connection, Kit? kit) => Task.Run(async () => await KitManager.AddKit(kit));
 
             public static readonly NetCall RequestRankInfo = new NetCall(ReceiveRequestRankInfo);
 

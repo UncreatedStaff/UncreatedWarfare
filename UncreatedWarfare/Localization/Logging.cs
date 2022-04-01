@@ -129,7 +129,7 @@ namespace Uncreated.Warfare
             if (ex.InnerException != null && ex.InnerException.InnerException == null)
             {
                 LogError("INNER EXCEPTION: ", method: method);
-                LogError(ex, method: method, filepath: filepath, ln: ln);
+                LogError(ex.InnerException, method: method, filepath: filepath, ln: ln);
             }
         }
     }

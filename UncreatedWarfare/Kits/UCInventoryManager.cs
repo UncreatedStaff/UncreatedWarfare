@@ -19,19 +19,19 @@ namespace Uncreated.Warfare.Kits
                     if (Assets.find(clothing.id) is ItemAsset asset)
                     {
                         if (clothing.type == EClothingType.SHIRT)
-                            player.Player.clothing.askWearShirt(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);
                         if (clothing.type == EClothingType.PANTS)
-                            player.Player.clothing.askWearPants(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            player.Player.clothing.askWearPants(asset.id, 100, asset.getState(true), true);
                         if (clothing.type == EClothingType.VEST)
-                            player.Player.clothing.askWearVest(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            player.Player.clothing.askWearVest(asset.id, 100, asset.getState(true), true);
                         if (clothing.type == EClothingType.HAT)
-                            player.Player.clothing.askWearHat(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            player.Player.clothing.askWearHat(asset.id, 100, asset.getState(true), true);
                         if (clothing.type == EClothingType.MASK)
-                            player.Player.clothing.askWearMask(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            player.Player.clothing.askWearMask(asset.id, 100, asset.getState(true), true);
                         if (clothing.type == EClothingType.BACKPACK)
-                            player.Player.clothing.askWearBackpack(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            player.Player.clothing.askWearBackpack(asset.id, 100, asset.getState(true), true);
                         if (clothing.type == EClothingType.GLASSES)
-                            player.Player.clothing.askWearGlasses(asset.id, 100, Convert.FromBase64String(clothing.state), true);
+                            player.Player.clothing.askWearGlasses(asset.id, 100, asset.getState(true), true);
                     }
                 }
 
@@ -40,7 +40,7 @@ namespace Uncreated.Warfare.Kits
                     if (Assets.find(k.id) is ItemAsset asset)
                     {
                         Item item = new Item(asset.id, k.amount, 100);
-                        item.metadata = Convert.FromBase64String(k.metadata);
+                        item.metadata = k.metadata;
 
                         if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
                             player.Inventory.tryAddItem(item, true);

@@ -882,7 +882,7 @@ namespace Uncreated.Warfare
             if (ucplayer != null && key.Length > 8 && ushort.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
             {
                 ulong team = ucplayer.GetTeam();
-                List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
+                List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, ucplayer)).ToList();
                 loadouts.Sort((k1, k2) => k1.Name.CompareTo(k2.Name));
 
                 if (loadouts.Count > 0)
@@ -962,7 +962,7 @@ namespace Uncreated.Warfare
 
             bool keepline = false;
             string name;
-            if (!ucplayer.OnDuty())
+            if (!ucplayer.OnDuty() && kit.SignTexts != null)
             {
                 if (!kit.SignTexts.TryGetValue(language, out name))
                     if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out name))
@@ -993,14 +993,14 @@ namespace Uncreated.Warfare
             if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
             {
                 if (ucplayer != null)
-                    if (kit.AllowedUsers.Contains(ucplayer.Steam64))
+                    if (KitManager.HasAccessFast(kit, ucplayer))
                         cost = ObjectTranslate("kit_premium_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
                     else if (kit.PremiumCost == -1)
                         cost = Translate("kit_premium_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
                     else
                         cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
             }
-            else if (kit.UnlockRequirements.Length != 0)
+            else if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
             {
                 for (int i = 0; i < kit.UnlockRequirements.Length; i++)
                 {
@@ -1013,7 +1013,7 @@ namespace Uncreated.Warfare
             if (cost == string.Empty && kit.CreditCost > 0)
             {
                 if (ucplayer != null)
-                    if (!ucplayer.AccessibleKits.Contains(kit.Name))
+                    if (!KitManager.HasAccessFast(kit, ucplayer))
                         cost = ObjectTranslate("kit_cost", language, kit.CreditCost);
             }
 

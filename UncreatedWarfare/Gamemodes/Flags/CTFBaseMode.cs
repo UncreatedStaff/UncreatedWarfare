@@ -84,6 +84,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
             _kitManager = new KitManager();
+            Commands.ReloadCommand.ReloadKits();
             _vehicleBay = new VehicleBay();
             _reviveManager = new ReviveManager();
             _gameStats = UCWarfare.I.gameObject.AddComponent<StatTracker>();

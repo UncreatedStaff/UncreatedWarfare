@@ -347,22 +347,18 @@ namespace Uncreated.Warfare
             }
             else return old;
         }
-        public async Task<List<string>> GetAccessibleKits(ulong player)
+        public async Task<List<Kit>> GetAccessibleKits(ulong player)
         {
-            List<string> kitNames = new List<string>();
-            await QueryAsync("SELECT `KitName` FROM `kitaccess` WHERE `Steam64` = @0;",
+            
+            List<Kit> kits = new List<Kit>();
+            await QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
                 new object[1] { player },
                 R =>
                 {
-                    kitNames.Add(R.GetString(0));
+                    if (KitManager.Instance.Kits.TryGetValue(R.GetInt32(0), out Kit kit))
+                        kits.Add(kit);
                 });
-            return kitNames;
-        }
-        public Task AddAccessibleKit(ulong player, string kitName)
-        {
-            return NonQueryAsync(
-                    "INSERT INTO `kitaccess` (`Steam64`, `KitName`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `KitName` = @1;",
-                    new object[2] { player, kitName });
+            return kits;
         }
         public Task AddKill(ulong Steam64, ulong Team, int amount = 1)
         {

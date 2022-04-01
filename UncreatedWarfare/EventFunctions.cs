@@ -470,7 +470,7 @@ namespace Uncreated.Warfare
                     Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
                     Task<int> t2 = Data.DatabaseManager.GetXP(player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam());
                     Task<int> t3 = Data.DatabaseManager.GetCredits(player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam());
-                    Task<List<string>> t4 = Data.DatabaseManager.GetAccessibleKits(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                    Task<List<Kit>> t4 = Data.DatabaseManager.GetAccessibleKits(player.Player.channel.owner.playerID.steamID.m_SteamID);
                     await UCWarfare.ToUpdate();
                     if (Data.Gamemode is ITeams)
                     {

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Uncreated.Networking.Encoding;
 using Uncreated.Warfare.Point;
@@ -14,6 +15,7 @@ namespace Uncreated.Warfare.Kits;
 
 public class Kit
 {
+    internal int PrimaryKey = -1;
     public string DisplayName => Class switch
     {
         EClass.UNARMED => "Unarmed",
@@ -61,8 +63,9 @@ public class Kit
     public bool Disabled;
     public List<KitItem> Items;
     public List<KitClothing> Clothes;
-    public List<ulong> AllowedUsers;
     public Dictionary<string, string> SignTexts;
+    [Obsolete]
+    public List<ulong> AllowedUsers;
     [JsonSettable]
     public string Weapons;
     public Kit()
@@ -81,9 +84,31 @@ public class Kit
         PremiumCost = 0;
         IsLoadout = false;
         TeamLimit = 1;
-        Cooldown = 0;
         AllowedUsers = new List<ulong>();
+        Cooldown = 0;
         SignTexts = new Dictionary<string, string> { { "en-us", "Default" } };
+        Weapons = string.Empty;
+        Disabled = false;
+    }
+    public Kit(string kitName, List<KitItem> items, List<KitClothing> clothing)
+    {
+        Name = kitName;
+        Items = items ?? new List<KitItem>();
+        Clothes = clothing ?? new List<KitClothing>();
+        Class = EClass.NONE;
+        Branch = EBranch.DEFAULT;
+        Team = 0;
+        UnlockRequirements = new BaseUnlockRequirement[0];
+        Skillsets = new Skillset[0];
+        CreditCost = 0;
+        UnlockLevel = 0;
+        IsPremium = false;
+        PremiumCost = 0;
+        IsLoadout = false;
+        TeamLimit = 1;
+        AllowedUsers = new List<ulong>();
+        Cooldown = 0;
+        SignTexts = new Dictionary<string, string> { { "en-us", kitName.ToProperCase() } };
         Weapons = string.Empty;
         Disabled = false;
     }
@@ -105,10 +130,8 @@ public class Kit
         kit.Name = R.ReadString();
         ushort itemCount = R.ReadUInt16();
         ushort clothesCount = R.ReadUInt16();
-        ushort allowedUsersCount = R.ReadUInt16();
         List<KitItem> items = new List<KitItem>(itemCount);
         List<KitClothing> clothes = new List<KitClothing>(clothesCount);
-        List<ulong> allowedUsers = new List<ulong>(allowedUsersCount);
         for (int i = 0; i < itemCount; i++)
         {
             items.Add(new KitItem()
@@ -119,7 +142,7 @@ public class Kit
                 x = R.ReadUInt8(),
                 y = R.ReadUInt8(),
                 rotation = R.ReadUInt8(),
-                metadata = Convert.ToBase64String(R.ReadBytes())
+                metadata = R.ReadBytes()
             });
         }
         for (int i = 0; i < clothesCount; i++)
@@ -127,13 +150,9 @@ public class Kit
             clothes.Add(new KitClothing()
             {
                 id = R.ReadGUID(),
-                type = R.ReadEnum<EClothingType>(),
-                state = Convert.ToBase64String(R.ReadBytes())
+                type = R.ReadEnum<EClothingType>()
             });
         }
-        for (int i = 0; i < allowedUsersCount; i++)
-            allowedUsers.Add(R.ReadUInt64());
-        kit.AllowedUsers = allowedUsers;
         kit.Items = items;
         kit.Clothes = clothes;
         kit.Branch = R.ReadEnum<EBranch>();
@@ -166,7 +185,6 @@ public class Kit
         W.Write(kit.Name);
         W.Write((ushort)kit.Items.Count);
         W.Write((ushort)kit.Clothes.Count);
-        W.Write((ushort)kit.AllowedUsers.Count);
         for (int i = 0; i < kit.Items.Count; i++)
         {
             KitItem item = kit.Items[i];
@@ -176,17 +194,14 @@ public class Kit
             W.Write(item.x);
             W.Write(item.y);
             W.Write(item.rotation);
-            W.Write(Convert.FromBase64String(item.metadata));
+            W.Write(item.metadata);
         }
         for (int i = 0; i < kit.Clothes.Count; i++)
         {
             KitClothing clothing = kit.Clothes[i];
             W.Write(clothing.id);
             W.Write(clothing.type);
-            W.Write(Convert.FromBase64String(clothing.state));
         }
-        for (int i = 0; i < kit.AllowedUsers.Count; i++)
-            W.Write(kit.AllowedUsers[i]);
         W.Write(kit.Branch);
         W.Write(kit.Class);
         W.Write(kit.Cooldown);
@@ -286,7 +301,7 @@ public class Kit
             writer.WriteNumberValue(AllowedUsers[i]);
         }
         writer.WriteEndArray();
-        
+
         writer.WritePropertyName(nameof(SignTexts));
         writer.WriteStartObject();
         foreach (KeyValuePair<string, string> kvp in SignTexts)
@@ -465,6 +480,33 @@ public class Kit
             }
         }
     }
+    public void AddUnlockRequirement(BaseUnlockRequirement req)
+    {
+        int index = -1;
+        for (int i = 0; i < UnlockRequirements.Length; i++)
+        {
+            BaseUnlockRequirement unlock = UnlockRequirements[i];
+            if (req == unlock)
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1)
+        {
+            BaseUnlockRequirement[] old = UnlockRequirements;
+            UnlockRequirements = new BaseUnlockRequirement[old.Length + 1];
+            if (old.Length > 0)
+            {
+                Array.Copy(old, 0, UnlockRequirements, 0, old.Length);
+                UnlockRequirements[UnlockRequirements.Length - 1] = req;
+            }
+            else
+            {
+                UnlockRequirements[0] = req;
+            }
+        }
+    }
     public bool RemoveLevelUnlock()
     {
         if (UnlockRequirements.Length == 0) return false;
@@ -485,6 +527,55 @@ public class Kit
         if (index != 0)
             Array.Copy(old, 0, UnlockRequirements, 0, index);
         Array.Copy(old, index + 1, UnlockRequirements, index, old.Length - index - 1);
+        return true;
+    }
+    public void AddSkillset(Skillset set)
+    {
+        int index = -1;
+        for (int i = 0; i < Skillsets.Length; i++)
+        {
+            ref Skillset skillset = ref Skillsets[i];
+            if (skillset == set)
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1)
+        {
+            Skillset[] old = Skillsets;
+            Skillsets = new Skillset[old.Length + 1];
+            if (old.Length > 0)
+            {
+                Array.Copy(old, 0, Skillsets, 0, old.Length);
+                Skillsets[Skillsets.Length - 1] = set;
+            }
+            else
+            {
+                Skillsets[0] = set;
+            }
+        }
+    }
+    public bool RemoveSkillset(Skillset set)
+    {
+        if (Skillsets.Length == 0) return false;
+        int index = -1;
+        for (int i = 0; i < Skillsets.Length; i++)
+        {
+            ref Skillset skillset = ref Skillsets[i];
+            if (skillset == set)
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) return false;
+        Skillset[] old = Skillsets;
+        Skillsets = new Skillset[old.Length - 1];
+        if (old.Length == 1) return true;
+        if (index != 0)
+            Array.Copy(old, 0, Skillsets, 0, index);
+        Array.Copy(old, index + 1, Skillsets, index, old.Length - index - 1);
         return true;
     }
 }
@@ -869,16 +960,32 @@ public sealed class UnlockRequirementAttribute : Attribute
     private readonly string[] _properties;
 }
 
+public class KitItemJsonConverter : JsonConverter<KitItem>
+{
+    public override KitItem? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        KitItem item = new KitItem();
+        item.ReadJson(ref reader);
+        return item;
+    }
+    public override void Write(Utf8JsonWriter writer, KitItem value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        value.WriteJson(writer);
+        writer.WriteEndObject();
+    }
+}
+[JsonConverter(typeof(KitItemJsonConverter))] // for backwards compatability of trunk items expecting base 64
 public class KitItem : IJsonReadWrite
 {
     public Guid id;
     public byte x;
     public byte y;
     public byte rotation;
-    public string metadata;
+    public byte[] metadata;
     public byte amount;
     public byte page;
-    public KitItem(Guid id, byte x, byte y, byte rotation, string metadata, byte amount, byte page)
+    public KitItem(Guid id, byte x, byte y, byte rotation, byte[] metadata, byte amount, byte page)
     {
         this.id = id;
         this.x = x;
@@ -901,7 +1008,7 @@ public class KitItem : IJsonReadWrite
         writer.WritePropertyName(nameof(rotation));
         writer.WriteNumberValue(rotation);
         writer.WritePropertyName(nameof(metadata));
-        writer.WriteStringValue(metadata);
+        writer.WriteStringValue(Convert.ToBase64String(metadata));
         writer.WritePropertyName(nameof(amount));
         writer.WriteNumberValue(amount);
         writer.WritePropertyName(nameof(page));
@@ -932,7 +1039,7 @@ public class KitItem : IJsonReadWrite
                             rotation = reader.GetByte();
                             break;
                         case nameof(metadata):
-                            metadata = reader.GetString()!;
+                            metadata = Convert.FromBase64String(reader.GetString()!);
                             break;
                         case nameof(amount):
                             amount = reader.GetByte();
@@ -949,12 +1056,11 @@ public class KitItem : IJsonReadWrite
 public class KitClothing : IJsonReadWrite
 {
     public Guid id;
-    public string state;
     public EClothingType type;
-    public KitClothing(Guid id, string state, EClothingType type)
+
+    public KitClothing(Guid id, EClothingType type)
     {
         this.id = id;
-        this.state = state;
         this.type = type;
     }
     public KitClothing() { }
@@ -963,8 +1069,6 @@ public class KitClothing : IJsonReadWrite
     {
         writer.WritePropertyName(nameof(id));
         writer.WriteStringValue(id);
-        writer.WritePropertyName(nameof(state));
-        writer.WriteStringValue(state);
         writer.WritePropertyName(nameof(type));
         writer.WriteNumberValue((byte)type);
     }
@@ -982,9 +1086,6 @@ public class KitClothing : IJsonReadWrite
                     {
                         case nameof(id):
                             id = reader.GetGuid();
-                            break;
-                        case nameof(state):
-                            state = reader.GetString()!;
                             break;
                         case nameof(type):
                             type = (EClothingType)reader.GetByte();

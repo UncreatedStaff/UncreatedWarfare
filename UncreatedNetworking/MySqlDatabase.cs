@@ -613,10 +613,11 @@ namespace Uncreated.SQL
         /// <param name="command">MySQL non-query to call.</param>
         /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
         /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <returns>The number of rows modified.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="command"/> == <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
         /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
-        public void NonQuery(string command, object[] parameters, byte t = 0)
+        public int NonQuery(string command, object[] parameters, byte t = 0)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
             if (!_openSuccess && !Open()) throw new Exception("Not connected");
@@ -627,7 +628,9 @@ namespace Uncreated.SQL
                 if (DebugLogging) Log(nameof(NonQuery) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 try
                 {
-                    Q.ExecuteNonQuery();
+                    int lc = Q.ExecuteNonQuery();
+                    _threadLocker.Release();
+                    return lc;
                 }
                 catch (InvalidOperationException ex) when (t == 0)
                 {
@@ -635,8 +638,7 @@ namespace Uncreated.SQL
                     Close();
                     if (Open())
                     {
-                        NonQuery(command, parameters, 1);
-                        return;
+                        return NonQuery(command, parameters, 1);
                     }
                     else
                     {
@@ -653,7 +655,6 @@ namespace Uncreated.SQL
                     throw;
                 }
             }
-            _threadLocker.Release();
         }
         /// <summary>
         /// Call a non-query, such as an insert, delete, etc.
@@ -661,11 +662,11 @@ namespace Uncreated.SQL
         /// <param name="command">MySQL non-query to call.</param>
         /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
         /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
-        /// <returns>A <see cref="Task"/> representing the Non-Query asynchronous operation.</returns>
+        /// <returns>The number of rows modified.</returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="command"/> == <see langword="null"/>.</exception>
         /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
         /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
-        public async Task NonQueryAsync(string command, object[] parameters, byte t = 0)
+        public async Task<int> NonQueryAsync(string command, object[] parameters, byte t = 0)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
             if (!_openSuccess && !Open()) throw new Exception("Not connected");
@@ -676,7 +677,9 @@ namespace Uncreated.SQL
                 if (DebugLogging) Log(nameof(NonQueryAsync) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 try
                 {
-                    await Q.ExecuteNonQueryAsync();
+                    int lc = await Q.ExecuteNonQueryAsync();
+                    _threadLocker.Release();
+                    return lc;
                 }
                 catch (InvalidOperationException ex) when (t == 0)
                 {
@@ -684,8 +687,7 @@ namespace Uncreated.SQL
                     await CloseAsync();
                     if (await OpenAsync())
                     {
-                        await NonQueryAsync(command, parameters, 1);
-                        return;
+                        return await NonQueryAsync(command, parameters, 1);
                     }
                     else
                     {
@@ -702,7 +704,6 @@ namespace Uncreated.SQL
                     throw;
                 }
             }
-            _threadLocker.Release();
         }
     }
     /// <summary>Stores information needed to connect to a MySQL connection.</summary>
@@ -726,7 +727,7 @@ namespace Uncreated.SQL
         [JsonIgnore]
         [System.Text.Json.Serialization.JsonIgnore]
         [System.Xml.Serialization.XmlIgnore]
-        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};"; }
+        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};Allow User Variables=True;"; }
 
         /// <summary>Read by <see cref="ByteReader"/></summary>
         public static MySqlData Read(ByteReader R)

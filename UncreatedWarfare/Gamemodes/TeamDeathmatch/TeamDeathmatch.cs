@@ -70,6 +70,7 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
             _kitManager = new KitManager();
+            Commands.ReloadCommand.ReloadKits();
             _reviveManager = new ReviveManager();
             _vehicleBay = new VehicleBay();
             _vehicleSpawner = new VehicleSpawner();

@@ -719,14 +719,16 @@ namespace Uncreated
     }
     public static class JsonEx
     {
+        private static readonly JavaScriptEncoder jsEncoder = JavaScriptEncoder.Create(UnicodeRanges.All);
         public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions()
         {
             WriteIndented = true, 
             IncludeFields = true, 
             AllowTrailingCommas = true,
-            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+            Encoder = jsEncoder
         };
-        public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true };
+        public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true, Encoder = jsEncoder };
+        public static readonly JsonWriterOptions condensedWriterOptions = new JsonWriterOptions() { Indented = false, Encoder = jsEncoder };
         public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };
         public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, bool value)
         {

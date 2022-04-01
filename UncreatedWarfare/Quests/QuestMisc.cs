@@ -1612,7 +1612,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             }
             else if (value.type == EDynamicValueType.ANY && _isKitSelector)
             {
-                IEnumerable<Kit> kits = KitManager.ActiveObjects.Where(x => !x.IsPremium && !x.IsLoadout);
+                IEnumerable<Kit> kits = KitManager.Instance.Kits.Values.Where(x => !x.IsPremium && !x.IsLoadout);
                 int ct = kits.Count();
                 int el = UnityEngine.Random.Range(0, ct);
                 _value = kits.ElementAt(el).Name;

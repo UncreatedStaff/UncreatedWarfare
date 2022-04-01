@@ -580,7 +580,7 @@ namespace Uncreated.Warfare.Stats
 
         [NetCall(ENetCall.FROM_SERVER, 2010)]
         internal static void ReceiveRequestKitList(in IConnection connection) => 
-            SendKitList.Invoke(connection, KitManager.ActiveObjects.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
+            SendKitList.Invoke(connection, KitManager.Instance.Kits.Values.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
 
         internal static readonly NetCallRaw<string[]> SendKitList = new NetCallRaw<string[]>(2011, ReadStringArray, WriteStringArray);
 

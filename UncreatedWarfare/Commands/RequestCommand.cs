@@ -5,6 +5,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -131,7 +132,7 @@ namespace Uncreated.Warfare.Commands
                     if (ushort.TryParse(requestsign.kit_name.Substring(8), out ushort loadoutNumber))
                     {
                         byte bteam = ucplayer.Player.GetTeamByte();
-                        List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && k.AllowedUsers.Contains(ucplayer.Steam64)).ToList();
+                        List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, ucplayer)).ToList();
 
                         if (loadouts.Count != 0)
                         {
@@ -178,7 +179,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_alreadyhaskit");
                     }
-                    else if (kit.IsPremium && !kit.AllowedUsers.Contains(ucplayer.Steam64) && !UCWarfare.Config.OverrideKitRequirements)
+                    else if (kit.IsPremium && !KitManager.HasAccessFast(kit, ucplayer) && !UCWarfare.Config.OverrideKitRequirements)
                     {
                         ucplayer.Message("request_kit_e_notallowed");
                     }
@@ -186,7 +187,7 @@ namespace Uncreated.Warfare.Commands
                     {
                         ucplayer.Message("request_kit_e_wronglevel", RankData.GetRankName(kit.UnlockLevel));
                     }
-                    else if (!kit.IsPremium && kit.CreditCost > 0 && !ucplayer.AccessibleKits.Contains(kit.Name) && !UCWarfare.Config.OverrideKitRequirements)
+                    else if (!kit.IsPremium && kit.CreditCost > 0 && !KitManager.HasAccessFast(kit, ucplayer) && !UCWarfare.Config.OverrideKitRequirements)
                     {
                         if (ucplayer.CachedCredits >= kit.CreditCost)
                             ucplayer.Message("request_kit_e_notboughtcredits", kit.CreditCost.ToString());
@@ -245,22 +246,35 @@ namespace Uncreated.Warfare.Commands
                         //    }
                         //    return;
                         //}
-                        if (kit.Class == EClass.SQUADLEADER && ucplayer.Squad == null)
+                        Task.Run(async () =>
                         {
-                            if (SquadManager.Squads.Count(x => x.Team == team) < 8)
+                            bool hasKit = await KitManager.HasAccess(kit, ucplayer);
+                            await UCWarfare.ToUpdate();
+                            if (!hasKit)
                             {
-                                // create a squad automatically if someone requests a squad leader kit.
-                                Squad squad = SquadManager.CreateSquad(ucplayer, ucplayer.GetTeam(), ucplayer.Branch);
-                                ucplayer.Message("squad_created", squad.Name);
+                                if (ucplayer.CachedCredits >= kit.CreditCost)
+                                    ucplayer.Message("request_kit_e_notboughtcredits", kit.CreditCost.ToString());
+                                else
+                                    ucplayer.Message("request_kit_e_notenoughcredits", (kit.CreditCost - ucplayer.CachedCredits).ToString());
                             }
-                            else
+                            if (kit.Class == EClass.SQUADLEADER && ucplayer.Squad == null)
                             {
-                                player.SendChat("squad_too_many");
-                                return;
+                                if (SquadManager.Squads.Count(x => x.Team == team) < 8)
+                                {
+                                    // create a squad automatically if someone requests a squad leader kit.
+                                    Squad squad = SquadManager.CreateSquad(ucplayer, ucplayer.GetTeam(), ucplayer.Branch);
+                                    ucplayer.Message("squad_created", squad.Name);
+                                }
+                                else
+                                {
+                                    player.SendChat("squad_too_many");
+                                    return;
+                                }
                             }
-                        }
-                        ActionLog.Add(EActionLogType.REQUEST_KIT, $"Kit {kit.Name}, Team {kit.Team}, Class: {Translation.TranslateEnum(kit.Class, 0)}", ucplayer);
-                        GiveKit(ucplayer, kit);
+                            ActionLog.Add(EActionLogType.REQUEST_KIT, $"Kit {kit.Name}, Team {kit.Team}, Class: {Translation.TranslateEnum(kit.Class, 0)}", ucplayer);
+                            GiveKit(ucplayer, kit);
+                        });
+                        return;
                     }
                 }
             }
