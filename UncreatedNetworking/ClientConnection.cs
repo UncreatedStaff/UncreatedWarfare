@@ -125,7 +125,7 @@ namespace Uncreated.Networking
                     CurrentMessage = new byte[message.Length];
                     CurrentSize = size;
                     Buffer.BlockCopy(message, 0, CurrentMessage, 0, message.Length);
-                } 
+                }
                 else // continuing a long message
                 {
                     byte[] old = CurrentMessage;

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
@@ -57,9 +58,9 @@ namespace Uncreated.Warfare.Kits
                 }
                 kitName = command[0];
 
-                if (KitManager.KitExists(kitName, out Kit kit)) // create kit
+                if (KitManager.KitExists(kitName, out Kit kit))
                 {
-                    if (kit.AllowedUsers.Contains(ucplayer.Steam64))
+                    if (KitManager.HasAccessFast(kit, ucplayer))
                     {
                         if (ucplayer.GetTeam() == kit.Team)
                         {
@@ -122,7 +123,7 @@ namespace Uncreated.Warfare.Kits
                     try
                     {
                         int counter = 0;
-                        foreach (Kit kit in KitManager.ActiveObjects)
+                        foreach (Kit kit in KitManager.Instance.Kits.Values)
                         {
                             if (kit.SignTexts == null || kit.SignTexts.Count == 0) continue;
                             foreach (KeyValuePair<string, string> lang in kit.SignTexts)
@@ -160,32 +161,55 @@ namespace Uncreated.Warfare.Kits
                     }
                     if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
                     {
-                        KitManager.CreateKit(kitName, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
-                        ActionLog.Add(EActionLogType.CREATE_KIT, kitName, ucplayer);
-                        RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
-                        Reply(ucplayer, "kit_created", kitName);
+                        Task.Run(async () =>
+                        {
+                            Kit? kit = await KitManager.AddKit(new Kit(kitName, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer)));
+                            if (kit != null)
+                            {
+                                ActionLog.Add(EActionLogType.CREATE_KIT, kitName, ucplayer);
+                                await UCWarfare.ToUpdate();
+                                RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
+                                Reply(ucplayer, "kit_created", kitName);
+                            }
+                        });
+                        
                         return;
                     }
                     else // overwrite kit
                     {
-                        ActionLog.Add(EActionLogType.EDIT_KIT, kitName, ucplayer);
-                        KitManager.OverwriteKitItems(kit.Name, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
-                        RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
-                        Reply(ucplayer, "kit_overwritten", kitName);
+                        Task.Run(async () =>
+                        {
+                            kit.Items = KitManager.ItemsFromInventory(ucplayer);
+                            kit.Clothes = KitManager.ClothesFromInventory(ucplayer);
+                            kit = (await KitManager.AddKit(kit))!;
+                            if (kit != null)
+                            {
+                                ActionLog.Add(EActionLogType.EDIT_KIT, kitName, ucplayer);
+                                await UCWarfare.ToUpdate();
+                                RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
+                                Reply(ucplayer, "kit_overwritten", kitName);
+                            }
+                        });
                         return;
                     }
                 }
                 // delete kit
                 else if (op == "delete" || op == "d")
                 {
-                    if (KitManager.KitExists(kitName, out _))
+                    if (KitManager.KitExists(kitName, out Kit kit))
                     {
-                        KitManager.DeleteKit(kitName);
+                        Task.Run(async () =>
+                        {
+                            if (await KitManager.DeleteKit(kit))
+                            {
+                                ActionLog.Add(EActionLogType.DELETE_KIT, kitName, ucplayer ?? 0ul);
 
-                        ActionLog.Add(EActionLogType.DELETE_KIT, kitName, ucplayer ?? 0ul);
-                        RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
-                        RequestSigns.RemoveRequestSigns(kitName);
-                        Reply(ucplayer, "kit_deleted", kitName);
+                                await UCWarfare.ToUpdate();
+                                RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
+                                RequestSigns.RemoveRequestSigns(kitName);
+                                Reply(ucplayer, "kit_deleted", kitName);
+                            }
+                        });
                         return;
                     }
                     else // error
@@ -240,7 +264,7 @@ namespace Uncreated.Warfare.Kits
                     if (KitManager.KitExists(kitName, out Kit kit))
                     {
                         bool wasloadout = kit.IsLoadout;
-                        KitManager.SetProperty(kit, property, newValue, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
+                        KitEx.SetProperty(kit, property, newValue, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
                         if (!allowedToChange) // error - invalid argument value
                         {
                             if (property == "level")
@@ -251,8 +275,7 @@ namespace Uncreated.Warfare.Kits
                                         kit.RemoveLevelUnlock();
                                     else
                                         kit.AddSimpleLevelUnlock(level);
-
-                                    KitManager.Save();
+                                    Task.Run(async() => await KitManager.AddKit(kit)).ConfigureAwait(false);
                                     goto SUCCESS;
                                 }
 
@@ -273,15 +296,12 @@ namespace Uncreated.Warfare.Kits
                             Reply(ucplayer, "kit_e_invalidprop", property);
                             return;
                         }
-                        goto SUCCESS;
-
-
                         SUCCESS:
                         // success
                         Reply(ucplayer, "kit_setprop", property, kitName, newValue);
                         ActionLog.Add(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper(), ucplayer ?? 0ul);
                         RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
-                        if (wasloadout && !kit.IsLoadout)
+                        if (wasloadout || kit.IsLoadout)
                         {
                             for (int s = 0; s < RequestSigns.ActiveObjects.Count; s++)
                             {
@@ -322,40 +342,44 @@ namespace Uncreated.Warfare.Kits
                         target = UCPlayer.FromName(targetPlayer);
 
                     bool hasPlayerJoined = true;
-
-                    if (target is null)
+                    Task.Run(async () =>
                     {
-                        hasPlayerJoined = Data.DatabaseManager.HasPlayerJoined(steam64).Result; // todo
-                    }
+                        hasPlayerJoined = await Data.DatabaseManager.HasPlayerJoined(steam64);
+                        if (!hasPlayerJoined)
+                        {
+                            await UCWarfare.ToUpdate();
+                            Reply(ucplayer, "kit_e_noplayer", targetPlayer);
+                            return;
+                        }
+                        bool hasAccess;
+                        if (target != null)
+                        {
+                            steam64 = target.Steam64;
+                            targetPlayer = target.CharacterName;
+                            hasAccess = KitManager.HasAccessFast(kit, target);
+                        }
+                        else
+                        {
+                            targetPlayer = (await Data.DatabaseManager.GetUsernamesAsync(steam64)).CharacterName;
+                            hasAccess = await KitManager.HasAccess(kit, steam64);
+                        }
+                        if (hasAccess)
+                        {
+                            await UCWarfare.ToUpdate();
+                            Reply(ucplayer, "kit_e_alreadyaccess", targetPlayer, kitName);
+                            return;
+                        }
+                        if (target != null)
+                            await KitManager.GiveAccess(kit, target, EKitAccessType.PURCHASE);
+                        else
+                            await KitManager.GiveAccess(kit, steam64, EKitAccessType.PURCHASE);
+                        ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, steam64.ToString(Data.Locale) + " GIVEN ACCESS TO " + kitName, ucplayer ?? 0ul);
 
-                    // error - player is not online and has never joined the server
-                    if (!hasPlayerJoined)
-                    {
-                        Reply(ucplayer, "kit_e_noplayer", targetPlayer);
-                        return;
-                    }
-
-                    if (target is not null)
-                    {
-                        steam64 = target.Steam64;
-                        targetPlayer = target.CharacterName;
-                    }
-                    else
-                        targetPlayer = Data.DatabaseManager.GetUsernames(steam64).CharacterName;
-
-                    // error - player already has access
-                    if (KitManager.HasAccess(steam64, kit.Name))
-                    {
-                        Reply(ucplayer, "kit_e_alreadyaccess", targetPlayer, kitName);
-                        return;
-                    }
-
-                    //success
-                    Reply(ucplayer, "kit_accessgiven", targetPlayer, kitName);
-                    ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, steam64.ToString(Data.Locale) + " GIVEN ACCESS TO " + kitName, ucplayer ?? 0ul);
-                    KitManager.GiveAccess(steam64, kit.Name);
-                    if (target != null)
-                        RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
+                        await UCWarfare.ToUpdate();
+                        Reply(ucplayer, "kit_accessgiven", targetPlayer, kitName);
+                        if (target != null)
+                            RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
+                    });
                     return;
                 }
                 // remove player access to kit
@@ -367,51 +391,53 @@ namespace Uncreated.Warfare.Kits
                         return;
                     }
 
-                    ulong steam64 = 0;
 
                     UCPlayer? target;
-                    if (ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+                    if (ulong.TryParse(targetPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out ulong steam64) && OffenseManager.IsValidSteam64ID(steam64))
                         target = UCPlayer.FromID(steam64);
                     else
                         target = UCPlayer.FromName(targetPlayer);
 
                     bool hasPlayerJoined = true;
-
-                    if (target is null)
+                    Task.Run(async () =>
                     {
-                        hasPlayerJoined = Data.DatabaseManager.HasPlayerJoined(steam64).Result; // todo
-                    }
+                        hasPlayerJoined = await Data.DatabaseManager.HasPlayerJoined(steam64);
+                        if (!hasPlayerJoined)
+                        {
+                            await UCWarfare.ToUpdate();
+                            Reply(ucplayer, "kit_e_noplayer", targetPlayer);
+                            return;
+                        }
+                        bool hasAccess;
+                        if (target != null)
+                        {
+                            steam64 = target.Steam64;
+                            targetPlayer = target.CharacterName;
+                            hasAccess = KitManager.HasAccessFast(kit, target);
+                        }
+                        else
+                        {
+                            targetPlayer = (await Data.DatabaseManager.GetUsernamesAsync(steam64)).CharacterName;
+                            hasAccess = await KitManager.HasAccess(kit, steam64);
+                        }
+                        if (!hasAccess)
+                        {
+                            await UCWarfare.ToUpdate();
+                            Reply(ucplayer, "kit_e_noaccess", targetPlayer, kitName);
+                            return;
+                        }
+                        if (target != null)
+                            await KitManager.RemoveAccess(kit, target);
+                        else
+                            await KitManager.RemoveAccess(kit, steam64);
+                        ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, steam64.ToString(Data.Locale) + " DENIED ACCESS TO " + kitName, ucplayer ?? 0ul);
 
-                    // error - player is not online and has never joined the server
-                    if (!hasPlayerJoined)
-                    {
-                        Reply(ucplayer, "kit_e_noplayer", targetPlayer);
-                        return;
-                    }
-
-                    if (target is not null)
-                    {
-                        steam64 = target.Steam64;
-                        targetPlayer = target.CharacterName;
-                    }
-                    else
-                        targetPlayer = Data.DatabaseManager.GetUsernames(steam64).CharacterName;
-
-                    // error - player already does not have access
-                    if (!KitManager.HasAccess(steam64, kit.Name))
-                    {
-                        Reply(ucplayer, "kit_e_noaccess", targetPlayer, kitName);
-                        return;
-                    }
-
-                    //success
-                    Reply(ucplayer, "kit_accessremoved", targetPlayer, kitName);
-                    ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, steam64.ToString(Data.Locale) + " DENIED ACCESS TO " + kitName, ucplayer ?? 0ul);
-                    KitManager.RemoveAccess(steam64, kit.Name);
-                    if (target != null)
-                        RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
+                        await UCWarfare.ToUpdate();
+                        Reply(ucplayer, "kit_accessremoved", targetPlayer, kitName);
+                        if (target != null)
+                            RequestSigns.InvokeLangUpdateForSignsOfKit(target.Player.channel.owner, kitName);
+                    });
                     return;
-
                 }
                 if (op == "copyfrom" || op == "cf") // copy new kit from existing kit
                 {
@@ -442,10 +468,13 @@ namespace Uncreated.Warfare.Kits
                                 Weapons = existing.Weapons
                             };
 
-                            ActionLog.Add(EActionLogType.CREATE_KIT, kitName + " COPIED FROM " + existingName, ucplayer ?? 0ul);
-                            KitManager.CreateKit(newKit);
-
-                            Reply(ucplayer, "kit_copied", existing.Name, newKit.Name);
+                            Task.Run(async () =>
+                            {
+                                await KitManager.AddKit(newKit);
+                                ActionLog.Add(EActionLogType.CREATE_KIT, kitName + " COPIED FROM " + existingName, ucplayer ?? 0ul);
+                                await UCWarfare.ToUpdate();
+                                Reply(ucplayer, "kit_copied", existing.Name, newKit.Name);
+                            });
                         }
                         else
                         {
@@ -505,46 +534,48 @@ namespace Uncreated.Warfare.Kits
 
                     if (!KitManager.KitExists(loadoutName, out _))
                     {
-
-                        Kit loadout = KitManager.CreateKit(loadoutName, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
-
-                        KitManager.UpdateObjectsWhere(k => k.Name == loadoutName, k =>
+                        Task.Run(async () =>
                         {
-                            k.IsLoadout = true;
-                            k.Team = team;
-                            k.Class = kitClass;
-                            if (kitClass == EClass.PILOT)
-                                k.Branch = EBranch.AIRFORCE;
-                            else if (kitClass == EClass.CREWMAN)
-                                k.Branch = EBranch.ARMOR;
-                            else
-                                k.Branch = EBranch.INFANTRY;
+                            Kit? loadout = new Kit(loadoutName, KitManager.ItemsFromInventory(ucplayer), KitManager.ClothesFromInventory(ucplayer));
 
-                            if (kitClass == EClass.HAT)
-                                k.TeamLimit = 0.1F;
+                            if (loadout != null)
+                            {
+                                loadout.IsLoadout = true;
+                                loadout.Team = team;
+                                loadout.Class = kitClass;
+                                if (kitClass == EClass.PILOT)
+                                    loadout.Branch = EBranch.AIRFORCE;
+                                else if (kitClass == EClass.CREWMAN)
+                                    loadout.Branch = EBranch.ARMOR;
+                                else
+                                    loadout.Branch = EBranch.INFANTRY;
 
-                            k.AllowedUsers.Add(steamid);
+                                if (kitClass == EClass.HAT)
+                                    loadout.TeamLimit = 0.1F;
+
 
                                 StringBuilder sb = new StringBuilder();
-                            for (int i = 4; i < command.Length; i++)
-                            {
-                                if (i > 4) sb.Append(' ');
-                                sb.Append(command[i]);
+                                for (int i = 4; i < command.Length; i++)
+                                {
+                                    if (i > 4) sb.Append(' ');
+                                    sb.Append(command[i]);
+                                }
+                                string displayName = sb.ToString();
+
+                                await KitManager.AddKit(loadout);
+                                await KitManager.GiveAccess(loadout, steamid, EKitAccessType.PURCHASE);
+                                ActionLog.Add(EActionLogType.CREATE_KIT, loadoutName, ucplayer);
+                                await UCWarfare.ToUpdate();
+                                KitManager.UpdateText(loadout, displayName);
+                                Reply(ucplayer, "kit_l_created", kitClass.ToString().ToUpper(), Data.DatabaseManager.GetUsernames(steamid).CharacterName, steamid.ToString(), loadoutName);
                             }
-                            string displayName = sb.ToString();
-                            KitManager.UpdateText(loadoutName, displayName, "en-us");
-
                         });
-
-                        ActionLog.Add(EActionLogType.CREATE_KIT, loadoutName, ucplayer);
-
-                        Reply(ucplayer, "kit_l_created", kitClass.ToString().ToUpper(), Data.DatabaseManager.GetUsernames(steamid).CharacterName, steamid.ToString(), loadoutName);
                     }
                     else
                     {
                         Reply(ucplayer, "kit_l_e_kitexists", class_s);
-                        return;
                     }
+                    return;
                 }
                 else if (op == "set" || op == "s")
                 {
@@ -561,8 +592,11 @@ namespace Uncreated.Warfare.Kits
                             string text = sb.ToString();
                             text.Replace("\\n", "\n");
                             L.Log(text);
-                            if (KitManager.UpdateText(command[2], text, command[3]))
+                            if (KitManager.KitExists(command[2], out Kit kit))
+                            {
+                                KitManager.UpdateText(kit, text, command[3]);
                                 Reply(ucplayer, "kit_setprop", "sign text", command[2], command[3] + " : " + text);
+                            }
                             else
                                 Reply(ucplayer, "kit_e_noexist", command[2]);
                             ActionLog.Add(EActionLogType.SET_KIT_PROPERTY, command[2] + ": SIGN TEXT >> \"" + text + "\"", ucplayer ?? 0ul);

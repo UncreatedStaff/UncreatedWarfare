@@ -347,22 +347,18 @@ namespace Uncreated.Warfare
             }
             else return old;
         }
-        public async Task<List<string>> GetAccessibleKits(ulong player)
+        public async Task<List<Kit>> GetAccessibleKits(ulong player)
         {
-            List<string> kitNames = new List<string>();
-            await QueryAsync("SELECT `KitName` FROM `kitaccess` WHERE `Steam64` = @0;",
+            
+            List<Kit> kits = new List<Kit>();
+            await QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
                 new object[1] { player },
                 R =>
                 {
-                    kitNames.Add(R.GetString(0));
+                    if (KitManager.Instance.Kits.TryGetValue(R.GetInt32(0), out Kit kit))
+                        kits.Add(kit);
                 });
-            return kitNames;
-        }
-        public Task AddAccessibleKit(ulong player, string kitName)
-        {
-            return NonQueryAsync(
-                    "INSERT INTO `kitaccess` (`Steam64`, `KitName`) VALUES (@0, @1) ON DUPLICATE KEY UPDATE `KitName` = @1;",
-                    new object[2] { player, kitName });
+            return kits;
         }
         public Task AddKill(ulong Steam64, ulong Team, int amount = 1)
         {
@@ -662,13 +658,13 @@ namespace Uncreated.Warfare
             if (ip == null) return "255.255.255.255";
             else return ip;
         }
-        public override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
+        protected override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
             => L.Log(message, color);
-        public override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
+        protected override void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow)
             => L.LogWarning(message, color);
-        public override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
+        protected override void LogError(string message, ConsoleColor color = ConsoleColor.Red)
             => L.LogError(message, color);
-        public override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
+        protected override void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red)
             => L.LogError(ex, color);
     }
 }

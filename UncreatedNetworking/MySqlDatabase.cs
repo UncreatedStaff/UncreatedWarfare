@@ -12,19 +12,35 @@ using System.Threading;
 
 namespace Uncreated.SQL
 {
+    /// <summary>
+    /// Overridable MySQL wrapper.
+    /// </summary>
     public abstract class MySqlDatabase : IDisposable
     {
+        /// <summary>
+        /// Underlying MySQL Connection
+        /// </summary>
         public MySqlConnection SQL;
+        /// <summary>
+        /// Should log debug messages.
+        /// </summary>
         public bool DebugLogging = false;
+        /// <summary>
+        /// Data used to log into the database.
+        /// </summary>
         protected MySqlData _login;
-        protected DbDataReader CurrentReader;
+        private DbDataReader CurrentReader;
         private bool _openSuccess;
-        private SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 1);
+        /// <summary>
+        /// Create a <see cref="MySqlDatabase"/> instance using a <see cref="MySqlData"/> object for the connection string.
+        /// </summary>
         public MySqlDatabase(MySqlData data)
         {
             _login = data;
             SQL = new MySqlConnection(_login.ConnectionString);
         }
+        /// <inheritdoc />
         public void Dispose()
         {
             _threadLocker.Wait();
@@ -33,10 +49,34 @@ namespace Uncreated.SQL
             _threadLocker.Release();
             _threadLocker.Dispose();
         }
-        public abstract void Log(string message, ConsoleColor color = ConsoleColor.Gray);
-        public abstract void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow);
-        public abstract void LogError(string message, ConsoleColor color = ConsoleColor.Red);
-        public abstract void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red);
+        /// <summary>
+        /// Override to customize how logging is done.
+        /// </summary>
+        /// <param name="message">A message message</param>
+        /// <param name="color">The color of the message, may not be respected by all overrides.</param>
+        protected abstract void Log(string message, ConsoleColor color = ConsoleColor.Gray);
+        /// <summary>
+        /// Override to customize how logging is done.
+        /// </summary>
+        /// <param name="message">A warning message</param>
+        /// <param name="color">The color of the message, may not be respected by all overrides.</param>
+        protected abstract void LogWarning(string message, ConsoleColor color = ConsoleColor.Yellow);
+        /// <summary>
+        /// Override to customize how logging is done.
+        /// </summary>
+        /// <param name="message">An error message</param>
+        /// <param name="color">The color of the message, may not be respected by all overrides.</param>
+        protected abstract void LogError(string message, ConsoleColor color = ConsoleColor.Red);
+        /// <summary>
+        /// Override to customize how logging is done.
+        /// </summary>
+        /// <param name="ex">An exception</param>
+        /// <param name="color">The color of the message, may not be respected by all overrides.</param>
+        protected abstract void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red);
+        /// <summary>
+        /// Open the MySQL connection.
+        /// </summary>
+        /// <returns>A <see cref="bool"/> meaning whether the operation was successful or not.</returns>
         public bool Open()
         {
             if (!_threadLocker.Wait(10000))
@@ -72,6 +112,10 @@ namespace Uncreated.SQL
                 }
             }
         }
+        /// <summary>
+        /// Close the MySQL connection.
+        /// </summary>
+        /// <returns>A <see cref="bool"/> meaning whether the operation was successful or not.</returns>
         public bool Close()
         {
             _threadLocker.Wait();
@@ -91,6 +135,10 @@ namespace Uncreated.SQL
                 return false;
             }
         }
+        /// <summary>
+        /// Open the MySQL connection asynchronously.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing an asynchronous operation that returns a <see cref="bool"/> meaning whether the operation was successful or not.</returns>
         public async Task<bool> OpenAsync()
         {
             await _threadLocker.WaitAsync();
@@ -122,6 +170,10 @@ namespace Uncreated.SQL
                 }
             }
         }
+        /// <summary>
+        /// Close the MySQL connection asynchronously.
+        /// </summary>
+        /// <returns>A <see cref="bool"/> meaning whether the operation was successful or not.</returns>
         public async Task<bool> CloseAsync()
         {
             await _threadLocker.WaitAsync();
@@ -141,10 +193,21 @@ namespace Uncreated.SQL
                 return false;
             }
         }
-        public void Query(string query, object[] parameters, ReadLoopAction ReadLoopAction, byte t = 0)
+        /// <summary>
+        /// Call a query, such as a select, etc, and run code for each row.
+        /// </summary>
+        /// <param name="query">MySQL query to call.</param>
+        /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
+        /// <param name="readLoopAction">Callback to call for each row, with signature: <code><see cref="void"/> <paramref name="readLoopAction"/>(<see cref="MySqlDataReader"/> reader)</code>
+        /// To break the loop use the overload: <see cref="Query(string, object[], BreakableReadLoopAction, byte)"/>.</param>
+        /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> == <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
+        /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
+        public void Query(string query, object[] parameters, ReadLoopAction readLoopAction, byte t = 0)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
-            if (!_openSuccess) throw new Exception("Not connected");
+            if (!_openSuccess && !Open()) throw new Exception("Not connected");
             _threadLocker.Wait();
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
@@ -156,9 +219,20 @@ namespace Uncreated.SQL
                     {
                         if (CurrentReader is MySqlDataReader R)
                         {
+                            int row = 0;
                             while (R.Read())
                             {
-                                ReadLoopAction.Invoke(R);
+                                try
+                                {
+                                    readLoopAction.Invoke(R);
+                                }
+                                catch (Exception ex)
+                                {
+                                    LogError("Error in defined reader loop on row " + row + ": ");
+                                    LogError(ex);
+                                    LogError(Environment.StackTrace);
+                                }
+                                ++row;
                             }
                         }
                         CurrentReader.Close();
@@ -173,12 +247,13 @@ namespace Uncreated.SQL
                     Close();
                     if (Open())
                     {
-                        Query(query, parameters, ReadLoopAction, 1);
+                        Query(query, parameters, readLoopAction, 1);
                     }
                     else
                     {
                         LogError($"Failed reopen the MySql connection to run the command: {Q.CommandText}: {string.Join(",", parameters)}");
                         LogError(ex);
+                        throw;
                     }
                     return;
                 }
@@ -186,14 +261,28 @@ namespace Uncreated.SQL
                 {
                     LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
+                    _threadLocker.Release();
+                    throw;
                 }
             }
             _threadLocker.Release();
         }
-        public async Task QueryAsync(string query, object[] parameters, ReadLoopAction ReadLoopAction, byte t = 0)
+        /// <summary>
+        /// Call a query, such as a select, etc, and run code for each row.
+        /// </summary>
+        /// <param name="query">MySQL query to call.</param>
+        /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
+        /// <param name="readLoopAction">Callback to call for each row, with signature: <code><see cref="void"/> <paramref name="readLoopAction"/>(<see cref="MySqlDataReader"/> reader)</code>
+        /// To break the loop use the overload: <see cref="QueryAsync(string, object[], BreakableReadLoopAction, byte)"/>.</param>
+        /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous Query operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> == <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
+        /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
+        public async Task QueryAsync(string query, object[] parameters, ReadLoopAction readLoopAction, byte t = 0)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
-            if (!_openSuccess) throw new Exception("Not connected");
+            if (!_openSuccess && !Open()) throw new Exception("Not connected");
             await _threadLocker.WaitAsync();
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
@@ -205,9 +294,20 @@ namespace Uncreated.SQL
                     {
                         if (CurrentReader is MySqlDataReader R)
                         {
+                            int row = 0;
                             while (await R.ReadAsync())
                             {
-                                ReadLoopAction.Invoke(R);
+                                try
+                                {
+                                    readLoopAction.Invoke(R);
+                                }
+                                catch (Exception ex)
+                                {
+                                    LogError("Error in defined reader loop on row " + row + ": ");
+                                    LogError(ex);
+                                    LogError(Environment.StackTrace);
+                                }
+                                ++row;
                             }
                         }
                         CurrentReader.Close();
@@ -222,31 +322,49 @@ namespace Uncreated.SQL
                     await CloseAsync();
                     if (await OpenAsync())
                     {
-                        await QueryAsync(query, parameters, ReadLoopAction, 1);
+                        await QueryAsync(query, parameters, readLoopAction, 1);
                         return;
                     }
                     else
                     {
                         LogError($"Failed reopen the MySql connection to run the command: {Q.CommandText}: {string.Join(",", parameters)}");
                         LogError(ex);
-                        return;
+                        throw;
                     }
                 }
                 catch (Exception ex)
                 {
                     LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
+                    _threadLocker.Release();
+                    throw;
                 }
             }
             _threadLocker.Release();
         }
-
+        /// <summary>
+        /// Called per row while reading a query response.
+        /// </summary>
         public delegate void ReadLoopAction(MySqlDataReader R);
+        /// <summary>
+        /// Called per row while reading a query response. Can return <see langword="true"/> to break from the loop.
+        /// </summary>
         public delegate bool BreakableReadLoopAction(MySqlDataReader R);
-        public void Query(string query, object[] parameters, BreakableReadLoopAction ReadLoopAction, byte t = 0)
+        /// <summary>
+        /// Call a query, such as a select, etc, and run code for each row.
+        /// </summary>
+        /// <param name="query">MySQL query to call.</param>
+        /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
+        /// <param name="readLoopAction">Callback to call for each row, with signature: <code><see cref="bool"/> <paramref name="readLoopAction"/>(<see cref="MySqlDataReader"/> reader)</code>
+        /// Return <see langword="true"/> to break the loop.</param>
+        /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> == <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
+        /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
+        public void Query(string query, object[] parameters, BreakableReadLoopAction readLoopAction, byte t = 0)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
-            if (!_openSuccess) throw new Exception("Not connected");
+            if (!_openSuccess && !Open()) throw new Exception("Not connected");
             _threadLocker.Wait();
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
@@ -258,7 +376,21 @@ namespace Uncreated.SQL
                     {
                         if (CurrentReader is MySqlDataReader R)
                         {
-                            while (R.Read() && !ReadLoopAction.Invoke(R)) ;
+                            int row = 0;
+                            while (R.Read())
+                            {
+                                try
+                                {
+                                    if (!readLoopAction.Invoke(R)) break;
+                                }
+                                catch (Exception ex)
+                                {
+                                    LogError("Error in defined reader loop on row " + row + ": ");
+                                    LogError(ex);
+                                    LogError(Environment.StackTrace);
+                                }
+                            }
+                            ++row;
                         }
                         CurrentReader.Close();
                         CurrentReader.Dispose();
@@ -272,12 +404,13 @@ namespace Uncreated.SQL
                     Close();
                     if (Open())
                     {
-                        Query(query, parameters, ReadLoopAction, 1);
+                        Query(query, parameters, readLoopAction, 1);
                     }
                     else
                     {
                         LogError($"Failed reopen the MySql connection to run the command: {Q.CommandText}: {string.Join(",", parameters)}");
                         LogError(ex);
+                        throw;
                     }
                     return;
                 }
@@ -285,14 +418,28 @@ namespace Uncreated.SQL
                 {
                     LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
+                    _threadLocker.Release();
+                    throw;
                 }
             }
             _threadLocker.Release();
         }
-        public async Task QueryAsync(string query, object[] parameters, BreakableReadLoopAction ReadLoopAction, byte t = 0)
+        /// <summary>
+        /// Call a query, such as a select, etc, and run code for each row.
+        /// </summary>
+        /// <param name="query">MySQL query to call.</param>
+        /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
+        /// <param name="readLoopAction">Callback to call for each row, with signature: <code><see cref="bool"/> <paramref name="readLoopAction"/>(<see cref="MySqlDataReader"/> reader)</code>
+        /// Return <see langword="true"/> to break the loop.</param>
+        /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous Query operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> == <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
+        /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
+        public async Task QueryAsync(string query, object[] parameters, BreakableReadLoopAction readLoopAction, byte t = 0)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
-            if (!_openSuccess) throw new Exception("Not connected");
+            if (!_openSuccess && !Open()) throw new Exception("Not connected");
             await _threadLocker.WaitAsync();
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
@@ -304,7 +451,21 @@ namespace Uncreated.SQL
                     {
                         if (CurrentReader is MySqlDataReader R)
                         {
-                            while (await R.ReadAsync() && !ReadLoopAction.Invoke(R)) ;
+                            int row = 0;
+                            while (await R.ReadAsync())
+                            {
+                                try
+                                {
+                                    if (!readLoopAction.Invoke(R)) break;
+                                }
+                                catch (Exception ex)
+                                {
+                                    LogError("Error in defined reader loop on row " + row + ": ");
+                                    LogError(ex);
+                                    LogError(Environment.StackTrace);
+                                }
+                            }
+                            ++row;
                         }
                         CurrentReader.Close();
                         CurrentReader.Dispose();
@@ -318,28 +479,41 @@ namespace Uncreated.SQL
                     await CloseAsync();
                     if (await OpenAsync())
                     {
-                        await QueryAsync(query, parameters, ReadLoopAction, 1);
+                        await QueryAsync(query, parameters, readLoopAction, 1);
                         return;
                     }
                     else
                     {
                         LogError($"Failed reopen the MySql connection to run the command: {Q.CommandText}: {string.Join(",", parameters)}");
                         LogError(ex);
-                        return;
+                        throw;
                     }
                 }
                 catch (Exception ex)
                 {
                     LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
+                    _threadLocker.Release();
+                    throw;
                 }
             }
             _threadLocker.Release();
         }
+        /// <summary>
+        /// Call a query, such as a select, etc, and get 1 cell's result (gets 0,0 in the table).
+        /// </summary>
+        /// <param name="query">MySQL query to call.</param>
+        /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
+        /// <param name="converter">Convert from <see cref="object"/> to <typeparamref name="T"/>, usually just a C-cast.</param>
+        /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> == <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
+        /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
+        /// <typeparam name="T">Output type</typeparam>
         public T Scalar<T>(string query, object[] parameters, Func<object, T> converter, byte t = 0)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
-            if (!_openSuccess) throw new Exception("Not connected");
+            if (!_openSuccess && !Open()) throw new Exception("Not connected");
             _threadLocker.Wait();
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
@@ -367,7 +541,7 @@ namespace Uncreated.SQL
                         LogError($"Failed reopen the MySql connection to run the command: {Q.CommandText}: {string.Join(",", parameters)}");
                         LogError(ex);
                         _threadLocker.Release();
-                        return default;
+                        throw;
                     }
                 }
                 catch (Exception ex)
@@ -375,14 +549,26 @@ namespace Uncreated.SQL
                     LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
                     _threadLocker.Release();
-                    return default;
+                    throw;
                 }
             }
         }
+        /// <summary>
+        /// Call a query, such as an insert, delete, etc, and get 1 cell's result (gets 0,0 in the table).
+        /// </summary>
+        /// <param name="query">MySQL query to call.</param>
+        /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
+        /// <param name="converter">Convert from <see cref="object"/> to <typeparamref name="T"/>, usually just a C-cast.</param>
+        /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <returns>A <see cref="Task{T}"/> representing the Non-Query asynchronous operation.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="query"/> == <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
+        /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
+        /// <typeparam name="T">Output type</typeparam>
         public async Task<T> ScalarAsync<T>(string query, object[] parameters, Func<object, T> converter, byte t = 0)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
-            if (!_openSuccess) throw new Exception("Not connected");
+            if (!_openSuccess && !Open()) throw new Exception("Not connected");
             await _threadLocker.WaitAsync();
             using (MySqlCommand Q = new MySqlCommand(query, SQL))
             {
@@ -409,7 +595,7 @@ namespace Uncreated.SQL
                         LogError($"Failed reopen the MySql connection to run the command: {Q.CommandText}: {string.Join(",", parameters)}");
                         LogError(ex);
                         _threadLocker.Release();
-                        return default;
+                        throw;
                     }
                 }
                 catch (Exception ex)
@@ -417,14 +603,24 @@ namespace Uncreated.SQL
                     LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
                     _threadLocker.Release();
-                    return default;
+                    throw;
                 }
             }
         }
-        public void NonQuery(string command, object[] parameters, byte t = 0)
+        /// <summary>
+        /// Call a non-query, such as an insert, delete, etc.
+        /// </summary>
+        /// <param name="command">MySQL non-query to call.</param>
+        /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
+        /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <returns>The number of rows modified.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="command"/> == <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
+        /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
+        public int NonQuery(string command, object[] parameters, byte t = 0)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
-            if (!_openSuccess) throw new Exception("Not connected");
+            if (!_openSuccess && !Open()) throw new Exception("Not connected");
             _threadLocker.Wait();
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
@@ -432,7 +628,9 @@ namespace Uncreated.SQL
                 if (DebugLogging) Log(nameof(NonQuery) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 try
                 {
-                    Q.ExecuteNonQuery();
+                    int lc = Q.ExecuteNonQuery();
+                    _threadLocker.Release();
+                    return lc;
                 }
                 catch (InvalidOperationException ex) when (t == 0)
                 {
@@ -440,28 +638,38 @@ namespace Uncreated.SQL
                     Close();
                     if (Open())
                     {
-                        NonQuery(command, parameters, 1);
-                        return;
+                        return NonQuery(command, parameters, 1);
                     }
                     else
                     {
                         LogError($"Failed reopen the MySql connection to run the command: {Q.CommandText}: {string.Join(",", parameters)}");
                         LogError(ex);
-                        return;
+                        throw;
                     }
                 }
                 catch (Exception ex)
                 {
                     LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
+                    _threadLocker.Release();
+                    throw;
                 }
             }
-            _threadLocker.Release();
         }
-        public async Task NonQueryAsync(string command, object[] parameters, byte t = 0)
+        /// <summary>
+        /// Call a non-query, such as an insert, delete, etc.
+        /// </summary>
+        /// <param name="command">MySQL non-query to call.</param>
+        /// <param name="parameters">MySQL parameters, could be any type. Are represeted in the command by "@index", for example "@0", "@1", etc.</param>
+        /// <param name="t">Ignore, used for recursive loop prevention. Set to 1 to avoid recurisve retry.</param>
+        /// <returns>The number of rows modified.</returns>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="command"/> == <see langword="null"/>.</exception>
+        /// <exception cref="InvalidOperationException">Thrown if the the operation fails and restarting the SQL connection doesn't work.</exception>
+        /// <exception cref="Exception">Thrown if the SQL operation fails.</exception>
+        public async Task<int> NonQueryAsync(string command, object[] parameters, byte t = 0)
         {
             if (command == null) throw new ArgumentNullException(nameof(command));
-            if (!_openSuccess) throw new Exception("Not connected");
+            if (!_openSuccess && !Open()) throw new Exception("Not connected");
             await _threadLocker.WaitAsync();
             using (MySqlCommand Q = new MySqlCommand(command, SQL))
             {
@@ -469,7 +677,9 @@ namespace Uncreated.SQL
                 if (DebugLogging) Log(nameof(NonQueryAsync) + ": " + Q.CommandText + " : " + string.Join(",", parameters), ConsoleColor.DarkGray);
                 try
                 {
-                    await Q.ExecuteNonQueryAsync();
+                    int lc = await Q.ExecuteNonQueryAsync();
+                    _threadLocker.Release();
+                    return lc;
                 }
                 catch (InvalidOperationException ex) when (t == 0)
                 {
@@ -477,46 +687,56 @@ namespace Uncreated.SQL
                     await CloseAsync();
                     if (await OpenAsync())
                     {
-                        await NonQueryAsync(command, parameters, 1);
-                        return;
+                        return await NonQueryAsync(command, parameters, 1);
                     }
                     else
                     {
                         LogError($"Failed reopen the MySql connection to run the command: {Q.CommandText}: {string.Join(",", parameters)}");
                         LogError(ex);
-                        return;
+                        throw;
                     }
                 }
                 catch (Exception ex)
                 {
                     LogError($"Failed to execute command: {Q.CommandText}: {string.Join(",", parameters)}");
                     LogError(ex);
+                    _threadLocker.Release();
+                    throw;
                 }
             }
-            _threadLocker.Release();
         }
     }
-
-    public class MySqlData
+    /// <summary>Stores information needed to connect to a MySQL connection.</summary>
+    [System.Text.Json.Serialization.JsonSerializable(typeof(MySqlData))]
+    public class MySqlData : IReadWrite
     {
+        /// <summary>IP/Host Address</summary>
         public string Host;
+        /// <summary>Database Name</summary>
         public string Database;
+        /// <summary>User Password</summary>
         public string Password;
+        /// <summary>User Name</summary>
         public string Username;
+        /// <summary>Port, default is 3306</summary>
         public ushort Port;
+        /// <summary>Character set to use when connecting</summary>
         public string CharSet;
+        /// <summary>Generated on get, connection string for mysql connectors.</summary>
+        /// <remarks><code>server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};</code></remarks>
         [JsonIgnore]
-        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};"; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        [System.Xml.Serialization.XmlIgnore]
+        public string ConnectionString { get => $"server={Host};port={Port};database={Database};uid={Username};password={Password};charset={CharSet};Allow User Variables=True;"; }
 
-        public static MySqlData Read(ByteReader R) => new MySqlData()
+        /// <summary>Read by <see cref="ByteReader"/></summary>
+        public static MySqlData Read(ByteReader R)
         {
-            Host = R.ReadString(),
-            Database = R.ReadString(),
-            Password = R.ReadString(),
-            Username = R.ReadString(),
-            CharSet = R.ReadString(),
-            Port = R.ReadUInt16()
-        };
+            MySqlData data = new MySqlData();
+            (data as IReadWrite).Read(R);
+            return data;
+        }
+        /// <summary>Write by <see cref="ByteWriter"/></summary>
         public static void Write(ByteWriter W, MySqlData o)
         {
             W.Write(o.Host);
@@ -525,6 +745,17 @@ namespace Uncreated.SQL
             W.Write(o.Username);
             W.Write(o.CharSet);
             W.Write(o.Port);
+        }
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        void IReadWrite.Write(ByteWriter W) => Write(W, this);
+        void IReadWrite.Read(ByteReader R)
+        {
+            Host = R.ReadString();
+            Database = R.ReadString();
+            Password = R.ReadString();
+            Username = R.ReadString();
+            CharSet = R.ReadString();
+            Port = R.ReadUInt16();
         }
     }
 }

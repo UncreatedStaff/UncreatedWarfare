@@ -437,10 +437,21 @@ namespace Uncreated.Warfare
                 { "warn_warned_private", "<color=#ffff00><color=#00ffff>{0}</color> warned you for: <b>{1}</b>.</color>" },
                 { "warn_warned_console", "{0} ({1}) was warned by {2} ({3}) for: {4}" },
                 { "warn_warned_broadcast", "<color=#ffff00><color=#d8addb>{0}</color> was warned by <color=#00ffff>{1}</color>.</color>" },
+
                 // mute
                 { "mute_syntax", "<color=#9cffb3>Syntax: /mute <voice|text|both> <name or steam64> <permanent | duration in minutes> <reason...></color>" },
                 { "mute_no_player_found", "<color=#9cffb3>No online players found with the name <color=#d8addb>{0}</color>. To mute someone that's offline, use their Steam64 ID.</color>" },
                 { "mute_cant_read_duration", "<color=#9cffb3>The given value for duration must be a positive number or 'permanent'.</color>" },
+                { "mute_feedback", "<color=#00ffff><color=#d8addb>{0}</color> ({1}) was {3} muted for <color=#9cffb3>{2}</color>.</color>" },
+                { "mute_feedback_permanent", "<color=#00ffff><color=#d8addb>{0}</color> ({1}) was {2} muted <color=#9cffb3>permanently</color>.</color>" },
+                { "mute_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was {3} muted by <color=#00ffff>{1}</color> for <color=#9cffb3>{2}</color>.</color>" },
+                { "mute_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was {1} muted by an operator for <color=#9cffb3>{2}</color>.</color>" },
+                { "mute_broadcast_permanent", "<color=#00ffff><color=#d8addb>{0}</color> was <color=#9cffb3>permanently</color> {2} muted by <color=#00ffff>{1}</color>.</color>" },
+                { "mute_broadcast_operator_permanent", "<color=#00ffff><color=#d8addb>{0}</color> was <color=#9cffb3>permanently</color> {1} muted by an operator.</color>" },
+                { "mute_dm", "<color=#ffff00><color=#00ffff>{0}</color> {3} muted you for <color=#9cffb3>{2}</color> because: <color=#9cffb3><b>{1}</b></color>.</color>" },
+                { "mute_dm_permanent", "<color=#ffff00><color=#00ffff>{0}</color> <color=#9cffb3>permanently</color> {2} muted you for: <color=#9cffb3><b>{1}</b></color>.</color>" },
+                { "mute_dm_operator", "<color=#ffff00>An operator {2} muted you for <color=#9cffb3>{1}</color> because: <color=#9cffb3><b>{0}</b></color>.</color>" },
+                { "mute_dm_operator_permanent", "<color=#ffff00>An operator <color=#9cffb3>permanently</color> {1} muted you for: <color=#9cffb3><b>{0}</b></color>.</color>" },
 
                 // amc
                 { "amc_reverse_damage", "<color=#f53b3b>Stop <b><color=#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.</color>" },

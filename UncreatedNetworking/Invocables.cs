@@ -12,13 +12,11 @@ namespace Uncreated.Networking
     public abstract class BaseNetCall
     {
         public readonly ushort ID;
-        public readonly bool RequiresMethod;
-        public BaseNetCall(ushort method, bool registerWithoutMethod = false)
+        public BaseNetCall(ushort method)
         {
             this.ID = method;
-            this.RequiresMethod = !registerWithoutMethod;
         }
-        public BaseNetCall(Delegate method, bool registerWithoutMethod = false)
+        public BaseNetCall(Delegate method)
         {
             MethodInfo info = method.GetMethodInfo();
             IEnumerator<CustomAttributeData> attributes = info.CustomAttributes.GetEnumerator();
@@ -41,7 +39,6 @@ namespace Uncreated.Networking
                 throw new ArgumentException($"Method provided for {info.Name} does not contain " +
                     $"a {nameof(NetCallAttribute)} attribute.", nameof(method));
             }
-            this.RequiresMethod = !registerWithoutMethod;
         }
         public abstract bool Read(byte[] message, out object[] parameters);
         public NetTask Listen(int TimeoutMS = NetTask.DEFAULT_TIMEOUT_MS)
@@ -54,22 +51,22 @@ namespace Uncreated.Networking
     /// <summary> For querying only </summary>
     public abstract class NetCallRaw : BaseNetCall
     {
-        public NetCallRaw(ushort method, bool registerWithoutMethod = false) : base(method, registerWithoutMethod) { }
-        public NetCallRaw(Delegate method, bool registerWithoutMethod = false) : base(method, registerWithoutMethod) { }
+        public NetCallRaw(ushort method) : base(method) { }
+        public NetCallRaw(Delegate method) : base(method) { }
     }
     /// <summary> For querying only </summary>
     public abstract class DynamicNetCall : BaseNetCall
     {
-        public DynamicNetCall(ushort method, bool registerWithoutMethod = false) : base(method, registerWithoutMethod) { }
-        public DynamicNetCall(Delegate method, bool registerWithoutMethod = false) : base(method, registerWithoutMethod) { }
+        public DynamicNetCall(ushort method) : base(method) { }
+        public DynamicNetCall(Delegate method) : base(method) { }
     }
     public sealed class NetCall : BaseNetCall
     {
         public delegate void Method(IConnection connection);
         public delegate Task MethodAsync(IConnection connection);
-        public NetCall(ushort method, bool registerWithoutMethod = false) : base(method, registerWithoutMethod) { }
-        public NetCall(Method method, bool registerWithoutMethod = false) : base(method, registerWithoutMethod) { }
-        public NetCall(MethodAsync method, bool registerWithoutMethod = false) : base(method, registerWithoutMethod) { }
+        public NetCall(ushort method) : base(method) { }
+        public NetCall(Method method) : base(method) { }
+        public NetCall(MethodAsync method) : base(method) { }
         public void Invoke(IConnection connection)
         {
             byte[] id = BitConverter.GetBytes(ID);
@@ -102,19 +99,19 @@ namespace Uncreated.Networking
         public delegate void Method(IConnection connection, T arg1);
         public delegate Task MethodAsync(IConnection connection, T arg1);
         /// <summary>Leave <paramref name="reader"/> or <paramref name="writer"/> null to auto-fill.</summary>
-        public NetCallRaw(ushort method, ByteReader.Reader<T> reader, ByteWriter.Writer<T> writer, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(ushort method, ByteReader.Reader<T> reader, ByteWriter.Writer<T> writer, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T>(method, writer, capacity: capacity);
             this._reader = new ByteReaderRaw<T>(reader);
         }
         /// <summary>Leave <paramref name="reader"/> or <paramref name="writer"/> null to auto-fill.</summary>
-        public NetCallRaw(Method method, ByteReader.Reader<T> reader, ByteWriter.Writer<T> writer, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(Method method, ByteReader.Reader<T> reader, ByteWriter.Writer<T> writer, int capacity = 0) : base(method)
         {
             _writer = new ByteWriterRaw<T>(this.ID, writer, capacity: capacity);
             _reader = new ByteReaderRaw<T>(reader);
         }
         /// <summary>Leave <paramref name="reader"/> or <paramref name="writer"/> null to auto-fill.</summary>
-        public NetCallRaw(MethodAsync method, ByteReader.Reader<T> reader, ByteWriter.Writer<T> writer, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(MethodAsync method, ByteReader.Reader<T> reader, ByteWriter.Writer<T> writer, int capacity = 0) : base(method)
         {
             _writer = new ByteWriterRaw<T>(this.ID, writer, capacity: capacity);
             _reader = new ByteReaderRaw<T>(reader);
@@ -178,19 +175,19 @@ namespace Uncreated.Networking
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2);
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(ushort method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(ushort method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2>(method, writer1, writer2, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2>(reader1, reader2);
         }
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(Method method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(Method method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2>(this.ID, writer1, writer2, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2>(reader1, reader2);
         }
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(MethodAsync method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(MethodAsync method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2>(this.ID, writer1, writer2, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2>(reader1, reader2);
@@ -255,19 +252,19 @@ namespace Uncreated.Networking
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3);
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(ushort method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(ushort method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2, T3>(method, writer1, writer2, writer3, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2, T3>(reader1, reader2, reader3);
         }
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(Method method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(Method method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2, T3>(this.ID, writer1, writer2, writer3, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2, T3>(reader1, reader2, reader3);
         }
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(MethodAsync method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(MethodAsync method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2, T3>(this.ID, writer1, writer2, writer3, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2, T3>(reader1, reader2, reader3);
@@ -333,19 +330,19 @@ namespace Uncreated.Networking
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(ushort method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteReader.Reader<T4> reader4, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, ByteWriter.Writer<T4> writer4, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(ushort method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteReader.Reader<T4> reader4, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, ByteWriter.Writer<T4> writer4, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2, T3, T4>(method, writer1, writer2, writer3, writer4, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2, T3, T4>(reader1, reader2, reader3, reader4);
         }
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(Method method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteReader.Reader<T4> reader4, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, ByteWriter.Writer<T4> writer4, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(Method method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteReader.Reader<T4> reader4, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, ByteWriter.Writer<T4> writer4, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2, T3, T4>(this.ID, writer1, writer2, writer3, writer4, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2, T3, T4>(reader1, reader2, reader3, reader4);
         }
         /// <summary>Leave any of the readers or writers null to auto-fill.</summary>
-        public NetCallRaw(MethodAsync method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteReader.Reader<T4> reader4, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, ByteWriter.Writer<T4> writer4, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCallRaw(MethodAsync method, ByteReader.Reader<T1> reader1, ByteReader.Reader<T2> reader2, ByteReader.Reader<T3> reader3, ByteReader.Reader<T4> reader4, ByteWriter.Writer<T1> writer1, ByteWriter.Writer<T2> writer2, ByteWriter.Writer<T3> writer3, ByteWriter.Writer<T4> writer4, int capacity = 0) : base(method)
         {
             this._writer = new ByteWriterRaw<T1, T2, T3, T4>(this.ID, writer1, writer2, writer3, writer4, capacity: capacity);
             this._reader = new ByteReaderRaw<T1, T2, T3, T4>(reader1, reader2, reader3, reader4);
@@ -410,17 +407,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T> _writer;
         public delegate void Method(IConnection connection, T arg1);
         public delegate Task MethodAsync(IConnection connection, T arg1);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T>();
             _writer = new DynamicByteWriter<T>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T>();
             _writer = new DynamicByteWriter<T>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T>();
             _writer = new DynamicByteWriter<T>(this.ID, capacity: capacity);
@@ -482,17 +479,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2>();
             _writer = new DynamicByteWriter<T1, T2>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2>();
             _writer = new DynamicByteWriter<T1, T2>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2>();
             _writer = new DynamicByteWriter<T1, T2>(this.ID, capacity: capacity);
@@ -554,17 +551,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2, T3> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3>();
             _writer = new DynamicByteWriter<T1, T2, T3>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3>();
             _writer = new DynamicByteWriter<T1, T2, T3>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3>();
             _writer = new DynamicByteWriter<T1, T2, T3>(this.ID, capacity: capacity);
@@ -628,17 +625,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2, T3, T4> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4>(this.ID, capacity: capacity);
@@ -703,17 +700,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2, T3, T4, T5> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5>(this.ID, capacity: capacity);
@@ -779,17 +776,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2, T3, T4, T5, T6> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6>(this.ID, capacity: capacity);
@@ -856,17 +853,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7>(this.ID, capacity: capacity);
@@ -934,17 +931,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8>(this.ID, capacity: capacity);
@@ -1013,17 +1010,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8, T9>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this.ID, capacity: capacity);
@@ -1093,17 +1090,17 @@ namespace Uncreated.Networking
         private readonly DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> _writer;
         public delegate void Method(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10);
         public delegate Task MethodAsync(IConnection connection, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10);
-        public NetCall(ushort method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(ushort method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(method, capacity: capacity);
         }
-        public NetCall(Method method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(Method method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.ID, capacity: capacity);
         }
-        public NetCall(MethodAsync method, int capacity = 0, bool registerWithoutMethod = false) : base(method, registerWithoutMethod)
+        public NetCall(MethodAsync method, int capacity = 0) : base(method)
         {
             _reader = new DynamicByteReader<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>();
             _writer = new DynamicByteWriter<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this.ID, capacity: capacity);

@@ -639,26 +639,27 @@ namespace Uncreated.Warfare
                 };
             }
         }
-        public static async Task<FPlayerName> GetPlayerOriginalNamesAsync(ulong player)
+        public static Task<FPlayerName> GetPlayerOriginalNamesAsync(ulong player)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             if (Data.OriginalNames.TryGetValue(player, out FPlayerName names))
-                return names;
-            else
+                return Task.FromResult(names);
+            else if (OffenseManager.IsValidSteam64ID(player))
             {
                 SteamPlayer? pl = PlayerTool.getSteamPlayer(player);
                 if (pl == default)
-                    return await Data.DatabaseManager.GetUsernamesAsync(player);
-                else return new FPlayerName()
+                    return Data.DatabaseManager.GetUsernamesAsync(player);
+                else return Task.FromResult(new FPlayerName()
                 {
                     CharacterName = pl.playerID.characterName,
                     NickName = pl.playerID.nickName,
                     PlayerName = pl.playerID.playerName,
                     Steam64 = player
-                };
+                });
             }
+            return Task.FromResult(FPlayerName.Nil);
         }
         public static bool IsInMain(this Player player)
         {

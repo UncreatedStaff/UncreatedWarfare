@@ -465,7 +465,7 @@ namespace Uncreated.Warfare.Components
                     if (asset != null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x,
                             asset.size_y, trunk[i].rotation))
                     {
-                        Item item = new Item(asset.id, true) { state = Convert.FromBase64String(trunk[i].metadata) };
+                        Item item = new Item(asset.id, true) { state = trunk[i].metadata };
                         Vehicle.trunkItems.addItem(trunk[i].x, trunk[i].y, trunk[i].rotation, item);
                         loaderCount++;
 

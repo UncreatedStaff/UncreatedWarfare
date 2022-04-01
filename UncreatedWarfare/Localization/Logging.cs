@@ -60,7 +60,7 @@ namespace Uncreated.Warfare
                 LogError(ex);
             }
         }
-        internal static void LogWarningEventCall(string warning, ConsoleColor color) => LogWarning(warning, color, "UncreatedNetworking Source");
+        internal static void LogWarningEventCall(string warning, ConsoleColor color) => LogWarning(warning, color, "UncreatedNetworking");
         public static void LogWarning(string warning, ConsoleColor color = ConsoleColor.Yellow, [CallerMemberName] string method = "")
         {
             try
@@ -82,7 +82,7 @@ namespace Uncreated.Warfare
                 LogError(ex);
             }
         }
-        internal static void LogErrorEventCall(string error, ConsoleColor color) => LogError(error, color, "UncreatedNetworking Source");
+        internal static void LogErrorEventCall(string error, ConsoleColor color) => LogError(error, color, "UncreatedNetworking");
         public static void LogError(string error, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "")
         {
             try
@@ -104,7 +104,7 @@ namespace Uncreated.Warfare
                 UnturnedLog.error(ex);
             }
         }
-        internal static void LogErrorEventCall(Exception ex, ConsoleColor color) => LogError(ex, color, "UncreatedNetworking Source");
+        internal static void LogErrorEventCall(Exception ex, ConsoleColor color) => LogError(ex, color, "UncreatedNetworking", "unknown", 0);
         public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "", [CallerFilePath] string filepath = "", [CallerLineNumber] int ln = 0)
         {
             string message = $"EXCEPTION - {ex.GetType().Name}\nSource: {filepath}::{method}( ... ) LN# {ln}\n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
@@ -125,6 +125,11 @@ namespace Uncreated.Warfare
             catch (Exception ex2)
             {
                 CommandWindow.LogError($"{message}\nEXCEPTION LOGGING \n\n{ex2.Message}\n{ex2.StackTrace}\n\nFINISHED");
+            }
+            if (ex.InnerException != null && ex.InnerException.InnerException == null)
+            {
+                LogError("INNER EXCEPTION: ", method: method);
+                LogError(ex.InnerException, method: method, filepath: filepath, ln: ln);
             }
         }
     }

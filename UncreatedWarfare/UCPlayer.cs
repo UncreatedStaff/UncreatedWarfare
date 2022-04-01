@@ -29,6 +29,7 @@ namespace Uncreated.Warfare
         public EClass KitClass;
         public EBranch Branch;
         public string KitName;
+        public Kit? Kit;
         public Squad? Squad;
         public Player Player { get; internal set; }
         public CSteamID CSteamID { get; internal set; }
@@ -89,7 +90,7 @@ namespace Uncreated.Warfare
                 return _rank.Value;
             }
         }
-        public List<string> AccessibleKits;
+        public List<Kit> AccessibleKits;
 
         internal List<Guid>? _completedQuests;
         public void RedownloadMedals()
@@ -103,7 +104,7 @@ namespace Uncreated.Warfare
         /// <summary>Slow, loops through all kits, only use once.</summary>
         public bool IsDonator
         {
-            get => _otherDonator || KitManager.ActiveObjects.Exists(x => ((x.IsPremium && x.PremiumCost > 0f) || x.IsLoadout) && x.AllowedUsers.Contains(Steam64));
+            get => _otherDonator || KitManager.Instance.Kits.Values.FirstOrDefault(x => ((x.IsPremium && x.PremiumCost > 0f) || x.IsLoadout) && KitManager.HasAccessFast(x, this)) != null;
         }
         public Vector3 Position
         {
@@ -257,12 +258,13 @@ namespace Uncreated.Warfare
         public void ChangeKit(Kit kit)
         {
             KitName = kit.Name;
+            Kit = kit;
             KitClass = kit.Class;
-            PlayerManager.ApplyToOnline();
+            PlayerManager.ApplyTo(this);
         }
         public ushort LastPingID { get; internal set; }
         public int SuppliesUnloaded;
-        public SteamPlayer SteamPlayer { get => Player.channel.owner; }
+        public SteamPlayer SteamPlayer => Player.channel.owner;
         public void Message(string text, params string[] formatting) => Player.Message(text, formatting);
         public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
         public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
@@ -281,6 +283,7 @@ namespace Uncreated.Warfare
                 Branch = EBranch.DEFAULT;
             }
             KitName = kitName;
+            KitManager.KitExists(kitName, out Kit);
             Squad = null;
             Player = player;
             CSteamID = steamID;
@@ -290,7 +293,7 @@ namespace Uncreated.Warfare
             _otherDonator = donator;
             LifeCounter = 0;
             SuppliesUnloaded = 0;
-            AccessibleKits = new List<string>();
+            AccessibleKits = new List<Kit>();
         }
         public char Icon
         {
@@ -384,13 +387,12 @@ namespace Uncreated.Warfare
                     if (Squad.Members[i].Player.transform != null && Squad.Members[i].Steam64 != Steam64 && (Position - Squad.Members[i].Position).sqrMagnitude < Math.Pow(distance, 2))
                         count++;
                 }
-                return (int)Math.Round(amount * (1 + ((float)count / 10)));
+                return Mathf.RoundToInt(amount * (1 + (float)count / 10));
             }
             catch
             {
                 return amount;
             }
-
         }
         public bool IsOnFOB(out FOB fob)
         {
@@ -421,13 +423,13 @@ namespace Uncreated.Warfare
             {
                 if (KitManager.KitExists(save.KitName, out Kit kit))
                 {
-                    pl.KitClass = kit.Class;
-                    pl.Branch = kit.Branch;
+                    pl.ChangeKit(kit);
                 }
                 else
                 {
                     pl.KitClass = EClass.NONE;
                     pl.Branch = EBranch.DEFAULT;
+                    pl.Kit = null;
                 }
                 pl.KitName = save.KitName;
                 pl._otherDonator = save.IsOtherDonator;

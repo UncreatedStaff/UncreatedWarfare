@@ -91,6 +91,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             _FOBManager = new FOBManager();
             _squadManager = new SquadManager();
             _kitManager = new KitManager();
+            Commands.ReloadCommand.ReloadKits();
             _vehicleBay = new VehicleBay();
             _reviveManager = new ReviveManager();
             _ticketManager = new TicketManager();

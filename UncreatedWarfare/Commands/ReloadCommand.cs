@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -243,11 +244,15 @@ namespace Uncreated.Warfare.Commands
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            Kits.KitManager.Reload();
-            foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
+            Task.Run(async () =>
             {
-                sign.InvokeUpdate();
-            }
+                await Kits.KitManager.Instance.Reload();
+                await UCWarfare.ToUpdate();
+                foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
+                {
+                    sign.InvokeUpdate();
+                }
+            });
         }
         internal static void ReloadAllConfigFiles()
         {

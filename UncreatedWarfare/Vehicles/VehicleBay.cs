@@ -148,7 +148,7 @@ namespace Uncreated.Warfare.Vehicles
                                 if (Assets.find(k.id) is ItemAsset iasset)
                                 {
                                     Item item = new Item(iasset.id, k.amount, 100)
-                                    { metadata = Convert.FromBase64String(k.metadata) };
+                                    { metadata = k.metadata };
                                     if (!vehicle.trunkItems.tryAddItem(item))
                                             ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
                                 }
@@ -968,7 +968,7 @@ namespace Uncreated.Warfare.Vehicles
                             jar.x,
                             jar.y,
                             jar.rot,
-                            Convert.ToBase64String(jar.item.metadata),
+                            jar.item.metadata,
                             jar.item.amount,
                             0
                         ));

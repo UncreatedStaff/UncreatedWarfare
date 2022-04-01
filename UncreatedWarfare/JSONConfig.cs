@@ -24,41 +24,51 @@ namespace Uncreated
         public delegate void CustomSerializer(TData obj, Utf8JsonWriter writer);
         public Config(string directory, string filename)
         {
-            F.CheckDir(directory, out bool success);
-            if (!success)
-            {
-                L.LogError("Failed to create directory for config of " + Type.Name);
-            }
-            else
-            {
-                this._dir = directory + filename;
-                if (!File.Exists(this._dir))
-                    LoadDefaults();
-                else
-                    Reload();
-            }
+            this._dir = directory + filename;
             customDeserializer = null;
             useCustomDeserializer = false;
+            customSerializer = null;
+            useCustomSerializer = false;
+            if (!System.IO.Directory.Exists(directory))
+            {
+                try
+                {
+                    System.IO.Directory.CreateDirectory(directory);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Unable to create data directory " + directory + ". Check permissions: " + ex.Message);
+                    return;
+                }
+            }
+            if (!File.Exists(this._dir))
+                LoadDefaults();
+            else
+                Reload();
         }
         public Config(string directory, string filename, CustomDeserializer deserializer, CustomSerializer serializer)
         {
-            F.CheckDir(directory, out bool success);
-            if (!success)
+            this._dir = directory + filename;
+            customDeserializer = deserializer;
+            useCustomDeserializer = deserializer != null;
+            customSerializer = serializer;
+            useCustomSerializer = serializer != null;
+            if (!System.IO.Directory.Exists(directory))
             {
-                L.LogError("Failed to create directory for config of " + Type.Name);
+                try
+                {
+                    System.IO.Directory.CreateDirectory(directory);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Unable to create data directory " + directory + ". Check permissions: " + ex.Message);
+                    return;
+                }
             }
+            if (!File.Exists(this._dir))
+                LoadDefaults();
             else
-            {
-                this._dir = directory + filename;
-                customDeserializer = deserializer;
-                useCustomDeserializer = deserializer != null;
-                customSerializer = serializer;
-                useCustomSerializer = serializer != null;
-                if (!File.Exists(this._dir))
-                    LoadDefaults();
-                else
-                    Reload();
-            }
+                Reload();
         }
         public void Save()
         {

@@ -101,7 +101,7 @@ namespace Uncreated.Warfare.Commands
                     ucplayer.Message("request_kit_e_notbuyablecredits");
                     return;
                 }
-                else if (kit.CreditCost == 0 || ucplayer.AccessibleKits.Contains(kit.Name))
+                else if (kit.CreditCost == 0 || KitManager.HasAccessFast(kit, ucplayer))
                 {
                     ucplayer.Message("request_kit_e_alreadyhaskit");
                     return;
@@ -112,15 +112,24 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
 
-                Task.Run(() => Data.DatabaseManager.AddAccessibleKit(ucplayer.Steam64, kit.Name)).ConfigureAwait(false);
+                Task.Run(
+                    async () => 
+                    {
+                        if (ucplayer.AccessibleKits == null)
+                            ucplayer.AccessibleKits = await Data.DatabaseManager.GetAccessibleKits(ucplayer.Steam64);
 
-                ucplayer.AccessibleKits.Add(kit.Name);
+                        await KitManager.GiveAccess(kit, ucplayer, EKitAccessType.CREDITS);
 
-                RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
-                EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
-                ucplayer.Message("request_kit_boughtcredits", kit.CreditCost.ToString());
-                Points.AwardCredits(ucplayer, -kit.CreditCost, isPurchase: true);
-                ActionLog.Add(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS", ucplayer);
+                        await UCWarfare.ToUpdate();
+
+                        RequestSigns.InvokeLangUpdateForSignsOfKit(ucplayer.SteamPlayer, kit.Name);
+                        EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
+                        ucplayer.Message("request_kit_boughtcredits", kit.CreditCost.ToString());
+                        Points.AwardCredits(ucplayer, -kit.CreditCost, isPurchase: true);
+                        ActionLog.Add(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS", ucplayer);
+                        L.Log(F.GetPlayerOriginalNames(ucplayer).PlayerName + " (" + ucplayer.Steam64 + ") bought " + kit.Name);
+                    } );
+
             }
             else
             {
