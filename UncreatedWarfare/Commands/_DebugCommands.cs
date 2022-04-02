@@ -1327,7 +1327,7 @@ namespace Uncreated.Warfare.Commands
             msPer = ((decimal)stopwatch.Elapsed.TotalMilliseconds) / TEST_CASES;
             L.Log("Inside bounds: " + stopwatch.Elapsed.TotalMilliseconds.ToString() + " (" + msPer.ToString("N50") + "ms) per check");
         }
-
+#if false
         public Dictionary<string, string> conversions = new Dictionary<string, string>()
         {
             { "fr4", "prem_frmed1" },
@@ -1483,6 +1483,7 @@ namespace Uncreated.Warfare.Commands
                 }
             });
         }
+#endif
     }
 #pragma warning restore IDE0051
 #pragma warning restore IDE0060
