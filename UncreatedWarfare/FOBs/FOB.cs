@@ -309,7 +309,7 @@ namespace Uncreated.Warfare.Components
                         }
                         if (item.item.id == shortAmmoID && ammoRemoved < 12)
                         {
-                            shouldRemove |= true;
+                            shouldRemove = true;
                             ammoRemoved++;
                         }
                         if (shouldRemove)
