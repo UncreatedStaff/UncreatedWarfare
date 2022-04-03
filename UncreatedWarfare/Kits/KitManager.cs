@@ -283,36 +283,6 @@ namespace Uncreated.Warfare.Kits
                     builder.Append(';');
                     await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
                 }
-                if (kit.AllowedUsers.Count > 0)
-                {
-                    StringBuilder builder = new StringBuilder("INSERT INTO `kit_access` (`Kit`, `Steam64`, `AccessType`) VALUES ", 512);
-                    object[] objs = new object[kit.AllowedUsers.Count * 3];
-                    for (int i = 0; i < kit.AllowedUsers.Count; ++i)
-                    {
-                        ulong user = kit.AllowedUsers[i];
-                        if (i != 0)
-                            builder.Append(", ");
-                        builder.Append('(');
-                        int index = i * 3;
-                        for (int j = 0; j < 3; ++j)
-                        {
-                            if (j != 0)
-                                builder.Append(", ");
-                            builder.Append('@').Append(index + j);
-                        }
-                        objs[index++] = pk;
-                        objs[index++] = user;
-                        EKitAccessType type;
-                        if (kit.IsPremium)
-                            type = kit.PremiumCost == -1 ? EKitAccessType.EVENT : EKitAccessType.PURCHASE;
-                        else 
-                            type = EKitAccessType.CREDITS;
-                        objs[index++] = type.ToString();
-                        builder.Append(')');
-                    }
-                    builder.Append(';');
-                    await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
-                }
                 if (kit.SignTexts.Count > 0)
                 {
                     StringBuilder builder = new StringBuilder("INSERT INTO `kit_lang` (`Kit`, `Language`, `Text`) VALUES ", 128);
@@ -777,7 +747,7 @@ namespace Uncreated.Warfare.Kits
             {
                 if (Assets.find(k.id) is ItemAsset asset)
                 {
-                    Item item = new Item(asset.id, k.amount, 100);
+                    Item item = new Item(asset.id, k.amount, 100, k.metadata);
                     if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
                         if (player.Player.inventory.tryAddItem(item, true))
                             ItemManager.dropItem(item, player.Position, true, true, true);
@@ -906,7 +876,7 @@ namespace Uncreated.Warfare.Kits
                     continue;
                 if (Assets.find(i.id) is ItemAsset itemasset)
                 {
-                    Item item = new Item(itemasset.id, i.amount, 100, itemasset.getState(true));
+                    Item item = new Item(itemasset.id, i.amount, 100, i.metadata);
 
                     if (!player.Player.inventory.tryAddItem(item, i.x, i.y, i.page, i.rotation))
                         player.Player.inventory.tryAddItem(item, true);

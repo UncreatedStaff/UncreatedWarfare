@@ -189,6 +189,11 @@ namespace Uncreated.Warfare.Kits
                                 RequestSigns.InvokeLangUpdateForSignsOfKit(kitName);
                                 Reply(ucplayer, "kit_overwritten", kitName);
                             }
+                            else
+                            {
+                                await UCWarfare.ToUpdate();
+                                Reply(ucplayer, "kit_overwritten", kitName);
+                            }
                         });
                         return;
                     }
@@ -463,7 +468,6 @@ namespace Uncreated.Warfare.Kits
                                 IsLoadout = existing.IsLoadout,
                                 TeamLimit = existing.TeamLimit,
                                 Cooldown = existing.Cooldown,
-                                AllowedUsers = new List<ulong>(),
                                 SignTexts = existing.SignTexts,
                                 Weapons = existing.Weapons
                             };

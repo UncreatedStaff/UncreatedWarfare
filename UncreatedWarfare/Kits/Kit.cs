@@ -64,8 +64,6 @@ public class Kit
     public List<KitItem> Items;
     public List<KitClothing> Clothes;
     public Dictionary<string, string> SignTexts;
-    [Obsolete]
-    public List<ulong> AllowedUsers;
     [JsonSettable]
     public string Weapons;
     public Kit()
@@ -84,7 +82,6 @@ public class Kit
         PremiumCost = 0;
         IsLoadout = false;
         TeamLimit = 1;
-        AllowedUsers = new List<ulong>();
         Cooldown = 0;
         SignTexts = new Dictionary<string, string> { { "en-us", "Default" } };
         Weapons = string.Empty;
@@ -106,7 +103,6 @@ public class Kit
         PremiumCost = 0;
         IsLoadout = false;
         TeamLimit = 1;
-        AllowedUsers = new List<ulong>();
         Cooldown = 0;
         SignTexts = new Dictionary<string, string> { { "en-us", kitName.ToProperCase() } };
         Weapons = string.Empty;
@@ -294,14 +290,6 @@ public class Kit
         }
         writer.WriteEndArray();
 
-        writer.WritePropertyName(nameof(AllowedUsers));
-        writer.WriteStartArray();
-        for (int i = 0; i < AllowedUsers.Count; i++)
-        {
-            writer.WriteNumberValue(AllowedUsers[i]);
-        }
-        writer.WriteEndArray();
-
         writer.WritePropertyName(nameof(SignTexts));
         writer.WriteStartObject();
         foreach (KeyValuePair<string, string> kvp in SignTexts)
@@ -395,15 +383,6 @@ public class Kit
                             break;
                         case nameof(Weapons):
                             Weapons = reader.GetString()!;
-                            break;
-                        case nameof(AllowedUsers):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                AllowedUsers = new List<ulong>(16);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.Number)
-                                    AllowedUsers.Add(reader.GetUInt64());
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
                             break;
                         case nameof(Items):
                             if (reader.TokenType == JsonTokenType.StartArray)

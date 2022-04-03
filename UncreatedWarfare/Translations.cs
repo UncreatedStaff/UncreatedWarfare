@@ -525,6 +525,7 @@ namespace Uncreated.Warfare
                 { "request_kit_e_signnoexist", "<color=#a8918a>This is not a request sign.</color>" },
                 { "request_kit_e_kitnoexist", "<color=#a8918a>This kit has not been created yet.</color>" },
                 { "request_kit_e_alreadyhaskit", "<color=#a8918a>You already have this kit.</color>" },
+                { "request_kit_e_notallowed", "<color=#a8918a>You do not have access to this kit.</color>" },
                 { "request_kit_e_notboughtcredits", "<color=#99918d>Look at this sign and type '<color=#ffe2ab>/buy</color>' to unlock this kit permanently for <color=#b8ffc1>C </color><color=#ffffff>{0}</color></color>" },
                 { "request_kit_e_notenoughcredits", "<color=#a8918a>You are missing <color=#b8ffc1>C </color><color=#ffffff>{0}</color> needed to unlock this kit.</color>" },
                 { "request_kit_e_notbuyablecredits", "<color=#a8918a>This kit cannot be purchased with credits.</color>" },
@@ -560,6 +561,7 @@ namespace Uncreated.Warfare
                 { "request_vehicle_e_wrongbranch", "<color=#b3ab9f>You must be a part of <color=#fcbda4>{0}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_alreadyrequested", "<color=#a8918a>This vehicle has already been requested.</color>" },
                 { "request_vehicle_e_already_owned", "<color=#a8918a>You have already requested a nearby vehicle.</color>" },
+                { "request_vehicle_e_unknown_delay", "<color=#b3ab9f>This vehicle is delayed because: <color=#94cfff>{0}</color>.</color>" },
                 { "request_vehicle_given", "<color=#b3a591>This <color=#ffe2ab>{0}</color> is now yours to take into battle.</color>" },
                 { "request_vehicle_bought", "<color=#c4a36a>Vehicle bought for <color=#b8ffc1>C </color><color=#ffffff>{0}</color>. Request it with '<color=#b3b0ab>/request</color>'.</color>" },
 

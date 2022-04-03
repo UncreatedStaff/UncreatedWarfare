@@ -613,8 +613,7 @@ namespace Uncreated.Warfare.FOBs
                     UpdateUIList(team, player.connection, FOBList, player);
                     return;
                 }
-                i += offset;
-                string ii = i.ToString();
+                string ii = (i + offset).ToString();
                 EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + ii,
                 Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates.Colorize("ebe8df"), FOBList[i].ClosestLocation));
                 EffectManager.sendUIEffectText(fobListKey, player.connection, true, "R" + ii, FOBList[i].UIResourceString);
@@ -677,8 +676,7 @@ namespace Uncreated.Warfare.FOBs
                     UpdateUIList(team, c, FOBList, player);
                     return;
                 }
-                i += offset;
-                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + i.ToString(), Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].GridCoordinates, Caches[i].ClosestLocation));
+                EffectManager.sendUIEffectText(fobListKey, c, true, "N" + (i + offset).ToString(), Translation.Translate("fob_ui", player.Steam64, Caches[i].Name.Colorize(Caches[i].UIColor), Caches[i].GridCoordinates, Caches[i].ClosestLocation));
             }
         }
         private static void UpdateUIList(ulong team, ITransportConnection connection, List<FOB> FOBList, UCPlayer player)

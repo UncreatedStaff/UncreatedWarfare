@@ -1106,26 +1106,26 @@ namespace Uncreated.Warfare
             RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
             UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
             string kit = string.Empty;
-            if (ucplayer != null)
-            {
-                Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
-                Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
-                if (Data.Is(out ITeams gm) && gm.UseJoinUI)
-                    gm.JoinManager.OnPlayerDisconnected(ucplayer);
-                if (Data.Is<IFOBs>(out _)) FOBManager.OnPlayerDisconnect(ucplayer);
-                kit = ucplayer.KitName;
-                try
-                {
-                    Data.Gamemode.OnPlayerLeft(ucplayer);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerLeft:");
-                    L.LogError(ex);
-                }
-            }
             try
             {
+                if (ucplayer != null)
+                {
+                    Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
+                    Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
+                    if (Data.Is(out ITeams gm) && gm.UseJoinUI)
+                        gm.JoinManager.OnPlayerDisconnected(ucplayer);
+                    if (Data.Is<IFOBs>(out _)) FOBManager.OnPlayerDisconnect(ucplayer);
+                    kit = ucplayer.KitName;
+                    try
+                    {
+                        Data.Gamemode.OnPlayerLeft(ucplayer);
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerLeft:");
+                        L.LogError(ex);
+                    }
+                }
                 FPlayerName names = F.GetPlayerOriginalNames(player.Player.channel.owner);
                 if (player.OnDuty())
                 {

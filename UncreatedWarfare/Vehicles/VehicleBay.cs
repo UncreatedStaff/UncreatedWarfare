@@ -797,6 +797,7 @@ namespace Uncreated.Warfare.Vehicles
             }
             return false;
         }
+        // TODO: gamemode blacklist not working
         public bool IsDelayed(out Delay delay)
         {
             delay = Delay.Nil;

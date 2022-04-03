@@ -28,11 +28,12 @@ namespace Uncreated.Warfare.Stats
                     /* PLAYTIME COUNTER */
                     for (int i = Provider.clients.Count - 1; i >= 0; i--)
                     {
-                        SteamPlayer pl = Provider.clients[i];
-                        byte team = pl.GetTeamByte();
-                        if (KitManager.HasKit(pl, out Kit kit))
+                        UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(Provider.clients[i]);
+                        if (ucplayer == null) continue;
+                        byte team = ucplayer.Player.channel.owner.GetTeamByte();
+                        if (KitManager.HasKit(ucplayer, out Kit kit))
                         {
-                            StatsManager.ModifyStats(pl.playerID.steamID.m_SteamID, s =>
+                            StatsManager.ModifyStats(ucplayer.Steam64, s =>
                             {
                                 s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval;
                                 WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == team);
@@ -48,43 +49,43 @@ namespace Uncreated.Warfare.Stats
                             }, true);
                         }
                         else
-                            StatsManager.ModifyStats(pl.playerID.steamID.m_SteamID, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
+                            StatsManager.ModifyStats(ucplayer.Steam64, s => s.PlaytimeMinutes += (uint)UCWarfare.Config.StatsInterval);
                         /* ON DUTY AWARDER */
-                        UCPlayer? player = UCPlayer.FromSteamPlayer(pl);
-                        if (player != null && Points.XPConfig.OnDutyXP > 0 && player.OnDuty())
+                        bool isOnDuty = ucplayer.OnDuty();
+                        if (Points.XPConfig.OnDutyXP > 0 && isOnDuty)
                         {
-                            Points.AwardXP(player.Player, Points.XPConfig.OnDutyXP, Translation.Translate("xp_on_duty", player));
+                            Points.AwardXP(ucplayer.Player, Points.XPConfig.OnDutyXP, Translation.Translate("xp_on_duty", ucplayer.Steam64));
                         }
 
 
-                        Vector3 position = pl.player.transform.position;
-                        if (previousPositions.TryGetValue(pl.playerID.steamID.m_SteamID, out Afk afk))
+                        Vector3 position = ucplayer.Position;
+                        if (previousPositions.TryGetValue(ucplayer.Steam64, out Afk afk) && ucplayer.OffDuty())
                         {
                             if (afk.lastLocation == position)
                             {
                                 if (afk.time == n)
                                 {
-                                    FPlayerName names = F.GetPlayerOriginalNames(pl);
+                                    FPlayerName names = F.GetPlayerOriginalNames(ucplayer);
                                     L.Log(Translation.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
-                                        pl.playerID.steamID.m_SteamID.ToString(Data.Locale), "AFK Auto-Kick"), ConsoleColor.Cyan);
-                                    Provider.kick(pl.playerID.steamID, "Auto-kick for being AFK.");
-                                    previousPositions.Remove(pl.playerID.steamID.m_SteamID);
+                                        ucplayer.Steam64.ToString(Data.Locale), "AFK Auto-Kick"), ConsoleColor.Cyan);
+                                    Provider.kick(ucplayer.CSteamID, "Auto-kick for being AFK.");
+                                    previousPositions.Remove(ucplayer.Steam64);
                                 }
                                 else if (afk.time == Afk.Clamp(n + 1)) // one cycle left
                                 {
-                                    pl.SendChat("afk_warning", ((uint)UCWarfare.Config.StatsInterval).GetTimeFromMinutes(pl.playerID.steamID.m_SteamID));
+                                    ucplayer.SendChat("afk_warning", ((uint)UCWarfare.Config.StatsInterval).GetTimeFromMinutes(ucplayer.Steam64));
                                 }
                             }
                             else
                             {
                                 afk.lastLocation = position;
                                 afk.time = n;
-                                previousPositions[pl.playerID.steamID.m_SteamID] = afk;
+                                previousPositions[ucplayer.Steam64] = afk;
                             }
                         }
                         else
                         {
-                            previousPositions.Add(pl.playerID.steamID.m_SteamID, new Afk() { lastLocation = position, player = pl.playerID.steamID.m_SteamID, time = n });
+                            previousPositions.Add(ucplayer.Steam64, new Afk() { lastLocation = position, player = ucplayer.Steam64, time = n });
                         }
                     }
                     counter++;

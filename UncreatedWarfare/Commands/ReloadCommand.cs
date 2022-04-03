@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
@@ -246,12 +247,18 @@ namespace Uncreated.Warfare.Commands
 #endif
             Task.Run(async () =>
             {
-                await Kits.KitManager.Instance.Reload();
+                await KitManager.Instance.Reload();
                 await UCWarfare.ToUpdate();
-                foreach (Kits.RequestSign sign in Kits.RequestSigns.ActiveObjects)
+                foreach (RequestSign sign in RequestSigns.ActiveObjects)
                 {
                     sign.InvokeUpdate();
                 }
+                if (!KitManager.KitExists(TeamManager.Team1UnarmedKit, out _))
+                    L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+                if (!KitManager.KitExists(TeamManager.Team2UnarmedKit, out _))
+                    L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+                if (!KitManager.KitExists(TeamManager.DefaultKit, out _))
+                    L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             });
         }
         internal static void ReloadAllConfigFiles()

@@ -24,12 +24,6 @@ namespace Uncreated.Warfare.Teams
 
         public TeamManager()
         {
-            if (!KitManager.KitExists(_data.data.team1unarmedkit, out _))
-                L.LogError("Team 1's unarmed kit, \"" + _data.data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(_data.data.team2unarmedkit, out _))
-                L.LogError("Team 2's unarmed kit, \"" + _data.data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(_data.data.defaultkit, out _))
-                L.LogError("The default kit, \"" + _data.data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             object val = typeof(GroupManager).GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic);
             if (val is Dictionary<CSteamID, GroupInfo> val2)
             {

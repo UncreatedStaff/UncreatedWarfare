@@ -248,7 +248,7 @@ namespace Uncreated.Warfare.Commands
                         //}
                         Task.Run(async () =>
                         {
-                            bool hasKit = await KitManager.HasAccess(kit, ucplayer);
+                            bool hasKit = kit.CreditCost == 0 || await KitManager.HasAccess(kit, ucplayer);
                             await UCWarfare.ToUpdate();
                             if (!hasKit)
                             {
@@ -256,6 +256,7 @@ namespace Uncreated.Warfare.Commands
                                     ucplayer.Message("request_kit_e_notboughtcredits", kit.CreditCost.ToString());
                                 else
                                     ucplayer.Message("request_kit_e_notenoughcredits", (kit.CreditCost - ucplayer.CachedCredits).ToString());
+                                return;
                             }
                             if (kit.Class == EClass.SQUADLEADER && ucplayer.Squad == null)
                             {
@@ -575,6 +576,10 @@ namespace Uncreated.Warfare.Commands
                             ucplayer.Message("request_vehicle_e_cache_delay_def_2+", ct2.ToString(Data.Locale));
                     }
                 }
+            }
+            else
+            {
+                ucplayer.Message("request_vehicle_e_unknown_delay", delay.ToString());
             }
         }
     }
