@@ -457,7 +457,7 @@ namespace Uncreated.Warfare.Components
                 List<KitItem> trunk = Data.Metadata.TrunkItems;
                 for (int i = 0; i < trunk.Count; i++)
                 {
-                    ItemAsset? asset = null;
+                    ItemAsset? asset;
                     if (trunk[i].id == buildGUID) asset = build;
                     else if (trunk[i].id == ammoGUID) asset = ammo;
                     else asset = Assets.find(trunk[i].id) as ItemAsset;
@@ -465,7 +465,7 @@ namespace Uncreated.Warfare.Components
                     if (asset != null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x,
                             asset.size_y, trunk[i].rotation))
                     {
-                        Item item = new Item(asset.id, true) { state = trunk[i].metadata };
+                        Item item = new Item(asset.id, trunk[i].amount, 100, F.CloneBytes(trunk[i].metadata));
                         Vehicle.trunkItems.addItem(trunk[i].x, trunk[i].y, trunk[i].rotation, item);
                         loaderCount++;
 

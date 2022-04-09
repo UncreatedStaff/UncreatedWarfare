@@ -747,7 +747,7 @@ namespace Uncreated.Warfare.Kits
             {
                 if (Assets.find(k.id) is ItemAsset asset)
                 {
-                    Item item = new Item(asset.id, k.amount, 100, k.metadata);
+                    Item item = new Item(asset.id, k.amount, 100, F.CloneBytes(k.metadata));
                     if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
                         if (player.Player.inventory.tryAddItem(item, true))
                             ItemManager.dropItem(item, player.Position, true, true, true);
@@ -876,7 +876,7 @@ namespace Uncreated.Warfare.Kits
                     continue;
                 if (Assets.find(i.id) is ItemAsset itemasset)
                 {
-                    Item item = new Item(itemasset.id, i.amount, 100, i.metadata);
+                    Item item = new Item(itemasset.id, i.amount, 100, F.CloneBytes(i.metadata));
 
                     if (!player.Player.inventory.tryAddItem(item, i.x, i.y, i.page, i.rotation))
                         player.Player.inventory.tryAddItem(item, true);

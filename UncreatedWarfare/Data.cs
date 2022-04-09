@@ -108,28 +108,35 @@ namespace Uncreated.Warfare
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
         internal static ClientStaticMethod SendEffectClearAll { get; private set; }
         internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
-        internal static MethodInfo AppendConsoleMethod;
         internal static MethodInfo ReplicateStance;
         internal static FieldInfo PrivateStance;
         internal static FieldInfo ItemManagerInstanceCount;
-        internal static ConsoleInputOutputBase defaultIOHandler;
+        internal static ICommandInputOutput? defaultIOHandler;
         public static Reporter Reporter;
         internal static Client NetClient;
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
+        internal delegate void OutputToConsole(string value, ConsoleColor color);
+        internal static OutputToConsole? OutputToConsoleMethod;
         public static void LoadColoredConsole()
         {
             try
             {
                 FieldInfo defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
-                defaultIOHandler = (ConsoleInputOutputBase)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
-                AppendConsoleMethod = defaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
-                L.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
+                if (defaultIoHandlerFieldInfo != null)
+                {
+                    defaultIOHandler = (ICommandInputOutput)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
+                    MethodInfo appendConsoleMethod = defaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (appendConsoleMethod != null)
+                    {
+                        OutputToConsoleMethod = (OutputToConsole)appendConsoleMethod.CreateDelegate(typeof(OutputToConsole), defaultIOHandler);
+                        L.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
+                    }
+                }
             }
             catch (Exception ex)
             {
                 CommandWindow.LogError("Couldn't get defaultIOHandler from CommandWindow:");
                 CommandWindow.LogError(ex);
-                CommandWindow.LogError("The colored console will likely work in boring colors!");
             }
         }
         public static void ReloadTCP()

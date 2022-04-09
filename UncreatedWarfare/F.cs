@@ -41,6 +41,13 @@ namespace Uncreated.Warfare
                 return color;
             else return Color.white;
         }
+        public static byte[] CloneBytes(byte[] src)
+        {
+            int length = src.Length;
+            byte[] output = new byte[length];
+            Buffer.BlockCopy(src, 0, output, 0, length);
+            return output;
+        }
         public static string FilterRarityToHex(string color)
         {
             if (color == null)
