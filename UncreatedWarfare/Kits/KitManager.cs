@@ -119,7 +119,11 @@ namespace Uncreated.Warfare.Kits
                 int kitPk = R.GetInt32(1);
                 if (Kits.TryGetValue(kitPk, out Kit kit))
                 {
-                    kit.SignTexts.Add(R.GetString(2), R.GetString(3));
+                    string lang = R.GetString(2);
+                    if (!kit.SignTexts.ContainsKey(lang))
+                        kit.SignTexts.Add(lang, R.GetString(3));
+                    else
+                        L.LogWarning("Duplicate translation for kit " + kit.Name + " (" + kit.PrimaryKey + ") for language " + lang);
                 }
             });
             await Data.DatabaseManager.QueryAsync("SELECT `Kit`, `JSON` FROM `kit_unlock_requirements`;", new object[0], R =>

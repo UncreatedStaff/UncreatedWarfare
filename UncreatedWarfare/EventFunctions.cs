@@ -856,6 +856,9 @@ namespace Uncreated.Warfare
                     if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(parameters.player.transform.position)) ||
                         (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(parameters.player.transform.position)))
                     {
+                        // if the player has shot since they died
+                        if (!killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) || comp.lastShot != default)
+                            goto next;
                         shouldAllow = false;
                         byte newdamage = (byte)Math.Min(byte.MaxValue, Mathf.RoundToInt(parameters.damage * parameters.times * UCWarfare.Config.AMCDamageMultiplier));
                         killer.life.askDamage(newdamage, parameters.direction * newdamage, EDeathCause.ARENA,
@@ -871,7 +874,7 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-
+            next:
             if (shouldAllow && Data.Is(out IRevives rev))
                 rev.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
         }
