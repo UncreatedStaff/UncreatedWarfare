@@ -45,7 +45,6 @@ namespace Uncreated.SQL
         {
             Close();
             SQL.Dispose();
-            _threadLocker.Release();
             _threadLocker.Dispose();
         }
         /// <summary>
