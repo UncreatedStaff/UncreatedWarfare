@@ -27,12 +27,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     return b.BoundsArea.CompareTo(a.BoundsArea);
                 });
                 Texture2D img = new Texture2D(Level.size, Level.size);
-                List<Vector2> PointsToTest = new List<Vector2>();
-                for (int i = -1 * img.width / 2; i < img.width / 2; i += 1)
+                List<Vector2> ptsToTest = new List<Vector2>(img.width * img.height);
+                for (int i = 0; i < img.width; i ++)
                 {
-                    for (int j = -1 * img.height / 2; j < img.height / 2; j += 1)
+                    for (int j = 0; j < img.height; j ++)
                     {
-                        PointsToTest.Add(new Vector2(i, j));
+                        ptsToTest.Add(new Vector2(i, j));
                     }
                 }
                 if (drawIsInTest)
@@ -41,17 +41,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     bool done = false;
                     while (!done)
                     {
-                        GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, step, out done, filename, false);
+                        GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, step, out done, filename, false);
                         step++;
                     }
                 }
                 else
-                    GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, 0, out _, filename, false);
+                    GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, 0, out _, filename, false);
                 if (drawrange)
-                    GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -3, out _, filename, drawsearchangles);
+                    GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -3, out _, filename, drawsearchangles);
                 if (drawpath)
-                    GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename, false);
-                GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename, false);
+                    GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -2, out _, filename, false);
+                GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -1, out _, filename, false);
                 if (player != null)
                     player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
                 else L.Log("Picture finished generating, check the Config\\Maps\\Flags folder menu");
@@ -110,7 +110,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 }
             }
         }
-        internal static void GenerateZoneOverlay(IFlagRotation gamemode, Texture2D img, Player? player, List<Zone> zones, List<Vector2> PointsToTest, int step, out bool complete, string? filename, bool drawAngles)
+        internal static void GenerateZoneOverlay(IFlagRotation gamemode, Texture2D img, Player? player, List<Zone> zones, List<Vector2> ptsToTest, int step, out bool complete, string? filename, bool drawAngles)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -130,26 +130,17 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 foreach (Zone zone in zones)
                 {
-                    if (zone.GetType() == typeof(PolygonZone))
+                    Zone.DrawData d = zone.DrawingData;
+                    if (zone is PolygonZone || zone is RectZone)
                     {
-                        PolygonZone pzone = (PolygonZone)zone;
-                        for (int i = 0; i < pzone.PolygonInverseZone.Lines.Length; i++)
+                        for (int i = 0; i < d.Lines!.Length; i++)
                         {
-                            DrawLine(img, pzone.PolygonInverseZone.Lines[i], Color.black, false);
+                            DrawLine(img, d.Lines[i], Color.black, false);
                         }
                     }
-                    else if (zone.GetType() == typeof(CircleZone))
+                    else if (zone is CircleZone)
                     {
-                        CircleZone czone = (CircleZone)zone;
-                        FillCircle(img, czone.InverseZone.Center.x + img.width / 2, czone.InverseZone.Center.y + img.height / 2, czone.CircleInverseZone.Radius, Color.black, false);
-                    }
-                    else if (zone.GetType() == typeof(RectZone))
-                    {
-                        RectZone rzone = (RectZone)zone;
-                        for (int i = 0; i < rzone.RectInverseZone.lines.Length; i++)
-                        {
-                            DrawLine(img, rzone.RectInverseZone.lines[i], Color.black, false);
-                        }
+                        FillCircle(img, d.Center.x, d.Center.y, d.Radius, Color.black, false);
                     }
                 }
                 //player.SendChat("Completed step 2", UCWarfare.GetColor("default"));
@@ -164,18 +155,19 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 
                 for (int e = z; e < (zones.Count > next ? next : zones.Count); e++)
                 {
-                    Zone zone = zones[e].InverseZone;
-                    Color zonecolor = $"{UnityEngine.Random.Range(0, 16)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}".Hex();
-                    for (int i = 0; i < PointsToTest.Count; i++)
+                    Zone zone = zones[e];
+                    Zone.DrawData zoneData = zone.DrawingData;
+                    Color zonecolor = $"{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}{UnityEngine.Random.Range(0, 10)}".Hex();
+                    for (int i = 0; i < ptsToTest.Count; i++)
                     {
-                        if (zone.IsInside(PointsToTest[i]))
+                        if (zone.IsInside(Zone.FromMapCoordinates(ptsToTest[i])))
                         {
-                            img.SetPixelClamp(Mathf.RoundToInt(PointsToTest[i].x + img.width / 2), Mathf.RoundToInt(PointsToTest[i].y + img.height / 2), zonecolor);
+                            img.SetPixelClamp(Mathf.RoundToInt(ptsToTest[i].x), -(Mathf.RoundToInt(ptsToTest[i].y) - img.height / 2) + img.height / 2, zonecolor);
                         }
                     }
                     for (int i = 0; i < 4; i++)
                     {
-                        ref Vector4 bounds = ref zone.Bounds;
+                        ref Vector4 bounds = ref zoneData.Bounds;
                         DrawLine(img, new Line(new Vector2(bounds.x, bounds.y), new Vector2(bounds.x, bounds.w)), Color.gray, false, 1);
                         DrawLine(img, new Line(new Vector2(bounds.x, bounds.y), new Vector2(bounds.z, bounds.y)), Color.gray, false, 1);
                         DrawLine(img, new Line(new Vector2(bounds.z, bounds.w), new Vector2(bounds.x, bounds.w)), Color.gray, false, 1);
@@ -196,8 +188,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 for (int i = 0; i <= gamemode.Rotation.Count; i++)
                 {
-                    DrawLine(img, new Line(i == gamemode.Rotation.Count ? TeamManager.Team2Main.InverseZone.Center : gamemode.Rotation[i].ZoneData.InverseZone.Center,
-                        i == 0 ? TeamManager.Team1Main.InverseZone.Center : gamemode.Rotation[i - 1].ZoneData.InverseZone.Center), Color.cyan, false, 8);
+                    DrawLine(img, new Line(i == gamemode.Rotation.Count ? TeamManager.Team2Main.DrawingData.Center : gamemode.Rotation[i].ZoneData.DrawingData.Center,
+                        i == 0 ? TeamManager.Team1Main.DrawingData.Center : gamemode.Rotation[i - 1].ZoneData.DrawingData.Center), Color.cyan, false, 8);
                 }
                 img.Apply();
             }
@@ -223,14 +215,18 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 img.LoadImage(fileData, false);
             }
             Dictionary<Flag, float> flags = new Dictionary<Flag, float>();
+
             flags = ObjectivePathing.InstantiateFlags(Gamemode.Config.MapConfig.Team1Adjacencies, gamemode.LoadedFlags, null, null);
+
             foreach (KeyValuePair<Flag, float> t1mainarrow in flags)
-                DrawLineGradient(new Line(TeamManager.Team1Main.InverseZone.Center, t1mainarrow.Key.ZoneData.InverseZone.Center), thickness, img, TeamManager.Team1Color,
+                DrawLineGradient(new Line(TeamManager.Team1Main.DrawingData.Center, t1mainarrow.Key.ZoneData.DrawingData.Center), thickness, img, TeamManager.Team1Color,
                     gamemode.Rotation.Count > 0 && gamemode.Rotation[0].ID == t1mainarrow.Key.ID ? color1path : color2, false);
+
             flags = ObjectivePathing.InstantiateFlags(Gamemode.Config.MapConfig.Team2Adjacencies, gamemode.LoadedFlags, null, null);
             foreach (KeyValuePair<Flag, float> t2mainarrow in flags)
-                DrawLineGradient(new Line(t2mainarrow.Key.ZoneData.InverseZone.Center, TeamManager.Team2Main.InverseZone.Center), thickness, img,
+                DrawLineGradient(new Line(t2mainarrow.Key.ZoneData.DrawingData.Center, TeamManager.Team2Main.DrawingData.Center), thickness, img,
                     gamemode.Rotation.Count > 0 && gamemode.Rotation.Last().ID == t2mainarrow.Key.ID ? color1path : color1, TeamManager.Team2Color, false);
+
             List<int> drewPaths = new List<int>();
             List<KeyValuePair<int, int>> drawnLines = new List<KeyValuePair<int, int>>();
             foreach (Flag flag in gamemode.LoadedFlags)
@@ -247,7 +243,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                             c1 = multidimensionalcolorpath;
                             drewPaths.Add(flag.ID);
                         }
-                        DrawLineGradient(new Line(flag.ZoneData.InverseZone.Center, flagarrow.Key.ZoneData.InverseZone.Center), thickness, img, c1, c1, false);
+                        DrawLineGradient(new Line(flag.ZoneData.DrawingData.Center, flagarrow.Key.ZoneData.DrawingData.Center), thickness, img, c1, c1, false);
                     }
                     else
                     {
@@ -260,7 +256,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                             drewPaths.Add(flag.ID);
                         }
                         drawnLines.Add(new KeyValuePair<int, int>(flag.ID, flagarrow.Key.ID));
-                        DrawLineGradient(new Line(flag.ZoneData.InverseZone.Center, flagarrow.Key.ZoneData.InverseZone.Center), thickness, img, c1, c2, false);
+                        DrawLineGradient(new Line(flag.ZoneData.DrawingData.Center, flagarrow.Key.ZoneData.DrawingData.Center), thickness, img, c1, c2, false);
                     }
                 }
             }
@@ -270,15 +266,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 Line line;
                 if (i == gamemode.Rotation.Count)
                 {
-                    line = new Line(gamemode.Rotation[i - 1].ZoneData.InverseZone.Center, TeamManager.Team2Main.InverseZone.Center);
+                    line = new Line(gamemode.Rotation[i - 1].ZoneData.DrawingData.Center, TeamManager.Team2Main.DrawingData.Center);
                 }
                 else if (i == 0)
                 {
-                    line = new Line(TeamManager.Team1Main.InverseZone.Center, gamemode.Rotation[i].ZoneData.InverseZone.Center);
+                    line = new Line(TeamManager.Team1Main.DrawingData.Center, gamemode.Rotation[i].ZoneData.DrawingData.Center);
                 }
                 else
                 {
-                    line = new Line(gamemode.Rotation[i - 1].ZoneData.InverseZone.Center, gamemode.Rotation[i].ZoneData.InverseZone.Center);
+                    line = new Line(gamemode.Rotation[i - 1].ZoneData.DrawingData.Center, gamemode.Rotation[i].ZoneData.DrawingData.Center);
                 }
                 DrawLineGradient(line, thickness / 2, img, color1missingpath, color2missingpath, false);
             }
@@ -290,12 +286,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public static void DrawArrow(Texture2D Texture, Line line, Color color, bool apply = true, float thickness = 1, float arrowHeadLength = 12)
         {
             DrawLine(Texture, line, color, false, thickness);
-            float mult = line.length / arrowHeadLength;
-            Vector2 d = (line.pt1 - line.pt2) * mult;
-            Vector2 endLeft = line.pt1 - d;
-            Vector2 endRight = line.pt1 + d;
-            Line left = new Line(line.pt1, endLeft);
-            Line right = new Line(line.pt1, endRight);
+            float mult = line.Length / arrowHeadLength;
+            Vector2 d = (line.Point1 - line.Point2) * mult;
+            Vector2 endLeft = line.Point1 - d;
+            Vector2 endRight = line.Point1 + d;
+            Line left = new Line(line.Point1, endLeft);
+            Line right = new Line(line.Point1, endRight);
             DrawLine(Texture, left, color, false, thickness);
             DrawLine(Texture, right, color, false, thickness);
             if (apply) Texture.Apply();
@@ -303,8 +299,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public static void DrawLineGradient(Line line, float thickness, Texture2D texture, Color color1, Color color2, bool apply = true)
         {
             if (thickness == 0) return;
-            Vector2 point1 = new Vector2(line.pt1.x + texture.width / 2, line.pt1.y + texture.height / 2);
-            Vector2 point2 = new Vector2(line.pt2.x + texture.width / 2, line.pt2.y + texture.height / 2);
+            Vector2 point1 = new Vector2(line.Point1.x + texture.width / 2, line.Point1.y + texture.height / 2);
+            Vector2 point2 = new Vector2(line.Point2.x + texture.width / 2, line.Point2.y + texture.height / 2);
             Vector2 t = point1;
             float frac = 1 / Mathf.Sqrt(Mathf.Pow(point2.x - point1.x, 2) + Mathf.Pow(point2.y - point1.y, 2));
             float ctr = 0;
@@ -329,8 +325,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public static void DrawLine(Texture2D texture, Line line, Color color, bool apply = true, float thickness = 1)
         {
             if (thickness == 0) return;
-            Vector2 point1 = new Vector2(line.pt1.x + texture.width / 2, line.pt1.y + texture.height / 2);
-            Vector2 point2 = new Vector2(line.pt2.x + texture.width / 2, line.pt2.y + texture.height / 2);
+            Vector2 point1 = new Vector2(line.Point1.x + texture.width / 2, line.Point1.y + texture.height / 2);
+            Vector2 point2 = new Vector2(line.Point2.x + texture.width / 2, line.Point2.y + texture.height / 2);
             Vector2 t = point1;
             float frac = 1 / Mathf.Sqrt(Mathf.Pow(point2.x - point1.x, 2) + Mathf.Pow(point2.y - point1.y, 2));
             float ctr = 0;
@@ -384,13 +380,33 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 x1 = x2;
                 y1 = y2;
             }
-            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x + radius, y)), color, false, thickness);
-            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x - radius, y)), color, false, thickness);
-            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x, y + radius)), color, false, thickness);
-            if (drawLineToOutside) DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x, y - radius)), color, false, thickness);
+            if (drawLineToOutside)
+            {
+                DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x + radius, y)), color, false, thickness);
+                DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x - radius, y)), color, false, thickness);
+                DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x, y + radius)), color, false, thickness);
+                DrawLine(texture, new Line(new Vector2(x, y), new Vector2(x, y - radius)), color, false, thickness);
+            }
             if (apply)
                 texture.Apply();
         }
         public static Vector2 GetPositionOnCircle(float radians, float radius = 1) => new Vector2(Mathf.Cos(radians) * radius, Mathf.Sin(radians) * radius);
+
+        public class TextureLite
+        {
+            public byte[] Data;
+            public int SizeX;
+            public int SizeY;
+            public TextureLite(int sizeX, int sizeY)
+            {
+                Data = new byte[sizeX * sizeY];
+                this.SizeX = sizeX;
+                this.SizeY = sizeY;
+            }
+            public void DrawLine(Line line, Color color)
+            {
+
+            }
+        }
     }
 }

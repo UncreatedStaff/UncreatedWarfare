@@ -10,6 +10,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -497,6 +498,7 @@ namespace Uncreated.Warfare
                             spawn.UpdateSign(ucplayer.Player.channel.owner);
                         Points.UpdateCreditsUI(ucplayer);
                         Points.UpdateXPUI(ucplayer);
+                        player.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
                     }
                 }).ConfigureAwait(false);
 
@@ -1104,9 +1106,11 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            TeamManager.PlayerBaseStatus.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            ulong s64 = player.Player.channel.owner.playerID.steamID.m_SteamID;
+            droppeditems.Remove(s64);
+            TeamManager.PlayerBaseStatus.Remove(s64);
+            RemoveDamageMessageTicks(s64);
+            Tips.OnPlayerDisconnected(s64);
             UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
             string kit = string.Empty;
             try
@@ -1138,8 +1142,8 @@ namespace Uncreated.Warfare
                         Commands.DutyCommand.InternOnToOff(player, names);
                 }
                 PlaytimeComponent? c = player.CSteamID.GetPlaytimeComponent(out bool gotptcomp);
-                Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-                ulong id = player.Player.channel.owner.playerID.steamID.m_SteamID;
+                Data.OriginalNames.Remove(s64);
+                ulong id = s64;
                 Chat.Broadcast("player_disconnected", names.CharacterName);
                 if (c != null)
                 {

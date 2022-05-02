@@ -225,10 +225,9 @@ namespace Uncreated.Warfare.Commands
             {
                 Gamemode.ConfigObj.Reload();
                 if (Data.Gamemode is FlagGamemode flaggm)
-                {
                     flaggm.LoadAllFlags();
-                }
-                Data.ExtraZones = JSONMethods.LoadExtraZones();
+                else
+                    Data.ZoneProvider.Reload();
                 Data.ExtraPoints = JSONMethods.LoadExtraPoints();
                 TeamManager.OnReloadFlags();
                 if (OnFlagsReloaded != null)

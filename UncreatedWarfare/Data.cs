@@ -13,6 +13,7 @@ using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Point;
@@ -83,13 +84,13 @@ namespace Uncreated.Warfare
         public static Dictionary<string, Dictionary<string, TranslationData>> Localization;
         public static Dictionary<string, Dictionary<string, string>> DeathLocalization;
         public static Dictionary<string, Dictionary<ELimb, string>> LimbLocalization;
-        public static Dictionary<int, Zone> ExtraZones;
         public static Dictionary<string, Vector3> ExtraPoints;
         public static Dictionary<ulong, string> DefaultPlayerNames;
         public static Dictionary<ulong, FPlayerName> OriginalNames = new Dictionary<ulong, FPlayerName>();
         public static Dictionary<ulong, string> Languages;
         public static Dictionary<string, LanguageAliasSet> LanguageAliases;
         public static Dictionary<ulong, PlaytimeComponent> PlaytimeComponents = new Dictionary<ulong, PlaytimeComponent>();
+        internal static JsonZoneProvider ZoneProvider;
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
         public static List<Log> Logs;
@@ -182,6 +183,8 @@ namespace Uncreated.Warfare
             F.CheckDir(FOBStorage, out _, true);
             F.CheckDir(TeamStorage, out _, true);
             F.CheckDir(OfficerStorage, out _, true);
+
+            ZoneProvider = new JsonZoneProvider(new FileInfo(Data.FlagStorage + "zones.json"));
 
             /* LOAD LOCALIZATION ASSETS */
             L.Log("Loading JSON Data...", ConsoleColor.Magenta);

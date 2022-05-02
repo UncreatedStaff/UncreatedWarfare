@@ -6,7 +6,7 @@ namespace Uncreated.Warfare
     public class CooldownManager
     {
         public static Config<CooldownConfig> config;
-        private readonly static List<Cooldown> cooldowns = new List<Cooldown>();
+        private readonly static List<Cooldown> cooldowns = new List<Cooldown>(128);
 
         public CooldownManager()
         {

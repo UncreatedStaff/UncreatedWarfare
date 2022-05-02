@@ -9,6 +9,7 @@ namespace Uncreated.Warfare
 {
     public static class Tips
     {
+        // TODO: Possible Memory Leak
         private static readonly List<Tip> _tips = new List<Tip>();
 
         public static void TryGiveTip(UCPlayer player, ETip type, params string[] translationArgs)
@@ -33,6 +34,10 @@ namespace Uncreated.Warfare
         private static void GiveTip(UCPlayer player, Tip tip)
         {
             ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(tip.TranslationKey, player, tip.TranslationArgs), EToastMessageSeverity.TIP));
+        }
+        internal static void OnPlayerDisconnected(ulong pid)
+        {
+            _tips.RemoveAll(x => x.Steam64 == pid);
         }
     }
     public class Tip

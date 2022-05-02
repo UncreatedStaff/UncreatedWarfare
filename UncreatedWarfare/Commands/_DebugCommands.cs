@@ -334,216 +334,6 @@ namespace Uncreated.Warfare.Commands
                 L.Log(Translation.Translate("test_sign_success", 0, out _, sign.text), ConsoleColor.Green);
             }
         }
-        private void visualize(string[] command, Player player)
-        {
-            if (player == default)
-            {
-                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
-                return;
-            }
-            Zone zone;
-            string zoneName;
-            string zoneColor;
-            if (Data.Is(out IFlagRotation fg))
-            {
-                Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(player));
-                if (flag == default)
-                {
-                    List<Zone> zones = Data.ExtraZones.Values.ToList();
-                    zones.Sort(delegate (Zone a, Zone b)
-                    {
-                        return a.BoundsArea.CompareTo(b.BoundsArea);
-                    });
-                    Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
-                    if (extrazone == default)
-                    {
-                        player.SendChat("test_zone_test_zone_not_in_zone", UCWarfare.GetColor("default"), player.transform.position.x.ToString(Data.Locale),
-                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
-                            fg.LoadedFlags.Count.ToString(Data.Locale));
-                        return;
-                    }
-                    else
-                    {
-                        zone = extrazone;
-                        zoneName = extrazone.Name;
-                        zoneColor = UCWarfare.GetColorHex("default");
-                    }
-                }
-                else
-                {
-                    zone = flag.ZoneData;
-                    zoneName = flag.Name;
-                    zoneColor = flag.TeamSpecificHexColor;
-                }
-            }
-            else
-            {
-                List<Zone> zones = Data.ExtraZones.Values.ToList();
-                zones.Sort(delegate (Zone a, Zone b)
-                {
-                    return a.BoundsArea.CompareTo(b.BoundsArea);
-                });
-                Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
-                if (extrazone == default)
-                {
-                    player.SendChat("test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
-                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
-                        zones.Count.ToString(Data.Locale));
-                    return;
-                }
-                else
-                {
-                    zone = extrazone;
-                    zoneName = extrazone.Name;
-                    zoneColor = UCWarfare.GetColorHex("default");
-                }
-            }
-            Vector2[] points;
-            Vector2[] corners;
-            Vector2 center;
-            if (command.Length == 2)
-            {
-                if (float.TryParse(command[1], System.Globalization.NumberStyles.Any, Data.Locale, out float spacing))
-                {
-                    points = zone.GetParticleSpawnPoints(out corners, out center, -1, spacing);
-                }
-                else
-                {
-                    player.SendChat("test_visualize_syntax");
-                    return;
-                }
-            }
-            else
-            {
-                points = zone.GetParticleSpawnPoints(out corners, out center);
-            }
-            CSteamID channel = player.channel.owner.playerID.steamID;
-            foreach (Vector2 Point in points)
-            {   // Border
-                float y = Mathf.Max(F.GetTerrainHeightAt2DPoint(Point.x, Point.y), zone.MinHeight);
-                if (y == 0) y = player.transform.position.y;
-                Vector3 pos = new Vector3(Point.x, y + 0.5f, Point.y);
-                F.TriggerEffectReliable(117, channel, pos);
-                F.TriggerEffectReliable(120, channel, pos);
-            }
-            foreach (Vector2 Point in corners)
-            {   // Corners
-                float y = Mathf.Max(F.GetTerrainHeightAt2DPoint(Point.x, Point.y), zone.MinHeight);
-                if (y == 0) y = player.transform.position.y;
-                Vector3 pos = new Vector3(Point.x, y + 0.5f, Point.y);
-                F.TriggerEffectReliable(115, channel, pos);
-                F.TriggerEffectReliable(120, channel, pos);
-            }
-            {   // Center
-                float y = Mathf.Max(F.GetTerrainHeightAt2DPoint(center.x, center.y), zone.MinHeight);
-                if (y == 0) y = player.transform.position.y;
-                Vector3 pos = new Vector3(center.x, y + 0.5f, center.y);
-                F.TriggerEffectReliable(113, channel, pos);
-                F.TriggerEffectReliable(120, channel, pos);
-            }
-            player.SendChat("test_visualize_success", (points.Length + corners.Length + 1).ToString(Data.Locale), zoneName, zoneColor);
-        }
-        private void go(string[] command, Player player)
-        {
-            if (player == default)
-            {
-                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
-                return;
-            }
-            if (command.Length == 1)
-            {
-                player.SendChat("test_go_syntax");
-                return;
-            }
-            string arg = command[1].ToLower();
-            if (command.Length > 2)
-            {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 1; i < command.Length; i++)
-                {
-                    if (i != 1) sb.Append(' ');
-                    sb.Append(command[i]);
-                }
-                arg = sb.ToString().ToLower();
-            }
-            if (Data.Is(out IFlagRotation fg))
-            {
-                Flag? flag;
-                if (fg is TeamCTF ctf)
-                {
-                    if (arg == "obj1" && ctf.ObjectiveTeam1 != null)
-                        flag = ctf.ObjectiveTeam1;
-                    else if (arg == "obj2" && ctf.ObjectiveTeam2 != null)
-                        flag = ctf.ObjectiveTeam2;
-                    else if (arg == "lobby")
-                        flag = null;
-                    else
-                        flag = fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
-                }
-                else if (fg is Invasion inv)
-                {
-                    if (arg == "obj")
-                        flag = (inv.ObjectiveTeam1 ?? inv.ObjectiveTeam2) ?? fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
-                    else
-                        flag = fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
-                }
-                else
-                    flag = fg.LoadedFlags.FirstOrDefault(f => f.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.ID == o));
-                if (flag == default)
-                {
-                    Dictionary<int, Zone> eZones = Data.ExtraZones;
-                    KeyValuePair<int, Zone> zone = arg == "lobby" ? new KeyValuePair<int, Zone>(0, Teams.TeamManager.LobbyZone) : eZones.FirstOrDefault(f => f.Value.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.Key == o));
-                    if (zone.Equals(default(KeyValuePair<int, Zone>)))
-                    {
-                        player.SendChat("test_go_no_zone", arg);
-                        return;
-                    }
-                    if (zone.Key == 0)
-                    {
-                        ActionLog.Add(EActionLogType.TELEPORT, "LOBBY", player.channel.owner.playerID.steamID.m_SteamID);
-                        player.teleportToLocationUnsafe(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle);
-                    }
-                    else if (Physics.Raycast(new Ray(new Vector3(zone.Value.Center.x, Level.HEIGHT, zone.Value.Center.y), Vector3.down), out RaycastHit hit2, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
-                    {
-                        ActionLog.Add(EActionLogType.TELEPORT, zone.Value.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
-                        player.teleportToLocationUnsafe(hit2.point + new Vector3(0, 1, 0), 90f);
-                    }
-                    else
-                    {
-                        ActionLog.Add(EActionLogType.TELEPORT, zone.Value.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
-                        player.teleportToLocationUnsafe(zone.Value.Center3DAbove, 90f);
-                    }
-                    player.SendChat("test_go_success_zone", zone.Value.Name);
-                    return;
-                }
-                if (Physics.Raycast(new Ray(new Vector3(flag.ZoneData.Center.x, Level.HEIGHT, flag.ZoneData.Center.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
-                {
-                    ActionLog.Add(EActionLogType.TELEPORT, flag.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
-                    player.teleportToLocationUnsafe(hit.point + new Vector3(0, 1, 0), 90f);
-                }
-                else
-                {
-                    ActionLog.Add(EActionLogType.TELEPORT, flag.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
-                    player.teleportToLocationUnsafe(flag.ZoneData.Center3DAbove, 90f);
-                }
-                player.SendChat("test_go_success_flag", flag.Name, flag.TeamSpecificHexColor);
-                return;
-            }
-            else
-            {
-                Dictionary<int, Zone> eZones = Data.ExtraZones;
-                KeyValuePair<int, Zone> zone = eZones.FirstOrDefault(f => f.Value.Name.ToLower().Contains(arg) || (int.TryParse(arg, System.Globalization.NumberStyles.Any, Data.Locale, out int o) && f.Key == o));
-                if (zone.Equals(default(KeyValuePair<int, Zone>)))
-                {
-                    player.SendChat("test_go_no_zone", arg);
-                    return;
-                }
-                ActionLog.Add(EActionLogType.TELEPORT, zone.Value.Name.ToUpper(), player.channel.owner.playerID.steamID.m_SteamID);
-                player.teleportToLocation(zone.Value.Center3DAbove, 90f);
-                player.SendChat("test_go_success_zone", zone.Value.Name);
-                return;
-            }
-        }
         private void time(string[] command, Player player)
         {
             UCWarfare.I.CoroutineTiming = !UCWarfare.I.CoroutineTiming;
@@ -562,6 +352,7 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("test_time_disabled");
             }
         }
+        // test zones: test zonearea all true false false true false
         private void zonearea(string[] command, Player player)
         {
             if (Data.Is(out IFlagRotation fg))
@@ -598,13 +389,15 @@ namespace Uncreated.Warfare.Commands
                     return;
                 }
                 List<Zone> zones = new List<Zone>();
-                foreach (Flag flag in all ? fg.LoadedFlags : fg.Rotation)
-                    zones.Add(flag.ZoneData);
-                if (extra)
+                if (all)
                 {
-                    foreach (Zone zone in Data.ExtraZones.Values)
-                        zones.Add(zone);
+                    if (extra)
+                        zones.AddRange(Data.ZoneProvider.Zones);
+                    else
+                        zones.AddRange(Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
                 }
+                else
+                    zones.AddRange(fg.Rotation.Select(x => x.ZoneData));
                 if (player != default)
                     player.SendChat("test_zonearea_started");
                 else L.Log(Translation.Translate("test_zonearea_started", 0, out _));
@@ -680,73 +473,6 @@ namespace Uncreated.Warfare.Commands
                 return;
             }
             L.Log(F.GetLayer(player.look.aim.position, player.look.aim.forward, RayMasks.BLOCK_COLLISION), ConsoleColor.DarkCyan); // so as to not hit player
-        }
-        private void dumpzone(string[] command, Player player)
-        {
-            if (player == default)
-            {
-                L.LogError(Translation.Translate("test_no_players_console", 0, out _));
-                return;
-            }
-            Zone zone;
-            string zoneName;
-            string zoneColor;
-            if (Data.Is(out IFlagRotation fg))
-            {
-                Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(player));
-                if (flag == default)
-                {
-                    List<Zone> zones = Data.ExtraZones.Values.ToList();
-                    zones.Sort(delegate (Zone a, Zone b)
-                    {
-                        return a.BoundsArea.CompareTo(b.BoundsArea);
-                    });
-                    Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
-                    if (extrazone == default)
-                    {
-                        player.SendChat("test_zone_test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
-                            player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
-                            fg.LoadedFlags.Count.ToString(Data.Locale));
-                        return;
-                    }
-                    else
-                    {
-                        zone = extrazone;
-                        zoneName = extrazone.Name;
-                        zoneColor = UCWarfare.GetColorHex("default");
-                    }
-                }
-                else
-                {
-                    zone = flag.ZoneData;
-                    zoneName = flag.Name;
-                    zoneColor = flag.TeamSpecificHexColor;
-                }
-            }
-            else
-            {
-                List<Zone> zones = Data.ExtraZones.Values.ToList();
-                zones.Sort(delegate (Zone a, Zone b)
-                {
-                    return a.BoundsArea.CompareTo(b.BoundsArea);
-                });
-                Zone extrazone = zones.FirstOrDefault(z => z.IsInside(player.transform.position));
-                if (extrazone == default)
-                {
-                    player.SendChat("test_zone_not_in_zone", player.transform.position.x.ToString(Data.Locale),
-                        player.transform.position.y.ToString(Data.Locale), player.transform.position.z.ToString(Data.Locale),
-                        zones.Count.ToString(Data.Locale));
-                    return;
-                }
-                else
-                {
-                    zone = extrazone;
-                    zoneName = extrazone.Name;
-                    zoneColor = UCWarfare.GetColorHex("default");
-                }
-            }
-            L.Log(zone.Dump(), ConsoleColor.Green);
-            player.SendChat("test_check_console");
         }
         private void clearui(string[] command, Player player)
         {

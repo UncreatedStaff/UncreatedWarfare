@@ -405,6 +405,24 @@ namespace Uncreated.Warfare
         {
             return LevelGround.getHeight(new Vector3(x, 0, z)) + above;
         }
+        internal static float GetHeight(Vector3 point, float minHeight)
+        {
+            float height;
+            if (Physics.Raycast(new Ray(new Vector3(point.x, Level.HEIGHT, point.z), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+            {
+                height = hit.point.y;
+                if (!float.IsNaN(minHeight))
+                    return Mathf.Max(height, minHeight);
+                return height;
+            }
+            else
+            {
+                height = LevelGround.getHeight(point);
+                if (!float.IsNaN(minHeight))
+                    return Mathf.Max(height, minHeight);
+                else return height;
+            }
+        }
         public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
         {
             if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
@@ -479,15 +497,19 @@ namespace Uncreated.Warfare
             }
             return sb.ToString();
         }
-        public static void TriggerEffectReliable(ushort ID, CSteamID player, Vector3 Position)
+        public static void TriggerEffectReliable(ushort ID, CSteamID player, Vector3 position)
         {
             TriggerEffectParameters p = new TriggerEffectParameters(ID)
             {
-                position = Position,
+                position = position,
                 reliable = true,
                 relevantPlayerID = player
             };
             EffectManager.triggerEffect(p);
+        }
+        public static void TriggerEffectReliable(EffectAsset asset, ITransportConnection connection, Vector3 position)
+        {
+            EffectManager.sendEffectReliable(asset.id, connection, position);
         }
         public static bool SavePhotoToDisk(string path, Texture2D texture)
         {

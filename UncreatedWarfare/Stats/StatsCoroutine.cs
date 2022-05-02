@@ -59,9 +59,9 @@ namespace Uncreated.Warfare.Stats
 
 
                         Vector3 position = ucplayer.Position;
-                        if (previousPositions.TryGetValue(ucplayer.Steam64, out Afk afk) && ucplayer.OffDuty())
+                        if (previousPositions.TryGetValue(ucplayer.Steam64, out Afk afk))
                         {
-                            if (afk.lastLocation == position)
+                            if (ucplayer.OffDuty() && afk.lastLocation == position)
                             {
                                 if (afk.time == n)
                                 {

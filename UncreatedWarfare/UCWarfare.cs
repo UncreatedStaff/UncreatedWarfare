@@ -13,6 +13,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -138,17 +139,16 @@ namespace Uncreated.Warfare
             LeaderboardEx.TempCacheEffectIDs();
             FOBManager.TempCacheEffectIDs();
             JoinManager.CacheIDs();
+            ZonePlayerComponent.UIInit();
+            Zone.OnLevelLoaded();
+
+            Data.ZoneProvider.Reload();
+            Data.ZoneProvider.Save();
+
             Announcer = gameObject.AddComponent<UCAnnouncer>();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
-            Data.ExtraZones = JSONMethods.LoadExtraZones();
             //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
 
-            // remove once effectmanager supports GUIDs
-            SquadManager.TempCacheEffectIDs();
-            CTFUI.TempCacheEffectIDs();
-            LeaderboardEx.TempCacheEffectIDs();
-            JoinManager.CacheIDs();
-            FOBManager.TempCacheEffectIDs();
             FOBManager.OnLevelLoaded();
 
             Data.Gamemode.OnLevelLoaded();
@@ -326,6 +326,11 @@ namespace Uncreated.Warfare
                 FOBManager.SendFOBList(ucplayer);
             if (Data.Gamemode.ShowXPUI)
                 Points.UpdateXPUI(ucplayer);
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            {
+                if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out ZonePlayerComponent comp))
+                    comp.ReloadLang();
+            }
         }
         private void Update()
         {

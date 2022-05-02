@@ -306,43 +306,28 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 OnPointsChanged?.Invoke(_points, OldPoints, this);
         }
         public List<Player> PlayersOnFlag { get; private set; }
-        public Flag(FlagData data, FlagGamemode manager)
+
+        public Flag(Zone zone, FlagGamemode manager)
         {
             this.Manager = manager;
-            this._id = data.id;
-            this._x = data.x;
-            this._y = F.GetTerrainHeightAt2DPoint(data.x, data.y);
-            this._z = data.y;
-            this._position2d = data.Position2D;
+            this._id = zone.Id;
+            this._x = zone.Center.x;
+            this._y = zone.Center3D.y;
+            this._z = zone.Center.y;
+            this._position2d = new Vector2(_x, _z);
             this._position = new Vector3(_x, _y, _z);
-            this.LastDeltaPoints = 0;
-            this._name = data.name;
-            if (string.IsNullOrEmpty(data.short_name))
+            this._name = zone.Name;
+            if (string.IsNullOrEmpty(zone.ShortName))
                 this._shortName = _name;
             else
-                this._shortName = data.short_name;
-            this._color = data.color;
+                this._shortName = zone.ShortName!;
+            this._color = UCWarfare.GetColorHex("default");
             this._owner = 0;
             PlayersOnFlag = new List<Player>(48);
             PlayersOnFlagTeam1 = new List<Player>(24);
             PlayersOnFlagTeam2 = new List<Player>(24);
-            this.ZoneData = ComplexifyZone(data);
-            this.Adjacencies = data.adjacencies;
-        }
-        public static Zone ComplexifyZone(FlagData data)
-        {
-            switch (data.zone.type)
-            {
-                case "rectangle":
-                    return new RectZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
-                case "circle":
-                    return new CircleZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
-                case "polygon":
-                    return new PolygonZone(data.Position2D, data.zone, data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
-                default:
-                    L.LogError("Invalid zone type \"" + data.zone.type + "\" at flag ID: " + data.id.ToString(Data.Locale) + ", name: " + data.name);
-                    return new CircleZone(data.Position2D, new ZoneData("circle", "50"), data.use_map_size_multiplier, data.name, data.maxHeight, data.minHeight);
-            }
+            this.ZoneData = zone;
+            this.Adjacencies = zone.Data.Adjacencies;
         }
         public bool IsFriendly(UnturnedPlayer player) => IsFriendly(player.Player.quests.groupID.m_SteamID);
         public bool IsFriendly(SteamPlayer player) => IsFriendly(player.player.quests.groupID.m_SteamID);
