@@ -33,7 +33,6 @@ namespace Uncreated.Warfare.FOBs
             if (owner != null && owner.Steam64 != player.Steam64)
             {
                 Points.AwardXP(owner, Points.XPConfig.ResupplyFriendlyXP, Translation.Translate("xp_resupplied_teammate", owner));
-                Points.AwardTW(owner, Points.TWConfig.ResupplyFriendlyPoints);
             }
 
             player.Message("ammo_success", ammoCost.ToString(), Ammo.ToString());

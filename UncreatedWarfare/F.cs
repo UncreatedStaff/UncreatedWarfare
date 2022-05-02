@@ -114,28 +114,28 @@ namespace Uncreated.Warfare
             for (int i = 0; i < groups.Count; i++)
             {
                 RocketPermissionsGroup grp = groups[i];
-                if (grp.Id == "default") continue;
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup)
+                if (grp.Id.Equals("default", StringComparison.Ordinal)) continue;
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.ADMIN_OFF_DUTY) == EAdminType.ADMIN_OFF_DUTY) return true;
                     continue;
                 }
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup)
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.ADMIN_ON_DUTY) == EAdminType.ADMIN_ON_DUTY) return true;
                     continue;
                 }
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup)
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.TRIAL_ADMIN_OFF_DUTY) == EAdminType.TRIAL_ADMIN_OFF_DUTY) return true;
                     continue;
                 }
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup)
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY) return true;
                     continue;
                 }
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.HelperGroup)
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.HelperGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.HELPER) == EAdminType.HELPER) return true;
                     continue;
@@ -279,7 +279,6 @@ namespace Uncreated.Warfare
             else if (groupID == TeamManager.AdminID) return 3;
             else return 0;
         }
-        public static Vector3 GetBaseSpawn(this SteamPlayer player, out ulong team) => player.player.GetBaseSpawn(out team);
         public static Vector3 GetBaseSpawn(this Player player)
         {
             if (!Data.Is<ITeams>(out _)) return TeamManager.LobbySpawn;
@@ -400,7 +399,6 @@ namespace Uncreated.Warfare
             }
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
-        public static float GetTerrainHeightAt2DPoint(Vector2 position, float above = 0) => GetTerrainHeightAt2DPoint(position.x, position.y, above: above);
         public static float GetTerrainHeightAt2DPoint(float x, float z, float above = 0)
         {
             return LevelGround.getHeight(new Vector3(x, 0, z)) + above;
@@ -717,17 +715,8 @@ namespace Uncreated.Warfare
 #endif
             if (player != null && Data.Is(out IFlagRotation fg))
             {
-                if (fg.OnFlag == null)
+                if (fg.OnFlag == null || fg.Rotation == null)
                 {
-                    L.LogError("onflag null");
-                    if (fg.Rotation == null) L.LogError("rot null");
-                    flag = null!;
-                    return false;
-                }
-                else if (fg.Rotation == null)
-                {
-                    L.LogError("rot null");
-                    if (fg.OnFlag == null) L.LogError("onflag null");
                     flag = null!;
                     return false;
                 }

@@ -211,7 +211,6 @@ namespace Uncreated.Warfare.Squads
         {
             // TODO: colorize toast message
             Points.AwardXP(player, RewardXP, "ORDER FULFILLED".Colorize("a6f5b8"));
-            Points.AwardTW(player, RewardTW, "");
         }
 
         public void Cancel()

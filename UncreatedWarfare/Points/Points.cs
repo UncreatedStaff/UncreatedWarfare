@@ -344,7 +344,6 @@ namespace Uncreated.Warfare.Point
             if (creator != null)
             {
                 AwardXP(creator, amount, Translation.Translate(translationKey, creator));
-                AwardTW(creator, amount);
             }
 
             if (fob.Placer != fob.Creator)

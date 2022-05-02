@@ -141,8 +141,6 @@ namespace Uncreated.Warfare.Commands
                         player.SendChat("test_giveof_player_not_found", command[1]);
                     return;
                 }
-                Points.AwardTW(target, amount, player == null ? Translation.Translate("ofp_from_operator", target.Steam64) :
-                    Translation.Translate("ofp_from_player", target.Steam64, player == null ? "Console" : F.GetPlayerOriginalNames(player).CharacterName.ToUpper()));
                 if (player == null)
                     L.Log(Translation.Translate("test_giveof_success", 0, out _, amount.ToString(Data.Locale), amount.S(), F.GetPlayerOriginalNames(target).CharacterName));
                 else

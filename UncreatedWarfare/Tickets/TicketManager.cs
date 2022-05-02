@@ -303,6 +303,7 @@ namespace Uncreated.Warfare.Tickets
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            /*
             float winMultiplier = 0.15f;
 
             List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team).ToList();
@@ -319,7 +320,7 @@ namespace Uncreated.Warfare.Tickets
                     if (exp.Credits > 0)
                         Points.AwardTW(player, Mathf.RoundToInt(exp.Credits * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
                 }
-            }
+            }*/
         }
         public static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
         {
@@ -391,14 +392,6 @@ namespace Uncreated.Warfare.Tickets
                     {
                         alreadyUpdated.Add(player.Squad!, Points.TWConfig.MemberFlagCapturePoints);
                     }
-                }
-            }
-
-            for (int i = 0; i < SquadManager.Squads.Count; i++)
-            {
-                if (alreadyUpdated.TryGetValue(SquadManager.Squads[i], out int amount))
-                {
-                    Points.AwardTW(SquadManager.Squads[i].Leader.Player, amount, "");
                 }
             }
         }

@@ -291,7 +291,6 @@ namespace Uncreated.Warfare.Components
                             }
 
                             Points.AwardXP(creator, groupsUnloaded * xp, Translation.Translate("xp_supplies_unloaded", creator));
-                            Points.AwardTW(creator, groupsUnloaded * tw);
                         }
                     }
 
@@ -405,7 +404,6 @@ namespace Uncreated.Warfare.Components
                                 }
 
                                 Points.AwardXP(player, xp, Translation.Translate("xp_supplies_unloaded", player));
-                                Points.AwardTW(player, tw);
 
                                 player.SuppliesUnloaded = 0;
                             }
