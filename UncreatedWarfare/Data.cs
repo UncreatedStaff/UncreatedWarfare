@@ -201,7 +201,7 @@ namespace Uncreated.Warfare
             {
                 DuplicateKeyError(ex);
                 return;
-            }
+            } 
 
             Quests.QuestManager.Init();
 

@@ -50,20 +50,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
                 {
-                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
-                    Chat.Broadcast("shutdown_broadcast_after_game", reason);
-                    L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
-                    Data.Gamemode?.ShutdownAfterGame(reason, 0);
-                    if (Messager != null)
-                    {
-                        try
-                        {
-                            UCWarfare.I.StopCoroutine(Messager);
-                        }
-                        catch { }
-                    }
-                    Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
-                    Invocations.Shared.ShuttingDownAfter.NetInvoke(0UL, reason);
+                    ShutdownAfterGame(reason);
                 }
                 else if (option == "cancel" || option == "abort")
                 {
@@ -184,6 +171,43 @@ namespace Uncreated.Warfare.Commands
                 }
             }
         }
+
+        private static void ShutdownAfterGame(string reason)
+        {
+            ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
+            Chat.Broadcast("shutdown_broadcast_after_game", reason);
+            L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
+            Data.Gamemode?.ShutdownAfterGame(reason, 0);
+            if (Messager != null)
+            {
+                try
+                {
+                    UCWarfare.I.StopCoroutine(Messager);
+                }
+                catch { }
+            }
+            Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
+            Invocations.Shared.ShuttingDownAfter.NetInvoke(0UL, reason);
+        }
+        public static void ShutdownAfterGameDaily()
+        {
+            string reason = "Daily Restart";
+            ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
+            Chat.Broadcast("shutdown_broadcast_after_game_daily", reason);
+            L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
+            Data.Gamemode?.ShutdownAfterGame(reason, 0);
+            if (Messager != null)
+            {
+                try
+                {
+                    UCWarfare.I.StopCoroutine(Messager);
+                }
+                catch { }
+            }
+            Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
+            Invocations.Shared.ShuttingDownAfter.NetInvoke(0UL, reason);
+        }
+
         public static IEnumerator<WaitForSeconds> ShutdownMessageSender(string reason)
         {
             if (UCWarfare.Config.AdminLoggerSettings.TimeBetweenShutdownMessages == 0) yield break;
