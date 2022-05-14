@@ -10,14 +10,16 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Squads
 {
-    public class Command_order : IRocketCommand
+    public class OrderCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "order";
         public string Help => "Gives a squad orders to fulfill";
         public string Syntax => "/order";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.order" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>() { "uc.order" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

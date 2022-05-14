@@ -555,15 +555,17 @@ namespace Uncreated.Warfare
             }
             bool isMuted = false;
             bool squad = false;
+            ulong team = 0;
             UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
             if (ucplayer is not null)
             {
+                team = ucplayer.GetTeam();
                 if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
                 {
                     VoiceMutedUseTick();
                     isMuted = true;
                 }
-                else if (ucplayer.Squad != null && ucplayer.Squad.Members.Count > 1)
+                else if (ucplayer.Squad is not null && ucplayer.Squad.Members.Count > 1)
                 {
                     shouldBroadcastOverRadio = true;
                     squad = true;
@@ -586,22 +588,19 @@ namespace Uncreated.Warfare
                             if (ucplayer != null)
                             {
                                 ucplayer.LastSpoken = Time.realtimeSinceStartup;
-                                if (squad)
+                                UCPlayer? targetPl = PlayerManager.FromID(target.channel.owner.playerID.steamID.m_SteamID);
+                                if (targetPl != null && targetPl.Squad == ucplayer.Squad)
                                 {
-                                    UCPlayer? targetPl = PlayerManager.FromID(target.channel.owner.playerID.steamID.m_SteamID);
-                                    if (targetPl != null && targetPl.Squad == ucplayer.Squad)
-                                    {
-                                        return true;
-                                    }
+                                    return targetPl.GetTeam() == team || PlayerVoice.handleRelayVoiceCulling_Proximity(source, target);
                                 }
                             }
                             return PlayerVoice.handleRelayVoiceCulling_Proximity(source, target);
                         }
                         cullingHandler = CullingHandler;
-                        shouldBroadcastOverRadio = squad;
+                        shouldBroadcastOverRadio = true;
                         return;
                     }
-                    break;
+                    return;
                 case EState.LOADING:
                 case EState.FINISHED:
                     if (!UCWarfare.Config.RelayMicsDuringEndScreen)
@@ -614,7 +613,7 @@ namespace Uncreated.Warfare
             }
 
 
-            shouldBroadcastOverRadio = true;
+            shouldBroadcastOverRadio = false;
         }
 
         internal static void OnBattleyeKicked(SteamPlayer client, string reason)

@@ -27,8 +27,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "buy";
         public string Help => "Buy a kit permanently by looking at a sign or a vehicle by looking at the vehicle, then do /buy.";
         public string Syntax => "/buy";
-        public List<string> Aliases => new List<string>(1) { "buy" };
-        public List<string> Permissions => new List<string>(1) { "uc.buy" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.buy" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

@@ -7,14 +7,16 @@ using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class Command_kits : IRocketCommand
+    public class KitsCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "kits";
         public string Help => "shows you a list of kits";
         public string Syntax => "/kits";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.kits" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>() { "uc.kits" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);

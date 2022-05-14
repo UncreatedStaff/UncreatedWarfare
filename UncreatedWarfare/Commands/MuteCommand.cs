@@ -15,8 +15,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "mute";
         public string Help => "Mute players in either voice chat or text chat.";
         public string Syntax => "/mute <voice|text|both> <name or steam64> <permanent | duration in minutes> <reason...>";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.mute" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.mute" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UCPlayer? admin = UCPlayer.FromIRocketPlayer(caller);

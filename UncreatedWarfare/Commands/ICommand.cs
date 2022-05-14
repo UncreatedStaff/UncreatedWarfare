@@ -10,14 +10,16 @@ using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class Command_I : IRocketCommand
+    public class ItemCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "item";
         public string Help => "spawns in an item";
         public string Syntax => "/item";
-        public List<string> Aliases => new List<string>(1) { "i"};
-        public List<string> Permissions => new List<string>(1) { "uc.i" };
+        private readonly List<string> _aliases = new List<string>(1) { "i" };
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.i" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

@@ -20,8 +20,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "dev";
         public string Help => "Dev command for various server setup features.";
         public string Syntax => "/dev [arguments]";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.dev" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.dev" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

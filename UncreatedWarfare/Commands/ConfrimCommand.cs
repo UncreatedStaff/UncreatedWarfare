@@ -14,8 +14,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "confirm";
         public string Help => "Confirm a current action.";
         public string Syntax => "/confirm";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.confirm" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.confirm" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command) { }
     }
 }

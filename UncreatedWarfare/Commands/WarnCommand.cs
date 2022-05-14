@@ -19,9 +19,11 @@ namespace Uncreated.Warfare.Commands
 
         public string Syntax => "/warn <player> <reason>";
 
-        public List<string> Aliases => new List<string>(0);
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
 
-        public List<string> Permissions => new List<string>(1) { "uc.warn" };
+        private readonly List<string> _permissions = new List<string>(1) { "uc.warn" };
+		public List<string> Permissions => _permissions;
 
         public void Execute(IRocketPlayer caller, string[] command)
         {

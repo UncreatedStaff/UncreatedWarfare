@@ -10,14 +10,16 @@ using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Kits
 {
-    public class Command_vehiclebay : IRocketCommand
+    public class VehicleBayCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "vehiclebay";
         public string Help => "Set's up the vehicle bay";
         public string Syntax => "/vehiclebay";
-        public List<string> Aliases => new List<string>() { "vb" };
-        public List<string> Permissions => new List<string>() { "uc.vehiclebay" };
+        private readonly List<string> _aliases = new List<string>(1) { "vb" };
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>() { "uc.vehiclebay" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

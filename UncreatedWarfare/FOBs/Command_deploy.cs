@@ -10,14 +10,16 @@ using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class Command_deploy : IRocketCommand
+    public class DeployCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "deploy";
         public string Help => "deploys you to a nearby FOB";
         public string Syntax => "/deploy";
-        public List<string> Aliases => new List<string>(1) { "dep" };
-        public List<string> Permissions => new List<string>(1) { "uc.deploy" };
+        private readonly List<string> _aliases = new List<string>(1) { "dep" };
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.deploy" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

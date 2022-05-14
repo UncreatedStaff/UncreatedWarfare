@@ -32,13 +32,15 @@ namespace Uncreated.Warfare.Commands
     internal class _DebugCommand : IRocketCommand
 #pragma warning restore IDE1006 // Naming Styles
     {
+        public static int currentstep = 0;
+        private readonly List<string> _aliases = new List<string>(0);
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "test";
         public string Help => "Collection of test commands.";
-        public static int currentstep = 0;
         public string Syntax => "/test <mode>";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.test" };
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.test" };
+		public List<string> Permissions => _permissions;
         private readonly Type type = typeof(_DebugCommand);
         public void Execute(IRocketPlayer caller, string[] command)
         {

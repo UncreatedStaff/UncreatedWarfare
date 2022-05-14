@@ -7,14 +7,16 @@ using Uncreated.Warfare.Point;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class Command_officer : IRocketCommand
+    public class OfficerCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "officer";
         public string Help => "promotes or demotes a player to an officer rank";
         public string Syntax => "/officer";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.officer" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>() { "uc.officer" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

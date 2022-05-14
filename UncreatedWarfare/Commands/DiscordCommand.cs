@@ -11,8 +11,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "discord";
         public string Help => "Links you to the Uncreated Discord server.";
         public string Syntax => "/discord";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.discord" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.discord" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
             UnturnedPlayer player = (UnturnedPlayer)caller;

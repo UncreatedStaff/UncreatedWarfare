@@ -27,8 +27,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "request";
         public string Help => "Request a kit by looking at a sign or request a vehicle by looking at the vehicle, then do /request.";
         public string Syntax => "/request";
-        public List<string> Aliases => new List<string>(1) { "req" };
-        public List<string> Permissions => new List<string>(1) { "uc.request" };
+        private readonly List<string> _aliases = new List<string>(1) { "req" };
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.request" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG
@@ -298,7 +300,7 @@ namespace Uncreated.Warfare.Commands
         }
         private void GiveKit(UCPlayer ucplayer, Kit kit)
         {
-            Command_ammo.WipeDroppedItems(ucplayer.Player.inventory);
+            AmmoCommand.WipeDroppedItems(ucplayer.Player.inventory);
             KitManager.GiveKit(ucplayer, kit);
             Stats.StatsManager.ModifyKit(kit.Name, k => k.TimesRequested++);
             ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());

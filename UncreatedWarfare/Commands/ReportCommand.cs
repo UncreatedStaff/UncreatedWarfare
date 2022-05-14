@@ -19,8 +19,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "report";
         public string Help => "Use to report a player for specific actions. Use /report reasons for examples.";
         public string Syntax => "/report <\"reasons\" | player> <reason> <custom message...>";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.report" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.report" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

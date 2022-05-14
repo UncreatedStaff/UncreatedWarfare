@@ -10,15 +10,16 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Kits
 {
-    public class Command_kit : IRocketCommand
+    public class KitCommand : IRocketCommand
     {
-        private static readonly char[] LOADOUT_CHARACTERS = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't' };
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "kit";
         public string Help => "creates, renames or deletes a kit";
         public string Syntax => "/kit";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.kit" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.kit" };
+		public List<string> Permissions => _permissions;
         static void Reply(UCPlayer? player, string key, params string[] formatting)
         {
             if (player == null)

@@ -6,14 +6,16 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Squads
 {
-    public class Command_squad : IRocketCommand
+    public class SquadCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "squad";
         public string Help => "Creates or disbands a squad";
         public string Syntax => "/squad";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.squad" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>() { "uc.squad" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG
