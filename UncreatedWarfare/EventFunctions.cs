@@ -10,6 +10,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -497,6 +498,7 @@ namespace Uncreated.Warfare
                             spawn.UpdateSign(ucplayer.Player.channel.owner);
                         Points.UpdateCreditsUI(ucplayer);
                         Points.UpdateXPUI(ucplayer);
+                        player.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
                     }
                 }).ConfigureAwait(false);
 
@@ -538,36 +540,80 @@ namespace Uncreated.Warfare
         {
             // send ui or something
         }
-
+        private static readonly PlayerVoice.RelayVoiceCullingHandler NO_COMMS = (a, b) => false;
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == EState.ACTIVE || Data.Gamemode.State == EState.STAGING) return;
-
-            UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
-            if (ucplayer == null) return;
-            if (ucplayer.Squad != null && ucplayer.Squad.Members.Count > 1)
-                shouldBroadcastOverRadio = true;
-
-            bool CullingHandler(PlayerVoice source, PlayerVoice target)
+            if (Data.Gamemode is null)
             {
-                if (ucplayer != null)
+                cullingHandler = NO_COMMS;
+                shouldBroadcastOverRadio = false;
+                return;
+            }
+            bool isMuted = false;
+            bool squad = false;
+            ulong team = 0;
+            UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
+            if (ucplayer is not null)
+            {
+                team = ucplayer.GetTeam();
+                if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
                 {
-                    if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
-                    {
-                        VoiceMutedUseTick();
-                        return false;
-                    }
-                    ucplayer.LastSpoken = Time.realtimeSinceStartup;
+                    VoiceMutedUseTick();
+                    isMuted = true;
                 }
-                return true;
+                else if (ucplayer.Squad is not null && ucplayer.Squad.Members.Count > 1)
+                {
+                    shouldBroadcastOverRadio = true;
+                    squad = true;
+                }
+            }
+            if (isMuted)
+            {
+                cullingHandler = NO_COMMS;
+                shouldBroadcastOverRadio = false;
+                return;
+            }
+            switch (Data.Gamemode.State)
+            {
+                case EState.STAGING:
+                case EState.ACTIVE:
+                    if (squad)
+                    {
+                        bool CullingHandler(PlayerVoice source, PlayerVoice target)
+                        {
+                            if (ucplayer != null)
+                            {
+                                ucplayer.LastSpoken = Time.realtimeSinceStartup;
+                                UCPlayer? targetPl = PlayerManager.FromID(target.channel.owner.playerID.steamID.m_SteamID);
+                                if (targetPl != null && targetPl.Squad == ucplayer.Squad)
+                                {
+                                    return targetPl.GetTeam() == team || PlayerVoice.handleRelayVoiceCulling_Proximity(source, target);
+                                }
+                            }
+                            return PlayerVoice.handleRelayVoiceCulling_Proximity(source, target);
+                        }
+                        cullingHandler = CullingHandler;
+                        shouldBroadcastOverRadio = true;
+                        return;
+                    }
+                    return;
+                case EState.LOADING:
+                case EState.FINISHED:
+                    if (!UCWarfare.Config.RelayMicsDuringEndScreen)
+                    {
+                        cullingHandler = NO_COMMS;
+                        shouldBroadcastOverRadio = false;
+                        return;
+                    }
+                    break;
             }
 
-            cullingHandler = CullingHandler;
-            shouldBroadcastOverRadio = true;
+
+            shouldBroadcastOverRadio = false;
         }
 
         internal static void OnBattleyeKicked(SteamPlayer client, string reason)
@@ -856,6 +902,9 @@ namespace Uncreated.Warfare
                     if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(parameters.player.transform.position)) ||
                         (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(parameters.player.transform.position)))
                     {
+                        // if the player has shot since they died
+                        if (!killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) || comp.lastShot != default)
+                            goto next;
                         shouldAllow = false;
                         byte newdamage = (byte)Math.Min(byte.MaxValue, Mathf.RoundToInt(parameters.damage * parameters.times * UCWarfare.Config.AMCDamageMultiplier));
                         killer.life.askDamage(newdamage, parameters.direction * newdamage, EDeathCause.ARENA,
@@ -871,7 +920,7 @@ namespace Uncreated.Warfare
                     }
                 }
             }
-
+            next:
             if (shouldAllow && Data.Is(out IRevives rev))
                 rev.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
         }
@@ -1101,31 +1150,33 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            droppeditems.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            TeamManager.PlayerBaseStatus.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-            RemoveDamageMessageTicks(player.Player.channel.owner.playerID.steamID.m_SteamID);
+            ulong s64 = player.Player.channel.owner.playerID.steamID.m_SteamID;
+            droppeditems.Remove(s64);
+            TeamManager.PlayerBaseStatus.Remove(s64);
+            RemoveDamageMessageTicks(s64);
+            Tips.OnPlayerDisconnected(s64);
             UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
             string kit = string.Empty;
-            if (ucplayer != null)
-            {
-                Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
-                Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
-                if (Data.Is(out ITeams gm) && gm.UseJoinUI)
-                    gm.JoinManager.OnPlayerDisconnected(ucplayer);
-                if (Data.Is<IFOBs>(out _)) FOBManager.OnPlayerDisconnect(ucplayer);
-                kit = ucplayer.KitName;
-                try
-                {
-                    Data.Gamemode.OnPlayerLeft(ucplayer);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerLeft:");
-                    L.LogError(ex);
-                }
-            }
             try
             {
+                if (ucplayer != null)
+                {
+                    Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
+                    Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
+                    if (Data.Is(out ITeams gm) && gm.UseJoinUI)
+                        gm.JoinManager.OnPlayerDisconnected(ucplayer);
+                    if (Data.Is<IFOBs>(out _)) FOBManager.OnPlayerDisconnect(ucplayer);
+                    kit = ucplayer.KitName;
+                    try
+                    {
+                        Data.Gamemode.OnPlayerLeft(ucplayer);
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerLeft:");
+                        L.LogError(ex);
+                    }
+                }
                 FPlayerName names = F.GetPlayerOriginalNames(player.Player.channel.owner);
                 if (player.OnDuty())
                 {
@@ -1135,8 +1186,8 @@ namespace Uncreated.Warfare
                         Commands.DutyCommand.InternOnToOff(player, names);
                 }
                 PlaytimeComponent? c = player.CSteamID.GetPlaytimeComponent(out bool gotptcomp);
-                Data.OriginalNames.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
-                ulong id = player.Player.channel.owner.playerID.steamID.m_SteamID;
+                Data.OriginalNames.Remove(s64);
+                ulong id = s64;
                 Chat.Broadcast("player_disconnected", names.CharacterName);
                 if (c != null)
                 {

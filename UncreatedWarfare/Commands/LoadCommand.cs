@@ -13,14 +13,16 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class Command_load : IRocketCommand
+    public class LoadCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "load";
         public string Help => "loads supplies into a logistics truck";
         public string Syntax => "/load";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.load" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.load" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

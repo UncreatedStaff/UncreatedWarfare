@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -49,9 +50,23 @@ namespace Uncreated.Networking
             //Logging.Log("Sending " + data.Length.ToString() + " bytes of data to " + Identity, ConsoleColor.DarkGray);
             if (!IsActive || _socket == null || _socket.Connected == false)
                 return;
-            if (_stream == null)
-                _stream = _socket.GetStream();
-            _stream.BeginWrite(data, 0, data.Length, WriteComplete, data);
+            try
+            {
+                if (_stream == null)
+                    _stream = _socket.GetStream();
+                _stream.BeginWrite(data, 0, data.Length, WriteComplete, data);
+            }
+            catch (IOException ex)
+            {
+                Logging.LogError($"Error writing to {NetworkID}, disconnecting.");
+                Logging.LogError(ex);
+                Disconnect();
+            }
+            catch (Exception ex)
+            {
+                Logging.LogError($"Error writing to {NetworkID}: ");
+                Logging.LogError(ex);
+            }
         }
         public void WriteComplete(IAsyncResult ar)
         {
@@ -98,7 +113,7 @@ namespace Uncreated.Networking
                     Disconnect();
                 }
             }
-            catch (System.IO.IOException)
+            catch (IOException)
             {
                 Disconnect();
             }

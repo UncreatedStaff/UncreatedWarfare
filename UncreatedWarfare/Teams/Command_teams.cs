@@ -5,14 +5,16 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Teams
 {
-    class Command_teams : IRocketCommand
+    class TeamsCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "teams";
         public string Help => "Pull up the Teams UI";
         public string Syntax => "/teams";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.teams" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>() { "uc.teams" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

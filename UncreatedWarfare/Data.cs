@@ -13,6 +13,7 @@ using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Point;
@@ -83,13 +84,13 @@ namespace Uncreated.Warfare
         public static Dictionary<string, Dictionary<string, TranslationData>> Localization;
         public static Dictionary<string, Dictionary<string, string>> DeathLocalization;
         public static Dictionary<string, Dictionary<ELimb, string>> LimbLocalization;
-        public static Dictionary<int, Zone> ExtraZones;
         public static Dictionary<string, Vector3> ExtraPoints;
         public static Dictionary<ulong, string> DefaultPlayerNames;
         public static Dictionary<ulong, FPlayerName> OriginalNames = new Dictionary<ulong, FPlayerName>();
         public static Dictionary<ulong, string> Languages;
         public static Dictionary<string, LanguageAliasSet> LanguageAliases;
         public static Dictionary<ulong, PlaytimeComponent> PlaytimeComponents = new Dictionary<ulong, PlaytimeComponent>();
+        internal static JsonZoneProvider ZoneProvider;
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
         public static List<Log> Logs;
@@ -108,28 +109,35 @@ namespace Uncreated.Warfare
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
         internal static ClientStaticMethod SendEffectClearAll { get; private set; }
         internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
-        internal static MethodInfo AppendConsoleMethod;
         internal static MethodInfo ReplicateStance;
         internal static FieldInfo PrivateStance;
         internal static FieldInfo ItemManagerInstanceCount;
-        internal static ConsoleInputOutputBase defaultIOHandler;
+        internal static ICommandInputOutput? defaultIOHandler;
         public static Reporter Reporter;
         internal static Client NetClient;
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
+        internal delegate void OutputToConsole(string value, ConsoleColor color);
+        internal static OutputToConsole? OutputToConsoleMethod;
         public static void LoadColoredConsole()
         {
             try
             {
                 FieldInfo defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
-                defaultIOHandler = (ConsoleInputOutputBase)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
-                AppendConsoleMethod = defaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
-                L.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
+                if (defaultIoHandlerFieldInfo != null)
+                {
+                    defaultIOHandler = (ICommandInputOutput)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
+                    MethodInfo appendConsoleMethod = defaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (appendConsoleMethod != null)
+                    {
+                        OutputToConsoleMethod = (OutputToConsole)appendConsoleMethod.CreateDelegate(typeof(OutputToConsole), defaultIOHandler);
+                        L.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
+                    }
+                }
             }
             catch (Exception ex)
             {
                 CommandWindow.LogError("Couldn't get defaultIOHandler from CommandWindow:");
                 CommandWindow.LogError(ex);
-                CommandWindow.LogError("The colored console will likely work in boring colors!");
             }
         }
         public static void ReloadTCP()
@@ -176,6 +184,8 @@ namespace Uncreated.Warfare
             F.CheckDir(TeamStorage, out _, true);
             F.CheckDir(OfficerStorage, out _, true);
 
+            ZoneProvider = new JsonZoneProvider(new FileInfo(Data.FlagStorage + "zones.json"));
+
             /* LOAD LOCALIZATION ASSETS */
             L.Log("Loading JSON Data...", ConsoleColor.Magenta);
             try
@@ -191,7 +201,7 @@ namespace Uncreated.Warfare
             {
                 DuplicateKeyError(ex);
                 return;
-            }
+            } 
 
             Quests.QuestManager.Init();
 
@@ -472,6 +482,7 @@ namespace Uncreated.Warfare
                     new Permission("uc.warn"),
                     new Permission("uc.whitelist"),
                     new Permission("uc.build"),
+                    new Permission("uc.mute"),
                     new Permission("uc.kit"),
                     new Permission("uc.ammo"),
                     new Permission("uc.squad"),
@@ -498,6 +509,7 @@ namespace Uncreated.Warfare
                     new Permission("uc.structure.examine"),
                     new Permission("uc.unban"),
                     new Permission("uc.warn"),
+                    new Permission("uc.mute"),
                     new Permission("uc.build"),
                     new Permission("uc.ammo"),
                     new Permission("uc.squad"),
@@ -527,7 +539,9 @@ namespace Uncreated.Warfare
                     new Permission("uc.unstuck"),
                     new Permission("uc.confirm"),
                     new Permission("uc.buy"),
-                    new Permission("uc.report")
+                    new Permission("uc.report"),
+                    new Permission("uc.structure"),
+                    new Permission("uc.structure.examine")
                 };
         }
     }

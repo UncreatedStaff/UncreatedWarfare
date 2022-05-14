@@ -541,8 +541,13 @@ namespace Uncreated.Warfare
 #endif
             UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(dead);
             if (ucplayer != null)
+            {
                 ucplayer.LifeCounter++;
+            }
 
+            PlaytimeComponent? c2 = dead.Player.GetPlaytimeComponent(out bool success);
+            if (c2 != null)
+                c2.lastShot = default;
             if (cause == EDeathCause.LANDMINE)
             {
                 SteamPlayer placer = PlayerTool.getSteamPlayer(murderer.m_SteamID);

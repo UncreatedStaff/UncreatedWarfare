@@ -68,10 +68,9 @@ namespace Uncreated.Warfare.Point
                     EffectManager.askEffectClearByID(XPConfig.RankUI, player.Player.channel.owner.transportConnection);
                     EffectManager.askEffectClearByID(TWConfig.MedalsUI, player.Player.channel.owner.transportConnection);
                 }
-
             }).ConfigureAwait(false);
         }
-        private static int[] LEVELS = new int[]
+        private static readonly int[] LEVELS = new int[]
         {
             1000,
             4000,
@@ -120,13 +119,13 @@ namespace Uncreated.Warfare.Point
             int lvl = GetLevel(xp);
             int start = GetLevelXP(lvl);
             xp -= start;
-            return (float)(GetNextLevelXP(lvl) - start) / xp;
+            return xp / (float)(GetNextLevelXP(lvl) - start);
         }
         /// <summary>Get the percentage from 0-1 a player is through their current level at the given <paramref name="xp"/> and <paramref name="lvl"/>.</summary>
         public static float GetLevelProgressXP(int xp, int lvl)
         {
-            int end = GetNextLevelXP(lvl);
-            return (float)(end - GetLevelXP(lvl)) / (end - xp);
+            int strt = GetLevelXP(lvl);
+            return (float)(xp - strt) / (GetNextLevelXP(lvl) - strt);
         }
         public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
         {
@@ -345,7 +344,6 @@ namespace Uncreated.Warfare.Point
             if (creator != null)
             {
                 AwardXP(creator, amount, Translation.Translate(translationKey, creator));
-                AwardTW(creator, amount);
             }
 
             if (fob.Placer != fob.Creator)

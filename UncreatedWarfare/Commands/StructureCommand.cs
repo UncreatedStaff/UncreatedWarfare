@@ -20,8 +20,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "structure";
         public string Help => "Managed saved structures.";
         public string Syntax => "/structure";
-        public List<string> Aliases => new List<string>(1) { "struct" };
-        public List<string> Permissions => new List<string>(1) { "uc.structure" };
+        private readonly List<string> _aliases = new List<string>(1) { "struct" };
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.structure" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

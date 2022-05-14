@@ -11,9 +11,9 @@ namespace Uncreated.Warfare
         {
             try
             {
-                if (Data.AppendConsoleMethod != null && Data.defaultIOHandler != null)
+                if (Data.OutputToConsoleMethod != null && Data.defaultIOHandler != null)
                 {
-                    Data.AppendConsoleMethod.Invoke(Data.defaultIOHandler, new object[] { text, color });
+                    Data.OutputToConsoleMethod.Invoke(text, color);
                 }
             }
             catch
@@ -43,7 +43,7 @@ namespace Uncreated.Warfare
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Gray || Data.AppendConsoleMethod == default)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Gray || Data.OutputToConsoleMethod == null)
                 {
                     CommandWindow.Log(info);
                 }
@@ -65,7 +65,7 @@ namespace Uncreated.Warfare
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Yellow || Data.AppendConsoleMethod == default)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Yellow || Data.OutputToConsoleMethod == null)
                 {
                     CommandWindow.LogWarning(warning);
                 }
@@ -87,7 +87,7 @@ namespace Uncreated.Warfare
         {
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.AppendConsoleMethod == default)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.OutputToConsoleMethod == null)
                 {
                     CommandWindow.LogError(error);
                 }
@@ -110,7 +110,7 @@ namespace Uncreated.Warfare
             string message = $"EXCEPTION - {ex.GetType().Name}\nSource: {filepath}::{method}( ... ) LN# {ln}\n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
             try
             {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.AppendConsoleMethod == default)
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.OutputToConsoleMethod == null)
                 {
                     CommandWindow.LogError(message);
                 }

@@ -164,7 +164,6 @@ namespace Uncreated.Warfare.Revives
                     if (ucmedic != null)
                     {
                         Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
-                        Points.AwardTW(ucmedic, Points.TWConfig.ReviveFriendlyTW);
                         if (uctarget != null)
                             QuestManager.OnRevive(ucmedic, uctarget);
                     }
@@ -233,9 +232,6 @@ namespace Uncreated.Warfare.Revives
                     shouldAllow = false;
                     return;
                 }
-                if (UCWarfare.Config.Debug)
-                    L.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while not downed.", ConsoleColor.DarkGray);
-
                 UCPlayer? player = UCPlayer.FromPlayer(parameters.player);
                 if (player != null && player.OnDuty())
                 {
@@ -261,15 +257,10 @@ namespace Uncreated.Warfare.Revives
                     float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
                     parameters = p.parameters;
                     parameters.damage *= UCWarfare.Config.InjuredDamageMultiplier / 10 * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
-                    if (UCWarfare.Config.Debug)
-                        L.Log(parameters.player.name + " took " + parameters.damage + " damage in the " + parameters.limb.ToString() + " while downed.", ConsoleColor.DarkGray);
                 }
                 else
                 {
                     shouldAllow = false;
-
-                    L.Log(parameters.player.name + " was damaged too soon after being downed.", ConsoleColor.DarkGray);
-
                 }
             }
         }

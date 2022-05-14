@@ -147,8 +147,7 @@ namespace Uncreated.Warfare.Vehicles
                             {
                                 if (Assets.find(k.id) is ItemAsset iasset)
                                 {
-                                    Item item = new Item(iasset.id, k.amount, 100)
-                                    { metadata = k.metadata };
+                                    Item item = new Item(iasset.id, k.amount, 100, F.CloneBytes(k.metadata));
                                     if (!vehicle.trunkItems.tryAddItem(item))
                                             ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
                                 }
@@ -797,6 +796,7 @@ namespace Uncreated.Warfare.Vehicles
             }
             return false;
         }
+        // TODO: gamemode blacklist not working
         public bool IsDelayed(out Delay delay)
         {
             delay = Delay.Nil;

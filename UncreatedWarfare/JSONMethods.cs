@@ -7,7 +7,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 
 namespace Uncreated.Warfare
 {
@@ -310,6 +309,7 @@ namespace Uncreated.Warfare
     {
         public const string DEFAULT_LANGUAGE = "en-us";
 
+        /*
         public static List<FlagData> LoadFlags()
         {
 #if DEBUG
@@ -385,7 +385,7 @@ namespace Uncreated.Warfare
 
         def:
             return DefaultFlags.ToList();
-        }
+        }*/
         public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
         {
 #if DEBUG
@@ -673,6 +673,7 @@ namespace Uncreated.Warfare
             }
             return languages;
         }
+        /*
         public static Dictionary<int, Zone> LoadExtraZones()
         {
 #if DEBUG
@@ -761,7 +762,7 @@ namespace Uncreated.Warfare
                 defaultXtraZones.Add(zone.id, Flag.ComplexifyZone(zone));
             }
             return defaultXtraZones;
-        }
+        }*/
         public static Dictionary<string, Vector3> LoadExtraPoints()
         {
 #if DEBUG

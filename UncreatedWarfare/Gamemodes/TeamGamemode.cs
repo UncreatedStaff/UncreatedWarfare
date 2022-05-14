@@ -109,7 +109,7 @@ namespace Uncreated.Warfare.Gamemodes
         {
             if (Assets.find(Config.MapConfig.T1ZoneBlocker) is ItemBarricadeAsset t1)
                 _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t1),
-                    TeamManager.Team1Main.Center3DAbove, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
+                    TeamManager.Team1Main.Center3D + Vector3.up, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
         }
         public void DestoryBlockerOnT1()
         {
@@ -231,16 +231,16 @@ namespace Uncreated.Warfare.Gamemodes
         {
             if (Assets.find(Config.MapConfig.T1ZoneBlocker) is ItemBarricadeAsset t1)
                 _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t1),
-                    TeamManager.Team1Main.Center3DAbove, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
+                    TeamManager.Team1Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
             if (Assets.find(Config.MapConfig.T2ZoneBlocker) is ItemBarricadeAsset t2)
                 _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t2),
-                    TeamManager.Team2Main.Center3DAbove, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
+                    TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
         }
         public void SpawnBlockerOnT2()
         {
             if (Assets.find(Config.MapConfig.T2ZoneBlocker) is ItemBarricadeAsset t2)
                 _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t2),
-                    TeamManager.Team2Main.Center3DAbove, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
+                    TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
         }
         public override void OnPlayerDeath(UCWarfare.DeathEventArgs args)
         {

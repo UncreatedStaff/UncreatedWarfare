@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -24,12 +25,6 @@ namespace Uncreated.Warfare.Teams
 
         public TeamManager()
         {
-            if (!KitManager.KitExists(_data.data.team1unarmedkit, out _))
-                L.LogError("Team 1's unarmed kit, \"" + _data.data.team1unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(_data.data.team2unarmedkit, out _))
-                L.LogError("Team 2's unarmed kit, \"" + _data.data.team2unarmedkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
-            if (!KitManager.KitExists(_data.data.defaultkit, out _))
-                L.LogError("The default kit, \"" + _data.data.defaultkit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             object val = typeof(GroupManager).GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic);
             if (val is Dictionary<CSteamID, GroupInfo> val2)
             {
@@ -110,50 +105,162 @@ namespace Uncreated.Warfare.Teams
             _t2main = null;
             _t2amc = null;
             _lobbyZone = null;
+
+            // cache them all
+            _ = LobbyZone;
+            _ = Team1Main;
+            _ = Team2Main;
+            _ = Team1AMC;
+            _ = Team2AMC;
         }
         public static Zone Team1Main
         {
             get
             {
-                if (_t1main == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(1, out _t1main)))
-                    _t1main = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[1]);
-                return _t1main;
+                if (_t1main == null)
+                {
+                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
+                    {
+                        if (Data.ZoneProvider.Zones[i].Data.UseCase == EZoneUseCase.T1_MAIN)
+                        {
+                            _t1main = Data.ZoneProvider.Zones[i];
+                            break;
+                        }
+                    }
+                    if (_t1main == null)
+                    {
+                        L.LogWarning("There is no defined Team 1 base. Using default instead.");
+                        for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
+                        {
+                            if (JSONMethods.DefaultZones[i].UseCase == EZoneUseCase.T1_MAIN)
+                            {
+                                _t1main = JSONMethods.DefaultZones[i].GetZone();
+                                break;
+                            }
+                        }
+                    }
+                }
+                return _t1main!;
             }
         }
         public static Zone Team2Main
         {
             get
             {
-                if (_t2main == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(2, out _t2main)))
-                        _t2main = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[2]);
-                return _t2main;
+                if (_t2main == null)
+                {
+                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
+                    {
+                        if (Data.ZoneProvider.Zones[i].Data.UseCase == EZoneUseCase.T2_MAIN)
+                        {
+                            _t2main = Data.ZoneProvider.Zones[i];
+                            break;
+                        }
+                    }
+                    if (_t2main == null)
+                    {
+                        L.LogWarning("There is no defined Team 2 base. Using default instead.");
+                        for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
+                        {
+                            if (JSONMethods.DefaultZones[i].UseCase == EZoneUseCase.T2_MAIN)
+                            {
+                                _t2main = JSONMethods.DefaultZones[i].GetZone();
+                                break;
+                            }
+                        }
+                    }
+                }
+                return _t2main!;
             }
         }
         public static Zone Team1AMC
         {
             get
             {
-                if (_t1amc == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(101, out _t1amc)))
-                    _t1amc = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[101]);
-                return _t1amc;
+                if (_t1amc == null)
+                {
+                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
+                    {
+                        if (Data.ZoneProvider.Zones[i].Data.UseCase == EZoneUseCase.T1_AMC)
+                        {
+                            _t1amc = Data.ZoneProvider.Zones[i];
+                            break;
+                        }
+                    }
+                    if (_t1amc == null)
+                    {
+                        L.LogWarning("There is no defined Team 1 AMC. Using default instead.");
+                        for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
+                        {
+                            if (JSONMethods.DefaultZones[i].UseCase == EZoneUseCase.T1_AMC)
+                            {
+                                _t1amc = JSONMethods.DefaultZones[i].GetZone();
+                                break;
+                            }
+                        }
+                    }
+                }
+                return _t1amc!;
             }
         }
         public static Zone Team2AMC
         {
             get
             {
-                if (_t2amc == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(102, out _t2amc)))
-                    _t2amc = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[102]);
-                return _t2amc;
+                if (_t2amc == null)
+                {
+                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
+                    {
+                        if (Data.ZoneProvider.Zones[i].Data.UseCase == EZoneUseCase.T2_AMC)
+                        {
+                            _t2amc = Data.ZoneProvider.Zones[i];
+                            break;
+                        }
+                    }
+                    if (_t2amc == null)
+                    {
+                        L.LogWarning("There is no defined Team 2 AMC. Using default instead.");
+                        for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
+                        {
+                            if (JSONMethods.DefaultZones[i].UseCase == EZoneUseCase.T2_AMC)
+                            {
+                                _t2amc = JSONMethods.DefaultZones[i].GetZone();
+                                break;
+                            }
+                        }
+                    }
+                }
+                return _t2amc!;
             }
         }
         public static Zone LobbyZone
         {
             get
             {
-                if (_lobbyZone == null && (Data.ExtraZones == null || !Data.ExtraZones.TryGetValue(-69, out _lobbyZone)))
-                    _lobbyZone = Flag.ComplexifyZone(JSONMethods.DefaultExtraZones[-69]);
-                return _lobbyZone;
+                if (_lobbyZone == null)
+                {
+                    for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
+                    {
+                        if (Data.ZoneProvider.Zones[i].Data.UseCase == EZoneUseCase.LOBBY)
+                        {
+                            _lobbyZone = Data.ZoneProvider.Zones[i];
+                            break;
+                        }
+                    }
+                    if (_lobbyZone == null)
+                    {
+                        L.LogWarning("There is no defined lobby zone. Using default instead.");
+                        for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
+                        {
+                            if (JSONMethods.DefaultZones[i].UseCase == EZoneUseCase.LOBBY)
+                            {
+                                _lobbyZone = JSONMethods.DefaultZones[i].GetZone();
+                                break;
+                            }
+                        }
+                    }
+                }
+                return _lobbyZone!;
             }
         }
         public static Vector3 LobbySpawn

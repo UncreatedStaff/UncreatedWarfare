@@ -1,8 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
-using FlagData = Uncreated.Warfare.Gamemodes.Flags.FlagData;
 
 namespace Uncreated.Warfare
 {
@@ -525,6 +525,7 @@ namespace Uncreated.Warfare
                 { "request_kit_e_signnoexist", "<color=#a8918a>This is not a request sign.</color>" },
                 { "request_kit_e_kitnoexist", "<color=#a8918a>This kit has not been created yet.</color>" },
                 { "request_kit_e_alreadyhaskit", "<color=#a8918a>You already have this kit.</color>" },
+                { "request_kit_e_notallowed", "<color=#a8918a>You do not have access to this kit.</color>" },
                 { "request_kit_e_notboughtcredits", "<color=#99918d>Look at this sign and type '<color=#ffe2ab>/buy</color>' to unlock this kit permanently for <color=#b8ffc1>C </color><color=#ffffff>{0}</color></color>" },
                 { "request_kit_e_notenoughcredits", "<color=#a8918a>You are missing <color=#b8ffc1>C </color><color=#ffffff>{0}</color> needed to unlock this kit.</color>" },
                 { "request_kit_e_notbuyablecredits", "<color=#a8918a>This kit cannot be purchased with credits.</color>" },
@@ -560,6 +561,7 @@ namespace Uncreated.Warfare
                 { "request_vehicle_e_wrongbranch", "<color=#b3ab9f>You must be a part of <color=#fcbda4>{0}</color> to request this vehicle.</color>" },
                 { "request_vehicle_e_alreadyrequested", "<color=#a8918a>This vehicle has already been requested.</color>" },
                 { "request_vehicle_e_already_owned", "<color=#a8918a>You have already requested a nearby vehicle.</color>" },
+                { "request_vehicle_e_unknown_delay", "<color=#b3ab9f>This vehicle is delayed because: <color=#94cfff>{0}</color>.</color>" },
                 { "request_vehicle_given", "<color=#b3a591>This <color=#ffe2ab>{0}</color> is now yours to take into battle.</color>" },
                 { "request_vehicle_bought", "<color=#c4a36a>Vehicle bought for <color=#b8ffc1>C </color><color=#ffffff>{0}</color>. Request it with '<color=#b3b0ab>/request</color>'.</color>" },
 
@@ -681,6 +683,7 @@ namespace Uncreated.Warfare
                 { "shutdown_not_server", "<color=#9cffb3>This is not a server.</color>" },
                 { "shutdown_syntax", "<color=#9cffb3>Corrent syntax: /shutdown <aftergame|*seconds*|instant> <reason>.</color>" },
                 { "shutdown_broadcast_after_game", "<color=#00ffff>A shutdown has been scheduled after this game because: \"<color=#6699ff>{0}</color>\".</color>" },
+                { "shutdown_broadcast_after_game_daily", "<color=#00ffff>A daily restart will occur after this game. Down-time estimate: <color=#6699ff>2 minutes</color>.</color>" },
                 { "shutdown_broadcast_after_game_canceled", "<color=#00ffff>The scheduled shutdown has been canceled.</color>" },
                 { "shutdown_broadcast_after_game_canceled_console", "The scheduled shutdown was canceled." },
                 { "shutdown_broadcast_after_game_canceled_console_player", "The scheduled shutdown was canceled by {0}." },
@@ -963,30 +966,317 @@ namespace Uncreated.Warfare
                 { "tip_help_build", "<color=#d9c69a>{0} needs help building!</color>" },
                 { "tip_logi_resupplied", "Your {0} has been auto resupplied." },
 
-                
+                // Zones
+
+                { "zone_syntax", "<color=#ff8c69>Syntax: /zone <visualize|go|edit|list|create|util></color>" },
+                { "zone_visualize_no_results", "<color=#ff8c69>You aren't in any existing zone.</color>" },
+                { "zone_go_no_results", "<color=#ff8c69>Couldn't find a zone by that name.</color>" },
+                { "zone_go_success", "<color=#e6e3d5>Teleported to <color=#5a6e5c>{0}</color>.</color>" },
+                { "zone_visualize_success", "<color=#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.</color>" },
+                { "enter_zone_test", "<color=#e6e3d5>You've entered the zone <color=#cedcde>{0}</color>.</color>" },
+                { "exit_zone_test", "<color=#e6e3d5>You've exited the zone <color=#cedcde>{0}</color>.</color>" },
+
+                // zone create
+                { "create_zone_syntax", "<color=#ff8c69>Syntax: /zone create <polygon|rectangle|circle> <name>.</color>" },
+                { "create_zone_success", "<color=#e6e3d5>Started zone builder for {0}, a {1} zone.</color>" },
+                { "create_zone_name_taken", "<color=#ff8c69>\"{0}\" is already in use by another zone.</color>" },
+                { "create_zone_name_taken_2", "<color=#ff8c69>\"{0}\" is already in use by another zone being created by {1}.</color>" },
+
+                // zone edit
+                { "edit_zone_syntax", "<color=#ff8c69>Syntax: /zone edit <existing|maxheight|minheight|finalize|cancel|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|shortname|type> [value]</color>" },
+                { "edit_zone_not_started", "<color=#ff8c69>Start creating a zone with <color=#ffffff>/zone create <polygon|rectangle|circle> <name></color>.</color>" },
+                { "edit_zone_finalize_exists", "<color=#e6e3d5>There's already a zone saved with that id.</color>" },
+                { "edit_zone_finalize_success", "<color=#e6e3d5>Successfully finalized and saved {0}.</color>" },
+                { "edit_zone_finalize_failure", "<color=#ff8c69>The provided zone data was invalid because: <color=#ffffff>{0}</color></color>" },
+                { "edit_zone_finalize_use_case", "<color=#ff8c69>Before saving you must set a use case with /zone edit use case <type>: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".</color>" },
+                { "edit_zone_finalize_success_overwrite", "<color=#e6e3d5>Successfully overwrote {0}.</color>" },
+                { "edit_zone_cancel_success", "<color=#e6e3d5>Successfully cancelled making {0}.</color>" },
+                { "edit_zone_finalize_error", "<color=#ff8c69>There was a problem finalizing your zone: \"{0}\".</color>" },
+                { "edit_zone_maxheight_badvalue", "<color=#ff8c69>Maximum Height must be a decimal or whole number, or leave it blank to use the player's current height.</color>" },
+                { "edit_zone_maxheight_success", "<color=#e6e3d5>Set maximum height to {0}.</color>" },
+                { "edit_zone_minheight_badvalue", "<color=#ff8c69>Minimum Height must be a decimal or whole number, or leave it blank to use the player's current height.</color>" },
+                { "edit_zone_minheight_success", "<color=#e6e3d5>Set minimum height to {0}.</color>" },
+                { "edit_zone_type_badvalue", "<color=#ff8c69>Type must be rectangle, circle, or polygon.</color>" },
+                { "edit_zone_type_already_set", "<color=#ff8c69>This zone is already a {0}.</color>" },
+                { "edit_zone_type_success", "<color=#e6e3d5>Set type to {0}.</color>" },
+                { "edit_zone_addpoint_badvalues", "<color=#ff8c69>Adding a point requires X and Z parameters, or leave them blank to use the player's current position.</color>" },
+                { "edit_zone_addpoint_success", "<color=#e6e3d5>Added point #{0} at {1}.</color>" },
+                { "edit_zone_delpoint_badvalues", "<color=#ff8c69>Deleting a point requires either: nearby X and Z parameters, a point number, or leave them blank to use the player's current position.</color>" },
+                { "edit_zone_point_number_not_point", "<color=#ff8c69>Point #{0} is not defined.</color>" },
+                { "edit_zone_point_none_nearby", "<color=#ff8c69>There is no point near {0}.</color>" },
+                { "edit_zone_delpoint_success", "<color=#e6e3d5>Removed point #{0} at {1}.</color>" },
+                { "edit_zone_setpoint_badvalues", "<color=#ff8c69>Moving a point requires either: <nearby src x> <nearby src z> <dest x> <dest z>, <pt num> (destination is player position }, <pt num> <dest x> <dest z>, or <nearby src x> <nearby src z> (destination is nearby player).</color>" },
+                { "edit_zone_setpoint_success", "<color=#e6e3d5>Moved point #{0} from {1} to {2}.</color>" },
+                { "edit_zone_radius_badvalue", "<color=#ff8c69>Radius must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.</color>" },
+                { "edit_zone_radius_success", "<color=#e6e3d5>Set radius to {0}.</color>" },
+                { "edit_zone_sizex_badvalue", "<color=#ff8c69>Size X must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.</color>" },
+                { "edit_zone_sizex_success", "<color=#e6e3d5>Set size x to {0}.</color>" },
+                { "edit_zone_sizez_badvalue", "<color=#ff8c69>Size Z must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.</color>" },
+                { "edit_zone_sizez_success", "<color=#e6e3d5>Set size z to {0}.</color>" },
+                { "edit_zone_center_badvalue", "<color=#ff8c69>To set center you must provide two decimal or whole numbers, or leave them blank to use the player's current position.</color>" },
+                { "edit_zone_center_success", "<color=#e6e3d5>Set center position to {0}.</color>" },
+                { "edit_zone_clearpoints_success", "<color=#e6e3d5>Cleared all polygon points.</color>" },
+                { "edit_zone_name_badvalue", "<color=#ff8c69>Name requires one string argument. Quotation marks aren't required.</color>" },
+                { "edit_zone_name_success", "<color=#e6e3d5>Set name to \"{0}\".</color>" },
+                { "edit_zone_short_name_badvalue", "<color=#ff8c69>Short name requires one string argument. Quotation marks aren't required.</color>" },
+                { "edit_zone_short_name_success", "<color=#e6e3d5>Set short name to \"{0}\".</color>" },
+                { "edit_zone_existing_badvalue", "<color=#ff8c69>Edit existing zone requires the zone name as a parameter. Alternatively stand in the zone (without overlapping another).</color>" },
+                { "edit_zone_existing_in_progress", "<color=#ff8c69>Cancel or finalize the zone you're currently editing first.</color>" },
+                { "edit_zone_existing_success", "<color=#e6e3d5>Started editing zone {0}, a {1} zone.</color>" },
+                { "edit_zone_use_case_badvalue", "<color=#ff8c69>Use case requires one string argument: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".</color>" },
+                { "edit_zone_use_case_success", "<color=#e6e3d5>Set use case to \"{0}\".</color>" },
+
+
+                // edit zone ui
+                { "edit_zone_ui_suggested_command_1", "/zone edit maxheight [value]" },
+                { "edit_zone_ui_suggested_command_2", "/zone edit minheight [value]" },
+                { "edit_zone_ui_suggested_command_3", "/zone edit finalize" },
+                { "edit_zone_ui_suggested_command_4", "/zone edit cancel" },
+                { "edit_zone_ui_suggested_command_5_p", "/zone edit addpt [x z]" },
+                { "edit_zone_ui_suggested_command_6_p", "/zone edit delpt [number | x z]" },
+                { "edit_zone_ui_suggested_command_7_p", "/zone edit setpt <number | src: x z | number dest: x z | src: x z dest: x z>" },
+                { "edit_zone_ui_suggested_command_8_p", "/zone edit orderpt <from-index to-index | to-index | src: x z to-index>" },
+                { "edit_zone_ui_suggested_command_9_c", "/zone edit radius [value]" },
+                { "edit_zone_ui_suggested_command_10_r", "/zone edit sizex [value]" },
+                { "edit_zone_ui_suggested_command_11_r", "/zone edit sizez [value]" },
+                { "edit_zone_ui_suggested_command_12", "/zone util location" },
+                { "edit_zone_ui_suggested_command_13", "/zone edit type <rectangle | circle | polygon>" },
+                { "edit_zone_ui_suggested_command_14_p", "/zone edit clearpoints" },
+                { "edit_zone_ui_suggested_commands", "Suggested Commands" },
+                { "edit_zone_ui_y_limits", "Y: {0} - {1}" },
+                { "edit_zone_ui_y_limits_infinity", "∞" },
+
+                // zone util
+                { "util_zone_syntax", "<color=#ff8c69>Syntax: /zone util <location></color>" },
+                { "util_zone_location", "<color=#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.</color>" },
             };
         }
 
         public static Dictionary<string, string> DefaultTranslations;
-        public static readonly List<FlagData> DefaultFlags = new List<FlagData>
+        public static readonly List<ZoneModel> DefaultZones;
+        static JSONMethods()
         {
-            new FlagData(1, "AmmoHill", "", -89, 297, new ZoneData("rectangle", "86,68"), true, -1, -1),
-            new FlagData(2, "Hilltop", "", 258, 497, new ZoneData("rectangle", "66,72"), true, -1, -1),
-            new FlagData(3, "Papanov", "", 754, 759, new ZoneData("polygon", "635,738,713,873,873,780,796,645"), true, -1, -1),
-            new FlagData(4, "Verto", "", 624, 469, new ZoneData("polygon", "500,446,514,527,710,492,748,466,710,411"), true, -1, -1),
-            new FlagData(5, "Hill123", "", 631, 139, new ZoneData("rectangle", "44,86"), true, -1, -1),
-            new FlagData(6, "Hill13", "", 338, -15, new ZoneData("circle", "35"), true, -1, -1),
-            new FlagData(7, "Mining", "", 52.5f, -215, new ZoneData("polygon", "7,-283,-6,-270,-6,-160,7,-147,72,-147,111,-160,111,-257,104,-264,40,-283"), true, -1, -1),
-            new FlagData(8, "Fortress", "", -648.5f, 102.5f, new ZoneData("rectangle", "79,47"), true, -1, -1)
-        };
-        public static List<FlagData> DefaultExtraZones = new List<FlagData> 
-        {
-            new FlagData(-69, "lobby", "", 713.1f, -991, new ZoneData("rectangle", "12.2,12"), false, -1, -1),
-            new FlagData(1, "T1Main", "", 823, -880.5f, new ZoneData("rectangle", "120,189"), true, -1, -1),
-            new FlagData(101, "T1AMC", "", 717.5f, -697.5f, new ZoneData("rectangle", "613,653"), true, -1, -1),
-            new FlagData(2, "T2Main", "", -823, 876.5f, new ZoneData("rectangle", "120,189"), true, -1, -1),
-            new FlagData(102, "T2AMC", "", -799, 744.5f, new ZoneData("rectangle", "450,559"), true, -1, -1),
-        };
+            DefaultZones = new List<ZoneModel>(8);
+            ZoneModel mdl = new ZoneModel()
+            {
+                Id = 1,
+                Name = "Ammo Hill",
+                X = -89,
+                Z = 297,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.FLAG
+            };
+            mdl.ZoneData.SizeX = 86;
+            mdl.ZoneData.SizeZ = 68;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 2,
+                Name = "Hilltop",
+                X = 258,
+                Z = 497,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.FLAG
+            };
+            mdl.ZoneData.SizeX = 66;
+            mdl.ZoneData.SizeZ = 72;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 3,
+                Name = "Papanov",
+                X = 754,
+                Z = 759,
+                ZoneType = EZoneType.POLYGON,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.FLAG
+            };
+            mdl.ZoneData.Points = new UnityEngine.Vector2[]
+            {
+                new UnityEngine.Vector2(635, 738),
+                new UnityEngine.Vector2(713, 873),
+                new UnityEngine.Vector2(873, 780),
+                new UnityEngine.Vector2(796, 645)
+            };
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 4,
+                Name = "Verto",
+                X = 624,
+                Z = 469,
+                ZoneType = EZoneType.POLYGON,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.FLAG
+            };
+            mdl.ZoneData.Points = new UnityEngine.Vector2[]
+            {
+                new UnityEngine.Vector2(500, 446),
+                new UnityEngine.Vector2(514, 527),
+                new UnityEngine.Vector2(710, 492),
+                new UnityEngine.Vector2(748, 466),
+                new UnityEngine.Vector2(710, 411)
+            };
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 5,
+                Name = "Hill123",
+                X = 631,
+                Z = 139,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.FLAG
+            };
+            mdl.ZoneData.SizeX = 44;
+            mdl.ZoneData.SizeZ = 86;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 6,
+                Name = "Hill123",
+                X = 338,
+                Z = -15,
+                ZoneType = EZoneType.CIRCLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.FLAG
+            };
+            mdl.ZoneData.Radius = 35;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 7,
+                Name = "Mining",
+                X = 52.5f,
+                Z = -215,
+                ZoneType = EZoneType.POLYGON,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.FLAG
+            };
+            mdl.ZoneData.Points = new UnityEngine.Vector2[]
+            {
+                new UnityEngine.Vector2(7,-283),
+                new UnityEngine.Vector2(-6,-270),
+                new UnityEngine.Vector2(-6,-160),
+                new UnityEngine.Vector2(7,-147),
+                new UnityEngine.Vector2(72,-147),
+                new UnityEngine.Vector2(111,-160),
+                new UnityEngine.Vector2(111,-257),
+                new UnityEngine.Vector2(104,-264),
+                new UnityEngine.Vector2(40,-283)
+            };
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 8,
+                Name = "Fortress",
+                X = -648.5f,
+                Z = 102.5f,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.FLAG
+            };
+            mdl.ZoneData.SizeX = 79;
+            mdl.ZoneData.SizeZ = 47;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 9,
+                Name = "Lobby",
+                X = 713.1f,
+                Z = -991,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = false,
+                UseCase = EZoneUseCase.LOBBY
+            };
+            mdl.ZoneData.SizeX = 12.2f;
+            mdl.ZoneData.SizeZ = 12;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 10,
+                Name = "US Main Base",
+                ShortName = "US Main",
+                X = 823,
+                Z = -880.5f,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.T1_MAIN
+            };
+            mdl.ZoneData.SizeX = 120;
+            mdl.ZoneData.SizeZ = 189;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 11,
+                Name = "US AMC Zone",
+                ShortName = "US AMC",
+                X = 717.5f,
+                Z = -697.5f,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.T1_AMC
+            };
+            mdl.ZoneData.SizeX = 613;
+            mdl.ZoneData.SizeZ = 653;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 12,
+                Name = "Russian Main Base",
+                ShortName = "RU Main",
+                X = -823,
+                Z = 876.5f,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.T2_MAIN
+            };
+            mdl.ZoneData.SizeX = 120;
+            mdl.ZoneData.SizeZ = 189;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+            mdl = new ZoneModel()
+            {
+                Id = 13,
+                Name = "Russian AMC Zone",
+                ShortName = "RU AMC",
+                X = -799,
+                Z = 744.5f,
+                ZoneType = EZoneType.RECTANGLE,
+                UseMapCoordinates = true,
+                UseCase = EZoneUseCase.T2_AMC
+            };
+            mdl.ZoneData.SizeX = 450;
+            mdl.ZoneData.SizeZ = 559;
+            mdl.ValidateRead();
+            DefaultZones.Add(mdl);
+
+        }
         public static List<Point3D> DefaultExtraPoints = new List<Point3D>
         {
             new Point3D("lobby_spawn", 713.1f, 39f, -991)

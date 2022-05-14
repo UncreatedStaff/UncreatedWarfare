@@ -39,8 +39,7 @@ namespace Uncreated.Warfare.Kits
                 {
                     if (Assets.find(k.id) is ItemAsset asset)
                     {
-                        Item item = new Item(asset.id, k.amount, 100);
-                        item.metadata = k.metadata;
+                        Item item = new Item(asset.id, k.amount, 100, F.CloneBytes(k.metadata));
 
                         if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
                             player.Inventory.tryAddItem(item, true);

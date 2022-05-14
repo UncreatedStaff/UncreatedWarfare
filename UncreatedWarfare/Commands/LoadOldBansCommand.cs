@@ -12,8 +12,10 @@ namespace Uncreated.Warfare.Commands
         public string Name => "loadbans";
         public string Help => "Load any current bans.";
         public string Syntax => "/loadbans";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.loadbans" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.loadbans" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
             if (SteamBlacklist.list.Count == 0)

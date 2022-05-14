@@ -200,6 +200,12 @@ namespace Uncreated.Networking
         }
         public unsafe void WriteComplete(IAsyncResult ar)
         {
+            if (_stream == null)
+            {
+                LogAndReconnect();
+                ar.AsyncWaitHandle.Dispose();
+                return;
+            }
             try
             {
                 _stream.EndWrite(ar);

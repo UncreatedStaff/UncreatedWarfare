@@ -7,14 +7,16 @@ using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class Command_rally : IRocketCommand
+    public class RallyCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "rally";
         public string Help => "Deploys you to a rallypoint";
         public string Syntax => "/rally";
-        public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string>() { "uc.rally" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>() { "uc.rally" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

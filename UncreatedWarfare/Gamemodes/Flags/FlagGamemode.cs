@@ -55,11 +55,15 @@ namespace Uncreated.Warfare.Gamemodes.Flags
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            List<FlagData> data = JSONMethods.LoadFlags();
             _allFlags.Clear();
-            _allFlags.Capacity = data.Count;
-            for (int i = 0; i < data.Count; i++)
-                _allFlags.Add(new Flag(data[i], this) { index = -1 });
+            _allFlags.Capacity = Data.ZoneProvider.Zones.Count;
+            for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
+            {
+                if (Data.ZoneProvider.Zones[i].Data.UseCase == EZoneUseCase.FLAG)
+                {
+                    _allFlags.Add(new Flag(Data.ZoneProvider.Zones[i], this) { index = -1 });
+                }
+            }
             _allFlags.Sort((Flag a, Flag b) => a.ID.CompareTo(b.ID));
         }
         public virtual void OnEvaluate()

@@ -7,6 +7,7 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
 {
@@ -43,7 +44,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             else 
                 SpawnBlockerOnT2();
             if (firstFlag != null)
-                _vcp = FOBManager.RegisterNewSpecialFOB(Config.Invasion.SpecialFOBName, firstFlag.ZoneData.Center3DAbove, _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
+                _vcp = FOBManager.RegisterNewSpecialFOB(Config.Invasion.SpecialFOBName, new Vector3(firstFlag.ZoneData.Center.x, F.GetHeight(firstFlag.ZoneData.Center, firstFlag.ZoneData.MinHeight) + 2f, firstFlag.ZoneData.Center.y), _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
             StartStagingPhase(Config.Invasion.StagingTime);
         }
 

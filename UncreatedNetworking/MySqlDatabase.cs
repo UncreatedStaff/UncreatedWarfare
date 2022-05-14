@@ -43,10 +43,8 @@ namespace Uncreated.SQL
         /// <inheritdoc />
         public void Dispose()
         {
-            _threadLocker.Wait();
             Close();
             SQL.Dispose();
-            _threadLocker.Release();
             _threadLocker.Dispose();
         }
         /// <summary>

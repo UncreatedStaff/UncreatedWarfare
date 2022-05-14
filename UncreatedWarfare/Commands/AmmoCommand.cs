@@ -13,14 +13,16 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class Command_ammo : IRocketCommand
+    public class AmmoCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "ammo";
         public string Help => "resupplies your kit";
         public string Syntax => "/ammo";
-        public List<string> Aliases => new List<string>(0);
-        public List<string> Permissions => new List<string>(1) { "uc.ammo" };
+        private readonly List<string> _aliases = new List<string>(0);
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.ammo" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
 #if DEBUG

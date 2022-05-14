@@ -41,6 +41,13 @@ namespace Uncreated.Warfare
                 return color;
             else return Color.white;
         }
+        public static byte[] CloneBytes(byte[] src)
+        {
+            int length = src.Length;
+            byte[] output = new byte[length];
+            Buffer.BlockCopy(src, 0, output, 0, length);
+            return output;
+        }
         public static string FilterRarityToHex(string color)
         {
             if (color == null)
@@ -107,28 +114,28 @@ namespace Uncreated.Warfare
             for (int i = 0; i < groups.Count; i++)
             {
                 RocketPermissionsGroup grp = groups[i];
-                if (grp.Id == "default") continue;
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup)
+                if (grp.Id.Equals("default", StringComparison.Ordinal)) continue;
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.ADMIN_OFF_DUTY) == EAdminType.ADMIN_OFF_DUTY) return true;
                     continue;
                 }
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup)
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.ADMIN_ON_DUTY) == EAdminType.ADMIN_ON_DUTY) return true;
                     continue;
                 }
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup)
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.TRIAL_ADMIN_OFF_DUTY) == EAdminType.TRIAL_ADMIN_OFF_DUTY) return true;
                     continue;
                 }
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup)
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY) return true;
                     continue;
                 }
-                if (grp.Id == UCWarfare.Config.AdminLoggerSettings.HelperGroup)
+                if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.HelperGroup, StringComparison.Ordinal))
                 {
                     if ((type & EAdminType.HELPER) == EAdminType.HELPER) return true;
                     continue;
@@ -193,22 +200,22 @@ namespace Uncreated.Warfare
         public static bool IsHelper(this IRocketPlayer player) => player.PermissionCheck(EAdminType.HELPER);
         /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
         /// <param name="duration">Duration of ban IN SECONDS</param>
-        public static void OfflineBan(ulong BannedID, uint IPAddress, CSteamID BannerID, string reason, uint duration)
+        public static void OfflineBan(ulong offender, uint ipAddress, CSteamID banner, string reason, uint duration)
         {
-            CSteamID banned = new CSteamID(BannedID);
+            CSteamID banned = new CSteamID(offender);
             Provider.ban(banned, reason, duration);
             for (int index = 0; index < SteamBlacklist.list.Count; ++index)
             {
-                if (SteamBlacklist.list[index].playerID.m_SteamID == BannedID)
+                if (SteamBlacklist.list[index].playerID.m_SteamID == offender)
                 {
-                    SteamBlacklist.list[index].judgeID = BannerID;
+                    SteamBlacklist.list[index].judgeID = banner;
                     SteamBlacklist.list[index].reason = reason;
                     SteamBlacklist.list[index].duration = duration;
                     SteamBlacklist.list[index].banned = Provider.time;
                     return;
                 }
             }
-            SteamBlacklist.list.Add(new SteamBlacklistID(banned, IPAddress, BannerID, reason, duration, Provider.time));
+            SteamBlacklist.list.Add(new SteamBlacklistID(banned, ipAddress, banner, reason, duration, Provider.time));
         }
         public static string An(this string word)
         {
@@ -272,7 +279,6 @@ namespace Uncreated.Warfare
             else if (groupID == TeamManager.AdminID) return 3;
             else return 0;
         }
-        public static Vector3 GetBaseSpawn(this SteamPlayer player, out ulong team) => player.player.GetBaseSpawn(out team);
         public static Vector3 GetBaseSpawn(this Player player)
         {
             if (!Data.Is<ITeams>(out _)) return TeamManager.LobbySpawn;
@@ -393,10 +399,28 @@ namespace Uncreated.Warfare
             }
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
         }
-        public static float GetTerrainHeightAt2DPoint(Vector2 position, float above = 0) => GetTerrainHeightAt2DPoint(position.x, position.y, above: above);
         public static float GetTerrainHeightAt2DPoint(float x, float z, float above = 0)
         {
             return LevelGround.getHeight(new Vector3(x, 0, z)) + above;
+        }
+        internal static float GetHeight(Vector2 point, float minHeight) => GetHeight(new Vector3(point.x, 0f, point.y), minHeight);
+        internal static float GetHeight(Vector3 point, float minHeight)
+        {
+            float height;
+            if (Physics.Raycast(new Ray(new Vector3(point.x, Level.HEIGHT, point.z), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+            {
+                height = hit.point.y;
+                if (!float.IsNaN(minHeight))
+                    return Mathf.Max(height, minHeight);
+                return height;
+            }
+            else
+            {
+                height = LevelGround.getHeight(point);
+                if (!float.IsNaN(minHeight))
+                    return Mathf.Max(height, minHeight);
+                else return height;
+            }
         }
         public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
         {
@@ -472,15 +496,19 @@ namespace Uncreated.Warfare
             }
             return sb.ToString();
         }
-        public static void TriggerEffectReliable(ushort ID, CSteamID player, Vector3 Position)
+        public static void TriggerEffectReliable(ushort ID, CSteamID player, Vector3 position)
         {
             TriggerEffectParameters p = new TriggerEffectParameters(ID)
             {
-                position = Position,
+                position = position,
                 reliable = true,
                 relevantPlayerID = player
             };
             EffectManager.triggerEffect(p);
+        }
+        public static void TriggerEffectReliable(EffectAsset asset, ITransportConnection connection, Vector3 position)
+        {
+            EffectManager.sendEffectReliable(asset.id, connection, position);
         }
         public static bool SavePhotoToDisk(string path, Texture2D texture)
         {
@@ -688,17 +716,8 @@ namespace Uncreated.Warfare
 #endif
             if (player != null && Data.Is(out IFlagRotation fg))
             {
-                if (fg.OnFlag == null)
+                if (fg.OnFlag == null || fg.Rotation == null)
                 {
-                    L.LogError("onflag null");
-                    if (fg.Rotation == null) L.LogError("rot null");
-                    flag = null!;
-                    return false;
-                }
-                else if (fg.Rotation == null)
-                {
-                    L.LogError("rot null");
-                    if (fg.OnFlag == null) L.LogError("onflag null");
                     flag = null!;
                     return false;
                 }

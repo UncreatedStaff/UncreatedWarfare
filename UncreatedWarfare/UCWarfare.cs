@@ -13,6 +13,7 @@ using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -29,7 +30,8 @@ namespace Uncreated.Warfare
     public delegate void VoidDelegate();
     public partial class UCWarfare : RocketPlugin<Config>
     {
-        public static readonly Version Version = new Version(2, 0, 0, 0);
+        public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
+        public static readonly Version Version      = new Version(2, 0, 1, 3);
         public static int Season => Version.Major;
         public static UCWarfare Instance;
         public Coroutine? StatsRoutine;
@@ -50,6 +52,7 @@ namespace Uncreated.Warfare
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
         private bool InitialLoadEventSubscription;
+        private DateTime NextRestartTime;
         protected override void Load()
         {
 #if DEBUG
@@ -60,6 +63,16 @@ namespace Uncreated.Warfare
             Data.LoadColoredConsole();
             L.Log("Started loading " + Name + " - " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
+
+            DateTime loadTime = DateTime.Now;
+            if (loadTime.TimeOfDay > RestartTime - TimeSpan.FromHours(2)) // dont restart if the restart would be in less than 2 hours
+                NextRestartTime = loadTime.Date + RestartTime + TimeSpan.FromDays(1);
+            else
+                NextRestartTime = loadTime.Date + RestartTime;
+            L.Log("Restart scheduled at " + NextRestartTime.ToString("g"), ConsoleColor.Magenta);
+            float seconds = (float)(NextRestartTime - DateTime.Now).TotalSeconds;
+
+            StartCoroutine(RestartIn(seconds));
 
             /* PATCHES */
             L.Log("Patching methods...", ConsoleColor.Magenta);
@@ -124,6 +137,11 @@ namespace Uncreated.Warfare
             base.Load();
             UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
         }
+        private IEnumerator<WaitForSeconds> RestartIn(float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            Commands.ShutdownOverrideCommand.ShutdownAfterGameDaily();
+        }
         private void OnLevelLoaded(int level)
         {
 #if DEBUG
@@ -138,17 +156,16 @@ namespace Uncreated.Warfare
             LeaderboardEx.TempCacheEffectIDs();
             FOBManager.TempCacheEffectIDs();
             JoinManager.CacheIDs();
+            ZonePlayerComponent.UIInit();
+            Zone.OnLevelLoaded();
+
+            Data.ZoneProvider.Reload();
+            Data.ZoneProvider.Save();
+
             Announcer = gameObject.AddComponent<UCAnnouncer>();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
-            Data.ExtraZones = JSONMethods.LoadExtraZones();
             //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
 
-            // remove once effectmanager supports GUIDs
-            SquadManager.TempCacheEffectIDs();
-            CTFUI.TempCacheEffectIDs();
-            LeaderboardEx.TempCacheEffectIDs();
-            JoinManager.CacheIDs();
-            FOBManager.TempCacheEffectIDs();
             FOBManager.OnLevelLoaded();
 
             Data.Gamemode.OnLevelLoaded();
@@ -326,6 +343,11 @@ namespace Uncreated.Warfare
                 FOBManager.SendFOBList(ucplayer);
             if (Data.Gamemode.ShowXPUI)
                 Points.UpdateXPUI(ucplayer);
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            {
+                if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out ZonePlayerComponent comp))
+                    comp.ReloadLang();
+            }
         }
         private void Update()
         {

@@ -719,7 +719,7 @@ namespace Uncreated
     }
     public static class JsonEx
     {
-        private static readonly JavaScriptEncoder jsEncoder = JavaScriptEncoder.Create(UnicodeRanges.All);
+        private static readonly JavaScriptEncoder jsEncoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
         public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions()
         {
             WriteIndented = true, 

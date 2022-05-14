@@ -6,14 +6,16 @@ using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Commands
 {
-    public class Command_whitelist : IRocketCommand
+    public class WhitelistCommand : IRocketCommand
     {
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
         public string Name => "whitelist";
         public string Help => "Whitelists items";
         public string Syntax => "/whitelist";
-        public List<string> Aliases => new List<string>(1) { "wl" };
-        public List<string> Permissions => new List<string>(1) { "uc.whitelist" };
+        private readonly List<string> _aliases = new List<string>(2) { "wl", "wh" };
+        public List<string> Aliases => _aliases;
+        private readonly List<string> _permissions = new List<string>(1) { "uc.whitelist" };
+		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] arguments)
         {
 #if DEBUG
