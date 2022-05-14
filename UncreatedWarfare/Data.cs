@@ -482,6 +482,7 @@ namespace Uncreated.Warfare
                     new Permission("uc.warn"),
                     new Permission("uc.whitelist"),
                     new Permission("uc.build"),
+                    new Permission("uc.mute"),
                     new Permission("uc.kit"),
                     new Permission("uc.ammo"),
                     new Permission("uc.squad"),
@@ -508,6 +509,7 @@ namespace Uncreated.Warfare
                     new Permission("uc.structure.examine"),
                     new Permission("uc.unban"),
                     new Permission("uc.warn"),
+                    new Permission("uc.mute"),
                     new Permission("uc.build"),
                     new Permission("uc.ammo"),
                     new Permission("uc.squad"),
@@ -537,7 +539,9 @@ namespace Uncreated.Warfare
                     new Permission("uc.unstuck"),
                     new Permission("uc.confirm"),
                     new Permission("uc.buy"),
-                    new Permission("uc.report")
+                    new Permission("uc.report"),
+                    new Permission("uc.structure"),
+                    new Permission("uc.structure.examine")
                 };
         }
     }

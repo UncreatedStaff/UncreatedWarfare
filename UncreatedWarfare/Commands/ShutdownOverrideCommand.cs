@@ -172,6 +172,13 @@ namespace Uncreated.Warfare.Commands
             }
         }
 
+        internal static void ShutdownInstant(string reason)
+        {
+            ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason, 0);
+            Invocations.Shared.ShuttingDown.NetInvoke(0UL, reason);
+            Provider.shutdown(0, reason);
+        }
+
         private static void ShutdownAfterGame(string reason)
         {
             ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);

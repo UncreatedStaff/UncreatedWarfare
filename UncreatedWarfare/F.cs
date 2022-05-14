@@ -200,22 +200,22 @@ namespace Uncreated.Warfare
         public static bool IsHelper(this IRocketPlayer player) => player.PermissionCheck(EAdminType.HELPER);
         /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
         /// <param name="duration">Duration of ban IN SECONDS</param>
-        public static void OfflineBan(ulong BannedID, uint IPAddress, CSteamID BannerID, string reason, uint duration)
+        public static void OfflineBan(ulong offender, uint ipAddress, CSteamID banner, string reason, uint duration)
         {
-            CSteamID banned = new CSteamID(BannedID);
+            CSteamID banned = new CSteamID(offender);
             Provider.ban(banned, reason, duration);
             for (int index = 0; index < SteamBlacklist.list.Count; ++index)
             {
-                if (SteamBlacklist.list[index].playerID.m_SteamID == BannedID)
+                if (SteamBlacklist.list[index].playerID.m_SteamID == offender)
                 {
-                    SteamBlacklist.list[index].judgeID = BannerID;
+                    SteamBlacklist.list[index].judgeID = banner;
                     SteamBlacklist.list[index].reason = reason;
                     SteamBlacklist.list[index].duration = duration;
                     SteamBlacklist.list[index].banned = Provider.time;
                     return;
                 }
             }
-            SteamBlacklist.list.Add(new SteamBlacklistID(banned, IPAddress, BannerID, reason, duration, Provider.time));
+            SteamBlacklist.list.Add(new SteamBlacklistID(banned, ipAddress, banner, reason, duration, Provider.time));
         }
         public static string An(this string word)
         {
@@ -403,6 +403,7 @@ namespace Uncreated.Warfare
         {
             return LevelGround.getHeight(new Vector3(x, 0, z)) + above;
         }
+        internal static float GetHeight(Vector2 point, float minHeight) => GetHeight(new Vector3(point.x, 0f, point.y), minHeight);
         internal static float GetHeight(Vector3 point, float minHeight)
         {
             float height;

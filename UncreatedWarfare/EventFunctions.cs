@@ -540,35 +540,80 @@ namespace Uncreated.Warfare
         {
             // send ui or something
         }
-
+        private static readonly PlayerVoice.RelayVoiceCullingHandler NO_COMMS = (a, b) => false;
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.RelayMicsDuringEndScreen || Data.Gamemode == null || Data.Gamemode.State == EState.ACTIVE || Data.Gamemode.State == EState.STAGING) return;
-
-            UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
-            if (ucplayer == null) return;
-            if (ucplayer.Squad != null && ucplayer.Squad.Members.Count > 1)
-                shouldBroadcastOverRadio = true;
-
-            bool CullingHandler(PlayerVoice source, PlayerVoice target)
+            if (Data.Gamemode is null)
             {
-                if (ucplayer != null)
+                cullingHandler = NO_COMMS;
+                shouldBroadcastOverRadio = false;
+                return;
+            }
+            bool isMuted = false;
+            bool squad = false;
+            UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
+            if (ucplayer is not null)
+            {
+                if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
                 {
-                    if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
-                    {
-                        VoiceMutedUseTick();
-                        return false;
-                    }
-                    ucplayer.LastSpoken = Time.realtimeSinceStartup;
+                    VoiceMutedUseTick();
+                    isMuted = true;
                 }
-                return true;
+                else if (ucplayer.Squad != null && ucplayer.Squad.Members.Count > 1)
+                {
+                    shouldBroadcastOverRadio = true;
+                    squad = true;
+                }
+            }
+            if (isMuted)
+            {
+                cullingHandler = NO_COMMS;
+                shouldBroadcastOverRadio = false;
+                return;
+            }
+            switch (Data.Gamemode.State)
+            {
+                case EState.STAGING:
+                case EState.ACTIVE:
+                    if (squad)
+                    {
+                        bool CullingHandler(PlayerVoice source, PlayerVoice target)
+                        {
+                            if (ucplayer != null)
+                            {
+                                ucplayer.LastSpoken = Time.realtimeSinceStartup;
+                                if (squad)
+                                {
+                                    UCPlayer? targetPl = PlayerManager.FromID(target.channel.owner.playerID.steamID.m_SteamID);
+                                    if (targetPl != null && targetPl.Squad == ucplayer.Squad)
+                                    {
+                                        return true;
+                                    }
+                                }
+                            }
+                            return PlayerVoice.handleRelayVoiceCulling_Proximity(source, target);
+                        }
+                        cullingHandler = CullingHandler;
+                        shouldBroadcastOverRadio = squad;
+                        return;
+                    }
+                    break;
+                case EState.LOADING:
+                case EState.FINISHED:
+                    if (!UCWarfare.Config.RelayMicsDuringEndScreen)
+                    {
+                        cullingHandler = NO_COMMS;
+                        shouldBroadcastOverRadio = false;
+                        return;
+                    }
+                    break;
             }
 
-            cullingHandler = CullingHandler;
+
             shouldBroadcastOverRadio = true;
         }
 

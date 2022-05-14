@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using UnityEngine;
@@ -96,8 +97,16 @@ namespace Uncreated.Warfare.Stats
                     StatsManager.ModifyTeam(2, t => t.AveragePlayers = (t.AveragePlayers * t.AveragePlayersCounter +
                     Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team2ID)) / ++t.AveragePlayersCounter, false);
                     StatsManager.SaveTeams();
+                    long mem = GC.GetTotalMemory(false);
+                    L.Log("Memory usage: " + mem);
+
                     /* TICK STAT BACKUP */
                     StatsManager.BackupTick();
+
+                    if (mem >= 1000000000 /* ~1GB */)
+                    {
+                        ShutdownOverrideCommand.ShutdownInstant("Memory error, shutdown to prevent corrupted state.");
+                    }
                 }
                 catch (Exception ex)
                 {
