@@ -406,7 +406,7 @@ namespace Uncreated.Warfare.Vehicles
                 if (!player.OnDuty() && Data.Gamemode.State == EState.STAGING && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || player.GetTeam() == atk.AttackingTeam))
                 {
                     player.SendChat("vehicle_staging");
-                    shouldAllow = false;
+                    shouldAllow = false;    
                     return;
                 }
                 if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(nelsonplayer.channel.owner.playerID.steamID.m_SteamID))
