@@ -19,45 +19,8 @@ namespace Uncreated.Warfare.ReportSystem
         /// </summary>
         public static readonly NetCallRaw<Report, bool> SendReportInvocation = new NetCallRaw<Report, bool>(4000, Report.ReadReport, null, Report.WriteReport, null, 256);
         public static readonly NetCall<bool, string> ReceiveInvocationResponse = new NetCall<bool, string>(4001, 78);
-        public static readonly Dictionary<EDamageOrigin, string> DmgOriginLocalization = new Dictionary<EDamageOrigin, string>(30)
-        {
-            { EDamageOrigin.Animal_Attack, "Animal Attack" },
-            { EDamageOrigin.Bullet_Explosion, "Bullet Explosion" },
-            { EDamageOrigin.Carepackage_Timeout, "Carepackage Expired" },
-            { EDamageOrigin.Charge_Explosion, "Explosive Charge" },
-            { EDamageOrigin.Charge_Self_Destruct, "Detonated Charge" },
-            { EDamageOrigin.Flamable_Zombie_Explosion, "Flamable Zombie Explosion" },
-            { EDamageOrigin.Food_Explosion, "Explosive Food" },
-            { EDamageOrigin.Grenade_Explosion, "Explosive Grenade" },
-            { EDamageOrigin.Horde_Beacon_Self_Destruct, "Horde Beacon Expired" },
-            { EDamageOrigin.Kill_Volume, "Map Kill Volume" },
-            { EDamageOrigin.Lightning, "Lightning Strike" },
-            { EDamageOrigin.Mega_Zombie_Boulder, "Mega Zombie Boulder" },
-            { EDamageOrigin.Plant_Harvested, "Plant Harvested" },
-            { EDamageOrigin.Punch, "Punch" },
-            { EDamageOrigin.Radioactive_Zombie_Explosion, "Radioactive Zombie Explosion" },
-            { EDamageOrigin.Rocket_Explosion, "Explosive Rocket" },
-            { EDamageOrigin.Sentry, "Sentry" },
-            { EDamageOrigin.Trap_Explosion, "Trap Explosion" },
-            { EDamageOrigin.Trap_Wear_And_Tear, "Trap Wear & Tear" },
-            { EDamageOrigin.Unknown, "Unknown Damage Origin" },
-            { EDamageOrigin.Useable_Gun, "Gun" },
-            { EDamageOrigin.Useable_Melee, "Melee" },
-            { EDamageOrigin.VehicleDecay, "Vehicle Despawn" },
-            { EDamageOrigin.Vehicle_Bumper, "Ran Over" },
-            { EDamageOrigin.Vehicle_Collision_Self_Damage, "Collision" },
-            { EDamageOrigin.Vehicle_Explosion, "Vehicle Explosion" },
-            { EDamageOrigin.Zombie_Electric_Shock, "Electric Zombie Shock" },
-            { EDamageOrigin.Zombie_Fire_Breath, "Fire Zombie Breath" },
-            { EDamageOrigin.Zombie_Stomp, "Zombie Stomp" },
-            { EDamageOrigin.Zombie_Swipe, "Zombie Swipe" },
-        };
-        public static readonly Dictionary<EDeathCause, string> DeathCauseLocalization = new Dictionary<EDeathCause, string>(30);
         public Report? CreateReport(ulong reporter, ulong violator, string message)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
             if (data.TryGetValue(violator, out PlayerData pd))
             {
                 return pd.CustomReport(message, reporter);
@@ -122,10 +85,19 @@ namespace Uncreated.Warfare.ReportSystem
         }
         private void TickPlayer(PlayerData data, float deltaTime, float time)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Player player = data.player;
             InteractableVehicle veh = player.movement.getVehicle();
             if (veh != null)
             {
+                float lowerLimit = time - 1200f;
+
+                Guid g = veh.asset.GUID;
+                // check if the player is in an emplacement
+                if (FOBs.FOBManager.config.data.Buildables.Exists(x => x.emplacementData is not null && x.emplacementData.vehicleID == g))
+                    goto timeAdj;
                 int passengerCount = 0;
                 for (int i = 0; i < veh.passengers.Length; i++)
                 {
@@ -136,22 +108,28 @@ namespace Uncreated.Warfare.ReportSystem
                             break;
                     }
                 }
-                float lowerLimit = time - 1200f;
-                if (passengerCount > 1)
+                if (passengerCount == 1)
                 {
                     if (!data.soloTime.TryGetValue(veh.asset.GUID, out List<float> times))
                     {
                         times = new List<float>(120) { time };
                         data.soloTime.Add(veh.asset.GUID, times);
                     }
-                    // remove times 20 minutes ago or older
-                    for (int i = 0; i < times.Count; i++)
+                    else
+                    {
+                        times.Add(time);
+                    }
+                }
+                timeAdj:
+                foreach (KeyValuePair<Guid, List<float>> kvp in data.soloTime)
+                {
+                    List<float> times = kvp.Value;
+                    for (int i = 0; i < times.Count; ++i)
                     {
                         if (times[i] < lowerLimit)
                             times.RemoveAt(i--);
                         else break;
                     }
-                    times.Add(time);
                 }
                 for (int i = 0; i < data.recentRequests.Count; i++)
                 {
@@ -587,7 +565,7 @@ namespace Uncreated.Warfare.ReportSystem
                     vehicles[i] = new Report.VehicleTeamkill()
                     {
                         VehicleName = Assets.find<VehicleAsset>(data.vehicle)?.vehicleName ?? data.vehicle.ToString("N"),
-                        Origin = DmgOriginLocalization.TryGetValue(data.origin, out string orig) ? orig : data.origin.ToString().Replace('_', ' '),
+                        Origin = Translation.TranslateEnum(data.origin, 0),
                         Timestamp = data.time.FromUnityTime(),
                         VehicleOwner = data.owner,
                         Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N"),
@@ -614,7 +592,7 @@ namespace Uncreated.Warfare.ReportSystem
                     teamkills[i] = new Report.Teamkill()
                     {
                         Dead = data.dead,
-                        DeathType = DeathCauseLocalization.TryGetValue(data.cause, out string cause) ? cause : data.cause.ToString().Replace('_', ' '),
+                        DeathType = Translation.TranslateEnum(data.cause, 0),
                         Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N"),
                         IsVehicle = false,
                         Timestamp = data.time.FromUnityTime()
@@ -641,7 +619,7 @@ namespace Uncreated.Warfare.ReportSystem
                     damages[i] = new GreifingFOBsReport.StructureDamage()
                     {
                         Damage = data.damage,
-                        DamageOrigin = DmgOriginLocalization.TryGetValue(data.origin, out string orig) ? orig : data.origin.ToString().Replace('_', ' '),
+                        DamageOrigin = Translation.TranslateEnum(data.origin, 0),
                         Structure = Assets.find<ItemAsset>(data.structure)?.itemName ?? data.structure.ToString("N"),
                         Timestamp = data.time.FromUnityTime(),
                         Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N")

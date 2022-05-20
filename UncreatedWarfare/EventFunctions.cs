@@ -541,6 +541,42 @@ namespace Uncreated.Warfare
             // send ui or something
         }
         private static readonly PlayerVoice.RelayVoiceCullingHandler NO_COMMS = (a, b) => false;
+        internal static void OnRelayVoice2(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
+            ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
+        {
+            if (Data.Gamemode is null)
+            {
+                cullingHandler = NO_COMMS;
+                shouldBroadcastOverRadio = false;
+                return;
+            }
+            bool isMuted = false;
+            UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
+            if (ucplayer is not null)
+            {
+                if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
+                {
+                    VoiceMutedUseTick();
+                    isMuted = true;
+                }
+            }
+            if (isMuted)
+            {
+                shouldAllow = false;
+                cullingHandler = NO_COMMS;
+                shouldBroadcastOverRadio = false;
+            }
+            else if (Data.Gamemode.State is EState.FINISHED or EState.LOADING)
+            {
+                if (!UCWarfare.Config.RelayMicsDuringEndScreen)
+                {
+                    shouldAllow = false;
+                    cullingHandler = NO_COMMS;
+                    shouldBroadcastOverRadio = false;
+                    return;
+                }
+            }
+        }
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
@@ -1393,7 +1429,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
         {
-            if (state == false || key != 2 || player == null) return;
+            if (!state || key != 2 || player == null) return;
 
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

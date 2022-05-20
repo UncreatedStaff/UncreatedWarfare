@@ -157,7 +157,6 @@ namespace Uncreated.Warfare
                 //NetClient.AssertConnected();
             }
         }
-
         public static void LoadVariables()
         {
 #if DEBUG
@@ -210,7 +209,7 @@ namespace Uncreated.Warfare
             Languages = JSONMethods.LoadLanguagePreferences();
             LanguageAliases = JSONMethods.LoadLangAliases();
 
-            Translation.ReadEnumTranslations();
+            Translation.ReadEnumTranslations(TranslatableEnumTypes);
 
             /* CONSTRUCT FRAMEWORK */
             L.Log("Instantiating Framework...", ConsoleColor.Magenta);
@@ -347,6 +346,10 @@ namespace Uncreated.Warfare
                 StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
             //Quests.DailyQuests.OnLoad();
         }
+        internal static readonly List<Type> TranslatableEnumTypes = new List<Type>()
+        {
+            typeof(EDamageOrigin), typeof(EDeathCause)
+        };
         public static List<Log> ReadRocketLog()
         {
             List<Log> logs = new List<Log>();

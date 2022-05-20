@@ -1,4 +1,6 @@
 ﻿using HarmonyLib;
+using Rocket.API;
+using Rocket.Unturned.Player;
 using SDG.Unturned;
 using Steamworks;
 using System;

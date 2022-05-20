@@ -1772,7 +1772,7 @@ namespace Uncreated.Warfare
         }
         private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> enumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
         private const string ENUM_TRANSLATION_FILE_NAME = "Enums\\";
-        public static void ReadEnumTranslations()
+        public static void ReadEnumTranslations(List<Type> extEnumTypes)
         {
             enumTranslations.Clear();
             string def = Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE + "\\";
@@ -1790,11 +1790,11 @@ namespace Uncreated.Warfare
                         Directory.CreateDirectory(p);
                 }
             }
-            foreach (Type enumType in UCWarfare.Instance.Assembly.GetTypes().Where(t => t.IsEnum && Attribute.GetCustomAttribute(t, typeof(TranslatableAttribute)) != null))
+            foreach (Type enumType in UCWarfare.Instance.Assembly.GetTypes().Where(t => t.IsEnum && Attribute.GetCustomAttribute(t, typeof(TranslatableAttribute)) is not null).Concat(extEnumTypes.Where(x => x.IsEnum)))
             {
                 if (enumTranslations.ContainsKey(enumType)) continue;
                 Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
-                enumTranslations[enumType] = k;
+                enumTranslations.Add(enumType, k);
                 string fn = def + ENUM_TRANSLATION_FILE_NAME + enumType.FullName + ".json";
                 string[] values = enumType.GetEnumNames();
                 if (!File.Exists(fn))

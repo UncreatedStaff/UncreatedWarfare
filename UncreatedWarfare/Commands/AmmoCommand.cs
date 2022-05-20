@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Commands
 
                 if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
                 {
-                    var repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID,
+                    BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID,
                     10,
                     vehicle.transform.position,
                     player.GetTeam(),
@@ -91,7 +91,7 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
 
-                var fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
+                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
                 
 
                 if (fob == null)

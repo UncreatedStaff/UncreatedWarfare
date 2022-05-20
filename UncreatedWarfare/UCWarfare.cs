@@ -218,7 +218,7 @@ namespace Uncreated.Warfare
             Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
             Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
             PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
-            PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice;
+            PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
             R.Commands.OnExecuteCommand += EventFunctions.OnCommandExecuted;
         }
         private void UnsubscribeFromEvents()
@@ -261,13 +261,14 @@ namespace Uncreated.Warfare
             Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
             Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
             PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
-            PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice;
+            PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
             R.Commands.OnExecuteCommand -= EventFunctions.OnCommandExecuted;
             if (!InitialLoadEventSubscription)
             {
                 Level.onLevelLoaded -= OnLevelLoaded;
                 R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
             }
+
         }
         internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests = new Queue<MainThreadTask.MainThreadResult>();
         public static MainThreadTask ToUpdate() => new MainThreadTask();
