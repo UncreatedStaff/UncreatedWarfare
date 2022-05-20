@@ -47,7 +47,7 @@ namespace Uncreated.Warfare.Commands
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
                             {
                                 Data.DatabaseManager.AddUnban(steamplayer.m_SteamID, 0UL);
-                                Invocations.Shared.LogUnbanned.NetInvoke(steamplayer.m_SteamID, 0UL, DateTime.Now);
+                                OffenseManager.NetCalls.SendPlayerUnbanned.NetInvoke(steamplayer.m_SteamID, 0UL, DateTime.Now);
                             }
                             FPlayerName names = Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
                             ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {steamplayer.m_SteamID.ToString(Data.Locale)}");
@@ -84,7 +84,7 @@ namespace Uncreated.Warfare.Commands
                             if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
                             {
                                 Data.DatabaseManager.AddUnban(steamplayer.m_SteamID, player.CSteamID.m_SteamID);
-                                Invocations.Shared.LogUnbanned.NetInvoke(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);
+                                OffenseManager.NetCalls.SendPlayerUnbanned.NetInvoke(steamplayer.m_SteamID, player.CSteamID.m_SteamID, DateTime.Now);
                             }
                             FPlayerName names = Data.DatabaseManager.GetUsernames(steamplayer.m_SteamID);
                             FPlayerName callerNames = F.GetPlayerOriginalNames(player.Player);
@@ -123,14 +123,12 @@ namespace Uncreated.Warfare.Commands
             if (violator == null)
             {
                 CSteamID id = new CSteamID(Violator);
-                if (!Provider.requestUnbanPlayer(Provider.server, id))
-                    SharedInvocations.PrintText.NetInvoke(DateTime.Now, "UNBAN: Player not banned", ConsoleColor.Red);
-                else
+                if (Provider.requestUnbanPlayer(Provider.server, id))
                 {
                     if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
                     {
                         Data.DatabaseManager.AddUnban(Violator, Admin);
-                        Invocations.Shared.LogUnbanned.NetInvoke(Violator, Admin, DateTime.Now);
+                        OffenseManager.NetCalls.SendPlayerUnbanned.NetInvoke(Violator, Admin, DateTime.Now);
                     }
                     if (names.Steam64.ToString(Data.Locale) == names.PlayerName)
                     {
@@ -150,8 +148,6 @@ namespace Uncreated.Warfare.Commands
                     }
                 }
             }
-            else
-                SharedInvocations.PrintText.NetInvoke(DateTime.Now, "UNBAN: Player not banned", ConsoleColor.Red);
         }
     }
 }

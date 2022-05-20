@@ -4,6 +4,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Text;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -61,12 +62,12 @@ namespace Uncreated.Warfare
                 string[] splits = value.Split('\n');
                 for (int i = 0; i < splits.Length; i++)
                 {
-                    Log log = new Log(splits[i], Console.ForegroundColor);
-                    Data.AddLog(log);
-                    if (Data.NetClient != null && Data.NetClient.connection != null && Data.NetClient.connection.IsActive && 
-                        value != $"No invoker found for {Networking.Invocations.Shared.SendLogMessage.ID}.")
+                    LogMessage log = new LogMessage(splits[i], Console.ForegroundColor);
+                    L.AddLog(log);
+                    if (Data.NetClient != null && Data.NetClient != null && Data.NetClient.IsActive && 
+                        !value.Equals($"No invoker found for {L.NetCalls.SendLogMessage.ID}.", StringComparison.Ordinal))
                     {
-                        Networking.Invocations.Shared.SendLogMessage.Invoke(Data.NetClient.connection, log, 0);
+                        L.NetCalls.SendLogMessage.Invoke(Data.NetClient, log, 0);
                     }
                 }
             }

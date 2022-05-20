@@ -5,8 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Networking;
-using Uncreated.Networking.Encoding;
+using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.ReportSystem;
@@ -152,15 +153,15 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("report_success_p2");
                     L.Log(Translation.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
                         player.Player.channel.owner.playerID.playerName, player.Steam64.ToString(Data.Locale),
-                        targetNames.PlayerName, target.ToString(Data.Locale), report.Message, typename), ConsoleColor.Cyan);
+                        targetNames.PlayerName, target.ToString(Data.Locale), report.Message!, typename), ConsoleColor.Cyan);
                     byte[] jpgData =
                         targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE)
                             ? new byte[0]
                             : await SpyTask.RequestScreenshot(targetPl);
                     report.JpgData = jpgData;
                     L.Log(report.JpgData.Length.ToString());
-                    NetTask.Response res = await Reporter.SendReportInvocation.Request(
-                        Reporter.ReceiveInvocationResponse, Data.NetClient.connection, report, targetPl != null);
+                    NetTask.Response res = await Reporter.NetCalls.SendReportInvocation.Request(
+                        Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient, report, targetPl != null);
                     await UCWarfare.ToUpdate();
                     if (targetPl != null)
                     {
@@ -301,7 +302,7 @@ namespace Uncreated.Warfare.Commands
         {
             foreach (LanguageSet set in Translation.EnumeratePermissions(EAdminType.MODERATE_PERMS))
             {
-                string translation = Translation.Translate("report_notify_admin", set.Language, reporter.CharacterName, violator.CharacterName, report.Message, typename);
+                string translation = Translation.Translate("report_notify_admin", set.Language, reporter.CharacterName, violator.CharacterName, report.Message!, typename);
                 while (set.MoveNext())
                 {
                     ToastMessage.QueueMessage(set.Next, new ToastMessage(translation, EToastMessageSeverity.INFO));

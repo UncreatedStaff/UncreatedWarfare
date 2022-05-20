@@ -10,8 +10,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.Networking;
-using Uncreated.Networking.Encoding;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -72,20 +73,6 @@ namespace Uncreated.Warfare
                 builder.Append(array[i]);
             }
             return builder.ToString();
-        }
-        public static string[] ReadStringArray(ByteReader R)
-        {
-            int length = R.ReadInt32();
-            string[] rtn = new string[length];
-            for (int i = 0; i < length; i++)
-                rtn[i] = R.ReadString();
-            return rtn;
-        }
-        public static void WriteStringArray(ByteWriter W, string[] A)
-        {
-            W.Write(A.Length);
-            for (int i = 0; i < A.Length; i++)
-                W.Write(A[i]);
         }
         public static int DivideRemainder(float divisor, float dividend, out int remainder)
         {
@@ -762,7 +749,7 @@ namespace Uncreated.Warfare
         }
         public static void SaveProfilingData()
         {
-            F.CheckDir(Data.DATA_DIRECTORY + "Profiling\\", out _);
+            CheckDir(Data.DATA_DIRECTORY + "Profiling\\", out _);
             string fi = Data.DATA_DIRECTORY + "Profiling\\" + DateTime.Now.ToString("yyyy-mm-dd_HH-mm-ss") + "_profile.csv";
             L.Log("Flushing profiling information to \"" + fi + "\"", ConsoleColor.Cyan);
             ProfilingUtils.WriteAllDataToCSV(fi);
@@ -836,35 +823,35 @@ namespace Uncreated.Warfare
             return index;
         }
         public static void NetInvoke(this NetCall call) =>
-            call.Invoke(Data.NetClient.connection);
+            call.Invoke(Data.NetClient);
         public static void NetInvoke<T>(this NetCallRaw<T> call, T arg) =>
-            call.Invoke(Data.NetClient.connection, arg);
+            call.Invoke(Data.NetClient, arg);
         public static void NetInvoke<T1, T2>(this NetCallRaw<T1, T2> call, T1 arg1, T2 arg2) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2);
+            call.Invoke(Data.NetClient, arg1, arg2);
         public static void NetInvoke<T1, T2, T3>(this NetCallRaw<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3);
         public static void NetInvoke<T1, T2, T3, T4>(this NetCallRaw<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4);
         public static void NetInvoke<T1>(this NetCall<T1> call, T1 arg1) =>
-            call.Invoke(Data.NetClient.connection, arg1);
+            call.Invoke(Data.NetClient, arg1);
         public static void NetInvoke<T1, T2>(this NetCall<T1, T2> call, T1 arg1, T2 arg2) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2);
+            call.Invoke(Data.NetClient, arg1, arg2);
         public static void NetInvoke<T1, T2, T3>(this NetCall<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3);
         public static void NetInvoke<T1, T2, T3, T4>(this NetCall<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4);
         public static void NetInvoke<T1, T2, T3, T4, T5>(this NetCall<T1, T2, T3, T4, T5> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5);
         public static void NetInvoke<T1, T2, T3, T4, T5, T6>(this NetCall<T1, T2, T3, T4, T5, T6> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6);
         public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7>(this NetCall<T1, T2, T3, T4, T5, T6, T7> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10) =>
-            call.Invoke(Data.NetClient.connection, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
         public static bool FilterName(string original, out string final)
         {
 #if DEBUG

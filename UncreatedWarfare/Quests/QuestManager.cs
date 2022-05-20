@@ -423,7 +423,7 @@ public static class QuestManager
         {
             using (FileStream stream = new FileStream(QUEST_LOCATION, FileMode.Open, FileAccess.Write, FileShare.None))
             {
-                byte[] bytes = Encoding.UTF8.GetBytes("[]");
+                byte[] bytes = System.Text.Encoding.UTF8.GetBytes("[]");
                 stream.Write(bytes, 0, bytes.Length);
             }
             return;

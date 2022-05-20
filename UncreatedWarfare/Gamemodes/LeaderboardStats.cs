@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
@@ -67,7 +68,6 @@ namespace Uncreated.Warfare.Gamemodes
             }
             if (shuttingDown)
             {
-                Networking.Invocations.Shared.ShuttingDownAfterComplete.NetInvoke();
                 Provider.shutdown(0, shuttingDownMessage);
             }
             else

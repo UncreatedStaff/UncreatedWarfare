@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Commands
                         SteamBlacklistID ban = SteamBlacklist.list[index];
                         DateTime time = DateTime.Now - TimeSpan.FromSeconds(ban.duration - ban.getTime());
                         Data.DatabaseManager.AddBan(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.duration / 60, ban.reason, time);
-                        Invocations.Shared.LogBanned.NetInvoke(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.reason, ban.duration / 60, time);
+                        OffenseManager.NetCalls.SendPlayerBanned.NetInvoke(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.reason, ban.duration / 60, time);
                     }
                     ActionLog.Add(EActionLogType.LOAD_OLD_BANS, SteamBlacklist.list.Count + " BANS LOADED.");
                 }

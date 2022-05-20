@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
@@ -54,7 +55,7 @@ namespace Uncreated.Warfare
 
             RequestSigns.InvokeLangUpdateForAllSigns(player);
 
-            Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
+            PlayerManager.NetCalls.SendTeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
 
         }
         internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
@@ -515,7 +516,7 @@ namespace Uncreated.Warfare
                 Data.Reporter.OnPlayerJoin(player.Player.channel.owner);
                 if (ucplayer != null)
                 {
-                    Invocations.Shared.PlayerJoined.NetInvoke(new FPlayerList
+                    PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new PlayerListEntry
                     {
                         Duty = ucplayer.OnDuty(),
                         Name = names.CharacterName,
@@ -667,7 +668,7 @@ namespace Uncreated.Warfare
             {
                 ulong id = client.playerID.steamID.m_SteamID;
                 Data.DatabaseManager.AddBattleyeKick(id, reason);
-                Invocations.Shared.LogBattleyeKicked.NetInvoke(id, reason, DateTime.Now);
+                OffenseManager.NetCalls.SendPlayerBattleyeKicked.NetInvoke(id, reason, DateTime.Now);
             }
         }
         internal static void OnEnterStorage(CSteamID instigator, InteractableStorage storage, ref bool shouldAllow)
@@ -1233,7 +1234,7 @@ namespace Uncreated.Warfare
                 }
                 else
                     ActionLog.Add(EActionLogType.DISCONNECT, null, player.CSteamID.m_SteamID);
-                Invocations.Shared.PlayerLeft.NetInvoke(player.CSteamID.m_SteamID);
+                PlayerManager.NetCalls.SendPlayerLeft.NetInvoke(player.CSteamID.m_SteamID);
             }
             catch (Exception ex)
             {

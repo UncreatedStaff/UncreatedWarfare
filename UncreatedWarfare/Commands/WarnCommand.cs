@@ -52,7 +52,7 @@ namespace Uncreated.Warfare.Commands
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                                 {
                                     Data.DatabaseManager.AddWarning(player.playerID.steamID.m_SteamID, 0, reason);
-                                    Invocations.Shared.LogWarned.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
+                                    OffenseManager.NetCalls.SendPlayerWarned.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                 }
                                 player.playerID.steamID.SendChat("warn_warned_private_operator", reason);
                                 ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("warn_warned_private_operator", player, out _, reason), EToastMessageSeverity.WARNING));
@@ -93,7 +93,7 @@ namespace Uncreated.Warfare.Commands
                                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                                 {
                                     Data.DatabaseManager.AddWarning(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason);
-                                    Invocations.Shared.LogWarned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
+                                    OffenseManager.NetCalls.SendPlayerWarned.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.CSteamID.m_SteamID, reason, DateTime.Now);
                                 }
                                 player.SendChat("warn_warned_feedback", name.CharacterName);
                                 ToastMessage.QueueMessage(steamplayer,
@@ -131,7 +131,7 @@ namespace Uncreated.Warfare.Commands
                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                 {
                     Data.DatabaseManager.AddWarning(Violator, Admin, Reason);
-                    Invocations.Shared.LogWarned.NetInvoke(Violator, Admin, Reason, DateTime.Now);
+                    OffenseManager.NetCalls.SendPlayerWarned.NetInvoke(Violator, Admin, Reason, DateTime.Now);
                 }
                 if (admin != null)
                     admin.SendChat("warn_warned_feedback", names.CharacterName);

@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
@@ -265,16 +267,20 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        private static readonly Uncreated.Networking.Encoding.ByteWriter bw = new Uncreated.Networking.Encoding.ByteWriter(0, false, 27);
+        private static readonly ByteWriter bw = new ByteWriter(false, 27);
         public void AddReport(Report report)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            bw.BaseCapacity = report.Size;
-            bw.Flush();
-            Report.WriteReport(bw, report);
-            byte[] blob = bw.ByteBuffer;
+            byte[] blob;
+            lock (bw)
+            {
+                bw.BaseCapacity = report.Size;
+                bw.Flush();
+                Report.WriteReport(bw, report);
+                blob = bw.ToArray();
+            }
             NonQuery("INSERT INTO `reports` (`Reporter`, `Violator`, `ReportType`, `Data`, `Timestamp`, `Message`) VALUES (@0, @1, @2, @3, @4, @5);", new object[]
             {
                 report.Reporter,
@@ -282,7 +288,7 @@ namespace Uncreated.Warfare
                 report.Type,
                 blob,
                 string.Format(TIME_FORMAT_SQL, report.Time),
-                report.Message
+                report.Message ?? string.Empty
             });
         }
         public async Task<int> GetXP(ulong player, ulong team)

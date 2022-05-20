@@ -45,7 +45,7 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(player.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                 {
-                                    Invocations.Shared.LogKicked.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
+                                    OffenseManager.NetCalls.SendPlayerKicked.NetInvoke(player.playerID.steamID.m_SteamID, 0UL, reason, DateTime.Now);
                                     Data.DatabaseManager.AddKick(player.playerID.steamID.m_SteamID, 0, reason);
                                 }
                                 L.Log(Translation.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Commands
                                 Provider.kick(steamplayer.playerID.steamID, reason);
                                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                                 {
-                                    Invocations.Shared.LogKicked.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.Steam64, reason, DateTime.Now);
+                                    OffenseManager.NetCalls.SendPlayerKicked.NetInvoke(steamplayer.playerID.steamID.m_SteamID, player.Steam64, reason, DateTime.Now);
                                     Data.DatabaseManager.AddKick(steamplayer.playerID.steamID.m_SteamID, player.Steam64, reason);
                                 }
                                 L.LogWarning(Translation.Translate("kick_kicked_console", 0, out _,
@@ -112,16 +112,12 @@ namespace Uncreated.Warfare.Commands
                 names = Data.DatabaseManager.GetUsernames(Violator);
             else
                 names = F.GetPlayerOriginalNames(Violator);
-            if (violator == null)
-            {
-                SharedInvocations.PrintText.NetInvoke(DateTime.Now, "KICK: Player not found online", ConsoleColor.Red);
-            }
-            else
+            if (violator is not null)
             {
                 Provider.kick(violator.playerID.steamID, Reason);
                 if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
                 {
-                    Invocations.Shared.LogKicked.NetInvoke(Violator, Admin, Reason, DateTime.Now);
+                    OffenseManager.NetCalls.SendPlayerKicked.NetInvoke(Violator, Admin, Reason, DateTime.Now);
                     Data.DatabaseManager.AddKick(Violator, Admin, Reason);
                 }
                 L.LogWarning(Translation.Translate("kick_kicked_console", 0, out _,

@@ -255,7 +255,7 @@ namespace Uncreated.Warfare.Tickets
 
                             if (message != string.Empty) message = "xp_friendly_" + message;
                             Points.AwardCredits(player, Mathf.Clamp(data.CreditCost, 5, 1000), Translation.Translate(message, player.Steam64), true);
-                            Invocations.Warfare.LogFriendlyVehicleKill.NetInvoke(player.Steam64, vehicle.id, vehicle.asset.vehicleName ?? vehicle.id.ToString(), DateTime.Now);
+                            OffenseManager.NetCalls.SendVehicleTeamkilled.NetInvoke(player.Steam64, vehicle.id, vehicle.asset.vehicleName ?? vehicle.id.ToString(), DateTime.Now);
                         }
 
                         //float missingQuota = vc.Quota - vc.RequiredQuota;

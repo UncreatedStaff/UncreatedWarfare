@@ -1,7 +1,7 @@
 ﻿using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System;
-using Uncreated.Networking.Encoding;
+using Uncreated.Encoding;
 using Uncreated.Warfare;
 
 namespace Uncreated.Players

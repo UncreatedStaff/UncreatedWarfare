@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -27,7 +28,6 @@ namespace Uncreated.Warfare
 {
     public static class Data
     {
-        public const int MAX_LOGS = 1000;
         public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
         public static readonly string DATA_DIRECTORY = System.Environment.CurrentDirectory + @"\Plugins\UncreatedWarfare\";
         private static readonly string _flagStorage = DATA_DIRECTORY + @"Maps\{0}\Flags\";
@@ -93,7 +93,6 @@ namespace Uncreated.Warfare
         internal static JsonZoneProvider ZoneProvider;
         internal static WarfareSQL DatabaseManager;
         public static Gamemode Gamemode;
-        public static List<Log> Logs;
         public static bool TrackStats = true;
         public static bool Is<T>(out T gamemode) where T : Gamemodes.Interfaces.IGamemode
         {
@@ -114,7 +113,7 @@ namespace Uncreated.Warfare
         internal static FieldInfo ItemManagerInstanceCount;
         internal static ICommandInputOutput? defaultIOHandler;
         public static Reporter Reporter;
-        internal static Client NetClient;
+        internal static HomebaseClient NetClient;
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
         internal delegate void OutputToConsole(string value, ConsoleColor color);
         internal static OutputToConsole? OutputToConsoleMethod;
@@ -146,17 +145,18 @@ namespace Uncreated.Warfare
             {
                 if (NetClient != null)
                 {
-                    NetClient.connection.Close();
                     NetClient.Dispose();
                 }
                 L.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
-                NetClient = new Client(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
-                NetClient.connection.OnReceived += ClientReceived;
-                NetClient.connection.OnAutoSent += ClientSent;
-                NetClient.connection.OnServerConnectionEstablished += ServerConnectionEstablished;
+                NetClient = new HomebaseClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
+                NetClient.OnClientVerified += OnClientConnected;
+                NetClient.OnClientDisconnected += OnClientDisconnected;
+                NetClient.OnSentMessage += OnClientSentMessage;
+                NetClient.OnReceivedMessage += OnClientReceivedMessage;
                 //NetClient.AssertConnected();
             }
         }
+
         public static void LoadVariables()
         {
 #if DEBUG
@@ -167,11 +167,11 @@ namespace Uncreated.Warfare
             ActionLog.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Locale)}");
 
             /* INITIALIZE UNCREATED NETWORKING */
-            Logging.OnLog += L.Log;
-            Logging.OnLogWarning += L.LogWarningEventCall;
-            Logging.OnLogError += L.LogErrorEventCall;
-            Logging.OnLogException += L.LogErrorEventCall;
-            NetFactory.RegisterNetMethods(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+            Logging.OnLogInfo += L.NetLogInfo;
+            Logging.OnLogWarning += L.NetLogWarning;
+            Logging.OnLogError += L.NetLogError;
+            Logging.OnLogException += L.NetLogException;
+            NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
 
             /* CREATE DIRECTORIES */
             L.Log("Validating directories...", ConsoleColor.Magenta);
@@ -350,63 +350,36 @@ namespace Uncreated.Warfare
         {
             typeof(EDamageOrigin), typeof(EDeathCause)
         };
-        public static List<Log> ReadRocketLog()
-        {
-            List<Log> logs = new List<Log>();
-            string path = Path.Combine(Rocket.Core.Environment.LogsDirectory, Rocket.Core.Environment.LogFile);
-            if (!File.Exists(path))
-                return logs;
-            using (FileStream str = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                byte[] bytes = new byte[str.Length];
-                str.Read(bytes, 0, bytes.Length);
-                string file = Encoding.UTF8.GetString(bytes);
-                string[] lines = file.Split('\n');
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    if (logs.Count >= MAX_LOGS)
-                    {
-                        logs.RemoveRange(MAX_LOGS - 1, logs.Count - MAX_LOGS - 1);
-                    }
-                    logs.Insert(0, new Log(lines[i]));
-                }
-            }
-            return logs;
-        }
-        public static void AddLog(Log log)
-        {
-            if (Logs.Count > MAX_LOGS)
-            {
-                Logs.RemoveRange(MAX_LOGS - 1, Logs.Count - MAX_LOGS + 1);
-            }
-            else if (Logs.Count == MAX_LOGS) Logs.RemoveAt(MAX_LOGS - 1);
-            Logs.Insert(0, log);
-        }
-        private static void ClientReceived(byte[] bytes, IConnection connection)
+        private static void OnClientReceivedMessage(IConnection connection, byte[] message)
         {
             if (UCWarfare.Config.Debug)
             {
-                L.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", bytes), ConsoleColor.DarkGray);
+                L.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", message), ConsoleColor.DarkGray);
             }
         }
-        private static void ClientSent(byte[] bytes, IConnection connection, ref bool Allow)
+        private static void OnClientSentMessage(IConnection connection, byte[] message)
         {
             if (UCWarfare.Config.Debug)
             {
                 try
                 {
-                    ushort id = BitConverter.ToUInt16(bytes, 0);
-                    if (id != Invocations.Shared.SendLogMessage.ID)
+                    ushort id = BitConverter.ToUInt16(message, 0);
+                    if (id != L.NetCalls.SendLogMessage.ID)
                     {
-                        L.Log("Sent over TCP server on " + connection.Identity + ": " + bytes.Length, ConsoleColor.DarkGray);
+                        L.Log("Sent over TCP server on " + connection.Identity + ": " + message.Length, ConsoleColor.DarkGray);
                     }
-                } 
+                }
                 catch { }
             }
         }
-        private static void ServerConnectionEstablished(string identity)
+        private static void OnClientDisconnected(IConnection connection)
         {
-            Invocations.Shared.PlayerList.NetInvoke(PlayerManager.GetPlayerList());
+            L.Log("Disconnected from HomeBase.", ConsoleColor.DarkYellow);
+        }
+        private static void OnClientConnected(IConnection connection)
+        {
+            L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
+            PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
             ActionLog.OnConnected();
         }
         private static void DuplicateKeyError(Exception ex)

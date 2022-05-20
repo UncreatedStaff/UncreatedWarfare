@@ -75,7 +75,7 @@ namespace Uncreated.Warfare
                     BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
 
                     byte[] state = drop.GetServersideData().barricade.state;
-                    byte[] bytes = Encoding.UTF8.GetBytes(trimmedText);
+                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(trimmedText);
                     byte[] numArray1 = new byte[17 + bytes.Length];
                     byte[] numArray2 = numArray1;
                     Buffer.BlockCopy(state, 0, numArray2, 0, 16);
@@ -206,8 +206,8 @@ namespace Uncreated.Warfare
                                     byte[] bytes1;
                                     if (interactable.isDisplay)
                                     {
-                                        byte[] bytes2 = Encoding.UTF8.GetBytes(interactable.displayTags);
-                                        byte[] bytes3 = Encoding.UTF8.GetBytes(interactable.displayDynamicProps);
+                                        byte[] bytes2 = System.Text.Encoding.UTF8.GetBytes(interactable.displayTags);
+                                        byte[] bytes3 = System.Text.Encoding.UTF8.GetBytes(interactable.displayDynamicProps);
                                         bytes1 = new byte[20 + (interactable.displayItem != null ? interactable.displayItem.state.Length : 0) + 4 + 1 + bytes2.Length + 1 + bytes3.Length + 1];
                                         if (interactable.displayItem != null)
                                         {
@@ -262,11 +262,11 @@ namespace Uncreated.Warfare
                                             newtext = newtext.Replace("<size=", "").Replace("</size>", "");
                                         }
                                         byte[] state = serversideData.barricade.state;
-                                        byte[] textbytes = Encoding.UTF8.GetBytes(newtext);
+                                        byte[] textbytes = System.Text.Encoding.UTF8.GetBytes(newtext);
                                         if (textbytes.Length > byte.MaxValue - 18)
                                         {
                                             L.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");
-                                            textbytes = Encoding.UTF8.GetBytes(sign.text);
+                                            textbytes = System.Text.Encoding.UTF8.GetBytes(sign.text);
                                         }
                                         byte[] numArray1 = new byte[17 + textbytes.Length];
                                         numArray1[16] = (byte)textbytes.Length;

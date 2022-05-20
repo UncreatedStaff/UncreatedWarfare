@@ -4,6 +4,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Uncreated.Networking;
 using Uncreated.Warfare.Networking;
 using UnityEngine;
 
@@ -27,7 +28,7 @@ namespace Uncreated.Warfare.Commands
                 if (command.Length == 0)
                 {
                     ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT");
-                    Invocations.Shared.ShuttingDown.NetInvoke(0UL, "None specified.");
+                    SendShuttingDownInstant.NetInvoke(0UL, "None specified.");
                     Provider.shutdown(0);
                     return;
                 }
@@ -47,7 +48,7 @@ namespace Uncreated.Warfare.Commands
                 if (option == "instant" || option == "inst" || option == "now")
                 {
                     ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason);
-                    Invocations.Shared.ShuttingDown.NetInvoke(0UL, reason);
+                    SendShuttingDownInstant.NetInvoke(0UL, reason);
                     Provider.shutdown(0, reason);
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
@@ -68,7 +69,7 @@ namespace Uncreated.Warfare.Commands
                         }
                         catch { }
                     }
-                    Invocations.Shared.ShuttingDownCancel.NetInvoke(0UL);
+                    SendCancelledShuttingDownAfter.NetInvoke(0UL);
                 }
                 else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
@@ -81,7 +82,7 @@ namespace Uncreated.Warfare.Commands
                     time = seconds.GetTimeFromSeconds(0);
                     L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
                     ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason);
-                    Invocations.Shared.ShuttingDownTime.NetInvoke(0UL, reason, seconds);
+                    SendShuttingDownInSeconds.NetInvoke(0UL, reason, seconds);
                     Provider.shutdown(unchecked((int)seconds), reason);
                 }
                 else
@@ -96,7 +97,7 @@ namespace Uncreated.Warfare.Commands
                 if (command.Length == 0)
                 {
                     ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT", player.playerID.steamID.m_SteamID);
-                    Invocations.Shared.ShuttingDown.NetInvoke(0UL, "None specified.");
+                    SendShuttingDownInstant.NetInvoke(0UL, "None specified.");
                     Provider.shutdown(0);
                     return;
                 }
@@ -116,7 +117,7 @@ namespace Uncreated.Warfare.Commands
                 if (option == "instant" || option == "inst" || option == "now")
                 {
                     ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason, player.playerID.steamID.m_SteamID);
-                    Invocations.Shared.ShuttingDown.NetInvoke(0UL, reason);
+                    SendShuttingDownInstant.NetInvoke(0UL, reason);
                     Provider.shutdown(0, reason);
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
@@ -134,7 +135,7 @@ namespace Uncreated.Warfare.Commands
                         catch { }
                     }
                     Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
-                    Invocations.Shared.ShuttingDownAfter.NetInvoke(0UL, reason);
+                    SendShuttingDownAfter.NetInvoke(0UL, reason);
                 }
                 else if (option == "cancel" || option == "abort")
                 {
@@ -150,7 +151,7 @@ namespace Uncreated.Warfare.Commands
                         }
                         catch { }
                     }
-                    Invocations.Shared.ShuttingDownCancel.NetInvoke(0UL);
+                    SendCancelledShuttingDownAfter.NetInvoke(0UL);
                 }
                 else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
@@ -163,7 +164,7 @@ namespace Uncreated.Warfare.Commands
                     time = seconds.GetTimeFromSeconds(0);
                     L.Log(Translation.Translate("shutdown_broadcast_after_time_console_player", 0, out _, time, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
                     ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, player.playerID.steamID.m_SteamID);
-                    Invocations.Shared.ShuttingDownTime.NetInvoke(0UL, reason, seconds);
+                    SendShuttingDownInSeconds.NetInvoke(0UL, reason, seconds);
                     Provider.shutdown(unchecked((int)seconds), reason);
                 }
                 else
@@ -177,7 +178,7 @@ namespace Uncreated.Warfare.Commands
         internal static void ShutdownInstant(string reason)
         {
             ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason, 0);
-            Invocations.Shared.ShuttingDown.NetInvoke(0UL, reason);
+            SendShuttingDownInstant.NetInvoke(0UL, reason);
             Provider.shutdown(0, reason);
         }
 
@@ -196,7 +197,7 @@ namespace Uncreated.Warfare.Commands
                 catch { }
             }
             Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
-            Invocations.Shared.ShuttingDownAfter.NetInvoke(0UL, reason);
+            SendShuttingDownAfter.NetInvoke(0UL, reason);
         }
         public static void ShutdownAfterGameDaily()
         {
@@ -214,7 +215,7 @@ namespace Uncreated.Warfare.Commands
                 catch { }
             }
             Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
-            Invocations.Shared.ShuttingDownAfter.NetInvoke(0UL, reason);
+            SendShuttingDownAfter.NetInvoke(0UL, reason);
         }
 
         public static IEnumerator<WaitForSeconds> ShutdownMessageSender(string reason)
@@ -227,5 +228,10 @@ namespace Uncreated.Warfare.Commands
                     player.SendChat("shutdown_broadcast_after_game_reminder", reason);
             }
         }
+
+        public static readonly NetCall<ulong, string> SendShuttingDownInstant = new NetCall<ulong, string>(1012);
+        public static readonly NetCall<ulong, string> SendShuttingDownAfter = new NetCall<ulong, string>(1013);
+        public static readonly NetCall<ulong> SendCancelledShuttingDownAfter = new NetCall<ulong>(1014);
+        public static readonly NetCall<ulong, string, uint> SendShuttingDownInSeconds = new NetCall<ulong, string, uint>(1015);
     }
 }

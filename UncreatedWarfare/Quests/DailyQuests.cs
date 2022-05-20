@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Framework;
+using Uncreated.Framework.Quests;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Quests.Types;

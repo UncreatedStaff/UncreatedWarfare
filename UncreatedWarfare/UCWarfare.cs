@@ -59,7 +59,7 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             Instance = this;
-            Data.Logs = Data.ReadRocketLog();
+            L.Logs = L.ReadRocketLog();
             Data.LoadColoredConsole();
             L.Log("Started loading " + Name + " - " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
@@ -395,10 +395,10 @@ namespace Uncreated.Warfare
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
             Data.NetClient.Dispose();
-            Logging.OnLog -= L.Log;
-            Logging.OnLogWarning -= L.LogWarningEventCall;
-            Logging.OnLogError -= L.LogErrorEventCall;
-            Logging.OnLogException -= L.LogErrorEventCall;
+            Logging.OnLogInfo -= L.NetLogInfo;
+            Logging.OnLogWarning -= L.NetLogWarning;
+            Logging.OnLogError -= L.NetLogError;
+            Logging.OnLogException -= L.NetLogException;
             try
             {
                 Patches.Unpatch();
@@ -412,7 +412,6 @@ namespace Uncreated.Warfare
             {
                 WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.Locale) + ".dat");
             }
-            NetFactory.ClearRegistry();
 #if DEBUG
             profiler.Dispose();
             F.SaveProfilingData();
