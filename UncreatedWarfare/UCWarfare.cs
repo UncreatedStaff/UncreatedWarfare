@@ -31,7 +31,7 @@ namespace Uncreated.Warfare
     public partial class UCWarfare : RocketPlugin<Config>
     {
         public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
-        public static readonly Version Version      = new Version(2, 0, 1, 3);
+        public static readonly Version Version      = new Version(2, 0, 2, 0);
         public static int Season => Version.Major;
         public static UCWarfare Instance;
         public Coroutine? StatsRoutine;
