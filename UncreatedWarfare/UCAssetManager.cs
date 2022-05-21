@@ -78,26 +78,26 @@ public static class UCAssetManager
         public static readonly NetCallRaw<ItemData?[]> SendItemInfos = new NetCallRaw<ItemData?[]>(1122, ItemData.ReadMany, ItemData.WriteMany);
 
         [NetCall(ENetCall.FROM_SERVER, 1025)]
-        internal static void ReceiveRequestAssetName(IConnection connection, ushort id, EAssetType type)
+        internal static void ReceiveRequestAssetName(MessageContext context, ushort id, EAssetType type)
         {
             Asset a = Assets.find(type, id);
-            if (a == null)
+            if (a is null)
             {
-                SendAssetName.Invoke(connection, id, type, string.Empty);
+                context.Reply(SendAssetName, id, type, string.Empty);
                 return;
             }
-            SendAssetName.Invoke(connection, id, type, a.FriendlyName);
+            context.Reply(SendAssetName, id, type, a.FriendlyName);
         }
         [NetCall(ENetCall.FROM_SERVER, 1119)]
-        internal static void ReceiveItemInfoRequest(IConnection connection, ushort item)
+        internal static void ReceiveItemInfoRequest(MessageContext context, ushort item)
         {
             if (Assets.find(EAssetType.ITEM, item) is ItemAsset asset)
-                SendItemInfo.Invoke(connection, ItemData.FromAsset(asset));
+                context.Reply(SendItemInfo, ItemData.FromAsset(asset));
             else
-                SendItemInfo.Invoke(connection, null);
+                context.Reply(SendItemInfo, null);
         }
         [NetCall(ENetCall.FROM_SERVER, 1121)]
-        internal static void ReceiveItemInfosRequest(IConnection connection, ushort[] items)
+        internal static void ReceiveItemInfosRequest(MessageContext context, ushort[] items)
         {
             ItemData[] rtn = new ItemData[items.Length];
             for (int i = 0; i < items.Length; i++)
@@ -105,10 +105,10 @@ public static class UCAssetManager
                 if (Assets.find(EAssetType.ITEM, items[i]) is ItemAsset asset)
                     rtn[i] = ItemData.FromAsset(asset);
             }
-            SendItemInfos.Invoke(connection, rtn);
+            context.Reply(SendItemInfos, rtn);
         }
         [NetCall(ENetCall.FROM_SERVER, 1123)]
-        internal static void ReceiveAllItemInfosRequest(IConnection connection)
+        internal static void ReceiveAllItemInfosRequest(MessageContext context)
         {
             Asset[] assets = Assets.find(EAssetType.ITEM);
             ItemData[] rtn = new ItemData[assets.Length];
@@ -125,7 +125,7 @@ public static class UCAssetManager
                     rtn[i] = null!;
                 }
             }
-            SendItemInfos.Invoke(connection, rtn);
+            context.Reply(SendItemInfos, rtn);
         }
     }
 }

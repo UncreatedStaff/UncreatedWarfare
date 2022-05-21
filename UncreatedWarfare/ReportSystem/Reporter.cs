@@ -51,11 +51,11 @@ public class Reporter : MonoBehaviour
         }
         return null;
     }
-    public WasteingAssetsReport? CreateWasteingAssetsReport(ulong reporter, ulong violator, string message)
+    public WastingAssetsReport? CreateWastingAssetsReport(ulong reporter, ulong violator, string message)
     {
         if (data.TryGetValue(violator, out PlayerData pd))
         {
-            return pd.WasteingAssetsReport(message, reporter);
+            return pd.WastingAssetsReport(message, reporter);
         }
         return null;
     }
@@ -565,8 +565,8 @@ public class Reporter : MonoBehaviour
             }
             return vehicles;
         }
-        public WasteingAssetsReport WasteingAssetsReport(string message, ulong reporter) =>
-            new WasteingAssetsReport()
+        public WastingAssetsReport WastingAssetsReport(string message, ulong reporter) =>
+            new WastingAssetsReport()
             {
                 Message = message,
                 Reporter = reporter,

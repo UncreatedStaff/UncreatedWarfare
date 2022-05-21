@@ -1464,7 +1464,7 @@ public static class KitEx
         public static readonly NetCallRaw<Kit?[]> SendKits = new NetCallRaw<Kit?[]>(1118, Kit.ReadMany, Kit.WriteMany);
 
         [NetCall(ENetCall.FROM_SERVER, 1100)]
-        internal static Task ReceiveGiveKitAccess(IConnection connection, ulong player, string kit, EKitAccessType type)
+        internal static Task ReceiveGiveKitAccess(MessageContext context, ulong player, string kit, EKitAccessType type)
         {
             if (KitManager.KitExists(kit, out Kit k))
                 return KitManager.GiveAccess(k, player, type);
@@ -1472,7 +1472,7 @@ public static class KitEx
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1101)]
-        internal static Task ReceiveRemoveKitAccess(IConnection connection, ulong player, string kit)
+        internal static Task ReceiveRemoveKitAccess(MessageContext context, ulong player, string kit)
         {
             if (KitManager.KitExists(kit, out Kit k))
                 return KitManager.RemoveAccess(k, player);
@@ -1480,38 +1480,38 @@ public static class KitEx
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1109)]
-        internal static Task ReceiveCreateKit(IConnection connection, Kit? kit) => KitManager.AddKit(kit);
+        internal static Task ReceiveCreateKit(MessageContext context, Kit? kit) => KitManager.AddKit(kit);
 
         [NetCall(ENetCall.FROM_SERVER, 1113)]
-        internal static void ReceiveRequestKitClass(IConnection connection, string kitID)
+        internal static void ReceiveRequestKitClass(MessageContext context, string kitID)
         {
             if (KitManager.KitExists(kitID, out Kit kit))
             {
                 if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out string signtext))
                     signtext = kit.SignTexts.Values.FirstOrDefault() ?? kit.Name;
 
-                SendKitClass.Invoke(connection, kitID, kit.Class, signtext);
+                context.Reply(SendKitClass, kitID, kit.Class, signtext);
             }
             else
             {
-                SendKitClass.Invoke(connection, kitID, EClass.NONE, kit.Name);
+                context.Reply(SendKitClass, kitID, EClass.NONE, kitID);
             }
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1115)]
-        internal static void ReceiveKitRequest(IConnection connection, string kitID)
+        internal static void ReceiveKitRequest(MessageContext context, string kitID)
         {
             if (KitManager.KitExists(kitID, out Kit kit))
             {
-                SendKit.Invoke(connection, kit);
+                context.Reply(SendKit, kit);
             }
             else
             {
-                SendKit.Invoke(connection, null);
+                context.Reply(SendKit, kit);
             }
         }
         [NetCall(ENetCall.FROM_SERVER, 1116)]
-        internal static void ReceiveKitsRequest(IConnection connection, string[] kitIDs)
+        internal static void ReceiveKitsRequest(MessageContext context, string[] kitIDs)
         {
             Kit[] kits = new Kit[kitIDs.Length];
             for (int i = 0; i < kitIDs.Length; i++)
@@ -1525,7 +1525,7 @@ public static class KitEx
                     kits[i] = null!;
                 }
             }
-            SendKits.Invoke(connection, kits);
+            context.Reply(SendKits, kits);
         }
     }
 }

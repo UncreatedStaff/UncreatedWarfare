@@ -539,41 +539,41 @@ public static class PlayerManager
     {
         public static readonly NetCall<ulong, bool> SendSetQueueSkip = new NetCall<ulong, bool>(ReceiveSetQueueSkip);
         public static readonly NetCall<ulong> GetPermissionsRequest = new NetCall<ulong>(ReceivePermissionRequest);
-        public static readonly NetCall<ulong> CheckPlayerOnlineStatusRequest = new NetCall<ulong>(ReceivePlayerOnlineCheckRequest, 8);
+        public static readonly NetCall<ulong> CheckPlayerOnlineStatusRequest = new NetCall<ulong>(ReceivePlayerOnlineCheckRequest);
 
         public static readonly NetCallRaw<PlayerListEntry[]> SendPlayerList = new NetCallRaw<PlayerListEntry[]>(1000, PlayerListEntry.ReadArray, PlayerListEntry.WriteArray);
         public static readonly NetCallRaw<PlayerListEntry> SendPlayerJoined = new NetCallRaw<PlayerListEntry>(1016, PlayerListEntry.Read, PlayerListEntry.Write);
         public static readonly NetCall<ulong> SendPlayerLeft = new NetCall<ulong>(1017);
         public static readonly NetCall<ulong, bool> SendDutyChanged = new NetCall<ulong, bool>(1018);
         public static readonly NetCall<ulong, byte> SendTeamChanged = new NetCall<ulong, byte>(1019);
-        public static readonly NetCall<bool> SendPlayerOnlineStatus = new NetCall<bool>(1036, 1);
-        public static readonly NetCall<EAdminType> SendPermissions = new NetCall<EAdminType>(1034);
+        public static readonly NetCall<ulong, bool> SendPlayerOnlineStatus = new NetCall<ulong, bool>(1036);
+        public static readonly NetCall<ulong, EAdminType> SendPermissions = new NetCall<ulong, EAdminType>(1034);
 
         [NetCall(ENetCall.FROM_SERVER, 1024)]
-        internal static void ReceiveSetQueueSkip(IConnection connection, ulong player, bool status)
+        internal static void ReceiveSetQueueSkip(MessageContext context, ulong player, bool status)
         {
             if (PlayerSave.TryReadSaveFile(player, out PlayerSave save))
             {
                 save.HasQueueSkip = status;
                 PlayerSave.WriteToSaveFile(save);
             }
-            else
+            else if (status)
             {
                 save = new PlayerSave(player, 0, string.Empty, string.Empty, status, 0, false, false);
                 PlayerSave.WriteToSaveFile(save);
             }
         }
         [NetCall(ENetCall.FROM_SERVER, 1033)]
-        internal static void ReceivePermissionRequest(IConnection connection, ulong Steam64)
+        internal static void ReceivePermissionRequest(MessageContext context, ulong target)
         {
-            RocketPlayer player = new RocketPlayer(Steam64.ToString());
+            RocketPlayer player = new RocketPlayer(target.ToString());
             EAdminType perms = player.GetPermissions();
-            SendPermissions.Invoke(connection, perms);
+            context.Reply(SendPermissions, target, perms);
         }
         [NetCall(ENetCall.FROM_SERVER, 1035)]
-        internal static void ReceivePlayerOnlineCheckRequest(IConnection connection, ulong Steam64)
+        internal static void ReceivePlayerOnlineCheckRequest(MessageContext context, ulong target)
         {
-            SendPlayerOnlineStatus.Invoke(connection, PlayerTool.getSteamPlayer(Steam64) != null);
+            context.Reply(SendPlayerOnlineStatus, target, PlayerTool.getSteamPlayer(target) is not null);
         }
     }
 }

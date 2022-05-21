@@ -541,6 +541,16 @@ namespace Uncreated.Warfare
                 return true;
             }), text, formatting);
         }
+        /// <summary>
+        /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
+        /// </summary>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="textColor">The color of the chat.</param>
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
+        public static void BroadcastToAllExcept(ulong excluded, string text, params string[] formatting)
+        {
+            BroadcastToPlayers(Translation.EnumerateLanguageSets(x => excluded != x.Steam64), text, formatting);
+        }
         public static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer? recipient)
         {
             try

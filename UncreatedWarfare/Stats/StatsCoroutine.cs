@@ -74,7 +74,7 @@ namespace Uncreated.Warfare.Stats
                                 }
                                 else if (afk.time == Afk.Clamp(n + 1)) // one cycle left
                                 {
-                                    ucplayer.SendChat("afk_warning", ((uint)UCWarfare.Config.StatsInterval).GetTimeFromMinutes(ucplayer.Steam64));
+                                    ucplayer.SendChat("afk_warning", UCWarfare.Config.StatsInterval.GetTimeFromMinutes(ucplayer.Steam64));
                                 }
                             }
                             else

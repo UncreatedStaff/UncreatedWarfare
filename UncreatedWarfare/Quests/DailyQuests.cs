@@ -298,7 +298,7 @@ public static class DailyQuests
         SendNextQuests.NetInvoke(_sendQuests);
     }
     [NetCall(ENetCall.FROM_SERVER, 1126)]
-    public static async Task ReceiveQuestData(IConnection connection, Folder folder)
+    public static async Task ReceiveQuestData(MessageContext context, Folder folder)
     {
         string p = QuestManager.QUEST_FOLDER + "DailyQuests\\";
         folder.WriteToDisk(p);

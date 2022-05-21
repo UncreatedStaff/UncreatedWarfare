@@ -515,18 +515,18 @@ public static class StatsManager
         public static readonly NetCallRaw<WarfareKit> BackupKit = new NetCallRaw<WarfareKit>(2094, WarfareKit.Read, WarfareKit.Write);
 
         [NetCall(ENetCall.FROM_SERVER, 2000)]
-        internal static void ReceiveRequestPlayerData(IConnection connection, ulong Player)
+        internal static void ReceiveRequestPlayerData(MessageContext context, ulong Player)
         {
             bool online = Provider.clients.Exists(x => x.playerID.steamID.m_SteamID == Player);
             string dir = StatsDirectory + Player.ToString() + ".dat";
             if (WarfareStats.IO.ReadFrom(dir, out WarfareStats stats))
             {
-                SendPlayerData.Invoke(connection, stats, online);
+                context.Reply(SendPlayerData, stats, online);
             }
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2002)]
-        internal static void ReceiveRequestKitData(IConnection connection, string KitID)
+        internal static void ReceiveRequestKitData(MessageContext context, string KitID)
         {
             EClass @class = EClass.NONE;
             string sname = KitID;
@@ -540,21 +540,21 @@ public static class StatsManager
             string dir = KitsDirectory + KitID + ".dat";
             if (WarfareKit.IO.ReadFrom(dir, out WarfareKit kit))
             {
-                SendKitData.Invoke(connection, kit, sname, (byte)@class);
+                context.Reply(SendKitData, kit, sname, (byte)@class);
             }
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2004)]
-        internal static void ReceiveRequestTeamData(IConnection connection, byte team)
+        internal static void ReceiveRequestTeamData(MessageContext context, byte team)
         {
             if (team == 1)
-                SendTeamData.Invoke(connection, Team1Stats);
+                context.Reply(SendTeamData, Team1Stats);
             else if (team == 2)
-                SendTeamData.Invoke(connection, Team2Stats);
+                context.Reply(SendTeamData, Team1Stats);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2006)]
-        internal static void ReceiveRequestWeaponData(IConnection connection, ushort weaponid, string KitID)
+        internal static void ReceiveRequestWeaponData(MessageContext context, ushort weaponid, string KitID)
         {
             string dir = WeaponsDirectory + GetWeaponName(weaponid, KitID);
             if (WarfareWeapon.IO.ReadFrom(dir, out WarfareWeapon weapon))
@@ -569,28 +569,28 @@ public static class StatsManager
                 }
                 else
                     kitname = KitID;
-                SendWeaponData.Invoke(connection, weapon, name, kitname);
+                context.Reply(SendWeaponData, weapon, name, kitname);
             }
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2008)]
-        internal static void ReceiveRequestVehicleData(IConnection connection, ushort vehicleID)
+        internal static void ReceiveRequestVehicleData(MessageContext context, ushort vehicleID)
         {
             string dir = VehiclesDirectory + vehicleID.ToString() + ".dat";
             string name = Assets.find(EAssetType.VEHICLE, vehicleID) is VehicleAsset asset ? asset.vehicleName : vehicleID.ToString();
             if (WarfareVehicle.IO.ReadFrom(dir, out WarfareVehicle vehicle))
-                SendVehicleData.Invoke(connection, vehicle, name);
+                context.Reply(SendVehicleData, vehicle, name);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2010)]
-        internal static void ReceiveRequestKitList(IConnection connection) =>
-            SendKitList.Invoke(connection, KitManager.Instance.Kits.Values.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
+        internal static void ReceiveRequestKitList(MessageContext context) 
+            => context.Reply(SendKitList, KitManager.Instance.Kits.Values.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
 
         [NetCall(ENetCall.FROM_SERVER, 2012)]
-        internal static void ReceiveRequestTeamData(IConnection connection) => SendTeams.Invoke(connection, Team1Stats, Team2Stats);
+        internal static void ReceiveRequestTeamData(MessageContext context) => context.Reply(SendTeams, Team1Stats, Team2Stats);
 
         [NetCall(ENetCall.FROM_SERVER, 2020)]
-        internal static void ReceiveWeaponRequest(IConnection connection, ushort weapon)
+        internal static void ReceiveWeaponRequest(MessageContext context, ushort weapon)
         {
             if (!Directory.Exists(WeaponsDirectory)) SendWeapons.NetInvoke(new WarfareWeapon[0], string.Empty, new string[0]);
             string[] files = Directory.GetFiles(WeaponsDirectory, $"{weapon}*.dat");
@@ -609,22 +609,22 @@ public static class StatsManager
                     kitnames.Add(kitname);
                 }
             }
-            SendWeapons.NetInvoke(weapons.ToArray(), Assets.find(EAssetType.ITEM, weapon) is ItemAsset asset ? asset.itemName : weapon.ToString(Data.Locale), kitnames.ToArray());
+            context.Reply(SendWeapons, weapons.ToArray(), Assets.find(EAssetType.ITEM, weapon) is ItemAsset asset ? asset.itemName : weapon.ToString(Data.Locale), kitnames.ToArray());
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2025)]
-        internal static void ReceiveRequestEveryWeapon(IConnection connection)
+        internal static void ReceiveRequestEveryWeapon(MessageContext context)
         {
             string[] weaponnames = new string[Weapons.Count];
             for (int i = 0; i < weaponnames.Length; i++)
             {
                 weaponnames[i] = Assets.find(EAssetType.ITEM, Weapons[i].ID) is ItemAsset asset ? asset.itemName : Weapons[i].ID.ToString();
             }
-            SendEveryWeapon.NetInvoke(Weapons.ToArray(), weaponnames);
+            context.Reply(SendEveryWeapon, Weapons.ToArray(), weaponnames);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2026)]
-        internal static void ReceiveRequestEveryPlayer(IConnection connection)
+        internal static void ReceiveRequestEveryPlayer(MessageContext context)
         {
             if (!Directory.Exists(StatsDirectory))
                 Directory.CreateDirectory(StatsDirectory);
@@ -642,11 +642,11 @@ public static class StatsManager
                     L.LogWarning("Invalid vehicle file: " + file.FullName);
                 }
             }
-            SendEveryPlayer.NetInvoke(rtn.ToArray());
+            context.Reply(SendEveryPlayer, rtn.ToArray());
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2027)]
-        internal static void ReceiveRequestEveryKit(IConnection connection)
+        internal static void ReceiveRequestEveryKit(MessageContext context)
         {
             string[] kitnames = new string[Kits.Count];
             byte[] classes = new byte[Kits.Count];
@@ -661,18 +661,18 @@ public static class StatsManager
                             kitnames[i] = GameKit.SignTexts.Values.ElementAt(0);
                 }
             }
-            SendEveryKit.NetInvoke(Kits.ToArray(), kitnames, classes);
+            context.Reply(SendEveryKit, Kits.ToArray(), kitnames, classes);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2028)]
-        internal static void ReceiveRequestEveryVehicle(IConnection connection)
+        internal static void ReceiveRequestEveryVehicle(MessageContext context)
         {
             string[] vehiclenames = new string[Vehicles.Count];
             for (int i = 0; i < vehiclenames.Length; i++)
             {
                 vehiclenames[i] = Assets.find(EAssetType.VEHICLE, Weapons[i].ID) is VehicleAsset asset ? asset.vehicleName : Vehicles[i].ID.ToString();
             }
-            SendEveryVehicle.NetInvoke(Vehicles.ToArray(), vehiclenames);
+            context.Reply(SendEveryVehicle, Vehicles.ToArray(), vehiclenames);
         }
 
         private static WarfareWeapon[] ReadWeaponArray(ByteReader R)

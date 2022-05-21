@@ -111,24 +111,24 @@ public class ActionLog : MonoBehaviour
     {
         public static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
         public static readonly NetCall<DateTime> AckLog = new NetCall<DateTime>(ReceiveAckLog);
-        public static readonly NetCall RequestCurrentLog = new NetCall(1129);
+        public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
         public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
 
         [NetCall(ENetCall.FROM_SERVER, 1128)]
-        internal static void ReceiveAckLog(IConnection connection, DateTime fileReceived)
+        internal static void ReceiveAckLog(MessageContext context, DateTime fileReceived)
         {
             string path = Data.LOG_DIRECTORY + fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt";
             if (File.Exists(path))
                 File.Delete(path);
         }
         [NetCall(ENetCall.FROM_SERVER, 1129)]
-        internal static void ReceiveCurrentLogRequest(IConnection connection)
+        internal static void ReceiveCurrentLogRequest(MessageContext context)
         {
             string path2 = Data.LOG_DIRECTORY + "current.txt";
             FileInfo info = new FileInfo(path2);
             if (!info.Exists)
             {
-                SendCurrentLog.Invoke(connection, new byte[0], default);
+                context.Reply(SendCurrentLog, Array.Empty<byte>(), default);
                 return;
             }
             using (FileStream str = info.OpenRead())
@@ -138,19 +138,18 @@ public class ActionLog : MonoBehaviour
                     int len = (int)str.Length;
                     byte[] bytes = new byte[len];
                     str.Read(bytes, 0, len);
-                    SendCurrentLog.Invoke(connection, bytes, info.CreationTime);
+                    context.Reply(SendCurrentLog, bytes, info.CreationTime);
                 }
                 else
                 {
                     byte[] bytes = new byte[int.MaxValue];
                     str.Read(bytes, 0, int.MaxValue);
-                    SendCurrentLog.Invoke(connection, bytes, info.CreationTime);
+                    context.Reply(SendCurrentLog, bytes, info.CreationTime);
                     return;
                 }
             }
         }
     }
-
     internal static void OnConnected()
     {
         F.CheckDir(Data.LOG_DIRECTORY, out bool success);

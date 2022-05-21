@@ -198,9 +198,9 @@ public static class L
         public static readonly NetCallRaw<LogMessage[], byte> SendFullLog = new NetCallRaw<LogMessage[], byte>(1031, LogMessage.ReadMany, null, LogMessage.WriteMany, null);
 
         [NetCall(ENetCall.FROM_SERVER, 1029)]
-        internal static void ReceiveRequestFullLog(IConnection connection) => SendFullLog.Invoke(connection, Logs.ToArray(), 0);
+        internal static void ReceiveRequestFullLog(MessageContext context) => context.Reply(SendFullLog, Logs.ToArray(), (byte)0);
         [NetCall(ENetCall.FROM_SERVER, 1032)]
-        internal static void ReceiveCommand(IConnection connection, string command)
+        internal static void ReceiveCommand(MessageContext context, string command)
         {
             if (UCWarfare.IsMainThread)
                 RunCommand(command);

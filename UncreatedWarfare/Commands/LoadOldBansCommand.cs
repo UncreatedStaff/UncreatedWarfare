@@ -28,8 +28,9 @@ namespace Uncreated.Warfare.Commands
                     {
                         SteamBlacklistID ban = SteamBlacklist.list[index];
                         DateTime time = DateTime.Now - TimeSpan.FromSeconds(ban.duration - ban.getTime());
-                        Data.DatabaseManager.AddBan(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.duration / 60, ban.reason, time);
-                        OffenseManager.NetCalls.SendPlayerBanned.NetInvoke(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.reason, ban.duration / 60, time);
+                        int duration = ban.duration == SteamBlacklist.PERMANENT ? -1 : (int)(ban.duration / 60);
+                        Data.DatabaseManager.AddBan(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, duration, ban.reason, time);
+                        OffenseManager.NetCalls.SendPlayerBanned.NetInvoke(ban.playerID.m_SteamID, ban.judgeID.m_SteamID, ban.reason, duration, time);
                     }
                     ActionLog.Add(EActionLogType.LOAD_OLD_BANS, SteamBlacklist.list.Count + " BANS LOADED.");
                 }

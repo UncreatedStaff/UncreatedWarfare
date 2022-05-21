@@ -493,6 +493,7 @@ namespace Uncreated.Warfare
                         ucplayer.CachedXP = await t2;
                         ucplayer.CachedCredits = await t3;
                         ucplayer.AccessibleKits = await t4;
+                        await OffenseManager.ApplyMuteSettings(ucplayer);
                         await UCWarfare.ToUpdate();
                         RequestSigns.InvokeLangUpdateForAllSigns(ucplayer.Player.channel.owner);
                         foreach (Vehicles.VehicleSpawn spawn in VehicleSpawner.ActiveObjects)

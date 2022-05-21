@@ -9,6 +9,7 @@ namespace Uncreated.Players
     public struct FPlayerName
     {
         public static readonly FPlayerName Nil = new FPlayerName() { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
+        public static readonly FPlayerName Console = new FPlayerName() { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = 0 };
         public ulong Steam64;
         public string PlayerName;
         public string CharacterName;
