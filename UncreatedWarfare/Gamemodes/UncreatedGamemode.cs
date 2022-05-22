@@ -62,9 +62,9 @@ namespace Uncreated.Warfare.Gamemodes
         public virtual bool UseWhitelist { get => true; }
         protected EState _state;
         public EState State { get => _state; }
-        protected string shutdownMessage = string.Empty;
-        protected bool shutdownAfterGame = false;
-        protected ulong shutdownPlayer = 0;
+        internal string shutdownMessage = string.Empty;
+        internal bool shutdownAfterGame = false;
+        internal ulong shutdownPlayer = 0;
         public Coroutine EventLoopCoroutine;
         public bool isPendingCancel;
         public abstract string DisplayName { get; }

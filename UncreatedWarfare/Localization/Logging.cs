@@ -189,10 +189,12 @@ public static class L
             return;
         L.LogError($"Unable to match \"{command}\" with any built-in commands");
     }
+    internal static bool isRequestingLog = false;
     public static class NetCalls
     {
         public static readonly NetCall RequestFullLog = new NetCall(ReceiveRequestFullLog);
         public static readonly NetCall<string> RequestRunCommand = new NetCall<string>(ReceiveCommand);
+        public static readonly NetCall<bool> SetRequestLogState = new NetCall<bool>(ReceiveRequestsLogState);
 
         public static readonly NetCallRaw<LogMessage, byte> SendLogMessage = new NetCallRaw<LogMessage, byte>(1030, LogMessage.Read, null, LogMessage.Write, null);
         public static readonly NetCallRaw<LogMessage[], byte> SendFullLog = new NetCallRaw<LogMessage[], byte>(1031, LogMessage.ReadMany, null, LogMessage.WriteMany, null);
@@ -206,6 +208,11 @@ public static class L
                 RunCommand(command);
             else
                 UCWarfare.RunOnMainThread(() => RunCommand(command));
+        }
+        [NetCall(ENetCall.FROM_SERVER, 1023)]
+        private static void ReceiveRequestsLogState(MessageContext context, bool state)
+        {
+            isRequestingLog = state;
         }
     }
 }

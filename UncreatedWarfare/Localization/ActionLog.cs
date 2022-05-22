@@ -52,7 +52,7 @@ public class ActionLog : MonoBehaviour
                             File.SetLastAccessTime(path, creation);
                             File.SetLastWriteTime(path, creation);
 
-                            if (Data.NetClient != null && Data.NetClient != null && Data.NetClient.IsActive)
+                            if (UCWarfare.CanUseNetCall)
                             {
                                 using (FileStream str = info.OpenRead())
                                 {

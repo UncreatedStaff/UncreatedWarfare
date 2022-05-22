@@ -958,6 +958,7 @@ namespace Uncreated.Warfare
                 { "report_cooldown", "You've already reported {0} in the past hour." },
                 { "report_cancelled", "You did not confirm your report in time." },
                 { "report_confirm", "Did you mean to report {1} <i><color=#444444>{0}</color></i>? Type <color=#ff8c69>/confirm</color> to continue." },
+                { "report_not_connected", "<color=#ff8c69>The report system is not available right now, please try again later.</color>" },
 
                 // Tips
                 { "tip_place_radio", "Place a <color=#ababab>FOB RADIO</color>." },

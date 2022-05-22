@@ -420,7 +420,7 @@ public static class OffenseManager
         Task.Run(async () => {
             DateTime now = DateTime.Now;
             await Data.DatabaseManager.NonQueryAsync(
-                "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4);",
+                "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4, @5);",
                 new object[] { target, admin, reason, duration, now, (byte)type });
             FPlayerName names = await F.GetPlayerOriginalNamesAsync(target);
             FPlayerName names2 = await F.GetPlayerOriginalNamesAsync(admin);

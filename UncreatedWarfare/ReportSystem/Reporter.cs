@@ -13,65 +13,73 @@ public class Reporter : MonoBehaviour
 {
     public Report? CreateReport(ulong reporter, ulong violator, string message)
     {
-        if (data.TryGetValue(violator, out PlayerData pd))
+        for (int i = 0; i < data.Count; ++i)
         {
-            return pd.CustomReport(message, reporter);
+            if (data[i].Steam64 == violator)
+                return data[i].CustomReport(message, reporter);
         }
         return null;
     }
     public ChatAbuseReport? CreateChatAbuseReport(ulong reporter, ulong violator, string message)
     {
-        if (data.TryGetValue(violator, out PlayerData pd))
+        for (int i = 0; i < data.Count; ++i)
         {
-            return pd.ChatAbuseReport(message, reporter);
+            if (data[i].Steam64 == violator)
+                return data[i].ChatAbuseReport(message, reporter);
         }
         return null;
     }
     public CheatingReport? CreateCheatingReport(ulong reporter, ulong violator, string message)
     {
-        if (data.TryGetValue(violator, out PlayerData pd))
+        for (int i = 0; i < data.Count; ++i)
         {
-            return pd.CheatingReport(message, reporter);
+            if (data[i].Steam64 == violator)
+                return data[i].CheatingReport(message, reporter);
         }
         return null;
     }
     public VoiceChatAbuseReport? CreateVoiceChatAbuseReport(ulong reporter, ulong violator, string message)
     {
-        if (data.TryGetValue(violator, out PlayerData pd))
+        for (int i = 0; i < data.Count; ++i)
         {
-            return pd.VoiceChatAbuseReport(message, reporter);
+            if (data[i].Steam64 == violator)
+                return data[i].VoiceChatAbuseReport(message, reporter);
         }
         return null;
     }
     public SoloingReport? CreateSoloingReport(ulong reporter, ulong violator, string message)
     {
-        if (data.TryGetValue(violator, out PlayerData pd))
+        for (int i = 0; i < data.Count; ++i)
         {
-            return pd.SoloingReport(message, reporter);
+            if (data[i].Steam64 == violator)
+                return data[i].SoloingReport(message, reporter);
         }
         return null;
     }
     public WastingAssetsReport? CreateWastingAssetsReport(ulong reporter, ulong violator, string message)
     {
-        if (data.TryGetValue(violator, out PlayerData pd))
+        for (int i = 0; i < data.Count; ++i)
         {
-            return pd.WastingAssetsReport(message, reporter);
+            if (data[i].Steam64 == violator)
+                return data[i].WastingAssetsReport(message, reporter);
         }
         return null;
     }
     public IntentionalTeamkillReport? CreateIntentionalTeamkillReport(ulong reporter, ulong violator, string message)
     {
-        if (data.TryGetValue(violator, out PlayerData pd))
+        for (int i = 0; i < data.Count; ++i)
         {
-            return pd.IntentionalTeamkillReport(message, reporter);
+            if (data[i].Steam64 == violator)
+                return data[i].IntentionalTeamkillReport(message, reporter);
         }
         return null;
     }
     public GreifingFOBsReport? CreateGreifingFOBsReport(ulong reporter, ulong violator, string message)
     {
-        if (data.TryGetValue(violator, out PlayerData pd))
+        for (int i = 0; i < data.Count; ++i)
         {
-            return pd.GreifingFOBsReport(message, reporter);
+            if (data[i].Steam64 == violator)
+                return data[i].GreifingFOBsReport(message, reporter);
         }
         return null;
     }
@@ -93,11 +101,9 @@ public class Reporter : MonoBehaviour
             int passengerCount = 0;
             for (int i = 0; i < veh.passengers.Length; i++)
             {
-                if (veh.passengers[i] != null)
+                if (veh.passengers[i] is not null)
                 {
-                    passengerCount++;
-                    if (passengerCount > 1)
-                        break;
+                    if (++passengerCount > 1) break;
                 }
             }
             if (passengerCount == 1)
@@ -159,45 +165,46 @@ public class Reporter : MonoBehaviour
         float time = Time.realtimeSinceStartup;
         bool tickTime = time - lastTick > 5f;
         float dt2 = time - lastTick;
-        foreach (KeyValuePair<ulong, PlayerData> player in data.ToList())
+        for (int i = data.Count - 1; i >= 0; --i)
         {
-            if (!player.Value.isOnline)
+            PlayerData player = data[i];
+            if (!player.isOnline)
             {
-                player.Value.offlineTime += dt;
-                if (player.Value.offlineTime > 600f) // remove from list after 10 minutes
+                player.offlineTime += dt;
+                if (player.offlineTime > 600f) // remove from list after 10 minutes
                 {
-                    data.Remove(player.Key);
+                    data.RemoveAt(i);
+                    continue;
                 }
             }
-            else player.Value.onlineTime += dt;
-            for (int i = 0; i < player.Value.recentRequests.Count; i++)
+            else player.onlineTime += dt;
+            for (int j = 0; j < player.recentRequests.Count; i++)
             {
-                VehicleLifeData data = player.Value.recentRequests[i];
+                VehicleLifeData data = player.recentRequests[i];
                 if (!data.died)
                 {
                     data.lifeTime += dt;
-                    player.Value.recentRequests[i] = data;
+                    player.recentRequests[i] = data;
                 }
             }
             if (tickTime)
             {
-                if (player.Value.isOnline)
+                if (player.isOnline)
                 {
-                    PlayerData data = player.Value;
-                    if (data.player == null)
+                    if (player.player == null)
                     {
-                        SteamPlayer pl = PlayerTool.getSteamPlayer(player.Key);
+                        SteamPlayer pl = PlayerTool.getSteamPlayer(player.Steam64);
                         if (pl == null)
                         {
-                            data.isOnline = false;
+                            player.isOnline = false;
                             continue;
                         }
                         else
                         {
-                            data.player = pl.player;
+                            player.player = pl.player;
                         }
                     }
-                    TickPlayer(data, dt2, time);
+                    TickPlayer(player, dt2, time);
                 }
             }
         }
@@ -208,46 +215,66 @@ public class Reporter : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (data.TryGetValue(player, out PlayerData playerData))
+        for (int i = 0; i < data.Count; ++i)
         {
-            playerData.recentRequests.Add(new VehicleLifeData()
+            if (data[i].Steam64 == player)
             {
-                bayInstId = bayInstID,
-                died = false,
-                lifeTime = 0,
-                requestTime = Time.realtimeSinceStartup,
-                vehicle = vehicle
-            });
-        }
+                data[i].recentRequests.Add(new VehicleLifeData()
+                {
+                    bayInstId = bayInstID,
+                    died = false,
+                    lifeTime = 0,
+                    requestTime = Time.realtimeSinceStartup,
+                    vehicle = vehicle
+                });
+                break;
+            }
+        }    
     }
     internal void OnVehicleDied(ulong owner, uint bayInstId, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (bayInstId != uint.MaxValue && data.TryGetValue(owner, out PlayerData playerData))
+        if (bayInstId != uint.MaxValue)
         {
-            for (int i = 0; i < playerData.recentRequests.Count; i++)
+            for (int i = 0; i < data.Count; ++i)
             {
-                VehicleLifeData data = playerData.recentRequests[i];
-                if (data.bayInstId == bayInstId && !data.died)
+                if (data[i].Steam64 == owner)
                 {
-                    data.died = true;
-                    playerData.recentRequests[i] = data;
+                    PlayerData playerData = data[i];
+                    for (int j = 0; j < playerData.recentRequests.Count; j++)
+                    {
+                        VehicleLifeData data = playerData.recentRequests[j];
+                        if (data.bayInstId == bayInstId && !data.died)
+                        {
+                            data.died = true;
+                            playerData.recentRequests[j] = data;
+                            break;
+                        }
+                    }
                     break;
                 }
             }
         }
-        if (tk && data.TryGetValue(killer, out playerData))
+        if (tk)
         {
-            playerData.vehicleTeamkills.Add(new VehicleTeamkill()
+            for (int i = 0; i < data.Count; ++i)
             {
-                owner = owner,
-                time = Time.realtimeSinceStartup,
-                vehicle = vehicle,
-                weapon = weapon,
-                origin = origin
-            });
+                if (data[i].Steam64 == killer)
+                {
+                    PlayerData playerData = data[i];
+                    playerData.vehicleTeamkills.Add(new VehicleTeamkill()
+                    {
+                        owner = owner,
+                        time = Time.realtimeSinceStartup,
+                        vehicle = vehicle,
+                        weapon = weapon,
+                        origin = origin
+                    });
+                    break;
+                }
+            }
         }
     }
     internal void OnPlayerJoin(SteamPlayer player)
@@ -255,24 +282,27 @@ public class Reporter : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        foreach (KeyValuePair<ulong, PlayerData> pkv in data)
+        for (int i = 0; i < data.Count; ++i)
         {
-            if (pkv.Key == player.playerID.steamID.m_SteamID)
+            if (data[i].Steam64 == player.playerID.steamID.m_SteamID)
             {
-                pkv.Value.isOnline = true;
-                pkv.Value.onlineTime = 0;
-                pkv.Value.characterName = player.playerID.characterName;
-                pkv.Value.playerName = player.playerID.playerName;
-                pkv.Value.nickName = player.playerID.nickName;
+                PlayerData playerData = data[i];
+                playerData.isOnline = true;
+                playerData.onlineTime = 0;
+                playerData.characterName = player.playerID.characterName;
+                playerData.playerName = player.playerID.playerName;
+                playerData.nickName = player.playerID.nickName;
+                playerData.player = player.player;
                 return;
             }
         }
-        data.Add(player.playerID.steamID.m_SteamID, new PlayerData(player.playerID.steamID.m_SteamID) 
+        data.Add(new PlayerData(player.playerID.steamID.m_SteamID) 
         {
             isOnline = true,
             characterName = player.playerID.characterName,
             playerName = player.playerID.playerName,
-            nickName = player.playerID.nickName
+            nickName = player.playerID.nickName,
+            player = player.player
         });
     }
     /// <summary>Slow, use rarely.</summary>
@@ -283,58 +313,58 @@ public class Reporter : MonoBehaviour
 #endif
         if (type == UCPlayer.ENameSearchType.CHARACTER_NAME)
         {
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.characterName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.characterName.Length))
             {
-                if (current.Value.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.nickName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.nickName.Length))
             {
-                if (current.Value.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.playerName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.playerName.Length))
             {
-                if (current.Value.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
             return 0;
         }
         else if (type == UCPlayer.ENameSearchType.NICK_NAME)
         {
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.nickName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.nickName.Length))
             {
-                if (current.Value.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.characterName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.characterName.Length))
             {
-                if (current.Value.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.playerName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.playerName.Length))
             {
-                if (current.Value.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
             return 0;
         }
         else if (type == UCPlayer.ENameSearchType.PLAYER_NAME)
         {
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.playerName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.playerName.Length))
             {
-                if (current.Value.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.nickName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.nickName.Length))
             {
-                if (current.Value.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
-            foreach (KeyValuePair<ulong, PlayerData> current in data.OrderBy(x => x.Value.characterName.Length))
+            foreach (PlayerData current in data.OrderBy(x => x.characterName.Length))
             {
-                if (current.Value.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
-                    return current.Value.Steam64;
+                if (current.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                    return current.Steam64;
             }
             return 0;
         }
@@ -345,15 +375,19 @@ public class Reporter : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (data.TryGetValue(killer, out PlayerData playerData))
+        for (int i = 0; i < data.Count; ++i)
         {
-            playerData.teamkills.Add(new Teamkill()
+            if (data[i].Steam64 == killer)
             {
-                cause = cause,
-                dead = dead,
-                time = Time.realtimeSinceStartup,
-                weapon = weapon
-            });
+                data[i].teamkills.Add(new Teamkill()
+                {
+                    cause = cause,
+                    dead = dead,
+                    time = Time.realtimeSinceStartup,
+                    weapon = weapon
+                });
+                return;
+            }
         }
     }
     internal void OnPlayerChat(ulong player, string message)
@@ -361,29 +395,40 @@ public class Reporter : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (data.TryGetValue(player, out PlayerData playerData))
-            playerData.InsertChat(message);
+        for (int i = 0; i < data.Count; ++i)
+        {
+            if (data[i].Steam64 == player)
+            {
+                data[i].InsertChat(message);
+                return;
+            }
+        }
     }
-    internal void OnDamagedStructure(ulong player, StructureDamageData data)
+    internal void OnDamagedStructure(ulong player, StructureDamageData strdata)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (this.data.TryGetValue(player, out PlayerData playerData))
+        for (int i = 0; i < data.Count; ++i)
         {
-            for (int i = 0; i < playerData.recentFriendlyDamages.Count; i++)
+            if (data[i].Steam64 == player)
             {
-                if (playerData.recentFriendlyDamages[i].instId == data.instId)
+                PlayerData playerData = data[i];
+                for (int j = 0; j < playerData.recentFriendlyDamages.Count; j++)
                 {
-                    if (!playerData.recentFriendlyDamages[i].broke)
+                    if (playerData.recentFriendlyDamages[j].instId == strdata.instId)
                     {
-                        data.damage += playerData.recentFriendlyDamages[i].damage;
-                        playerData.recentFriendlyDamages[i] = data;
-                        return;
+                        if (!playerData.recentFriendlyDamages[j].broke)
+                        {
+                            strdata.damage += playerData.recentFriendlyDamages[j].damage;
+                            playerData.recentFriendlyDamages[j] = strdata;
+                            return;
+                        }
                     }
                 }
+                playerData.recentFriendlyDamages.Add(strdata);
+                return;
             }
-            playerData.recentFriendlyDamages.Add(data);
         }
     }
     internal void OnDestroyedStructure(ulong player, uint instId)
@@ -391,16 +436,21 @@ public class Reporter : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (this.data.TryGetValue(player, out PlayerData playerData))
+        for (int i = 0; i < data.Count; ++i)
         {
-            for (int i = 0; i < playerData.recentFriendlyDamages.Count; i++)
+            if (data[i].Steam64 == player)
             {
-                StructureDamageData data = playerData.recentFriendlyDamages[i];
-                if (data.instId == instId)
+                PlayerData playerData = data[i];
+                for (int j = 0; j < playerData.recentFriendlyDamages.Count; j++)
                 {
-                    data.broke = true;
-                    playerData.recentFriendlyDamages[i] = data;
+                    StructureDamageData data = playerData.recentFriendlyDamages[j];
+                    if (data.instId == instId)
+                    {
+                        data.broke = true;
+                        playerData.recentFriendlyDamages[j] = data;
+                    }
                 }
+                return;
             }
         }
     }
@@ -417,7 +467,7 @@ public class Reporter : MonoBehaviour
         }
     }
 #endif
-    private readonly Dictionary<ulong, PlayerData> data = new Dictionary<ulong, PlayerData>(64);
+    private readonly List<PlayerData> data = new List<PlayerData>(64);
     private class PlayerData
     {
         public readonly ulong Steam64;

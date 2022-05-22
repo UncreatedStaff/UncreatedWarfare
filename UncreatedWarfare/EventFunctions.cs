@@ -514,7 +514,7 @@ namespace Uncreated.Warfare
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.Player.channel.owner);
                 }
                 Chat.Broadcast("player_connected", names.CharacterName);
-                Data.Reporter.OnPlayerJoin(player.Player.channel.owner);
+                Data.Reporter?.OnPlayerJoin(player.Player.channel.owner);
                 if (ucplayer != null)
                 {
                     PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new PlayerListEntry
@@ -781,7 +781,7 @@ namespace Uncreated.Warfare
                         weapon = pl.player.equipment.asset.GUID;
                     }
                     else weapon = Guid.Empty;
-                    Data.Reporter.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
+                    Data.Reporter?.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
                     {
                         broke = false,
                         damage = pendingTotalDamage,
@@ -881,7 +881,7 @@ namespace Uncreated.Warfare
                         weapon = pl.player.equipment.asset.GUID;
                     }
                     else weapon = Guid.Empty;
-                    Data.Reporter.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
+                    Data.Reporter?.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
                     {
                         broke = false,
                         damage = pendingTotalDamage,
@@ -1375,7 +1375,7 @@ namespace Uncreated.Warfare
             {
                 SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
                 ActionLog.Add(EActionLogType.DESTROY_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", c.LastDamager);
-                if (damager != null && data.group.GetTeam() == damager.GetTeam())
+                if (Data.Reporter is not null && damager != null && data.group.GetTeam() == damager.GetTeam())
                 {
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
                 }
@@ -1412,7 +1412,7 @@ namespace Uncreated.Warfare
             {
                 SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
                 ActionLog.Add(EActionLogType.DESTROY_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", c.LastDamager);
-                if (damager != null && data.group.GetTeam() == damager.GetTeam())
+                if (Data.Reporter is not null && damager != null && data.group.GetTeam() == damager.GetTeam())
                 {
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
                 }

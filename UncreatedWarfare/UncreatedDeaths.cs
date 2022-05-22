@@ -57,7 +57,7 @@ namespace Uncreated.Warfare
                 OffenseManager.NetCalls.SendTeamkill.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                     parameters.key, parameters.itemName, DateTime.Now);
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, x => x.Teamkills++, false);
-                Data.Reporter.OnTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.item, parameters.dead.channel.owner.playerID.steamID.m_SteamID, parameters.cause);
+                Data.Reporter?.OnTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.item, parameters.dead.channel.owner.playerID.steamID.m_SteamID, parameters.cause);
                 if (Data.Gamemode is TeamCTF ctf)
                 {
                     if (team == 1)

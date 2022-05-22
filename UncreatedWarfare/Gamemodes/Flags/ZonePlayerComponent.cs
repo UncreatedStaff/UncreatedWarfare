@@ -168,8 +168,8 @@ internal class ZonePlayerComponent : MonoBehaviour
         string text = Translation.TranslateEnum(type, player.Steam64);
         if (_edit != null)
         {
-            EffectManager.sendUIEffect(_edit.id, EDIT_KEY, tc, true);
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.Player.channel.owner.transportConnection });
+            EffectManager.sendUIEffect(_edit.id, EDIT_KEY, tc, true);
             player.HasUIHidden = true;
             EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Name", name);
             EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Type", text);
@@ -358,8 +358,8 @@ internal class ZonePlayerComponent : MonoBehaviour
             string text = Translation.TranslateEnum(_currentBuilder.ZoneType, player.Steam64);
             if (_edit != null)
             {
-                EffectManager.sendUIEffect(_edit.id, EDIT_KEY, tc, true);
                 Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.Player.channel.owner.transportConnection });
+                EffectManager.sendUIEffect(_edit.id, EDIT_KEY, tc, true);
                 player.HasUIHidden = true;
                 EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Name", _currentBuilder.Name);
                 EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Type", text);

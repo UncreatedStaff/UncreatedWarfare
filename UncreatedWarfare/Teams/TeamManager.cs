@@ -117,7 +117,7 @@ namespace Uncreated.Warfare.Teams
         {
             get
             {
-                if (_t1main == null)
+                if (_t1main is null)
                 {
                     for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
                     {
@@ -127,7 +127,7 @@ namespace Uncreated.Warfare.Teams
                             break;
                         }
                     }
-                    if (_t1main == null)
+                    if (_t1main is null)
                     {
                         L.LogWarning("There is no defined Team 1 base. Using default instead.");
                         for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)
@@ -147,7 +147,7 @@ namespace Uncreated.Warfare.Teams
         {
             get
             {
-                if (_t2main == null)
+                if (_t2main is null)
                 {
                     for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
                     {
@@ -157,7 +157,7 @@ namespace Uncreated.Warfare.Teams
                             break;
                         }
                     }
-                    if (_t2main == null)
+                    if (_t2main is null)
                     {
                         L.LogWarning("There is no defined Team 2 base. Using default instead.");
                         for (int i = 0; i < JSONMethods.DefaultZones.Count; ++i)

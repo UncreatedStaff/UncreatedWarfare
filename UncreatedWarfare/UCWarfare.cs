@@ -3,6 +3,7 @@
 using Rocket.Core;
 using Rocket.Core.Plugins;
 using Rocket.Unturned;
+using Rocket.Unturned.Events;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -31,28 +32,23 @@ namespace Uncreated.Warfare
     public partial class UCWarfare : RocketPlugin<Config>
     {
         public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
-        public static readonly Version Version      = new Version(2, 0, 2, 0);
-        public static int Season => Version.Major;
+        public static readonly Version Version      = new Version(2, 0, 2, 1);
         public static UCWarfare Instance;
         public Coroutine? StatsRoutine;
         public UCAnnouncer Announcer;
         //public NetworkingQueue Queue;
-        public static UCWarfare I { get => Instance; }
-        public static Config Config { get => Instance.Configuration.Instance; }
         private MySqlData _sqlElsewhere;
-        public MySqlData SQL
-        {
-            get
-            {
-                return LoadMySQLDataFromElsewhere && (!_sqlElsewhere.Equals(default(MySqlData))) ? _sqlElsewhere : Configuration.Instance.SQL;
-            }
-        }
         public bool LoadMySQLDataFromElsewhere = false; // for having sql password defaults without having them in our source code.
         public event EventHandler UCWarfareLoaded;
         public event EventHandler UCWarfareUnloading;
         public bool CoroutineTiming = false;
         private bool InitialLoadEventSubscription;
         private DateTime NextRestartTime;
+        public static UCWarfare I { get => Instance; }
+        public static Config Config { get => Instance.Configuration.Instance; }
+        public static bool CanUseNetCall => Instance?.Configuration?.Instance is not null && Instance.Configuration.Instance.PlayerStatsSettings.EnableTCPServer && Data.NetClient is not null && Data.NetClient.IsActive;
+        public static int Season => Version.Major;
+        public MySqlData SQL => LoadMySQLDataFromElsewhere && _sqlElsewhere is not null ? _sqlElsewhere : Configuration.Instance.SQL;
         protected override void Load()
         {
 #if DEBUG
@@ -234,7 +230,7 @@ namespace Uncreated.Warfare
             Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
             Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
             BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
-            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
+            UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
             UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
             UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
             UseableThrowable.onThrowableSpawned -= EventFunctions.ThrowableSpawned;
@@ -394,7 +390,7 @@ namespace Uncreated.Warfare
             L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
-            Data.NetClient.Dispose();
+            Data.NetClient?.Dispose();
             Logging.OnLogInfo -= L.NetLogInfo;
             Logging.OnLogWarning -= L.NetLogWarning;
             Logging.OnLogError -= L.NetLogError;

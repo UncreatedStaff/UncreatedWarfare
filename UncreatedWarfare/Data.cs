@@ -12,6 +12,7 @@ using System.Text;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -113,7 +114,7 @@ namespace Uncreated.Warfare
         internal static FieldInfo ItemManagerInstanceCount;
         internal static ICommandInputOutput? defaultIOHandler;
         public static Reporter Reporter;
-        internal static HomebaseClient NetClient;
+        internal static HomebaseClient? NetClient;
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
         internal delegate void OutputToConsole(string value, ConsoleColor color);
         internal static OutputToConsole? OutputToConsoleMethod;
@@ -239,7 +240,10 @@ namespace Uncreated.Warfare
             }
             ReloadTCP();
 
-            Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
+            if (UCWarfare.Config.EnableReporter)
+            {
+                Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
+            }
 
             /* REFLECT PRIVATE VARIABLES */
             L.Log("Getting client calls...", ConsoleColor.Magenta);
@@ -381,6 +385,8 @@ namespace Uncreated.Warfare
             L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
             PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
             ActionLog.OnConnected();
+            if (Gamemode.shutdownAfterGame)
+                ShutdownOverrideCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
         }
         private static void DuplicateKeyError(Exception ex)
         {
