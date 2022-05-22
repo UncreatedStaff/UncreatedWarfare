@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
@@ -54,7 +55,7 @@ namespace Uncreated.Warfare
 
             RequestSigns.InvokeLangUpdateForAllSigns(player);
 
-            Invocations.Shared.TeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
+            PlayerManager.NetCalls.SendTeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
 
         }
         internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
@@ -492,6 +493,7 @@ namespace Uncreated.Warfare
                         ucplayer.CachedXP = await t2;
                         ucplayer.CachedCredits = await t3;
                         ucplayer.AccessibleKits = await t4;
+                        await OffenseManager.ApplyMuteSettings(ucplayer);
                         await UCWarfare.ToUpdate();
                         RequestSigns.InvokeLangUpdateForAllSigns(ucplayer.Player.channel.owner);
                         foreach (Vehicles.VehicleSpawn spawn in VehicleSpawner.ActiveObjects)
@@ -515,7 +517,7 @@ namespace Uncreated.Warfare
                 Data.Reporter.OnPlayerJoin(player.Player.channel.owner);
                 if (ucplayer != null)
                 {
-                    Invocations.Shared.PlayerJoined.NetInvoke(new FPlayerList
+                    PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new PlayerListEntry
                     {
                         Duty = ucplayer.OnDuty(),
                         Name = names.CharacterName,
@@ -541,6 +543,42 @@ namespace Uncreated.Warfare
             // send ui or something
         }
         private static readonly PlayerVoice.RelayVoiceCullingHandler NO_COMMS = (a, b) => false;
+        internal static void OnRelayVoice2(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
+            ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
+        {
+            if (Data.Gamemode is null)
+            {
+                cullingHandler = NO_COMMS;
+                shouldBroadcastOverRadio = false;
+                return;
+            }
+            bool isMuted = false;
+            UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
+            if (ucplayer is not null)
+            {
+                if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
+                {
+                    VoiceMutedUseTick();
+                    isMuted = true;
+                }
+            }
+            if (isMuted)
+            {
+                shouldAllow = false;
+                cullingHandler = NO_COMMS;
+                shouldBroadcastOverRadio = false;
+            }
+            else if (Data.Gamemode.State is EState.FINISHED or EState.LOADING)
+            {
+                if (!UCWarfare.Config.RelayMicsDuringEndScreen)
+                {
+                    shouldAllow = false;
+                    cullingHandler = NO_COMMS;
+                    shouldBroadcastOverRadio = false;
+                    return;
+                }
+            }
+        }
         internal static void OnRelayVoice(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
             ref bool shouldBroadcastOverRadio, ref PlayerVoice.RelayVoiceCullingHandler cullingHandler)
         {
@@ -631,7 +669,7 @@ namespace Uncreated.Warfare
             {
                 ulong id = client.playerID.steamID.m_SteamID;
                 Data.DatabaseManager.AddBattleyeKick(id, reason);
-                Invocations.Shared.LogBattleyeKicked.NetInvoke(id, reason, DateTime.Now);
+                OffenseManager.NetCalls.SendPlayerBattleyeKicked.NetInvoke(id, reason, DateTime.Now);
             }
         }
         internal static void OnEnterStorage(CSteamID instigator, InteractableStorage storage, ref bool shouldAllow)
@@ -1197,7 +1235,7 @@ namespace Uncreated.Warfare
                 }
                 else
                     ActionLog.Add(EActionLogType.DISCONNECT, null, player.CSteamID.m_SteamID);
-                Invocations.Shared.PlayerLeft.NetInvoke(player.CSteamID.m_SteamID);
+                PlayerManager.NetCalls.SendPlayerLeft.NetInvoke(player.CSteamID.m_SteamID);
             }
             catch (Exception ex)
             {
@@ -1393,7 +1431,7 @@ namespace Uncreated.Warfare
         }
         internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
         {
-            if (state == false || key != 2 || player == null) return;
+            if (!state || key != 2 || player == null) return;
 
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

@@ -74,6 +74,9 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="UncreatedNetworking">
+      <HintPath>..\..\UncreatedNetworking\bin\Debug\net48\UncreatedNetworking.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>
@@ -99,12 +102,11 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Lib.Harmony" Version="2.0.4" />
-    <PackageReference Include="MySql.Data" Version="8.0.25" />
-    <PackageReference Include="System.Text.Json" Version="6.0.1" />
+    <PackageReference Include="Lib.Harmony" Version="2.2.1" />
+    <PackageReference Include="MySql.Data" Version="8.0.29" />
+    <PackageReference Include="System.Text.Json" Version="6.0.4" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\UncreatedNetworking\UncreatedNetworking.csproj" />
     <ProjectReference Include="..\UncreatedStats\UncreatedStats.csproj" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">

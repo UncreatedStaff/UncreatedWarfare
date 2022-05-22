@@ -52,7 +52,7 @@ public class ActionLog : MonoBehaviour
                             File.SetLastAccessTime(path, creation);
                             File.SetLastWriteTime(path, creation);
 
-                            if (Data.NetClient != null && Data.NetClient.connection != null && Data.NetClient.connection.IsActive)
+                            if (Data.NetClient != null && Data.NetClient != null && Data.NetClient.IsActive)
                             {
                                 using (FileStream str = info.OpenRead())
                                 {
@@ -61,7 +61,7 @@ public class ActionLog : MonoBehaviour
                                         int len = (int)str.Length;
                                         byte[] bytes = new byte[len];
                                         str.Read(bytes, 0, len);
-                                        SendLog.NetInvoke(bytes, creation);
+                                        NetCalls.SendLog.NetInvoke(bytes, creation);
                                     }
                                 }
                             }
@@ -93,7 +93,7 @@ public class ActionLog : MonoBehaviour
     private void OnApplicationQuit() => Update();
     private void WriteItem(ref ActionLogItem item, FileStream stream)
     {
-        byte[] data = Encoding.UTF8.GetBytes(item.ToString() + "\n");
+        byte[] data = System.Text.Encoding.UTF8.GetBytes(item.ToString() + "\n");
         stream.Write(data, 0, data.Length);
     }
     private record struct ActionLogItem(ulong Player, EActionLogType Type, string? Data, DateTime Timestamp)
@@ -106,47 +106,50 @@ public class ActionLog : MonoBehaviour
             else return v;
         }
     }
-    internal static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, R => R.ReadLongBytes(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
-    public static readonly NetCall<DateTime> AckLog = new NetCall<DateTime>(ReceiveAckLog);
-    public static readonly NetCall RequestCurrentLog = new NetCall(1129);
-    public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
 
-    [NetCall(ENetCall.FROM_SERVER, 1128)]
-    internal static void ReceiveAckLog(IConnection connection, DateTime fileReceived)
+    public static class NetCalls
     {
-        string path = Data.LOG_DIRECTORY + fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt";
-        if (File.Exists(path))
-            File.Delete(path);
-    }
-    [NetCall(ENetCall.FROM_SERVER, 1129)]
-    internal static void ReceiveCurrentLogRequest(IConnection connection)
-    {
-        string path2 = Data.LOG_DIRECTORY + "current.txt";
-        FileInfo info = new FileInfo(path2);
-        if (!info.Exists)
+        public static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
+        public static readonly NetCall<DateTime> AckLog = new NetCall<DateTime>(ReceiveAckLog);
+        public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
+        public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
+
+        [NetCall(ENetCall.FROM_SERVER, 1128)]
+        internal static void ReceiveAckLog(MessageContext context, DateTime fileReceived)
         {
-            SendCurrentLog.Invoke(connection, new byte[0], default);
-            return;
+            string path = Data.LOG_DIRECTORY + fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt";
+            if (File.Exists(path))
+                File.Delete(path);
         }
-        using (FileStream str = info.OpenRead())
+        [NetCall(ENetCall.FROM_SERVER, 1129)]
+        internal static void ReceiveCurrentLogRequest(MessageContext context)
         {
-            if (str.Length <= int.MaxValue)
+            string path2 = Data.LOG_DIRECTORY + "current.txt";
+            FileInfo info = new FileInfo(path2);
+            if (!info.Exists)
             {
-                int len = (int)str.Length;
-                byte[] bytes = new byte[len];
-                str.Read(bytes, 0, len);
-                SendCurrentLog.Invoke(connection, bytes, info.CreationTime);
-            }
-            else
-            {
-                byte[] bytes = new byte[int.MaxValue];
-                str.Read(bytes, 0, int.MaxValue);
-                SendCurrentLog.Invoke(connection, bytes, info.CreationTime);
+                context.Reply(SendCurrentLog, Array.Empty<byte>(), default);
                 return;
             }
+            using (FileStream str = info.OpenRead())
+            {
+                if (str.Length <= int.MaxValue)
+                {
+                    int len = (int)str.Length;
+                    byte[] bytes = new byte[len];
+                    str.Read(bytes, 0, len);
+                    context.Reply(SendCurrentLog, bytes, info.CreationTime);
+                }
+                else
+                {
+                    byte[] bytes = new byte[int.MaxValue];
+                    str.Read(bytes, 0, int.MaxValue);
+                    context.Reply(SendCurrentLog, bytes, info.CreationTime);
+                    return;
+                }
+            }
         }
     }
-
     internal static void OnConnected()
     {
         F.CheckDir(Data.LOG_DIRECTORY, out bool success);
@@ -159,7 +162,7 @@ public class ActionLog : MonoBehaviour
                     FileInfo info = new FileInfo(file);
                     if (info.Name != "current.txt")
                     {
-                        SendLog.NetInvoke(File.ReadAllBytes(file), info.CreationTime);
+                        NetCalls.SendLog.NetInvoke(File.ReadAllBytes(file), info.CreationTime);
                     }
                 }
                 catch (Exception ex)

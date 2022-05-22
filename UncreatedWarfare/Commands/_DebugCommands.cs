@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -938,7 +939,7 @@ namespace Uncreated.Warfare.Commands
                     "[2x] %SPEAKER%: chat 4",
                 }
             };
-            Reporter.SendReportInvocation.NetInvoke(report, false);
+            Reporter.NetCalls.SendReportInvocation.NetInvoke(report, false);
             L.Log("Sent chat abuse report.");
         }
         private void readtest(string[] command, Player player)

@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
@@ -265,16 +267,20 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        private static readonly Uncreated.Networking.Encoding.ByteWriter bw = new Uncreated.Networking.Encoding.ByteWriter(0, false, 27);
+        private static readonly ByteWriter bw = new ByteWriter(false, 27);
         public void AddReport(Report report)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            bw.BaseCapacity = report.Size;
-            bw.Flush();
-            Report.WriteReport(bw, report);
-            byte[] blob = bw.ByteBuffer;
+            byte[] blob;
+            lock (bw)
+            {
+                bw.BaseCapacity = report.Size;
+                bw.Flush();
+                Report.WriteReport(bw, report);
+                blob = bw.ToArray();
+            }
             NonQuery("INSERT INTO `reports` (`Reporter`, `Violator`, `ReportType`, `Data`, `Timestamp`, `Message`) VALUES (@0, @1, @2, @3, @4, @5);", new object[]
             {
                 report.Reporter,
@@ -282,7 +288,7 @@ namespace Uncreated.Warfare
                 report.Type,
                 blob,
                 string.Format(TIME_FORMAT_SQL, report.Time),
-                report.Message
+                report.Message ?? string.Empty
             });
         }
         public async Task<int> GetXP(ulong player, ulong team)
@@ -440,7 +446,7 @@ namespace Uncreated.Warfare
                 }
             }
         }
-        public Task AddTeamkill(ulong Steam64, ulong Team, int amount = 1)
+        public Task AddTeamkill(ulong steam64, ulong team, int amount = 1)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -455,11 +461,11 @@ namespace Uncreated.Warfare
                     $"VALUES(@0, @1, '0', '0', @2) " +
                     $"ON DUPLICATE KEY UPDATE " +
                     $"`Teamkills` = `Teamkills` + VALUES(`Teamkills`);",
-                    new object[] { Steam64, Team, amount });
+                    new object[] { steam64, team, amount });
             }
             else
             {
-                uint oldTeamkills = GetTeamkills(Steam64, Team);
+                uint oldTeamkills = GetTeamkills(steam64, team);
                 if (amount >= oldTeamkills)
                 {
                     return NonQueryAsync(
@@ -468,7 +474,7 @@ namespace Uncreated.Warfare
                         $"VALUES(@0, @1, '0', '0', '0') " +
                         $"ON DUPLICATE KEY UPDATE " +
                         $"`Teamkills` = 0;", // clamp to 0
-                        new object[] { Steam64, Team });
+                        new object[] { steam64, team });
                 }
                 else
                 {
@@ -476,53 +482,53 @@ namespace Uncreated.Warfare
                         $"UPDATE `playerstats` SET " +
                         $"`Teamkills` = `Teamkills` - @2 " +
                         $"WHERE `Steam64` = @0 AND `Team` = @1;",
-                        new object[] { Steam64, Team, Math.Abs(amount) });
+                        new object[] { steam64, team, Math.Abs(amount) });
                 }
             }
         }
-        public Task AddUnban(ulong Pardoned, ulong Pardoner)
+        public Task AddUnban(ulong target, ulong admin)
             => NonQueryAsync(
                 "INSERT INTO `unbans` " +
                 "(`Pardoned`, `Pardoner`, `Timestamp`) " +
                 "VALUES(@0, @1, @2);",
-                new object[] { Pardoned, Pardoner, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public Task AddBan(ulong Banned, ulong Banner, uint Duration, string Reason)
+                new object[] { target, admin, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
+        public Task AddBan(ulong target, ulong admin, int duration, string reason)
             => NonQueryAsync(
                 "INSERT INTO `bans` " +
                 "(`Banned`, `Banner`, `Duration`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4);",
-                new object[] { Banned, Banner, Duration, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public Task AddBan(ulong Banned, ulong Banner, uint Duration, string Reason, DateTime time)
+                new object[] { target, admin, duration, reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
+        public Task AddBan(ulong target, ulong admin, int duration, string reason, DateTime time)
             => NonQueryAsync(
                 "INSERT INTO `bans` " +
                 "(`Banned`, `Banner`, `Duration`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4);",
-                new object[] { Banned, Banner, Duration, Reason, string.Format(TIME_FORMAT_SQL, time) });
-        public Task AddKick(ulong Kicked, ulong Kicker, string Reason)
+                new object[] { target, admin, duration, reason, string.Format(TIME_FORMAT_SQL, time) });
+        public Task AddKick(ulong target, ulong admin, string reason)
             => NonQueryAsync(
                 "INSERT INTO `kicks` " +
                 "(`Kicked`, `Kicker`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3);",
-                new object[] { Kicked, Kicker, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public Task AddWarning(ulong Warned, ulong Warner, string Reason)
+                new object[] { target, admin, reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
+        public Task AddWarning(ulong target, ulong admin, string reason)
             => NonQueryAsync(
                 "INSERT INTO `warnings` " +
                 "(`Warned`, `Warner`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3);",
-                new object[] { Warned, Warner, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public Task AddBattleyeKick(ulong Kicked, string Reason)
+                new object[] { target, admin, reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
+        public Task AddBattleyeKick(ulong target, string reason)
             => NonQueryAsync(
                 "INSERT INTO `battleye_kicks` " +
                 "(`Kicked`, `Reason`, `Timestamp`) " +
                 "VALUES(@0, @1, @2);",
-                new object[] { Kicked, Reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public Task AddTeamkill(ulong Teamkiller, ulong Teamkilled, string Cause, string ItemName = "", ushort Item = 0, float Distance = 0f)
+                new object[] { target, reason, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
+        public Task AddTeamkill(ulong target, ulong teamkilled, string deathCause, string itemName = "", ushort itemId = 0, float distance = 0f)
             => NonQueryAsync(
                 "INSERT INTO `teamkills` " +
                 "(`Teamkiller`, `Teamkilled`, `Cause`, `Item`, `ItemID`, `Distance`, `Timestamp`) " +
                 "VALUES(@0, @1, @2, @3, @4, @5, @6);",
-                new object[] { Teamkiller, Teamkilled, Cause, ItemName, Item, Distance, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-        public async Task<bool> HasPlayerJoined(ulong Steam64)
+                new object[] { target, teamkilled, deathCause, itemName, itemId, distance, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
+        public async Task<bool> HasPlayerJoined(ulong steam64)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -531,7 +537,7 @@ namespace Uncreated.Warfare
                 $"SELECT COUNT(*) " +
                 $"FROM `logindata` " +
                 $"WHERE `Steam64` = @0;",
-                new object[1] { Steam64 },
+                new object[1] { steam64 },
                 o => Convert.ToInt32(o));
             return amt > 0;
         }
@@ -657,6 +663,27 @@ namespace Uncreated.Warfare
                 );
             if (ip == null) return "255.255.255.255";
             else return ip;
+        }
+        public uint GetPackedIP(ulong id)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            uint ip = 0;
+            Query(
+                $"SELECT `IP`, `PackedIP` " +
+                $"FROM `logindata` " +
+                $"WHERE `Steam64` = @0 " +
+                $"LIMIT 1;",
+                new object[] { id },
+                R =>
+                {
+                    ip = R.GetUInt32(1);
+                    if (ip == 0)
+                        ip = Parser.getUInt32FromIP(R.GetString(0));
+                }
+                );
+            return ip;
         }
         protected override void Log(string message, ConsoleColor color = ConsoleColor.Gray)
             => L.Log(message, color);

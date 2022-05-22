@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.Commands
                             $"{b.model.transform.eulerAngles.y.ToString(Data.Locale)}f, " +
                             $"{b.model.transform.eulerAngles.z.ToString(Data.Locale)}f)";
                     }
-                    byte[] bytes = Encoding.UTF8.GetBytes(line);
+                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(line);
                     writer.Write(bytes, 0, bytes.Length);
                     writer.Close();
                     writer.Dispose();

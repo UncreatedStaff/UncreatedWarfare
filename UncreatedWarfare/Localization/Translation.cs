@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -741,21 +742,21 @@ namespace Uncreated.Warfare
             }
             else if (seconds < 2628000) // < 1 month (30.416 days) (365/12)
             {
-                uint days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out uint hoursOverflow);
+                int days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out int hoursOverflow);
                 return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
             }
             else if (seconds < 31536000) // < 1 year
             {
-                uint months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out uint daysOverflow);
+                int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out int daysOverflow);
                 return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
             }
             else // > 1 year
             {
-                uint years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
+                int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
                 return $"{years} {Translate("time_year" + years.S(), player)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
             }
         }
-        public static string GetTimeFromSeconds(this uint seconds, string language)
+        public static string GetTimeFromSeconds(this int seconds, string language)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -776,21 +777,21 @@ namespace Uncreated.Warfare
             }
             else if (seconds < 2628000) // < 1 month (30.416 days) (365/12)
             {
-                uint days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out uint hoursOverflow);
+                int days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out int hoursOverflow);
                 return $"{days} {Translate("time_day" + days.S(), language)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", language)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), language)}")}";
             }
             else if (seconds < 31536000) // < 1 year
             {
-                uint months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out uint daysOverflow);
+                int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out int daysOverflow);
                 return $"{months} {Translate("time_month" + months.S(), language)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", language)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), language)}")}";
             }
             else // > 1 year
             {
-                uint years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
+                int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
                 return $"{years} {Translate("time_year" + years.S(), language)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", language)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), language)}")}";
             }
         }
-        public static string GetTimeFromMinutes(this uint minutes, ulong player)
+        public static string GetTimeFromMinutes(this int minutes, ulong player)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -801,26 +802,26 @@ namespace Uncreated.Warfare
             }
             else if (minutes < 1440) // < 1 day 
             {
-                uint hours = F.DivideRemainder(minutes, 60, out uint minutesOverflow);
+                int hours = F.DivideRemainder(minutes, 60, out int minutesOverflow);
                 return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
             }
             else if (minutes < 43800) // < 1 month (30.416 days)
             {
-                uint days = F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out uint hoursOverflow);
+                int days = F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out int hoursOverflow);
                 return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
             }
             else if (minutes < 525600) // < 1 year
             {
-                uint months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out uint daysOverflow);
+                int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out int daysOverflow);
                 return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
             }
             else // > 1 year
             {
-                uint years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
+                int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
                 return $"{years} {Translate("time_year" + years.S(), player)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
             }
         }
-        public static string GetTimeFromMinutes(this uint minutes, string language)
+        public static string GetTimeFromMinutes(this int minutes, string language)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -831,22 +832,22 @@ namespace Uncreated.Warfare
             }
             else if (minutes < 1440) // < 1 day 
             {
-                uint hours = F.DivideRemainder(minutes, 60, out uint minutesOverflow);
+                int hours = F.DivideRemainder(minutes, 60, out int minutesOverflow);
                 return $"{hours} {Translate("time_hour" + hours.S(), language)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", language)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), language)}")}";
             }
             else if (minutes < 43800) // < 1 month (30.416 days)
             {
-                uint days = F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out uint hoursOverflow);
+                int days = F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out int hoursOverflow);
                 return $"{days} {Translate("time_day" + days.S(), language)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", language)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), language)}")}";
             }
             else if (minutes < 525600) // < 1 year
             {
-                uint months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out uint daysOverflow);
+                int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out int daysOverflow);
                 return $"{months} {Translate("time_month" + months.S(), language)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", language)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), language)}")}";
             }
             else // > 1 year
             {
-                uint years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out uint monthOverflow);
+                int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
                 return $"{years} {Translate("time_year" + years.S(), language)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", language)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), language)}")}";
             }
         }
@@ -1528,6 +1529,38 @@ namespace Uncreated.Warfare
                 languages.Clear();
             }
         }
+        public static IEnumerable<LanguageSet> EnumerateLanguageSetsExclude(ulong exclude)
+        {
+            lock (languages)
+            {
+                if (languages.Count > 0)
+                    languages.Clear();
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if (pl.Steam64 == exclude) continue;
+                    if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                        lang = JSONMethods.DEFAULT_LANGUAGE;
+                    bool found = false;
+                    for (int i2 = 0; i2 < languages.Count; i2++)
+                    {
+                        if (languages[i2].Language == lang)
+                        {
+                            languages[i2].Add(pl);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        languages.Add(new LanguageSet(lang, pl));
+                }
+                for (int i = 0; i < languages.Count; i++)
+                {
+                    yield return languages[i];
+                }
+                languages.Clear();
+            }
+        }
         public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<Player> players)
         {
             lock (languages)
@@ -1772,7 +1805,7 @@ namespace Uncreated.Warfare
         }
         private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> enumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
         private const string ENUM_TRANSLATION_FILE_NAME = "Enums\\";
-        public static void ReadEnumTranslations()
+        public static void ReadEnumTranslations(List<Type> extEnumTypes)
         {
             enumTranslations.Clear();
             string def = Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE + "\\";
@@ -1790,11 +1823,11 @@ namespace Uncreated.Warfare
                         Directory.CreateDirectory(p);
                 }
             }
-            foreach (Type enumType in UCWarfare.Instance.Assembly.GetTypes().Where(t => t.IsEnum && Attribute.GetCustomAttribute(t, typeof(TranslatableAttribute)) != null))
+            foreach (Type enumType in UCWarfare.Instance.Assembly.GetTypes().Where(t => t.IsEnum && Attribute.GetCustomAttribute(t, typeof(TranslatableAttribute)) is not null).Concat(extEnumTypes.Where(x => x.IsEnum)))
             {
                 if (enumTranslations.ContainsKey(enumType)) continue;
                 Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
-                enumTranslations[enumType] = k;
+                enumTranslations.Add(enumType, k);
                 string fn = def + ENUM_TRANSLATION_FILE_NAME + enumType.FullName + ".json";
                 string[] values = enumType.GetEnumNames();
                 if (!File.Exists(fn))

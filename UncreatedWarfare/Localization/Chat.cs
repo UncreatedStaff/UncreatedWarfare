@@ -83,7 +83,7 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             string localizedString = Translation.Translate(text, player.playerID.steamID.m_SteamID, formatting);
-            if (Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
+            if (System.Text.Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
                 SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player);
             else
             {
@@ -101,7 +101,7 @@ namespace Uncreated.Warfare
                     newMessage = defaultMessage + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                     L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                 }
-                if (Encoding.UTF8.GetByteCount(newMessage) <= MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(newMessage) <= MAX_CHAT_MESSAGE_SIZE)
                     SendSingleMessage(newMessage, textColor, EChatMode.SAY, null, newMessage.Contains("</"), player);
                 else
                     L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
@@ -121,7 +121,7 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             string localizedString = Translation.Translate(text, player.playerID.steamID.m_SteamID, out Color textColor, formatting);
-            if (Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
+            if (System.Text.Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
                 SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player);
             else
             {
@@ -139,7 +139,7 @@ namespace Uncreated.Warfare
                     newMessage = defaultMessage + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                     L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                 }
-                if (Encoding.UTF8.GetByteCount(newMessage) <= MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(newMessage) <= MAX_CHAT_MESSAGE_SIZE)
                     SendSingleMessage(newMessage, textColor, EChatMode.SAY, null, newMessage.Contains("</"), player);
                 else
                     L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
@@ -207,7 +207,7 @@ namespace Uncreated.Warfare
             {
                 string localizedString = Translation.Translate(text, set.Language, formatting);
                 bool isRich = localizedString.Contains("</");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
                     if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
@@ -224,7 +224,7 @@ namespace Uncreated.Warfare
                             L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                         }
                     }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                     {
                         L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                             + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -255,7 +255,7 @@ namespace Uncreated.Warfare
             {
                 string localizedString = Translation.Translate(text, set.Language, formatting);
                 bool isRich = localizedString.Contains("</");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
                     if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
@@ -272,7 +272,7 @@ namespace Uncreated.Warfare
                             L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                         }
                     }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                     {
                         L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                             + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -302,7 +302,7 @@ namespace Uncreated.Warfare
             {
                 string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
                 bool isRich = localizedString.Contains("</");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
                     if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
@@ -319,7 +319,7 @@ namespace Uncreated.Warfare
                             L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                         }
                     }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                     {
                         L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                             + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -349,7 +349,7 @@ namespace Uncreated.Warfare
             {
                 string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
                 bool isRich = localizedString.Contains("</");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
                     if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
@@ -366,7 +366,7 @@ namespace Uncreated.Warfare
                             L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                         }
                     }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                     {
                         L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                             + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -394,7 +394,7 @@ namespace Uncreated.Warfare
 #endif
             string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
             bool isRich = localizedString.Contains("</");
-            if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+            if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
             {
                 L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
                 if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
@@ -411,7 +411,7 @@ namespace Uncreated.Warfare
                         L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                     }
                 }
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                         + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -434,7 +434,7 @@ namespace Uncreated.Warfare
             {
                 string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
                 bool isRich = localizedString.Contains("</");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
                     if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
@@ -451,7 +451,7 @@ namespace Uncreated.Warfare
                             L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                         }
                     }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                     {
                         L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                             + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -475,7 +475,7 @@ namespace Uncreated.Warfare
             {
                 string localizedString = Translation.Translate(text, set.Language, formatting);
                 bool isRich = localizedString.Contains("</");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your translation of {text}.");
                     if (!JSONMethods.DefaultTranslations.TryGetValue(text, out localizedString))
@@ -492,7 +492,7 @@ namespace Uncreated.Warfare
                             L.LogWarning("There's been an error sending a chat message. Please make sure that you don't have invalid formatting symbols in \"" + text + "\"");
                         }
                     }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                     {
                         L.LogError("There's been an error sending a chat message. Default message for \"" + text + "\" is longer than "
                                    + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
@@ -540,6 +540,16 @@ namespace Uncreated.Warfare
                 }
                 return true;
             }), text, formatting);
+        }
+        /// <summary>
+        /// Send a message in chat to everyone except for those in the list of excluded <see cref="CSteamID"/>s.
+        /// </summary>
+        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
+        /// <param name="textColor">The color of the chat.</param>
+        /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
+        public static void BroadcastToAllExcept(ulong excluded, string text, params string[] formatting)
+        {
+            BroadcastToPlayers(Translation.EnumerateLanguageSets(x => excluded != x.Steam64), text, formatting);
         }
         public static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer? recipient)
         {
@@ -598,7 +608,7 @@ namespace Uncreated.Warfare
                 string killer = translateKillerName ? Translation.Translate(killerName.CharacterName, set.Language) : killerName.CharacterName;
                 string localizedString = Translation.TranslateDeath(set.Language, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, false, translateKillerName);
                 Color color = UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your death translation of {key}.");
                     if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out localizedString) && !JSONMethods.DefaultDeathTranslations.TryGetValue(backupcause.ToString(), out localizedString))
@@ -613,7 +623,7 @@ namespace Uncreated.Warfare
                         localizedString = key + $" ({F.ColorizeName(dead.CharacterName, deadTeam)}, {F.ColorizeName(killer, killerTeam)}, {limb}, {itemName}, {Math.Round(distance).ToString(Data.Locale) + "m"}";
                         L.LogWarning("There's been an error sending a death message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                     }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                         L.LogError("There's been an error sending a death message. Default message for \"" + key + "\" is longer than "
                             + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
                 }
@@ -637,7 +647,7 @@ namespace Uncreated.Warfare
             {
                 string localizedString = Translation.TranslateLandmineDeath(set.Language, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);
                 Color color = UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background");
-                if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your death translation of {key}.");
                     if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out localizedString))
@@ -652,7 +662,7 @@ namespace Uncreated.Warfare
                         localizedString = key + $" ({F.ColorizeName(dead.CharacterName, deadTeam)}, {F.ColorizeName(killerName.CharacterName, killerTeam)}, {limb}, {landmineName}, {triggererName.CharacterName}";
                         L.LogWarning("There's been an error sending a death message. Please make sure that you don't have invalid formatting symbols in \"" + key + "\"");
                     }
-                    if (Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
+                    if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                         L.LogError("There's been an error sending a death message. Default message for \"" + key + "\" is longer than "
                             + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
                 }

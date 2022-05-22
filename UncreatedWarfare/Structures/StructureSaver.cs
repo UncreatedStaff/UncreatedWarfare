@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Framework;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Structures

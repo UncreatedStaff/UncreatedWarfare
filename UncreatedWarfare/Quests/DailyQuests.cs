@@ -6,6 +6,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Framework;
+using Uncreated.Framework.Quests;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Quests.Types;
@@ -296,7 +298,7 @@ public static class DailyQuests
         SendNextQuests.NetInvoke(_sendQuests);
     }
     [NetCall(ENetCall.FROM_SERVER, 1126)]
-    public static async Task ReceiveQuestData(IConnection connection, Folder folder)
+    public static async Task ReceiveQuestData(MessageContext context, Folder folder)
     {
         string p = QuestManager.QUEST_FOLDER + "DailyQuests\\";
         folder.WriteToDisk(p);

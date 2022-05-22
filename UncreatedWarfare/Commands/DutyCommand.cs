@@ -57,7 +57,7 @@ namespace Uncreated.Warfare.Commands
             player.SendChat("duty_on_feedback");
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
             RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
-            Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
+            PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
             ActionLog.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
         }
         public static void AdminOnToOff(UnturnedPlayer player, FPlayerName names)
@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Commands
                 player.SendChat("duty_off_feedback");
                 RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             }
-            Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
+            PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
             ActionLog.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
         }
         public static void InternOffToOn(UnturnedPlayer player, FPlayerName names)
@@ -89,7 +89,7 @@ namespace Uncreated.Warfare.Commands
             player.SendChat("duty_on_feedback");
             Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
             RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
-            Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
+            PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
             ActionLog.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
         }
         public static void InternOnToOff(UnturnedPlayer player, FPlayerName names)
@@ -108,7 +108,7 @@ namespace Uncreated.Warfare.Commands
                 player.SendChat("duty_off_feedback");
                 RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
             }
-            Invocations.Shared.DutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
+            PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
             ActionLog.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
         }
     }

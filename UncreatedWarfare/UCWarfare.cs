@@ -31,7 +31,7 @@ namespace Uncreated.Warfare
     public partial class UCWarfare : RocketPlugin<Config>
     {
         public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
-        public static readonly Version Version      = new Version(2, 0, 1, 3);
+        public static readonly Version Version      = new Version(2, 0, 2, 0);
         public static int Season => Version.Major;
         public static UCWarfare Instance;
         public Coroutine? StatsRoutine;
@@ -59,7 +59,7 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             Instance = this;
-            Data.Logs = Data.ReadRocketLog();
+            L.Logs = L.ReadRocketLog();
             Data.LoadColoredConsole();
             L.Log("Started loading " + Name + " - " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
                 "Please stop using this plugin now.", ConsoleColor.Green);
@@ -218,7 +218,7 @@ namespace Uncreated.Warfare
             Patches.BarricadeDestroyedHandler += EventFunctions.OnBarricadeDestroyed;
             Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
             PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
-            PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice;
+            PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
             R.Commands.OnExecuteCommand += EventFunctions.OnCommandExecuted;
         }
         private void UnsubscribeFromEvents()
@@ -261,13 +261,14 @@ namespace Uncreated.Warfare
             Patches.BarricadeDestroyedHandler -= EventFunctions.OnBarricadeDestroyed;
             Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
             PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
-            PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice;
+            PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
             R.Commands.OnExecuteCommand -= EventFunctions.OnCommandExecuted;
             if (!InitialLoadEventSubscription)
             {
                 Level.onLevelLoaded -= OnLevelLoaded;
                 R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
             }
+
         }
         internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests = new Queue<MainThreadTask.MainThreadResult>();
         public static MainThreadTask ToUpdate() => new MainThreadTask();
@@ -394,10 +395,10 @@ namespace Uncreated.Warfare
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
             Data.NetClient.Dispose();
-            Logging.OnLog -= L.Log;
-            Logging.OnLogWarning -= L.LogWarningEventCall;
-            Logging.OnLogError -= L.LogErrorEventCall;
-            Logging.OnLogException -= L.LogErrorEventCall;
+            Logging.OnLogInfo -= L.NetLogInfo;
+            Logging.OnLogWarning -= L.NetLogWarning;
+            Logging.OnLogError -= L.NetLogError;
+            Logging.OnLogException -= L.NetLogException;
             try
             {
                 Patches.Unpatch();
@@ -411,7 +412,6 @@ namespace Uncreated.Warfare
             {
                 WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.Locale) + ".dat");
             }
-            NetFactory.ClearRegistry();
 #if DEBUG
             profiler.Dispose();
             F.SaveProfilingData();

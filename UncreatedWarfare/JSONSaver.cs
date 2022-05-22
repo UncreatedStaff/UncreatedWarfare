@@ -12,6 +12,7 @@ using Uncreated.Warfare;
 using System.Text.Json.Serialization;
 using System.Text.Encodings.Web;
 using System.Text.Unicode;
+using Uncreated.Framework;
 
 namespace Uncreated
 {

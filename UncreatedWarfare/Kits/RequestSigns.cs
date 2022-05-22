@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Framework;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -150,7 +151,7 @@ namespace Uncreated.Warfare.Kits
 #endif
             BarricadeDrop barricadeByRootFast = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
             byte[] state = barricadeByRootFast.GetServersideData().barricade.state;
-            byte[] bytes = Encoding.UTF8.GetBytes(text);
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text);
             if (bytes.Length > byte.MaxValue)
             {
                 L.LogWarning(text + " is too long to go on a sign! (SetSignTextSneaky)");

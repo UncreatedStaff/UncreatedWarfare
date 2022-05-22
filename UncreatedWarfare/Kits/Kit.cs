@@ -7,7 +7,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using Uncreated.Networking.Encoding;
+using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 
@@ -138,7 +139,7 @@ public class Kit
                 x = R.ReadUInt8(),
                 y = R.ReadUInt8(),
                 rotation = R.ReadUInt8(),
-                metadata = R.ReadBytes()
+                metadata = R.ReadBytes() ?? new byte[0]
             });
         }
         for (int i = 0; i < clothesCount; i++)
