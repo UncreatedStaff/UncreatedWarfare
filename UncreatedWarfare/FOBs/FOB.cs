@@ -252,6 +252,25 @@ namespace Uncreated.Warfare.Components
 
             Placer = radio.GetServersideData().owner;
 
+            builtRadioGUID = radio.asset.GUID;
+
+            if (Team == 1)
+            {
+                BuildID = Gamemode.Config.Items.T1Build;
+                AmmoID = Gamemode.Config.Items.T1Ammo;
+            }
+            else if (Team == 2)
+            {
+                BuildID = Gamemode.Config.Items.T2Build;
+                AmmoID = Gamemode.Config.Items.T2Ammo;
+            }
+            else return;
+
+            if (Assets.find(BuildID) is ItemAsset build)
+                shortBuildID = build.id;
+            if (Assets.find(AmmoID) is ItemAsset ammo)
+                shortAmmoID = ammo.id;
+
             InteractableVehicle nearestLogi = UCVehicleManager.GetNearestLogi(Position, 30, Team);
             if (nearestLogi != null)
             {
@@ -260,6 +279,8 @@ namespace Uncreated.Warfare.Components
                     component.Quota += 5;
                     Creator = component.LastDriver;
                 }
+
+                L.Log("is driven: " + nearestLogi.isDriven);
 
                 if (!nearestLogi.isDriven)
                 {
@@ -297,22 +318,26 @@ namespace Uncreated.Warfare.Components
                     int buildRemoved = 0;
                     int ammoRemoved = 0;
 
+                    L.Log("trunk count: " + nearestLogi.trunkItems.getItemCount());
                     for (int i = 0; i < nearestLogi.trunkItems.getItemCount(); i++)
                     {
                         ItemJar item = nearestLogi.trunkItems.items[i];
                         bool shouldRemove = false;
                         if (item.item.id == shortBuildID && buildRemoved < 16)
                         {
+                            L.Log("should remove build");
                             shouldRemove = true;
                             buildRemoved++;
                         }
                         if (item.item.id == shortAmmoID && ammoRemoved < 12)
                         {
+                            L.Log("should remove ammo");
                             shouldRemove = true;
                             ammoRemoved++;
                         }
                         if (shouldRemove)
                         {
+                            L.Log("removed item");
                             ItemManager.dropItem(new Item(item.item.id, true), nearestLogi.transform.position, false, true, true);
                             nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
                             i--;
@@ -320,25 +345,6 @@ namespace Uncreated.Warfare.Components
                     }
                 }
             }
-
-            builtRadioGUID = radio.asset.GUID;
-
-            if (Team == 1)
-            {
-                BuildID = Gamemode.Config.Items.T1Build;
-                AmmoID = Gamemode.Config.Items.T1Ammo;
-            }
-            else if (Team == 2)
-            {
-                BuildID = Gamemode.Config.Items.T2Build;
-                AmmoID = Gamemode.Config.Items.T2Ammo;
-            }
-            else return;
-
-            if (Assets.find(BuildID) is ItemAsset build)
-                shortBuildID = build.id;
-            if (Assets.find(AmmoID) is ItemAsset ammo)
-                shortAmmoID = ammo.id;
 
             UpdateBunker(UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 30, Position, Team, false).FirstOrDefault());
 

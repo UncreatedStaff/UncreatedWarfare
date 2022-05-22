@@ -54,6 +54,21 @@ namespace Uncreated.Warfare.Components
             lastPos = this.transform.position;
 
             countermeasures = new List<Transform>();
+
+            switch (Data.Type)
+            {
+                case EVehicleType.LOGISTICS: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(      new Guid("ec1e91ee98084bebb9ed8e048c4bb9a9"), 12, Team); break;
+                case EVehicleType.TRANSPORT: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(      new Guid("ec1e91ee98084bebb9ed8e048c4bb9a9"), 12, Team); break;
+                case EVehicleType.HUMVEE: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(         new Guid("34fea0ab821141bd935b001ee82a7049"), 12, Team); break;
+                case EVehicleType.SCOUT_CAR: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(      new Guid("893e47f7923e429895cc76fa7523ae51"), 12, Team); break;
+                case EVehicleType.APC: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(            new Guid("1a25daa6f506441282cd30be48d27883"), 12, Team); break;
+                case EVehicleType.IFV: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(            new Guid("7df9ff5c54d34ebaa9bc085a7f490bc1"), 12, Team); break;
+                case EVehicleType.MBT: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(            new Guid("81521cd7f1b94635a8d0f2916c2bbaf8"), 12, Team); break;
+                case EVehicleType.HELI_TRANSPORT: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize( new Guid("8c29d85daad6468497eb0baf9de5f240"), 12, Team); break;
+                case EVehicleType.HELI_ATTACK: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(    new Guid("bc3f127ccaee41c1b4d166e6415f9768"), 12, Team); break;
+                case EVehicleType.JET: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(            new Guid("0e90e68eff624456b76fee28a4875d14"), 12, Team); break;
+                case EVehicleType.EMPLACEMENT: vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(    new Guid("f7816f7d06e1475f8e68ed894c282a74"), 12, Team); break;
+            }
         }
         public void OnPlayerEnteredVehicle(Player nelsonplayer, InteractableVehicle vehicle)
         {

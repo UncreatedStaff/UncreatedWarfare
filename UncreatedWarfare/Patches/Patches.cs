@@ -399,7 +399,9 @@ namespace Uncreated.Warfare
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), ((ItemWeaponAsset)__instance.player.equipment.asset).range, RayMasks.BARRICADE, __instance.player);
+                var weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
+
+                RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE, __instance.player);
                 if (info.transform != null)
                 {
                     var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
@@ -418,6 +420,17 @@ namespace Uncreated.Warfare
                                 else if (drop.model.TryGetComponent(out FOBComponent radio))
                                     radio.parent.Repair(builder);
                             }
+                        }
+                    }
+                }
+
+                if (weaponAsset.GUID == new Guid("3879d9014aca4a17b3ed749cf7a9283e"))
+                {
+                    if (Physics.Raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), out var hit, 700))
+                    {
+                        if (hit.transform != null)
+                        {
+                            SpottedComponent.MarkTarget(hit.transform);
                         }
                     }
                 }
