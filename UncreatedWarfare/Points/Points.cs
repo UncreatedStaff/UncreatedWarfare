@@ -18,9 +18,9 @@ namespace Uncreated.Warfare.Point
         private static readonly Config<XPConfig> _xpconfig = new Config<XPConfig>(Data.PointsStorage, "xp.json");
         private static readonly Config<TWConfig> _twconfig = new Config<TWConfig>(Data.PointsStorage, "tw.json");
         private static readonly Config<CreditsConfig> _creditsconfig = new Config<CreditsConfig>(Data.PointsStorage, "credits.json");
-        public static XPConfig XPConfig => _xpconfig.data;
-        public static TWConfig TWConfig => _twconfig.data;
-        public static CreditsConfig CreditsConfig => _creditsconfig.data;
+        public static XPConfig XPConfig => _xpconfig.Data;
+        public static TWConfig TWConfig => _twconfig.Data;
+        public static CreditsConfig CreditsConfig => _creditsconfig.Data;
 
         public static OfficerStorage Officers;
 
@@ -132,9 +132,9 @@ namespace Uncreated.Warfare.Point
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (amount == 0 || _xpconfig.data.XPMultiplier == 0f) return;
+            if (amount == 0 || _xpconfig.Data.XPMultiplier == 0f) return;
 
-            amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
+            amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
             Task.Run(async () =>
             {
                 int currentAmount = await Data.DatabaseManager.AddCredits(player.Steam64, player.GetTeam(), amount);
@@ -174,11 +174,11 @@ namespace Uncreated.Warfare.Point
         }
         public static void AwardXP(UCPlayer player, int amount, string? message = null, bool awardCredits = true)
         {
-            if (!Data.TrackStats || amount == 0 || _xpconfig.data.XPMultiplier == 0f) return;
+            if (!Data.TrackStats || amount == 0 || _xpconfig.Data.XPMultiplier == 0f) return;
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            amount = Mathf.RoundToInt(amount * _xpconfig.data.XPMultiplier);
+            amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
             Task.Run(async () =>
             {
                 RankData oldRank = player.Rank;
@@ -260,20 +260,20 @@ namespace Uncreated.Warfare.Point
             if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
                 return;
 
-            EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.connection, true);
-            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
+            EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.Connection, true);
+            EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
                 "Rank", player.Rank.Name
             );
             //EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
             //    "Level", player.Rank.Level == 0 ? string.Empty : Translation.Translate("ui_xp_level", player, player.Rank.Level.ToString(Data.Locale))
             //);
-            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
+            EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
                 "XP", player.Rank.CurrentXP + "/" + player.Rank.RequiredXP
             );
-            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,   
+            EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,   
                 "Next", player.Rank.NextAbbreviation
             );
-            EffectManager.sendUIEffectText(XPUI_KEY, player.connection, true,
+            EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
                 "Progress", player.Rank.ProgressBar
             );
         }
@@ -286,8 +286,8 @@ namespace Uncreated.Warfare.Point
             if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
                 return;
 
-            EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CREDITSUI_KEY, player.connection, true);
-            EffectManager.sendUIEffectText(CREDITSUI_KEY, player.connection, true,  
+            EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CREDITSUI_KEY, player.Connection, true);
+            EffectManager.sendUIEffectText(CREDITSUI_KEY, player.Connection, true,  
                 "Credits", "<color=#b8ffc1>C</color>  " + player.CachedCredits
             );
         }

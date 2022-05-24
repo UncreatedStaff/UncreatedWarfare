@@ -75,7 +75,7 @@ namespace Uncreated.Warfare.Components
                 var player = PlayerManager.OnlinePlayers[i];
 
                 if (player.GetTeam() == Team)
-                    EffectManager.sendEffect(EffectID, player.connection, transform.position);
+                    EffectManager.sendEffect(EffectID, player.Connection, transform.position);
             }
         }
         private IEnumerator<WaitForSeconds> MarkerLoop(int seconds)

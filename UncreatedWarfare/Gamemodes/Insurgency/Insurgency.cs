@@ -89,8 +89,8 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 #endif
             base.Init();
             _FOBManager = new FOBManager();
-            _squadManager = new SquadManager();
-            _kitManager = new KitManager();
+            _squadManager = Data.Singletons.LoadSingleton<SquadManager>();
+            _kitManager = Data.Singletons.LoadSingleton<KitManager>();
             Commands.ReloadCommand.ReloadKits();
             _vehicleBay = new VehicleBay();
             _reviveManager = new ReviveManager();
@@ -336,7 +336,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
                 InsurgencyUI.SendCacheList(player);
                 int bleed = TicketManager.GetTeamBleed(player.GetTeam());
                 TicketManager.GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
-                TicketManager.UpdateUI(player.connection, UIID, tickets, message);
+                TicketManager.UpdateUI(player.Connection, UIID, tickets, message);
             }
             StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
             StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
@@ -356,7 +356,7 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
             InsurgencyUI.SendCacheList(player);
             int bleed = TicketManager.GetTeamBleed(newGroup);
             TicketManager.GetUIDisplayerInfo(newGroup, bleed, out ushort UIID, out string tickets, out string message);
-            TicketManager.UpdateUI(player.connection, UIID, tickets, message);
+            TicketManager.UpdateUI(player.Connection, UIID, tickets, message);
             base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
         }
         public bool AddIntelligencePoints(int points)
@@ -608,11 +608,11 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
+            EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.Connection, true);
             if (player.GetTeam() == AttackingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_briefing", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.Connection, true, "Top", Translation.Translate("phases_briefing", player));
             else if (player.GetTeam() == DefendingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_preparation", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.Connection, true, "Top", Translation.Translate("phases_preparation", player));
         }
         protected override void EndStagingPhase()
         {
@@ -628,10 +628,10 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
         }
         public override void Dispose()
         {
-            _squadManager?.Dispose();
+            Data.Singletons.UnloadSingleton(ref _squadManager);
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
-            _kitManager?.Dispose();
+            Data.Singletons.UnloadSingleton(ref _kitManager);
             _vehicleBay?.Dispose();
             _ticketManager?.Dispose();
             FOBManager.Reset();

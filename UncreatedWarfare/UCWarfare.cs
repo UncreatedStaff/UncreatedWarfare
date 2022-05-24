@@ -147,7 +147,6 @@ namespace Uncreated.Warfare
             F.CheckDir(Data.StructureStorage, out _, true);
             F.CheckDir(Data.VehicleStorage, out _, true);
             // remove once effectmanager supports GUIDs
-            SquadManager.TempCacheEffectIDs();
             CTFUI.TempCacheEffectIDs();
             LeaderboardEx.TempCacheEffectIDs();
             FOBManager.TempCacheEffectIDs();
@@ -408,6 +407,7 @@ namespace Uncreated.Warfare
             {
                 WarfareStats.IO.WriteTo(StatsManager.OnlinePlayers[i], StatsManager.StatsDirectory + StatsManager.OnlinePlayers[i].Steam64.ToString(Data.Locale) + ".dat");
             }
+            Data.Singletons.UnloadAll();
 #if DEBUG
             profiler.Dispose();
             F.SaveProfilingData();

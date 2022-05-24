@@ -5,23 +5,35 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare;
+using Uncreated.Warfare.Commands;
 
 namespace Uncreated
 {
     public class Config<TData> : IConfiguration where TData : ConfigData, new()
     {
-        readonly string _dir;
-        public TData data { get; private set; }
-        public Type Type = typeof(TData);
-        public string Directory => _dir;
+        public delegate TData CustomDeserializer(ref Utf8JsonReader reader);
+        public delegate void CustomSerializer(TData obj, Utf8JsonWriter writer);
 
+        readonly string _dir;
+        public Type Type = typeof(TData);
         private readonly CustomDeserializer? customDeserializer;
         private readonly bool useCustomDeserializer;
         private readonly CustomSerializer? customSerializer;
         private readonly bool useCustomSerializer;
-
-        public delegate TData CustomDeserializer(ref Utf8JsonReader reader);
-        public delegate void CustomSerializer(TData obj, Utf8JsonWriter writer);
+        private readonly bool _regReload;
+        private readonly string? reloadKey;
+        public string Directory => _dir;
+        public string? ReloadKey => reloadKey;
+        public TData Data { get; private set; }
+        public Config(string directory, string filename, string reloadKey)
+            : this (directory, filename)
+        {
+            if (reloadKey is not null)
+            {
+                this.reloadKey = reloadKey;
+                _regReload = ReloadCommand.RegisterConfigForRelaod(this);
+            }
+        }
         public Config(string directory, string filename)
         {
             this._dir = directory + filename;
@@ -41,10 +53,20 @@ namespace Uncreated
                     return;
                 }
             }
+            if (Attribute.GetCustomAttribute(Type, typeof(JsonSerializableAttribute)) is null)
+            {
+                L.LogWarning("It's recommended to apply the JsonSerializable attribute to the config type: " + Type.Name, ConsoleColor.Blue);
+            }
+
             if (!File.Exists(this._dir))
                 LoadDefaults();
             else
                 Reload();
+        }
+        public void DeregisterReload()
+        {
+            if (_regReload && this.reloadKey is not null)
+                ReloadCommand.DeregisterConfigForReload(this.reloadKey);
         }
         public Config(string directory, string filename, CustomDeserializer deserializer, CustomSerializer serializer)
         {
@@ -85,11 +107,11 @@ namespace Uncreated
                     try
                     {
                         writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                        customSerializer!.Invoke(data, writer);
+                        customSerializer!.Invoke(Data, writer);
                     }
                     catch (Exception ex)
                     {
-                        L.LogError("Failed to run custom serializer, running auto-serialzier...");
+                        L.LogError($"Failed to run {Type.Name} custom serializer, running auto-serialzier...");
                         L.LogError(ex);
                         goto other;
                     }
@@ -99,12 +121,21 @@ namespace Uncreated
                     }
                     return;
                 }
-
-                other:
-                byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(data, JsonEx.serializerSettings));
-                stream.Write(utf8, 0, utf8.Length);
+            other:
+                try
+                {
+                    byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Data, JsonEx.serializerSettings));
+                    stream.Write(utf8, 0, utf8.Length);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError($"Failed to run {Type.Name} auto-serializer.");
+                    L.LogError(ex);
+                }
             }
         }
+        /// <summary>Not implemented</summary>
+        protected virtual void OnReload() { }
         public void Reload()
         {
 #if DEBUG
@@ -127,16 +158,21 @@ namespace Uncreated
                     {
                         if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                         {
-                            data = customDeserializer!.Invoke(ref reader);
+                            Data = customDeserializer!.Invoke(ref reader);
                         }
-                        if (data != null) return;
+                        if (Data is not null)
+                        {
+                            OnReload();
+                            return;
+                        }
                     }
 
-                    data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings)!;
+                    Data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings)!;
+                    OnReload();
                 }
-                catch (JsonException ex)
+                catch (Exception ex)
                 {
-                    L.LogError("Failed to run serializer");
+                    L.LogError($"Failed to run auto-deserializer for {Type.Name}.");
                     L.LogError(ex);
                 }
             }
@@ -156,13 +192,13 @@ namespace Uncreated
                         if (fields[i].IsStatic ||  // if the field is static or it contains [JsonIgnore] in its attributes.
                             fields[i].CustomAttributes.Count(x => x.AttributeType == typeof(JsonIgnoreAttribute) ||
                             x.AttributeType == typeof(PreventUpgradeAttribute)) > 0) continue;
-                        object currentvalue = fields[i].GetValue(data);
+                        object currentvalue = fields[i].GetValue(Data);
                         object defaultvalue = fields[i].GetValue(defaultConfig);
                         if (currentvalue == defaultvalue) continue;
                         else if (currentvalue != fields[i].FieldType.getDefaultValue()) continue;
                         else
                         {
-                            fields[i].SetValue(data, defaultvalue);
+                            fields[i].SetValue(Data, defaultvalue);
                             needsSaving = true;
                         }
                     }
@@ -172,7 +208,11 @@ namespace Uncreated
                         L.LogError(ex);
                     }
                 }
-                if (needsSaving) Save();
+                if (needsSaving)
+                {
+                    Save();
+                    OnReload();
+                }
             }
             catch (Exception ex)
             {
@@ -185,8 +225,8 @@ namespace Uncreated
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig LoadDefaults -> " + _dir);
 #endif
-            data = new TData();
-            data.SetDefaults();
+            Data = new TData();
+            Data.SetDefaults();
             using (FileStream stream = new FileStream(_dir, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
             {
                 if (useCustomSerializer)
@@ -195,7 +235,7 @@ namespace Uncreated
                     try
                     {
                         writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                        customSerializer!.Invoke(data, writer);
+                        customSerializer!.Invoke(Data, writer);
                     }
                     catch (Exception ex)
                     {
@@ -211,7 +251,7 @@ namespace Uncreated
                 }
 
                 other:
-                byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(data, JsonEx.serializerSettings));
+                byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Data, JsonEx.serializerSettings));
                 stream.Write(utf8, 0, utf8.Length);
             }
         }

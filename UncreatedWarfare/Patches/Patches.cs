@@ -27,9 +27,9 @@ namespace Uncreated.Warfare
             Patcher.UnpatchAll("net.uncreated.warfare");
         }
         public delegate void BarricadeDroppedEventArgs(BarricadeDrop drop, BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group);
-        public delegate void BarricadeDestroyedEventArgs(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant);
-        public delegate void StructureDestroyedEventArgs(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID);
-        public delegate void BarricadeHealthEventArgs(SDG.Unturned.BarricadeData data);
+        public delegate void BarricadeDestroyedEventArgs(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant);
+        public delegate void StructureDestroyedEventArgs(StructureData data, StructureDrop drop, uint instanceID);
+        public delegate void BarricadeHealthEventArgs(BarricadeData data);
         public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
         public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
@@ -46,7 +46,6 @@ namespace Uncreated.Warfare
         public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
         public static event PlayerGesture OnPlayerGesture_Global;
         public static event PlayerMarker OnPlayerMarker_Global;
-
         [HarmonyPatch]
         public static class InternalPatches
         {
@@ -66,7 +65,7 @@ namespace Uncreated.Warfare
                     LogMessage log = new LogMessage(splits[i], Console.ForegroundColor);
                     L.AddLog(log);
                     if (UCWarfare.CanUseNetCall && value.IndexOf(LOG_MESSAGE_ID_STR, StringComparison.Ordinal) != 21)
-                        L.NetCalls.SendLogMessage.Invoke(Data.NetClient, log, 0);
+                        L.NetCalls.SendLogMessage.Invoke(Data.NetClient!, log, 0);
                 }
             }
             //// SDG.Unturned.Provider

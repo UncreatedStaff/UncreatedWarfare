@@ -175,7 +175,7 @@ namespace Uncreated.Warfare.Commands
                             return;
                         }   
                     }
-                    if (isInMain && FOBManager.config.data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
+                    if (isInMain && FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
                     {
                         player.SendChat("ammo_cooldown", cooldown.ToString());
                         return;
@@ -197,8 +197,8 @@ namespace Uncreated.Warfare.Commands
                         player.SendChat("ammo_success_main", ammoCost.ToString());
                         ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT IN MAIN", player.Steam64);
 
-                        if (FOBManager.config.data.AmmoCommandCooldown > 0)
-                            CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.data.AmmoCommandCooldown);
+                        if (FOBManager.config.Data.AmmoCommandCooldown > 0)
+                            CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
                     }
                     else
                     {

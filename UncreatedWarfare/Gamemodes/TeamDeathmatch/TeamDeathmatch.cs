@@ -68,8 +68,8 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
         {
             base.Init();
             _FOBManager = new FOBManager();
-            _squadManager = new SquadManager();
-            _kitManager = new KitManager();
+            _squadManager = Data.Singletons.LoadSingleton<SquadManager>();
+            _kitManager = Data.Singletons.LoadSingleton<KitManager>();
             Commands.ReloadCommand.ReloadKits();
             _reviveManager = new ReviveManager();
             _vehicleBay = new VehicleBay();
@@ -84,6 +84,15 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch
             RallyManager.WipeAllRallies();
             VehicleSigns.InitAllSigns();
             base.OnLevelLoaded();
+        }
+        public override void Dispose()
+        {
+            Data.Singletons.UnloadSingleton(ref _squadManager);
+            Data.Singletons.UnloadSingleton(ref _kitManager);
+            _reviveManager.Dispose();
+            _vehicleBay.Dispose();
+            _vehicleSpawner.Dispose();
+            base.Dispose();
         }
     }
 }

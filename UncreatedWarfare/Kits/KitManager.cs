@@ -14,29 +14,48 @@ using Uncreated.Networking;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
 public delegate void KitChangedHandler(UCPlayer player, Kit kit, string oldKit);
-public class KitManager : IDisposable
+public class KitManager : BaseReloadSingleton
 {
+    public KitManager() : base("kits") { }
     public static event KitChangedHandler OnKitChanged;
-    public static KitManager Instance { get; private set; }
-    private bool _disp = false;
     public Dictionary<int, Kit> Kits;
-    public KitManager()
+    public override void Load()
     {
-        if (Instance != null && !Instance._disp)
-        {
-            Instance.Dispose();
-        }
-        Instance = this;
         PlayerLife.OnPreDeath += PlayerLife_OnPreDeath;
         Kits = new Dictionary<int, Kit>();
     }
-    public async Task Reload()
+    public override void Reload()
     {
+        Task.Run(async () =>
+        {
+            await ReloadKits();
+            await UCWarfare.ToUpdate();
+            foreach (RequestSign sign in RequestSigns.ActiveObjects)
+                sign.InvokeUpdate();
+            if (!KitExists(TeamManager.Team1UnarmedKit, out _))
+                L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if (!KitExists(TeamManager.Team2UnarmedKit, out _))
+                L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+            if (!KitExists(TeamManager.DefaultKit, out _))
+                L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+        }).ConfigureAwait(false);
+    }
+    public override void Unload()
+    {
+        _isLoaded = false;
+        _singleton = null!;
+        PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
+        Kits = null!;
+    }
+    public async Task ReloadKits()
+    {
+        SingletonEx.AssertLoaded<KitManager>(_isLoaded);
         Kits.Clear();
         await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_data`;", new object[0], R =>
         {
@@ -146,6 +165,7 @@ public class KitManager : IDisposable
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        SingletonEx.AssertLoaded<KitManager>(_isLoaded);
         if (HasKit(life.player.channel.owner.playerID.steamID, out Kit kit))
         {
             for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
@@ -177,6 +197,7 @@ public class KitManager : IDisposable
     }
     public static async Task<Kit?> AddKit(Kit? kit)
     {
+        KitManager singleton = GetSingleton();
         if (kit != null)
         {
             bool hasPk = kit.PrimaryKey > -1;
@@ -372,10 +393,10 @@ public class KitManager : IDisposable
                 builder.Append(';');
                 await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
             }
-            if (Instance.Kits.ContainsKey(pk))
-                Instance.Kits[pk] = kit;
-            else 
-                Instance.Kits.Add(pk, kit);
+            if (singleton.Kits.ContainsKey(pk))
+                singleton.Kits[pk] = kit;
+            else
+                singleton.Kits.Add(pk, kit);
         }
 
         return kit;
@@ -545,30 +566,51 @@ public class KitManager : IDisposable
     public static async Task<bool> DeleteKit(int primaryKey)
     {
         if (primaryKey == -1) return false;
-        Instance.Kits.Remove(primaryKey);
+        KitManager singleton = GetSingleton();
+        singleton.Kits.Remove(primaryKey);
         return await Data.DatabaseManager.NonQueryAsync("DELETE FROM `kit_data` WHERE `pk` = @0;", new object[1] { primaryKey }) > 0;
     }
     public static async Task<bool> DeleteKit(string name)
     {
-        KeyValuePair<int, Kit> fod = Instance.Kits.FirstOrDefault(x => x.Value.Name.Equals(name, StringComparison.Ordinal));
+        KitManager singleton = GetSingleton();
+        KeyValuePair<int, Kit> fod = singleton.Kits.FirstOrDefault(x => x.Value.Name.Equals(name, StringComparison.Ordinal));
         if (fod.Value != null)
-            Instance.Kits.Remove(fod.Key);
+            singleton.Kits.Remove(fod.Key);
         return await Data.DatabaseManager.NonQueryAsync("SET @pk := (SELECT `pk` FROM `kit_data` WHERE `InternalName` = @0 LIMIT 1); " +
             "DELETE FROM `kit_data` WHERE @pk IS NOT NULL AND `pk` = @pk;", new object[1]
         {
             name
         }) > 0;
     }
-    public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate) => Instance.Kits.Values.Where(predicate);
+    public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate)
+    {
+        KitManager singleton = GetSingleton();
+        return singleton.Kits.Values.Where(predicate);
+    }
     public static bool KitExists(string kitName, out Kit kit)
     {
-        kit = Instance.Kits.Values.FirstOrDefault(x => x.Name.Equals(kitName, StringComparison.Ordinal));
+        KitManager singleton = GetSingleton();
+        kit = singleton.Kits.Values.FirstOrDefault(x => x.Name.Equals(kitName, StringComparison.Ordinal));
         return kit != null;
     }
     public static bool KitExists(Func<Kit, bool> predicate, out Kit kit)
     {
-        kit = Instance.Kits.Values.FirstOrDefault(predicate);
+        KitManager singleton = GetSingleton();
+        kit = singleton.Kits.Values.FirstOrDefault(predicate);
         return kit != null;
+    }
+    private static KitManager _singleton;
+
+    /// <exception cref="SingletonUnloadedException"/>
+    internal static KitManager GetSingleton()
+    {
+        if (_singleton is null)
+        {
+            _singleton = Data.Singletons.GetSingleton<KitManager>();
+            if (_singleton is null)
+                throw new SingletonUnloadedException(typeof(KitManager));
+        }
+        return _singleton;
     }
     public static List<KitItem> ItemsFromInventory(UCPlayer player)
     {
@@ -629,7 +671,8 @@ public class KitManager : IDisposable
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        foreach (Kit kit in Instance.Kits.Values)
+        KitManager singleton = GetSingleton();
+        foreach (Kit kit in singleton.Kits.Values)
         {
             if (!kit.IsLoadout && kit.UnlockRequirements != null)
             {
@@ -662,8 +705,9 @@ public class KitManager : IDisposable
     }
     public static bool OnQuestCompleted(UCPlayer player, Guid presetKey)
     {
+        KitManager singleton = GetSingleton();
         bool affectedKit = false;
-        foreach (Kit kit in Instance.Kits.Values)
+        foreach (Kit kit in singleton.Kits.Values)
         {
             if (!kit.IsLoadout && kit.UnlockRequirements != null)
             {
@@ -987,11 +1031,6 @@ public class KitManager : IDisposable
             return pl.AccessibleKits;
         }
         else return Array.Empty<Kit>();
-    }
-    public void Dispose()
-    {
-        PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
-        _disp = true;
     }
 }
 public static class KitEx

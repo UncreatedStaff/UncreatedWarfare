@@ -584,7 +584,7 @@ public static class StatsManager
 
         [NetCall(ENetCall.FROM_SERVER, 2010)]
         internal static void ReceiveRequestKitList(MessageContext context) 
-            => context.Reply(SendKitList, KitManager.Instance.Kits.Values.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
+            => context.Reply(SendKitList, KitManager.GetSingleton().Kits.Values.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
 
         [NetCall(ENetCall.FROM_SERVER, 2012)]
         internal static void ReceiveRequestTeamData(MessageContext context) => context.Reply(SendTeams, Team1Stats, Team2Stats);

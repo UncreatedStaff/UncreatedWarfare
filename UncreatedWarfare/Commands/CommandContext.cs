@@ -2,6 +2,8 @@
 using Steamworks;
 using System;
 using System.Globalization;
+using Uncreated.Framework;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
@@ -42,6 +44,16 @@ public readonly struct CommandContext
         Parameters = args;
         ArgumentCount = args.Length;
     }
+    public bool CheckPermission(string permission) =>
+        IsConsole || (Caller is not null && Caller.HasPermission(permission));
+    public bool CheckPermissionOr(string permission1, string permission2) =>
+        IsConsole || (Caller is not null && (Caller.HasPermission(permission1) || Caller.HasPermission(permission2)));
+    public bool CheckPermissionAnd(string permission1, string permission2) =>
+        IsConsole || (Caller is not null && Caller.HasPermission(permission1) && Caller.HasPermission(permission2));
+    public bool CheckPermission(EAdminType permission) =>
+        IsConsole || (Caller is not null && F.PermissionCheck(Caller, permission));
+    public bool HasDutyPerms() =>
+        IsConsole || (Caller is not null && Caller.OnDuty());
     public bool HasArg(int position)
     {
         return position > -1 && position < ArgumentCount;
@@ -99,6 +111,20 @@ public readonly struct CommandContext
         }
         value = Parameters[parameter];
         return true;
+    }
+    public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = default;
+            return false;
+        }
+        return Enum.TryParse(Parameters[parameter], true, out value);
+    }
+    public bool TryGetRange(int start, out string value, int length = -1)
+    {
+        value = GetRange(start, length)!;
+        return value is not null;
     }
     public string? Get(int parameter)
     {
@@ -203,6 +229,123 @@ public readonly struct CommandContext
         {
             Caller.SendChat(translationKey, formatting);
         }
+    }
+    public bool HasPermissionOrReply(string permission, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = CheckPermission(permission);
+        if (!perm)
+            Reply(noPermissionMessageKey);
+        return perm;
+    }
+    public bool HasPermissionOrReply(string permission, string[] formatting, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = CheckPermission(permission);
+        if (!perm)
+            Reply(noPermissionMessageKey, formatting);
+        return perm;
+    }
+    public bool HasPermissionOrReplyAnd(string permission1, string permission2, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = CheckPermissionOr(permission1, permission2);
+        if (!perm)
+            Reply(noPermissionMessageKey);
+        return perm;
+    }
+    public bool HasPermissionOrReplyOr(string permission1, string permission2, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = CheckPermissionOr(permission1, permission2);
+        if (!perm)
+            Reply(noPermissionMessageKey);
+        return perm;
+    }
+    public bool HasPermissionOrReplyAnd(string permission1, string permission2, string[] formatting, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = CheckPermissionAnd(permission1, permission2);
+        if (!perm)
+            Reply(noPermissionMessageKey, formatting);
+        return perm;
+    }
+    public bool HasPermissionOrReplyOr(string permission1, string permission2, string[] formatting, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = CheckPermissionOr(permission1, permission2);
+        if (!perm)
+            Reply(noPermissionMessageKey, formatting);
+        return perm;
+    }
+    public bool HasPermissionOrReply(EAdminType permission, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = CheckPermission(permission);
+        if (!perm)
+            Reply(noPermissionMessageKey);
+        return perm;
+    }
+    public bool HasPermissionOrReply(EAdminType permission, string[] formatting, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = CheckPermission(permission);
+        if (!perm)
+            Reply(noPermissionMessageKey, formatting);
+        return perm;
+    }
+    public bool OnDutyOrReply(string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = IsConsole || (Caller is not null && Caller.OnDuty());
+        if (!perm)
+            Reply(noPermissionMessageKey);
+        return perm;
+    }
+    public bool OnDutyOrReply(string[] formatting, string noPermissionMessageKey = "no_permissions")
+    {
+        bool perm = IsConsole || (Caller is not null && Caller.OnDuty());
+        if (!perm)
+            Reply(noPermissionMessageKey, formatting);
+        return perm;
+    }
+    public void LogAction(EActionLogType type, string data)
+    {
+        ActionLog.Add(type, data, CallerID);
+    }
+    public void SendGamemodeError()
+    {
+        Reply("command_e_gamemode");
+    }
+    public void SendPlayerOnlyError()
+    {
+        Reply("command_e_no_console");
+    }
+    public void SendConsoleOnlyError()
+    {
+        Reply("command_e_no_player");
+    }
+    public void SendUnknownError()
+    {
+        Reply("command_e_unknown_error");
+    }
+    public bool IsConsoleReply()
+    {
+        if (IsConsole)
+            SendPlayerOnlyError();
+        return IsConsole;
+    }
+    public bool IsPlayerReply()
+    {
+        if (!IsConsole)
+            SendConsoleOnlyError();
+        return !IsConsole;
+    }
+    public bool CheckGamemodeAndSend<T>() where T : IGamemode
+    {
+        if (Data.Is<T>())
+            return true;
+        SendGamemodeError();
+        return false;
+    }
+    public void SendNoPermission()
+    {
+        Reply("no_permissions");
+    }
+    public void SendCorrectUsage(string usage)
+    {
+        Reply("correct_usage", usage);
     }
     public static ConsoleColor GetClosestConsoleColor(Color color)
     {

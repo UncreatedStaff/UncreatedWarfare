@@ -111,6 +111,15 @@ public class Kit
     }
     /// <summary>empty constructor</summary>
     public Kit(bool dummy) { }
+    public string GetDisplayName()
+    {
+        if (SignTexts is null) return Name;
+        if (SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out string val))
+            return val ?? Name;
+        if (SignTexts.Count > 0)
+            return SignTexts.FirstOrDefault().Value ?? Name;
+        return Name;
+    }
     public static Kit?[] ReadMany(ByteReader R)
     {
         Kit?[] kits = new Kit[R.ReadInt32()];
@@ -211,8 +220,6 @@ public class Kit
         W.Write(kit.UnlockLevel);
         W.Write(kit.Disabled);
     }
-
-
     public void WriteJson(Utf8JsonWriter writer)
     {
         writer.WritePropertyName(nameof(Name));

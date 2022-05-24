@@ -30,7 +30,7 @@ namespace Uncreated.Warfare.Teams
             {
                 foreach (KeyValuePair<CSteamID, GroupInfo> kv in val2)
                 {
-                    if (kv.Key.m_SteamID == _data.data.team1id)
+                    if (kv.Key.m_SteamID == _data.Data.team1id)
                     {
                         if (kv.Value.name != Team1Name)
                         {
@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Teams
                             kv.Value.name = Team1Name;
                         }
                     }
-                    else if (kv.Key.m_SteamID == _data.data.team2id)
+                    else if (kv.Key.m_SteamID == _data.Data.team2id)
                     {
                         if (kv.Value.name != Team2Name)
                         {
@@ -46,7 +46,7 @@ namespace Uncreated.Warfare.Teams
                             kv.Value.name = Team2Name;
                         }
                     }
-                    else if (kv.Key.m_SteamID == _data.data.adminid)
+                    else if (kv.Key.m_SteamID == _data.Data.adminid)
                     {
                         if (kv.Value.name != AdminName)
                         {
@@ -61,27 +61,27 @@ namespace Uncreated.Warfare.Teams
         public static ulong Team1ID { get => 1; }
         public static ulong Team2ID { get => 2; }
         public static ulong AdminID { get => 3; }
-        public static string Team1Name { get => _data.data.team1name; }
-        public static string Team2Name { get => _data.data.team2name; }
-        public static string AdminName { get => _data.data.adminname; }
-        public static string Team1Code { get => _data.data.team1code; }
-        public static string Team2Code { get => _data.data.team2code; }
-        public static string AdminCode { get => _data.data.admincode; }
-        public static Color Team1Color { get => _data.data.Team1Color; }
-        public static Color Team2Color { get => _data.data.Team2Color; }
-        public static Color AdminColor { get => _data.data.AdminColor; }
-        public static Color NeutralColor { get => _data.data.AdminColor; }
-        public static string Team1ColorHex { get => _data.data.Team1ColorHex; }
-        public static string Team2ColorHex { get => _data.data.Team2ColorHex; }
-        public static string AdminColorHex { get => _data.data.AdminColorHex; }
-        public static string NeutralColorHex { get => _data.data.AdminColorHex; }
-        public static string Team1UnarmedKit { get => _data.data.team1unarmedkit; }
-        public static string Team2UnarmedKit { get => _data.data.team2unarmedkit; }
-        public static float Team1SpawnAngle { get => _data.data.team1spawnangle; }
-        public static float Team2SpawnAngle { get => _data.data.team2spawnangle; }
-        public static float LobbySpawnAngle { get => _data.data.lobbyspawnangle; }
-        public static float TeamSwitchCooldown { get => _data.data.team_switch_cooldown; }
-        public static string DefaultKit { get => _data.data.defaultkit; }
+        public static string Team1Name { get => _data.Data.team1name; }
+        public static string Team2Name { get => _data.Data.team2name; }
+        public static string AdminName { get => _data.Data.adminname; }
+        public static string Team1Code { get => _data.Data.team1code; }
+        public static string Team2Code { get => _data.Data.team2code; }
+        public static string AdminCode { get => _data.Data.admincode; }
+        public static Color Team1Color { get => _data.Data.Team1Color; }
+        public static Color Team2Color { get => _data.Data.Team2Color; }
+        public static Color AdminColor { get => _data.Data.AdminColor; }
+        public static Color NeutralColor { get => _data.Data.AdminColor; }
+        public static string Team1ColorHex { get => _data.Data.Team1ColorHex; }
+        public static string Team2ColorHex { get => _data.Data.Team2ColorHex; }
+        public static string AdminColorHex { get => _data.Data.AdminColorHex; }
+        public static string NeutralColorHex { get => _data.Data.AdminColorHex; }
+        public static string Team1UnarmedKit { get => _data.Data.team1unarmedkit; }
+        public static string Team2UnarmedKit { get => _data.Data.team2unarmedkit; }
+        public static float Team1SpawnAngle { get => _data.Data.team1spawnangle; }
+        public static float Team2SpawnAngle { get => _data.Data.team2spawnangle; }
+        public static float LobbySpawnAngle { get => _data.Data.lobbyspawnangle; }
+        public static float TeamSwitchCooldown { get => _data.Data.team_switch_cooldown; }
+        public static string DefaultKit { get => _data.Data.defaultkit; }
         internal static void ResetLocations()
         {
             _t1main = null;

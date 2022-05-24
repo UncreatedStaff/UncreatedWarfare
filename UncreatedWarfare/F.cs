@@ -776,27 +776,11 @@ public static class F
             new Vector3(0.0f, PlayerMovement.HEIGHT_STAND + 0.5f - PlayerStance.RADIUS, 0.0f), PlayerStance.RADIUS, PlayerStance.checkColliders,
             RayMasks.BLOCK_STANCE, QueryTriggerInteraction.Ignore) == 0;
     }
-
-    private static string emp = string.Empty;
     public static string GetClosestLocation(Vector3 point)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ref string closest = ref emp;
-        float smallest = -1f;
-        for (int i = 0; i < LevelNodes.nodes.Count; i++)
-        {
-            if (LevelNodes.nodes[i] is LocationNode node)
-            {
-                float amt = (point - node.point).sqrMagnitude;
-                if (smallest == -1 || amt < smallest)
-                {
-                    closest = ref node.name;
-                    smallest = amt;
-                }
-            }
-        }
         int index = GetClosestLocationIndex(point);
         return index == -1 ? string.Empty : ((LocationNode)LevelNodes.nodes[index]).name;
     }

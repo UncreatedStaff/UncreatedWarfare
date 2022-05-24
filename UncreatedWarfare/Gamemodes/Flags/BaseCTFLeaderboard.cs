@@ -92,7 +92,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 if (!player.Player.life.isDead)
                     player.Player.teleportToLocationUnsafe(team.GetBaseSpawnFromTeam(), team.GetBaseAngle());
                 else
-                    player.Player.life.ReceiveRespawnRequest(false);
+                    player.Player.life.ServerRespawn(false);
 
                 // resupply the kit.
                 if (Data.Is<IKitRequests>(out _) && string.IsNullOrEmpty(player.KitName))
@@ -187,8 +187,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         EffectManager.sendUIEffectVisibility(LeaderboardEx.leaderboardKey, channel, true, "2VC" + i, false);
                 }
 
-                //UCPlayer topOfficer = PlayerManager.OnlinePlayers.OrderByDescending(x => x.cachedOfp).FirstOrDefault();
-                //if (topOfficer.cachedOfp == 0) topOfficer = default;
                 /*
                  *  STATS
                  */

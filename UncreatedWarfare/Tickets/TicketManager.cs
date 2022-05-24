@@ -487,15 +487,15 @@ namespace Uncreated.Warfare.Tickets
             ulong team = player.GetTeam();
             int bleed = GetTeamBleed(player.GetTeam());
             GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
-            UpdateUI(player.connection, UIID, tickets, message);
+            UpdateUI(player.Connection, UIID, tickets, message);
         }
         public static void OnGroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            EffectManager.askEffectClearByID(config.data.Team1TicketUIID, player.transportConnection);
-            EffectManager.askEffectClearByID(config.data.Team2TicketUIID, player.transportConnection);
+            EffectManager.askEffectClearByID(config.Data.Team1TicketUIID, player.transportConnection);
+            EffectManager.askEffectClearByID(config.Data.Team2TicketUIID, player.transportConnection);
             int bleed = GetTeamBleed(player.GetTeam());
             GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
             UpdateUI(player.transportConnection, UIID, tickets, message);
@@ -595,13 +595,13 @@ namespace Uncreated.Warfare.Tickets
             if (TeamManager.IsTeam1(team))
             {
                 tickets = Team1Tickets.ToString();
-                UIID = config.data.Team1TicketUIID;
+                UIID = config.Data.Team1TicketUIID;
             }
 
             else if (TeamManager.IsTeam2(team))
             {
                 tickets = Team2Tickets.ToString();
-                UIID = config.data.Team2TicketUIID;
+                UIID = config.Data.Team2TicketUIID;
             }
 
             if (Data.Is(out Insurgency insurgency))
@@ -650,7 +650,7 @@ namespace Uncreated.Warfare.Tickets
             for (int i = 0; i < players.Count; i++)
             {
                 if (!players[i].HasUIHidden)
-                    UpdateUI(players[i].connection, UIID, tickets, message);
+                    UpdateUI(players[i].Connection, UIID, tickets, message);
             }
         }
         public static void UpdateUITeam2(int bleed = 0)
@@ -665,7 +665,7 @@ namespace Uncreated.Warfare.Tickets
             for (int i = 0; i < players.Count; i++)
             {
                 if (!players[i].HasUIHidden)
-                    UpdateUI(players[i].connection, UIID, tickets, message);
+                    UpdateUI(players[i].Connection, UIID, tickets, message);
             }
         }
         public static int GetTeamBleed(ulong team)

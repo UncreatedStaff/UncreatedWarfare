@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.FOBs
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            foreach (BuildableData b in config.data.Buildables)
+            foreach (BuildableData b in config.Data.Buildables)
             {
                 if (!Whitelister.IsWhitelisted(b.foundationID, out _))
                     Whitelister.AddItem(b.foundationID);
@@ -544,7 +544,7 @@ namespace Uncreated.Warfare.FOBs
                 FOBList = Team2FOBs;
             else return;
 
-            UpdateUIList(team, player.connection, FOBList, player);
+            UpdateUIList(team, player.Connection, FOBList, player);
         }
         public static void UpdateResourceUIString(FOB fob)
         {
@@ -577,7 +577,7 @@ namespace Uncreated.Warfare.FOBs
             for (int j = 0; j < PlayerManager.OnlinePlayers.Count; j++)
             {
                 if (PlayerManager.OnlinePlayers[j].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[j]))
-                    EffectManager.sendUIEffectText(fobListKey, PlayerManager.OnlinePlayers[j].connection, true, "R" + i.ToString(),
+                    EffectManager.sendUIEffectText(fobListKey, PlayerManager.OnlinePlayers[j].Connection, true, "R" + i.ToString(),
                 fob.UIResourceString);
             }
         }
@@ -596,7 +596,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (fob == null)
             {
-                UpdateUIList(team, player.connection, FOBList, player);
+                UpdateUIList(team, player.Connection, FOBList, player);
             }
             else
             {
@@ -610,13 +610,13 @@ namespace Uncreated.Warfare.FOBs
                 int i = FOBList.IndexOf(fob);
                 if (i == -1)
                 {
-                    UpdateUIList(team, player.connection, FOBList, player);
+                    UpdateUIList(team, player.Connection, FOBList, player);
                     return;
                 }
                 string ii = (i + offset).ToString();
-                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + ii,
+                EffectManager.sendUIEffectText(fobListKey, player.Connection, true, "N" + ii,
                 Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates.Colorize("ebe8df"), FOBList[i].ClosestLocation));
-                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "R" + ii, FOBList[i].UIResourceString);
+                EffectManager.sendUIEffectText(fobListKey, player.Connection, true, "R" + ii, FOBList[i].UIResourceString);
             }
         }
         public static void UpdateFOBList(UCPlayer player, SpecialFOB? fob = null)
@@ -687,7 +687,7 @@ namespace Uncreated.Warfare.FOBs
             EffectManager.sendUIEffect(fobListId, fobListKey, connection, true);
 
             int i2 = 0;
-            int min = Math.Min(SpecialFOBs.Count, config.data.FobLimit);
+            int min = Math.Min(SpecialFOBs.Count, config.Data.FobLimit);
             for (int i = 0; i < min; i++)
             {
                 //L.LogDebug($"    s: {i}");
@@ -702,7 +702,7 @@ namespace Uncreated.Warfare.FOBs
 
             if (Data.Is(out Insurgency ins) && team == ins.DefendingTeam)
             {
-                min = Math.Min(Caches.Count, config.data.FobLimit);
+                min = Math.Min(Caches.Count, config.Data.FobLimit);
                 for (int i = 0; i < min; i++)
                 {
                     string i22 = i2.ToString();
@@ -714,20 +714,20 @@ namespace Uncreated.Warfare.FOBs
                 }
             }
 
-            min = Math.Min(FOBList.Count, config.data.FobLimit - i2);
+            min = Math.Min(FOBList.Count, config.Data.FobLimit - i2);
             for (int i = 0; i < min; i++)
             {
                 //L.LogDebug($"    f: {i}");
                 string i22 = i2.ToString();
 
                 EffectManager.sendUIEffectVisibility(fobListKey, connection, true, i22, true);
-                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "N" + i22,
+                EffectManager.sendUIEffectText(fobListKey, player.Connection, true, "N" + i22,
                     Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates, FOBList[i].ClosestLocation));
-                EffectManager.sendUIEffectText(fobListKey, player.connection, true, "R" + i22,
+                EffectManager.sendUIEffectText(fobListKey, player.Connection, true, "R" + i22,
                     FOBList[i].UIResourceString);
                 i2++;
             }
-            for (; i2 < config.data.FobLimit; i2++)
+            for (; i2 < config.Data.FobLimit; i2++)
             {
                 //L.LogDebug($"    c: {i2}");
                 EffectManager.sendUIEffectVisibility(fobListKey, connection, true, i2.ToString(), false);

@@ -433,7 +433,7 @@ namespace Uncreated.Warfare.Components
             }
 
             if (startCoolDown)
-                CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.config.data.DeployFOBCooldown);
+                CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.config.Data.DeployFOBCooldown);
         }
 
         public object PendingFOB;

@@ -99,8 +99,6 @@ namespace Uncreated.Warfare.Squads
 
         private Coroutine loop;
 
-        internal const short orderKey = 12004;
-
         public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag? flag = null)
         {
 #if DEBUG
@@ -255,20 +253,16 @@ namespace Uncreated.Warfare.Squads
         }
         public void SendUI(UCPlayer player)
         {
-            EffectManager.sendUIEffect(SquadManager.orderID, orderKey, true);
+            SquadManager.OrderUI.SendToPlayer(player.Connection);
             UpdateUI(player);
         }
         public void UpdateUI(UCPlayer player)
         {
-            L.Log("Order UI updated");
-            EffectManager.sendUIEffectText(orderKey, player.connection, true, "OrderInfo", $"Orders from <color=#a7becf>{Commander.CharacterName}</color>:");
-            EffectManager.sendUIEffectText(orderKey, player.connection, true, "Order", Message);
-            EffectManager.sendUIEffectText(orderKey, player.connection, true, "Time", $"- {MinutesLeft}m left");
-            EffectManager.sendUIEffectText(orderKey, player.connection, true, "Reward", $"- Reward: {RewardLevel}");
+            SquadManager.OrderUI.SetOrder(player, this);
         }
         public void HideUI(UCPlayer player)
         {
-             EffectManager.askEffectClearByID(SquadManager.orderID, player.connection);
+            SquadManager.OrderUI.ClearFromPlayer(player.Connection);
         }
 
         public IEnumerator<WaitForSeconds> Tick()

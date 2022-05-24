@@ -156,7 +156,7 @@ namespace Uncreated.Warfare.Components
 
                     TryAcquireTarget(aim, aquisitionRange);
 
-                    if (lockedOnToVehicle)
+                    if (lockedOnToVehicle && vehicleLockedOn != null)
                     {
                         var center = vehicleLockedOn.transform.Find("Center");
                         if (center != null)
