@@ -40,6 +40,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
         EventDispatcher.OnVehicleSwapSeatRequested += OnVehicleSwapSeatRequested;
         EventDispatcher.OnExitVehicleRequested += OnVehicleExitRequested;
         EventDispatcher.OnExitVehicle += OnVehicleExit;
+        EventDispatcher.OnVehicleSpawned += OnVehicleSpawned;
         if (Whitelister.Loaded) // whitelist all vehicle bay items
             WhitelistItems();
         Singleton = this;
@@ -52,11 +53,16 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
     public override void Unload()
     {
         Singleton = null!;
+        EventDispatcher.OnVehicleSpawned -= OnVehicleSpawned;
         EventDispatcher.OnExitVehicle -= OnVehicleExit;
         EventDispatcher.OnExitVehicleRequested -= OnVehicleExitRequested;
         EventDispatcher.OnVehicleSwapSeatRequested -= OnVehicleSwapSeatRequested;
         EventDispatcher.OnEnterVehicleRequested -= OnVehicleEnterRequested;
         _config = null!;
+    }
+    private void OnVehicleSpawned(VehicleSpawned e)
+    {
+        e.Vehicle.gameObject.AddComponent<VehicleComponent>().Initialize(e.Vehicle);
     }
     private void WhitelistItems()
     {

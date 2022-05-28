@@ -43,6 +43,7 @@ partial class JSONMethods
             { "team_2_short", "MEC" },
             { "team_3_short", "Admins" },
             { "teams_join_success", "You've joined {0}." },
+            { "team_join_announce", "{0} joined {1}!" },
             { "join_player_joined_console", "{0} changed group: {2} >> {1}" },
             { "neutral", "Neutral" },
             { "undiscovered_flag", "unknown" },

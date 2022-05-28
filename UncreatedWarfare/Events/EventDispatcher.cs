@@ -19,6 +19,7 @@ public static class EventDispatcher
     public static event EventDelegate<ExitVehicleRequested> OnExitVehicleRequested;
     public static event EventDelegate<EnterVehicleRequested> OnEnterVehicleRequested;
     public static event EventDelegate<VehicleSwapSeatRequested> OnVehicleSwapSeatRequested;
+    public static event EventDelegate<VehicleSpawned> OnVehicleSpawned;
     public static event EventDelegate<ExitVehicle> OnExitVehicle;
     public static event EventDelegate<EnterVehicle> OnEnterVehicle;
     public static event EventDelegate<VehicleSwapSeat> OnVehicleSwapSeat;
@@ -33,6 +34,7 @@ public static class EventDispatcher
     public static event EventDelegate<BattlEyeKicked> OnPlayerBattlEyeKicked;
     internal static void SubscribeToAll()
     {
+        EventPatches.TryPatchAll();
         VehicleManager.onExitVehicleRequested += VehicleManagerOnExitVehicleRequested;
         VehicleManager.onEnterVehicleRequested += VehicleManagerOnEnterVehicleRequested;
         VehicleManager.onSwapSeatRequested += VehicleManagerOnSwapSeatRequested;
@@ -84,9 +86,11 @@ public static class EventDispatcher
     {
         if (OnExitVehicleRequested == null || !shouldAllow) return;
         ExitVehicleRequested request = new ExitVehicleRequested(player, vehicle, shouldAllow, pendingLocation, pendingYaw);
-        EventDelegate<ExitVehicleRequested>[] inv = (EventDelegate<ExitVehicleRequested>[])OnExitVehicleRequested.GetInvocationList();
-        for (int i = 0; i < inv.Length && request.CanContinue; ++i)
-            TryInvoke(inv[i], request, nameof(OnExitVehicleRequested));
+        foreach (EventDelegate<ExitVehicleRequested> inv in OnExitVehicleRequested.GetInvocationList().Cast<EventDelegate<ExitVehicleRequested>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnExitVehicleRequested));
+        }
         if (!request.CanContinue)
             shouldAllow = false;
         else
@@ -99,9 +103,11 @@ public static class EventDispatcher
     {
         if (OnEnterVehicleRequested == null || !shouldAllow || vehicle == null || player == null) return;
         EnterVehicleRequested request = new EnterVehicleRequested(player, vehicle, shouldAllow);
-        EventDelegate<EnterVehicleRequested>[] inv = (EventDelegate<EnterVehicleRequested>[])OnEnterVehicleRequested.GetInvocationList();
-        for (int i = 0; i < inv.Length && request.CanContinue; ++i)
-            TryInvoke(inv[i], request, nameof(OnEnterVehicleRequested));
+        foreach (EventDelegate<EnterVehicleRequested> inv in OnEnterVehicleRequested.GetInvocationList().Cast<EventDelegate<EnterVehicleRequested>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnEnterVehicleRequested));
+        }
         if (!request.CanContinue)
             shouldAllow = false;
     }
@@ -109,9 +115,11 @@ public static class EventDispatcher
     {
         if (OnVehicleSwapSeatRequested == null || !shouldAllow) return;
         VehicleSwapSeatRequested request = new VehicleSwapSeatRequested(player, vehicle, shouldAllow, fromSeatIndex, toSeatIndex);
-        EventDelegate<VehicleSwapSeatRequested>[] inv = (EventDelegate<VehicleSwapSeatRequested>[])OnVehicleSwapSeatRequested.GetInvocationList();
-        for (int i = 0; i < inv.Length && request.CanContinue; ++i)
-            TryInvoke(inv[i], request, nameof(OnVehicleSwapSeatRequested));
+        foreach (EventDelegate<VehicleSwapSeatRequested> inv in OnVehicleSwapSeatRequested.GetInvocationList().Cast<EventDelegate<VehicleSwapSeatRequested>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnVehicleSwapSeatRequested));
+        }
         if (!request.CanContinue) shouldAllow = false;
         else toSeatIndex = request.FinalSeat;
     }
@@ -123,9 +131,11 @@ public static class EventDispatcher
         UCPlayer? pl2 = UCPlayer.FromPlayer(pl.player.player);
         if (pl2 is null) return;
         VehicleSwapSeat request = new VehicleSwapSeat(pl2, vehicle, (byte)fromSeatIndex, (byte)toSeatIndex);
-        EventDelegate<VehicleSwapSeat>[] inv = (EventDelegate<VehicleSwapSeat>[])OnVehicleSwapSeat.GetInvocationList();
-        for (int i = 0; i < inv.Length && request.CanContinue; ++i)
-            TryInvoke(inv[i], request, nameof(OnVehicleSwapSeat));
+        foreach (EventDelegate<VehicleSwapSeat> inv in OnVehicleSwapSeat.GetInvocationList().Cast<EventDelegate<VehicleSwapSeat>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnVehicleSwapSeat));
+        }
     }
     private static void InteractableVehicleOnPassengerRemoved(InteractableVehicle vehicle, int seatIndex, Player player)
     {
@@ -133,9 +143,11 @@ public static class EventDispatcher
         UCPlayer? pl2 = UCPlayer.FromPlayer(player);
         if (pl2 is null) return;
         ExitVehicle request = new ExitVehicle(pl2, vehicle, (byte)seatIndex);
-        EventDelegate<ExitVehicle>[] inv = (EventDelegate<ExitVehicle>[])OnExitVehicle.GetInvocationList();
-        for (int i = 0; i < inv.Length && request.CanContinue; ++i)
-            TryInvoke(inv[i], request, nameof(OnExitVehicle));
+        foreach (EventDelegate<ExitVehicle> inv in OnExitVehicle.GetInvocationList().Cast<EventDelegate<ExitVehicle>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnExitVehicle));
+        }
     }
     private static void InteractableVehicleOnPassengerAdded(InteractableVehicle vehicle, int seatIndex)
     {
@@ -145,18 +157,32 @@ public static class EventDispatcher
         UCPlayer? pl2 = UCPlayer.FromPlayer(pl.player.player);
         if (pl2 is null) return;
         EnterVehicle request = new EnterVehicle(pl2, vehicle, (byte)seatIndex);
-        EventDelegate<EnterVehicle>[] inv = (EventDelegate<EnterVehicle>[])OnEnterVehicle.GetInvocationList();
-        for (int i = 0; i < inv.Length && request.CanContinue; ++i)
-            TryInvoke(inv[i], request, nameof(OnEnterVehicle));
+        foreach (EventDelegate<EnterVehicle> inv in OnEnterVehicle.GetInvocationList().Cast<EventDelegate<EnterVehicle>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnEnterVehicle));
+        }
+    }
+    internal static void InvokeOnVehicleSpawned(InteractableVehicle result)
+    {
+        if (OnVehicleSpawned == null) return;
+        VehicleSpawned args = new VehicleSpawned(result);
+        foreach (EventDelegate<VehicleSpawned> inv in OnVehicleSpawned.GetInvocationList().Cast<EventDelegate<VehicleSpawned>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnVehicleSpawned));
+        }
     }
     internal static void InvokeOnBarricadeDestroyed(BarricadeDrop barricade, BarricadeData barricadeData, BarricadeRegion region, byte x, byte y, ushort plant)
     {
         if (OnBarricadeDestroyed == null) return;
         UCPlayer? instigator = barricade.model.TryGetComponent(out BarricadeComponent component) ? UCPlayer.FromID(component.LastDamager) : null;
         BarricadeDestroyed args = new BarricadeDestroyed(instigator, barricade, barricadeData, region, x, y, plant);
-        EventDelegate<BarricadeDestroyed>[] inv = (EventDelegate<BarricadeDestroyed>[])OnBarricadeDestroyed.GetInvocationList();
-        for (int i = 0; i < inv.Length && args.CanContinue; ++i)
-            TryInvoke(inv[i], args, nameof(OnBarricadeDestroyed));
+        foreach (EventDelegate<BarricadeDestroyed> inv in OnBarricadeDestroyed.GetInvocationList().Cast<EventDelegate<BarricadeDestroyed>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnBarricadeDestroyed));
+        }
     }
     private static void ProviderOnServerDisconnected(CSteamID steamID)
     {
@@ -164,9 +190,11 @@ public static class EventDispatcher
         UCPlayer? player = UCPlayer.FromCSteamID(steamID);
         if (player is null) return;
         PlayerEvent args = new PlayerEvent(player);
-        EventDelegate<PlayerEvent>[] inv = (EventDelegate<PlayerEvent>[])OnPlayerLeaving.GetInvocationList();
-        for (int i = 0; i < inv.Length && args.CanContinue; ++i)
-            TryInvoke(inv[i], args, nameof(OnPlayerLeaving));
+        foreach (EventDelegate<PlayerEvent> inv in OnPlayerLeaving.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnPlayerLeaving));
+        }
     }
     private static void ProviderOnServerConnected(CSteamID steamID)
     {
@@ -175,9 +203,11 @@ public static class EventDispatcher
         if (player is null) return;
         PlayerSave.TryReadSaveFile(steamID.m_SteamID, out PlayerSave? save);
         PlayerJoined args = new PlayerJoined(player, save);
-        EventDelegate<PlayerJoined>[] inv = (EventDelegate<PlayerJoined>[])OnPlayerJoined.GetInvocationList();
-        for (int i = 0; i < inv.Length && args.CanContinue; ++i)
-            TryInvoke(inv[i], args, nameof(OnPlayerJoined));
+        foreach (EventDelegate<PlayerJoined> inv in OnPlayerJoined.GetInvocationList().Cast<EventDelegate<PlayerJoined>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnPlayerJoined));
+        }
     }
     private static void ProviderOnCheckValidWithExplanation(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
     {
@@ -191,9 +221,11 @@ public static class EventDispatcher
         if (pending is null) return;
         PlayerSave.TryReadSaveFile(callback.m_SteamID.m_SteamID, out PlayerSave? save);
         PlayerPending args = new PlayerPending(pending, save, isValid, explanation);
-        EventDelegate<PlayerPending>[] inv = (EventDelegate<PlayerPending>[])OnPlayerPending.GetInvocationList();
-        for (int i = 0; i < inv.Length && args.CanContinue; ++i)
-            TryInvoke(inv[i], args, nameof(OnPlayerPending));
+        foreach (EventDelegate<PlayerPending> inv in OnPlayerPending.GetInvocationList().Cast<EventDelegate<PlayerPending>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnPlayerPending));
+        }
         if (!args.CanContinue)
         {
             isValid = false;
@@ -206,9 +238,11 @@ public static class EventDispatcher
         UCPlayer? player = UCPlayer.FromSteamPlayer(client);
         if (player is null) return;
         BattlEyeKicked args = new BattlEyeKicked(player, reason);
-        EventDelegate<BattlEyeKicked>[] inv = (EventDelegate<BattlEyeKicked>[])OnPlayerBattlEyeKicked.GetInvocationList();
-        for (int i = 0; i < inv.Length && args.CanContinue; ++i)
-            TryInvoke(inv[i], args, nameof(OnPlayerBattlEyeKicked));
+        foreach (EventDelegate<BattlEyeKicked> inv in OnPlayerBattlEyeKicked.GetInvocationList().Cast<EventDelegate<BattlEyeKicked>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnPlayerBattlEyeKicked));
+        }
     }
     private static void BarricadeManagerOnDeployBarricadeRequested(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angle_x, ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
     {
@@ -223,9 +257,11 @@ public static class EventDispatcher
         }
         Vector3 rotation = new Vector3(angle_x, angle_y, angle_z);
         PlaceBarricadeRequested args = new PlaceBarricadeRequested(player, vehicle, barricade, asset, hit, point, rotation, owner, group, shouldAllow);
-        EventDelegate<PlaceBarricadeRequested>[] inv = (EventDelegate<PlaceBarricadeRequested>[])OnBarricadePlaceRequested.GetInvocationList();
-        for (int i = 0; i < inv.Length && args.CanContinue; ++i)
-            TryInvoke(inv[i], args, nameof(OnBarricadePlaceRequested));
+        foreach (EventDelegate<PlaceBarricadeRequested> inv in OnBarricadePlaceRequested.GetInvocationList().Cast<EventDelegate<PlaceBarricadeRequested>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnBarricadePlaceRequested));
+        }
         if (!args.CanContinue)
             shouldAllow = false;
         else
@@ -245,9 +281,11 @@ public static class EventDispatcher
         UCPlayer? owner = UCPlayer.FromID(data.owner);
         if (owner is null) return;
         BarricadePlaced args = new BarricadePlaced(owner, drop, data, region);
-        EventDelegate<BarricadePlaced>[] inv = (EventDelegate<BarricadePlaced>[])OnBarricadePlaced.GetInvocationList();
-        for (int i = 0; i < inv.Length && args.CanContinue; ++i)
-            TryInvoke(inv[i], args, nameof(OnBarricadePlaced));
+        foreach (EventDelegate<BarricadePlaced> inv in OnBarricadePlaced.GetInvocationList().Cast<EventDelegate<BarricadePlaced>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnBarricadePlaced));
+        }
     }
 }
 public delegate void EventDelegate<T>(T e) where T : EventState;
