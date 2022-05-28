@@ -96,7 +96,7 @@ public class Reporter : MonoBehaviour
 
             Guid g = veh.asset.GUID;
             // check if the player is in an emplacement
-            if (FOBs.FOBManager.config.Data.Buildables.Exists(x => x.emplacementData is not null && x.emplacementData.vehicleID == g))
+            if (FOBs.FOBManager.Config.Buildables.Exists(x => x.Emplacement is not null && x.Emplacement.EmplacementVehicle == g))
                 goto timeAdj;
             int passengerCount = 0;
             for (int i = 0; i < veh.passengers.Length; i++)

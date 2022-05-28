@@ -16,14 +16,14 @@ namespace Uncreated.Warfare.Commands;
 
 public class ReportCommand : IRocketCommand
 {
+    private readonly List<string> _aliases = new List<string>(0);
+    private readonly List<string> _permissions = new List<string>(1) { "uc.report" };
+    public List<string> Permissions => _permissions;
+    public List<string> Aliases => _aliases;
     public AllowedCaller AllowedCaller => AllowedCaller.Player;
     public string Name => "report";
     public string Help => "Use to report a player for specific actions. Use /report reasons for examples.";
     public string Syntax => "/report <\"reasons\" | player> <reason> <custom message...>";
-    private readonly List<string> _aliases = new List<string>(0);
-    public List<string> Aliases => _aliases;
-    private readonly List<string> _permissions = new List<string>(1) { "uc.report" };
-		public List<string> Permissions => _permissions;
     public void Execute(IRocketPlayer caller, string[] command)
     {
 #if DEBUG
@@ -244,7 +244,7 @@ public class ReportCommand : IRocketCommand
         return;
     Help:
         player.SendChat("report_syntax");
-    Types:
+    Types: // not returning here is intentional
         player.SendChat("report_reasons");
         return;
     }

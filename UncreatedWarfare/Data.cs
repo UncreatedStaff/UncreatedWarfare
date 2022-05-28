@@ -199,7 +199,7 @@ namespace Uncreated.Warfare
             F.CheckDir(TeamStorage, out _, true);
             F.CheckDir(OfficerStorage, out _, true);
 
-            ZoneProvider = new JsonZoneProvider(new FileInfo(Data.FlagStorage + "zones.json"));
+            ZoneProvider = new JsonZoneProvider(new FileInfo(FlagStorage + "zones.json"));
 
             /* LOAD LOCALIZATION ASSETS */
             L.Log("Loading JSON Data...", ConsoleColor.Magenta);
@@ -235,25 +235,7 @@ namespace Uncreated.Warfare
             CommandWindow.shouldLogDeaths = false;
             Gamemode.ReadGamemodes();
 
-            Type? nextMode = Gamemode.GetNextGamemode();
-            if (nextMode == null) nextMode = typeof(TeamCTF);
-            Gamemode = (UCWarfare.I.gameObject.AddComponent(nextMode) as Gamemode)!;
-            if (Gamemode != null)
-            {
-                Gamemode.Init();
-                for (int i = 0; i < Provider.clients.Count; i++)
-                {
-                    UCPlayer? pl = UCPlayer.FromSteamPlayer(Provider.clients[i]);
-                    if (pl != null)
-                        Gamemode.OnPlayerJoined(pl, true, false);
-                }
-                L.Log("Loaded " + Gamemode.DisplayName, ConsoleColor.Cyan);
-                L.Log("Initialized gamemode.", ConsoleColor.Magenta);
-            }
-            else
-            {
-                L.LogError("Failed to Initialize Gamemode");
-            }
+            if (!Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF))) throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Failed to load gamemode"));
             ReloadTCP();
 
             if (UCWarfare.Config.EnableReporter)

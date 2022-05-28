@@ -15,6 +15,8 @@ namespace Uncreated.Warfare.Squads;
 
 public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 {
+    public SquadManager() : base("squad") { }
+
     public new static SquadsConfig Config;
     public static List<Squad> Squads;
     private static SquadManager _singleton;
@@ -33,7 +35,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         "GOLF",
         "HOTEL"
     };
-    public SquadManager() : base("squad") { }
 
     public override void Load()
     {
@@ -59,12 +60,12 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
     }
     private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
     {
-        _singleton.AssertLoadedLite();
+        _singleton.IsLoaded();
         ReplicateKitChange(player);
     }
     public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
     {
-        _singleton.AssertLoadedLite();
+        _singleton.IsLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -194,7 +195,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 
     public static void OnPlayerJoined(UCPlayer player, string squadName)
     {
-        _singleton.AssertLoadedLite();
+        _singleton.IsLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -354,7 +355,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
     }
     public static void OnPlayerDisconnected(UCPlayer player)
     {
-        _singleton.AssertLoadedLite();
+        _singleton.IsLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

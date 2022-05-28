@@ -24,7 +24,7 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     }
     public interface ILongestShotTracker
     {
-        Flags.LongestShot LongestShot { get; set; }
+        LongestShot LongestShot { get; set; }
     }
     public interface IFobsTracker
     {

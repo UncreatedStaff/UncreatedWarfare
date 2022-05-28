@@ -167,10 +167,6 @@ public class ReloadCommand : IRocketCommand
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Gamemode.ConfigObj.Reload();
-        Gamemodes.Flags.TeamCTF.CTFUI.TempCacheEffectIDs();
-        LeaderboardEx.TempCacheEffectIDs();
-        FOBManager.TempCacheEffectIDs();
-        JoinManager.CacheIDs();
     }
     internal static void ReloadFlags()
     {
@@ -205,9 +201,9 @@ public class ReloadCommand : IRocketCommand
         {
             await manager.ReloadKits();
             await UCWarfare.ToUpdate();
-            foreach (RequestSign sign in RequestSigns.ActiveObjects)
+            if (RequestSigns.Loaded)
             {
-                sign.InvokeUpdate();
+                RequestSigns.UpdateAllSigns();
             }
             if (!KitManager.KitExists(TeamManager.Team1UnarmedKit, out _))
                 L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");

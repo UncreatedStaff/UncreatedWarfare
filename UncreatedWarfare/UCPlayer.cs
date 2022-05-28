@@ -150,6 +150,7 @@ public class UCPlayer : IRocketPlayer
     public static explicit operator UnturnedPlayer(UCPlayer player) => UnturnedPlayer.FromPlayer(player.Player);
     public static UCPlayer? FromID(ulong steamID)
     {
+        if (steamID == 0) return null;
         return PlayerManager.FromID(steamID);
         //return PlayerManager.OnlinePlayers.Find(p => p != null && p.Steam64 == steamID);
     }

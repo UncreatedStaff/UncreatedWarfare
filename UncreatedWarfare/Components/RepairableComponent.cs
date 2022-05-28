@@ -52,11 +52,11 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EBuildableType.EMPLACEMENT);
+            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.BuildableBarricade == Structure.asset.GUID && b.Type != EBuildableType.EMPLACEMENT);
 
             if (buildable != null)
             {
-                string structureName = Assets.find<ItemBarricadeAsset>(buildable.foundationID).itemName;
+                string structureName = Assets.find<ItemBarricadeAsset>(buildable.Foundation).itemName;
                 string message = structureName + " DESTROYED";
 
                 UCPlayer? player = null;
@@ -71,7 +71,7 @@ namespace Uncreated.Warfare.Components
 
                     int amount = 0;
                     float vehicleQuota = 0;
-                    if (buildable.type == EBuildableType.FOB_BUNKER)
+                    if (buildable.Type == EBuildableType.FOB_BUNKER)
                     {
                         if (teamkilled)
                         {
@@ -83,9 +83,9 @@ namespace Uncreated.Warfare.Components
                             vehicleQuota = 5;
                         }
                     }
-                    if (buildable.type == EBuildableType.FORTIFICATION)
+                    if (buildable.Type == EBuildableType.FORTIFICATION)
                     {
-                        amount = (int)Math.Round(buildable.requiredHits * 0.1F);
+                        amount = (int)Math.Round(buildable.RequiredHits * 0.1F);
                         
 
                         if (teamkilled) amount *= -1;
@@ -93,7 +93,7 @@ namespace Uncreated.Warfare.Components
                     }
                     else
                     {
-                        amount = (int)Math.Round(buildable.requiredHits * 0.75F);
+                        amount = (int)Math.Round(buildable.RequiredHits * 0.75F);
                         if (teamkilled) amount *= -1;
                         else vehicleQuota = amount * 0.02F;
                     }

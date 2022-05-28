@@ -198,6 +198,7 @@ public static class L
 
         public static readonly NetCallRaw<LogMessage, byte> SendLogMessage = new NetCallRaw<LogMessage, byte>(1030, LogMessage.Read, null, LogMessage.Write, null);
         public static readonly NetCallRaw<LogMessage[], byte> SendFullLog = new NetCallRaw<LogMessage[], byte>(1031, LogMessage.ReadMany, null, LogMessage.WriteMany, null);
+        public static readonly NetCall<string> SendFatalException = new NetCall<string>(1131);
 
         [NetCall(ENetCall.FROM_SERVER, 1029)]
         internal static void ReceiveRequestFullLog(MessageContext context) => context.Reply(SendFullLog, Logs.ToArray(), (byte)0);
