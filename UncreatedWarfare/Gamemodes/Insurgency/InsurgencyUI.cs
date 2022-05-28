@@ -12,23 +12,23 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!Data.Is(out Insurgency gm)) return;
+            if (!Data.Is(out Insurgency gm) || gm.Caches == null) return;
             ITransportConnection c = player.Player.channel.owner.transportConnection;
-            EffectManager.sendUIEffect(CTFUI.flagListID, CTFUI.flagListKey, c, true);
-            EffectManager.sendUIEffectVisibility(CTFUI.flagListKey, c, true, "Header", true);
-            EffectManager.sendUIEffectText(CTFUI.flagListKey, c, true, "Header", Translation.Translate("caches_header", player));
+            CTFUI.ListUI.SendToPlayer(c);
+            CTFUI.ListUI.Header.SetVisibility(c, true);
+            CTFUI.ListUI.Header.SetText(c, Translation.Translate("caches_header", player));
             int i = 0;
-            for (; i < gm.Caches.Count; i++)
+            int num = Math.Min(gm.Caches.Count, CTFUI.ListUI.Parents.Length);
+            for (; i < num; i++)
             {
-                string i2 = i.ToString();
                 Insurgency.CacheData cache = gm.Caches[i];
                 ulong team = player.GetTeam();
 
-                EffectManager.sendUIEffectVisibility(CTFUI.flagListKey, c, true, i2, true);
-                EffectManager.sendUIEffectText(CTFUI.flagListKey, c, true, "N" + i2, GetCacheLabel(cache, player, team, gm));
+                CTFUI.ListUI.Parents[i].SetVisibility(c, true);
+                CTFUI.ListUI.Names[i].SetText(c, GetCacheLabel(cache, player, team, gm));
             }
-            for (; i < Gamemode.Config.UI.FlagUICount; i++)
-                EffectManager.sendUIEffectVisibility(CTFUI.flagListKey, c, true, i.ToString(), false);
+            for (; i < CTFUI.ListUI.Parents.Length; i++)
+                CTFUI.ListUI.Parents[i].SetVisibility(c, false);
         }
         public static void ReplicateCacheUpdate(Insurgency.CacheData cache)
         {
@@ -37,11 +37,12 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency
 #endif
             if (!Data.Is(out Insurgency gm)) return;
             int index = gm.Caches.IndexOf(cache);
-            string i2 = "N" + index.ToString();
+            if (index < 0 || index >= CTFUI.ListUI.Parents.Length)
+                return;
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer player = PlayerManager.OnlinePlayers[i];
-                EffectManager.sendUIEffectText(CTFUI.flagListKey, player.Player.channel.owner.transportConnection, true, i2, GetCacheLabel(cache, player, player.GetTeam(), gm));
+                CTFUI.ListUI.Names[index].SetText(player.Connection, GetCacheLabel(cache, player, player.GetTeam(), gm));
             }
         }
         public static string GetCacheLabel(Insurgency.CacheData cache, UCPlayer player, ulong team, Insurgency insurgency)

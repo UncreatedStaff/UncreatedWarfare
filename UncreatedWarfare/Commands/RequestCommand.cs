@@ -300,7 +300,7 @@ namespace Uncreated.Warfare.Commands
         }
         private void GiveKit(UCPlayer ucplayer, Kit kit)
         {
-            AmmoCommand.WipeDroppedItems(ucplayer.Player.inventory);
+            AmmoCommand.WipeDroppedItems(ucplayer.Steam64);
             KitManager.GiveKit(ucplayer, kit);
             Stats.StatsManager.ModifyKit(kit.Name, k => k.TimesRequested++);
             ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
@@ -309,7 +309,7 @@ namespace Uncreated.Warfare.Commands
             {
                 CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
             }
-            CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.config.Data.RequestKitCooldown);
+            CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.Config.RequestKitCooldown);
 
             PlayerManager.ApplyTo(ucplayer);
         }
@@ -368,18 +368,19 @@ namespace Uncreated.Warfare.Commands
             }
             else
             {
-                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                if (VehicleSpawner.Loaded) // check if an owned vehicle is nearby
                 {
-                    VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
-                    if (spawn == null) continue;
-                    if (spawn.HasLinkedVehicle(out InteractableVehicle veh))
+                    foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
                     {
-                        if (veh == null || veh.isDead) continue;
-                        if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 &&
-                            (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
+                        if (spawn is not null && spawn.HasLinkedVehicle(out InteractableVehicle veh))
                         {
-                            ucplayer.Message("request_vehicle_e_already_owned");
-                            return;
+                            if (veh == null || veh.isDead) continue;
+                            if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 &&
+                                (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
+                            {
+                                ucplayer.Message("request_vehicle_e_already_owned");
+                                return;
+                            }
                         }
                     }
                 }
@@ -450,7 +451,7 @@ namespace Uncreated.Warfare.Commands
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.Message("request_vehicle_given", vehicle.asset.vehicleName, UCWarfare.GetColorHex("request_vehicle_given_vehicle_name"));
 
-                if (!FOBManager.config.Data.Buildables.Exists(e => e.type == EBuildableType.EMPLACEMENT && e.structureID == vehicle.asset.GUID))
+                if (!FOBManager.Config.Buildables.Exists(e => e.Type == EBuildableType.EMPLACEMENT && e.BuildableBarricade == vehicle.asset.GUID))
                 {
                     ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
                     ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack

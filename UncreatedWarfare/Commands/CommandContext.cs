@@ -1,13 +1,16 @@
 ﻿using Rocket.API;
+using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
-public readonly struct CommandContext
+public struct CommandContext
 {
     public readonly UCPlayer? Caller;
     public readonly bool IsConsole;
@@ -155,6 +158,51 @@ public readonly struct CommandContext
         }
         return int.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
     }
+    public bool TryGet(int parameter, out byte value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        return byte.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+    }
+    public bool TryGet(int parameter, out sbyte value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        return sbyte.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+    }
+    public bool TryGet(int parameter, out Guid value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = default;
+            return false;
+        }
+        return Guid.TryParse(Parameters[parameter], out value);
+    }
+    public bool TryGet(int parameter, out uint value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        return uint.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+    }
+    public bool TryGet(int parameter, out ushort value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        return ushort.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+    }
     public bool TryGet(int parameter, out ulong value)
     {
         if (parameter < 0 || parameter >= ArgumentCount)
@@ -215,6 +263,108 @@ public readonly struct CommandContext
         }
         return decimal.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
     }
+    /// <summary>Get an asset based on a <see cref="Guid"/> search, <see cref="ushort"/> search, then <see cref="Asset.FriendlyName"/> search.</summary>
+    /// <typeparam name="TAsset"><see cref="Asset"/> type to find.</typeparam>
+    /// <param name="length">Set to 1 to only get one parameter (default), set to -1 to get any remaining parameters.</param>
+    /// <param name="multipleResultsFound"><see langword="true"/> if <paramref name="allowMultipleResults"/> is <see langword="false"/> and multiple results were found.</param>
+    /// <param name="allowMultipleResults">Set to <see langword="false"/> to make the function return <see langword="false"/> if multiple results are found. <paramref name="asset"/> will still be set.</param>
+    /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
+    public bool TryGet<TAsset>(int parameter, out TAsset asset, out bool multipleResultsFound, bool remainder = false, bool allowMultipleResults = false) where TAsset : Asset
+    {
+        if (!TryGetRange(parameter, out string p, remainder ? -1 : 1))
+        {
+            multipleResultsFound = false;
+            asset = null!;
+            return false;
+        }
+        if (Guid.TryParse(p, out Guid guid))
+        {
+            asset = Assets.find<TAsset>(guid);
+            multipleResultsFound = false;
+            return asset is not null;
+        }
+        EAssetType type = JsonAssetReference<TAsset>.AssetTypeHelper.Type;
+        if (type != EAssetType.NONE)
+        {
+            if (ushort.TryParse(p, out ushort value))
+            {
+                if (Assets.find(type, value) is TAsset asset2)
+                {
+                    asset = asset2;
+                    multipleResultsFound = false;
+                    return true;
+                }
+            }
+
+            TAsset[] assets = Assets.find(type).OfType<TAsset>().OrderBy(x => x.FriendlyName.Length).ToArray();
+            if (allowMultipleResults)
+            {
+                for (int i = 0; i < assets.Length; ++i)
+                {
+                    if (assets[i].FriendlyName.Equals(p, StringComparison.OrdinalIgnoreCase))
+                    {
+                        asset = assets[i];
+                        multipleResultsFound = false;
+                        return true;
+                    }
+                }
+                for (int i = 0; i < assets.Length; ++i)
+                {
+                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.OrdinalIgnoreCase) != -1)
+                    {
+                        asset = assets[i];
+                        multipleResultsFound = false;
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                List<TAsset> results = new List<TAsset>(16);
+                for (int i = 0; i < assets.Length; ++i)
+                {
+                    if (assets[i].FriendlyName.Equals(p, StringComparison.OrdinalIgnoreCase))
+                    {
+                        results.Add(assets[i]);
+                    }
+                }
+                if (results.Count == 1)
+                {
+                    asset = results[0];
+                    multipleResultsFound = false;
+                    return true;
+                }
+                else if (results.Count > 1)
+                {
+                    multipleResultsFound = true;
+                    asset = results[0];
+                    return false; // if multiple results match for the full name then a partial will be the same
+                }
+                for (int i = 0; i < assets.Length; ++i)
+                {
+                    if (assets[i].FriendlyName.IndexOf(p, StringComparison.OrdinalIgnoreCase) != -1)
+                    {
+                        results.Add(assets[i]);
+                    }
+                }
+                if (results.Count == 1)
+                {
+                    asset = results[0];
+                    multipleResultsFound = false;
+                    return true;
+                }
+                else if (results.Count > 1)
+                {
+                    multipleResultsFound = true;
+                    asset = results[0];
+                    return false;
+                }
+            }
+        }
+        multipleResultsFound = false;
+        asset = null!;
+        return false;
+    }
     public void Reply(string translationKey, params string[] formatting)
     {
         if (translationKey is null) throw new ArgumentNullException(nameof(translationKey));
@@ -229,6 +379,112 @@ public readonly struct CommandContext
         {
             Caller.SendChat(translationKey, formatting);
         }
+    }
+    public bool TryGetTarget(out Transform transform)
+    {
+        if (IsConsole || Caller is null || !Caller.IsOnline)
+        {
+            transform = null!;
+            return false;
+        }
+        Transform aim = Caller.Player.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.PLAYER_INTERACT, Caller.Player);
+        transform = info.transform;
+        return transform != null;
+    }
+    public bool TryGetTarget<T>(out T interactable) where T : Interactable
+    {
+        if (IsConsole || Caller is null || !Caller.IsOnline)
+        {
+            interactable = null!;
+            return false;
+        }
+        Transform aim = Caller.Player.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.PLAYER_INTERACT, Caller.Player);
+        if (info.transform == null)
+        {
+            interactable = null!;
+            return false;
+        }
+        if (typeof(InteractableVehicle).IsAssignableFrom(typeof(T)))
+        {
+            interactable = (info.vehicle as T)!;
+            return interactable != null;
+        }
+        else if (typeof(InteractableForage).IsAssignableFrom(typeof(T)))
+        {
+            if (info.transform.TryGetComponent(out InteractableForage forage))
+            {
+                interactable = (forage as T)!;
+                return interactable != null;
+            }
+        }
+        BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
+        interactable = (drop?.interactable as T)!;
+        return interactable != null;
+    }
+    public bool TryGetTarget(out BarricadeDrop drop)
+    {
+        if (IsConsole || Caller is null || !Caller.IsOnline)
+        {
+            drop = null!;
+            return false;
+        }
+        Transform aim = Caller.Player.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.BARRICADE, Caller.Player);
+        if (info.transform == null)
+        {
+            drop = null!;
+            return false;
+        }
+        drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
+        return drop != null;
+    }
+    public bool TryGetTarget(out StructureDrop drop)
+    {
+        if (IsConsole || Caller is null || !Caller.IsOnline)
+        {
+            drop = null!;
+            return false;
+        }
+        Transform aim = Caller.Player.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.STRUCTURE, Caller.Player);
+        if (info.transform == null)
+        {
+            drop = null!;
+            return false;
+        }
+        drop = StructureManager.FindStructureByRootTransform(info.transform);
+        return drop != null;
+    }
+    public bool TryGetTarget(out InteractableVehicle vehicle)
+    {
+        if (IsConsole || Caller is null || !Caller.IsOnline)
+        {
+            vehicle = null!;
+            return false;
+        }
+        Transform aim = Caller.Player.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.VEHICLE, Caller.Player);
+        if (info.transform == null)
+        {
+            vehicle = null!;
+            return false;
+        }
+        vehicle = info.vehicle;
+        return vehicle != null;
+    }
+    public bool TryGetTarget(out UCPlayer player)
+    {
+        if (IsConsole || Caller is null || !Caller.IsOnline)
+        {
+            player = null!;
+            return false;
+        }
+        Transform aim = Caller.Player.look.aim;
+        RaycastInfo info = DamageTool.raycast(new Ray(aim.position, aim.forward), 4f, RayMasks.PLAYER, Caller.Player);
+        player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
+        return player != null && player.IsOnline;
     }
     public bool HasPermissionOrReply(string permission, string noPermissionMessageKey = "no_permissions")
     {
@@ -300,7 +556,7 @@ public readonly struct CommandContext
             Reply(noPermissionMessageKey, formatting);
         return perm;
     }
-    public void LogAction(EActionLogType type, string data)
+    public void LogAction(EActionLogType type, string? data = null)
     {
         ActionLog.Add(type, data, CallerID);
     }
@@ -346,6 +602,10 @@ public readonly struct CommandContext
     public void SendCorrectUsage(string usage)
     {
         Reply("correct_usage", usage);
+    }
+    public void SendPlayerNotFound()
+    {
+        Reply("command_e_player_not_found");
     }
     public static ConsoleColor GetClosestConsoleColor(Color color)
     {

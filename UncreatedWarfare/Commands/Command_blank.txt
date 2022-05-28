@@ -21,8 +21,7 @@ namespace Uncreated.Warfare.Commands
 		public List<string> Permissions => _permissions;
         public void Execute(IRocketPlayer caller, string[] command)
         {
-            UnturnedPlayer player = (UnturnedPlayer)caller;
-
+            CommandContext ctx = new CommandContext(caller, command);
             // TODO
         }
     }

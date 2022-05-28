@@ -62,7 +62,7 @@ namespace Uncreated.Warfare.Components
             }
 
             // buildable
-            if (FOBManager.config.Data.Buildables.Exists(b => b.foundationID == drop.asset.GUID && b.type != EBuildableType.FORTIFICATION))
+            if (FOBManager.Config.Buildables.Exists(b => b.Foundation == drop.asset.GUID && b.Type != EBuildableType.FORTIFICATION))
                 AttachIcon(Gamemode.Config.UI.MarkerBuildable, drop.model, data.group, 2F);
         }
         public static void DrawNewMarkers(UCPlayer player, bool clearOld)

@@ -6,7 +6,7 @@ using Uncreated.Warfare.Kits;
 namespace Uncreated.Warfare.Squads;
 public sealed class SquadsConfig : Config<SquadConfigData>
 {
-    public SquadsConfig() : base(Warfare.Data.SquadStorage, "config.json", "squad")
+    public SquadsConfig() : base(Warfare.Data.SquadStorage, "config.json")
     {
     }
     protected override void OnReload()

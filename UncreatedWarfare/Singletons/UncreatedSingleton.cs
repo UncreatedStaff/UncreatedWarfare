@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;
 
@@ -10,12 +11,56 @@ public interface IUncreatedSingleton
     void Load();
     void Unload();
 }
+public interface ILevelStartListener : IUncreatedSingleton
+{
+    void OnLevelReady();
+}
+public interface IGameStartListener : IUncreatedSingleton
+{
+    void OnGameStarting(bool isOnLoad);
+}
+public interface IPlayerDisconnectListener : IUncreatedSingleton
+{
+    void OnPlayerDisconnecting(UCPlayer player);
+}
+public interface IPlayerConnectListener : IUncreatedSingleton
+{
+    void OnPlayerConnecting(UCPlayer player);
+}
+public interface IPlayerInitListener : IUncreatedSingleton
+{
+    void OnPlayerInit(UCPlayer player, bool wasAlreadyOnline);
+}
+
 public interface IReloadableSingleton : IUncreatedSingleton
 {
     string? ReloadKey { get; }
     void Reload();
 }
 public abstract class BaseSingleton : IUncreatedSingleton
+{
+    public bool IsLoaded => _isLoaded;
+    protected bool _isLoaded;
+    /// <exception cref="SingletonUnloadedException"/>
+    internal void AssertLoadedIntl()
+    {
+        if (!_isLoaded)
+            throw new SingletonUnloadedException(this.GetType());
+    }
+    public abstract void Load();
+    public abstract void Unload();
+    void IUncreatedSingleton.Load()
+    {
+        Load();
+        _isLoaded = true;
+    }
+    void IUncreatedSingleton.Unload()
+    {
+        _isLoaded = false;
+        Unload();
+    }
+}
+public abstract class BaseSingletonComponent : MonoBehaviour, IUncreatedSingleton
 {
     public bool IsLoaded => _isLoaded;
     protected bool _isLoaded;
@@ -54,7 +99,50 @@ public abstract class BaseReloadSingleton : BaseSingleton, IReloadableSingleton
         _isLoaded = true;
     }
 }
-
+public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingleton where TData : new()
+{
+    public string? ReloadKey => reloadKey;
+    private readonly string? reloadKey;
+    public bool IsLoaded => _isLoaded;
+    protected bool _isLoaded;
+    /// <exception cref="SingletonUnloadedException"/>
+    internal void AssertLoadedIntl()
+    {
+        if (!_isLoaded)
+            throw new SingletonUnloadedException(this.GetType());
+    }
+    protected ListSingleton(string? reloadKey, string file) : base (file, false)
+    {
+        this.reloadKey = reloadKey;
+    }
+    protected ListSingleton(string file) : this(null, file) { }
+    protected ListSingleton(string? reloadKey, string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : base (file, serializer, deserializer, false)
+    {
+        this.reloadKey = reloadKey;
+    }
+    protected ListSingleton(string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : this(null, file, serializer, deserializer) { }
+    public virtual void Reload() { }
+    public abstract void Load();
+    public abstract void Unload();
+    void IReloadableSingleton.Reload()
+    {
+        _isLoaded = false;
+        Init();
+        Reload();
+        _isLoaded = true;
+    }
+    void IUncreatedSingleton.Load()
+    {
+        Init();
+        Load();
+        _isLoaded = true;
+    }
+    void IUncreatedSingleton.Unload()
+    {
+        _isLoaded = false;
+        Unload();
+    }
+}
 public abstract class ConfigSingleton<TConfig, TData> : BaseReloadSingleton where TConfig : Config<TData> where TData : ConfigData, new()
 {
     private readonly string? _folder;
@@ -142,7 +230,25 @@ public static class SingletonEx
         singleton.AssertLoadedIntl();
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static bool AssertLoadedLite<T>(this T? singleton) where T : BaseSingleton
+    public static void AssertLoaded<T, TData>(this T? singleton) where T : ListSingleton<TData> where TData : new()
+    {
+        if (singleton is null)
+            throw new SingletonUnloadedException(typeof(T));
+        singleton.AssertLoadedIntl();
+    }
+    public static bool IsLoaded<T, TData>(this T? singleton) where T : ListSingleton<TData> where TData : new()
+    {
+        if (singleton is null)
+            return false;
+        return singleton.IsLoaded;
+    }
+    public static bool IsLoaded<T>(this T? singleton) where T : BaseSingleton
+    {
+        if (singleton is null)
+            return false;
+        return singleton.IsLoaded;
+    }
+    public static bool IsLoaded2<T>(this T? singleton) where T : BaseSingletonComponent
     {
         if (singleton is null)
             return false;

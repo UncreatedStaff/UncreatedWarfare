@@ -45,7 +45,7 @@ public class Tips : BaseSingleton
     }
     internal static void OnPlayerDisconnected(ulong pid)
     {
-        if (!_singleton.AssertLoadedLite()) return;
+        if (!_singleton.IsLoaded()) return;
         _singleton._tips.RemoveAll(x => x.Steam64 == pid);
     }
     private static void GiveTip(UCPlayer player, Tip tip)

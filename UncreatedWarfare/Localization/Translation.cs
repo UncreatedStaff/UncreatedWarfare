@@ -1268,7 +1268,7 @@ namespace Uncreated.Warfare
 
             string finalformat =
                 $"{(Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N"))}\n" +
-                $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{Translate("vbs_branch_" + data.Branch.ToString().ToLower(), language)}</color>\n" +
+                $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{TranslateEnum(data.Branch, language)}</color>\n" +
                 (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>\n" : "\n") +
                 (unlock) +
                 $"{{0}}\n";
@@ -1892,7 +1892,7 @@ namespace Uncreated.Warfare
             }
         }
     }
-    /// <summary>Disposing does nothing.</summary>
+    /// <summary>Disposing calls <see cref="Reset"/>.</summary>
     public struct LanguageSet : IEnumerator<UCPlayer>
     {
         public string Language;
@@ -1904,11 +1904,18 @@ namespace Uncreated.Warfare
         UCPlayer IEnumerator<UCPlayer>.Current => Next;
 
         object IEnumerator.Current => Next;
-
+        public LanguageSet(UCPlayer player)
+        {
+            if (!Data.Languages.TryGetValue(player.Steam64, out Language))
+                Language = JSONMethods.DEFAULT_LANGUAGE;
+            Players = new List<UCPlayer>(1) { player };
+            nextIndex = 0;
+            Next = null!;
+        }
         public LanguageSet(string lang)
         {
             this.Language = lang;
-            this.Players = new List<UCPlayer>(Provider.clients.Count);
+            this.Players = new List<UCPlayer>(lang == JSONMethods.DEFAULT_LANGUAGE ? Provider.clients.Count : 4);
             this.nextIndex = 0;
             this.Next = null!;
         }
@@ -1938,8 +1945,7 @@ namespace Uncreated.Warfare
             Next = null!;
             nextIndex = 0;
         }
-
-        public void Dispose() { }
+        public void Dispose() => Reset();
     }
 
     [AttributeUsage(AttributeTargets.Enum, Inherited = false, AllowMultiple = false)]

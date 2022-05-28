@@ -14,25 +14,6 @@ namespace Uncreated.Warfare
         [HarmonyPatch]
         public class RegionsPatches
         {
-            // SDG.Unturned.BarricadeManager
-            /// <summary>
-            /// Prefix of <see cref="BarricadeManager.destroyBarricade(BarricadeRegion, byte, byte, ushort, ushort)"/> to invoke <see cref="BarricadeDestroyedHandler"/>.
-            /// </summary>
-            [HarmonyPatch(typeof(BarricadeManager), nameof(BarricadeManager.destroyBarricade), typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort))]
-            [HarmonyPrefix]
-            static void DestroyBarricadePostFix(BarricadeDrop barricade, byte x, byte y, ushort plant)
-            {
-#if DEBUG
-                using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-                if (!UCWarfare.Config.Patches.destroyBarricade) return;
-                if (barricade is null)
-                {
-                    L.Log("NULL BARRICADEDROP IN DestroyBarricadePostFix");
-                    return;
-                }
-                BarricadeDestroyedHandler?.Invoke(barricade.GetServersideData(), barricade, barricade.GetServersideData().instanceID, plant);
-            }
             // SDG.Unturned.StructureManager
             /// <summary>
             /// Prefix of <see cref="StructureManager.destroyStructure(StructureRegion, byte, byte, ushort, Vector3)"/> to invoke <see cref="StructureDestroyedHandler"/>.
@@ -242,21 +223,18 @@ namespace Uncreated.Warfare
                                     {
                                         if (newtext.StartsWith("sign_"))
                                         {
-                                            if (newtext.StartsWith("sign_vbs_") && VehicleSigns.SignExists(sign, out VehicleSign vbsign))
+                                            if (newtext.StartsWith("sign_vbs_"))
                                             {
-                                                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
+                                                if (VehicleSpawner.Loaded && VehicleBay.Loaded && VehicleSigns.Loaded)
                                                 {
-                                                    if (VehicleSpawner.ActiveObjects[i].LinkedSign == vbsign)
+                                                    if (VehicleSigns.SignExists(sign, out VehicleSign vbsign) &&
+                                                        VehicleSpawner.SpawnExists(vbsign.bay_instance_id, vbsign.bay_type, out Vehicles.VehicleSpawn spawn))
                                                     {
-                                                        if (VehicleBay.VehicleExists(VehicleSpawner.ActiveObjects[i].VehicleID, out VehicleData data))
-                                                            newtext = string.Format(Translation.TranslateVBS(VehicleSpawner.ActiveObjects[i], data, lang), data.GetCostLine(pl));
-                                                        else
-                                                            newtext = Translation.TranslateSign(newtext, lang, pl, false);
-                                                        break;
+                                                        if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+                                                            newtext = string.Format(Translation.TranslateVBS(spawn, data, lang), data.GetCostLine(pl));
                                                     }
                                                 }
                                             }
-                                            else
                                                 newtext = Translation.TranslateSign(newtext, lang, pl, false);
                                             // size is not allowed in signs.
                                             newtext = newtext.Replace("<size=", "").Replace("</size>", "");

@@ -7,7 +7,9 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -984,5 +986,264 @@ public static class F
         string rtn = ABET[bigsqrx] + (bigsqry + 1).ToString();
         if (!isOut) rtn += "-" + (smlSqrDstX + (2 - smlSqrDstY) * 3 + 1).ToString();
         return rtn;
+    }
+    public static bool TryParseAny(string input, Type type, out object value)
+    {
+        value = null!;
+        if (input is null || type is null || string.IsNullOrEmpty(input)) return false;
+        if (type.IsClass)
+        {
+            if (type == typeof(string))
+            {
+                value = input;
+                return true;
+            }
+            else if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(JsonAssetReference<>))
+            {
+                if (Guid.TryParse(input, out Guid guid))
+                {
+                    value = Activator.CreateInstance(type, guid);
+                    return value is not null;
+                }
+                else if (ushort.TryParse(input, NumberStyles.Any, Data.Locale, out ushort id))
+                {
+                    value = Activator.CreateInstance(type, id);
+                    return value is not null;
+                }
+                else if (input.Equals("null", StringComparison.OrdinalIgnoreCase))
+                {
+                    value = Activator.CreateInstance(type);
+                    return value is not null;
+                }
+            }
+            return false;
+        }
+        if (type.IsEnum)
+        {
+            try
+            {
+                value = Enum.Parse(type, input, true);
+                return value is not null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        if (type.IsPrimitive)
+        {
+            if (type == typeof(ulong))
+            {
+                bool res = ulong.TryParse(input, NumberStyles.Any, Data.Locale, out ulong v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(float))
+            {
+                bool res = float.TryParse(input, NumberStyles.Any, Data.Locale, out float v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(long))
+            {
+                bool res = long.TryParse(input, NumberStyles.Any, Data.Locale, out long v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(ushort))
+            {
+                bool res = ushort.TryParse(input, NumberStyles.Any, Data.Locale, out ushort v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(short))
+            {
+                bool res = short.TryParse(input, NumberStyles.Any, Data.Locale, out short v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(byte))
+            {
+                bool res = byte.TryParse(input, NumberStyles.Any, Data.Locale, out byte v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(int))
+            {
+                bool res = int.TryParse(input, NumberStyles.Any, Data.Locale, out int v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(uint))
+            {
+                bool res = uint.TryParse(input, NumberStyles.Any, Data.Locale, out uint v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(bool))
+            {
+                if (
+                    input.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("y", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("t", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("yes", StringComparison.OrdinalIgnoreCase))
+                {
+                    value = true;
+                    return true;
+                }
+                else if (
+                    input.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("0", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("n", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("f", StringComparison.OrdinalIgnoreCase) ||
+                    input.Equals("no", StringComparison.OrdinalIgnoreCase))
+                {
+                    value = false;
+                    return true;
+                }
+                return false;
+            }
+            else if (type == typeof(char))
+            {
+                if (input.Length == 1)
+                {
+                    value = input[0];
+                    return true;
+                }
+                return false;
+            }
+            else if (type == typeof(sbyte))
+            {
+                bool res = sbyte.TryParse(input, NumberStyles.Any, Data.Locale, out sbyte v2);
+                value = v2;
+                return res;
+            }
+            else if (type == typeof(double))
+            {
+                bool res = double.TryParse(input, NumberStyles.Any, Data.Locale, out double v2);
+                value = v2;
+                return res;
+            }
+            return false;
+        }
+        if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+        {
+            if (input.Equals("null", StringComparison.OrdinalIgnoreCase))
+            {
+                value = Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(type));
+                return value is not null;
+            }
+            Type @internal = type.GenericTypeArguments[0];
+            if (!@internal.IsGenericType && TryParseAny(input, @internal, out object val) && val is not null)
+            {
+                value = Activator.CreateInstance(typeof(Nullable<>).MakeGenericType(type), val);
+                return value is not null;
+            }
+            return false;
+        }
+        if (type == typeof(decimal))
+        {
+            bool res = decimal.TryParse(input, NumberStyles.Any, Data.Locale, out decimal v2);
+            value = v2;
+            return res;
+        }
+        else if (type == typeof(DateTime))
+        {
+            bool res = DateTime.TryParse(input, Data.Locale, DateTimeStyles.AssumeLocal, out DateTime v2);
+            value = v2;
+            return res;
+        }
+        else if (type == typeof(TimeSpan))
+        {
+            bool res = TimeSpan.TryParse(input, Data.Locale, out TimeSpan v2);
+            value = v2;
+            return res;
+        }
+        else if (type == typeof(Guid))
+        {
+            bool res = Guid.TryParse(input, out Guid v2);
+            value = v2;
+            return res;
+        }
+        else if (type == typeof(Vector2))
+        {
+            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, Data.Locale, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            if (vals.Length == 2)
+            {
+                value = new Vector2(vals[0], vals[1]);
+                return true;
+            }
+            return false;
+        }
+        else if (type == typeof(Vector3))
+        {
+            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, Data.Locale, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            if (vals.Length == 3)
+            {
+                value = new Vector3(vals[0], vals[1], vals[2]);
+                return true;
+            }
+            return false;
+        }
+        else if (type == typeof(Vector4))
+        {
+            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, Data.Locale, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            if (vals.Length == 4)
+            {
+                value = new Vector4(vals[0], vals[1], vals[2], vals[3]);
+                return true;
+            }
+            return false;
+        }
+        else if (type == typeof(Quaternion))
+        {
+            float[] vals = input.Split(',').Select(x => float.TryParse(x.Trim(), NumberStyles.Any, Data.Locale, out float res) ? res : float.NaN).Where(x => !float.IsNaN(x)).ToArray();
+            if (vals.Length == 4)
+            {
+                value = new Quaternion(vals[0], vals[1], vals[2], vals[3]);
+                return true;
+            }
+            return false;
+        }
+        else if (type == typeof(Color))
+        {
+            if (ColorUtility.TryParseHtmlString(input, out Color color))
+            {
+                value = color;
+                return true;
+            }
+            if (input[0] != '#')
+            {
+                input = "#" + input;
+                if (ColorUtility.TryParseHtmlString(input, out color))
+                {
+                    value = color;
+                    return true;
+                }
+            }
+            return false;
+        }
+        return false;
+    }
+    public static bool HasGUID<T>(this JsonAssetReference<T>[] assets, Guid guid) where T : Asset
+    {
+        for (int i = 0; i < assets.Length; ++i)
+        {
+            T? asset = assets[i].Asset;
+            if (asset is null) continue;
+            if (asset.GUID == guid) return true;
+        }
+        return false;
+    }
+    public static bool HasID<T>(this JsonAssetReference<T>[] assets, ushort id) where T : Asset
+    {
+        for (int i = 0; i < assets.Length; ++i)
+        {
+            T? asset = assets[i].Asset;
+            if (asset is null) continue;
+            if (asset.id == id) return true;
+        }
+        return false;
     }
 }

@@ -39,7 +39,7 @@ namespace Uncreated.Warfare.Teams
                 player.SendChat("teams_e_notinmain");
                 return;
             }
-            teamgm.JoinManager.JoinLobby(player, true);
+            teamgm.JoinManager.JoinLobby(player);
             
         }
     }
