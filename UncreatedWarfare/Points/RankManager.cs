@@ -13,7 +13,7 @@ namespace Uncreated.Warfare.Ranks;
 public static class RankManager
 {
     public static readonly Config<RankConfig> ConfigSave;
-    public static RankConfig Config => ConfigSave.data;
+    public static RankConfig Config => ConfigSave.Data;
     private const uint DATA_VERSION = 1;
     public static void Reload() => ConfigSave.Reload();
     static RankManager()

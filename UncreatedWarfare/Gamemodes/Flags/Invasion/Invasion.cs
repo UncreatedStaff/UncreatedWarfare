@@ -490,11 +490,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Invasion
             if (AttackingTeam == 1) obj = ObjectiveTeam1;
             else if (AttackingTeam == 2) obj = ObjectiveTeam2;
             if (obj == null) return;
-            EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
+            EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.Connection, true);
             if (player.GetTeam() == AttackingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_invasion_attack", player));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.Connection, true, "Top", Translation.Translate("phases_invasion_attack", player));
             else if (player.GetTeam() == DefendingTeam)
-                EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_invasion_defense", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
+                EffectManager.sendUIEffectText(CTFUI.headerKey, player.Connection, true, "Top", Translation.Translate("phases_invasion_defense", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
         }
         protected override void EndStagingPhase()
         {

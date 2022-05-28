@@ -82,8 +82,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
 #endif
             base.Init();
             _FOBManager = new FOBManager();
-            _squadManager = new SquadManager();
-            _kitManager = new KitManager();
+            _squadManager = Data.Singletons.LoadSingleton<SquadManager>();
+            _kitManager = Data.Singletons.LoadSingleton<KitManager>();
             Commands.ReloadCommand.ReloadKits();
             _vehicleBay = new VehicleBay();
             _reviveManager = new ReviveManager();
@@ -744,10 +744,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             EffectManager.ClearEffectByID_AllPlayers(CTFUI.headerID);
             if (_stagingPhaseTimer != null)
                 StopCoroutine(_stagingPhaseTimer);
-            _squadManager?.Dispose();
+            Data.Singletons.UnloadSingleton(ref _squadManager);
             _vehicleSpawner?.Dispose();
             _reviveManager?.Dispose();
-            _kitManager?.Dispose();
+            Data.Singletons.UnloadSingleton(ref _kitManager);
             _vehicleBay?.Dispose();
             FOBManager.Reset();
             Destroy(_gameStats);

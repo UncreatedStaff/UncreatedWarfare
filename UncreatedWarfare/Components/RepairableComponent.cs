@@ -52,7 +52,7 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EBuildableType.EMPLACEMENT);
+            BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.structureID == Structure.asset.GUID && b.type != EBuildableType.EMPLACEMENT);
 
             if (buildable != null)
             {

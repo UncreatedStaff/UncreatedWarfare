@@ -158,8 +158,8 @@ namespace Uncreated.Warfare
             if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
                 drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
 
-            if (FOBManager.config.data.Buildables == null) return;
-            BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
+            if (FOBManager.config.Data.Buildables == null) return;
+            BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == drop.asset.GUID);
             if (buildable != null)
             {
                 drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
@@ -167,7 +167,7 @@ namespace Uncreated.Warfare
 
             IconManager.OnBarricadePlaced(drop, isFOBRadio);
 
-            BuildableData? repairable = isFOBRadio ? null : FOBManager.config.data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EBuildableType.EMPLACEMENT && b.emplacementData != null && b.emplacementData.baseID == drop.asset.GUID));
+            BuildableData? repairable = isFOBRadio ? null : FOBManager.config.Data.Buildables.Find(b => b.structureID == drop.asset.GUID || (b.type == EBuildableType.EMPLACEMENT && b.emplacementData != null && b.emplacementData.baseID == drop.asset.GUID));
             if (repairable != null || isFOBRadio)
             {
                 drop.model.gameObject.AddComponent<RepairableComponent>();
@@ -308,7 +308,7 @@ namespace Uncreated.Warfare
                     return;
                 }
 
-                    BuildableData buildable = FOBManager.config.data.Buildables.Find(b => b.foundationID == barricade.asset.GUID);
+                    BuildableData buildable = FOBManager.config.Data.Buildables.Find(b => b.foundationID == barricade.asset.GUID);
 
                     if (buildable != null)
                     {
@@ -447,21 +447,17 @@ namespace Uncreated.Warfare
                 bool g = Data.Is(out ITeams t);
                 bool shouldRespawn = false;
                 bool isNewPlayer = !PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save);
-                if (!isNewPlayer)
+                if (!isNewPlayer && (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin))
                 {
-                    if (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin)
-                    {
-                        shouldRespawn = true;
+                    shouldRespawn = true;
 
-                        save.ShouldRespawnOnJoin = false;
-                    }
+                    save.ShouldRespawnOnJoin = false;
                 }
-
 
                 save.LastGame = Data.Gamemode.GameID;
 
                 if (player.Player.life.isDead)
-                    player.Player.life.ReceiveRespawnRequest(false);
+                    player.Player.life.ServerRespawn(false);
                 else if (shouldRespawn)
                 {
                     player.Player.life.sendRevive();
@@ -472,6 +468,17 @@ namespace Uncreated.Warfare
                     PlayerManager.ApplyTo(ucplayer);
 
                 FPlayerName names = F.GetPlayerOriginalNames(player);
+                if (Data.Is<ITeams>())
+                {
+                    ulong team = player.GetTeam();
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", player,
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO));
+                }
+                else
+                {
+                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", player,
+                        UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO));
+                }
                 if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
                 {
                     UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
@@ -486,24 +493,10 @@ namespace Uncreated.Warfare
                 Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
                 Task.Run(async () =>
                 {
-                    bool FIRST_TIME = !await Data.DatabaseManager.HasPlayerJoined(player.Player.channel.owner.playerID.steamID.m_SteamID);
                     Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
                     Task<int> t2 = Data.DatabaseManager.GetXP(player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam());
                     Task<int> t3 = Data.DatabaseManager.GetCredits(player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam());
                     Task<List<Kit>> t4 = Data.DatabaseManager.GetAccessibleKits(player.Player.channel.owner.playerID.steamID.m_SteamID);
-                    await UCWarfare.ToUpdate();
-                    if (Data.Gamemode is ITeams)
-                    {
-                        ulong team = player.GetTeam();
-                        ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                            UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO));
-                    }
-                    else
-                    {
-                        ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(FIRST_TIME ? "welcome_message_first_time" : "welcome_message", player,
-                            UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO));
-                    }
-                    await UCWarfare.ToPool();
                     await Data.DatabaseManager.RegisterLogin(player.Player);
                     await t1;
                     if (ucplayer != null)
@@ -532,7 +525,7 @@ namespace Uncreated.Warfare
                     VehicleSpawner.ActiveObjects[i].UpdateSign(player.Player.channel.owner);
                 }
                 Chat.Broadcast("player_connected", names.CharacterName);
-                Data.Reporter.OnPlayerJoin(player.Player.channel.owner);
+                Data.Reporter?.OnPlayerJoin(player.Player.channel.owner);
                 if (ucplayer != null)
                 {
                     PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new PlayerListEntry
@@ -607,6 +600,7 @@ namespace Uncreated.Warfare
             {
                 cullingHandler = NO_COMMS;
                 shouldBroadcastOverRadio = false;
+                shouldAllow = false;
                 return;
             }
             bool isMuted = false;
@@ -615,6 +609,7 @@ namespace Uncreated.Warfare
             UCPlayer? ucplayer = PlayerManager.FromID(speaker.channel.owner.playerID.steamID.m_SteamID);
             if (ucplayer is not null)
             {
+                ucplayer.LastSpoken = Time.realtimeSinceStartup;
                 team = ucplayer.GetTeam();
                 if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
                 {
@@ -631,6 +626,7 @@ namespace Uncreated.Warfare
             {
                 cullingHandler = NO_COMMS;
                 shouldBroadcastOverRadio = false;
+                shouldAllow = false;
                 return;
             }
             switch (Data.Gamemode.State)
@@ -643,7 +639,6 @@ namespace Uncreated.Warfare
                         {
                             if (ucplayer != null)
                             {
-                                ucplayer.LastSpoken = Time.realtimeSinceStartup;
                                 UCPlayer? targetPl = PlayerManager.FromID(target.channel.owner.playerID.steamID.m_SteamID);
                                 if (targetPl != null && targetPl.Squad == ucplayer.Squad)
                                 {
@@ -663,6 +658,7 @@ namespace Uncreated.Warfare
                     {
                         cullingHandler = NO_COMMS;
                         shouldBroadcastOverRadio = false;
+                        shouldAllow = false;
                         return;
                     }
                     break;
@@ -799,7 +795,7 @@ namespace Uncreated.Warfare
                         weapon = pl.player.equipment.asset.GUID;
                     }
                     else weapon = Guid.Empty;
-                    Data.Reporter.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
+                    Data.Reporter?.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
                     {
                         broke = false,
                         damage = pendingTotalDamage,
@@ -899,7 +895,7 @@ namespace Uncreated.Warfare
                         weapon = pl.player.equipment.asset.GUID;
                     }
                     else weapon = Guid.Empty;
-                    Data.Reporter.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
+                    Data.Reporter?.OnDamagedStructure(instigatorSteamID.m_SteamID, new ReportSystem.Reporter.StructureDamageData()
                     {
                         broke = false,
                         damage = pendingTotalDamage,
@@ -1393,7 +1389,7 @@ namespace Uncreated.Warfare
             {
                 SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
                 ActionLog.Add(EActionLogType.DESTROY_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", c.LastDamager);
-                if (damager != null && data.group.GetTeam() == damager.GetTeam())
+                if (Data.Reporter is not null && damager != null && data.group.GetTeam() == damager.GetTeam())
                 {
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
                 }
@@ -1430,7 +1426,7 @@ namespace Uncreated.Warfare
             {
                 SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
                 ActionLog.Add(EActionLogType.DESTROY_BARRICADE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", c.LastDamager);
-                if (damager != null && data.group.GetTeam() == damager.GetTeam())
+                if (Data.Reporter is not null && damager != null && data.group.GetTeam() == damager.GetTeam())
                 {
                     Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
                 }

@@ -57,7 +57,7 @@ namespace Uncreated.Warfare
                 OffenseManager.NetCalls.SendTeamkill.NetInvoke(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.dead.channel.owner.playerID.steamID.m_SteamID,
                     parameters.key, parameters.itemName, DateTime.Now);
                 StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, x => x.Teamkills++, false);
-                Data.Reporter.OnTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.item, parameters.dead.channel.owner.playerID.steamID.m_SteamID, parameters.cause);
+                Data.Reporter?.OnTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, parameters.item, parameters.dead.channel.owner.playerID.steamID.m_SteamID, parameters.cause);
                 if (Data.Gamemode is TeamCTF ctf)
                 {
                     if (team == 1)
@@ -162,7 +162,7 @@ namespace Uncreated.Warfare
                             Insurgency.CacheData d = ins.Caches[i];
                             if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
                                 (d.Cache.Structure.model.transform.position - parameters.killer.transform.position).sqrMagnitude <=
-                                Gamemode.ConfigObj.data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.data.Insurgency.CacheDiscoverRange)
+                                Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
                             {
                                 if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
                             }
@@ -175,7 +175,7 @@ namespace Uncreated.Warfare
                             Insurgency.CacheData d = ins.Caches[i];
                             if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
                                 (d.Cache.Structure.model.transform.position - parameters.dead.transform.position).sqrMagnitude <=
-                                Gamemode.ConfigObj.data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.data.Insurgency.CacheDiscoverRange)
+                                Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
                             {
                                 if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
                             }

@@ -62,7 +62,7 @@ namespace Uncreated.Warfare.Components
             }
 
             // buildable
-            if (FOBManager.config.data.Buildables.Exists(b => b.foundationID == drop.asset.GUID && b.type != EBuildableType.FORTIFICATION))
+            if (FOBManager.config.Data.Buildables.Exists(b => b.foundationID == drop.asset.GUID && b.type != EBuildableType.FORTIFICATION))
                 AttachIcon(Gamemode.Config.UI.MarkerBuildable, drop.model, data.group, 2F);
         }
         public static void DrawNewMarkers(UCPlayer player, bool clearOld)
@@ -79,13 +79,13 @@ namespace Uncreated.Warfare.Components
                     if (!seenTypes.Contains(icon.EffectGUID))
                     {
                         seenTypes.Add(icon.EffectGUID);
-                        EffectManager.askEffectClearByID(icon.EffectID, player.connection);
+                        EffectManager.askEffectClearByID(icon.EffectID, player.Connection);
                     }
                 }
 
                 if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
                 {
-                    EffectManager.sendEffect(icon.EffectID, player.connection, icon.Point);
+                    EffectManager.sendEffect(icon.EffectID, player.Connection, icon.Point);
                 }
             }
         }
@@ -101,7 +101,7 @@ namespace Uncreated.Warfare.Components
             {
                 if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
                 {
-                    EffectManager.sendEffect(icon.EffectID, player.connection, icon.Point);
+                    EffectManager.sendEffect(icon.EffectID, player.Connection, icon.Point);
                 }
             }
 
@@ -118,7 +118,7 @@ namespace Uncreated.Warfare.Components
             {
                 if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
                 {
-                    EffectManager.askEffectClearByID(icon.EffectID, player.connection);
+                    EffectManager.askEffectClearByID(icon.EffectID, player.Connection);
                 }
             }
             icons.Remove(icon);
@@ -173,7 +173,7 @@ namespace Uncreated.Warfare.Components
         }
         public void SpawnNewIcon(UCPlayer player)
         {
-            EffectManager.sendEffect(EffectID, player.connection, Point);
+            EffectManager.sendEffect(EffectID, player.Connection, Point);
         }
     }
 }

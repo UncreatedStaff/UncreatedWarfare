@@ -54,6 +54,8 @@ namespace Uncreated.Warfare
         public string GamemodeRotation;
         public bool DisableNameFilter;
         public int MinAlphanumericStringLength;
+        public bool EnableReporter;
+
         public void LoadDefaults()
         {
             this.FlagSettings = new FlagSettings();
@@ -96,6 +98,7 @@ namespace Uncreated.Warfare
             this.GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0";
             this.DisableNameFilter = false;
             this.MinAlphanumericStringLength = 5;
+            this.EnableReporter = true;
         }
     }
     public class FlagSettings

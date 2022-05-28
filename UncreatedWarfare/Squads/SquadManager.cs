@@ -5,728 +5,693 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using Uncreated.Framework.UI;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Squads.UI;
 
-namespace Uncreated.Warfare.Squads
+namespace Uncreated.Warfare.Squads;
+
+public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 {
-    public class SquadManager : IDisposable
+    public new static SquadsConfig Config;
+    public static List<Squad> Squads;
+    private static SquadManager _singleton;
+    public static readonly SquadMenuUI MenuUI   = new SquadMenuUI();
+    public static readonly SquadListUI ListUI   = new SquadListUI();
+    public static readonly UnturnedUI RallyUI   = new UnturnedUI(12003, Config?.Data?.SquadRallyUI, true, false, false);
+    public static readonly SquadOrderUI OrderUI = new SquadOrderUI();
+    public static readonly string[] SQUAD_NAMES =
     {
-        public static Config<SquadConfigData> config;
-        public static List<Squad> Squads;
-        internal static ushort squadListID = 0;
-        internal const short squadListKey = 12001;
-        internal static ushort squadMenuID = 0;
-        internal const short squadMenuKey = 12002;
-        internal static ushort rallyID = 0;
-        internal static ushort orderID = 0;
-        internal const short rallyKey = 12003;
+        "ALPHA",
+        "BRAVO",
+        "CHARLIE",
+        "DELTA",
+        "ECHO",
+        "FOXTROT",
+        "GOLF",
+        "HOTEL"
+    };
+    public SquadManager() : base("squad") { }
 
-        // temporary until effects are upgraded to using GUIDs
-        internal static void TempCacheEffectIDs()
-        {
-            if (Assets.find(Gamemode.Config.UI.SquadListGUID) is EffectAsset squadList)
-                squadListID = squadList.id;
-            if (Assets.find(Gamemode.Config.UI.SquadMenuGUID) is EffectAsset squadMenu)
-                squadMenuID = squadMenu.id;
-            if (Assets.find(Gamemode.Config.UI.RallyGUID) is EffectAsset rally)
-                rallyID = rally.id;
-            if (Assets.find(Gamemode.Config.UI.OrderUI) is EffectAsset order)
-                orderID = order.id;
-            L.Log("Found squad UIs: " + squadListID + ", " + squadMenuID + ", " + rallyID + ", " + orderID);
-        }
-        public static readonly string[] NAMES =
-        {
-            "ALPHA",
-            "BRAVO",
-            "CHARLIE",
-            "DELTA",
-            "ECHO",
-            "FOXTROT",
-            "GOLF",
-            "HOTEL"
-        };
-        public SquadManager()
-        {
-            config = new Config<SquadConfigData>(Data.SquadStorage, "config.json");
-
-            Squads = new List<Squad>();
-            KitManager.OnKitChanged += OnKitChanged;
-        }
-        private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
-        {
+    public override void Load()
+    {
+        base.Load();
+        Config = this.ConfigurationFile;
+        Squads = new List<Squad>();
+        KitManager.OnKitChanged += OnKitChanged;
+        _singleton = this;
+    }
+    public override void Reload()
+    {
+        Config = null!;
+        base.Reload();
+        Config = this.ConfigurationFile;
+    }
+    public override void Unload()
+    {
+        _singleton = null!;
+        base.Unload();
+        Config = null!;
+        Squads = null!;
+        KitManager.OnKitChanged -= OnKitChanged;
+    }
+    private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
+    {
+        _singleton.AssertLoadedLite();
+        ReplicateKitChange(player);
+    }
+    public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
+    {
+        _singleton.AssertLoadedLite();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (player.Squad != null)
+        UCPlayer? player = UCPlayer.FromSteamPlayer(steamplayer);
+        if (player == null) return;
+        if (player.Squad != null)
+        {
+            LeaveSquad(player, player.Squad);
+        }
+        ulong team = newGroup.GetTeam();
+        if (team == 1 || team == 2)
+            SendSquadList(player, team);
+    }
+    public static void ClearAll(Player player)
+    {
+        MenuUI.ClearFromPlayer(player.channel.owner.transportConnection);
+        ListUI.ClearFromPlayer(player.channel.owner.transportConnection);
+        RallyUI.ClearFromPlayer(player.channel.owner.transportConnection);
+    }
+    public static void ClearList(Player player)
+    {
+        ListUI.ClearFromPlayer(player.channel.owner.transportConnection);
+    }
+    public static void ClearMenu(Player player)
+    {
+        MenuUI.ClearFromPlayer(player.channel.owner.transportConnection);
+    }
+    public static void ClearRally(Player player)
+    {
+        RallyUI.ClearFromPlayer(player.channel.owner.transportConnection);
+    }
+    public static void SendSquadMenu(UCPlayer player, Squad squad, bool holdMemberCountUpdate = false)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ITransportConnection c = player.Player.channel.owner.transportConnection;
+        MenuUI.SendToPlayer(c);
+        MenuUI.Header.SetText(c, Translation.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
+        MenuUI.Lock.SetVisibility(c, squad.IsLocked);
+        int i = 0;
+        int num = Math.Min(squad.Members.Count, MenuUI.MemberParents.Length);
+        for (; i < num; i++)
+        {
+            MenuUI.MemberParents[i].SetVisibility(c, true);
+            MenuUI.MemberNames[i].SetText(c, Translation.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(squad.Members[i]).NickName));
+            MenuUI.MemberIcons[i].SetText(c, new string(squad.Members[i].Icon, 1));
+        }
+        for (; i < MenuUI.MemberParents.Length; i++)
+        {
+            MenuUI.MemberParents[i].SetVisibility(c, false);
+        }
+        if (!holdMemberCountUpdate)
+        {
+            int s2 = 0;
+            MenuUI.OtherSquad_0.SetVisibility(c, true);
+            MenuUI.OtherSquad_0_Text.SetText(c, Translation.Translate("squad_ui_expanded", player));
+            for (int s = 0; s < Squads.Count; s++)
             {
-                ReplicateKitChange(player);
+                int sq;
+                if (Squads[s] == squad || Squads[s].Team != squad.Team) continue;
+                if ((sq = s2 + 1) >= MenuUI.OtherSquadParents.Length) break;
+
+                MenuUI.OtherSquadParents[sq].SetVisibility(c, true);
+                MenuUI.OtherSquadTexts[sq].SetText(c, Translation.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
+                s2++;
+            }
+            for (; s2 < MenuUI.OtherSquadParents.Length - 1; s2++)
+            {
+                MenuUI.OtherSquadParents[s2 + 1].SetVisibility(c, false);
             }
         }
-        public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
-        {
+    }
+    // assumes ui is already on screen
+    public static void UpdateUIMemberCount(ulong team)
+    {
+        _singleton.AssertLoaded();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer? player = UCPlayer.FromSteamPlayer(steamplayer);
-            if (player == null) return;
-            if (player.Squad != null)
-            {
-                LeaveSquad(player, player.Squad);
-            }
-            ulong team = newGroup.GetTeam();
-            if (team == 1 || team == 2)
-                SendSquadList(player, team);
-        }
-        public static void ClearAll(Player player)
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            EffectManager.askEffectClearByID(squadListID, player.channel.owner.transportConnection);
-            EffectManager.askEffectClearByID(squadMenuID, player.channel.owner.transportConnection);
-            EffectManager.askEffectClearByID(rallyID, player.channel.owner.transportConnection);
-        }
-        public static void ClearList(Player player)
-        {
-            EffectManager.askEffectClearByID(squadListID, player.channel.owner.transportConnection);
-        }
-        public static void ClearMenu(Player player)
-        {
-            EffectManager.askEffectClearByID(squadMenuID, player.channel.owner.transportConnection);
-        }
-        public static void ClearRally(Player player)
-        {
-            EffectManager.askEffectClearByID(rallyID, player.channel.owner.transportConnection);
-        }
-        public static void SendSquadMenu(UCPlayer player, Squad squad, bool holdMemberCountUpdate = false)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            if (player.GetTeam() != team) continue;
             ITransportConnection c = player.Player.channel.owner.transportConnection;
-            EffectManager.sendUIEffect(squadMenuID, squadMenuKey, c, true);
-            EffectManager.sendUIEffectText(squadMenuKey, c, true, "Heading", Translation.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
-            EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "Locked", squad.IsLocked);
-            int i = 0;
-            for (; i < squad.Members.Count; i++)
+            if (player.Squad is not null) // if the player's in a squad update the squad menu other squad's list, else update the main squad list.
             {
-                string i2 = i.ToString();
-                EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i2, true);
-                EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2,
-                    Translation.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(squad.Members[i]).NickName));
-                EffectManager.sendUIEffectText(squadMenuKey, c, true, "MI" + i2, squad.Members[i].Icon.ToString());
-            }
-            for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)
-            {
-                EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i.ToString(), false);
-            }
-            if (!holdMemberCountUpdate)
-            {
-                int s2 = 1;
-                EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S0", true);
-                EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN0", Translation.Translate("squad_ui_expanded", player));
+                int s2 = 0;
+                MenuUI.OtherSquad_0.SetVisibility(c, true);
+                MenuUI.OtherSquad_0_Text.SetText(c, Translation.Translate("squad_ui_expanded", player));
                 for (int s = 0; s < Squads.Count; s++)
                 {
-                    if (Squads[s] == squad || Squads[s].Team != squad.Team) continue;
-                    string s22 = s2.ToString();
-                    EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S" + s22, true);
-                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN" + s22,
-                        Translation.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
+                    int sq;
+                    if (Squads[s] == player.Squad || Squads[s].Team != team) continue;
+                    if ((sq = s2 + 1) >= MenuUI.OtherSquadParents.Length) break;
+
+                    MenuUI.OtherSquadParents[sq].SetVisibility(c, true);
+                    MenuUI.OtherSquadTexts[sq].SetText(c, Translation.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
+                    s2++;
+                }
+                for (; s2 < MenuUI.OtherSquadParents.Length - 1; s2++)
+                {
+                    MenuUI.OtherSquadParents[s2 + 1].SetVisibility(c, false);
+                }
+            }
+            else
+            {
+                int s2 = 0;
+                for (int s = 0; s < Squads.Count; s++)
+                {
+                    if (Squads[s].Team != team) continue;
+                    if (s2 >= ListUI.Squads.Length) break;
+                    Squad sq = Squads[s];
+                    ListUI.Squads[s2].SetVisibility(c, true);
+                    ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
+                    ListUI.SquadMemberCounts[s2].SetText(c, Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : string.Empty, sq.Members.Count.ToString(Data.Locale)));
                     s2++;
                 }
                 for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
                 {
-                    EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S" + s2.ToString(), false);
+                    ListUI.Squads[s2].SetVisibility(c, false);
                 }
             }
         }
-        // assumes ui is already on screen
-        public static void UpdateUIMemberCount(ulong team)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                UCPlayer player = PlayerManager.OnlinePlayers[i];
-                if (player.GetTeam() != team) continue;
-                ITransportConnection c = player.Player.channel.owner.transportConnection;
-                if (player.Squad != null) // if the player's in a squad update the squad menu other squad's list, else update the main squad list.
-                {
-                    int s2 = 1;
-                    EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S0", true);                                //  ... box
-                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN0", Translation.Translate("squad_ui_expanded", player));  //  "     "
-                    for (int s = 0; s < Squads.Count; s++)
-                    {
-                        if (Squads[s] == player.Squad || Squads[s].Team != player.GetTeam()) continue;
-                        string s22 = s2.ToString();
-                        EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S" + s22, true);
-                        EffectManager.sendUIEffectText(squadMenuKey, c, true, "SN" + s22,
-                            Translation.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
-                        s2++;
-                    }
-                    for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
-                    {
-                        EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "S" + s2.ToString(), false);
-                    }
-                }
-                else
-                {
-                    int s2 = 0;
-                    for (int s = 0; s < Squads.Count; s++)
-                    {
-                        if (Squads[s].Team != team) continue;
-                        Squad sq = Squads[s];
-                        string s22 = s2.ToString();
-                        EffectManager.sendUIEffectVisibility(squadListKey, c, true, s22, true);
-                        EffectManager.sendUIEffectText(squadListKey, c, true, "N" + s22,
-                            RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
-                        EffectManager.sendUIEffectText(squadListKey, c, true, "M" + s22, 
-                            Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
-                        s2++;
-                    }
-                    for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
-                    {
-                        EffectManager.sendUIEffectVisibility(squadListKey, c, true, s2.ToString(), false);
-                    }
-                }
-            }
-        }
+    }
 
-        public static void OnPlayerJoined(UCPlayer player, string squadName)
-        {
+    public static void OnPlayerJoined(UCPlayer player, string squadName)
+    {
+        _singleton.AssertLoadedLite();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            ulong team = player.GetTeam();
-            Squad squad = Squads.Find(s => s.Name == squadName && s.Team == team);
+        ulong team = player.GetTeam();
+        Squad squad = Squads.Find(s => s.Name == squadName && s.Team == team);
 
-            if (squad != null && !squad.IsFull())
-            {
-                JoinSquad(player, squad);
-            }
-            else
-            {
-                SendSquadList(player, team);
-            }
-        }
-        public static void SendSquadListToTeam(ulong team)
+        if (squad is not null && !squad.IsFull())
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                if (PlayerManager.OnlinePlayers[i].GetTeam() == team && PlayerManager.OnlinePlayers[i].Squad == null)
-                    SendSquadList(PlayerManager.OnlinePlayers[i], team);
-            }
+            JoinSquad(player, squad);
         }
-        public static void SendSquadList(UCPlayer player) => SendSquadList(player, player.GetTeam());
-        public static void SendSquadList(UCPlayer player, ulong team)
+        else
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            ITransportConnection c = player.Player.channel.owner.transportConnection;
-            EffectManager.sendUIEffect(squadListID, squadListKey, c, true);
-            int s2 = 0;
-            for (int s = 0; s < Squads.Count; s++)
-            {
-                if (Squads[s].Team != team) continue;
-                if (s2 == 0)
-                    EffectManager.sendUIEffectVisibility(squadListKey, c, true, "Header", true);
-                Squad sq = Squads[s];
-                string s22 = s2.ToString();
-                EffectManager.sendUIEffectVisibility(squadListKey, c, true, s22, true);
-                EffectManager.sendUIEffectText(squadListKey, c, true, "N" + s22,
-                    RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
-                EffectManager.sendUIEffectText(squadListKey, c, true, "M" + s22,
-                    Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
-                s2++;
-            }
-            for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
-            {
-                if (s2 == 0)
-                    EffectManager.sendUIEffectVisibility(squadListKey, c, true, "Header", false);
-                EffectManager.sendUIEffectVisibility(squadListKey, c, true, s2.ToString(), false);
-            }
+            SendSquadList(player, team);
         }
-        public static void ReplicateLockSquad(Squad squad)
-        {
+    }
+    public static void SendSquadListToTeam(ulong team)
+    {
+        _singleton.AssertLoaded();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            int index = 0;
-            for (int i = 0; i < Squads.Count; i++)
-            {
-                if (Squads[i].Team != squad.Team) continue;
-                if (Squads[i] == squad) break;
-                index++;
-            }
-            string m = "M" + index.ToString();
-            int index2 = 1;
-            for (int i = 0; i < Squads.Count; i++)
-            {
-                if (Squads[i].Team != squad.Team) continue;
-                if (Squads[i] != squad)
-                    index2++;
-            }
-            string sn = "SN" + index2.ToString();
-            for (int i = 0; i < squad.Members.Count; i++)
-            {
-                EffectManager.sendUIEffectVisibility(squadMenuKey, squad.Members[i].Player.channel.owner.transportConnection, true, "Locked", squad.IsLocked);
-            }
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+        {
+            if (PlayerManager.OnlinePlayers[i].GetTeam() == team && PlayerManager.OnlinePlayers[i].Squad == null)
+                SendSquadList(PlayerManager.OnlinePlayers[i], team);
+        }
+    }
+    public static void SendSquadList(UCPlayer player) => SendSquadList(player, player.GetTeam());
+    public static void SendSquadList(UCPlayer player, ulong team)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ITransportConnection c = player.Player.channel.owner.transportConnection;
+        ListUI.SendToPlayer(c);
+        int s2 = 0;
+        for (int s = 0; s < Squads.Count; s++)
+        {
+            if (Squads[s].Team != team) continue;
+            if (s2 == 0)
+                ListUI.Header.SetVisibility(c, true);
+            Squad sq = Squads[s];
+            ListUI.Squads[s2].SetVisibility(c, true);
+            ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
+            ListUI.SquadMemberCounts[s2].SetText(c, Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
+            s2++;
+        }
+        for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
+        {
+            if (s2 == 0)
+                ListUI.Header.SetVisibility(c, false);
+            ListUI.Squads[s2].SetVisibility(c, false);
+        }
+    }
+    public static void ReplicateLockSquad(Squad squad)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        int index = 0;
+        for (int i = 0; i < Squads.Count; i++)
+        {
+            if (Squads[i].Team != squad.Team) continue;
+            if (Squads[i] == squad) break;
+            index++;
+        }
+        for (int i = 0; i < squad.Members.Count; i++)
+        {
+            MenuUI.Lock.SetVisibility(squad.Members[i].Connection, squad.IsLocked);
+        }
+        if (index < ListUI.Squads.Length)
+        {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer player = PlayerManager.OnlinePlayers[i];
                 if (squad.Team != player.GetTeam() || squad == player.Squad) continue;
-                ITransportConnection c = player.Player.channel.owner.transportConnection;
-                if (player.Squad == null)
+                if (player.Squad is null)
                 {
-                    EffectManager.sendUIEffectText(squadListKey, c, true, m,
+                    ListUI.SquadMemberCounts[index].SetText(player.Connection,
                         Translation.Translate("squad_ui_player_count", player, squad.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", squad.Members.Count.ToString(Data.Locale)));
                 }
-                else
-                {
-                    EffectManager.sendUIEffectText(squadMenuKey, c, true, sn,
-                        Translation.Translate(squad.IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, squad.Members.Count.ToString(Data.Locale)));
-                }
             }
         }
-        public static void ReplicateKitChange(UCPlayer player)
+        for (int i = 0; i < Squads.Count; ++i)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (player.Squad != null)
-                for (int i = 0; i < player.Squad.Members.Count; i++)
-                    EffectManager.sendUIEffectText(squadMenuKey, player.Squad.Members[i].connection, true, "MI" + i.ToString(), player.Squad.Members[i].Icon.ToString());
-        }
-        public static void UpdateMemberList(Squad squad)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            for (int m = 0; m < squad.Members.Count; m++)
+            Squad s = Squads[i];
+            if (s == squad) continue;
+            index = 0;
+            for (int s2 = 0; s2 < Squads.Count; ++s2)
             {
-                UCPlayer player = squad.Members[m];
-                ITransportConnection c = player.Player.channel.owner.transportConnection;
-                EffectManager.sendUIEffectText(squadMenuKey, c, true, "Heading", Translation.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
-                int i = 0;
-                for (; i < squad.Members.Count; i++)
-                {
-                    string i2 = i.ToString();
-                    EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i2, true);
-                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "MN" + i2,
-                        Translation.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(squad.Members[i]).NickName));
-                    EffectManager.sendUIEffectText(squadMenuKey, c, true, "MI" + i2, squad.Members[i].Icon.ToString());
-                }
-                for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)
-                {
-                    EffectManager.sendUIEffectVisibility(squadMenuKey, c, true, "M" + i.ToString(), false);
-                }
+                Squad s3 = Squads[s2];
+                if (s.Team != s3.Team || s3 == s) continue;
+                ++index;
+                if (squad == s) break;
+            }
+            if (index >= MenuUI.OtherSquadParents.Length) continue;
+            for (int m = 0; m < s.Members.Count; ++m)
+            {
+                UCPlayer pl = s.Members[m];
+                MenuUI.OtherSquadTexts[index].SetText(pl.Connection, Translation.Translate(squad.IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", pl, squad.Members.Count.ToString(Data.Locale)));
             }
         }
-        public static void OnPlayerDisconnected(UCPlayer player)
-        {
+    }
+    public static void ReplicateKitChange(UCPlayer player)
+    {
+        _singleton.AssertLoaded();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (player.Squad != null)
-                LeaveSquad(player, player.Squad);
+        Squad? squad = player.Squad;
+        if (squad is null) return;
+        int plInd = -1;
+        for (int i = 0; i < squad.Members.Count; i++)
+        {
+            if (squad.Members[i].Steam64 == player.Steam64)
+            {
+                plInd = i;
+                break;
+            }
         }
+        if (plInd > -1 && plInd < MenuUI.MemberIcons.Length)
+        {
+            string newIcon = new string(player.Icon, 1);
+            for (int i = 0; i < squad.Members.Count; ++i)
+            {
+                MenuUI.MemberIcons[plInd].SetText(squad.Members[i].Player.channel.owner.transportConnection, newIcon);
+            }
+        }
+    }
+    public static void UpdateMemberList(Squad squad)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        for (int m = 0; m < squad.Members.Count; m++)
+        {
+            UCPlayer player = squad.Members[m];
+            ITransportConnection c = player.Player.channel.owner.transportConnection;
+            MenuUI.Header.SetText(c, Translation.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
+            int i = 0;
+            int num = Math.Min(squad.Members.Count, MenuUI.MemberParents.Length);
+            for (; i < num; i++)
+            {
+                MenuUI.MemberParents[i].SetVisibility(c, true);
+                UCPlayer member = squad.Members[i];
+                MenuUI.MemberNames[i].SetText(c, Translation.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(member).NickName));
+                MenuUI.MemberIcons[i].SetText(c, new string(member.Icon, 1));
+            }
+            for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)
+            {
+                MenuUI.MemberParents[i].SetVisibility(c, false);
+            }
+        }
+    }
+    public static void OnPlayerDisconnected(UCPlayer player)
+    {
+        _singleton.AssertLoadedLite();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        if (player.Squad != null)
+            LeaveSquad(player, player.Squad);
+    }
 
-        public static string FindUnusedSquadName(ulong team)
-        {
+    public static string FindUnusedSquadName(ulong team)
+    {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            for (int n = 0; n < NAMES.Length; n++)
+        for (int n = 0; n < SQUAD_NAMES.Length; n++)
+        {
+            string name = SQUAD_NAMES[n];
+            for (int i = 0; i < Squads.Count; i++)
             {
-                string name = NAMES[n];
-                for (int i = 0; i < Squads.Count; i++)
+                if (Squads[i].Team == team)
                 {
-                    if (Squads[i].Team == team)
+                    if (name == Squads[i].Name)
                     {
-                        if (name == Squads[i].Name)
-                        {
-                            goto next;
-                        }
+                        goto next;
                     }
                 }
-                return name;
-                next:
-                continue;
             }
-            return NAMES[NAMES.Length - 1];
+            return name;
+            next:
+            continue;
+        }
+        return SQUAD_NAMES[SQUAD_NAMES.Length - 1];
+    }
+
+    public static Squad CreateSquad(UCPlayer leader, ulong team, EBranch branch)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        string name = FindUnusedSquadName(team);
+        Squad squad = new Squad(name, leader, team, branch);
+        Squads.Add(squad);
+        SortSquadListABC();
+        leader.Squad = squad;
+
+        ClearList(leader.Player);
+        SendSquadMenu(leader, squad);
+
+        UpdateUIMemberCount(team);
+
+        ActionLog.Add(EActionLogType.CREATED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(team, 0), leader);
+
+        return squad;
+    }
+    private static void SortSquadListABC()
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        Squads.Sort((a, b) => a.Name[0].CompareTo(b.Name[0]));
+    }
+    public static void JoinSquad(UCPlayer player, Squad squad)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        foreach (UCPlayer p in squad.Members)
+        {
+            if (p.Steam64 != player.Steam64)
+                p.Message("squad_player_joined", player.Player.channel.owner.playerID.nickName);
+            else
+                p.Message("squad_joined", squad.Name);
         }
 
-        public static Squad CreateSquad(UCPlayer leader, ulong team, EBranch branch)
-        {
+        squad.Members.Add(player);
+        SortMembers(squad);
+
+        player.Squad = squad;
+
+        ClearList(player.Player);
+        SendSquadMenu(player, squad, holdMemberCountUpdate: true);
+
+        SendSquadListToTeam(squad.Team);
+        UpdateMemberList(squad);
+        UpdateUIMemberCount(squad.Team);
+
+        ActionLog.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.Locale), player);
+
+        if (RallyManager.HasRally(squad, out RallyPoint rally))
+            rally.ShowUIForSquad();
+
+        PlayerManager.ApplyToOnline();
+    }
+    private static void SortMembers(Squad squad)
+    {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            string name = FindUnusedSquadName(team);
-            Squad squad = new Squad(name, leader, team, branch);
-            Squads.Add(squad);
-            SortSquadListABC();
-            leader.Squad = squad;
-
-            ClearList(leader.Player);
-            SendSquadMenu(leader, squad);
-
-            UpdateUIMemberCount(team);
-
-            ActionLog.Add(EActionLogType.CREATED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(team, 0), leader);
-
-            return squad;
+        squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
+        {
+            int o = b.Medals.TotalTW.CompareTo(a.Medals.TotalTW); // sort players by their officer status
+            return o == 0 ? b.CachedXP.CompareTo(a.CachedXP) : o;
+        });
+        if (squad.Leader != null)
+        {
+            squad.Members.RemoveAll(x => x.Steam64 == squad.Leader.Steam64);
+            squad.Members.Insert(0, squad.Leader);
         }
-        private static void SortSquadListABC()
-        {
+    }
+    public static void LeaveSquad(UCPlayer player, Squad squad)
+    {
+        _singleton.AssertLoaded();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            Squads.Sort((a, b) => a.Name[0].CompareTo(b.Name[0]));
-        }
-        public static void JoinSquad(UCPlayer player, Squad squad)
+        player.Message("squad_left");
+
+        bool willNeedNewLeader = squad.Leader == null || squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID;
+        player.Squad = null;
+        ClearMenu(player.Player);
+        squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
+        if (squad.Members.Count == 0)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            foreach (UCPlayer p in squad.Members)
-            {
-                if (p.Steam64 != player.Steam64)
-                    p.Message("squad_player_joined", player.Player.channel.owner.playerID.nickName);
-                else
-                    p.Message("squad_joined", squad.Name);
-            }
+            Squads.Remove(squad);
 
-            squad.Members.Add(player);
-            SortMembers(squad);
-
-            player.Squad = squad;
-
-            ClearList(player.Player);
-            SendSquadMenu(player, squad, holdMemberCountUpdate: true);
-
-            SendSquadListToTeam(squad.Team);
-            UpdateMemberList(squad);
-            UpdateUIMemberCount(squad.Team);
-
-            ActionLog.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + squad.Leader.Steam64.ToString(Data.Locale), player);
-
-            if (RallyManager.HasRally(squad, out RallyPoint rally))
-                rally.ShowUIForSquad();
-
-            PlayerManager.ApplyToOnline();
-        }
-        public static void SortMembers(Squad squad)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            squad.Members.Sort(delegate (UCPlayer a, UCPlayer b)
-            {
-                int o = b.Medals.TotalTW.CompareTo(a.Medals.TotalTW); // sort players by their officer status
-                return o == 0 ? b.CachedXP.CompareTo(a.CachedXP) : o;
-            });
             if (squad.Leader != null)
             {
-                squad.Members.RemoveAll(x => x.Steam64 == squad.Leader.Steam64);
-                squad.Members.Insert(0, squad.Leader);
-            }
-        }
-        public static void LeaveSquad(UCPlayer player, Squad squad)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            player.Message("squad_left");
-
-            bool willNeedNewLeader = squad.Leader == null || squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID;
-            player.Squad = null;
-            ClearMenu(player.Player);
-            squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
-            if (squad.Members.Count == 0)
-            {
-                Squads.Remove(squad);
-
-                if (squad.Leader != null)
-                {
-                    squad.Leader.Message("squad_disbanded");
-                    if (squad.Leader.KitClass == EClass.SQUADLEADER)
-                        KitManager.TryGiveUnarmedKit(squad.Leader);
-                }
-
-                UpdateUIMemberCount(squad.Team);
-
-                ActionLog.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
-
-                if (RallyManager.HasRally(squad, out RallyPoint rally1))
-                {
-                    if (rally1.drop != null && Regions.tryGetCoordinate(rally1.drop.model.position, out byte x, out byte y))
-                        BarricadeManager.destroyBarricade(rally1.drop, x, y, ushort.MaxValue);
-
-                    RallyManager.TryDeleteRallyPoint(rally1.structure.instanceID);
-                }
-
-                PlayerManager.ApplyToOnline();
-
-                SendSquadList(player);
-
-                return;
+                squad.Leader.Message("squad_disbanded");
+                if (squad.Leader.KitClass == EClass.SQUADLEADER)
+                    KitManager.TryGiveUnarmedKit(squad.Leader);
             }
 
-            ActionLog.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.Locale)), player);
-
-            if (willNeedNewLeader)
-            {   
-                squad.Leader = null!; // need to set leader to null before sorting, otherwise old leader will get added back
-            }
-            SortMembers(squad);
-            if (willNeedNewLeader)
-            {
-                squad.Leader = squad.Members[0]; // goes to the best officer, then the best xp
-                squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
-                squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
-            }
-            for (int i = 0; i < squad.Members.Count; i++)
-            {
-                UCPlayer p = squad.Members[i];
-                if (p.Steam64 != player.Steam64)
-                    p.Message("squad_player_left", player.Player.channel.owner.playerID.nickName);
-                else
-                    p.Message("squad_left", squad.Name);
-            }
-            UpdateMemberList(squad);
             UpdateUIMemberCount(squad.Team);
 
-            if (RallyManager.HasRally(squad, out RallyPoint rally2))
-                rally2.ClearUIForPlayer(player);
+            ActionLog.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), player);
+
+            if (RallyManager.HasRally(squad, out RallyPoint rally1))
+            {
+                if (rally1.drop != null && Regions.tryGetCoordinate(rally1.drop.model.position, out byte x, out byte y))
+                    BarricadeManager.destroyBarricade(rally1.drop, x, y, ushort.MaxValue);
+
+                RallyManager.TryDeleteRallyPoint(rally1.structure.instanceID);
+            }
+
+            PlayerManager.ApplyToOnline();
 
             SendSquadList(player);
 
-            PlayerManager.ApplyToOnline();
+            return;
         }
-        public static void DisbandSquad(Squad squad)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            Squads.RemoveAll(s => s.Name == squad.Name);
 
-            ActionLog.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+        ActionLog.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.Locale)), player);
 
-            for (int i = 0; i < squad.Members.Count; i++)
-            {
-                UCPlayer member = squad.Members[i];
-                member.Squad = null;
-
-                member.Message("squad_disbanded");
-                ClearMenu(member.Player);
-            }
-            SendSquadListToTeam(squad.Team);
-            UpdateUIMemberCount(squad.Team);
-
-            if (RallyManager.HasRally(squad, out RallyPoint rally))
-            {
-                if (rally.drop != null && Regions.tryGetCoordinate(rally.drop.model.position, out byte x, out byte y))
-                    BarricadeManager.destroyBarricade(rally.drop, x, y, ushort.MaxValue);
-
-                RallyManager.TryDeleteRallyPoint(rally.structure.instanceID);
-            }
-
-            PlayerManager.ApplyToOnline();
+        if (willNeedNewLeader)
+        {   
+            squad.Leader = null!; // need to set leader to null before sorting, otherwise old leader will get added back
         }
-        public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
+        SortMembers(squad);
+        if (willNeedNewLeader)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (player == null || squad == null || squad.Members.Count < 2)
-                return;
-
-            if (squad.Members.Remove(player))
-                player.Message("squad_kicked", squad.Name);
-
-            SortMembers(squad);
-            for (int i = 0; i < squad.Members.Count; i++)
-            {
-                UCPlayer p = squad.Members[i];
-                if (p.Steam64 != player.Steam64)
-                    p.Message("squad_player_kicked", F.GetPlayerOriginalNames(player).NickName);
-            }
-            UpdateMemberList(squad);
-            player.Squad = null;
-            ClearMenu(player.Player);
-            SendSquadListToTeam(squad.Team);
-            UpdateUIMemberCount(squad.Team);
-
-            if (RallyManager.HasRally(squad, out RallyPoint rally))
-                rally.ClearUIForPlayer(player);
-
-            PlayerManager.ApplyToOnline();
+            squad.Leader = squad.Members[0]; // goes to the best officer, then the best xp
+            squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
+            squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
         }
-        public static void PromoteToLeader(Squad squad, UCPlayer newLeader)
+        for (int i = 0; i < squad.Members.Count; i++)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (squad.Leader.KitClass == EClass.SQUADLEADER)
-                KitManager.TryGiveUnarmedKit(squad.Leader);
-
-            squad.Leader = newLeader;
-
-            for (int i = 0; i < squad.Members.Count; i++)
-            {
-                UCPlayer p = squad.Members[i];
-                if (p.CSteamID != squad.Leader.CSteamID)
-                    p.Message("squad_player_promoted", newLeader.Player.channel.owner.playerID.nickName);
-                else
-                    p.Message("squad_promoted", squad.Leader.SteamPlayer.playerID.nickName);
-            }
-
-            SortMembers(squad);
-            UpdateMemberList(squad);
+            UCPlayer p = squad.Members[i];
+            if (p.Steam64 != player.Steam64)
+                p.Message("squad_player_left", player.Player.channel.owner.playerID.nickName);
+            else
+                p.Message("squad_left", squad.Name);
         }
-        public static bool FindSquad(string input, ulong teamID, out Squad squad)
-        {
+        UpdateMemberList(squad);
+        UpdateUIMemberCount(squad.Team);
+
+        if (RallyManager.HasRally(squad, out RallyPoint rally2))
+            rally2.ClearUIForPlayer(player);
+
+        SendSquadList(player);
+
+        PlayerManager.ApplyToOnline();
+    }
+    public static void DisbandSquad(Squad squad)
+    {
+        _singleton.AssertLoaded();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
-            string name = input.ToLower();
-            if (name.Length == 1)
+        Squads.RemoveAll(s => s.Name == squad.Name);
+
+        ActionLog.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+
+        for (int i = 0; i < squad.Members.Count; i++)
+        {
+            UCPlayer member = squad.Members[i];
+            member.Squad = null;
+
+            member.Message("squad_disbanded");
+            ClearMenu(member.Player);
+        }
+        SendSquadListToTeam(squad.Team);
+        UpdateUIMemberCount(squad.Team);
+
+        if (RallyManager.HasRally(squad, out RallyPoint rally))
+        {
+            if (rally.drop != null && Regions.tryGetCoordinate(rally.drop.model.position, out byte x, out byte y))
+                BarricadeManager.destroyBarricade(rally.drop, x, y, ushort.MaxValue);
+
+            RallyManager.TryDeleteRallyPoint(rally.structure.instanceID);
+        }
+
+        PlayerManager.ApplyToOnline();
+    }
+    public static void KickPlayerFromSquad(UCPlayer player, Squad squad)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        if (player == null || squad == null || squad.Members.Count < 2)
+            return;
+
+        if (squad.Members.Remove(player))
+            player.Message("squad_kicked", squad.Name);
+
+        SortMembers(squad);
+        for (int i = 0; i < squad.Members.Count; i++)
+        {
+            UCPlayer p = squad.Members[i];
+            if (p.Steam64 != player.Steam64)
+                p.Message("squad_player_kicked", F.GetPlayerOriginalNames(player).NickName);
+        }
+        UpdateMemberList(squad);
+        player.Squad = null;
+        ClearMenu(player.Player);
+        SendSquadListToTeam(squad.Team);
+        UpdateUIMemberCount(squad.Team);
+
+        if (RallyManager.HasRally(squad, out RallyPoint rally))
+            rally.ClearUIForPlayer(player);
+
+        PlayerManager.ApplyToOnline();
+    }
+    public static void PromoteToLeader(Squad squad, UCPlayer newLeader)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        if (squad.Leader.KitClass == EClass.SQUADLEADER)
+            KitManager.TryGiveUnarmedKit(squad.Leader);
+
+        squad.Leader = newLeader;
+
+        for (int i = 0; i < squad.Members.Count; i++)
+        {
+            UCPlayer p = squad.Members[i];
+            if (p.CSteamID != squad.Leader.CSteamID)
+                p.Message("squad_player_promoted", newLeader.Player.channel.owner.playerID.nickName);
+            else
+                p.Message("squad_promoted", squad.Leader.SteamPlayer.playerID.nickName);
+        }
+
+        SortMembers(squad);
+        UpdateMemberList(squad);
+    }
+    public static bool FindSquad(string input, ulong teamID, out Squad squad)
+    {
+        _singleton.AssertLoaded();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        List<Squad> friendlySquads = Squads.Where(s => s.Team == teamID).ToList();
+        string name = input.ToLower();
+        if (name.Length == 1)
+        {
+            char let = char.ToLower(name[0]);
+            if (let >= 'a' && let <= 'h')
             {
-                char let = char.ToLower(name[0]);
-                if (let >= 'a' && let <= 'h')
+                name = let switch
                 {
-                    name = let switch
-                    {
-                        'a' => NAMES[0],
-                        'b' => NAMES[1],
-                        'c' => NAMES[2],
-                        'd' => NAMES[3],
-                        'e' => NAMES[4],
-                        'f' => NAMES[5],
-                        'g' => NAMES[6],
-                        'h' => NAMES[7],
-                        _ => name
-                    };
-                }
+                    'a' => SQUAD_NAMES[0],
+                    'b' => SQUAD_NAMES[1],
+                    'c' => SQUAD_NAMES[2],
+                    'd' => SQUAD_NAMES[3],
+                    'e' => SQUAD_NAMES[4],
+                    'f' => SQUAD_NAMES[5],
+                    'g' => SQUAD_NAMES[6],
+                    'h' => SQUAD_NAMES[7],
+                    _ => name
+                };
             }
-            squad = friendlySquads.Find(s => s.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1);
-            return squad != null;
         }
-        public static void SetLocked(Squad squad, bool value)
-        {
+        squad = friendlySquads.Find(s => s.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1);
+        return squad != null;
+    }
+    public static void SetLocked(Squad squad, bool value)
+    {
+        _singleton.AssertLoaded();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            ActionLog.Add(value ? EActionLogType.LOCKED_SQUAD : EActionLogType.UNLOCKED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
-            squad.IsLocked = value;
-            ReplicateLockSquad(squad);
-        }
-        public void Dispose()
-        {
-            KitManager.OnKitChanged -= OnKitChanged;
-        }
+        ActionLog.Add(value ? EActionLogType.LOCKED_SQUAD : EActionLogType.UNLOCKED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
+        squad.IsLocked = value;
+        ReplicateLockSquad(squad);
+    }
+}
+
+public class Squad : IEnumerable<UCPlayer>
+{
+    public string Name;
+    public ulong Team;
+    public EBranch Branch;
+    public bool IsLocked;
+    public UCPlayer Leader;
+    public List<UCPlayer> Members;
+    public Squad(string name, UCPlayer leader, ulong team, EBranch branch)
+    {
+        Name = name;
+        Team = team;
+        Branch = branch;
+        Leader = leader;
+        IsLocked = false;
+        Members = new List<UCPlayer> { leader };
     }
 
-    public class Squad : IEnumerable<UCPlayer>
+    public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
+
+    public bool IsFull() => Members.Count >= 6;
+    public bool IsNotSolo() => Members.Count > 1;
+
+    IEnumerator IEnumerable.GetEnumerator() => Members.GetEnumerator();
+    public IEnumerator<ITransportConnection> EnumerateMembers()
     {
-        public string Name;
-        public ulong Team;
-        public EBranch Branch;
-        public bool IsLocked;
-        public UCPlayer Leader;
-        public List<UCPlayer> Members;
-        public Squad(string name, UCPlayer leader, ulong team, EBranch branch)
-        {
-            Name = name;
-            Team = team;
-            Branch = branch;
-            Leader = leader;
-            IsLocked = false;
-            Members = new List<UCPlayer> { leader };
-        }
-
-        public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();
-
-        public bool IsFull() => Members.Count >= 6;
-        public bool IsNotSolo() => Members.Count > 1;
-
-        IEnumerator IEnumerable.GetEnumerator() => Members.GetEnumerator();
-        public IEnumerator<ITransportConnection> EnumerateMembers()
-        {
-            IEnumerator<UCPlayer> players = Members.GetEnumerator();
-            while (players.MoveNext())
-                yield return players.Current.Player.channel.owner.transportConnection;
-            players.Dispose();
-        }
-    }
-
-    public class SquadConfigData : ConfigData
-    {
-        public ushort RallyTimer;
-        public float RallyDespawnDistance;
-        public int SquadDisconnectTime;
-        public Dictionary<EClass, ClassConfig> Classes;
-        public ushort EmptyMarker;
-        public ushort SquadLeaderEmptyMarker;
-        public ushort MortarMarker;
-        public ushort InjuredMarker;
-        public ushort MedicMarker;
-        public float MedicRange;
-        public int MaxSquadNameLength;
-
-        public override void SetDefaults()
-        {
-            RallyTimer = 45;
-            RallyDespawnDistance = 30;
-            EmptyMarker = 36100;
-            SquadLeaderEmptyMarker = 36130;
-            MortarMarker = 36120;
-            InjuredMarker = 36121;
-            MedicMarker = 36122;
-            MedicRange = 300f;
-            SquadDisconnectTime = 120;
-            MaxSquadNameLength = 16;
-            Classes = new Dictionary<EClass, ClassConfig>
-            {
-                { EClass.NONE, new ClassConfig('±', 36101, 36131) },
-                { EClass.UNARMED, new ClassConfig('±', 36101, 36131) },
-                { EClass.SQUADLEADER, new ClassConfig('¦', 36102, 36132) },
-                { EClass.RIFLEMAN, new ClassConfig('¡', 36103, 36133) },
-                { EClass.MEDIC, new ClassConfig('¢', 36104, 36134) },
-                { EClass.BREACHER, new ClassConfig('¤', 36105, 36135) },
-                { EClass.AUTOMATIC_RIFLEMAN, new ClassConfig('¥', 36106, 36136) },
-                { EClass.GRENADIER, new ClassConfig('¬', 36107, 36137) },
-                { EClass.MACHINE_GUNNER, new ClassConfig('«', 36108, 36138) },
-                { EClass.LAT, new ClassConfig('®', 36109, 36139) },
-                { EClass.HAT, new ClassConfig('¯', 36110, 36140) },
-                { EClass.MARKSMAN, new ClassConfig('¨', 36111, 36141) },
-                { EClass.SNIPER, new ClassConfig('£', 36112, 36142) },
-                { EClass.AP_RIFLEMAN, new ClassConfig('©', 36113, 36143) },
-                { EClass.COMBAT_ENGINEER, new ClassConfig('ª', 36114, 36144) },
-                { EClass.CREWMAN, new ClassConfig('§', 36115, 36145) },
-                { EClass.PILOT, new ClassConfig('°', 36116, 36146) },
-                { EClass.SPEC_OPS, new ClassConfig('À', 36117, 36147) },
-            };
-        }
-
-        public SquadConfigData() { }
-    }
-
-    public class ClassConfig
-    {
-        public char Icon;
-        public ushort MarkerEffect;
-        public ushort SquadLeaderMarkerEffect;
-        [JsonConstructor]
-        public ClassConfig(char Icon, ushort MarkerEffect, ushort SquadLeaderMarkerEffect)
-        {
-            this.Icon = Icon;
-            this.MarkerEffect = MarkerEffect;
-            this.SquadLeaderMarkerEffect = SquadLeaderMarkerEffect;
-        }
+        IEnumerator<UCPlayer> players = Members.GetEnumerator();
+        while (players.MoveNext())
+            yield return players.Current.Player.channel.owner.transportConnection;
+        players.Dispose();
     }
 }

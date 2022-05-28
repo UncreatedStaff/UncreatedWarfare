@@ -41,6 +41,11 @@ public class ReportCommand : IRocketCommand
         {
             goto Help;
         }
+        if (!UCWarfare.CanUseNetCall || UCWarfare.Config.EnableReporter)
+        {
+            player.SendChat("report_not_connected");
+            return;
+        }
         EReportType type;
         string message;
         ulong target;
@@ -111,6 +116,11 @@ public class ReportCommand : IRocketCommand
             try
             {
                 await UCWarfare.ToUpdate();
+                if (!UCWarfare.CanUseNetCall)
+                {
+                    player.SendChat("report_not_connected");
+                    return;
+                }
                 FPlayerName targetNames = F.GetPlayerOriginalNames(target);
                 if (CooldownManager.HasCooldownNoStateCheck(player, ECooldownType.REPORT, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
                 {
@@ -125,6 +135,11 @@ public class ReportCommand : IRocketCommand
                 if (!didConfirm)
                 {
                     player.SendChat("report_cancelled", targetNames.CharacterName);
+                    return;
+                }
+                if (!UCWarfare.CanUseNetCall)
+                {
+                    player.SendChat("report_not_connected");
                     return;
                 }
                 CooldownManager.StartCooldown(player, ECooldownType.REPORT, 3600f, target);
@@ -160,8 +175,13 @@ public class ReportCommand : IRocketCommand
                         : await SpyTask.RequestScreenshot(targetPl);
                 report.JpgData = jpgData;
                 L.Log(report.JpgData.Length.ToString());
+                if (!UCWarfare.CanUseNetCall)
+                {
+                    player.SendChat("report_not_connected");
+                    return;
+                }
                 RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(
-                    Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient, report, targetPl != null);
+                    Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient!, report, targetPl != null);
                 await UCWarfare.ToUpdate();
                 if (targetPl != null)
                 {

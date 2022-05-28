@@ -12,7 +12,11 @@ namespace Uncreated.Warfare
         {
             DefaultTranslations = new Dictionary<string, string>
             {
+                { "todo", "<color=#ff8c69>This command hasn't been implemented yet.</color>" },
                 { "correct_usage", "<color=#ff8c69>Correct usage: {0}</color>" },
+                { "command_e_no_console", "<color=#ff8c69>This command can not be called from console.</color>" },
+                { "command_e_no_player", "<color=#ff8c69>This command can only called from console.</color>" },
+                { "command_e_unknown_error", "<color=#ff8c69>We ran into an unknown error executing that command.</color>" },
                 { "correct_usage_c", "Correct usage: {0}" },
                 { "entered_main", "<color=#e6e3d5>You have entered the safety of {0} headquarters!</color>" },
                 { "left_main", "<color=#e6e3d5>You have left the safety of {0} headquarters.</color>" },
@@ -109,10 +113,11 @@ namespace Uncreated.Warfare
                 { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
                 { "kit_setprop", "<color=#a0ad8e>Set <color=#8ce4ff>{0}</color> for kit <color=#ffb89c>{1}</color> to: <color=#ffffff>{2}</color></color>" },
                 { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
+                { "kit_accessgiven_dm", "<color=#a0ad8e>You were just given access to the kit: <color=#ffffff>{0}</color>.</color>" },
+                { "kit_accessremoved_dm", "<color=#a0ad8e>You were just denied access to the kit: <color=#ffffff>{0}</color>.</color>" },
                 { "kit_accessremoved", "<color=#a0ad8e>Disallowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
                 { "kit_e_exist", "<color=#ff8c69>A kit called {0} already exists.</color>" },
                 { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
-                { "kit_e_set_sign_syntax", "<color=#ff8c69>Syntax: /kit set sign <kitname> <language> <sign text...></color>" },
                 { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'Class', 'Cost', 'IsPremium', etc.</color>" },
                 { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
                 { "kit_e_invalidarg_not_allowed", "<color=#ff8c69>{0} is not a valid property, or it cannot be changed.</color>" },
@@ -197,6 +202,10 @@ namespace Uncreated.Warfare
                 { "order_e_raycast", "<color=#b58b86>Something went wrong while raycasting. Please contact the devs/admins about this.</color>" },
                 { "order_s_sent", "<color=#9fa1a6>Order sent to {0}: <color=#9dbccf>{1}</color></color>" },
                 { "order_s_received", "<color=#9fa1a6><color=#9dbccf>{0}</color> has given your squad new orders:\n<color=#d4d4d4>{1}</color></color>" },
+                { "order_ui_commander", "Orders from <color=#a7becf>{0}</color>:" },
+                { "order_ui_text", "{0}" },
+                { "order_ui_time", "- {0}m left" },
+                { "order_ui_reward", "- Reward: {0}" },
 
                 // rally
                 { "rally_success", "<color=#959c8c>You have <color=#5eff87>rallied</color> with your squad.</color>" },
@@ -766,14 +775,18 @@ namespace Uncreated.Warfare
                 { "heal_e_enemy", "<color=#bdae9d>You cannot aid enemy soldiers.</color>" },
 
                 // reloads
+                { "reload_syntax", "<color=#ff8c69>Syntax: /reload [help|module].</color>" },
+                { "reload_help_1", "<color=#bdae9d>Reload options:</color>" },
+                { "reload_help_2", "<color=#bdae9d>{0}</color>" },
                 { "reload_reloaded_all", "<color=#e6e3d5>Reloaded all Uncreated Warfare components.</color>" },
-                { "reload_reloaded_config", "<color=#e6e3d5>Reloaded all the config files.</color>" },
-                { "reload_reloaded_lang", "<color=#e6e3d5>Reloaded all translations.</color>" },
-                { "reload_reloaded_flags", "<color=#e6e3d5>Re-read flags from file and begain to start a new game.</color>" },
+                { "reload_reloaded_translations", "<color=#e6e3d5>Reloaded all translation files.</color>" },
+                { "reload_reloaded_flags", "<color=#e6e3d5>Reloaded flag data.</color>" },
+                { "reload_reloaded_flags_gm", "<color=#ff8c69>You must be on a flag gamemode to use this command!</color>" },
+                { "reload_reloaded_rocket", "<color=#e6e3d5>Reloaded the LDM configuration files.</color>" },
+                { "reload_reloaded_generic", "<color=#e6e3d5>Reloaded the '{0}' config file.</color>" },
                 { "reload_reloaded_tcp", "<color=#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.</color>" },
                 { "reload_reloaded_kits", "<color=#e6e3d5>Reloaded all kits and request signs.</color>" },
                 { "reload_reloaded_slots", "<color=#e6e3d5>Reset the slots plugin to max.</color>" },
-                { "reload_reloaded_slots_not_enabled", "<color=#e6e3d5>{0} must be enabled to use this command operation.</color>" },
                 { "reload_reloaded_sql", "<color=#e6e3d5>Reopened the MySql Connection.</color>" },
                 { "reload_reloaded_gameconfig", "<color=#e6e3d5>Reloaded Gamemode Config.</color>" },
 
@@ -959,6 +972,7 @@ namespace Uncreated.Warfare
                 { "report_cooldown", "You've already reported {0} in the past hour." },
                 { "report_cancelled", "You did not confirm your report in time." },
                 { "report_confirm", "Did you mean to report {1} <i><color=#444444>{0}</color></i>? Type <color=#ff8c69>/confirm</color> to continue." },
+                { "report_not_connected", "<color=#ff8c69>The report system is not available right now, please try again later.</color>" },
 
                 // Tips
                 { "tip_place_radio", "Place a <color=#ababab>FOB RADIO</color>." },

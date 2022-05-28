@@ -27,9 +27,9 @@ namespace Uncreated.Warfare
             Patcher.UnpatchAll("net.uncreated.warfare");
         }
         public delegate void BarricadeDroppedEventArgs(BarricadeDrop drop, BarricadeRegion region, Barricade barricade, Vector3 point, Quaternion rotation, ulong owner, ulong group);
-        public delegate void BarricadeDestroyedEventArgs(SDG.Unturned.BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant);
-        public delegate void StructureDestroyedEventArgs(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID);
-        public delegate void BarricadeHealthEventArgs(SDG.Unturned.BarricadeData data);
+        public delegate void BarricadeDestroyedEventArgs(BarricadeData data, BarricadeDrop drop, uint instanceID, ushort plant);
+        public delegate void StructureDestroyedEventArgs(StructureData data, StructureDrop drop, uint instanceID);
+        public delegate void BarricadeHealthEventArgs(BarricadeData data);
         public delegate void OnPlayerTogglesCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool allow);
         public delegate void OnPlayerSetsCosmeticsDelegate(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow);
         public delegate void BatteryStealingDelegate(SteamPlayer theif, ref bool allow);
@@ -46,10 +46,10 @@ namespace Uncreated.Warfare
         public static event PlayerTriedStoreItem OnPlayerTriedStoreItem_Global;
         public static event PlayerGesture OnPlayerGesture_Global;
         public static event PlayerMarker OnPlayerMarker_Global;
-
         [HarmonyPatch]
         public static class InternalPatches
         {
+            private static readonly string LOG_MESSAGE_ID_STR = L.NetCalls.SendLogMessage.ID.ToString(Data.Locale);
             // SDG.Unturned.Provider
             /// <summary>
             /// Prefix of <see cref="Console.WriteLine(string)"/> to send any logs to the tcp server and log them.
@@ -58,17 +58,14 @@ namespace Uncreated.Warfare
             [HarmonyPrefix]
             static void ConsolePatch(string value)
             {
-                if (value.StartsWith("Sent over TCP server on") || value.StartsWith("Error writing to")) return;
+                if (!L.isRequestingLog || value.StartsWith("Sent over TCP server on", StringComparison.Ordinal) || value.StartsWith("Error writing to", StringComparison.Ordinal)) return;
                 string[] splits = value.Split('\n');
                 for (int i = 0; i < splits.Length; i++)
                 {
                     LogMessage log = new LogMessage(splits[i], Console.ForegroundColor);
                     L.AddLog(log);
-                    if (Data.NetClient != null && Data.NetClient != null && Data.NetClient.IsActive && 
-                        !value.Equals($"No invoker found for {L.NetCalls.SendLogMessage.ID}.", StringComparison.Ordinal))
-                    {
-                        L.NetCalls.SendLogMessage.Invoke(Data.NetClient, log, 0);
-                    }
+                    if (UCWarfare.CanUseNetCall && value.IndexOf(LOG_MESSAGE_ID_STR, StringComparison.Ordinal) != 21)
+                        L.NetCalls.SendLogMessage.Invoke(Data.NetClient!, log, 0);
                 }
             }
             //// SDG.Unturned.Provider
@@ -264,7 +261,7 @@ namespace Uncreated.Warfare
                             ChatManager.serverSendMessage(text, chatted, callingPlayer, client, EChatMode.GROUP, useRichTextFormatting: isRich);
                     }
                 }
-                Data.Reporter.OnPlayerChat(callingPlayer.playerID.steamID.m_SteamID, text);
+                Data.Reporter?.OnPlayerChat(callingPlayer.playerID.steamID.m_SteamID, text);
                 return false;
             }
             // SDG.Unturned.PlayerAnimator

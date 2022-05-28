@@ -6,21 +6,18 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using Uncreated.Framework;
+using System.Runtime.CompilerServices;
 using Uncreated.Networking;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
-using Uncreated.Warfare.Revives;
-using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using UnityEngine;
 
@@ -104,6 +101,11 @@ namespace Uncreated.Warfare
             gamemode = default!;
             return false;
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Is<T>() where T : Gamemodes.Interfaces.IGamemode
+        {
+            return Gamemode is T;
+        }
         internal static ClientInstanceMethod<string> SendChangeText { get; private set; }
         internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
         internal static ClientStaticMethod SendEffectClearAll { get; private set; }
@@ -113,10 +115,11 @@ namespace Uncreated.Warfare
         internal static FieldInfo ItemManagerInstanceCount;
         internal static ICommandInputOutput? defaultIOHandler;
         public static Reporter Reporter;
-        internal static HomebaseClient NetClient;
+        internal static HomebaseClient? NetClient;
         internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
         internal delegate void OutputToConsole(string value, ConsoleColor color);
         internal static OutputToConsole? OutputToConsoleMethod;
+        internal static SingletonManager Singletons;
         public static void LoadColoredConsole()
         {
             try
@@ -143,9 +146,18 @@ namespace Uncreated.Warfare
         {
             if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
             {
-                if (NetClient != null)
+                if (NetClient is not null)
                 {
-                    NetClient.Dispose();
+                    try
+                    {
+                        NetClient.Dispose();
+                        NetClient.OnClientVerified -= OnClientConnected;
+                        NetClient.OnClientDisconnected -= OnClientDisconnected;
+                        NetClient.OnSentMessage -= OnClientSentMessage;
+                        NetClient.OnReceivedMessage -= OnClientReceivedMessage;
+                        GC.Collect();
+                    }
+                    catch { }
                 }
                 L.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
                 NetClient = new HomebaseClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
@@ -153,7 +165,6 @@ namespace Uncreated.Warfare
                 NetClient.OnClientDisconnected += OnClientDisconnected;
                 NetClient.OnSentMessage += OnClientSentMessage;
                 NetClient.OnReceivedMessage += OnClientReceivedMessage;
-                //NetClient.AssertConnected();
             }
         }
 
@@ -163,7 +174,12 @@ namespace Uncreated.Warfare
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             UCWarfare.I.gameObject.AddComponent<ActionLog>();
-            
+            Singletons = UCWarfare.I.gameObject.AddComponent<SingletonManager>();
+            Singletons.OnSingletonLoaded    += OnSingletonLoaded;
+            Singletons.OnSingletonUnloaded  += OnSingletonUnloaded;
+            Singletons.OnSingletonReloaded  += OnSingletonReloaded;
+
+
             ActionLog.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Locale)}");
 
             /* INITIALIZE UNCREATED NETWORKING */
@@ -233,13 +249,17 @@ namespace Uncreated.Warfare
                 }
                 L.Log("Loaded " + Gamemode.DisplayName, ConsoleColor.Cyan);
                 L.Log("Initialized gamemode.", ConsoleColor.Magenta);
-            } else
+            }
+            else
             {
                 L.LogError("Failed to Initialize Gamemode");
             }
             ReloadTCP();
 
-            Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
+            if (UCWarfare.Config.EnableReporter)
+            {
+                Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
+            }
 
             /* REFLECT PRIVATE VARIABLES */
             L.Log("Getting client calls...", ConsoleColor.Magenta);
@@ -346,6 +366,31 @@ namespace Uncreated.Warfare
                 StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
             //Quests.DailyQuests.OnLoad();
         }
+
+        private static void OnSingletonReloaded(IReloadableSingleton singleton, bool success)
+        {
+            if (success)
+                L.Log("Singleton reloaded || " + singleton.GetType().Name, ConsoleColor.Blue);
+            else
+                L.LogWarning("Singleton failed to reload | " + singleton.GetType().Name, ConsoleColor.Red);
+        }
+
+        private static void OnSingletonUnloaded(IUncreatedSingleton singleton, bool success)
+        {
+            if (success)
+                L.Log("Singleton unloaded \\\\ " + singleton.GetType().Name, ConsoleColor.Blue);
+            else
+                L.LogWarning("Singleton failed to unload | " + singleton.GetType().Name, ConsoleColor.Red);
+        }
+
+        private static void OnSingletonLoaded(IUncreatedSingleton singleton, bool success)
+        {
+            if (success)
+                L.Log("Singleton loaded // " + singleton.GetType().Name, ConsoleColor.Blue);
+            else
+                L.LogWarning("Singleton failed to load | " + singleton.GetType().Name, ConsoleColor.Red);
+        }
+
         internal static readonly List<Type> TranslatableEnumTypes = new List<Type>()
         {
             typeof(EDamageOrigin), typeof(EDeathCause)
@@ -381,6 +426,8 @@ namespace Uncreated.Warfare
             L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
             PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
             ActionLog.OnConnected();
+            if (Gamemode.shutdownAfterGame)
+                ShutdownOverrideCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
         }
         private static void DuplicateKeyError(Exception ex)
         {

@@ -776,27 +776,11 @@ public static class F
             new Vector3(0.0f, PlayerMovement.HEIGHT_STAND + 0.5f - PlayerStance.RADIUS, 0.0f), PlayerStance.RADIUS, PlayerStance.checkColliders,
             RayMasks.BLOCK_STANCE, QueryTriggerInteraction.Ignore) == 0;
     }
-
-    private static string emp = string.Empty;
     public static string GetClosestLocation(Vector3 point)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ref string closest = ref emp;
-        float smallest = -1f;
-        for (int i = 0; i < LevelNodes.nodes.Count; i++)
-        {
-            if (LevelNodes.nodes[i] is LocationNode node)
-            {
-                float amt = (point - node.point).sqrMagnitude;
-                if (smallest == -1 || amt < smallest)
-                {
-                    closest = ref node.name;
-                    smallest = amt;
-                }
-            }
-        }
         int index = GetClosestLocationIndex(point);
         return index == -1 ? string.Empty : ((LocationNode)LevelNodes.nodes[index]).name;
     }
@@ -823,78 +807,78 @@ public static class F
     }
     public static void NetInvoke(this NetCall call)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!);
     }
     public static void NetInvoke<T>(this NetCallRaw<T> call, T arg)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg);
     }
     public static void NetInvoke<T1, T2>(this NetCallRaw<T1, T2> call, T1 arg1, T2 arg2)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2);
     }
     public static void NetInvoke<T1, T2, T3>(this NetCallRaw<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3);
     }
     public static void NetInvoke<T1, T2, T3, T4>(this NetCallRaw<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4);
     }
     public static void NetInvoke<T1>(this NetCall<T1> call, T1 arg1)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1);
     }
     public static void NetInvoke<T1, T2>(this NetCall<T1, T2> call, T1 arg1, T2 arg2)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2);
     }
     public static void NetInvoke<T1, T2, T3>(this NetCall<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3);
     }
     public static void NetInvoke<T1, T2, T3, T4>(this NetCall<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5>(this NetCall<T1, T2, T3, T4, T5> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6>(this NetCall<T1, T2, T3, T4, T5, T6> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7>(this NetCall<T1, T2, T3, T4, T5, T6, T7> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
-        if (Data.NetClient is not null)
-            call.Invoke(Data.NetClient, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     }
     public static bool FilterName(string original, out string final)
     {

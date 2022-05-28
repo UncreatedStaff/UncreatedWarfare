@@ -98,9 +98,9 @@ namespace Uncreated.Warfare.Components
                     {
                         byte[] state = new byte[0];
                         if (parent.Team == 1)
-                            state = Convert.FromBase64String(FOBManager.config.data.T1RadioState);
+                            state = Convert.FromBase64String(FOBManager.config.Data.T1RadioState);
                         else if (parent.Team == 2)
-                            state = Convert.FromBase64String(FOBManager.config.data.T2RadioState);
+                            state = Convert.FromBase64String(FOBManager.config.Data.T2RadioState);
 
                         parent.Radio.GetServersideData().barricade.state = state;
                         parent.Radio.ReceiveUpdateState(state);
@@ -181,7 +181,7 @@ namespace Uncreated.Warfare.Components
             get
             {
                 return UCBarricadeManager.GetBarricadesWhere(b =>
-                    FOBManager.config.data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
+                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
                     (Position - b.model.position).sqrMagnitude < SqrRadius &&
                     b.GetServersideData().group == Team
                     );
@@ -192,13 +192,13 @@ namespace Uncreated.Warfare.Components
             get
             {
                 return UCBarricadeManager.CountBarricadesWhere(b =>
-                    FOBManager.config.data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
+                    FOBManager.config.Data.Buildables.Exists(bl => bl.structureID == b.asset.GUID && bl.type == EBuildableType.FORTIFICATION) &&
                     (Position - b.model.position).sqrMagnitude < SqrRadius &&
                     b.GetServersideData().group == Team
                     );
             }
         }
-        public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.config.data.Buildables.Where(bl => bl.type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
+        public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.config.Data.Buildables.Where(bl => bl.type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
 
         public List<UCPlayer> FriendliesOnFOB { get; private set; }
         public List<UCPlayer> NearbyEnemies { get; private set; }
@@ -365,7 +365,7 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                Radius = FOBManager.config.data.FOBBuildPickupRadius;
+                Radius = FOBManager.config.Data.FOBBuildPickupRadius;
             }
         }
         public void ConsumeResources()
@@ -489,17 +489,17 @@ namespace Uncreated.Warfare.Components
         }
         public void ShowResourceUI(UCPlayer player)
         {
-            EffectManager.sendUIEffect(FOBManager.nearbyResourceId, (short)FOBManager.nearbyResourceId, player.connection, true);
+            EffectManager.sendUIEffect(FOBManager.nearbyResourceId, (short)FOBManager.nearbyResourceId, player.Connection, true);
             UpdateBuildUI(player);
             UpdateAmmoUI(player);
         }
         public void HideResourceUI(UCPlayer player)
         {
-            EffectManager.askEffectClearByID(FOBManager.nearbyResourceId, player.connection);
+            EffectManager.askEffectClearByID(FOBManager.nearbyResourceId, player.Connection);
         }
         public void UpdateBuildUI(UCPlayer player)
         {
-            EffectManager.sendUIEffectText((short)FOBManager.nearbyResourceId, player.connection, true,
+            EffectManager.sendUIEffectText((short)FOBManager.nearbyResourceId, player.Connection, true,
                     "Build",
                     Build.ToString()
                     );
@@ -508,7 +508,7 @@ namespace Uncreated.Warfare.Components
         }
         public void UpdateAmmoUI(UCPlayer player)
         {
-            EffectManager.sendUIEffectText((short)FOBManager.nearbyResourceId, player.connection, true,
+            EffectManager.sendUIEffectText((short)FOBManager.nearbyResourceId, player.Connection, true,
                     "Ammo",
                     Ammo.ToString()
                     );
@@ -709,8 +709,8 @@ namespace Uncreated.Warfare.Components
         {
             EFOBRadius.SHORT => 30 * 30,
             EFOBRadius.FULL_WITH_BUNKER_CHECK or EFOBRadius.FULL =>
-                FOBManager.config.data.FOBBuildPickupRadius * FOBManager.config.data.FOBBuildPickupRadius,
-            EFOBRadius.FOB_PLACEMENT => Mathf.Pow(FOBManager.config.data.FOBBuildPickupRadius * 2, 2),
+                FOBManager.config.Data.FOBBuildPickupRadius * FOBManager.config.Data.FOBBuildPickupRadius,
+            EFOBRadius.FOB_PLACEMENT => Mathf.Pow(FOBManager.config.Data.FOBBuildPickupRadius * 2, 2),
             EFOBRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
             _ => 0
         };

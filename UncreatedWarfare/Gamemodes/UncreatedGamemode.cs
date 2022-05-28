@@ -40,8 +40,8 @@ namespace Uncreated.Warfare.Gamemodes
             { "TDM", typeof(TeamDeathmatch.TeamDeathmatch) },
             { "Insurgency", typeof(Insurgency.Insurgency) }
         };
-        internal static readonly Config<GamemodeConfigs> ConfigObj = new Config<GamemodeConfigs>(Data.DATA_DIRECTORY, "gamemode_settings.json");
-        public static GamemodeConfigs Config => ConfigObj.data;
+        internal static readonly Config<GamemodeConfigData> ConfigObj = new Config<GamemodeConfigData>(Data.DATA_DIRECTORY, "gamemode_settings.json");
+        public static GamemodeConfigData Config => ConfigObj.Data;
         public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
         protected readonly string _name;
         public string Name { get => _name; }
@@ -59,18 +59,20 @@ namespace Uncreated.Warfare.Gamemodes
         public event TeamWinDelegate OnTeamWin;
         public Whitelister Whitelister;
         public CooldownManager Cooldowns;
+        public Tips Tips;
         public virtual bool UseWhitelist { get => true; }
         protected EState _state;
         public EState State { get => _state; }
-        protected string shutdownMessage = string.Empty;
-        protected bool shutdownAfterGame = false;
-        protected ulong shutdownPlayer = 0;
+        internal string shutdownMessage = string.Empty;
+        internal bool shutdownAfterGame = false;
+        internal ulong shutdownPlayer = 0;
         public Coroutine EventLoopCoroutine;
         public bool isPendingCancel;
         public abstract string DisplayName { get; }
         public virtual bool TransmitMicWhileNotActive { get => true; }
         public virtual bool ShowXPUI { get => true; }
         public virtual bool ShowOFPUI { get => true; }
+        public virtual bool UseTips { get => true; }
         public virtual bool AllowCosmetics { get => true; }
         protected int _ticks = 0;
         protected int _stagingSeconds { get; set; }
@@ -106,6 +108,8 @@ namespace Uncreated.Warfare.Gamemodes
             Cooldowns = new CooldownManager();
             if (UseWhitelist)
                 Whitelister = new Whitelister();
+            if (UseTips)
+                Tips = Data.Singletons.LoadSingleton<Tips>();
             Subscribe();
             _ticks = 0;
         }
@@ -345,12 +349,12 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public virtual void ShowStagingUI(UCPlayer player)
         {
-            EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.connection, true);
-            EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Top", Translation.Translate("phases_briefing", player));
+            EffectManager.sendUIEffect(CTFUI.headerID, CTFUI.headerKey, player.Connection, true);
+            EffectManager.sendUIEffectText(CTFUI.headerKey, player.Connection, true, "Top", Translation.Translate("phases_briefing", player));
         }
         public void ClearStagingUI(UCPlayer player)
         {
-            EffectManager.askEffectClearByID(CTFUI.headerID, player.connection);
+            EffectManager.askEffectClearByID(CTFUI.headerID, player.Connection);
         }
         public void ShowStagingUIForAll()
         {
@@ -359,7 +363,7 @@ namespace Uncreated.Warfare.Gamemodes
         }
         public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
         {
-            EffectManager.sendUIEffectText(CTFUI.headerKey, player.connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds:D2}");
+            EffectManager.sendUIEffectText(CTFUI.headerKey, player.Connection, true, "Bottom", $"{timeleft.Minutes}:{timeleft.Seconds:D2}");
         }
         public void UpdateStagingUIForAll()
         {
@@ -383,6 +387,8 @@ namespace Uncreated.Warfare.Gamemodes
         {
             if (_stagingPhaseTimer != null)
                 StopCoroutine(_stagingPhaseTimer);
+            if (Tips is not null)
+                Data.Singletons.UnloadSingleton(ref Tips);
             Unsubscribe();
             CancelCoroutine();
             Whitelister?.Dispose();
