@@ -222,7 +222,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                                 reason = "suicide " + v.vehicleName;
                         }
 
-                            float distance = (player.Position - vehicle.transform.position).magnitude;
+                            int distance = Mathf.RoundToInt((player.Position - vehicle.transform.position).magnitude);
 
                             if (reason == "")
                                 Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);

@@ -614,7 +614,7 @@ partial class JSONMethods
             #endregion
 
             #region Vehicle Death Messages
-            { "VEHICLE_DESTROYED", "{0} took out a {1} with a {2}." },
+            { "VEHICLE_DESTROYED", "{0} took out a {1} with a {2} from {3}." },
             { "VEHICLE_DESTROYED_UNKNOWN", "{0} took out a {1}." },
             { "VEHICLE_TEAMKILLED", "{0} blew up a friendly {1}." },
             #endregion
