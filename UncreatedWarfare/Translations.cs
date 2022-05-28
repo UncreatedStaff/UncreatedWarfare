@@ -639,7 +639,7 @@ namespace Uncreated.Warfare
                 { "vehiclebay_check_registered", "<color=#a0ad8e>This spawn (<color=#8ce4ff>{0}</color>) is registered with vehicle: <color=#ffffff>{1} - {2}</color></color>" },
                 { "vehiclebay_check_notregistered", "<color=#a0ad8e>This spawn is not registered.</color>" },
 
-                { "VEHICLE_DESTROYED", "{0} took out a {1} with a {2}." },
+                { "VEHICLE_DESTROYED", "{0} took out a {1} with a {2} from {3}m." },
                 { "VEHICLE_DESTROYED_UNKNOWN", "{0} took out a {1}." },
                 { "VEHICLE_TEAMKILLED", "{0} blew up a friendly {1}." },
                 
@@ -845,6 +845,7 @@ namespace Uncreated.Warfare
                 { "xp_friendly_downed", "<color=#e3e3e3>DOWNED FRIENDLY</color>" },
                 { "xp_enemy_killed", "KILLED ENEMY" },
                 { "xp_kill_assist", "ASSIST" },
+                { "xp_spotted_assist", "SPOTTER ASSIST" },
                 { "xp_vehicle_assist", "VEHICLE ASSIST" },
                 { "xp_driver_assist", "DRIVER ASSIST" },
                 { "xp_wasting_assets", "WASTING ASSETS" },
@@ -1049,6 +1050,22 @@ namespace Uncreated.Warfare
                 // zone util
                 { "util_zone_syntax", "<color=#ff8c69>Syntax: /zone util <location></color>" },
                 { "util_zone_location", "<color=#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.</color>" },
+
+                // spotting
+                { "spotted", "<color=#b9ffaa>SPOTTED</color>" },
+
+                // vehicle types
+                { "humvee", "Humvee" },
+                { "transport", "Transport Truck" },
+                { "logistics", "Logistics Truck" },
+                { "scout_car", "Scout Car" },
+                { "apc", "APC" },
+                { "ifv", "IFV" },
+                { "mbt", "Main Battle Tank" },
+                { "heli_transport", "Transport heli" },
+                { "heli_attack", "Attack Heli" },
+                { "jet", "Jet" },
+                { "emplacement", "Emplacement" },
             };
         }
 
@@ -1303,7 +1320,7 @@ namespace Uncreated.Warfare
             { "insurgency_cache_discovered_color", "555bcf" },
 
             // Team Colors
-            { "team_1_color", "78b2ff " },
+            { "team_1_color", "78b2ff" },
             { "team_2_color", "ffcd8c" },
             { "team_3_color", "0099ff" },
             { "neutral_color", "c2c2c2" },

@@ -279,6 +279,7 @@ namespace Uncreated.Warfare
                 if (!UCWarfare.Config.Patches.explodeInteractableVehicle) return true;
                 if (!__instance.asset.ShouldExplosionCauseDamage) return true;
                 CSteamID instigator = CSteamID.Nil;
+
                 if (__instance.gameObject.TryGetComponent(out VehicleComponent vc))
                 {
                     instigator = vc.Vehicle.lockedOwner;

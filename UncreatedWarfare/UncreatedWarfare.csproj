@@ -75,7 +75,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Net.Http" />
     <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\UncreatedNetworking\bin\Debug\net48\UncreatedNetworking.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Libraries\UncreatedNetworking.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.dll</HintPath>

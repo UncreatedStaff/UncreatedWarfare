@@ -127,19 +127,31 @@ namespace Uncreated.Warfare.Components
 #endif
             float minAngle = 10;
 
-            foreach (InteractableVehicle v in VehicleManager.vehicles)
+            if (Physics.Raycast(new Ray(projectile.transform.position, projectile.transform.up), out var hit, aquisitionRange, RayMasks.VEHICLE))
             {
-                if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead)
+                if (hit.transform != null && hit.transform.TryGetComponent(out InteractableVehicle v))
                 {
-                    if ((v.transform.position - aim.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
+                    vehicleLockedOn = v;
+                    SetVehicleData(v);
+                }
+            }
+
+            if (vehicleLockedOn == null)
+            {   
+                foreach (InteractableVehicle v in VehicleManager.vehicles)
+                {
+                    if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead)
                     {
-                        float angleBetween = Vector3.Angle(v.transform.position - lookOrigin.position, lookOrigin.forward);
-                        if (angleBetween < minAngle)
+                        if ((v.transform.position - aim.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
                         {
-                            minAngle = angleBetween;
-                            maxTurnDegrees *= Mathf.Clamp(1 - angleBetween / 10, 0.2F, 1);
-                            vehicleLockedOn = v;
-                            SetVehicleData(v);
+                            float angleBetween = Vector3.Angle(v.transform.position - lookOrigin.position, lookOrigin.forward);
+                            if (angleBetween < minAngle)
+                            {
+                                minAngle = angleBetween;
+                                maxTurnDegrees *= Mathf.Clamp(1 - angleBetween / 10, 0.2F, 1);
+                                vehicleLockedOn = v;
+                                SetVehicleData(v);
+                            }
                         }
                     }
                 }

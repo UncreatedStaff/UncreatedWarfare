@@ -1399,6 +1399,7 @@ namespace Uncreated.Warfare.Vehicles
         public Guid[] TOWMissileWeapons;
         public Guid[] GroundAAWeapons;
         public Guid[] AirAAWeapons;
+        public Guid[] LaserGuidedWeapons;
 
         public override void SetDefaults()
         {
@@ -1417,13 +1418,16 @@ namespace Uncreated.Warfare.Vehicles
             {
                 new Guid("58b18a3fa1104ca58a7bdebef3ab6b29"), // stinger
                 new Guid("5ae39e59d299415d8c4d08b233206302"), // igla
-
             };
             AirAAWeapons = new Guid[]
             {
                 new Guid("661a347f5e56406e85510a1b427bc4d6"), // F-15 AA
                 new Guid("ad70852b3d31401b9001a13d64a13f78"), // Su-34 AA
-
+            };
+            LaserGuidedWeapons = new Guid[]
+            {
+                new Guid("433ea5249699420eb7adb67791a98134"), // F-15 Laser Guided
+                new Guid("3754ca2527ee40e2ad0951c8930efb07"), // Su-34 Laser Guided
             };
         }
     }

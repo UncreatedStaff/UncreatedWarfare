@@ -248,7 +248,7 @@ namespace Uncreated.Warfare
                         foreach (SteamPlayer client in Provider.clients)
                         {
                             if (player.Squad.Members.Exists(x => x.Steam64 == client.playerID.steamID.m_SteamID))
-                                ChatManager.serverSendMessage("[S] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                                ChatManager.serverSendMessage("[SQ] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                             else if (client.player != null && (client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)
                                 ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                         }
@@ -422,17 +422,6 @@ namespace Uncreated.Warfare
                                 else if (drop.model.TryGetComponent(out FOBComponent radio))
                                     radio.parent.Repair(builder);
                             }
-                        }
-                    }
-                }
-
-                if (weaponAsset.GUID == new Guid("3879d9014aca4a17b3ed749cf7a9283e"))
-                {
-                    if (Physics.Raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), out var hit, 700))
-                    {
-                        if (hit.transform != null)
-                        {
-                            SpottedComponent.MarkTarget(hit.transform);
                         }
                     }
                 }

@@ -91,6 +91,12 @@ namespace Uncreated.Warfare.Tickets
                         Points.XPConfig.KillAssistXP,
                         Translation.Translate("xp_kill_assist", parameters.killer));
                 }
+
+                if (parameters.dead.TryGetComponent(out SpottedComponent spotted))
+                {
+                    spotted.OnTargetKilled(Points.XPConfig.EnemyKilledXP);
+                }
+
                 component.ResetAttackers();
             }
 
@@ -111,8 +117,12 @@ namespace Uncreated.Warfare.Tickets
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+
+            var spotted = vehicle.transform.GetComponent<SpottedComponent>();
+
             if (vehicle.gameObject.TryGetComponent(out FOBs.BuiltBuildableComponent comp))
                 UnityEngine.Object.Destroy(comp);
+
             if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
             {
                 ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
@@ -200,10 +210,12 @@ namespace Uncreated.Warfare.Tickets
                                     reason = "suicide " + v.vehicleName;
                             }
 
+                            float distance = (player.Position - vehicle.transform.position).magnitude;
+
                             if (reason == "")
                                 Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
                             else
-                                Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason);
+                                Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason, distance.ToString());
 
                             ActionLog.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
                                                                              $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
@@ -226,6 +238,12 @@ namespace Uncreated.Warfare.Tickets
                                         {
                                             Points.AwardXP(attacker, reward, Translation.Translate("xp_" + message, player));
                                             Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
+
+                                            if (spotted != null)
+                                            {
+                                                spotted.OnTargetKilled(reward);
+                                                UnityEngine.Object.Destroy(spotted);
+                                            }
                                         }
                                         else if (responsibleness > 0.1F)
                                             Points.AwardXP(attacker, reward, Translation.Translate("xp_vehicle_assist", attacker));
@@ -297,6 +315,9 @@ namespace Uncreated.Warfare.Tickets
                     }
                 }
             }
+
+            if (spotted != null)
+                UnityEngine.Object.Destroy(spotted);
         }
         public static void OnRoundWin(ulong team)
         {

@@ -28,11 +28,9 @@ namespace Uncreated.Warfare.Components
 
         private DateTime start;
 
-        private InteractableVehicle? vehicleLockedOn;
+        private SpottedComponent? laserTarget;
 
-        private VehicleData? vehicleLockedOnData;
-
-        bool lockedOnToVehicle { get => vehicleLockedOn != null; }
+        public bool LockedOn { get => laserTarget != null; }
 
         bool armed;
 
@@ -56,10 +54,9 @@ namespace Uncreated.Warfare.Components
 
             start = DateTime.Now;
 
-            guiderDistance = 30;
             isActive = false;
 
-            vehicleLockedOn = null;
+            laserTarget = null;
 
             if (projectile.TryGetComponent(out rigidbody))
             {
@@ -73,7 +70,8 @@ namespace Uncreated.Warfare.Components
                             aim = turret.turretAim;
                             isActive = true;
 
-                            projectile.transform.forward = aim.forward;
+                            projectile.transform.forward = Quaternion.AngleAxis(-30, aim.up - aim.right) * aim.forward;
+
                             rigidbody.velocity = projectile.transform.forward * projectileSpeed;
 
                             colliders = projectile.GetComponents<BoxCollider>().ToList();
@@ -85,52 +83,49 @@ namespace Uncreated.Warfare.Components
                     L.LogDebug("LASER GUIDED MISSILE ERROR: player firing not found");
                 }
                 else
+                {
+                    aim = firer.look.aim.transform;
+                    isActive = true;
+                    projectile.transform.forward = aim.forward;
+                    rigidbody.velocity = projectile.transform.forward * projectileSpeed;
+                    colliders = projectile.GetComponents<BoxCollider>().ToList();
+                    colliders.ForEach(c => c.enabled = false);
                     L.LogDebug("LASER GUIDED MISSILE ERROR: player was not in a vehicle");
+                }
             }
             else
                 L.LogDebug("LASER GUIDED MISSILE ERROR: could not find rigidbody");
         }
 
-        private void TryAcquireTarget(Transform lookOrigin, float range)
+        private bool TryAcquireTarget(Transform lookOrigin, float range)
         {
+            if (laserTarget != null)
+                return true;
+
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            vehicleLockedOn = null;
+            float minAngle = 3;
 
-            float minAngle = 5;
-
-            foreach (InteractableVehicle v in VehicleManager.vehicles)
+            foreach (var spotted in SpottedComponent.ActiveMarkers)
             {
-                if ((v.asset.engine == EEngine.CAR || v.asset.engine == EEngine.BOAT) && !v.isDead && v.anySeatsOccupied)
+                if (spotted.CurrentSpotter!.GetTeam() == firer.quests.groupID.m_SteamID && !(spotted.Type == SpottedComponent.ESpotted.AIRCRAFT || spotted.Type == SpottedComponent.ESpotted.INFANTRY))
                 {
-                    if ((v.transform.position - aim.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
+                    if ((spotted.transform.position - aim.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
                     {
-                        float angleBetween = Vector3.Angle(v.transform.position - lookOrigin.position, lookOrigin.forward);
+                        float angleBetween = Vector3.Angle(spotted.transform.position - lookOrigin.position, lookOrigin.forward);
                         if (angleBetween < minAngle)
                         {
                             minAngle = angleBetween;
-                            vehicleLockedOn = v;
-                            //SetVehicleData(v);
+                            laserTarget = spotted;
                         }
                     }
                 }
             }
+
+            return laserTarget != null;
         }
-        private void SetVehicleData(InteractableVehicle vehicle)
-        {
-            if (vehicle.transform.TryGetComponent(out VehicleComponent vehicleComponent))
-            {
-                vehicleLockedOnData = vehicleComponent.Data;
-            }
-            else
-            {
-                var vc = vehicle.transform.gameObject.AddComponent<VehicleComponent>();
-                vc.Initialize(vehicle);
-                vehicleLockedOnData = vc.Data;
-            }
-        }
-        int count = 0;
+        
         private void FixedUpdate()
         {
             if (isActive)
@@ -138,6 +133,8 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+                int count = 0;
+
                 guiderDistance += Time.fixedDeltaTime * projectileSpeed;
 
                 if (guiderDistance > 30 + armingDistance && !armed)
@@ -146,23 +143,17 @@ namespace Uncreated.Warfare.Components
                     armed = true;
                 }
 
-                ushort id = 26036;
+                ushort id = 26044;
                 if (count % 10 == 0 && armed)
-                    id = 26037;
+                    id = 26045;
 
                 if ((DateTime.Now - start).TotalSeconds > guidanceDelay)
                 {
                     Vector3 target = aim.TransformPoint(new Vector3(0, 0, guiderDistance));
 
-                    TryAcquireTarget(aim, aquisitionRange);
-
-                    if (lockedOnToVehicle)
+                    if (TryAcquireTarget(aim, aquisitionRange))
                     {
-                        var center = vehicleLockedOn.transform.Find("Center");
-                        if (center != null)
-                            target = center.position;
-                        else
-                            target = vehicleLockedOn.transform.position;
+                        target = laserTarget!.transform.position;
                     }
 
                     Vector3 idealDirection = target - projectile.transform.position;
