@@ -49,13 +49,13 @@ public class KitCommand : IRocketCommand
             {
                 int c = 0;
                 StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < singleton.Kits.Count; ++i)
+                foreach (KeyValuePair<int, Kit> v in singleton.Kits)
                 {
-                    if (singleton.Kits[i].GetDisplayName().IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) != -1)
+                    if (v.Value.GetDisplayName().IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) != -1)
                     {
                         if (c != 0)
                             sb.Append(", ");
-                        sb.Append(singleton.Kits[i].Name);
+                        sb.Append(v.Value.Name);
                         if (++c > 8) break;
                     }
                 }

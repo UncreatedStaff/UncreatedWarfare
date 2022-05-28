@@ -32,6 +32,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected override void OnReady()
     {
         LoadAllFlags();
+        LoadRotation();
         base.OnReady();
     }
     protected override void EventLoopAction()
