@@ -786,6 +786,7 @@ partial class JSONMethods
             { "xp_kill_assist", "ASSIST" },
             { "xp_vehicle_assist", "VEHICLE ASSIST" },
             { "xp_driver_assist", "DRIVER ASSIST" },
+            { "xp_spotted_assist", "SPOTTER" },
             { "xp_friendly_killed", "TEAMKILLED" },
             { "xp_fob_killed", "FOB DESTROYED" },
             { "xp_fob_teamkilled", "FRIENDLY FOB DESTROYED" },
