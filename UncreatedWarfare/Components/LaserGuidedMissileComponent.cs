@@ -145,13 +145,9 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                
-
                 guiderDistance += Time.fixedDeltaTime * projectileSpeed;
 
                 turnMultiplier = Mathf.Clamp(turnMultiplier + Time.fixedDeltaTime / fullGuidanceDelay, 0, 1);
-
-                L.Log(turnMultiplier.ToString());
 
                 if (guiderDistance > 30 + armingDistance && !armed)
                 {
