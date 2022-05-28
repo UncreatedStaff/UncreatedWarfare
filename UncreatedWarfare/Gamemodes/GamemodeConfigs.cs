@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Gamemodes;
 
@@ -10,7 +11,16 @@ public sealed class GamemodeConfig : Config<GamemodeConfigData>
     public GamemodeConfig() : base(Warfare.Data.DATA_DIRECTORY, "gamemode_settings.json", "gameconfig") { }
     protected override void OnReload()
     {
-        // todo
+        UI_CONFIG ui = Data.UI;
+        Squads.SquadManager.ListUI.LoadFromConfig(ui.SquadListGUID);
+        Squads.SquadManager.MenuUI.LoadFromConfig(ui.SquadMenuGUID);
+        Squads.SquadManager.RallyUI.LoadFromConfig(ui.RallyGUID);
+        Squads.SquadManager.OrderUI.LoadFromConfig(ui.OrderUI);
+        FOBs.FOBManager.ListUI.LoadFromConfig(ui.FOBListGUID);
+        FOBs.FOBManager.ResourceUI.LoadFromConfig(ui.NearbyResourcesGUID);
+        CTFUI.ListUI.LoadFromConfig(ui.FlagListGUID);
+        CTFUI.CaptureUI.LoadFromConfig(ui.CaptureGUID);
+        Teams.JoinManager.JoinUI.LoadFromConfig(ui.JoinUIGUID);
     }
 }
 [JsonSerializable(typeof(GamemodeConfigData))]
@@ -115,19 +125,18 @@ public class GENERAL_GM_CONFIG
 [JsonSerializable(typeof(UI_CONFIG))]
 public class UI_CONFIG
 {
-    public Guid CaptureGUID;
-    public Guid FlagListGUID;
-    public Guid HeaderGUID;
-    public Guid FOBListGUID;
-    public Guid SquadListGUID;
-    public Guid SquadMenuGUID;
-    public Guid RallyGUID;
-    public Guid OrderUI;
+    public JsonAssetReference<EffectAsset> CaptureGUID;
+    public JsonAssetReference<EffectAsset> FlagListGUID;
+    public JsonAssetReference<EffectAsset> HeaderGUID;
+    public JsonAssetReference<EffectAsset> FOBListGUID;
+    public JsonAssetReference<EffectAsset> SquadListGUID;
+    public JsonAssetReference<EffectAsset> SquadMenuGUID;
+    public JsonAssetReference<EffectAsset> RallyGUID;
+    public JsonAssetReference<EffectAsset> OrderUI;
     public Guid XPGUID;
     public Guid OfficerGUID;
-    public Guid CTFLeaderboardGUID;
-    public Guid InsurgencyLeaderboardGUID;
-    public Guid NearbyResourcesGUID;
+    public JsonAssetReference<EffectAsset> CTFLeaderboardGUID;
+    public JsonAssetReference<EffectAsset> NearbyResourcesGUID;
     public Guid MarkerAmmo;
     public Guid MarkerRepair;
     public Guid MarkerRadio;
@@ -136,7 +145,7 @@ public class UI_CONFIG
     public Guid MarkerCacheAttack;
     public Guid MarkerCacheDefend;
     public Guid MarkerBuildable;
-    public Guid JoinUIGUID;
+    public JsonAssetReference<EffectAsset> JoinUIGUID;
     public Guid WinToastGUID;
     public int FlagUICount;
     public int MaxSquadMembers;
@@ -150,28 +159,27 @@ public class UI_CONFIG
     public char LockIcon;
     public void SetDefaults()
     {
-        CaptureGUID = new Guid("76a9ffb4-659a-4940-80d9-8c8ef7733815");
-        FlagListGUID = new Guid("c01fe46d-9b79-4364-aca6-a3887a028164");
-        HeaderGUID = new Guid("c14fe9ff-ee6d-4f8d-be7f-57885f678edd");
-        FOBListGUID = new Guid("2c01a369-43ea-4518-9d86-6f5463f8e5e9");
-        SquadListGUID = new Guid("5acd091f-1e7b-4f93-ac9f-5431729ac5cc");
-        SquadMenuGUID = new Guid("98154002-fbcd-4b74-9955-2d6497db8fc5");
-        RallyGUID = new Guid("a280ac3f-e8c1-486c-adc8-eca331e8ce32");
-        OrderUI = new Guid("57a08eb9c4cb4fd2ad30a3e413e29b27");
-        XPGUID = new Guid("d6de0a80-25de-44d2-9a99-a41937a58a59");
-        OfficerGUID = new Guid("9fd31b77-6b74-4b72-847f-2dc00dba93a8");
-        CTFLeaderboardGUID = new Guid("b83389df-1245-438d-b188-89af94f04960");
-        InsurgencyLeaderboardGUID = new Guid("fd44278117b14ce6939af354ce7f37b4");
-        NearbyResourcesGUID = new Guid("3775a1e7-d84b-47e7-9cac-ecd5e6b2a224");
-        MarkerAmmo = new Guid("827b0c00724b466d8d33633fe2a7743a");
+        CaptureGUID =           "76a9ffb4659a494080d98c8ef7733815";
+        FlagListGUID =          "c01fe46d9b794364aca6a3887a028164";
+        HeaderGUID =            "c14fe9ffee6d4f8dbe7f57885f678edd";
+        FOBListGUID =           "2c01a36943ea45189d866f5463f8e5e9";
+        SquadListGUID =         "5acd091f1e7b4f93ac9f5431729ac5cc";
+        SquadMenuGUID =         "98154002fbcd4b7499552d6497db8fc5";
+        RallyGUID =             "a280ac3fe8c1486cadc8eca331e8ce32";
+        OrderUI =               "57a08eb9c4cb4fd2ad30a3e413e29b27";
+        JoinUIGUID =            "0ce74ee0a7534851838e967ed4ea4c5e";
+        XPGUID =       new Guid("d6de0a8025de44d29a99a41937a58a59");
+        OfficerGUID =  new Guid("9fd31b776b744b72847f2dc00dba93a8");
+        CTFLeaderboardGUID =    "b83389df1245438db18889af94f04960";
+        NearbyResourcesGUID =   "3775a1e7d84b47e79cacecd5e6b2a224";
+        MarkerAmmo =   new Guid("827b0c00724b466d8d33633fe2a7743a");
         MarkerRepair = new Guid("bcfda6fb871f42cd88597c8ac5f7c424");
-        MarkerRadio = new Guid("bc6f0e7d5d9340f39ca4968bc3f7a132");
+        MarkerRadio =  new Guid("bc6f0e7d5d9340f39ca4968bc3f7a132");
         MarkerRadioDamaged = new Guid("37d5c48597ea4b61a7a87ed85a4c9b39");
         MarkerBunker = new Guid("d7452e8671c14e93a5e9d69e077d999c");
         MarkerCacheAttack = new Guid("26b60044bc1442eb9d0521bfea306517");
         MarkerCacheDefend = new Guid("06efa2c2f9ec413aa417c717a7be3364");
         MarkerBuildable = new Guid("35ab4b71bfb74755b318ce62935f58c9");
-        JoinUIGUID = new Guid("0ce74ee0a7534851838e967ed4ea4c5e");
         WinToastGUID = new Guid("8ffc84cb14ce482181405ad929ec8307");
         MaxSquadMembers = 6;
         MaxSquads = 8;

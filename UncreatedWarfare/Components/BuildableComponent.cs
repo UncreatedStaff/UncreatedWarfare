@@ -38,7 +38,7 @@ namespace Uncreated.Warfare.Components
             SDG.Unturned.BarricadeData data = foundation.GetServersideData();
 
             UCPlayer? placer = UCPlayer.FromID(data.owner);
-            if (placer != null && !(buildable.type == EBuildableType.FORTIFICATION || buildable.type == EBuildableType.AMMO_CRATE))
+            if (placer != null && !(buildable.Type == EBuildableType.FORTIFICATION || buildable.Type == EBuildableType.AMMO_CRATE))
             {
                 foreach (UCPlayer player in PlayerManager.OnlinePlayers.Where(p => p != placer && 
                 p.GetTeam() == data.group && 
@@ -70,7 +70,7 @@ namespace Uncreated.Warfare.Components
 
             if (builder.Player.TryGetPlaytimeComponent(out PlaytimeComponent component))
             {
-                component.QueueMessage(new Players.ToastMessage(Points.GetProgressBar(Hits, Buildable.requiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
+                component.QueueMessage(new Players.ToastMessage(Points.GetProgressBar(Hits, Buildable.RequiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
             }
 
             if (PlayerHits.ContainsKey(builder.Steam64))
@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Components
             else
                 PlayerHits.Add(builder.Steam64, amount);
 
-            if (Hits >= Buildable.requiredHits)
+            if (Hits >= Buildable.RequiredHits)
             {
                 Build();
             }
@@ -92,21 +92,21 @@ namespace Uncreated.Warfare.Components
 
             string structureName;
 
-            if (Buildable.type != EBuildableType.EMPLACEMENT)
+            if (Buildable.Type != EBuildableType.EMPLACEMENT)
             {
-                Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Buildable.structureID));
+                Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Buildable.BuildableBarricade));
                 Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
                 BarricadeDrop structure = BarricadeManager.FindBarricadeByRootTransform(transform);
 
                 BuiltBuildableComponent comp = transform.gameObject.AddComponent<BuiltBuildableComponent>();
                 comp.Initialize(structure, Buildable, PlayerHits);
 
-                if (Assets.find(Buildable.foundationID) is ItemAsset asset)
+                if (Assets.find(Buildable.Foundation) is ItemAsset asset)
                     structureName = asset.itemName;
                 else
-                    structureName = Buildable.foundationID.ToString("N");
+                    structureName = Buildable.Foundation.ToString();
 
-                if (Buildable.type == EBuildableType.FOB_BUNKER)
+                if (Buildable.Type == EBuildableType.FOB_BUNKER)
                 {
                     FOB? fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
                     if (fob != null)
@@ -125,19 +125,19 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                ItemAsset? ammoasset = Buildable.emplacementData == null ? null : Assets.find<ItemAsset>(Buildable.emplacementData.ammoID);
+                ItemAsset? ammoasset = Buildable.Emplacement == null ? null : Assets.find<ItemAsset>(Buildable.Emplacement.Ammo);
 
-                if (Buildable.emplacementData == null || Assets.find(Buildable.emplacementData.vehicleID) is not VehicleAsset vehicleasset)
+                if (Buildable.Emplacement == null || Assets.find(Buildable.Emplacement.EmplacementVehicle) is not VehicleAsset vehicleasset)
                 {
-                    L.LogError($"Emplacement {(Buildable.emplacementData == null ? "null" : Assets.find(Buildable.emplacementData.vehicleID)?.name?.Replace("_Base", "") ?? Buildable.emplacementData.vehicleID.ToString("N"))}'s vehicle id is not a valid vehicle.");
+                    L.LogError($"Emplacement {(Buildable.Emplacement == null ? "null" : Assets.find(Buildable.Emplacement.EmplacementVehicle)?.name?.Replace("_Base", "") ?? Buildable.Emplacement.EmplacementVehicle.ToString())}'s vehicle id is not a valid vehicle.");
                     return;
                 }
 
                 if (ammoasset != null)
-                    for (int i = 0; i < Buildable.emplacementData.ammoAmount; i++)
+                    for (int i = 0; i < Buildable.Emplacement.AmmoCount; i++)
                         ItemManager.dropItem(new Item(ammoasset.id, true), data.point, true, true, true);
                 else
-                    L.LogWarning($"Emplacement {Assets.find(Buildable.structureID)?.name ?? Buildable.structureID.ToString("N")}'s ammo id is not a valid item.");
+                    L.LogWarning($"Emplacement {Assets.find(Buildable.BuildableBarricade)?.name ?? Buildable.BuildableBarricade.ToString()}'s ammo id is not a valid item.");
 
                 Quaternion rotation = Foundation.model.rotation;
                 rotation.eulerAngles = new Vector3(rotation.eulerAngles.x + 90, rotation.eulerAngles.y, rotation.eulerAngles.z);
@@ -157,9 +157,9 @@ namespace Uncreated.Warfare.Components
                     VehicleManager.ReceiveVehicleLockState(vehicle.instanceID, owner, group, true);
                 }
 
-                if (Buildable.emplacementData.baseID != Guid.Empty)
+                if (Buildable.Emplacement.BaseBarricade != Guid.Empty)
                 {
-                    if (Assets.find(Buildable.emplacementData.baseID) is not ItemBarricadeAsset emplacementBase)
+                    if (Assets.find(Buildable.Emplacement.BaseBarricade) is not ItemBarricadeAsset emplacementBase)
                     {
                         L.LogWarning($"Emplacement base was not a valid barricade.");
                     }
@@ -177,12 +177,12 @@ namespace Uncreated.Warfare.Components
             {
                 UCPlayer? player = UCPlayer.FromID(entry.Key);
 
-                float contribution = (float)entry.Value / Buildable.requiredHits;
+                float contribution = (float)entry.Value / Buildable.RequiredHits;
 
                 if (contribution >= 0.1F && player != null)
                 {
                     int amount = 0;
-                    if (Buildable.type == EBuildableType.FOB_BUNKER)
+                    if (Buildable.Type == EBuildableType.FOB_BUNKER)
                         amount = Mathf.RoundToInt(contribution * Points.XPConfig.BuiltFOBXP);
                     else
                         amount = entry.Value * Points.XPConfig.ShovelXP;
@@ -209,7 +209,7 @@ namespace Uncreated.Warfare.Components
                 FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
                 if (fob is not null)
                 {
-                    fob.AddBuild(Buildable.requiredBuild);
+                    fob.AddBuild(Buildable.RequiredBuild);
                 }
             }
 
@@ -221,18 +221,18 @@ namespace Uncreated.Warfare.Components
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             ulong team = placer.GetTeam();
-            float radius = FOBManager.config.Data.FOBBuildPickupRadius;
+            float radius = FOBManager.Config.FOBBuildPickupRadius;
 
-            if (FOBManager.config.Data.RestrictFOBPlacement)
+            if (FOBManager.Config.RestrictFOBPlacement)
             {
                 if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                 {
                     placer?.Message("no_placement_fobs_underwater");
                     return false;
                 }
-                else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.config.Data.FOBMaxHeightAboveTerrain)
+                else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.Config.FOBMaxHeightAboveTerrain)
                 {
-                    placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                    placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.Config.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
                     return false;
                 }
                 else if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(point))
@@ -241,7 +241,7 @@ namespace Uncreated.Warfare.Components
                     return false;
                 }
             }
-            if (FOB.GetFOBs(team).Count >= FOBManager.config.Data.FobLimit)
+            if (FOB.GetFOBs(team).Count >= FOBManager.Config.FobLimit)
             {
                 // fob limit reached
                 placer?.Message("build_error_too_many_fobs");
@@ -281,18 +281,18 @@ namespace Uncreated.Warfare.Components
 
             FOB? fob = FOB.GetNearestFOB(point, EFOBRadius.FULL, team);
 
-            if (buildable.type == EBuildableType.FOB_BUNKER)
+            if (buildable.Type == EBuildableType.FOB_BUNKER)
             {
-                if (FOBManager.config.Data.RestrictFOBPlacement)
+                if (FOBManager.Config.RestrictFOBPlacement)
                 {
                     if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                     {
                         placer?.Message("no_placement_fobs_underwater");
                         return false;
                     }
-                    else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.config.Data.FOBMaxHeightAboveTerrain)
+                    else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.Config.FOBMaxHeightAboveTerrain)
                     {
-                        placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.config.Data.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                        placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.Config.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
                         return false;
                     }
                     else if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(point))
@@ -324,7 +324,7 @@ namespace Uncreated.Warfare.Components
                     return false;
                 }
 
-                if (!(placer.KitClass == EClass.COMBAT_ENGINEER && KitManager.KitExists(placer.KitName, out Kit kit) && kit.Items.Exists(i => i.id == buildable.foundationID)))
+                if (!(placer.KitClass == EClass.COMBAT_ENGINEER && KitManager.KitExists(placer.KitName, out Kit kit) && kit.Items.Exists(i => i.id == buildable.Foundation)))
                 {
                     if (fob == null)
                     {
@@ -342,7 +342,7 @@ namespace Uncreated.Warfare.Components
                 if (fob is null)
                     return true;
 
-                if (buildable.type == EBuildableType.REPAIR_STATION)
+                if (buildable.Type == EBuildableType.REPAIR_STATION)
                 {
                     int existing = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, fob.Radius, fob.Position, team, false).Count();
                     if (existing >= 1)
@@ -352,26 +352,26 @@ namespace Uncreated.Warfare.Components
                         return false;
                     }
                 }
-                if (buildable.type == EBuildableType.EMPLACEMENT && buildable.emplacementData != null)
+                if (buildable.Type == EBuildableType.EMPLACEMENT && buildable.Emplacement != null)
                 {
-                    int existing = UCVehicleManager.GetNearbyVehicles(buildable.emplacementData.vehicleID, fob.Radius, fob.Position).Count();
-                    if (existing >= buildable.emplacementData.allowedPerFob)
+                    int existing = UCVehicleManager.GetNearbyVehicles(buildable.Emplacement.EmplacementVehicle, fob.Radius, fob.Position).Count();
+                    if (existing >= buildable.Emplacement.MaxFobCapacity)
                     {
                         // max emplacements of this type reached
-                        placer?.Message("build_error_structureexists", buildable.emplacementData.allowedPerFob.ToString(), foundation.asset.itemName + (buildable.emplacementData.allowedPerFob == 1 ? "" : "s"));
+                        placer?.Message("build_error_structureexists", buildable.Emplacement.MaxFobCapacity.ToString(), foundation.asset.itemName + (buildable.Emplacement.MaxFobCapacity == 1 ? "" : "s"));
                         return false;
                     }
                 }
             }
 
-            if (fob.Build < buildable.requiredBuild)
+            if (fob.Build < buildable.RequiredBuild)
             {
                 // not enough build
-                placer?.Message("build_error_notenoughbuild", fob.Build.ToString(), buildable.requiredBuild.ToString());
+                placer?.Message("build_error_notenoughbuild", fob.Build.ToString(), buildable.RequiredBuild.ToString());
                 return false;
             }
 
-            fob.ReduceBuild(buildable.requiredBuild);
+            fob.ReduceBuild(buildable.RequiredBuild);
 
             return true;
         }

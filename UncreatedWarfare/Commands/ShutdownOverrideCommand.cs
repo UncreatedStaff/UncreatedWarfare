@@ -73,17 +73,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
-                    string time;
-                    foreach (SteamPlayer player in Provider.clients)
-                    {
-                        time = seconds.GetTimeFromSeconds(player.playerID.steamID.m_SteamID);
-                        player.SendChat("shutdown_broadcast_after_time", time, reason);
-                    }
-                    time = seconds.GetTimeFromSeconds(0);
-                    L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
-                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason);
-                    NetCalls.SendShuttingDownInSeconds.NetInvoke(0UL, reason, seconds);
-                    Provider.shutdown(unchecked((int)seconds), reason);
+                    ShutdownIn(seconds, reason);
                 }
                 else
                 {
@@ -155,17 +145,7 @@ namespace Uncreated.Warfare.Commands
                 }
                 else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
                 {
-                    string time;
-                    foreach (SteamPlayer pl in Provider.clients)
-                    {
-                        time = seconds.GetTimeFromSeconds(pl.playerID.steamID.m_SteamID);
-                        pl.SendChat("shutdown_broadcast_after_time", time, reason);
-                    }
-                    time = seconds.GetTimeFromSeconds(0);
-                    L.Log(Translation.Translate("shutdown_broadcast_after_time_console_player", 0, out _, time, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
-                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, player.playerID.steamID.m_SteamID);
-                    NetCalls.SendShuttingDownInSeconds.NetInvoke(0UL, reason, seconds);
-                    Provider.shutdown(unchecked((int)seconds), reason);
+                    ShutdownIn(seconds, reason);
                 }
                 else
                 {
@@ -174,7 +154,20 @@ namespace Uncreated.Warfare.Commands
                 }
             }
         }
-
+        internal static void ShutdownIn(uint seconds, string reason)
+        {
+            string time;
+            foreach (SteamPlayer player in Provider.clients)
+            {
+                time = seconds.GetTimeFromSeconds(player.playerID.steamID.m_SteamID);
+                player.SendChat("shutdown_broadcast_after_time", time, reason);
+            }
+            time = seconds.GetTimeFromSeconds(0);
+            L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
+            ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason);
+            NetCalls.SendShuttingDownInSeconds.NetInvoke(0UL, reason, seconds);
+            Provider.shutdown(checked((int)seconds), reason);
+        }
         internal static void ShutdownInstant(string reason)
         {
             ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason, 0);

@@ -4,138 +4,109 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Vehicles;
 
-namespace Uncreated.Warfare.Commands
+namespace Uncreated.Warfare.Commands;
+
+public class ClearCommand : IRocketCommand
 {
-    public class ClearCommand : IRocketCommand
+    private readonly List<string> _permissions = new List<string>(1) { "uc.clear" };
+    private readonly List<string> _aliases = new List<string>(0);
+    public AllowedCaller AllowedCaller => AllowedCaller.Both;
+    public string Name => "clear";
+    public string Help => "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
+    public string Syntax => "/clear <inventory|items|vehicles|structures> [player for inventory]";
+    public List<string> Aliases => _aliases;
+	public List<string> Permissions => _permissions;
+    public void Execute(IRocketPlayer caller, string[] command)
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Both;
-        public string Name => "clear";
-        public string Help => "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
-        public string Syntax => "/clear <inventory|items|vehicles|structures> [player for inventory]";
-        private readonly List<string> _aliases = new List<string>(0);
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>(1) { "uc.clear" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] command)
-        {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-            bool isConsole = player == null;
-            if (command.Length < 1)
+        CommandContext ctx = new CommandContext(caller, command);
+        if (!ctx.HasArgs(1))
+        {
+            ctx.SendCorrectUsage(Syntax);
+            return;
+        }
+
+        if (ctx.MatchParameter(0, "help"))
+        {
+            ctx.SendCorrectUsage(Syntax + " - " + Help);
+            return;
+        }
+
+        if (ctx.MatchParameter(0, "inventory", "inv"))
+        {
+            if (ctx.TryGet(1, out _, out UCPlayer? pl) || ctx.HasArgs(2))
             {
-                if (isConsole) L.LogError(Translation.Translate("clear_not_enough_args", 0, out _));
-                else player!.SendChat("clear_not_enough_args");
-                return;
-            }
-            string operation = command[0].ToLower();
-            if (operation == "inv" || operation == "inventory")
-            {
-                if (command.Length == 1)
+                if (pl is not null)
                 {
-                    if (isConsole)
-                    {
-                        if (isConsole) L.LogError(Translation.Translate("clear_inventory_console_identity", 0, out _));
-                        else player!.SendChat("clear_inventory_console_identity");
-                        return;
-                    }
-                    else
-                    {
-                        Kits.UCInventoryManager.ClearInventory(player!);
-                        if (isConsole) L.LogError(Translation.Translate("clear_inventory_self", 0, out _));
-                        else player!.SendChat("clear_inventory_self");
-                        ActionLog.Add(EActionLogType.CLEAR_INVENTORY, "CLEARED PERSONAL INVENTORY", player!);
-                    }
+                    Kits.UCInventoryManager.ClearInventory(pl);
+                    ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.Locale));
+                    FPlayerName names = F.GetPlayerOriginalNames(pl);
+                    ctx.Reply("clear_inventory_others", ctx.IsConsole ? names.PlayerName : names.CharacterName);
                 }
                 else
                 {
-                    StringBuilder name = new StringBuilder();
-                    for (int i = 1; i < command.Length; i++)
-                        name.Append((i == 1 ? '\0' : ' ') + command[i]);
-                    string n = name.ToString();
-                    if (PlayerTool.tryGetSteamPlayer(n, out SteamPlayer splayer))
-                    {
-                        Kits.UCInventoryManager.ClearInventory(splayer);
-                        n = isConsole ? F.GetPlayerOriginalNames(splayer).PlayerName : F.GetPlayerOriginalNames(splayer).CharacterName;
-                        if (isConsole) L.LogError(Translation.Translate("clear_inventory_others", 0, out _, n));
-                        else player!.SendChat("clear_inventory_others", n);
-                        ActionLog.Add(EActionLogType.CLEAR_INVENTORY, "CLEARED INVENTORY OF " + splayer.playerID.steamID.m_SteamID.ToString(Data.Locale), isConsole ? 0ul : player!);
-                    }
-                    else
-                    {
-                        if (isConsole) L.LogError(Translation.Translate("clear_inventory_player_not_found", 0, out _, n));
-                        else player!.SendChat("clear_inventory_player_not_found", n);
-                    }
+                    ctx.Reply("clear_inventory_player_not_found");
                 }
             }
-            else if (operation == "i" || operation == "items" || operation == "item")
+            else if (ctx.IsConsole)
             {
-                ClearItems();
-                if (isConsole) L.LogError(Translation.Translate("clear_items_cleared", 0, out _));
-                else player!.SendChat("clear_items_cleared");
-                ActionLog.Add(EActionLogType.CLEAR_ITEMS, null, isConsole ? 0ul : player!);
-            }
-            else if (operation == "v" || operation == "vehicles" || operation == "vehicle")
-            {
-                WipeVehiclesAndRespawn();
-                if (isConsole) L.LogError(Translation.Translate("clear_vehicles_cleared", 0, out _));
-                else player!.SendChat("clear_vehicles_cleared");
-                ActionLog.Add(EActionLogType.CLEAR_VEHICLES, null, isConsole ? 0ul : player!);
-            }
-            else if (operation == "s" || operation == "b" || operation == "structures" || operation == "structure" ||
-                operation == "struct" || operation == "barricades" || operation == "barricade")
-            {
-                Data.Gamemode.ReplaceBarricadesAndStructures();
-                if (isConsole) L.LogError(Translation.Translate("clear_structures_cleared", 0, out _));
-                else player!.SendChat("clear_structures_cleared");
-                ActionLog.Add(EActionLogType.CLEAR_STRUCTURES, null, isConsole ? 0ul : player!);
+                ctx.Reply("clear_inventory_console_identity");
             }
             else
             {
-                if (isConsole) L.LogError(Translation.Translate("correct_usage", 0, out _, Syntax));
-                else player!.SendChat("correct_usage", Syntax);
-                return;
+                Kits.UCInventoryManager.ClearInventory(ctx.Caller!);
+                ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED PERSONAL INVENTORY");
+                ctx.Reply("clear_inventory_self");
             }
         }
-        public static void WipeVehiclesAndRespawn()
+        else if (ctx.MatchParameter(0, "items", "item", "i"))
         {
-            if (Data.Is(out IVehicles ctf))
-            {
-                List<Vehicles.VehicleSpawn> spawnsToReset = new List<Vehicles.VehicleSpawn>();
-                for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
-                {
-                    if (VehicleSpawner.ActiveObjects[i].HasLinkedVehicle(out InteractableVehicle veh))
-                    {
-                        VehicleBarricadeRegion reg = BarricadeManager.findRegionFromVehicle(veh);
-                        for (int s = 0; s < reg.drops.Count; s++)
-                        {
-                            if (reg.drops[s].interactable is InteractableStorage storage)
-                            {
-                                storage.despawnWhenDestroyed = true;
-                            }
-                        }
-                        spawnsToReset.Add(VehicleSpawner.ActiveObjects[i]);
-                    }
-
-                }
-                VehicleBay.DeleteAllVehiclesFromWorld();
-                for (int i = 0; i < spawnsToReset.Count; i++)
-                    spawnsToReset[i].SpawnVehicle();
-            } 
-            else
-            {
-                VehicleBay.DeleteAllVehiclesFromWorld();
-                VehicleManager.askVehicleDestroyAll();
-            }
+            ClearItems();
+            ctx.LogAction(EActionLogType.CLEAR_ITEMS);
+            ctx.Reply("clear_items_cleared");
         }
-        public static void ClearItems()
+        else if (ctx.MatchParameter(0, "vehicles", "vehicle", "v"))
         {
-            EventFunctions.itemstemp.Clear();
-            ItemManager.askClearAllItems();
+            WipeVehiclesAndRespawn();
+            ctx.LogAction(EActionLogType.CLEAR_VEHICLES);
+            ctx.Reply("clear_vehicles_cleared");
         }
+        else if (ctx.MatchParameter(0, "structures", "structure", "struct") ||
+                 ctx.MatchParameter(0, "barricades", "barricade", "b") || ctx.MatchParameter(0, "s"))
+        {
+            Data.Gamemode.ReplaceBarricadesAndStructures();
+            ctx.LogAction(EActionLogType.CLEAR_STRUCTURES);
+            ctx.Reply("clear_structures_cleared");
+        }
+        else
+            ctx.SendCorrectUsage(Syntax);
+    }
+    public static void WipeVehicles()
+    {
+        if (VehicleSpawner.Loaded)
+        {
+            VehicleBay.DeleteAllVehiclesFromWorld();
+        } 
+        else
+        {
+            VehicleManager.askVehicleDestroyAll();
+        }
+    }
+    public static void WipeVehiclesAndRespawn()
+    {
+        WipeVehicles();
+        if (VehicleSpawner.Loaded)
+            VehicleSpawner.RespawnAllVehicles();
+    }
+    public static void ClearItems()
+    {
+        EventFunctions.itemstemp.Clear();
+        ItemManager.askClearAllItems();
     }
 }

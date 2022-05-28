@@ -264,41 +264,6 @@ namespace Uncreated.Warfare.Commands
 
                     player.Player.Message($"Saved/Updated {barricadesInMain.Count} barricades in main.".Colorize("ebd0ab"));
                 }
-                else if (action == "removemain" || action == "rm")
-                {
-                    for (int i = RequestSigns.ActiveObjects.Count - 1; i >= 0; i--)
-                    {
-                        RequestSign sign = RequestSigns.ActiveObjects[i];
-                        if (!TeamManager.IsInAnyMain(sign.transform.position.Vector3))
-                        {
-                            RequestSigns.RemoveRequestSign(sign);
-                        }
-                    }
-                    for (int i = VehicleSpawner.ActiveObjects.Count - 1; i >= 0; i--)
-                    {
-                        Vehicles.VehicleSpawn spawn = VehicleSpawner.ActiveObjects[i];
-                        if (!TeamManager.IsInAnyMain(spawn.SpawnpadLocation.position.Vector3))
-                        {
-                            VehicleSpawner.DeleteSpawn(spawn.SpawnPadInstanceID, spawn.type);
-                        }
-                    }
-                    for (int i = StructureSaver.ActiveObjects.Count - 1; i >= 0; i--)
-                    {
-                        Structures.Structure structure = StructureSaver.ActiveObjects[i];
-                        if (!TeamManager.IsInAnyMain(structure.transform.position.Vector3))
-                        {
-                            StructureSaver.RemoveStructure(structure);
-                        }
-                    }
-                    List<BarricadeDrop> drops = UCBarricadeManager.GetBarricadesWhere(x => !TeamManager.IsInAnyMain(x.model.transform.position));
-                    for (int i = drops.Count - 1; i >= 0; --i)
-                    {
-                        if (Regions.tryGetCoordinate(drops[i].model.transform.position, out byte x, out byte y))
-                            BarricadeManager.destroyBarricade(drops[i], x, y, ushort.MaxValue);
-                    }
-
-                    player.Player.Message($"Unsaved any barricades outside of main.".Colorize("ebd0ab"));
-                }
             }
         }
         private void DestroyBarricade(BarricadeDrop bdrop, Player player)

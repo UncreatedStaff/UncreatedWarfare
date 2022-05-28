@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.FOBs
             this.data = data;
             this.drop = drop;
             ResuppliedPlayers = new Dictionary<ulong, int>();
-            Ammo = FOBManager.config.Data.AmmoBagMaxUses;
+            Ammo = FOBManager.Config.AmmoBagMaxUses;
         }
         public void ResupplyPlayer(UCPlayer player, Kit kit, int ammoCost)
         {

@@ -1,64 +1,45 @@
 ﻿using System;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Tickets;
 
-namespace Uncreated.Warfare.Gamemodes.Flags
+namespace Uncreated.Warfare.Gamemodes.Flags;
+
+public abstract class TicketGamemode : FlagGamemode, ITickets
 {
-    public abstract class TicketGamemode : FlagGamemode
+    private TicketManager _ticketManager;
+    public TicketManager TicketManager => _ticketManager;
+    protected abstract bool TimeToTicket();
+    protected TicketGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
+    { }
+    protected override void PreInit()
     {
-        public static TicketManager TicketManager;
-        protected abstract bool TimeToTicket();
-        protected TicketGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
-        { }
-        public override void Init()
+        AddSingletonRequirement(ref _ticketManager);
+        base.PreInit();
+    }
+    protected override void PostDispose()
+    {
+        base.PostDispose();
+    }
+    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    {
+        base.PlayerInit(player, wasAlreadyOnline);
+    }
+    protected override void EventLoopAction()
+    {
+        if (TimeToTicket())
+            EvaluateTickets();
+        base.EventLoopAction();
+    }
+    protected virtual void EvaluateTickets()
+    {
+        if (EveryXSeconds(20))
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            base.Init();
-            TicketManager = new TicketManager();
+            TicketManager.OnFlag20Seconds();
         }
-        protected override void EventLoopAction()
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (TimeToTicket())
-                EvaluateTickets();
-            base.EventLoopAction();
-        }
-        protected virtual void EvaluateTickets()
-        {
-            if (EveryXSeconds(20))
-            {
-#if DEBUG
-                using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-                TicketManager.OnFlag20Seconds();
-            }
-        }
-        public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            TicketManager.OnGroupChanged(player.Player.channel.owner, oldteam, newteam);
-            base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
-        }
-        public override void OnPlayerJoined(UCPlayer player, bool wasAlreadyOnline, bool shouldRespawn)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            TicketManager.OnPlayerJoined(player);
-            base.OnPlayerJoined(player, wasAlreadyOnline, shouldRespawn);
-        }
-        public override void Dispose()
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            TicketManager?.Dispose();
-            base.Dispose();
-        }
+    }
+    public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+    {
+        TicketManager.OnGroupChanged(player.Player.channel.owner, oldteam, newteam);
+        base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
     }
 }

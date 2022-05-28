@@ -11,274 +11,241 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 
-namespace Uncreated.Warfare.Commands
-{
-    public class AmmoCommand : IRocketCommand
-    {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
-        public string Name => "ammo";
-        public string Help => "resupplies your kit";
-        public string Syntax => "/ammo";
-        private readonly List<string> _aliases = new List<string>(0);
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>(1) { "uc.ammo" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] command)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-            if (player == null) return;
+namespace Uncreated.Warfare.Commands;
 
-            if (!Data.Is(out IKitRequests ctf))
+public class AmmoCommand : IRocketCommand
+{
+    public AllowedCaller AllowedCaller => AllowedCaller.Player;
+    public string Name => "ammo";
+    public string Help => "resupplies your kit";
+    public string Syntax => "/ammo";
+    private readonly List<string> _aliases = new List<string>(0);
+    public List<string> Aliases => _aliases;
+    private readonly List<string> _permissions = new List<string>(1) { "uc.ammo" };
+	public List<string> Permissions => _permissions;
+    public void Execute(IRocketPlayer caller, string[] command)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        CommandContext ctx = new CommandContext(caller, command);
+
+        if (ctx.IsConsole || ctx.Caller is null)
+        {
+            ctx.SendPlayerOnlyError();
+            return;
+        }
+
+        if (!Data.Is(out IKitRequests ctf))
+        {
+            ctx.SendGamemodeError();
+            return;
+        }
+        if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+        {
+            if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
             {
-                player.Message("command_e_gamemode");
+                ctx.Reply("ammo_vehicle_cant_rearm");
                 return;
             }
-            SDG.Unturned.BarricadeData? barricade = UCBarricadeManager.GetBarricadeDataFromLook(player.Player.look, out BarricadeDrop? drop);
-            //InteractableStorage storage = UCBarricadeManager.GetInteractableFromLook<InteractableStorage>(player.Player.look);
-            InteractableVehicle? vehicle = UCBarricadeManager.GetVehicleFromLook(player.Player.look);
-
-
-            if (vehicle != null)
+            if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
             {
-                if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
+                ctx.Reply("ammo_auto_resupply");
+                return;
+            }
+            bool isInMain = F.IsInMain(vehicle.transform.position);
+            if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
+            {
+                BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID,
+                10,
+                vehicle.transform.position,
+                ctx.Caller!.GetTeam(),
+                false).FirstOrDefault();
+
+                if (repairStation == null)
                 {
-                    player.SendChat("ammo_vehicle_cant_rearm");
+                    ctx.Reply("ammo_not_near_repair_station");
                     return;
                 }
-                //if (FOBManager.config.data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO_VEHICLE, out Cooldown cooldown))
-                //{
-                //    player.SendChat("ammo_vehicle_cooldown", cooldown.Timeleft.TotalSeconds.ToString("N0"));
-                //    return;
-                //}
-                if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
-                {
-                    player.SendChat("ammo_auto_resupply");
-                    return;
+            }
+            FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
 
-                    //if (vehicle.TryGetComponent(out VehicleComponent c))
-                    //{
-                    //    c.TryStartAutoLoadSupplies();
-                    //}
 
-                    ////VehicleBay.ResupplyVehicleBarricades(vehicle, vehicleData);
-
-                    ////if (FOBManager.config.data.AmmoCommandCooldown > 0)
-                    ////    CooldownManager.StartCooldown(player, ECooldownType.AMMO_VEHICLE, FOBManager.config.data.AmmoCommandCooldown);
-                    //foreach (Guid item in vehicleData.Items)
-                    //    if (Assets.find(item) is ItemAsset a)
-                    //        ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
-
-                    //player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), vehicleData.RearmCost == 1 ? "" : "ES");
-                }
-
-                bool isInMain = F.IsInMain(vehicle.transform.position);
-
-                if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
-                {
-                    BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID,
-                    10,
-                    vehicle.transform.position,
-                    player.GetTeam(),
-                    false).FirstOrDefault();
-
-                    if (repairStation == null)
-                    {
-                        player.SendChat("ammo_not_near_repair_station");
-                        return;
-                    }
-                }
-
-                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
-                
-
-                if (fob == null)
-                {
-                    if (!isInMain)
-                    {
-                        player.SendChat("ammo_not_near_fob");
-                        return;
-                    }
-                }
-
-                if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
-                {
-                    player.SendChat("ammo_not_enough_stock", fob.Ammo.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
-                    return;
-                }
-                
-                if (vehicleData.Items.Length == 0)
-                {
-                    player.SendChat("ammo_vehicle_full_already");
-                    return;
-                }
-
-                EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
-
-                foreach (Guid item in vehicleData.Items)
-                    if (Assets.find(item) is ItemAsset a)
-                        ItemManager.dropItem(new Item(a.id, true), player.Position, true, true, true);
-
+            if (fob == null)
+            {
                 if (!isInMain)
                 {
-                    fob!.ReduceAmmo(vehicleData.RearmCost);
-                    player.SendChat("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), fob.Ammo.ToString());
-                    ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR VEHICLE", player.Steam64);
+                    ctx.Reply("ammo_not_near_fob");
+                    return;
                 }
-                else
-                {
-                    player.SendChat("ammo_success_vehicle_main", vehicleData.RearmCost.ToString(Data.Locale));
-                    ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN", player.Steam64);
-                }
+            }
+
+            if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
+            {
+                ctx.Reply("ammo_not_enough_stock", fob.Ammo.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
                 return;
             }
-            else if (barricade != null && drop != null && barricade.barricade != null)
+
+            if (vehicleData.Items.Length == 0)
             {
-                if (!player.IsTeam1() && !player.IsTeam2())
+                ctx.Reply("ammo_vehicle_full_already");
+                return;
+            }
+
+            EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
+
+            foreach (Guid item in vehicleData.Items)
+                if (Assets.find(item) is ItemAsset a)
+                    ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
+
+            if (!isInMain)
+            {
+                fob!.ReduceAmmo(vehicleData.RearmCost);
+                ctx.Reply("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), fob.Ammo.ToString());
+                ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR VEHICLE", ctx.Caller.Steam64);
+            }
+            else
+            {
+                ctx.Reply("ammo_success_vehicle_main", vehicleData.RearmCost.ToString(Data.Locale));
+                ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN", ctx.Caller.Steam64);
+            }
+        }
+        else if (ctx.TryGetTarget(out BarricadeDrop barricade))
+        {
+            if (!ctx.Caller.IsTeam1() && !ctx.Caller.IsTeam2())
+            {
+                ctx.Reply("ammo_not_in_team");
+                return;
+            }
+            if (!KitManager.HasKit(ctx.Caller.Steam64, out Kit kit))
+            {
+                ctx.Reply("ammo_no_kit");
+                return;
+            }
+
+            int ammoCost = 1;
+            if (ctx.Caller.KitClass == EClass.LAT || ctx.Caller.KitClass == EClass.AUTOMATIC_RIFLEMAN || ctx.Caller.KitClass == EClass.GRENADIER)
+                ammoCost = 2;
+            else if (ctx.Caller.KitClass == EClass.HAT || ctx.Caller.KitClass == EClass.MACHINE_GUNNER || ctx.Caller.KitClass == EClass.COMBAT_ENGINEER)
+                ammoCost = 3;
+
+            if (barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is<Insurgency>(out _) && barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
+            {
+                if (!(Assets.find(Gamemode.Config.Items.T1Ammo) is ItemAsset t1ammo) || !(Assets.find(Gamemode.Config.Items.T2Ammo) is ItemAsset t2ammo))
                 {
-                    player.SendChat("ammo_not_in_team");
+                    L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
                     return;
                 }
-                if (!KitManager.HasKit(player.Steam64, out Kit kit))
+
+                bool isInMain = false;
+
+                if (!ctx.Caller.IsOnFOB(out var fob))
                 {
-                    player.SendChat("ammo_no_kit");
-                    return;
-                }
-
-                int ammoCost = 1;
-                if (player.KitClass == EClass.LAT || player.KitClass == EClass.AUTOMATIC_RIFLEMAN || player.KitClass == EClass.GRENADIER)
-                    ammoCost = 2;
-                else if (player.KitClass == EClass.HAT || player.KitClass == EClass.MACHINE_GUNNER || player.KitClass == EClass.COMBAT_ENGINEER)
-                    ammoCost = 3;
-
-                if (barricade.barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is<Insurgency>(out _) && barricade.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
-                {
-                    if (!(Assets.find(Gamemode.Config.Items.T1Ammo) is ItemAsset t1ammo) || !(Assets.find(Gamemode.Config.Items.T2Ammo) is ItemAsset t2ammo))
+                    if (F.IsInMain(barricade.model.transform.position))
                     {
-                        L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
-                        return;
-                    }
-
-                    bool isInMain = false;
-
-                    if (!player.IsOnFOB(out var fob))
-                    {
-                        if (F.IsInMain(barricade.point))
-                        {
-                            isInMain = true;
-                        }
-                        else
-                        {
-                            player.SendChat("ammo_not_near_fob");
-                            return;
-                        }   
-                    }
-                    if (isInMain && FOBManager.config.Data.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(player, ECooldownType.AMMO, out Cooldown cooldown))
-                    {
-                        player.SendChat("ammo_cooldown", cooldown.ToString());
-                        return;
-                    }
-
-                    if (!isInMain && fob.Ammo < ammoCost)
-                    {
-                        player.SendChat("ammo_not_enough_stock", fob.Ammo.ToString(), ammoCost.ToString());
-                        return;
-                    }
-
-                    WipeDroppedItems(player.Player.inventory);
-                    KitManager.ResupplyKit(player, kit);
-
-                    EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
-
-                    if (isInMain)
-                    {
-                        player.SendChat("ammo_success_main", ammoCost.ToString());
-                        ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT IN MAIN", player.Steam64);
-
-                        if (FOBManager.config.Data.AmmoCommandCooldown > 0)
-                            CooldownManager.StartCooldown(player, ECooldownType.AMMO, FOBManager.config.Data.AmmoCommandCooldown);
+                        isInMain = true;
                     }
                     else
                     {
-                        fob.ReduceAmmo(1);
-                        ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BOX", player.Steam64);
-                        player.SendChat("ammo_success", ammoCost.ToString(), fob.Ammo.ToString());
+                        ctx.Reply("ammo_not_near_fob");
+                        return;
                     }
-                        
                 }
-                else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.barricade.asset.GUID)
+                if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(ctx.Caller, ECooldownType.AMMO, out Cooldown cooldown))
                 {
-                    if (drop.model.TryGetComponent(out AmmoBagComponent ammobag))
-                    {
-                        //if (ammobag.ResuppliedPlayers.TryGetValue(player.Steam64, out int lifeIndex) && lifeIndex == player.LifeCounter)
-                        //{
-                        //    player.Message("ammo_bag_already_resupplied");
-                        //    return;
-                        //}
+                    ctx.Reply("ammo_cooldown", cooldown.ToString());
+                    return;
+                }
 
-                        if (ammobag.Ammo < ammoCost)
-                        {
-                            player.SendChat("ammo_not_enough_stock", ammobag.Ammo.ToString(), ammoCost.ToString());
-                            return;
-                        }
+                if (!isInMain && fob.Ammo < ammoCost)
+                {
+                    ctx.Reply("ammo_not_enough_stock", fob.Ammo.ToString(), ammoCost.ToString());
+                    return;
+                }
 
-                        ammobag.ResupplyPlayer(player, kit, ammoCost);
+                WipeDroppedItems(ctx.CallerID);
+                KitManager.ResupplyKit(ctx.Caller, kit);
 
-                        EffectManager.sendEffect(30, EffectManager.SMALL, player.Position);
-                        ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BAG", player.Steam64);
+                EffectManager.sendEffect(30, EffectManager.SMALL, ctx.Caller.Position);
 
-                        WipeDroppedItems(player.Player.inventory);
-                    }
-                    else
-                    {
-                        player.SendChat("ERROR: AmmoBagComponent was not found. Please report this to the admins.");
-                        CommandWindow.LogError("ERROR: Missing AmmoBagComponent on an ammo bag");
-                    }
+                if (isInMain)
+                {
+                    ctx.Reply("ammo_success_main", ammoCost.ToString());
+                    ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT IN MAIN", ctx.Caller.Steam64);
+
+                    if (FOBManager.Config.AmmoCommandCooldown > 0)
+                        CooldownManager.StartCooldown(ctx.Caller, ECooldownType.AMMO, FOBManager.Config.AmmoCommandCooldown);
                 }
                 else
                 {
-                    player.SendChat("ammo_error_nocrate");
-                    return;
+                    fob.ReduceAmmo(1);
+                    ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BOX", ctx.Caller.Steam64);
+                    ctx.Reply("ammo_success", ammoCost.ToString(), fob.Ammo.ToString());
+                }
+
+            }
+            else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
+            {
+                if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
+                {
+                    if (ammobag.Ammo < ammoCost)
+                    {
+                        ctx.Reply("ammo_not_enough_stock", ammobag.Ammo.ToString(), ammoCost.ToString());
+                        return;
+                    }
+
+                    ammobag.ResupplyPlayer(ctx.Caller, kit, ammoCost);
+
+                    EffectManager.sendEffect(30, EffectManager.SMALL, ctx.Caller.Position);
+                    ActionLog.Add(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BAG", ctx.Caller.Steam64);
+
+                    WipeDroppedItems(ctx.CallerID);
+                }
+                else
+                {
+                    ctx.Reply("ERROR: AmmoBagComponent was not found. Please report this to the admins.");
+                    L.LogError("ERROR: Missing AmmoBagComponent on an ammo bag");
                 }
             }
             else
             {
-                player.SendChat("ammo_error_nocrate");
+                ctx.Reply("ammo_error_nocrate");
+                return;
             }
         }
-        internal static void WipeDroppedItems(PlayerInventory player)
+        else
+            ctx.Reply("ammo_error_nocrate");
+    }
+    internal static void WipeDroppedItems(ulong player)
+    {
+        if (!EventFunctions.droppeditems.TryGetValue(player, out List<uint> instances))
+            return;
+        ushort build1 = Assets.find(Gamemode.Config.Items.T1Build)?.id ?? 0;
+        ushort build2 = Assets.find(Gamemode.Config.Items.T2Build)?.id ?? 0;
+        ushort ammo1 = Assets.find(Gamemode.Config.Items.T1Ammo)?.id ?? 0;
+        ushort ammo2 = Assets.find(Gamemode.Config.Items.T2Ammo)?.id ?? 0;
+        for (byte x = 0; x < Regions.WORLD_SIZE; x++)
         {
-            if (!EventFunctions.droppeditems.TryGetValue(player.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
-                return;
-            ushort build1 = Assets.find(Gamemode.Config.Items.T1Build)?.id ?? 0;
-            ushort build2 = Assets.find(Gamemode.Config.Items.T2Build)?.id ?? 0;
-            ushort ammo1 = Assets.find(Gamemode.Config.Items.T1Ammo)?.id ?? 0;
-            ushort ammo2 = Assets.find(Gamemode.Config.Items.T2Ammo)?.id ?? 0;
-            for (byte x = 0; x < Regions.WORLD_SIZE; x++)
+            for (byte y = 0; y < Regions.WORLD_SIZE; y++)
             {
-                for (byte y = 0; y < Regions.WORLD_SIZE; y++)
+                if (Regions.checkSafe(x, y))
                 {
-                    if (Regions.checkSafe(x, y))
+                    ItemRegion region = ItemManager.regions[x, y];
+                    for (int i = 0; i < instances.Count; i++)
                     {
-                        ItemRegion region = ItemManager.regions[x, y];
-                        for (int i = 0; i < instances.Count; i++)
+                        int index = region.items.FindIndex(r => r.instanceID == instances[i]);
+                        if (index != -1)
                         {
-                            int index = region.items.FindIndex(r => r.instanceID == instances[i]);
-                            if (index != -1)
-                            {
-                                SDG.Unturned.ItemData it = ItemManager.regions[x, y].items[index];
-                                if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
+                            ItemData it = ItemManager.regions[x, y].items[index];
+                            if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
 
-                                Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);
-                                ItemManager.regions[x, y].items.RemoveAt(index);
-                            }
+                            Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);
+                            ItemManager.regions[x, y].items.RemoveAt(index);
                         }
                     }
                 }
             }
-            instances.Clear();
         }
+        instances.Clear();
     }
 }

@@ -23,7 +23,6 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     }
     public interface ITeams : IGamemode
     {
-        Teams.TeamManager TeamManager { get; }
         bool UseJoinUI { get; }
         Teams.JoinManager JoinManager { get; }
     }

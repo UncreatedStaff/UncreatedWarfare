@@ -168,371 +168,90 @@ public static class PlayerManager
             }
         }
         GroupManager.save();
-    }
 
-    /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-    private static FieldInfo? GetField(string property, out byte reason)
+    }
+    public static ESetFieldResult SetProperty(PlayerSave obj, string property, string value)
     {
-        for (int i = 0; i < fields.Length; i++)
+        if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
+        if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
+        FieldInfo? field = GetField(property, out ESetFieldResult reason);
+        if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
-            if (fields[i].Name == property) // case sensitive search
+            if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(value.GetType()))
             {
-                if (ValidateField(fields[i], out reason))
+                try
                 {
-                    return fields[i];
+                    field.SetValue(obj, val);
                 }
-            }
-        }
-        for (int i = 0; i < fields.Length; i++)
-        {
-            if (fields[i].Name.ToLower() == property.ToLower()) // case insensitive search if case sensitive search netted no results
-            {
-                if (ValidateField(fields[i], out reason))
+                catch (Exception ex)
                 {
-                    return fields[i];
+                    L.LogError(ex);
+                    return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
                 }
+                return ESetFieldResult.SUCCESS;
             }
+            return ESetFieldResult.INVALID_INPUT;
         }
-        reason = 1;
-        return default;
+        else return reason;
     }
-    private static object? ParseInput(string input, Type type, out bool parsed)
+    public static ESetFieldResult SetProperty<TValue>(PlayerSave obj, string property, TValue value)
     {
-        if (input == default || type == default)
+        if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
+        if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
+        FieldInfo? field = GetField(property, out ESetFieldResult reason);
+        if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
-            parsed = false;
-            return default;
-        }
-        if (type == typeof(object))
-        {
-            parsed = true;
-            return input;
-        }
-        if (type == typeof(string))
-        {
-            parsed = true;
-            return input;
-        }
-        if (type == typeof(bool))
-        {
-            string lowercase = input.ToLower();
-            if (lowercase == "true")
-            {
-                parsed = true;
-                return true;
-            }
-            else if (lowercase == "false")
-            {
-                parsed = true;
-                return false;
-            }
-            else
-            {
-                parsed = false;
-                return default;
-            }
-        }
-        if (type == typeof(char))
-        {
-            if (input.Length == 1)
-            {
-                parsed = true;
-                return input[0];
-            }
-        }
-        if (type.IsEnum)
-        {
-            try
-            {
-                object output = Enum.Parse(type, input, true);
-                if (output == default)
-                {
-                    parsed = false;
-                    return default;
-                }
-                parsed = true;
-                return output;
-            }
-            catch (ArgumentNullException)
-            {
-                parsed = false;
-                return default;
-            }
-            catch (ArgumentException)
-            {
-                parsed = false;
-                return default;
-            }
-        }
-        if (!type.IsPrimitive)
-        {
-            L.LogError("Can not parse non-primitive types except for strings and enums.");
-            parsed = false;
-            return default;
-        }
-
-        if (type == typeof(int))
-        {
-            if (int.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out int result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(ushort))
-        {
-            if (ushort.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ushort result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(ulong))
-        {
-            if (ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(float))
-        {
-            if (float.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out float result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(decimal))
-        {
-            if (decimal.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out decimal result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(double))
-        {
-            if (double.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out double result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(byte))
-        {
-            if (byte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out byte result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(sbyte))
-        {
-            if (sbyte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out sbyte result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(short))
-        {
-            if (short.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out short result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(uint))
-        {
-            if (uint.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out uint result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(long))
-        {
-            if (long.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out long result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        parsed = false;
-        return default;
-    }
-    /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
-    public static PlayerSave SetProperty(PlayerSave obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
-    {
-        FieldInfo? field = GetField(property, out byte reason);
-        if (reason != 0)
-        {
-            if (reason == 1 || reason == 2)
-            {
-                set = false;
-                parsed = false;
-                found = false;
-                allowedToChange = false;
-                return obj;
-            }
-            else if (reason == 3)
-            {
-                set = false;
-                parsed = false;
-                found = true;
-                allowedToChange = false;
-                return obj;
-            }
-        }
-        found = true;
-        allowedToChange = true;
-        if (field == null)
-        {
-            found = false;
-            allowedToChange = false;
-            set = false;
-            parsed = false;
-            return obj;
-        }
-        object? parsedValue = ParseInput(value, field.FieldType, out parsed);
-        if (parsed)
-        {
-            try
-            {
-                field.SetValue(obj, parsedValue);
-                set = true;
-                PlayerSave.WriteToSaveFile(obj);
-                return obj;
-            }
-            catch (FieldAccessException ex)
-            {
-                L.LogError(ex);
-                set = false;
-                return obj;
-            }
-            catch (TargetException ex)
-            {
-                L.LogError(ex);
-                set = false;
-                return obj;
-            }
-            catch (ArgumentException ex)
-            {
-                L.LogError(ex);
-                set = false;
-                return obj;
-            }
-        }
-        else
-        {
-            set = false;
-            return obj;
-        }
-    }
-    /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-    private static bool ValidateField(FieldInfo field, out byte reason)
-    {
-        if (field == default)
-        {
-            L.LogError("PlayerSave saver: field not found.");
-            reason = 1;
-            return false;
-        }
-        if (field.IsStatic)
-        {
-            L.LogError("PlayerSave saver tried to save to a static property.");
-            reason = 2;
-            return false;
-        }
-        if (field.IsInitOnly)
-        {
-            L.LogError("PlayerSave saver tried to save to a readonly property.");
-            reason = 2;
-            return false;
-        }
-        IEnumerator<CustomAttributeData> attributes = field.CustomAttributes.GetEnumerator();
-        bool settable = false;
-        while (attributes.MoveNext())
-        {
-            if (attributes.Current.AttributeType == typeof(JsonSettable))
-            {
-                settable = true;
-                break;
-            }
-        }
-        attributes.Dispose();
-        if (!settable)
-        {
-            L.LogError("PlayerSave saver tried to save to a non json-savable property.");
-            reason = 3;
-            return false;
-        }
-        reason = 0;
-        return true;
-    }
-    public static PlayerSave SetProperty<V>(PlayerSave obj, string property, V value, out bool success, out bool found, out bool allowedToChange)
-    {
-        FieldInfo? field = GetField(property, out byte reason);
-        if (reason != 0)
-        {
-            if (reason == 1 || reason == 2)
-            {
-                found = false;
-                allowedToChange = false;
-                success = false;
-                return obj;
-            }
-            else if (reason == 3)
-            {
-                found = true;
-                allowedToChange = false;
-                success = false;
-                return obj;
-            }
-        }
-        found = true;
-        allowedToChange = true;
-        if (field != default)
-        {
-            if (field.FieldType.IsAssignableFrom(typeof(V)))
+            if (field.FieldType.IsAssignableFrom(value.GetType()))
             {
                 try
                 {
                     field.SetValue(obj, value);
-                    success = true;
-                    PlayerSave.WriteToSaveFile(obj);
-                    return obj;
                 }
-                catch (FieldAccessException ex)
+                catch (Exception ex)
                 {
                     L.LogError(ex);
-                    success = false;
-                    return obj;
+                    return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
                 }
-                catch (TargetException ex)
-                {
-                    L.LogError(ex);
-                    success = false;
-                    return obj;
-                }
-                catch (ArgumentException ex)
-                {
-                    L.LogError(ex);
-                    success = false;
-                    return obj;
-                }
+                return ESetFieldResult.SUCCESS;
             }
-            else
-            {
-                success = false;
-                return obj;
-            }
+            return ESetFieldResult.INVALID_INPUT;
+        }
+        else return reason;
+    }
+    private static FieldInfo? GetField(string property, out ESetFieldResult reason)
+    {
+        for (int i = 0; i < fields.Length; i++)
+        {
+            FieldInfo fi = fields[i];
+            if (fi.Name.Equals(property, StringComparison.Ordinal))
+                return ValidateField(fi, out reason) ? fi : null;
+        }
+        for (int i = 0; i < fields.Length; i++)
+        {
+            FieldInfo fi = fields[i];
+            if (fi.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
+                return ValidateField(fi, out reason) ? fi : null;
+        }
+        reason = ESetFieldResult.FIELD_NOT_FOUND;
+        return default;
+    }
+    private static bool ValidateField(FieldInfo field, out ESetFieldResult reason)
+    {
+        if (field == null || field.IsStatic || field.IsInitOnly)
+        {
+            reason = ESetFieldResult.FIELD_NOT_FOUND;
+            return false;
+        }
+        Attribute atr = Attribute.GetCustomAttribute(field, typeof(JsonSettable));
+        if (atr is not null)
+        {
+            reason = ESetFieldResult.SUCCESS;
+            return true;
         }
         else
         {
-            success = false;
-            return obj;
+            reason = ESetFieldResult.FIELD_PROTECTED;
+            return false;
         }
     }
     public static class NetCalls

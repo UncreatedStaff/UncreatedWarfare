@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -218,20 +219,28 @@ namespace Uncreated.Warfare.Point
                 {
                     ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp_1", player), Translation.Translate("promoted_xp_2", player, player.Rank.Name.ToUpper()), EToastMessageSeverity.BIG));
 
-                    for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
-                        VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
-                    for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                        Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
-
+                    if (VehicleSpawner.Loaded)
+                    {
+                        VehicleSpawner.UpdateSigns(player);
+                    }
+                    if (RequestSigns.Loaded)
+                    {
+                        RequestSigns.UpdateAllSigns(player.SteamPlayer);
+                    }
                 }
                 else if (player.Rank.Level < oldRank.Level)
                 {
                     ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp_1", player), Translation.Translate("demoted_xp_2", player, player.Rank.Name.ToUpper()), EToastMessageSeverity.BIG));
 
-                    for (int i = 0; i < VehicleSpawner.ActiveObjects.Count; i++)
-                        VehicleSpawner.ActiveObjects[i].UpdateSign(player.SteamPlayer);
-                    for (int i = 0; i < Kits.RequestSigns.ActiveObjects.Count; i++)
-                        Kits.RequestSigns.ActiveObjects[i].InvokeUpdate(player.SteamPlayer);
+                    if (VehicleSpawner.Loaded)
+                    {
+                        foreach (Vehicles.VehicleSpawn spawn in VehicleSpawner.Spawners)
+                            spawn.UpdateSign(player.SteamPlayer);
+                    }
+                    if (RequestSigns.Loaded)
+                    {
+                        RequestSigns.UpdateAllSigns(player.SteamPlayer);
+                    }
                 }
             });
         }

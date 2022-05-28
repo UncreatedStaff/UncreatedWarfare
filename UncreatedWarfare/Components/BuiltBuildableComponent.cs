@@ -28,5 +28,5 @@ public class BuiltBuildableComponent : MonoBehaviour
         PlayerHits = playerHits;
         IsVehicle = true;
     }
-    public float GetPlayerContribution(ulong player) => PlayerHits.TryGetValue(player, out int hits) ? hits / (float)Buildable.requiredHits : 0f;
+    public float GetPlayerContribution(ulong player) => PlayerHits.TryGetValue(player, out int hits) ? hits / (float)Buildable.RequiredHits : 0f;
 }

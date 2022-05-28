@@ -22,13 +22,14 @@ namespace Uncreated.Warfare.Kits;
 public delegate void KitChangedHandler(UCPlayer player, Kit kit, string oldKit);
 public class KitManager : BaseReloadSingleton
 {
+    public static bool Loaded => _singleton.IsLoaded();
     public KitManager() : base("kits") { }
     public static event KitChangedHandler OnKitChanged;
-    public Dictionary<int, Kit> Kits;
+    public Dictionary<int, Kit> Kits = new Dictionary<int, Kit>(256);
     public override void Load()
     {
         PlayerLife.OnPreDeath += PlayerLife_OnPreDeath;
-        Kits = new Dictionary<int, Kit>();
+        Kits.Clear();
     }
     public override void Reload()
     {
@@ -36,8 +37,10 @@ public class KitManager : BaseReloadSingleton
         {
             await ReloadKits();
             await UCWarfare.ToUpdate();
-            foreach (RequestSign sign in RequestSigns.ActiveObjects)
-                sign.InvokeUpdate();
+            if (RequestSigns.Loaded)
+            {
+                RequestSigns.UpdateAllSigns();
+            }
             if (!KitExists(TeamManager.Team1UnarmedKit, out _))
                 L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
             if (!KitExists(TeamManager.Team2UnarmedKit, out _))
@@ -51,7 +54,6 @@ public class KitManager : BaseReloadSingleton
         _isLoaded = false;
         _singleton = null!;
         PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
-        Kits = null!;
     }
     public async Task ReloadKits()
     {
@@ -701,7 +703,7 @@ public class KitManager : BaseReloadSingleton
             }
         }
 
-        RequestSigns.InvokeLangUpdateForAllSigns(player.Player.channel.owner);
+        RequestSigns.UpdateAllSigns(player.Player.channel.owner);
     }
     public static bool OnQuestCompleted(UCPlayer player, Guid presetKey)
     {
@@ -828,8 +830,8 @@ public class KitManager : BaseReloadSingleton
 
         OnKitChanged?.Invoke(player, kit, oldkit);
         if (oldkit != null && oldkit != string.Empty)
-            RequestSigns.InvokeLangUpdateForSignsOfKit(oldkit);
-        RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
+            RequestSigns.UpdateSignsOfKit(oldkit);
+        RequestSigns.UpdateSignsOfKit(kit.Name);
     }
     public static void ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false)
     {
@@ -1021,7 +1023,7 @@ public class KitManager : BaseReloadSingleton
 #endif
         kit.SignTexts.Remove(language);
         kit.SignTexts.Add(language, text);
-        RequestSigns.InvokeLangUpdateForSignsOfKit(kit.Name);
+        RequestSigns.UpdateSignsOfKit(kit.Name);
     }
     public static IEnumerable<Kit> GetAccessibleKits(ulong playerID)
     {
