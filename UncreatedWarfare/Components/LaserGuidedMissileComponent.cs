@@ -104,11 +104,11 @@ namespace Uncreated.Warfare.Components
 
         private bool TryAcquireTarget(Transform lookOrigin, float range)
         {
-            if (laserTarget != null && laserTarget.IsActive)
+            if (laserTarget != null && !laserTarget.IsActive)
                 laserTarget = null;
 
             if (laserTarget != null)
-                return false;
+                return true;
 
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

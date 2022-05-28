@@ -150,8 +150,12 @@ namespace Uncreated.Warfare.Components
 
             ToastMessage.QueueMessage(spotter, new ToastMessage(Translation.Translate("spotted", spotter), EToastMessageSeverity.MINI), true);
 
-            ChatManager.serverSendMessage($"[T] <color=#{Teams.TeamManager.GetTeamHexColor(spotter.GetTeam())}>{spotter.channel.owner.playerID.nickName}</color>: Enemy {targetName} spotted!",
-                Color.white, spotter.channel.owner, null, EChatMode.GROUP, null, true);
+            foreach (var player in PlayerManager.OnlinePlayers)
+            {
+                if (player.GetTeam() == spotter.GetTeam())
+                    ChatManager.serverSendMessage($"[T] <color=#{Teams.TeamManager.GetTeamHexColor(spotter.GetTeam())}>%SPEAKER%</color>: Enemy {targetName} spotted!",
+                Color.white, spotter.channel.owner, player, EChatMode.SAY, null, true);
+            }
         }
         private IEnumerator<WaitForSeconds> MarkerLoop(int seconds)
         {
