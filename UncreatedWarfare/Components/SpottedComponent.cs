@@ -140,7 +140,7 @@ namespace Uncreated.Warfare.Components
                 var player = PlayerManager.OnlinePlayers[i];
 
                 if (player.GetTeam() == CurrentSpotter!.GetTeam())
-                    EffectManager.sendEffect(EffectID, player.connection, transform.position);
+                    EffectManager.sendEffect(EffectID, player.Connection, transform.position);
             }
         }
         private void TryAnnounce(Player spotter, string targetName)
