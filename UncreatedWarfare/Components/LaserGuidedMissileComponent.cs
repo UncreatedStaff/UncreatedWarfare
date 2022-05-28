@@ -23,7 +23,8 @@ namespace Uncreated.Warfare.Components
         private float projectileSpeed;
         private float maxTurnDegrees;
         private float armingDistance;
-        private float guidanceDelay;
+        private float fullGuidanceDelay;
+        private float turnMultiplier;
         private Transform aim;
 
         private DateTime start;
@@ -36,7 +37,7 @@ namespace Uncreated.Warfare.Components
 
         private bool isActive;
 
-        public void Initialize(GameObject projectile, Player firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float guidanceDelay)
+        public void Initialize(GameObject projectile, Player firer, float projectileSpeed, float responsiveness, float aquisitionRange, float armingDistance, float fullGuidanceDelay)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -47,8 +48,11 @@ namespace Uncreated.Warfare.Components
             this.projectileSpeed = projectileSpeed;
             this.aquisitionRange = aquisitionRange;
             this.armingDistance = armingDistance;
-            this.guidanceDelay = guidanceDelay;
+            this.fullGuidanceDelay = fullGuidanceDelay;
             this.guiderDistance = 30;
+            this.turnMultiplier = 0;
+
+            count = 0;
 
             armed = false;
 
@@ -70,7 +74,8 @@ namespace Uncreated.Warfare.Components
                             aim = turret.turretAim;
                             isActive = true;
 
-                            projectile.transform.forward = Quaternion.AngleAxis(-30, aim.up - aim.right) * aim.forward;
+                            projectile.transform.position = vehicle.transform.TransformPoint(new Vector3(-4, 0, -4));
+                            projectile.transform.forward = Quaternion.AngleAxis(20, vehicle.transform.right) * vehicle.transform.forward;
 
                             rigidbody.velocity = projectile.transform.forward * projectileSpeed;
 
@@ -99,8 +104,11 @@ namespace Uncreated.Warfare.Components
 
         private bool TryAcquireTarget(Transform lookOrigin, float range)
         {
+            if (laserTarget != null && laserTarget.IsActive)
+                laserTarget = null;
+
             if (laserTarget != null)
-                return true;
+                return false;
 
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -125,7 +133,9 @@ namespace Uncreated.Warfare.Components
 
             return laserTarget != null;
         }
-        
+
+        private int count;
+
         private void FixedUpdate()
         {
             if (isActive)
@@ -133,9 +143,13 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                int count = 0;
+                
 
                 guiderDistance += Time.fixedDeltaTime * projectileSpeed;
+
+                turnMultiplier = Mathf.Clamp(turnMultiplier + Time.fixedDeltaTime / fullGuidanceDelay, 0, 1);
+
+                L.Log(turnMultiplier.ToString());
 
                 if (guiderDistance > 30 + armingDistance && !armed)
                 {
@@ -147,22 +161,21 @@ namespace Uncreated.Warfare.Components
                 if (count % 10 == 0 && armed)
                     id = 26045;
 
-                if ((DateTime.Now - start).TotalSeconds > guidanceDelay)
+                Vector3 target = aim.TransformPoint(new Vector3(0, 0, guiderDistance));
+
+                if (TryAcquireTarget(aim, aquisitionRange))
                 {
-                    Vector3 target = aim.TransformPoint(new Vector3(0, 0, guiderDistance));
-
-                    if (TryAcquireTarget(aim, aquisitionRange))
-                    {
-                        target = laserTarget!.transform.position;
-                    }
-
-                    Vector3 idealDirection = target - projectile.transform.position;
-
-                    Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, Mathf.Deg2Rad * maxTurnDegrees, Mathf.Deg2Rad * maxTurnDegrees);
-
-                    projectile.transform.forward = targetDirection;
-                    rigidbody.velocity = projectile.transform.forward * projectileSpeed;
+                    target = laserTarget!.transform.position;
                 }
+
+                Vector3 idealDirection = target - projectile.transform.position;
+
+                float maxAngle = Mathf.Deg2Rad * maxTurnDegrees * turnMultiplier;
+
+                Vector3 targetDirection = Vector3.RotateTowards(transform.forward, idealDirection, maxAngle, maxAngle);
+
+                projectile.transform.forward = targetDirection;
+                rigidbody.velocity = projectile.transform.forward * projectileSpeed;
 
                 EffectManager.sendEffect(id, 1200, projectile.transform.position, projectile.transform.forward);
 

@@ -227,7 +227,7 @@ namespace Uncreated.Warfare
             else if (VehicleBay.Config.AirAAWeapons.Contains(gun.equippedGunAsset.GUID))
                 projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
             else if (VehicleBay.Config.LaserGuidedWeapons.Contains(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 135, 1f, 700, 20, 0f);
+                projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 700, 8, 0.6f);
 
             Patches.DeathsPatches.lastProjected = projectile;
             if (gun.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
