@@ -398,17 +398,16 @@ public static partial class Patches
                 {
                     UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
 
-                        if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
+                    if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
+                    {
+                        if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
                         {
-                            if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
-                            {
-                                if (drop.model.TryGetComponent(out RepairableComponent repairable))
-                                    repairable.Repair(builder);
-                                else if (drop.model.TryGetComponent(out BuildableComponent buildable))
-                                    buildable.IncrementBuildPoints(builder);
-                                else if (drop.model.TryGetComponent(out FOBComponent radio))
-                                    radio.parent.Repair(builder);
-                            }
+                            if (drop.model.TryGetComponent(out RepairableComponent repairable))
+                                repairable.Repair(builder);
+                            else if (drop.model.TryGetComponent(out BuildableComponent buildable))
+                                buildable.IncrementBuildPoints(builder);
+                            else if (drop.model.TryGetComponent(out FOBComponent radio))
+                                radio.parent.Repair(builder);
                         }
                     }
                 }

@@ -1113,20 +1113,17 @@ public static class EventFunctions
             }
         }
     }
-    internal static void OnPlayerLeavesVehicle(Player player, InteractableVehicle vehicle, ref bool shouldAllow, ref Vector3 pendingLocation, ref float pendingYaw)
+    internal static void OnPlayerLeavesVehicle(ExitVehicle e)
     {
-        if (shouldAllow)
-        {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (vehicle.transform.TryGetComponent(out VehicleComponent component))
-            {
-                component.OnPlayerExitedVehicle(player, vehicle);
-            }
-            ActionLog.Add(EActionLogType.LEAVE_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
-                                                             $"ID: ({vehicle.instanceID})", player.channel.owner.playerID.steamID.m_SteamID);
+        if (e.Vehicle.transform.TryGetComponent(out VehicleComponent component))
+        {
+            component.OnPlayerExitedVehicle(e);
         }
+        ActionLog.Add(EActionLogType.LEAVE_VEHICLE_SEAT, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.asset.id} / {e.Vehicle.asset.GUID:N}, Owner: {e.Vehicle.lockedOwner.m_SteamID}, " +
+                                                         $"ID: ({e.Vehicle.instanceID})", e.Steam64);
     }
     internal static void OnVehicleSwapSeat(VehicleSwapSeat e)
     {

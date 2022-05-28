@@ -34,6 +34,7 @@ namespace Uncreated
                 _regReload = ReloadCommand.RegisterConfigForRelaod(this);
             }
         }
+        private bool isFirst = true;
         public Config(string directory, string filename)
         {
             this._dir = directory + filename;
@@ -62,6 +63,7 @@ namespace Uncreated
                 LoadDefaults();
             else
                 Reload();
+            isFirst = false;
         }
         public void DeregisterReload()
         {
@@ -162,13 +164,15 @@ namespace Uncreated
                         }
                         if (Data is not null)
                         {
-                            OnReload();
+                            if (!isFirst)
+                                OnReload();
                             return;
                         }
                     }
 
                     Data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings)!;
-                    OnReload();
+                    if (!isFirst)
+                        OnReload();
                 }
                 catch (Exception ex)
                 {
@@ -211,7 +215,8 @@ namespace Uncreated
                 if (needsSaving)
                 {
                     Save();
-                    OnReload();
+                    if (!isFirst)
+                        OnReload();
                 }
             }
             catch (Exception ex)

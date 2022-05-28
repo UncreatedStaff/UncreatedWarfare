@@ -1018,6 +1018,18 @@ public static class F
             }
             return false;
         }
+        if (type.IsEnum)
+        {
+            try
+            {
+                value = Enum.Parse(type, input, true);
+                return value is not null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         if (type.IsPrimitive)
         {
             if (type == typeof(ulong))
@@ -1129,18 +1141,6 @@ public static class F
                 return value is not null;
             }
             return false;
-        }
-        if (type.IsEnum)
-        {
-            try
-            {
-                value = Enum.Parse(type, input, true);
-                return value is not null;
-            }
-            catch
-            {
-                return false;
-            }
         }
         if (type == typeof(decimal))
         {

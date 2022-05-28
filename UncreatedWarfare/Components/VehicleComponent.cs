@@ -11,106 +11,106 @@ using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-namespace Uncreated.Warfare.Components
+namespace Uncreated.Warfare.Components;
+
+public class VehicleComponent : MonoBehaviour
 {
-    public class VehicleComponent : MonoBehaviour
+    public Guid item;
+    public InteractableVehicle Vehicle;
+    public ulong Team { get => Vehicle.lockedGroup.m_SteamID; }
+    public VehicleData Data;
+    public bool isInVehiclebay { get; private set; }
+    public EDamageOrigin lastDamageOrigin;
+    public ulong lastDamager;
+    public Dictionary<ulong, Vector3> TransportTable { get; private set; }
+    public Dictionary<ulong, double> UsageTable { get; private set; }
+    private Dictionary<ulong, DateTime> TimeEnteredTable;
+    private Dictionary<ulong, DateTime> TimeRewardedTable;
+    public Dictionary<ulong, KeyValuePair<ushort, DateTime>> DamageTable;
+    private float _quota;
+    private float _requiredQuota;
+    public float Quota { get => _quota; set => _quota = value; }
+    public float RequiredQuota { get => _requiredQuota; set => _requiredQuota = value; }
+    private bool IsResupplied;
+    private Coroutine? quotaLoop;
+    private Coroutine? autoSupplyLoop;
+    public Coroutine? forceSupplyLoop { get; private set; }
+    public bool IsArmor
     {
-        public Guid item;
-        public InteractableVehicle Vehicle;
-        public ulong Team { get => Vehicle.lockedGroup.m_SteamID; }
-        public VehicleData Data;
-        public bool isInVehiclebay { get; private set; }
-        public EDamageOrigin lastDamageOrigin;
-        public ulong lastDamager;
-        public Dictionary<ulong, Vector3> TransportTable { get; private set; }
-        public Dictionary<ulong, double> UsageTable { get; private set; }
-        private Dictionary<ulong, DateTime> TimeEnteredTable;
-        private Dictionary<ulong, DateTime> TimeRewardedTable;
-        public Dictionary<ulong, KeyValuePair<ushort, DateTime>> DamageTable;
-        private float _quota;
-        private float _requiredQuota;
-        public float Quota { get => _quota; set => _quota = value; }
-        public float RequiredQuota { get => _requiredQuota; set => _requiredQuota = value; }
-        private bool IsResupplied;
-        private Coroutine? quotaLoop;
-        private Coroutine? autoSupplyLoop;
-        public Coroutine? forceSupplyLoop { get; private set; }
-        public bool IsArmor
+        get
         {
-            get
-            {
-                if (Data is null) return false;
+            if (Data is null) return false;
 
-                return Data.Type == EVehicleType.APC ||
-                    Data.Type == EVehicleType.IFV ||
-                    Data.Type == EVehicleType.MBT;
-            }
+            return Data.Type == EVehicleType.APC ||
+                Data.Type == EVehicleType.IFV ||
+                Data.Type == EVehicleType.MBT;
         }
-        public bool IsLightVehlice
+    }
+    public bool IsLightVehlice
+    {
+        get
         {
-            get
-            {
-                if (Data is null) return false;
+            if (Data is null) return false;
 
-                return Data.Type == EVehicleType.LOGISTICS ||
-                    Data.Type == EVehicleType.TRANSPORT ||
-                    Data.Type == EVehicleType.HUMVEE ||
-                    Data.Type == EVehicleType.SCOUT_CAR;
-            }
+            return Data.Type == EVehicleType.LOGISTICS ||
+                Data.Type == EVehicleType.TRANSPORT ||
+                Data.Type == EVehicleType.HUMVEE ||
+                Data.Type == EVehicleType.SCOUT_CAR;
         }
-        public bool IsAircraft
+    }
+    public bool IsAircraft
+    {
+        get
         {
-            get
-            {
-                if (Data is null) return false;
+            if (Data is null) return false;
 
-                return Data.Type == EVehicleType.HELI_TRANSPORT ||
-                    Data.Type == EVehicleType.HELI_ATTACK ||
-                    Data.Type == EVehicleType.JET;
-            }
+            return Data.Type == EVehicleType.HELI_TRANSPORT ||
+                Data.Type == EVehicleType.HELI_ATTACK ||
+                Data.Type == EVehicleType.JET;
         }
-        public bool IsEmplacement
+    }
+    public bool IsEmplacement
+    {
+        get
         {
-            get
-            {
-                if (Data is null) return false;
+            if (Data is null) return false;
 
-                return Data.Type == EVehicleType.EMPLACEMENT;
-            }
+            return Data.Type == EVehicleType.EMPLACEMENT;
         }
-        public void Initialize(InteractableVehicle vehicle)
-        {
-            Vehicle = vehicle;
-            TransportTable = new Dictionary<ulong, Vector3>();
-            UsageTable = new Dictionary<ulong, double>();
-            TimeEnteredTable = new Dictionary<ulong, DateTime>();
-            TimeRewardedTable = new Dictionary<ulong, DateTime>();
-            DamageTable = new Dictionary<ulong, KeyValuePair<ushort, DateTime>>();
-            IsResupplied = true;
+    }
+    public void Initialize(InteractableVehicle vehicle)
+    {
+        Vehicle = vehicle;
+        TransportTable = new Dictionary<ulong, Vector3>();
+        UsageTable = new Dictionary<ulong, double>();
+        TimeEnteredTable = new Dictionary<ulong, DateTime>();
+        TimeRewardedTable = new Dictionary<ulong, DateTime>();
+        DamageTable = new Dictionary<ulong, KeyValuePair<ushort, DateTime>>();
+        IsResupplied = true;
 
-        _quota = 0;
-        _requiredQuota = -1;
+    _quota = 0;
+    _requiredQuota = -1;
 
-        if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
-        {
-            Data = data;
-            IsInVehiclebay = true;
-        }
-        lastPos = this.transform.position;
+    if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
+    {
+        Data = data;
+        isInVehiclebay = true;
+    }
+    lastPos = this.transform.position;
 
-            countermeasures = new List<Transform>();
+        countermeasures = new List<Transform>();
 
-            if (IsArmor) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.ARMOR);
-            else if (IsLightVehlice) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.LIGHT_VEHICLE);
-            else if (IsAircraft) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.AIRCRAFT);
-            else if (IsEmplacement) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.EMPLACEMENT);
-        }
-        private void OnDestroy()
-        {
-            RemoveCountermeasures();
-        }
-        internal void OnPlayerEnteredVehicle(EnterVehicle e)
-        {
+        if (IsArmor) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.ARMOR);
+        else if (IsLightVehlice) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.LIGHT_VEHICLE);
+        else if (IsAircraft) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.AIRCRAFT);
+        else if (IsEmplacement) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.EMPLACEMENT);
+    }
+    private void OnDestroy()
+    {
+        RemoveCountermeasures();
+    }
+    internal void OnPlayerEnteredVehicle(EnterVehicle e)
+    {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -151,58 +151,54 @@ namespace Uncreated.Warfare.Components
             }
         }
     }
-    public void OnPlayerExitedVehicle(Player nelsonplayer, InteractableVehicle vehicle)
+    public void OnPlayerExitedVehicle(ExitVehicle e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
-        if (player == null)
-            return;
+        if (isInVehiclebay)
+            EvaluateUsage(e.Player.Player.channel.owner);
 
-        if (IsInVehiclebay)
-            EvaluateUsage(nelsonplayer.channel.owner);
-
-        if (player.KitClass == EClass.SQUADLEADER &&
+        if (e.Player.KitClass == EClass.SQUADLEADER &&
             (Data.Type == EVehicleType.LOGISTICS || Data.Type == EVehicleType.HELI_TRANSPORT) &&
-            !F.IsInMain(player.Position) &&
-            FOB.GetNearestFOB(player.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, player.GetTeam()) == null
+            !F.IsInMain(e.Player.Position) &&
+            FOB.GetNearestFOB(e.Player.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
             )
         {
-            Tips.TryGiveTip(player, ETip.PLACE_RADIO);
+            Tips.TryGiveTip(e.Player, ETip.PLACE_RADIO);
         }
 
-        if (vehicle.passengers[0] == null || vehicle.passengers[0].player == null || 
-            vehicle.passengers[0].player.player.channel.owner.playerID.steamID.m_SteamID == player.Steam64)
+        if (e.Vehicle.passengers[0] == null || e.Vehicle.passengers[0].player == null ||
+            e.Vehicle.passengers[0].player.player.channel.owner.playerID.steamID.m_SteamID == e.Player.Steam64)
         {
-            if (LastDriver == player.Steam64)
+            if (LastDriver == e.Player.Steam64)
                 LastDriverDistance = totalDistance;
             return;
         }
-        if (TransportTable.TryGetValue(player.Steam64, out Vector3 original))
+        if (TransportTable.TryGetValue(e.Player.Steam64, out Vector3 original))
         {
-            float distance = (player.Position - original).magnitude;
-            if (distance >= 200 && !(player.KitClass == EClass.CREWMAN || player.KitClass == EClass.PILOT))
+            float distance = (e.Player.Position - original).magnitude;
+            if (distance >= 200 && !(e.Player.KitClass == EClass.CREWMAN || e.Player.KitClass == EClass.PILOT))
             {
                 bool isOnCooldown = false;
-                if (TimeRewardedTable.TryGetValue(player.Steam64, out DateTime time) && (DateTime.Now - time).TotalSeconds < 60)
+                if (TimeRewardedTable.TryGetValue(e.Player.Steam64, out DateTime time) && (DateTime.Now - time).TotalSeconds < 60)
                     isOnCooldown = true;
 
                 if (!isOnCooldown)
                 {
                     int amount = (int)(Math.Floor(distance / 100) * 2) + 5;
 
-                    Points.AwardXP(vehicle.passengers[0].player.player, amount, Translation.Translate("xp_transporting_players", vehicle.passengers[0].player.player));
+                    Points.AwardXP(e.Vehicle.passengers[0].player.player, amount, Translation.Translate("xp_transporting_players", e.Vehicle.passengers[0].player.player));
 
                     _quota += 0.5F;
 
-                    if (!TimeRewardedTable.ContainsKey(player.Steam64))
-                        TimeRewardedTable.Add(player.Steam64, DateTime.Now);
+                    if (!TimeRewardedTable.ContainsKey(e.Player.Steam64))
+                        TimeRewardedTable.Add(e.Player.Steam64, DateTime.Now);
                     else
-                        TimeRewardedTable[player.Steam64] = DateTime.Now;
+                        TimeRewardedTable[e.Player.Steam64] = DateTime.Now;
                 }
             }
-            TransportTable.Remove(player.Steam64);
+            TransportTable.Remove(e.Player.Steam64);
         }
     }
     public void OnPlayerSwapSeatRequested(VehicleSwapSeat e)
@@ -217,7 +213,7 @@ namespace Uncreated.Warfare.Components
             totalDistance = 0;
         }
 
-        if (IsInVehiclebay)
+        if (isInVehiclebay)
         {
             EvaluateUsage(e.Player.SteamPlayer);
 
@@ -321,7 +317,7 @@ namespace Uncreated.Warfare.Components
     }
     public void StartForceLoadSupplies(UCPlayer caller, ESupplyType type, int amount)
     {
-        ForceSupplyLoop = StartCoroutine(ForceSupplyLoopCoroutine(caller, type, amount));
+        forceSupplyLoop = StartCoroutine(ForceSupplyLoopCoroutine(caller, type, amount));
     }
     public bool TryStartAutoLoadSupplies()
     {
@@ -456,7 +452,7 @@ namespace Uncreated.Warfare.Components
         else if (type == ESupplyType.AMMO)
             caller.Message("load_s_ammo", (addedBackCount + addedNewCount).ToString());
 
-        ForceSupplyLoop = null;
+        forceSupplyLoop = null;
     }
     private IEnumerator<WaitForSeconds> AutoSupplyLoop()
     {

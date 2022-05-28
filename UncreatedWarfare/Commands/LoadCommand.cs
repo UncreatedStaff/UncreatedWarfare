@@ -56,7 +56,7 @@ public class LoadCommand : IRocketCommand
                                     if (action == "build") type = ESupplyType.BUILD;
                                     else if (action == "ammo") type = ESupplyType.AMMO;
 
-                                    if (c.ForceSupplyLoop == null)
+                                    if (c.forceSupplyLoop == null)
                                         c.StartForceLoadSupplies(player, type, amount);
                                     ActionLog.Add(EActionLogType.LOAD_SUPPLIES, type.ToString(), player);
                                 }

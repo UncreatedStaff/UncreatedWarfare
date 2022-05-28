@@ -21,6 +21,7 @@ public class VehicleBayData : ConfigData
     public JsonAssetReference<ItemGunAsset>[] TOWMissileWeapons;
     public JsonAssetReference<ItemGunAsset>[] GroundAAWeapons;
     public JsonAssetReference<ItemGunAsset>[] AirAAWeapons;
+    public JsonAssetReference<ItemGunAsset>[] LaserGuidedWeapons;
 
     public override void SetDefaults()
     {
@@ -44,6 +45,11 @@ public class VehicleBayData : ConfigData
         {
             "661a347f5e56406e85510a1b427bc4d6", // F-15 AA
             "ad70852b3d31401b9001a13d64a13f78"  // Su-34 AA
+        };
+        LaserGuidedWeapons = new JsonAssetReference<ItemGunAsset>[]
+        {
+            new Guid("433ea5249699420eb7adb67791a98134"), // F-15 Laser Guided
+            new Guid("3754ca2527ee40e2ad0951c8930efb07"), // Su-34 Laser Guided
         };
     }
 }

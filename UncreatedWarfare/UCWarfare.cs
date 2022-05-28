@@ -202,7 +202,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         BarricadeManager.onOpenStorageRequested += EventFunctions.OnEnterStorage;
         EventDispatcher.OnEnterVehicle += EventFunctions.OnEnterVehicle;
         EventDispatcher.OnVehicleSwapSeat += EventFunctions.OnVehicleSwapSeat;
-        VehicleManager.onExitVehicleRequested += EventFunctions.OnPlayerLeavesVehicle;
+        EventDispatcher.OnExitVehicle += EventFunctions.OnPlayerLeavesVehicle;
         VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
@@ -250,7 +250,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
         EventDispatcher.OnEnterVehicle -= EventFunctions.OnEnterVehicle;
         EventDispatcher.OnVehicleSwapSeat -= EventFunctions.OnVehicleSwapSeat;
-        VehicleManager.onExitVehicleRequested -= EventFunctions.OnPlayerLeavesVehicle;
+        EventDispatcher.OnExitVehicle -= EventFunctions.OnPlayerLeavesVehicle;
         VehicleManager.onDamageVehicleRequested -= EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop -= EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;

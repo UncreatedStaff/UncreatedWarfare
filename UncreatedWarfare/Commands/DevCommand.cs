@@ -145,9 +145,9 @@ public class DevCommand : IRocketCommand
 
                     L.Log($"{vehicle.asset.vehicleName.ToUpper()}");
 
-                    L.Log($"    Is In VehicleBay: {component.IsInVehiclebay}\n");
+                    L.Log($"    Is In VehicleBay: {component.isInVehiclebay}\n");
 
-                    if (component.IsInVehiclebay)
+                    if (component.isInVehiclebay)
                     {
                         L.Log($"    Team: {component.Data.Team}");
                         L.Log($"    Type: {component.Data.Type}");
