@@ -950,6 +950,24 @@ partial class JSONMethods
             #region Teams
             { "teams_e_cooldown", "<color=#ff8c69>You can't use /teams for another {0}.</color>" },
             #endregion
+
+            #region Spotting
+            { "spotted", "<color=#b9ffaa>SPOTTED</color>" },
+            #endregion
+
+            #region VehicleTypes
+            { "humvee", "Humvee" },
+            { "transport", "Transport Truck" },
+            { "logistics", "Logistics Truck" },
+            { "scout_car", "Scout Car" },
+            { "apc", "APC" },
+            { "ifv", "IFV" },
+            { "mbt", "Main Battle Tank" },
+            { "heli_transport", "Transport heli" },
+            { "heli_attack", "Attack Heli" },
+            { "jet", "Jet" },
+            { "emplacement", "Emplacement" },
+            #endregion
         };
     }
 
@@ -1202,11 +1220,11 @@ partial class JSONMethods
         { "insurgency_cache_undiscovered_color", "b780d9" },
         { "insurgency_cache_discovered_color", "555bcf" },
 
-        // Team Colors
-        { "team_1_color", "78b2ff " },
-        { "team_2_color", "ffcd8c" },
-        { "team_3_color", "0099ff" },
-        { "neutral_color", "c2c2c2" },
+            // Team Colors
+            { "team_1_color", "78b2ff" },
+            { "team_2_color", "ffcd8c" },
+            { "team_3_color", "0099ff" },
+            { "neutral_color", "c2c2c2" },
 
         // Team 1 Circle
         { "capturing_team_1", "78b2ff " },

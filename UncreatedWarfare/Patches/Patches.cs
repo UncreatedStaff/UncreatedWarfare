@@ -235,7 +235,7 @@ public static partial class Patches
                     foreach (SteamPlayer client in Provider.clients)
                     {
                         if (player.Squad.Members.Exists(x => x.Steam64 == client.playerID.steamID.m_SteamID))
-                            ChatManager.serverSendMessage("[S] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
+                            ChatManager.serverSendMessage("[SQ] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                         else if (client.player != null && (client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)
                             ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                     }
@@ -398,28 +398,18 @@ public static partial class Patches
                 {
                     UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
 
-                    if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
-                    {
-                        if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
+                        if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
                         {
-                            if (drop.model.TryGetComponent(out RepairableComponent repairable))
-                                repairable.Repair(builder);
-                            else if (drop.model.TryGetComponent(out BuildableComponent buildable))
-                                buildable.IncrementBuildPoints(builder);
-                            else if (drop.model.TryGetComponent(out FOBComponent radio))
-                                radio.parent.Repair(builder);
+                            if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
+                            {
+                                if (drop.model.TryGetComponent(out RepairableComponent repairable))
+                                    repairable.Repair(builder);
+                                else if (drop.model.TryGetComponent(out BuildableComponent buildable))
+                                    buildable.IncrementBuildPoints(builder);
+                                else if (drop.model.TryGetComponent(out FOBComponent radio))
+                                    radio.parent.Repair(builder);
+                            }
                         }
-                    }
-                }
-            }
-
-            if (weaponAsset.GUID == new Guid("3879d9014aca4a17b3ed749cf7a9283e"))
-            {
-                if (Physics.Raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), out var hit, 700))
-                {
-                    if (hit.transform != null)
-                    {
-                        SpottedComponent.MarkTarget(hit.transform);
                     }
                 }
             }

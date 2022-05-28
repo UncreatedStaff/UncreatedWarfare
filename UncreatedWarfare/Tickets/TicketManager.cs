@@ -95,16 +95,22 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             ulong killerID = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
             ulong victimID = parameters.dead.channel.owner.playerID.steamID.m_SteamID;
 
-            UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
-            if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
-            {
-                Points.AwardXP(
-                    assister,
-                    Points.XPConfig.KillAssistXP,
-                    Translation.Translate("xp_kill_assist", parameters.killer));
+                UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
+                if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
+                {
+                    Points.AwardXP(
+                        assister,
+                        Points.XPConfig.KillAssistXP,
+                        Translation.Translate("xp_kill_assist", parameters.killer));
+                }
+
+                if (parameters.dead.TryGetComponent(out SpottedComponent spotted))
+                {
+                    spotted.OnTargetKilled(Points.XPConfig.EnemyKilledXP);
+                }
+
+                component.ResetAttackers();
             }
-            component.ResetAttackers();
-        }
 
         Points.TryAwardDriverAssist(parameters.killer, Points.XPConfig.EnemyKilledXP, 1);
     }
@@ -123,11 +129,15 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (vehicle.gameObject.TryGetComponent(out FOBs.BuiltBuildableComponent comp))
-            UnityEngine.Object.Destroy(comp);
-        if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
-        {
-            ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
+
+            var spotted = vehicle.transform.GetComponent<SpottedComponent>();
+
+            if (vehicle.gameObject.TryGetComponent(out FOBs.BuiltBuildableComponent comp))
+                UnityEngine.Object.Destroy(comp);
+
+            if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
+            {
+                ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
 
             if (lteam == 1)
                 AddTeam1Tickets(-data.TicketCost);
@@ -212,10 +222,12 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                                 reason = "suicide " + v.vehicleName;
                         }
 
-                        if (reason == "")
-                            Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
-                        else
-                            Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason);
+                            float distance = (player.Position - vehicle.transform.position).magnitude;
+
+                            if (reason == "")
+                                Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
+                            else
+                                Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason, distance.ToString());
 
                         ActionLog.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
                                                                          $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
@@ -231,24 +243,30 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                                 float responsibleness = entry.Value.Key / totalDamage;
                                 int reward = Mathf.RoundToInt(responsibleness * fullXP);
 
-                                UCPlayer? attacker = UCPlayer.FromID(entry.Key);
-                                if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
-                                {
-                                    if (attacker.CSteamID.m_SteamID == vc.lastDamager)
+                                    UCPlayer? attacker = UCPlayer.FromID(entry.Key);
+                                    if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
                                     {
-                                        Points.AwardXP(attacker, reward, Translation.Translate("xp_" + message, player));
-                                        Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
-                                    }
-                                    else if (responsibleness > 0.1F)
-                                        Points.AwardXP(attacker, reward, Translation.Translate("xp_vehicle_assist", attacker));
-                                    if (responsibleness > resMax)
-                                    {
-                                        resMax = responsibleness;
-                                        resMaxPl = attacker;
+                                        if (attacker.CSteamID.m_SteamID == vc.lastDamager)
+                                        {
+                                            Points.AwardXP(attacker, reward, Translation.Translate("xp_" + message, player));
+                                            Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
+
+                                            if (spotted != null)
+                                            {
+                                                spotted.OnTargetKilled(reward);
+                                                UnityEngine.Object.Destroy(spotted);
+                                            }
+                                        }
+                                        else if (responsibleness > 0.1F)
+                                            Points.AwardXP(attacker, reward, Translation.Translate("xp_vehicle_assist", attacker));
+                                        if (responsibleness > resMax)
+                                        {
+                                            resMax = responsibleness;
+                                            resMaxPl = attacker;
+                                        }
                                     }
                                 }
                             }
-                        }
 
                         if (resMaxPl != null && resMax > 0 && player.Steam64 != resMaxPl.Steam64)
                         {
@@ -295,26 +313,29 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                     //            float responsibleness = (float)(entry.Value / totalTime);
                     //            int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
 
-                    //            UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
-                    //            if (assetWaster != null)
-                    //                Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
-                    //        }
-                    //    }
-                    //}
-                    
-                    if (Data.Reporter is not null)
-                    {
-                        if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
-                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
-                        else
-                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+                        //            UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
+                        //            if (assetWaster != null)
+                        //                Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
+                        //        }
+                        //    }
+                        //}
+                        
+                        if (Data.Reporter is not null)
+                        {
+                            if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
+                                Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+                            else
+                                Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+                        }
                     }
                 }
             }
+
+            if (spotted != null)
+                UnityEngine.Object.Destroy(spotted);
         }
-    }
-    public static void OnRoundWin(ulong team)
-    {
+        public static void OnRoundWin(ulong team)
+        {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

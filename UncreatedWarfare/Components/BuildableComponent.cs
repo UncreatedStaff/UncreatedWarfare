@@ -111,7 +111,7 @@ namespace Uncreated.Warfare.Components
                     FOB? fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
                     if (fob != null)
                     {
-                        transform.gameObject.AddComponent<SpottedComponent>().Initialize(new Guid("de142d979e12442fb9d44baf8f520751"), 60, fob.Team, 60);
+                        transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.FOB);
 
                         fob.UpdateBunker(structure);
                         FOBManager.SendFOBListToTeam(fob.Team);
