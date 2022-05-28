@@ -1,11 +1,13 @@
 ﻿using HarmonyLib;
 using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Events;
 internal static class EventPatches
@@ -20,6 +22,7 @@ internal static class EventPatches
                 new Type[] { typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort) }, 
                 null),
             prefix: GetMethodInfo(DestroyBarricadePostFix));
+        PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic), postfix: GetMethodInfo(OnVehicleSpawned));
     }
     private static MethodInfo GetMethodInfo(Delegate method)
     {
@@ -105,5 +108,37 @@ internal static class EventPatches
             region = BarricadeManager.vehicleRegions[plant];
         else return;
         EventDispatcher.InvokeOnBarricadeDestroyed(barricade, barricade.GetServersideData(), region, x, y, plant);
+    }
+    // SDG.Unturned.VehicleManager.addVehicle
+    /// <summary>
+    /// Postfix of <see cref="VehicleManager.addVehicle(a lot)"/> to call OnVehicleSpawned
+    /// </summary>
+    private static void OnVehicleSpawned(Guid assetGuid,
+        ushort skinID,
+        ushort mythicID,
+        float roadPosition,
+        Vector3 point,
+        Quaternion angle,
+        bool sirens,
+        bool blimp,
+        bool headlights,
+        bool taillights,
+        ushort fuel,
+        bool isExploded,
+        ushort health,
+        ushort batteryCharge,
+        CSteamID owner,
+        CSteamID group,
+        bool locked,
+        CSteamID[] passengers,
+        byte[][] turrets,
+        uint instanceID,
+        byte tireAliveMask,
+        NetId netId, InteractableVehicle __result)
+    {
+        if (__result != null)
+        {
+            EventDispatcher.InvokeOnVehicleSpawned(__result);
+        }
     }
 }

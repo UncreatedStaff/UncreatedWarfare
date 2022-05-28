@@ -83,6 +83,8 @@ public partial class UCWarfare : RocketPlugin<Config>
             L.LogError(ex);
         }
 
+        EventDispatcher.SubscribeToAll();
+
 
         /* DEBUG MYSQL LOADING */
         if (LoadMySQLDataFromElsewhere)
@@ -172,7 +174,7 @@ public partial class UCWarfare : RocketPlugin<Config>
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Data.Gamemode.Subscribe();
+        Data.Gamemode?.Subscribe();
         U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
         U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
@@ -218,6 +220,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Data.Gamemode?.Unsubscribe();
+        EventDispatcher.UnsubscribeFromAll();
         Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
         if (U.Events is not null)
         {
