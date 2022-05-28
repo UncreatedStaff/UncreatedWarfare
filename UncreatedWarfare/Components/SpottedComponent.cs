@@ -62,8 +62,8 @@ namespace Uncreated.Warfare.Components
                     break;
                 case ESpotted.FOB:
                     EffectGUID = new Guid("de142d979e12442fb9d44baf8f520751");
-                    _defaultTimer = 60;
-                    _frequency = 60;
+                    _defaultTimer = 90;
+                    _frequency = 2;
                     break;
             }
 
