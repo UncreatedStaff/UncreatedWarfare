@@ -42,7 +42,7 @@ namespace Uncreated.Warfare.Commands
 
             if (command.Length == 1)
             {
-                PlaytimeComponent? c = player.Player.GetPlaytimeComponent(out _);
+                UCPlayerData? c = player.Player.GetPlayerData(out _);
 
                 ulong team = player.GetTeam();
                 bool IsInMain = player.Player.IsInMain();

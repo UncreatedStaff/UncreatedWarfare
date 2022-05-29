@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Uncreated.Framework;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
@@ -18,6 +19,8 @@ public struct CommandContext
     public readonly int ArgumentCount;
     public readonly ulong CallerID;
     public readonly CSteamID CallerCSteamID;
+
+    private static readonly Regex RemoveRichTextRegex = new Regex("<(?:(?:(?=.*<\\/color>)color=#{0,1}[0123456789ABCDEF]{6})|(?:(?<=<color=#{0,1}[0123456789ABCDEF]{6}>.*)\\/color)|(?:(?=.*<\\/b>)b)|(?:(?<=<b>.*)\\/b)|(?:(?=.*<\\/i>)i)|(?:(?<=<i>.*)\\/i)|(?:(?=.*<\\/size>)size=\\d+)|(?:(?<=<size=\\d+>.*)\\/size)|(?:(?=.*<\\/material>)material=\\d+)|(?:(?<=<material=\\d+>.*)\\/material))>", RegexOptions.IgnoreCase);
     public CommandContext(IRocketPlayer caller, string[] args)
     {
         if (args is null) args = Array.Empty<string>();
@@ -372,6 +375,7 @@ public struct CommandContext
         if (IsConsole || Caller is null)
         {
             string message = Translation.Translate(translationKey, JSONMethods.DEFAULT_LANGUAGE, out Color color, formatting);
+            message = RemoveRichText(message);
             ConsoleColor clr = GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
@@ -610,9 +614,13 @@ public struct CommandContext
     public static ConsoleColor GetClosestConsoleColor(Color color)
     {
         int i = (color.r > 0.5f || color.g > 0.5f || color.b > 0.5f) ? 8 : 0;
-        if (color.r > 0.25f) i |= 4;
-        if (color.g > 0.25f) i |= 2;
-        if (color.b > 0.25f) i |= 1;
+        if (color.r > 0.5f) i |= 4;
+        if (color.g > 0.5f) i |= 2;
+        if (color.b > 0.5f) i |= 1;
         return (ConsoleColor)i;
+    }
+    public static string RemoveRichText(string text)
+    {
+        return RemoveRichTextRegex.Replace(text, string.Empty);
     }
 }

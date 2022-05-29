@@ -174,7 +174,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 }
 
 
-                if (medic.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IRevivesStats r2)
+                if (medic.TryGetPlayerData(out UCPlayerData c) && c.stats is IRevivesStats r2)
                     r2.AddRevive();
 
                 Stats.StatsManager.ModifyTeam(team, t => t.Revives++, false);
@@ -199,7 +199,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                     Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s => s.Revives++, false);
             }
             EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
-            EffectManager.askEffectClearByID(Squads.SquadManager.Config.Data.MedicMarker, target.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, target.channel.owner.transportConnection);
             ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, tteam);
         }
     }
@@ -302,7 +302,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         Guid item = Guid.Empty;
         if (killer != default)
         {
-            if (killer.player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            if (killer.player.TryGetPlayerData(out Components.UCPlayerData c))
             {
                 c.TryUpdateAttackers(killer.playerID.steamID.m_SteamID);
             }
@@ -331,7 +331,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 if (kteam != team)
                 {
                     ToastMessage.QueueMessage(killer, new ToastMessage(Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
-                    if (parameters.player.transform.TryGetComponent(out PlaytimeComponent p))
+                    if (parameters.player.transform.TryGetComponent(out UCPlayerData p))
                     {
                         if ((DateTime.Now - p.secondLastAttacker.Value).TotalSeconds < 30 && p.secondLastAttacker.Key != parameters.killer.m_SteamID)
                         {
@@ -397,7 +397,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
             }
 
             EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, player.Player.channel.owner.transportConnection);
-            EffectManager.askEffectClearByID(Squads.SquadManager.Config.Data.MedicMarker, player.Player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, player.Player.channel.owner.transportConnection);
         }
         ClearInjuredMarker(player.CSteamID.m_SteamID, player.GetTeam());
     }
@@ -423,9 +423,9 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         while (player.MoveNext())
         {
             var sqrDistance = (player.Current.Position - Position).sqrMagnitude;
-            var sqrmLimit = Math.Pow(Squads.SquadManager.Config.Data.MedicRange, 2);
+            var sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
             if (sqrDistance >= 1 && sqrDistance <= sqrmLimit)
-                EffectManager.sendEffectReliable(Squads.SquadManager.Config.Data.InjuredMarker, player.Current.Player.channel.owner.transportConnection, Position);
+                EffectManager.sendEffectReliable(Squads.SquadManager.Config.InjuredMarker, player.Current.Player.channel.owner.transportConnection, Position);
         }
         player.Dispose();
     }
@@ -448,13 +448,13 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         while (players.MoveNext())
         {
             if (clearAll)
-                EffectManager.askEffectClearByID(Squads.SquadManager.Config.Data.InjuredMarker, players.Current.Player.channel.owner.transportConnection);
+                EffectManager.askEffectClearByID(Squads.SquadManager.Config.InjuredMarker, players.Current.Player.channel.owner.transportConnection);
             for (int i = 0; i < positions.Length; i++)
             {
                 var sqrDistance = (players.Current.Position - positions[i]).sqrMagnitude;
-                var sqrmLimit = Math.Pow(Squads.SquadManager.Config.Data.MedicRange, 2);
+                var sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
                 if (sqrDistance >= 1 && sqrDistance <= sqrmLimit)
-                    EffectManager.sendEffectReliable(Squads.SquadManager.Config.Data.InjuredMarker, players.Current.Player.channel.owner.transportConnection, positions[i]);
+                    EffectManager.sendEffectReliable(Squads.SquadManager.Config.InjuredMarker, players.Current.Player.channel.owner.transportConnection, positions[i]);
             }
         }
         if (dispose) players.Dispose();
@@ -467,9 +467,9 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         while (players.MoveNext())
         {
             if (clearAll)
-                EffectManager.askEffectClearByID(Squads.SquadManager.Config.Data.MedicMarker, players.Current);
+                EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, players.Current);
             for (int i = 0; i < positions.Length; i++)
-                EffectManager.sendEffectReliable(Squads.SquadManager.Config.Data.MedicMarker, players.Current, positions[i]);
+                EffectManager.sendEffectReliable(Squads.SquadManager.Config.MedicMarker, players.Current, positions[i]);
         }
         if (dispose) players.Dispose();
     }
@@ -479,10 +479,10 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (clearAll)
-            EffectManager.askEffectClearByID(Squads.SquadManager.Config.Data.InjuredMarker, player);
+            EffectManager.askEffectClearByID(Squads.SquadManager.Config.InjuredMarker, player);
         for (int i = 0; i < positions.Length; i++)
-            if ((center - positions[i]).sqrMagnitude <= Math.Pow(Squads.SquadManager.Config.Data.MedicRange, 2))
-                EffectManager.sendEffectReliable(Squads.SquadManager.Config.Data.InjuredMarker, player, positions[i]);
+            if ((center - positions[i]).sqrMagnitude <= Math.Pow(Squads.SquadManager.Config.MedicRange, 2))
+                EffectManager.sendEffectReliable(Squads.SquadManager.Config.InjuredMarker, player, positions[i]);
     }
     public void SpawnMedicMarkers(ITransportConnection player, Vector3[] positions, bool clearAll)
     {
@@ -490,9 +490,9 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (clearAll)
-            EffectManager.askEffectClearByID(Squads.SquadManager.Config.Data.MedicMarker, player);
+            EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, player);
         for (int i = 0; i < positions.Length; i++)
-            EffectManager.sendEffectReliable(Squads.SquadManager.Config.Data.MedicMarker, player, positions[i]);
+            EffectManager.sendEffectReliable(Squads.SquadManager.Config.MedicMarker, player, positions[i]);
     }
     public void ClearInjuredMarker(ulong clearedPlayer, ulong Team)
     {
@@ -516,7 +516,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
     }
     public void ClearInjuredMarkers(UCPlayer medic)
     {
-        EffectManager.askEffectClearByID(Squads.SquadManager.Config.Data.InjuredMarker, medic.Player.channel.owner.transportConnection);
+        EffectManager.askEffectClearByID(Squads.SquadManager.Config.InjuredMarker, medic.Player.channel.owner.transportConnection);
     }
     public Vector3[] GetPositionsOfTeam(ulong Team)
     {
@@ -562,7 +562,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
             Vector3[] medics = Medics
                 .Where(x => x.GetTeam() == team &&
                     (x.Position - downed.Position).sqrMagnitude <
-                    Math.Pow(Squads.SquadManager.Config.Data.MedicRange, 2) &&
+                    Math.Pow(Squads.SquadManager.Config.MedicRange, 2) &&
                     x.Connection != downed.Connection)
                 .Select(x => x.Position)
                 .ToArray();
@@ -578,7 +578,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         Vector3[] medics = Medics
             .Where(x => x.GetTeam() == team &&
                 (x.Position - origin).sqrMagnitude <
-                Math.Pow(Squads.SquadManager.Config.Data.MedicRange, 2) &&
+                Math.Pow(Squads.SquadManager.Config.MedicRange, 2) &&
                     x.Connection != player)
             .Select(x => x.Position)
             .ToArray();
@@ -636,11 +636,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (killerid.TryGetPlaytimeComponent(out Components.PlaytimeComponent killer) && killer.stats != null && killer.stats is IPVPModeStats pvp)
+            if (killerid.TryGetPlayerData(out Components.UCPlayerData killer) && killer.stats != null && killer.stats is IPVPModeStats pvp)
             {
                 pvp.AddDamage(damage);
             }
-            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent victim))
+            if (player.TryGetPlayerData(out Components.UCPlayerData victim))
             {
                 victim.TryUpdateAttackers(killerid.m_SteamID);
             }

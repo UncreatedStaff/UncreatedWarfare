@@ -135,7 +135,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
             {
                 IndividualStats s = BasePlayerStats.New<IndividualStats>(Provider.clients[i].player);
                 stats.Add(Provider.clients[i].playerID.steamID.m_SteamID, s);
-                if (Provider.clients[i].player.TryGetPlaytimeComponent(out PlaytimeComponent pt))
+                if (Provider.clients[i].player.TryGetPlayerData(out UCPlayerData pt))
                     pt.stats = s;
             }
         }
@@ -157,13 +157,13 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
         {
             s = BasePlayerStats.New<IndividualStats>(player);
             stats.Add(player.channel.owner.playerID.steamID.m_SteamID, s);
-            if (player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+            if (player.TryGetPlayerData(out UCPlayerData c))
                 c.stats = s;
         }
         else
         {
             s.Player = player;
-            if (player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+            if (player.TryGetPlayerData(out UCPlayerData c))
                 c.stats = s;
         }
         L.LogDebug(player.name + " added to playerstats, " + stats.Count + " trackers");

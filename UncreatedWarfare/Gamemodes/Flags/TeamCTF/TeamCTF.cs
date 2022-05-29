@@ -17,7 +17,7 @@ public class TeamCTF :
         {
             CTFUI.ClearFlagList(player.transportConnection);
             SendUIParameters.Nil.SendToPlayer(player);
-            if (player.player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            if (player.player.TryGetPlayerData(out Components.UCPlayerData c))
                 c.stats = null!;
         }
         base.PostDispose();

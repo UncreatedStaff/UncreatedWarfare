@@ -21,6 +21,8 @@ namespace Uncreated.Warfare.Tickets;
 
 public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener
 {
+    private static TicketManager Singleton;
+    public static bool Loaded => Singleton.IsLoaded();
     public static Config<TicketData> config = new Config<TicketData>(Data.TicketStorage, "config.json");
 
     public static int Team1Tickets;
@@ -30,12 +32,14 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     }
     public override void Load()
     {
+        Singleton = this;
         Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
         Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
         VehicleManager.OnVehicleExploded += OnVehicleExploded;
     }
     public override void Unload()
     {
+        Singleton = null!;
         VehicleManager.OnVehicleExploded -= OnVehicleExploded;
     }
     void IPlayerInitListener.OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
@@ -79,7 +83,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             if (parameters.dead.quests.groupID.m_SteamID == insurgency.DefendingTeam)
             {
                 insurgency.AddIntelligencePoints(1);
-                if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is InsurgencyPlayerStats s)
+                if (parameters.killer.TryGetPlayerData(out UCPlayerData c) && c.stats is InsurgencyPlayerStats s)
                     s._intelligencePointsCollected++;
                 insurgency.GameStats.intelligenceGathered++;
             }
@@ -90,7 +94,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             Points.XPConfig.EnemyKilledXP,
             Translation.Translate("xp_enemy_killed", parameters.killer));
 
-        if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent component))
+        if (parameters.dead.TryGetPlayerData(out UCPlayerData component))
         {
             ulong killerID = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
             ulong victimID = parameters.dead.channel.owner.playerID.steamID.m_SteamID;
@@ -656,6 +660,15 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             message
             );
 
+    }
+    public static void UpdateUI(UCPlayer player)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ulong team = player.GetTeam();
+        GetUIDisplayerInfo(team, GetTeamBleed(team), out ushort id, out string tickets, out string message);
+        UpdateUI(player.Connection, id, tickets, message);
     }
     public static void UpdateUITeam1(int bleed = 0)
     {

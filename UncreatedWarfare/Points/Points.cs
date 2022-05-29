@@ -163,7 +163,7 @@ namespace Uncreated.Warfare.Point
                     else
                         ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
 
-                    if (!isPurchase && player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (!isPurchase && player.Player.TryGetPlayerData(out UCPlayerData c))
                     {
                         if (c.stats is IExperienceStats kd)
                             kd.AddCredits(amount);
@@ -188,7 +188,7 @@ namespace Uncreated.Warfare.Point
 
                 player.CachedXP = currentAmount;
 
-                if (player.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                if (player.Player.TryGetPlayerData(out UCPlayerData c))
                 {
                     if (c.stats is IExperienceStats kd)
                         kd.AddXP(amount);

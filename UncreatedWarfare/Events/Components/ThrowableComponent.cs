@@ -1,0 +1,23 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using UnityEngine;
+
+namespace Uncreated.Warfare.Events.Components;
+
+#pragma warning disable IDE0051
+internal class ThrowableComponent : MonoBehaviour
+{
+    internal ulong Owner;
+    internal Guid Throwable;
+    internal int UnityInstanceID;
+    private void Start() => UnityInstanceID = gameObject.GetInstanceID();
+    private void OnDestroy()
+    {
+        EventDispatcher.InvokeOnThrowableDespawning(this);
+    }
+}
+
+#pragma warning restore IDE0051

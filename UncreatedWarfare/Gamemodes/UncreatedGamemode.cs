@@ -233,6 +233,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 listener.OnLevelReady();
             InternalOnReady();
             OnReady();
+            PostOnReady();
             _hasOnReadyRan = true;
         }
     }
@@ -352,7 +353,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                     goto error;
                 Data.Singletons.LoadSingleton(Data.Gamemode);
                 ActionLog.Add(EActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
-                L.Log("Chosen new gameode " + Data.Gamemode.DisplayName, ConsoleColor.DarkCyan);
+                L.Log("Chosen new gamemode " + Data.Gamemode.DisplayName, ConsoleColor.DarkCyan);
                 return true;
             }
             catch (SingletonLoadException ex2)

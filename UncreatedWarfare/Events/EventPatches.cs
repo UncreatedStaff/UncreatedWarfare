@@ -7,6 +7,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Components;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events;
@@ -21,8 +23,11 @@ internal static class EventPatches
                 null, 
                 new Type[] { typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort) }, 
                 null),
-            prefix: GetMethodInfo(DestroyBarricadePostFix));
+            postfix: GetMethodInfo(DestroyBarricadePostFix));
+
         PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic), postfix: GetMethodInfo(OnVehicleSpawned));
+
+        PatchMethod(typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic), prefix: GetMethodInfo(TrapOnTriggerEnter));
     }
     private static MethodInfo GetMethodInfo(Delegate method)
     {
@@ -140,5 +145,150 @@ internal static class EventPatches
         {
             EventDispatcher.InvokeOnVehicleSpawned(__result);
         }
+    }
+    // SDG.Unturned.InteractableTrap.OnTriggerEnter
+    /// <summary>
+    /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider)"/> to call OnVehicleSpawned
+    /// </summary>
+    private static bool TrapOnTriggerEnter(Collider other, InteractableTrap __instance, float ___lastActive, float ___setupDelay, ref float ___lastTriggered, 
+        float ___cooldown, bool ___isExplosive, float ___playerDamage, float ___zombieDamage, float ___animalDamage, float ___barricadeDamage,
+        float ___structureDamage, float ___vehicleDamage, float ___resourceDamage, float ___objectDamage, float ___range2, float ___explosionLaunchSpeed,
+        ushort ___explosion2, bool ___isBroken)
+    {
+        float time = Time.realtimeSinceStartup;
+        if (other.isTrigger ||                          // collider is another trigger
+            time - ___lastActive < ___setupDelay ||     // in setup phase
+                                                        // collider is part of the trap barricade
+            __instance.transform.parent == other.transform.parent && other.transform.parent != null ||
+            time - ___lastTriggered < ___cooldown ||    // on cooldown
+                                                        // gamemode not active
+            Data.Gamemode is null || Data.Gamemode.State != Gamemodes.EState.ACTIVE 
+            )
+            return false;
+        ___lastTriggered = time;
+        BarricadeDrop? barricade = BarricadeManager.FindBarricadeByRootTransform(__instance.gameObject.transform.parent) ?? BarricadeManager.FindBarricadeByRootTransform(__instance.gameObject.transform);
+        if (barricade is null) return false;
+        UCPlayer? triggerer = null;
+        ThrowableComponent? throwable = null;
+        if (other.transform.CompareTag("Player"))
+        {
+            triggerer = UCPlayer.FromPlayer(DamageTool.getPlayer(other.transform));
+            if (triggerer == null) return false;
+        }
+        else if (other.transform.CompareTag("Vehicle"))
+        {
+            InteractableVehicle? vehicle = DamageTool.getVehicle(other.transform);
+            if (vehicle == null) return false;
+            for (int i = 0; i < vehicle.passengers.Length; ++i)
+            {
+                if (vehicle.passengers[i].player == null)
+                    continue;
+                triggerer = UCPlayer.FromPlayer(vehicle.passengers[i].player.player);
+            }
+            if (triggerer == null)
+            {
+                if (vehicle.TryGetComponent(out VehicleComponent comp2))
+                    triggerer = UCPlayer.FromID(comp2.LastDriver);
+                if (triggerer == null) return false;
+            }
+        }
+        else
+        {
+            if (other.TryGetComponent(out throwable))
+                triggerer = UCPlayer.FromSteamPlayer(PlayerTool.getSteamPlayer(throwable!.Owner));
+        }
+        if (triggerer != null)
+        {
+            if (___isExplosive)
+            {
+                CSteamID owner = new CSteamID(barricade.GetServersideData().owner);
+                UCPlayer? ownerPl = UCPlayer.FromCSteamID(owner);
+                bool shouldExplode = true;
+                EventDispatcher.InvokeOnLandmineExploding(ownerPl, barricade, __instance, triggerer, other.gameObject, ref shouldExplode);
+                if (shouldExplode)
+                {
+                    UCPlayerData? ownerData = null;
+                    if (ownerPl is not null && ownerPl.Player.TryGetPlayerData(out ownerData))
+                    {
+                        ownerData.ExplodingLandmine = barricade;
+                    }
+                    if (triggerer.Player.TryGetPlayerData(out UCPlayerData? triggererData))
+                    {
+                        triggererData.TriggeringLandmine = barricade;
+                        triggererData.TriggeringThrowable = throwable;
+                    }
+
+                    Vector3 position = __instance.transform.position;
+                    DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner)
+                    {
+                        playerDamage = ___playerDamage,
+                        zombieDamage = ___zombieDamage,
+                        animalDamage = ___animalDamage,
+                        barricadeDamage = ___barricadeDamage,
+                        structureDamage = ___structureDamage,
+                        vehicleDamage = ___vehicleDamage,
+                        resourceDamage = ___resourceDamage,
+                        objectDamage = ___objectDamage,
+                        damageOrigin = EDamageOrigin.Trap_Explosion,
+                        launchSpeed = ___explosionLaunchSpeed
+                    }, out _);
+                    if (___explosion2 != 0 && Assets.find(EAssetType.EFFECT, ___explosion2) is EffectAsset asset)
+                    {
+                        EffectManager.triggerEffect(new TriggerEffectParameters(asset)
+                        {
+                            position = position,
+                            relevantDistance = EffectManager.LARGE,
+                            reliable = true
+                        });
+                    }
+                    if (ownerData != null)
+                        ownerData.ExplodingLandmine = null;
+                    if (triggererData != null)
+                    {
+                        triggererData.TriggeringLandmine = null;
+                        triggererData.TriggeringThrowable = null;
+                    }
+                }
+            }
+            else
+            {
+                if (other.transform.CompareTag("Player"))
+                {
+                    CSteamID owner = new CSteamID(barricade.GetServersideData().owner);
+                    if (triggerer.Player.movement.getVehicle() != null)
+                    {
+                        return false;
+                    }
+                    DamageTool.damage(triggerer.Player, EDeathCause.SHRED, ELimb.SPINE, owner, Vector3.up, ___playerDamage, 1f, out _, trackKill: true);
+                    if (___isBroken)
+                        triggerer.Player.life.breakLegs();
+                    BarricadeManager.damage(barricade.model, 5f, 1f, false, triggerer.CSteamID, EDamageOrigin.Trap_Wear_And_Tear);
+                }
+                else return false;
+            }
+        }
+        else if (!___isExplosive)
+        {
+            if (!other.transform.CompareTag("Agent")) return false;
+            Zombie zombie = DamageTool.getZombie(other.transform);
+            if (zombie != null)
+            {
+                DamageTool.damageZombie(new DamageZombieParameters(zombie, __instance.transform.forward, ___zombieDamage)
+                {
+                    instigator = __instance
+                }, out _, out _);
+                BarricadeManager.damage(barricade.model, zombie.isHyper ? 10f : 5f, 1f, false, CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
+            }
+            else
+            {
+                Animal animal = DamageTool.getAnimal(other.transform);
+                DamageTool.damageAnimal(new DamageAnimalParameters(animal, __instance.transform.forward, ___animalDamage)
+                {
+                    instigator = __instance
+                }, out _, out _);
+                BarricadeManager.damage(barricade.model, 5f, 1f, false, CSteamID.Nil, EDamageOrigin.Trap_Wear_And_Tear);
+            }
+        }
+        return false;
     }
 }

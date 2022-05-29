@@ -24,6 +24,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -182,10 +183,8 @@ public partial class UCWarfare : RocketPlugin<Config>
         Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
         Commands.ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
         BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
-        UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
         UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
-        UseableThrowable.onThrowableSpawned += EventFunctions.ThrowableSpawned;
         PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
         BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
         StructureManager.onStructureSpawned += EventFunctions.OnStructurePlaced;
@@ -205,6 +204,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         EventDispatcher.OnEnterVehicle += EventFunctions.OnEnterVehicle;
         EventDispatcher.OnVehicleSwapSeat += EventFunctions.OnVehicleSwapSeat;
         EventDispatcher.OnExitVehicle += EventFunctions.OnPlayerLeavesVehicle;
+        EventDispatcher.OnLandmineExploding += EventFunctions.OnLandmineExploding;
         VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
@@ -231,10 +231,8 @@ public partial class UCWarfare : RocketPlugin<Config>
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
         Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
         BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
-        UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
         UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
-        UseableThrowable.onThrowableSpawned -= EventFunctions.ThrowableSpawned;
         PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
         BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
         StructureManager.onStructureSpawned -= EventFunctions.OnStructurePlaced;
@@ -251,6 +249,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
         BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
         StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
+        EventDispatcher.OnLandmineExploding -= EventFunctions.OnLandmineExploding;
         EventDispatcher.OnEnterVehicle -= EventFunctions.OnEnterVehicle;
         EventDispatcher.OnVehicleSwapSeat -= EventFunctions.OnVehicleSwapSeat;
         EventDispatcher.OnExitVehicle -= EventFunctions.OnPlayerLeavesVehicle;
@@ -339,6 +338,8 @@ public partial class UCWarfare : RocketPlugin<Config>
             FOBManager.SendFOBList(ucplayer);
         if (Data.Gamemode.ShowXPUI)
             Points.UpdateXPUI(ucplayer);
+        if (TicketManager.Loaded)
+            TicketManager.UpdateUI(ucplayer);
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out ZonePlayerComponent comp))
@@ -386,6 +387,7 @@ public partial class UCWarfare : RocketPlugin<Config>
 
             L.Log("Unloading " + Name, ConsoleColor.Magenta);
 
+            Data.Singletons.UnloadSingleton(ref Data.DeathTracker, false);
             Data.Singletons.UnloadSingleton(ref Data.Gamemode);
 
             if (Announcer != null)

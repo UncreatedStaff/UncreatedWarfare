@@ -44,7 +44,7 @@ partial class JSONMethods
             { "team_3_short", "Admins" },
             { "teams_join_success", "You've joined {0}." },
             { "teams_join_announce", "{0} joined {1}!" },
-            { "join_player_joined_console", "{0} changed group: {2} >> {1}" },
+            { "join_player_joined_console", "{0} ({1}) changed group: {3} >> {2}" },
             { "neutral", "Neutral" },
             { "undiscovered_flag", "unknown" },
             { "ui_capturing", "CAPTURING" },
@@ -233,9 +233,10 @@ partial class JSONMethods
             { "squad_too_many", "<color=#ff8c69>There can not be more than 8 squads on a team at once.</color>" },
 
             { "squad_ui_player_name", "{0}" },
-            { "squad_ui_player_count", "<color=#bd6b5b>{0}</color>{1}/6" },
+            { "squad_ui_player_count", "<color=#bd6b5b>{0}</color> {1}/6" },
             { "squad_ui_player_count_small", "{0}/6" },
             { "squad_ui_player_count_small_locked", "<color=#969696>{0}/6</color>" },
+            { "squad_ui_header_name", "<color=#bd6b5b>{0}</color> {1}/6" },
             { "squad_ui_leader_name", "{0}" },
             { "squad_ui_expanded", "..." },
             #endregion
@@ -469,6 +470,7 @@ partial class JSONMethods
 
             #region Restrictions
             { "no_placement_on_vehicle", "<color=#f53b3b>You can't place a{1} <color=#d9e882>{0}</color> on a vehicle!</color>" },
+            { "no_place_trap", "<color=#f53b3b>You're not allowed to place a{1} <color=#d9e882>{0}</color> here.</color>" },
             { "cant_steal_batteries", "<color=#f53b3b>Stealing batteries is not allowed.</color>" },
             { "cant_leave_group", "<color=#f53b3b>You are not allowed to manually change groups.</color>" },
             { "cant_store_this_item", "<color=#f53b3b>You are not allowed to store <color=#d9e882>{0}</color>.</color>" },
@@ -1222,11 +1224,11 @@ partial class JSONMethods
         { "insurgency_cache_undiscovered_color", "b780d9" },
         { "insurgency_cache_discovered_color", "555bcf" },
 
-            // Team Colors
-            { "team_1_color", "78b2ff" },
-            { "team_2_color", "ffcd8c" },
-            { "team_3_color", "0099ff" },
-            { "neutral_color", "c2c2c2" },
+        // Team Colors
+        { "team_1_color", "78b2ff" },
+        { "team_2_color", "ffcd8c" },
+        { "team_3_color", "0099ff" },
+        { "neutral_color", "c2c2c2" },
 
         // Team 1 Circle
         { "capturing_team_1", "78b2ff " },
@@ -1325,7 +1327,6 @@ partial class JSONMethods
         // Deaths
         { "death_background", "ffffff" },
         { "death_background_teamkill", "ff9999" },
-        { "death_zombie_name_color", "788c5a" },
 
         // Request
         { "kit_public_header", "ffffff" },
@@ -1377,93 +1378,4 @@ partial class JSONMethods
         new LanguageAliasSet("nb-no", "Norwegian", new string[] { "norwegian", "norway", "bokmål", "bokmal", "norsk", "nb-no", "nb", "no", "nbno" }),
         new LanguageAliasSet("ro-ro", "Romanian", new string[] { "română", "romanian", "ro", "roro", "ro-ro", "romania" })
     };
-    public static readonly Dictionary<string, string> DefaultDeathTranslations = new Dictionary<string, string> {
-        { "ACID", "{0} tried to enter enemy main." },
-        { "ANIMAL", "{0} was attacked by an animal." },
-        { "ARENA", "{0} stepped outside the arena boundary." },
-        { "BLEEDING", "{0} bled out from {1}." },
-        { "BLEEDING_UNKNOWN", "{0} bled out." },
-        { "BLEEDING_SUICIDE", "{0} bled out." },
-        { "BONES", "{0} fell to their death." },
-        { "BOULDER", "{0} was crushed by a mega zombie." },
-        { "BREATH", "{0} asphyxiated." },
-        { "BURNER", "{0} was burned by a mega zombie." },
-        { "BURNING", "{0} burned to death." },
-        { "CHARGE", "{1} blew up {0} with a demolition charge." },
-        { "CHARGE_SUICIDE", "{0} was blown up by their own demolition charge." },
-        { "FOOD", "{0} starved to death." },
-        { "FREEZING", "{0} froze to death." },
-        { "GRENADE", "{1} blew up {0} with a {3}." },
-        { "GRENADE_SUICIDE", "{0} blew themselves up with their {3}." },
-        { "GRENADE_SUICIDE_UNKNOWN", "{0} blew themselves up with a grenade." },
-        { "GRENADE_UNKNOWN", "{1} blew up {0} with a grenade." },
-        { "GUN", "{1} shot {0} in the {2} with a {3} from {4} away." },
-        { "GUN_UNKNOWN", "{1} shot {0} in the {2} from {4} away." },
-        { "GUN_SUICIDE_UNKNOWN", "{0} shot themselves in the {2}." },
-        { "GUN_SUICIDE", "{0} shot themselves in the {2} with a {3}." },
-        { "INFECTION", "{0} got infected." },
-        { "KILL", "{0} was killed by an admin, {1}." },
-        { "KILL_SUICIDE", "{0} killed themselves as an admin." },
-        { "LANDMINE", "{1} blew up {0} with a {3}." },
-        { "LANDMINE_SUICIDE", "{0} blew themselves up with their {3}." },
-        { "LANDMINE_SUICIDE_UNKNOWN", "{0} blew themselves up with a landmine." },
-        { "LANDMINE_UNKNOWN", "{1} got blown up by {0} with a landmine." },
-        { "LANDMINE_TRIGGERED", "{1} blew up {0} with a {3} set off by {5}." },
-        { "LANDMINE_SUICIDE_TRIGGERED", "{0} was blown up by their own {3} set off by {5}." },
-        { "LANDMINE_SUICIDE_UNKNOWN_TRIGGERED", "{0} was blown up by their own landmine set off by {5}." },
-        { "LANDMINE_UNKNOWN_TRIGGERED", "{1} blew up {0} with a landmine set off by {5}." },
-        { "LANDMINE_UNKNOWNKILLER", "{0} was blown up by a {3}." },
-        { "LANDMINE_UNKNOWN_UNKNOWNKILLER", "{0} was blown up by a landmine." },
-        { "LANDMINE_TRIGGERED_UNKNOWNKILLER", "{0} was blown up by a {3} set off by {5}." },
-        { "LANDMINE_UNKNOWN_TRIGGERED_UNKNOWNKILLER", "{0} was blown up by a landmine set off by {5}." },
-        { "MELEE", "{1} struck {0} in the {2} with a {3}." },
-        { "MELEE_UNKNOWN", "{1} struck {0} in the {2}." },
-        { "MISSILE", "{1} blew up {0} with a {3} from {4} away." },
-        { "MISSILE_UNKNOWN", "{1} blew up {0} with a missile from {4} away." },
-        { "MISSILE_SUICIDE_UNKNOWN", "{0} blew themselves up." },
-        { "MISSILE_SUICIDE", "{0} blew themselves up with a {3}." },
-        { "PUNCH", "{0} domed {1}." },
-        { "ROADKILL", "{0} was ran over by {1}." },
-        { "SENTRY", "{0} was killed by a sentry." },
-        { "SHRED", "{0} was shredded by barbed wire." },
-        { "SPARK", "{0} was shocked by a mega zombie." },
-        { "SPIT", "{0} was killed by a spitter zombie." },
-        { "SPLASH", "{1} killed {0} with {3} fragmentation." },
-        { "SPLASH_UNKNOWN", "{1} killed {0} with fragmentation." },
-        { "SPLASH_SUICIDE_UNKNOWN", "{0} fragged themselves." },
-        { "SPLASH_SUICIDE", "{0} fragged themselves with a {3}." },
-        { "SUICIDE", "{0} committed suicide." },
-        { "VEHICLE", "{0} died inside a {3}." }, // {1} killed {0} with a {3}
-        { "VEHICLE_SUICIDE", "{0} crashed their {3} and died." },
-        { "VEHICLE_SUICIDE_UNKNOWN", "{0} crashed a vehicle and died." },
-        { "VEHICLE_UNKNOWN", "{0} died inside a vehicle." },
-        { "VEHICLE_UNKNOWNKILLER", "{0} died inside a {3}." },
-        { "VEHICLE_UNKNOWN_UNKNOWNKILLER", "{0} died inside a vehicle." },
-        { "WATER", "{0} dehydrated." },
-        { "ZOMBIE", "{0} was killed by {1}." },
-        { "MAINCAMP", "{0} tried to main-camp {1} from {4} away and died." },
-        { "MAINDEATH", "{0} tried to enter enemy territory." },
-        { "38328", "{0} was blown up by a mortar by {1} from {4} away." },  // 81mm mortar turret item id
-        { "38328_SUICIDE", "{0} blew themselves up with a mortar." }        // 81mm mortar turret item id
-    };
-    public static readonly Dictionary<ELimb, string> DefaultLimbTranslations = new Dictionary<ELimb, string> {
-        { ELimb.LEFT_ARM, "Left Arm" },
-        { ELimb.LEFT_BACK, "Left Back" },
-        { ELimb.LEFT_FOOT, "Left Foot" },
-        { ELimb.LEFT_FRONT, "Left Front" },
-        { ELimb.LEFT_HAND, "Left Hand" },
-        { ELimb.LEFT_LEG, "Left Leg" },
-        { ELimb.RIGHT_ARM, "Right Arm" },
-        { ELimb.RIGHT_BACK, "Right Back" },
-        { ELimb.RIGHT_FOOT, "Right Foot" },
-        { ELimb.RIGHT_FRONT, "Right Front" },
-        { ELimb.RIGHT_HAND, "Right Hand" },
-        { ELimb.RIGHT_LEG, "Right Leg" },
-        { ELimb.SKULL, "Head" },
-        { ELimb.SPINE, "Spine" }
-    };
-    public const string DeathsTranslationDescription = "Translations | Key, space, value with unlimited spaces. " +
-        "Formatting: Dead player name, Murderer name when applicable, Limb, Gun name when applicable, distance when applicable. /reload translations to reload";
-    public const string DeathsLimbTranslationsDescription = "Translations | Key, space, value with unlimited spaces. " +
-        "Must match SDG.Unturned.ELimb enumerator list <LEFT|RIGHT>_<ARM|LEG|BACK|FOOT|FRONT|HAND>, SPINE, SKULL. ex. LEFT_ARM, RIGHT_FOOT";
 }

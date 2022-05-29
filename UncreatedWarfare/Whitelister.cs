@@ -51,7 +51,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             shouldAllow = false;
         }
     }
-    private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, SDG.Unturned.ItemData itemData, ref bool shouldAllow)
+    private void OnItemPickup(Player P, byte x, byte y, uint instanceID, byte to_x, byte to_y, byte to_rot, byte to_page, ItemData itemData, ref bool shouldAllow)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -69,9 +69,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             return;
         }
         else
-        {
-            isWhitelisted = IsWhitelisted(a.GUID, out whitelistedItem);
-        }
+        isWhitelisted = IsWhitelisted(a.GUID, out whitelistedItem);
         if (to_page == PlayerInventory.STORAGE && !isWhitelisted)
         {
             shouldAllow = false;
@@ -86,6 +84,8 @@ public class Whitelister : ListSingleton<WhitelistItem>
             if (allowedItems == 0)
                 allowedItems = kit.Clothes.Count(k => k.id == a.GUID);
 
+            int max = isWhitelisted ? Math.Max(allowedItems, whitelistedItem.Amount) : allowedItems;
+
             if (allowedItems == 0)
             {
                 if (!isWhitelisted)
@@ -99,14 +99,14 @@ public class Whitelister : ListSingleton<WhitelistItem>
                     player.Message("whitelist_maxamount");
                 }
             }
-            else if (itemCount >= allowedItems)
+            else if (itemCount >= max)
             {
                 if (!isWhitelisted)
                 {
                     shouldAllow = false;
                     player.Message("whitelist_kit_maxamount");
                 }
-                else if (itemCount >= whitelistedItem.Amount)
+                else if (itemCount >= max)
                 {
                     shouldAllow = false;
                     player.Message("whitelist_maxamount");
@@ -309,12 +309,17 @@ public class Whitelister : ListSingleton<WhitelistItem>
         return Singleton.ObjectExists(w => w.Item == itemID, out item);
     }
 }
-public struct WhitelistItem
+public class WhitelistItem
 {
     public Guid Item;
     [JsonSettable]
     public int Amount;
 
+    public WhitelistItem()
+    {
+        Item = default;
+        Amount = 255;
+    }
     public WhitelistItem(Guid itemID, ushort amount)
     {
         this.Item = itemID;

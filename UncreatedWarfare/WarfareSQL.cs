@@ -35,12 +35,12 @@ public class WarfareSQL : MySqlDatabase
             new object[] { Steam64 },
             (R) =>
             {
-                name = new FPlayerName() { Steam64 = Steam64, PlayerName = R.GetString(0), CharacterName = R.GetString(1), NickName = R.GetString(2) };
+                name = new FPlayerName() { Steam64 = Steam64, PlayerName = R.GetString(0), CharacterName = R.GetString(1), NickName = R.GetString(2), WasFound = true };
             });
         if (name.HasValue)
             return name.Value;
         string tname = Steam64.ToString(Data.Locale);
-        return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname };
+        return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
     }
     public async Task<FPlayerName> GetUsernamesAsync(ulong Steam64)
     {
@@ -55,12 +55,12 @@ public class WarfareSQL : MySqlDatabase
             new object[] { Steam64 },
             (R) =>
             {
-                name = new FPlayerName() { Steam64 = Steam64, PlayerName = R.GetString(0), CharacterName = R.GetString(1), NickName = R.GetString(2) };
+                name = new FPlayerName() { Steam64 = Steam64, PlayerName = R.GetString(0), CharacterName = R.GetString(1), NickName = R.GetString(2), WasFound = true };
             });
         if (name.HasValue)
             return name.Value;
         string tname = Steam64.ToString(Data.Locale);
-        return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname };
+        return new FPlayerName() { Steam64 = Steam64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
     }
     public bool GetDiscordID(ulong Steam64, out ulong DiscordID)
     {

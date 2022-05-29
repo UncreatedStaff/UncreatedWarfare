@@ -531,7 +531,7 @@ public class VehicleBayCommand : IRocketCommand
             }
             if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
             {
-                if (ctx.Caller!.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                if (ctx.Caller!.Player.TryGetPlayerData(out Components.UCPlayerData c))
                 {
                     if (c.currentlylinking != null)
                     {
@@ -563,7 +563,7 @@ public class VehicleBayCommand : IRocketCommand
                 VehicleSpawn? spawn = GetBayTarget(ref ctx);
                 if (spawn is not null)
                 {
-                    if (ctx.Caller!.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+                    if (ctx.Caller!.Player.TryGetPlayerData(out Components.UCPlayerData c))
                     {
                         c.currentlylinking = spawn;
                         ctx.Reply("vehiclebay_link_started");

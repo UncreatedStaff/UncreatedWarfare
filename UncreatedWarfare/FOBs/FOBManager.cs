@@ -209,7 +209,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
         
         if (fob.Owner != 0 && Data.Is(out IGameStats ws) && ws.GameStats is IFobsTracker ft)
         {
-            if (fob.Owner.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IFOBStats f)
+            if (fob.Owner.TryGetPlayerData(out UCPlayerData c) && c.stats is IFOBStats f)
                 f.AddFOBPlaced();
             if (fob.Team == 1)
             {
@@ -284,6 +284,47 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
         SendFOBListToTeam(fob.Team);
         return fob;
     }
+
+    private const float INSIDE_FOB_RANGE_SQR = 2f * 2f;
+    public static bool IsPointInFOB(Vector3 point, out FOB? fob, out SpecialFOB? specialFob)
+    {
+        Singleton.AssertLoaded();
+        fob = null;
+        specialFob = null;
+        if (Singleton.SpecialFOBs != null)
+        {
+            for (int i = 0; i < Singleton.SpecialFOBs.Count; ++i)
+            {
+                if ((Singleton.SpecialFOBs[i].Point - point).sqrMagnitude <= INSIDE_FOB_RANGE_SQR)
+                {
+                    specialFob = Singleton.SpecialFOBs[i];
+                }
+            }
+        }
+        if (Singleton.Team1FOBs != null)
+        {
+            for (int i = 0; i < Singleton.Team1FOBs.Count; ++i)
+            {
+                BarricadeDrop? bunker = Singleton.Team1FOBs[i].Bunker;
+                if (bunker != null && (bunker.model.position - point).sqrMagnitude <= INSIDE_FOB_RANGE_SQR)
+                {
+                    fob = Singleton.Team1FOBs[i];
+                }
+            }
+        }
+        if (Singleton.Team2FOBs != null)
+        {
+            for (int i = 0; i < Singleton.Team2FOBs.Count; ++i)
+            {
+                BarricadeDrop? bunker = Singleton.Team2FOBs[i].Bunker;
+                if (bunker != null && (bunker.model.position - point).sqrMagnitude <= INSIDE_FOB_RANGE_SQR)
+                {
+                    fob = Singleton.Team2FOBs[i];
+                }
+            }
+        }
+        return fob is not null || specialFob is not null;
+    }
     public static SpecialFOB RegisterNewSpecialFOB(string name, Vector3 point, ulong team, string UIcolor, bool disappearAroundEnemies)
     {
         Singleton.AssertLoaded();
@@ -352,7 +393,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
 
         if (removed != null)
         {
-            IEnumerator<PlaytimeComponent> pts = Data.PlaytimeComponents.Values.GetEnumerator();
+            IEnumerator<UCPlayerData> pts = Data.PlaytimeComponents.Values.GetEnumerator();
             while (pts.MoveNext())
             {
                 if (pts.Current.PendingFOB is FOB f && f.Number == removed.Number)
@@ -368,7 +409,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
             if (killer != null && killerteam != 0 && killerteam != team && Data.Gamemode.State == EState.ACTIVE && Data.Is(out IGameStats w) && w.GameStats is IFobsTracker ft)
             // doesnt count destroying fobs after game ends
             {
-                if (killer.Player.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IFOBStats f)
+                if (killer.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is IFOBStats f)
                     f.AddFOBDestroyed();
                 if (team == 1)
                 {
@@ -409,7 +450,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
 
         if (removed != null)
         {
-            IEnumerator<PlaytimeComponent> pts = Data.PlaytimeComponents.Values.GetEnumerator();
+            IEnumerator<UCPlayerData> pts = Data.PlaytimeComponents.Values.GetEnumerator();
             while (pts.MoveNext())
             {
                 if (pts.Current.PendingFOB is SpecialFOB special)
@@ -444,7 +485,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
         {
             removed.Destroy();
 
-            IEnumerator<PlaytimeComponent> pts = Data.PlaytimeComponents.Values.GetEnumerator();
+            IEnumerator<UCPlayerData> pts = Data.PlaytimeComponents.Values.GetEnumerator();
             while (pts.MoveNext())
             {
                 if (pts.Current.PendingFOB is FOB fob && fob.Number == removed.Number)

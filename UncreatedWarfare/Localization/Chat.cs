@@ -611,12 +611,11 @@ namespace Uncreated.Warfare
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your death translation of {key}.");
-                    if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out localizedString) && !JSONMethods.DefaultDeathTranslations.TryGetValue(backupcause.ToString(), out localizedString))
-                        localizedString = key;
+                    localizedString = key;
                     try
                     {
                         localizedString = string.Format(localizedString, F.ColorizeName(dead.CharacterName, deadTeam), F.ColorizeName(killer, killerTeam),
-                            Translation.TranslateLimb(set.Language, limb), itemName, Math.Round(distance).ToString(Data.Locale));
+                            Translation.TranslateEnum(limb, set.Language), itemName, Math.Round(distance).ToString(Data.Locale));
                     }
                     catch (FormatException)
                     {
@@ -650,12 +649,12 @@ namespace Uncreated.Warfare
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
                     L.LogWarning($"'{localizedString}' is too long, sending default message instead, consider shortening your death translation of {key}.");
-                    if (!JSONMethods.DefaultDeathTranslations.TryGetValue(key, out localizedString))
-                        localizedString = key;
+                    
+                    localizedString = key;
                     try
                     {
                         localizedString = string.Format(localizedString, F.ColorizeName(dead.CharacterName, deadTeam), F.ColorizeName(killerName.CharacterName, killerTeam),
-                        Translation.TranslateLimb(set.Language, limb), landmineName, "0", F.ColorizeName(triggererName.CharacterName, triggererTeam));
+                        Translation.TranslateEnum(limb, set.Language), landmineName, "0", F.ColorizeName(triggererName.CharacterName, triggererTeam));
                     }
                     catch (FormatException)
                     {

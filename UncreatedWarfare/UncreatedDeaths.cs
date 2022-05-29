@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -44,7 +45,7 @@ partial class UCWarfare
             Task.Run(() => Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team));
             StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s => s.Teamkills++, false);
             StatsManager.ModifyTeam(team, t => t.Teamkills++, false);
-            if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is ITeamPVPModeStats tpvp)
+            if (parameters.killer.TryGetPlayerData(out UCPlayerData c) && c.stats is ITeamPVPModeStats tpvp)
                 tpvp.AddTeamkill();
             if (Configuration.Instance.AdminLoggerSettings.LogTKs)
             {
@@ -128,7 +129,7 @@ partial class UCWarfare
         {
             Task.Run(() => Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team));
             TicketManager.OnEnemyKilled(parameters);
-            if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent c))
+            if (parameters.killer.TryGetPlayerData(out UCPlayerData c))
             {
                 if (c.stats is IPVPModeStats kd)
                     kd.AddKill();
@@ -157,7 +158,7 @@ partial class UCWarfare
                             (d.Cache.Structure.model.transform.position - parameters.killer.transform.position).sqrMagnitude <=
                             Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
                         {
-                            if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
+                            if (parameters.killer.TryGetPlayerData(out UCPlayerData comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
                         }
                     }
                 }
@@ -170,7 +171,7 @@ partial class UCWarfare
                             (d.Cache.Structure.model.transform.position - parameters.dead.transform.position).sqrMagnitude <=
                             Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange * Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
                         {
-                            if (parameters.killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
+                            if (parameters.killer.TryGetPlayerData(out UCPlayerData comp) && comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
                         }
                     }
                 }
@@ -321,7 +322,7 @@ partial class UCWarfare
             Task.Run(() => Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team));
             StatsManager.ModifyTeam(team, t => t.Deaths++, false);
             QuestManager.OnDeath(parameters);
-            if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
+            if (parameters.dead.TryGetPlayerData(out UCPlayerData c) && c.stats is IPVPModeStats kd)
                 kd.AddDeath();
             if (KitManager.HasKit(parameters.dead, out Kit kit))
             {
@@ -494,7 +495,7 @@ partial class UCWarfare
                 }
             }
             TicketManager.OnPlayerDeath(parameters);
-            if (parameters.dead.TryGetPlaytimeComponent(out PlaytimeComponent c) && c.stats is IPVPModeStats kd)
+            if (parameters.dead.TryGetPlayerData(out UCPlayerData c) && c.stats is IPVPModeStats kd)
                 kd.AddDeath();
             Task.Run(() => Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team));
             QuestManager.OnDeath(parameters);
@@ -528,6 +529,7 @@ partial class UCWarfare
         }
         OnPlayerDeathGlobal?.Invoke(parameters);
     }
+    /*
     private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
     {
 #if DEBUG
@@ -539,7 +541,7 @@ partial class UCWarfare
             ucplayer.LifeCounter++;
         }
 
-        PlaytimeComponent? c2 = dead.Player.GetPlaytimeComponent(out bool success);
+        UCPlayerData? c2 = dead.Player.GetPlayerData(out bool success);
         if (c2 != null)
             c2.lastShot = default;
         if (cause == EDeathCause.LANDMINE)
@@ -576,7 +578,7 @@ partial class UCWarfare
                 placerName = F.GetPlayerOriginalNames(placer);
                 placerTeam = placer.GetTeam();
                 foundPlacer = true;
-                if (placer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                if (placer.player.TryGetPlayerData(out UCPlayerData c))
                 {
                     if (c.LastLandmineExploded.Equals(default(LandmineData)) || c.LastLandmineExploded.owner == null)
                     {
@@ -602,7 +604,7 @@ partial class UCWarfare
                 else landmineName = "Unknown";
                 if (landmine.instanceID != 0)
                 {
-                    PlaytimeComponent pt = Data.PlaytimeComponents.Values.FirstOrDefault(
+                    UCPlayerData pt = Data.PlaytimeComponents.Values.FirstOrDefault(
                         x =>
                         x != null &&
                         !x.LastLandmineTriggered.Equals(default(LandmineData)) &&
@@ -1041,8 +1043,6 @@ partial class UCWarfare
             }
             string key = cause.ToString();
             if (dead.CSteamID.m_SteamID == murderer.m_SteamID && cause != EDeathCause.SUICIDE) key += "_SUICIDE";
-            if (cause == EDeathCause.ARENA && Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey("MAINCAMP")) key = "MAINCAMP";
-            else if (cause == EDeathCause.ACID && Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey("MAINDEATH")) key = "MAINDEATH";
             if ((cause == EDeathCause.GUN || cause == EDeathCause.MELEE || cause == EDeathCause.MISSILE || cause == EDeathCause.SPLASH
                 || cause == EDeathCause.VEHICLE || cause == EDeathCause.ROADKILL || cause == EDeathCause.BLEEDING) && foundKiller)
             {
@@ -1051,14 +1051,6 @@ partial class UCWarfare
                     Asset a = Assets.find(item);
                     string k1 = (itemIsVehicle ? "v" : "") + a == null ? "0" : a.id.ToString(Data.Locale);
                     string k2 = k1 + "_SUICIDE";
-                    if (Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey(k1))
-                    {
-                        key = k1;
-                    }
-                    if (dead.CSteamID.m_SteamID == killer!.playerID.steamID.m_SteamID && cause != EDeathCause.SUICIDE && Data.DeathLocalization[JSONMethods.DEFAULT_LANGUAGE].ContainsKey(k2))
-                    {
-                        key = k2;
-                    }
                 }
                 else
                 {
@@ -1171,7 +1163,7 @@ partial class UCWarfare
             LogDeathMessage(key, cause, dead.Player, killerName, translateName, killerTeam, limb, itemName, distance);
         }
         OnPlayerDeathPostMessages?.Invoke(dead, cause, limb, murderer);
-    }
+    }*/
     private void LogDeathMessage(string key, EDeathCause backupcause, Player dead, FPlayerName killerName, bool translateName, ulong killerGroup, ELimb limb, string itemName, float distance)
     {
         Chat.BroadcastDeath(key, backupcause, F.GetPlayerOriginalNames(dead), dead.GetTeam(), killerName, translateName, killerGroup, limb, itemName, distance, out string message, true);
@@ -1218,22 +1210,22 @@ partial class UCWarfare
                 }
             }
         }
-        if (killer != null && killer.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+        if (killer != null && killer.player.TryGetPlayerData(out UCPlayerData c))
         {
             if (cause == EDeathCause.GUN && c.lastShot != default)
                 item = c.lastShot;
-            else if (cause == EDeathCause.GRENADE && c.thrown != default && c.thrown.Count > 0)
+            else if (cause == EDeathCause.GRENADE && c.ActiveThrownItems != default && c.ActiveThrownItems.Count > 0)
             {
-                ThrowableOwner g = c.thrown.FirstOrDefault(x => Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
+                ThrowableComponent g = c.ActiveThrownItems.FirstOrDefault(x => Assets.find(x.Throwable) is ItemThrowableAsset asset && asset.isExplosive);
                 if (g != default)
                 {
-                    item = g.ThrowableID;
+                    item = g.Throwable;
                     if (Config.Debug)
                         L.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                 }
-                else if (c.thrown[0] != null)
+                else if (c.ActiveThrownItems[0] != null)
                 {
-                    item = c.thrown[0].ThrowableID;
+                    item = c.ActiveThrownItems[0].Throwable;
                     if (Config.Debug)
                         L.Log("Cause was grenade and found id: " + item.ToString(), ConsoleColor.DarkGray);
                 }
@@ -1241,7 +1233,7 @@ partial class UCWarfare
                 else item = default;
             }
             else if (cause == EDeathCause.LANDMINE)
-                item = c.LastLandmineExploded.barricadeGUID;
+                item = c.ExplodingLandmine?.asset?.GUID ?? default;
             else if (cause == EDeathCause.MISSILE && c.lastProjected != default)
                 item = c.lastProjected;
             else if (cause == EDeathCause.VEHICLE && c.lastExplodedVehicle != default)

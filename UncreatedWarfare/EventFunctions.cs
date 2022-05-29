@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Barricades;
+using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -150,29 +152,6 @@ public static class EventFunctions
             drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
 
     }
-    internal static void ThrowableSpawned(UseableThrowable useable, GameObject throwable)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        try
-        {
-            ThrowableOwner t = throwable.AddComponent<ThrowableOwner>();
-            PlaytimeComponent? c = useable.player.GetPlaytimeComponent(out bool success);
-            if (c != null)
-            {
-                t.Set(useable, throwable, c);
-                c.thrown.Add(t);
-            }
-            L.LogDebug(useable.player.name + " spawned a throwable: " + (useable.equippedThrowableAsset != null ?
-                useable.equippedThrowableAsset.itemName : useable.name), ConsoleColor.DarkGray);
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Exception in ThrowableSpawned:");
-            L.LogError(ex);
-        }
-    }
     internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
     {
 #if DEBUG
@@ -207,7 +186,7 @@ public static class EventFunctions
                 projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 700, 8, 0.6f);
 
         Patches.DeathsPatches.lastProjected = projectile;
-        if (gun.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+        if (gun.player.TryGetPlayerData(out UCPlayerData c))
         {
             c.lastProjected = gun.equippedGunAsset.GUID;
         }
@@ -217,7 +196,7 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        PlaytimeComponent? c = gun.player.GetPlaytimeComponent(out bool success);
+        UCPlayerData? c = gun.player.GetPlayerData(out bool success);
         if (c != null)
         {
             c.lastShot = gun.equippedGunAsset.GUID;
@@ -231,6 +210,23 @@ public static class EventFunctions
         foreach (SteamPlayer player in Provider.clients)
             UCWarfare.I.UpdateLangs(player);
     }
+
+    internal static void OnLandmineExploding(LandmineExploding e)
+    {
+        if (UCWarfare.Config.BlockLandmineFriendlyFire && e.Triggerer.GetTeam() == e.TrapBarricade.GetServersideData().group.GetTeam())
+        {
+            e.Break();
+        }
+        else
+        {
+            if (!CheckLandminePosition(e.TrapBarricade.model.transform.position))
+                e.Break();
+        }
+    }
+    private static bool CheckLandminePosition(Vector3 position)
+    {
+        return !(TeamManager.IsInAnyMainOrAMCOrLobby(position) || FOBManager.Loaded && FOBManager.IsPointInFOB(position, out _, out _));
+    }
     internal static void OnBarricadeTryPlaced(Barricade barricade, ItemBarricadeAsset asset, Transform hit, ref Vector3 point, ref float angle_x,
         ref float angle_y, ref float angle_z, ref ulong owner, ref ulong group, ref bool shouldAllow)
     {
@@ -241,11 +237,28 @@ public static class EventFunctions
         {
             if (!shouldAllow) return;
             UCPlayer? player = UCPlayer.FromID(owner);
+            if (player is null)
+            {
+                shouldAllow = false;
+                return;
+            }
+
+            bool perms = player.OnDuty();
+            if (asset.build == EBuild.SPIKE || asset.build == EBuild.WIRE)
+            {
+                if (!perms && !CheckLandminePosition(point))
+                {
+                    shouldAllow = false;
+                    player.SendChat("no_place_trap", asset.itemName, asset.itemName.An());
+                    return;
+                }
+            }
+
             if (hit != null && hit.TryGetComponent<InteractableVehicle>(out _))
             {
                 if (!UCWarfare.Config.AdminLoggerSettings.AllowedBarricadesOnVehicles.Contains(asset.id))
                 {
-                    if (player != null && player.OffDuty())
+                    if (!perms)
                     {
                         shouldAllow = false;
                         player.SendChat("no_placement_on_vehicle", asset.itemName, asset.itemName.An());
@@ -259,7 +272,7 @@ public static class EventFunctions
 
             if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
             {
-                if (player != null && player.OffDuty() && player.KitClass != EClass.RIFLEMAN)
+                if (!perms && player.KitClass != EClass.RIFLEMAN)
                 {
                     shouldAllow = false;
                     player.SendChat("ammo_not_rifleman");
@@ -270,14 +283,12 @@ public static class EventFunctions
                 Data.Gamemode.Whitelister.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
             if (!(shouldAllow && Data.Gamemode is TeamGamemode)) return;
             ulong team = group.GetTeam();
-            if (player != null)
+            if (!perms && TeamManager.IsInAnyMainOrAMCOrLobby(point))
             {
-                if (!player.OnDuty() && TeamManager.IsInAnyMainOrAMCOrLobby(point))
-                {
-                    shouldAllow = false;
-                    player.Message("whitelist_noplace");
-                    return;
-                }
+                shouldAllow = false;
+                player.Message("whitelist_noplace");
+                return;
+            }
 
             if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == barricade.asset.GUID))
             {
@@ -285,18 +296,11 @@ public static class EventFunctions
                 return;
             }
 
-                BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.Foundation == barricade.asset.GUID);
+            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.Foundation == barricade.asset.GUID);
 
-                if (buildable != null)
-                {
-                    shouldAllow = BuildableComponent.TryPlaceBuildable(barricade, buildable, player, point);
-                    return;
-                }
-            }
-            else
+            if (buildable != null)
             {
-                L.LogError("Error in OnBarricadeTryPlaced: Player is null.");
-                shouldAllow = false;
+                shouldAllow = BuildableComponent.TryPlaceBuildable(barricade, buildable, player, point);
                 return;
             }
         }
@@ -344,40 +348,40 @@ public static class EventFunctions
                 c.item = Guid.Empty;
                 if (damageOrigin == EDamageOrigin.Grenade_Explosion)
                 {
-                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
+                    if (instigatorSteamID.TryGetPlayerData(out UCPlayerData c2))
                     {
-                        ThrowableOwner a = c2.thrown.FirstOrDefault(x =>
-                            Assets.find(x.ThrowableID) is ItemThrowableAsset asset && asset.isExplosive);
+                        ThrowableComponent a = c2.ActiveThrownItems.FirstOrDefault(x =>
+                            Assets.find(x.Throwable) is ItemThrowableAsset asset && asset.isExplosive);
                         if (a != null)
-                            c.item = a.ThrowableID;
+                            c.item = a.Throwable;
                     }
                 }
                 else if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                 {
-                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
+                    if (instigatorSteamID.TryGetPlayerData(out UCPlayerData c2))
                     {
                         c.item = c2.lastProjected;
                     }
                 }
                 else if (damageOrigin == EDamageOrigin.Vehicle_Explosion)
                 {
-                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
+                    if (instigatorSteamID.TryGetPlayerData(out UCPlayerData c2))
                     {
                         c.item = c2.lastExplodedVehicle;
                     }
                 }
                 else if (damageOrigin == EDamageOrigin.Useable_Gun || damageOrigin == EDamageOrigin.Bullet_Explosion)
                 {
-                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
+                    if (instigatorSteamID.TryGetPlayerData(out UCPlayerData c2))
                     {
                         c.item = c2.lastShot;
                     }
                 }
                 else if (damageOrigin == EDamageOrigin.Trap_Explosion)
                 {
-                    if (instigatorSteamID.TryGetPlaytimeComponent(out PlaytimeComponent c2))
+                    if (instigatorSteamID.TryGetPlayerData(out UCPlayerData c2) && c2.TriggeringLandmine != null)
                     {
-                        c.item = c2.LastLandmineExploded.barricadeGUID;
+                        c.item = c2.TriggeringLandmine.asset.GUID;
                     }
                 }
 
@@ -463,7 +467,7 @@ public static class EventFunctions
             }
             player.Player.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.INFANTRY);
 
-            PlaytimeComponent pt = player.Player.transform.gameObject.AddComponent<PlaytimeComponent>();
+            UCPlayerData pt = player.Player.transform.gameObject.AddComponent<UCPlayerData>();
             pt.StartTracking(player.Player);
             Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
             Task.Run(async () =>
@@ -722,7 +726,7 @@ public static class EventFunctions
                 if (team == 0 || pl == null || pl.GetTeam() != team) return;
                 if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                 {
-                    if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (pl.player.TryGetPlayerData(out UCPlayerData c))
                     {
                         weapon = c.lastProjected;
                     }
@@ -734,7 +738,7 @@ public static class EventFunctions
                 }
                 else if (damageOrigin == EDamageOrigin.Useable_Gun)
                 {
-                    if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (pl.player.TryGetPlayerData(out UCPlayerData c))
                     {
                         weapon = c.lastShot;
                     }
@@ -746,9 +750,9 @@ public static class EventFunctions
                 }
                 else if (damageOrigin == EDamageOrigin.Grenade_Explosion)
                 {
-                    if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (pl.player.TryGetPlayerData(out UCPlayerData c))
                     {
-                        weapon = c.thrown.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.ThrowableID)?.isExplosive ?? false)?.ThrowableID ?? Guid.Empty;
+                        weapon = c.ActiveThrownItems.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.Throwable)?.isExplosive ?? false)?.Throwable ?? Guid.Empty;
                     }
                     else if (pl.player.equipment.asset != null)
                     {
@@ -758,9 +762,9 @@ public static class EventFunctions
                 }
                 else if (damageOrigin == EDamageOrigin.Trap_Explosion)
                 {
-                    if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (pl.player.TryGetPlayerData(out UCPlayerData c) && c.ExplodingLandmine != null)
                     {
-                        weapon = c.LastLandmineTriggered.barricadeGUID;
+                        weapon = c.ExplodingLandmine.asset.GUID;
                     }
                     else if (pl.player.equipment.asset != null)
                     {
@@ -822,7 +826,7 @@ public static class EventFunctions
                 if (team == 0 || pl == null || pl.GetTeam() != team) return;
                 if (damageOrigin == EDamageOrigin.Rocket_Explosion)
                 {
-                    if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (pl.player.TryGetPlayerData(out UCPlayerData c))
                     {
                         weapon = c.lastProjected;
                     }
@@ -834,7 +838,7 @@ public static class EventFunctions
                 }
                 else if (damageOrigin == EDamageOrigin.Useable_Gun)
                 {
-                    if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (pl.player.TryGetPlayerData(out UCPlayerData c))
                     {
                         weapon = c.lastProjected;
                     }
@@ -846,9 +850,9 @@ public static class EventFunctions
                 }
                 else if (damageOrigin == EDamageOrigin.Grenade_Explosion)
                 {
-                    if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (pl.player.TryGetPlayerData(out UCPlayerData c))
                     {
-                        weapon = c.thrown.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.ThrowableID)?.isExplosive ?? false)?.ThrowableID ?? Guid.Empty;
+                        weapon = c.ActiveThrownItems.FirstOrDefault(x => Assets.find<ItemThrowableAsset>(x.Throwable)?.isExplosive ?? false)?.Throwable ?? Guid.Empty;
                     }
                     else if (pl.player.equipment.asset != null)
                     {
@@ -858,9 +862,9 @@ public static class EventFunctions
                 }
                 else if (damageOrigin == EDamageOrigin.Trap_Explosion)
                 {
-                    if (pl.player.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                    if (pl.player.TryGetPlayerData(out UCPlayerData c) && c.TriggeringLandmine != null)
                     {
-                        weapon = c.LastLandmineTriggered.barricadeGUID;
+                        weapon = c.TriggeringLandmine.asset.GUID;
                     }
                     else if (pl.player.equipment.asset != null)
                     {
@@ -926,11 +930,11 @@ public static class EventFunctions
                     (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(parameters.player.transform.position)))
                 {
                     // if the player has shot since they died
-                    if (!killer.TryGetPlaytimeComponent(out PlaytimeComponent comp) || comp.lastShot != default)
+                    if (!killer.TryGetPlayerData(out UCPlayerData comp) || comp.lastShot != default)
                         goto next;
                     shouldAllow = false;
                     byte newdamage = (byte)Math.Min(byte.MaxValue, Mathf.RoundToInt(parameters.damage * parameters.times * UCWarfare.Config.AMCDamageMultiplier));
-                    killer.life.askDamage(newdamage, parameters.direction * newdamage, EDeathCause.ARENA,
+                    killer.life.askDamage(newdamage, parameters.direction * newdamage, DeathTracker.MAIN_CAMP,
                     parameters.limb, parameters.player.channel.owner.playerID.steamID, out _, true, ERagdollEffect.NONE, false, true);
                     if (!lastSentMessages.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out long lasttime) || new TimeSpan(DateTime.Now.Ticks - lasttime).TotalSeconds > 5)
                     {
@@ -1198,7 +1202,7 @@ public static class EventFunctions
                     L.LogError(ex);
                 }
             }
-            PlaytimeComponent? c = player.CSteamID.GetPlaytimeComponent(out bool gotptcomp);
+            UCPlayerData? c = player.CSteamID.GetPlayerData(out bool gotptcomp);
             Data.OriginalNames.Remove(s64);
             ulong id = s64;
             Chat.Broadcast("player_disconnected", names.CharacterName);

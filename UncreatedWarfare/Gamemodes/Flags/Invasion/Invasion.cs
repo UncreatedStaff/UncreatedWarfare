@@ -30,7 +30,7 @@ public class Invasion :
         {
             CTFUI.ClearFlagList(player.transportConnection);
             SendUIParameters.Nil.SendToPlayer(player);
-            if (player.player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            if (player.player.TryGetPlayerData(out Components.UCPlayerData c))
                 c.stats = null!;
         }
         base.PostDispose();
@@ -324,7 +324,7 @@ public class Invasion :
                 InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam1[i].TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam1[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }
@@ -349,7 +349,7 @@ public class Invasion :
                 InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam2[i].TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam2[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }

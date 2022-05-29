@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Players;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -88,7 +89,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
         if (player != null && !player.player.life.isDead && InAMC.Contains(player.playerID.steamID.m_SteamID))
         {
             player.player.movement.forceRemoveFromVehicle();
-            player.player.life.askDamage(byte.MaxValue, Vector3.zero, EDeathCause.ACID, ELimb.SKULL, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
+            player.player.life.askDamage(byte.MaxValue, Vector3.zero, DeathTracker.MAIN_DEATH, ELimb.SKULL, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
         }
     }
 

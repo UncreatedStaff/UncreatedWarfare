@@ -525,7 +525,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
                 InvokeOnFlagCaptured(flag, 1, OldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam1[i].TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam1[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }
@@ -547,7 +547,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
                 InvokeOnFlagCaptured(flag, 2, OldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam2[i].TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam2[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }

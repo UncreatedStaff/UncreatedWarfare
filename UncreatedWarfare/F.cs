@@ -510,27 +510,27 @@ public static class F
         }
         catch { return false; }
     }
-    public static bool TryGetPlaytimeComponent(this Player player, out PlaytimeComponent component)
+    public static bool TryGetPlayerData(this Player player, out UCPlayerData component)
     {
-        component = GetPlaytimeComponent(player, out bool success)!;
+        component = GetPlayerData(player, out bool success)!;
         return success;
     }
-    public static bool TryGetPlaytimeComponent(this CSteamID player, out PlaytimeComponent component)
+    public static bool TryGetPlayerData(this CSteamID player, out UCPlayerData component)
     {
-        component = GetPlaytimeComponent(player, out bool success)!;
+        component = GetPlayerData(player, out bool success)!;
         return success;
     }
-    public static bool TryGetPlaytimeComponent(this ulong player, out PlaytimeComponent component)
+    public static bool TryGetPlayerData(this ulong player, out UCPlayerData component)
     {
-        component = GetPlaytimeComponent(player, out bool success)!;
+        component = GetPlayerData(player, out bool success)!;
         return success;
     }
-    public static PlaytimeComponent? GetPlaytimeComponent(this Player player, out bool success)
+    public static UCPlayerData? GetPlayerData(this Player player, out bool success)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.PlaytimeComponents.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out PlaytimeComponent pt))
+        if (Data.PlaytimeComponents.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out UCPlayerData pt))
         {
             success = pt != null;
             return pt;
@@ -540,7 +540,7 @@ public static class F
             success = false;
             return null;
         }
-        else if (player.transform.TryGetComponent(out PlaytimeComponent playtimeObj))
+        else if (player.transform.TryGetComponent(out UCPlayerData playtimeObj))
         {
             success = true;
             return playtimeObj;
@@ -551,12 +551,12 @@ public static class F
             return null;
         }
     }
-    public static PlaytimeComponent? GetPlaytimeComponent(this CSteamID player, out bool success)
+    public static UCPlayerData? GetPlayerData(this CSteamID player, out bool success)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.PlaytimeComponents.TryGetValue(player.m_SteamID, out PlaytimeComponent pt))
+        if (Data.PlaytimeComponents.TryGetValue(player.m_SteamID, out UCPlayerData pt))
         {
             success = pt != null;
             return pt;
@@ -574,7 +574,7 @@ public static class F
                 success = false;
                 return null;
             }
-            if (p.transform.TryGetComponent(out PlaytimeComponent playtimeObj))
+            if (p.transform.TryGetComponent(out UCPlayerData playtimeObj))
             {
                 success = true;
                 return playtimeObj;
@@ -586,7 +586,7 @@ public static class F
             }
         }
     }
-    public static PlaytimeComponent? GetPlaytimeComponent(this ulong player, out bool success)
+    public static UCPlayerData? GetPlayerData(this ulong player, out bool success)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -596,7 +596,7 @@ public static class F
             success = false;
             return default;
         }
-        if (Data.PlaytimeComponents.TryGetValue(player, out PlaytimeComponent pt))
+        if (Data.PlaytimeComponents.TryGetValue(player, out UCPlayerData pt))
         {
             success = pt != null;
             return pt;
@@ -609,7 +609,7 @@ public static class F
                 success = false;
                 return null;
             }
-            if (p.player.transform.TryGetComponent(out PlaytimeComponent playtimeObj))
+            if (p.player.transform.TryGetComponent(out UCPlayerData playtimeObj))
             {
                 success = true;
                 return playtimeObj;

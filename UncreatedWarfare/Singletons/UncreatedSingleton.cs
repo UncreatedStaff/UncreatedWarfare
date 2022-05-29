@@ -99,7 +99,7 @@ public abstract class BaseReloadSingleton : BaseSingleton, IReloadableSingleton
         _isLoaded = true;
     }
 }
-public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingleton where TData : new()
+public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingleton where TData : class, new()
 {
     public string? ReloadKey => reloadKey;
     private readonly string? reloadKey;
@@ -230,13 +230,13 @@ public static class SingletonEx
         singleton.AssertLoadedIntl();
     }
     /// <exception cref="SingletonUnloadedException"/>
-    public static void AssertLoaded<T, TData>(this T? singleton) where T : ListSingleton<TData> where TData : new()
+    public static void AssertLoaded<T, TData>(this T? singleton) where T : ListSingleton<TData> where TData : class, new()
     {
         if (singleton is null)
             throw new SingletonUnloadedException(typeof(T));
         singleton.AssertLoadedIntl();
     }
-    public static bool IsLoaded<T, TData>(this T? singleton) where T : ListSingleton<TData> where TData : new()
+    public static bool IsLoaded<T, TData>(this T? singleton) where T : ListSingleton<TData> where TData : class, new()
     {
         if (singleton is null)
             return false;

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Squads.UI;
 public class SquadOrderUI : UnturnedUI
@@ -14,7 +15,7 @@ public class SquadOrderUI : UnturnedUI
     public readonly UnturnedLabel TimeLeft  = new UnturnedLabel("Time");
     public readonly UnturnedLabel Reward    = new UnturnedLabel("Reward");
 
-    public SquadOrderUI() : base(12004, SquadManager.Config?.Data?.SquadRallyUI, true, false) { }
+    public SquadOrderUI() : base(12004, Gamemode.Config.UI.OrderUI, true, false) { }
     public void SetOrder(UCPlayer player, Order order)
     {
         ITransportConnection c = player.Connection;

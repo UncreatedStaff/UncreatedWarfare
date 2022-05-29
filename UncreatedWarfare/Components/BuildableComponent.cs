@@ -68,7 +68,7 @@ namespace Uncreated.Warfare.Components
 
             //XPManager.AddXP(builder.Player, XPManager.config.Data.ShovelXP, Math.Round((float)Hits / Buildable.requiredHits * 100F).ToString() + "%", true);
 
-            if (builder.Player.TryGetPlaytimeComponent(out PlaytimeComponent component))
+            if (builder.Player.TryGetPlayerData(out UCPlayerData component))
             {
                 component.QueueMessage(new Players.ToastMessage(Points.GetProgressBar(Hits, Buildable.RequiredHits, 25), Players.EToastMessageSeverity.PROGRESS), true);
             }

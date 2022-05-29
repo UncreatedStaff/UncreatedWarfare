@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -9,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
+using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using UnityEngine;
@@ -27,11 +29,16 @@ public static class EventDispatcher
     public static event EventDelegate<BarricadeDestroyed> OnBarricadeDestroyed;
     public static event EventDelegate<PlaceBarricadeRequested> OnBarricadePlaceRequested;
     public static event EventDelegate<BarricadePlaced> OnBarricadePlaced;
+    public static event EventDelegate<LandmineExploding> OnLandmineExploding;
+
+    public static event EventDelegate<ThrowableSpawned> OnThrowableSpawned;
+    public static event EventDelegate<ThrowableSpawned> OnThrowableDespawning;
 
     public static event EventDelegate<PlayerPending> OnPlayerPending;
     public static event EventDelegate<PlayerJoined> OnPlayerJoined;
     public static event EventDelegate<PlayerEvent> OnPlayerLeaving;
     public static event EventDelegate<BattlEyeKicked> OnPlayerBattlEyeKicked;
+    public static event EventDelegate<PlayerDied> OnPlayerDied;
     internal static void SubscribeToAll()
     {
         EventPatches.TryPatchAll();
@@ -47,9 +54,11 @@ public static class EventDispatcher
         Provider.onServerDisconnected += ProviderOnServerDisconnected;
         Provider.onCheckValidWithExplanation += ProviderOnCheckValidWithExplanation;
         Provider.onBattlEyeKick += ProviderOnBattlEyeKick;
+        UseableThrowable.onThrowableSpawned += UseableThrowableOnThrowableSpawned;
     }
     internal static void UnsubscribeFromAll()
     {
+        UseableThrowable.onThrowableSpawned -= UseableThrowableOnThrowableSpawned;
         Provider.onBattlEyeKick -= ProviderOnBattlEyeKick;
         Provider.onCheckValidWithExplanation -= ProviderOnCheckValidWithExplanation;
         Provider.onServerDisconnected -= ProviderOnServerDisconnected;
@@ -184,6 +193,15 @@ public static class EventDispatcher
             TryInvoke(inv, args, nameof(OnBarricadeDestroyed));
         }
     }
+    internal static void InvokeOnPlayerDied(PlayerDied e)
+    {
+        if (OnPlayerDied == null) return;
+        foreach (EventDelegate<PlayerDied> inv in OnPlayerDied.GetInvocationList().Cast<EventDelegate<PlayerDied>>())
+        {
+            if (!e.CanContinue) break;
+            TryInvoke(inv, e, nameof(OnPlayerDied));
+        }
+    }
     private static void ProviderOnServerDisconnected(CSteamID steamID)
     {
         if (OnPlayerLeaving == null) return;
@@ -286,6 +304,55 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(OnBarricadePlaced));
         }
+    }
+    private static void UseableThrowableOnThrowableSpawned(UseableThrowable useable, GameObject throwable)
+    {
+        ThrowableComponent c = throwable.AddComponent<ThrowableComponent>();
+        c.Throwable = useable.equippedThrowableAsset.GUID;
+        c.Owner = useable.player.channel.owner.playerID.steamID.m_SteamID;
+        if (OnThrowableSpawned == null) return;
+        UCPlayer? owner = UCPlayer.FromPlayer(useable.player);
+        if (owner is null) return;
+        ThrowableSpawned args = new ThrowableSpawned(owner, useable.equippedThrowableAsset, throwable);
+        foreach (EventDelegate<ThrowableSpawned> inv in OnThrowableSpawned.GetInvocationList().Cast<EventDelegate<ThrowableSpawned>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnThrowableSpawned));
+        }
+    }
+    internal static void InvokeOnThrowableDespawning(ThrowableComponent throwableComponent)
+    {
+        if (OnThrowableDespawning == null) return;
+        UCPlayer? owner = UCPlayer.FromID(throwableComponent.Owner);
+        if (owner is null || Assets.find(throwableComponent.Throwable) is not ItemThrowableAsset asset) return;
+        ThrowableSpawned args = new ThrowableSpawned(owner, asset, throwableComponent.gameObject);
+        foreach (EventDelegate<ThrowableSpawned> inv in OnThrowableDespawning.GetInvocationList().Cast<EventDelegate<ThrowableSpawned>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnThrowableDespawning));
+        }
+        owner.Player.StartCoroutine(ThrowableDespawnCoroutine(owner, throwableComponent.UnityInstanceID));
+    }
+    private static IEnumerator ThrowableDespawnCoroutine(UCPlayer player, int instId)
+    {
+        yield return null;
+        if (player.IsOnline && player.Player.TryGetPlayerData(out UCPlayerData component))
+        {
+            for (int i = component.ActiveThrownItems.Count - 1; i >= 0; --i)
+                if (component.ActiveThrownItems[i] == null || component.ActiveThrownItems[i].UnityInstanceID == instId)
+                    component.ActiveThrownItems.RemoveAt(i);
+        }
+    }
+    internal static void InvokeOnLandmineExploding(UCPlayer? owner, BarricadeDrop barricade, InteractableTrap trap, UCPlayer triggerer, GameObject triggerObject, ref bool shouldExplode)
+    {
+        if (OnLandmineExploding == null || !shouldExplode) return;
+        LandmineExploding request = new LandmineExploding(owner, barricade, trap, triggerer, triggerObject, shouldExplode);
+        foreach (EventDelegate<LandmineExploding> inv in OnLandmineExploding.GetInvocationList().Cast<EventDelegate<LandmineExploding>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnLandmineExploding));
+        }
+        if (!request.CanContinue) shouldExplode = false;
     }
 }
 public delegate void EventDelegate<T>(T e) where T : EventState;

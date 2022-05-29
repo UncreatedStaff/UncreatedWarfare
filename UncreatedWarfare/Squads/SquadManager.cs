@@ -17,12 +17,12 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 {
     public SquadManager() : base("squad") { }
 
-    public new static SquadsConfig Config;
-    public static List<Squad> Squads;
+    public new static SquadConfigData Config => _singleton.IsLoaded() ? _singleton.ConfigurationFile.Data : null!;
+    public static readonly List<Squad> Squads = new List<Squad>(12);
     private static SquadManager _singleton;
     public static readonly SquadMenuUI MenuUI   = new SquadMenuUI();
     public static readonly SquadListUI ListUI   = new SquadListUI();
-    public static readonly UnturnedUI RallyUI   = new UnturnedUI(12003, Config?.Data?.SquadRallyUI, true, false, false);
+    public static readonly UnturnedUI RallyUI   = new UnturnedUI(12003, Gamemode.Config.UI.RallyGUID, true, false, false);
     public static readonly SquadOrderUI OrderUI = new SquadOrderUI();
     public static readonly string[] SQUAD_NAMES =
     {
@@ -39,23 +39,19 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
     public override void Load()
     {
         base.Load();
-        Config = this.ConfigurationFile;
-        Squads = new List<Squad>();
+        Squads.Clear();
         KitManager.OnKitChanged += OnKitChanged;
         _singleton = this;
     }
     public override void Reload()
     {
-        Config = null!;
         base.Reload();
-        Config = this.ConfigurationFile;
     }
     public override void Unload()
     {
         _singleton = null!;
         base.Unload();
-        Config = null!;
-        Squads = null!;
+        Squads.Clear();
         KitManager.OnKitChanged -= OnKitChanged;
     }
     private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)

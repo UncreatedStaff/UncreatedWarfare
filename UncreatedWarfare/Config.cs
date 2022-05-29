@@ -55,6 +55,7 @@ namespace Uncreated.Warfare
         public bool DisableNameFilter;
         public int MinAlphanumericStringLength;
         public bool EnableReporter;
+        public bool BlockLandmineFriendlyFire;
 
         public void LoadDefaults()
         {
@@ -99,6 +100,7 @@ namespace Uncreated.Warfare
             this.DisableNameFilter = false;
             this.MinAlphanumericStringLength = 5;
             this.EnableReporter = true;
+            this.BlockLandmineFriendlyFire = true;
         }
     }
     public class FlagSettings

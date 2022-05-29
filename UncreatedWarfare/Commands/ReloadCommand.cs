@@ -149,8 +149,9 @@ public class ReloadCommand : IRocketCommand
         {
             Data.LanguageAliases = JSONMethods.LoadLangAliases();
             Data.Languages = JSONMethods.LoadLanguagePreferences();
-            Data.Localization = JSONMethods.LoadTranslations(out Data.DeathLocalization, out Data.LimbLocalization);
+            Data.Localization = JSONMethods.LoadTranslations();
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+            Deaths.Localization.Reload();
             Translation.ReadEnumTranslations(Data.TranslatableEnumTypes);
             if (OnTranslationsReloaded != null)
                 OnTranslationsReloaded.Invoke();

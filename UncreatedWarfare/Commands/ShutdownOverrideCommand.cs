@@ -29,7 +29,8 @@ namespace Uncreated.Warfare.Commands
                 {
                     ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT");
                     NetCalls.SendShuttingDownInstant.NetInvoke(0UL, "None specified.");
-                    Provider.shutdown(0);
+                    UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
+                    Provider.shutdown(3);
                     return;
                 }
                 string option = command[0].ToLower();
@@ -50,7 +51,7 @@ namespace Uncreated.Warfare.Commands
                     ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason);
                     NetCalls.SendShuttingDownInstant.NetInvoke(0UL, reason);
                     UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
-                    Provider.shutdown(0, reason);
+                    Provider.shutdown(3, reason);
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
                 {
@@ -89,7 +90,8 @@ namespace Uncreated.Warfare.Commands
                 {
                     ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT", player.playerID.steamID.m_SteamID);
                     NetCalls.SendShuttingDownInstant.NetInvoke(0UL, "None specified.");
-                    Provider.shutdown(0);
+                    UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
+                    Provider.shutdown(3);
                     return;
                 }
                 string option = command[0].ToLower();
@@ -110,7 +112,7 @@ namespace Uncreated.Warfare.Commands
                     ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason, player.playerID.steamID.m_SteamID);
                     NetCalls.SendShuttingDownInstant.NetInvoke(0UL, reason);
                     UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
-                    Provider.shutdown(0, reason);
+                    Provider.shutdown(2, reason);
                 }
                 else if (option == "aftergame" || option == "after" || option == "game")
                 {

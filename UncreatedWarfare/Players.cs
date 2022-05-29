@@ -14,6 +14,7 @@ namespace Uncreated.Players
         public string PlayerName;
         public string CharacterName;
         public string NickName;
+        public bool WasFound;
 
         public FPlayerName(SteamPlayerID player)
         {
@@ -21,6 +22,7 @@ namespace Uncreated.Players
             this.CharacterName = player.characterName;
             this.NickName = player.nickName;
             this.Steam64 = player.steamID.m_SteamID;
+            WasFound = true;
         }
         public FPlayerName(ulong player)
         {
@@ -29,6 +31,7 @@ namespace Uncreated.Players
             this.CharacterName = ts;
             this.NickName = ts;
             this.Steam64 = player;
+            WasFound = true;
         }
         public FPlayerName(SteamPlayer player)
         {
@@ -36,6 +39,7 @@ namespace Uncreated.Players
             this.CharacterName = player.playerID.characterName;
             this.NickName = player.playerID.nickName;
             this.Steam64 = player.playerID.steamID.m_SteamID;
+            WasFound = true;
         }
         public FPlayerName(UnturnedPlayer player)
         {
@@ -43,6 +47,7 @@ namespace Uncreated.Players
             this.CharacterName = player.Player.channel.owner.playerID.characterName;
             this.NickName = player.Player.channel.owner.playerID.nickName;
             this.Steam64 = player.Player.channel.owner.playerID.steamID.m_SteamID;
+            WasFound = true;
         }
         public FPlayerName(Player player)
         {
@@ -50,6 +55,7 @@ namespace Uncreated.Players
             this.CharacterName = player.channel.owner.playerID.characterName;
             this.NickName = player.channel.owner.playerID.nickName;
             this.Steam64 = player.channel.owner.playerID.steamID.m_SteamID;
+            WasFound = true;
         }
         public static void Write(ByteWriter W, FPlayerName N)
         {
@@ -115,7 +121,7 @@ namespace Uncreated.Players
         public static void QueueMessage(SteamPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.player, message, priority);
         public static void QueueMessage(Player player, ToastMessage message, bool priority = false)
         {
-            if (F.TryGetPlaytimeComponent(player, out Warfare.Components.PlaytimeComponent c))
+            if (F.TryGetPlayerData(player, out Warfare.Components.UCPlayerData c))
                 c.QueueMessage(message, priority);
         }
     }

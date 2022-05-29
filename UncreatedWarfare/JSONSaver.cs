@@ -12,7 +12,7 @@ using Uncreated.Warfare;
 
 namespace Uncreated;
 
-public abstract class JSONSaver<T> : List<T> where T : new()
+public abstract class JSONSaver<T> : List<T> where T : class, new()
 {
     protected const string EMPTY_LIST = "[]";
     protected string directory;

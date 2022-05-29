@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Components;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -15,256 +16,6 @@ namespace Uncreated.Warfare
         [HarmonyPatch]
         public static class DeathsPatches
         {
-            // SDG.Unturned.InteractableTrap
-            /// <summary>
-            /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider other)"/> to set the killer to the player that placed the landmine.
-            /// </summary>
-            [HarmonyPatch(typeof(InteractableTrap), "OnTriggerEnter")]
-            [HarmonyPrefix]
-            static bool LandmineExplodeOverride(Collider other, InteractableTrap __instance,
-                ref float ___lastTriggered, float ___lastActive, float ___setupDelay, float ___cooldown,
-                bool ___isExplosive, ushort ___explosion2, float ___range2,
-                float ___playerDamage, float ___zombieDamage, float ___animalDamage, float ___barricadeDamage,
-                float ___structureDamage, float ___vehicleDamage, float ___resourceDamage, float ___objectDamage,
-                bool ___isBroken, float ___explosionLaunchSpeed)
-            {
-#if DEBUG
-                using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-                if (!UCWarfare.Config.Patches.UseableTrapOnTriggerEnter) return true;
-
-                if (other.isTrigger ||
-                    Time.realtimeSinceStartup - ___lastActive < ___setupDelay ||
-                    __instance.transform.parent != null &&
-                    other.transform == __instance.transform.parent ||
-                    Time.realtimeSinceStartup - ___lastTriggered < ___cooldown)
-                    return false;
-                ___lastTriggered = Time.realtimeSinceStartup;
-                if (!Provider.isServer)
-                    return false;
-                try
-                {
-                    if (___isExplosive)
-                    {
-                        if (other.transform.CompareTag("Player") && (!Provider.isPvP || !(other.transform.parent == null) && other.transform.parent.CompareTag("Vehicle")) && ___explosionLaunchSpeed <= 0.00999999977648258)
-                            return false;
-                    }
-
-
-                    BarricadeComponent owner = __instance.transform.GetComponentInParent<BarricadeComponent>() ?? __instance.transform.GetComponent<BarricadeComponent>();
-
-                    if (owner != null)
-                    {
-                        if (owner.Player == null)
-                        {
-                            SteamPlayer pl = PlayerTool.getSteamPlayer(owner.Owner);
-                            owner.Player = pl?.player;
-                        }
-                        if (owner.Player != null)
-                        {
-                            if (owner.Player.TryGetPlaytimeComponent(out PlaytimeComponent c))
-                                c.LastLandmineExploded = new LandmineData(__instance, owner);
-                            if (UCWarfare.Config.Debug)
-                                L.LogDebug(F.GetPlayerOriginalNames(owner.Player).PlayerName + "'s trap was triggered", ConsoleColor.DarkGray);
-                        }
-                        else if (UCWarfare.Config.Debug && owner.Owner != 0)
-                        {
-                            FPlayerName names = Data.DatabaseManager.GetUsernames(owner.Owner);
-                            L.LogDebug("[OFFLINE] " + names.PlayerName + "'s trap was triggered", ConsoleColor.DarkGray);
-                        }
-                    }
-                    else if (UCWarfare.Config.Debug)
-                    {
-                        L.LogDebug("Unknown owner's trap was triggered", ConsoleColor.DarkGray);
-                    }
-
-                    if (___isExplosive)
-                    {
-                        if (other.transform.CompareTag("Player")) // landmine that player walks over
-                        {
-                            L.LogDebug("Landmine walked over by player");
-                            if (!Provider.isPvP || other.transform.parent != null && other.transform.parent.CompareTag("Vehicle"))
-                                return false;
-
-                            Vector3 position = __instance.transform.position;
-                            if (Teams.TeamManager.IsInAnyMainOrAMCOrLobby(position))
-                            {
-                                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(__instance.transform);
-                                if (drop != null && Regions.tryGetCoordinate(position, out byte x, out byte y))
-                                {
-                                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                                    SDG.Unturned.BarricadeData sdata = drop.GetServersideData();
-                                    if (sdata == null)
-                                    {
-                                        L.LogDebug("Trap attempted to explode in main owned by " + (drop.model.TryGetComponent(out BarricadeComponent bc) ? bc.Owner.ToString() : "unknown player"));
-                                    }
-                                    else
-                                    {
-                                        L.LogDebug("Trap attempted to explode in main owned by " + sdata.owner.ToString());
-                                    }
-                                }
-                                else
-                                {
-                                    L.LogDebug("Trap attempted to explode in main owned by unknown player");
-                                }
-                                return false;
-                            }
-                            // triggerer
-                            Player player = DamageTool.getPlayer(other.transform) ?? other.GetComponent<Player>();
-
-                            if (owner != null && player != null && player.quests.groupID.m_SteamID == owner.Owner.GetTeamFromPlayerSteam64ID())
-                            {
-                                return false;
-                            }
-
-                            if (owner != null && player != null && player.TryGetPlaytimeComponent(out PlaytimeComponent c))
-                            {
-                                c.LastLandmineTriggered = new LandmineData(__instance, owner);
-                            }
-
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner == null || owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
-                            {
-                                playerDamage = ___playerDamage,
-                                zombieDamage = ___zombieDamage,
-                                animalDamage = ___animalDamage,
-                                barricadeDamage = ___barricadeDamage,
-                                structureDamage = ___structureDamage,
-                                vehicleDamage = ___vehicleDamage,
-                                resourceDamage = ___resourceDamage,
-                                objectDamage = ___objectDamage,
-                                damageOrigin = EDamageOrigin.Trap_Explosion,
-                                launchSpeed = ___explosionLaunchSpeed
-                            }, out _);
-                            if (___explosion2 <= 0)
-                                return false;
-                            EffectManager.triggerEffect(new TriggerEffectParameters(___explosion2)
-                            {
-                                position = position,
-                                relevantDistance = EffectManager.LARGE
-                            });
-                        }
-                        else // other form of trigger (throwable, animal, etc)
-                        {
-                            Vector3 position = __instance.transform.position;
-                            if (Teams.TeamManager.IsInAnyMainOrAMCOrLobby(position))
-                            {
-                                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(__instance.transform);
-                                if (drop != null && Regions.tryGetCoordinate(position, out byte x, out byte y))
-                                {
-                                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
-                                    SDG.Unturned.BarricadeData sdata = drop.GetServersideData();
-                                    if (sdata == null)
-                                    {
-                                        L.Log("Trap attempted to explode in main owned by " + (drop.model.TryGetComponent(out BarricadeComponent bc) ? bc.Owner.ToString() : "unknown player"), ConsoleColor.Cyan);
-                                    }
-                                    else
-                                    {
-                                        L.Log("Trap attempted to explode in main owned by " + sdata.owner.ToString(), ConsoleColor.Cyan);
-                                    }
-                                }
-                                else
-                                {
-                                    L.Log("Trap attempted to explode in main owned by unknown player", ConsoleColor.Cyan);
-                                }
-                                return false;
-                            }
-                            ThrowableOwner c = other.transform.GetComponent<ThrowableOwner>(); // throwable?
-                            if (c != null)
-                            {
-                                SteamPlayer throwableOwner = PlayerTool.getSteamPlayer(c.ownerID);
-                                if (throwableOwner != null)
-                                {
-                                    if (owner != null && throwableOwner.player.quests.groupID.m_SteamID == owner.Owner.GetTeamFromPlayerSteam64ID())
-                                    {
-                                        return false;
-                                    }
-                                    if (owner != null && throwableOwner.player.TryGetPlaytimeComponent(out PlaytimeComponent c2))
-                                    {
-                                        c2.LastLandmineTriggered = new LandmineData(__instance, owner);
-                                    }
-                                }
-                            }
-                            DamageTool.explode(new ExplosionParameters(position, ___range2, EDeathCause.LANDMINE, owner == null || owner.Player == null ? CSteamID.Nil : owner.Player.channel.owner.playerID.steamID)
-                            {
-                                playerDamage = ___playerDamage,
-                                zombieDamage = ___zombieDamage,
-                                animalDamage = ___animalDamage,
-                                barricadeDamage = ___barricadeDamage,
-                                structureDamage = ___structureDamage,
-                                vehicleDamage = ___vehicleDamage,
-                                resourceDamage = ___resourceDamage,
-                                objectDamage = ___objectDamage,
-                                damageOrigin = EDamageOrigin.Trap_Explosion,
-                                launchSpeed = ___explosionLaunchSpeed
-                            }, out _);
-                            if (___explosion2 <= 0)
-                                return false;
-                            EffectManager.triggerEffect(new TriggerEffectParameters(___explosion2)
-                            {
-                                position = position,
-                                relevantDistance = EffectManager.LARGE
-                            });
-                        }
-                    }
-                    else if (other.transform.CompareTag("Player")) // non explosive and player walks over it (barbed, etc)
-                    {
-                        L.LogDebug("Trap triggered by player.");
-                        if (!Provider.isPvP || other.transform.parent != null && other.transform.parent.CompareTag("Vehicle"))
-                            return false;
-                        Player player = DamageTool.getPlayer(other.transform);
-                        if (player == null)
-                            return false;
-
-                        // triggerer
-                        if (owner != null && player.TryGetPlaytimeComponent(out PlaytimeComponent c))
-                        {
-                            c.LastLandmineTriggered = new LandmineData(__instance, owner);
-                        }
-                        DamageTool.damage(player, EDeathCause.SHRED, ELimb.SPINE,
-                            owner == null ? CSteamID.Nil : (owner.Player == null ? new CSteamID(owner.Owner) : owner.Player.channel.owner.playerID.steamID)
-                            , Vector3.up, ___playerDamage, 1f, out EPlayerKill _, trackKill: true);
-                        if (___isBroken)
-                            player.life.breakLegs();
-                        EffectManager.sendEffect(5, EffectManager.SMALL, __instance.transform.position + Vector3.up, Vector3.down);
-                        BarricadeManager.damage(__instance.transform.parent, 5f, 1f, false, damageOrigin: EDamageOrigin.Trap_Wear_And_Tear);
-                    }
-                    else
-                    {
-                        if (!other.transform.CompareTag("Agent"))
-                            return false;
-                        Zombie zombie = DamageTool.getZombie(other.transform);
-                        if (zombie != null)
-                        {
-                            DamageTool.damageZombie(new DamageZombieParameters(zombie, __instance.transform.forward, ___zombieDamage)
-                            {
-                                instigator = __instance
-                            }, out EPlayerKill _, out uint _);
-                            EffectManager.sendEffect(zombie.isRadioactive ? (ushort)95 : (ushort)5, EffectManager.SMALL, __instance.transform.position + Vector3.up, Vector3.down);
-                            BarricadeManager.damage(__instance.transform.parent, zombie.isHyper ? 10f : 5f, 1f, false, damageOrigin: EDamageOrigin.Trap_Wear_And_Tear);
-                        }
-                        else
-                        {
-                            Animal animal = DamageTool.getAnimal(other.transform);
-                            if (animal == null)
-                                return false;
-                            DamageTool.damageAnimal(new DamageAnimalParameters(animal, __instance.transform.forward, ___animalDamage)
-                            {
-                                instigator = __instance
-                            }, out EPlayerKill _, out uint _);
-                            EffectManager.sendEffect(5, EffectManager.SMALL, __instance.transform.position + Vector3.up, Vector3.down);
-                            BarricadeManager.damage(__instance.transform.parent, 5f, 1f, false, damageOrigin: EDamageOrigin.Trap_Wear_And_Tear);
-                        }
-                    }
-                    return false;
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error in patched Landmine Trigger Override.");
-                    L.LogError(ex);
-                    return true; // run original code to cleanup.
-                }
-            }
-
             // SDG.Unturned.InteractableVehicle
             /// <summary>
             /// Call event before vehicle explode
@@ -296,7 +47,7 @@ namespace Uncreated.Warfare
                 __instance.GetComponent<Rigidbody>().AddForce(force);
                 __instance.GetComponent<Rigidbody>().AddTorque(16f, 0.0f, 0.0f);
                 //__instance.dropTrunkItems();
-                if (instigator.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                if (instigator.TryGetPlayerData(out UCPlayerData c))
                 {
                     c.lastExplodedVehicle = __instance.asset.GUID;
                 }
@@ -404,7 +155,7 @@ namespace Uncreated.Warfare
                             Player hit = DamageTool.getPlayer(other.transform);
                             Player driver = ___vehicle.passengers[0].player.player;
                             if (hit == null || driver == null || hit.movement.getVehicle() != null || !DamageTool.isPlayerAllowedToDamagePlayer(driver, hit)) return true;
-                            if (driver.TryGetPlaytimeComponent(out PlaytimeComponent c))
+                            if (driver.TryGetPlayerData(out UCPlayerData c))
                             {
                                 c.lastRoadkilled = ___vehicle.asset.GUID;
                             }

@@ -36,13 +36,13 @@ public class TDMGameStatsTracker : MonoBehaviour
         {
             s = new TDMPlayerStats(player);
             playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, s);
-            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            if (player.TryGetPlayerData(out Components.UCPlayerData c))
                 c.stats = s;
         }
         else
         {
             s.player = player;
-            if (player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c))
+            if (player.TryGetPlayerData(out Components.UCPlayerData c))
                 c.stats = s;
         }
         L.Log(player.name + " added to playerstats, " + playerstats.Count + " trackers");
@@ -65,7 +65,7 @@ public class TDMGameStatsTracker : MonoBehaviour
             {
                 TDMPlayerStats s = new TDMPlayerStats(Provider.clients[i].player);
                 playerstats.Add(Provider.clients[i].playerID.steamID.m_SteamID, s);
-                if (Provider.clients[i].player.TryGetPlaytimeComponent(out Components.PlaytimeComponent pt))
+                if (Provider.clients[i].player.TryGetPlayerData(out Components.UCPlayerData pt))
                     pt.stats = s;
             }
         }
@@ -198,13 +198,13 @@ public class TDMGameStatsTracker : MonoBehaviour
             int totalxpgaina = 0;
             for (int i = 0; i < a.Members.Count; i++)
             {
-                if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats xp)
+                if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IExperienceStats xp)
                     totalxpgaina += xp.XPGained;
             }
             int totalxpgainb = 0;
             for (int i = 0; i < b.Members.Count; i++)
             {
-                if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats xp)
+                if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IExperienceStats xp)
                     totalxpgainb += xp.XPGained;
             }
             if (totalxpgaina == totalxpgainb)
@@ -212,13 +212,13 @@ public class TDMGameStatsTracker : MonoBehaviour
                 int totalopgaina = 0;
                 for (int i = 0; i < a.Members.Count; i++)
                 {
-                    if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats xp)
+                    if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IExperienceStats xp)
                         totalopgaina += xp.Credits;
                 }
                 int totalopgainb = 0;
                 for (int i = 0; i < b.Members.Count; i++)
                 {
-                    if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IExperienceStats xp)
+                    if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IExperienceStats xp)
                         totalopgainb += xp.Credits;
                 }
                 if (totalxpgaina == totalxpgainb)
@@ -226,13 +226,13 @@ public class TDMGameStatsTracker : MonoBehaviour
                     int totalkillsa = 0;
                     for (int i = 0; i < a.Members.Count; i++)
                     {
-                        if (a.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IPVPModeStats pvp)
+                        if (a.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IPVPModeStats pvp)
                             totalkillsa += pvp.Kills;
                     }
                     int totalkillsb = 0;
                     for (int i = 0; i < b.Members.Count; i++)
                     {
-                        if (b.Members[i].Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent c) && c.stats is IPVPModeStats pvp)
+                        if (b.Members[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IPVPModeStats pvp)
                             totalkillsb += pvp.Kills;
                     }
                     return totalkillsa.CompareTo(totalkillsb);
@@ -251,9 +251,9 @@ public class TDMGameStatsTracker : MonoBehaviour
             else
             {
                 int axp = 0, bxp = 0;
-                if (a.Player.TryGetPlaytimeComponent(out Components.PlaytimeComponent ca) && ca.stats is IExperienceStats xp)
+                if (a.Player.TryGetPlayerData(out Components.UCPlayerData ca) && ca.stats is IExperienceStats xp)
                     axp = xp.XPGained;
-                if (b.Player.TryGetPlaytimeComponent(out ca) && ca.stats is IExperienceStats xp2)
+                if (b.Player.TryGetPlayerData(out ca) && ca.stats is IExperienceStats xp2)
                     bxp = xp2.XPGained;
                 return axp.CompareTo(bxp);
             }

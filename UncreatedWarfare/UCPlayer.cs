@@ -156,7 +156,7 @@ public class UCPlayer : IRocketPlayer
     }
     public static UCPlayer? FromCSteamID(CSteamID steamID) =>
         steamID == default ? null : FromID(steamID.m_SteamID);
-    public static UCPlayer? FromPlayer(Player player) => FromID(player.channel.owner.playerID.steamID.m_SteamID);
+    public static UCPlayer? FromPlayer(Player player) => player == null ? null : FromID(player.channel.owner.playerID.steamID.m_SteamID);
     public static UCPlayer? FromUnturnedPlayer(UnturnedPlayer player) =>
         player == null || player.Player == null || player.CSteamID == default ? null : FromID(player.CSteamID.m_SteamID);
     public static UCPlayer? FromSteamPlayer(SteamPlayer player)
@@ -301,9 +301,9 @@ public class UCPlayer : IRocketPlayer
     {
         get
         {
-            if (SquadManager.Config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+            if (SquadManager.Config.Classes.TryGetValue(KitClass, out ClassConfig config))
                 return config.Icon;
-            else if (SquadManager.Config.Data.Classes.TryGetValue(EClass.NONE, out config))
+            else if (SquadManager.Config.Classes.TryGetValue(EClass.NONE, out config))
                 return config.Icon;
             else return '±';
         }
@@ -313,9 +313,9 @@ public class UCPlayer : IRocketPlayer
     {
         get
         {
-            if (SquadManager.Config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+            if (SquadManager.Config.Classes.TryGetValue(KitClass, out ClassConfig config))
                 return config.MarkerEffect;
-            else if (SquadManager.Config.Data.Classes.TryGetValue(EClass.NONE, out config))
+            else if (SquadManager.Config.Classes.TryGetValue(EClass.NONE, out config))
                 return config.MarkerEffect;
             else return 0;
         }
@@ -324,9 +324,9 @@ public class UCPlayer : IRocketPlayer
     {
         get
         {
-            if (SquadManager.Config.Data.Classes.TryGetValue(KitClass, out ClassConfig config))
+            if (SquadManager.Config.Classes.TryGetValue(KitClass, out ClassConfig config))
                 return config.SquadLeaderMarkerEffect;
-            else if (SquadManager.Config.Data.Classes.TryGetValue(EClass.NONE, out config))
+            else if (SquadManager.Config.Classes.TryGetValue(EClass.NONE, out config))
                 return config.SquadLeaderMarkerEffect;
             else return 0;
         }
