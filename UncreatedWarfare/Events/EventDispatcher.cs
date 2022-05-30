@@ -314,6 +314,8 @@ public static class EventDispatcher
         if (OnThrowableSpawned == null) return;
         UCPlayer? owner = UCPlayer.FromPlayer(useable.player);
         if (owner is null) return;
+        if (owner.Player.TryGetPlayerData(out UCPlayerData comp))
+            comp.ActiveThrownItems.Add(c);
         ThrowableSpawned args = new ThrowableSpawned(owner, useable.equippedThrowableAsset, throwable);
         foreach (EventDelegate<ThrowableSpawned> inv in OnThrowableSpawned.GetInvocationList().Cast<EventDelegate<ThrowableSpawned>>())
         {

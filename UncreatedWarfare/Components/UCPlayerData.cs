@@ -5,6 +5,7 @@ using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Point;
 using UnityEngine;
@@ -56,16 +57,14 @@ public class UCPlayerData : MonoBehaviour
     public Guid LastVehicleHitBy;
     private Coroutine? _currentTeleportRequest;
     public Vehicles.VehicleSpawn? currentlylinking;
-    public DamagePlayerParameters LastBleedingHit;
+    public DeathMessageArgs LastBleedingArgs;
+    public PlayerDied? LastBleedingEvent;
     public Guid LastInfectableConsumed;
     public Guid LastExplosiveConsumed;
-    public Guid LastBleedingItem1;
-    public Guid LastBleedingItem2;
     public Guid LastChargeDetonated;
     public Guid LastShreddedBy;
     public Guid LastGunShot; // used for amc
     internal VehicleComponent? ExplodingVehicle;
-    public float LastBleedingDistance;
     public object PendingFOB;
     private struct ToastMessageInfo
     {

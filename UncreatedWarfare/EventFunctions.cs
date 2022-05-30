@@ -12,6 +12,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -729,25 +730,28 @@ public static class EventFunctions
         {
             if (data != null || instigatingPlayer.TryGetPlayerData(out data))
             {
-                data.LastBleedingItem1 = default;
-                data.LastBleedingItem2 = default;
-                data.LastBleedingHit = default;
-                data.LastBleedingDistance = 0f;
+                data.LastBleedingArgs = default;
+                data.LastBleedingEvent = null;
             }
         }
         else if (consumeableAsset.bleedingModifier == ItemConsumeableAsset.Bleeding.Cut)
         {
             if (data != null || instigatingPlayer.TryGetPlayerData(out data))
             {
-                data.LastBleedingItem1 = consumeableAsset.GUID;
-                data.LastBleedingItem2 = default;
-                data.LastBleedingDistance = 0f;
-                data.LastBleedingHit = new DamagePlayerParameters(instigatingPlayer)
+                data.LastBleedingArgs = new DeathMessageArgs()
                 {
-                    cause = EDeathCause.INFECTION,
-                    killer = instigatingPlayer.channel.owner.playerID.steamID
+                    DeadPlayerName = F.GetPlayerOriginalNames(instigatingPlayer).CharacterName,
+                    DeadPlayerTeam = instigatingPlayer.GetTeam(),
+                    DeathCause = EDeathCause.INFECTION,
+                    ItemName = consumeableAsset.itemName,
+                    ItemGuid = consumeableAsset.GUID,
+                    Flags = EDeathFlags.ITEM
                 };
-                data.LastInfectableConsumed = consumeableAsset.GUID;
+                data.LastBleedingEvent = new PlayerDied(UCPlayer.FromPlayer(instigatingPlayer)!)
+                {
+                    Cause = EDeathCause.INFECTION,
+                    DeadTeam = data.LastBleedingArgs.DeadPlayerTeam
+                };
             }
         }
     }
@@ -1504,21 +1508,34 @@ public static class EventFunctions
             {
                 if (target.TryGetPlayerData(out UCPlayerData data))
                 {
-                    data.LastBleedingItem1 = default;
-                    data.LastBleedingItem2 = default;
-                    data.LastBleedingHit = default;
+                    data.LastBleedingArgs = default;
+                    data.LastBleedingEvent = null;
                 }
             }
             else if (asset.bleedingModifier == ItemConsumeableAsset.Bleeding.Cut)
             {
                 if (target.TryGetPlayerData(out UCPlayerData data))
                 {
-                    data.LastBleedingItem1 = asset.GUID;
-                    data.LastBleedingItem2 = default;
-                    data.LastBleedingHit = new DamagePlayerParameters(target)
+                    data.LastBleedingArgs = new DeathMessageArgs()
                     {
-                        cause = EDeathCause.INFECTION,
-                        killer = instigator.channel.owner.playerID.steamID
+                        DeadPlayerName = F.GetPlayerOriginalNames(target).CharacterName,
+                        DeadPlayerTeam = target.GetTeam(),
+                        DeathCause = EDeathCause.INFECTION,
+                        ItemName = asset.itemName,
+                        ItemGuid = asset.GUID,
+                        Flags = EDeathFlags.ITEM | EDeathFlags.KILLER,
+                        KillerName = F.GetPlayerOriginalNames(instigator).CharacterName,
+                        KillerTeam = instigator.GetTeam()
+                    };
+                    data.LastBleedingArgs.isTeamkill = data.LastBleedingArgs.DeadPlayerTeam == data.LastBleedingArgs.KillerTeam;
+                    data.LastBleedingEvent = new PlayerDied(UCPlayer.FromPlayer(target)!)
+                    {
+                        Cause = EDeathCause.INFECTION,
+                        DeadTeam = data.LastBleedingArgs.DeadPlayerTeam,
+                        Instigator = instigator.channel.owner.playerID.steamID,
+                        Killer = UCPlayer.FromPlayer(instigator),
+                        KillerTeam = data.LastBleedingArgs.KillerTeam,
+                        WasTeamkill = data.LastBleedingArgs.isTeamkill
                     };
                 }
             }

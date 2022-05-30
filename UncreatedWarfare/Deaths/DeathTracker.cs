@@ -43,6 +43,18 @@ public class DeathTracker : BaseReloadSingleton
     {
         UCPlayer? dead = UCPlayer.FromPlayer(sender.player);
         if (dead is null) return;
+        if (cause == EDeathCause.BLEEDING)
+        {
+            if (dead.Player.TryGetPlayerData(out UCPlayerData deadData))
+            {
+                if (deadData.LastBleedingEvent is not null)
+                {
+                    deadData.LastBleedingArgs.Flags |= EDeathFlags.BLEEDING;
+                    Localization.BroadcastDeath(deadData.LastBleedingEvent, deadData.LastBleedingArgs);
+                    return;
+                }
+            }
+        }
         if (ReviveManager.Loaded
             && Data.Is(out IRevives revives)
             && revives.ReviveManager.DownedPlayers.ContainsKey(dead.Steam64)
@@ -62,6 +74,18 @@ public class DeathTracker : BaseReloadSingleton
     {
         UCPlayer? pl = UCPlayer.FromPlayer(parameters.player);
         if (pl is null) return;
+        if (parameters.cause == EDeathCause.BLEEDING)
+        {
+            if (pl.Player.TryGetPlayerData(out UCPlayerData deadData))
+            {
+                if (deadData.LastBleedingEvent is not null)
+                {
+                    deadData.LastBleedingArgs.Flags |= EDeathFlags.BLEEDING;
+                    _injuredPlayers.Add(pl.Steam64, new InjuredDeathCache(deadData.LastBleedingEvent, deadData.LastBleedingArgs));
+                    return;
+                }
+            }
+        }
         PlayerDied e = new PlayerDied(pl);
         DeathMessageArgs args = new DeathMessageArgs();
         FillArgs(pl, parameters.cause, parameters.limb, parameters.killer, ref args, e);
@@ -77,7 +101,7 @@ public class DeathTracker : BaseReloadSingleton
         args.Limb = limb;
         args.Flags = EDeathFlags.NONE;
         e.WasTeamkill = false;
-        e.Intigator = instigator;
+        e.Instigator = instigator;
         e.Limb = limb;
         e.Cause = cause;
         switch (cause)
@@ -231,6 +255,7 @@ public class DeathTracker : BaseReloadSingleton
                 args.KillerTeam = killer.GetTeam();
                 e.KillerTeam = args.KillerTeam;
                 args.Flags |= EDeathFlags.KILLER;
+                args.KillDistance = (killer.Position - dead.Position).magnitude;
                 if (deadTeam == args.KillerTeam)
                 {
                     args.isTeamkill = true;
@@ -241,36 +266,16 @@ public class DeathTracker : BaseReloadSingleton
 
         switch (cause)
         {
+            case EDeathCause.BLEEDING:
+                return;
             case EDeathCause.GUN:
             case EDeathCause.MELEE:
             case EDeathCause.SPLASH:
                 if (killer is not null && killer.Player.equipment.asset is not null)
                 {
-                    args.ItemName = dead.Player.equipment.asset.itemName;
-                    args.ItemGuid = dead.Player.equipment.asset.GUID;
+                    args.ItemName = killer.Player.equipment.asset.itemName;
+                    args.ItemGuid = killer.Player.equipment.asset.GUID;
                     args.Flags |= EDeathFlags.ITEM;
-                }
-                break;
-            case EDeathCause.BLEEDING:
-                if (deadData != null)
-                {
-                    Asset? a = Assets.find(deadData.LastBleedingItem1);
-                    if (a != null)
-                    {
-                        args.ItemName = a.FriendlyName;
-                        args.ItemIsVehicle = a is VehicleAsset;
-                        args.Flags |= EDeathFlags.ITEM;
-                        args.ItemGuid = a.GUID;
-                    }
-                    a = Assets.find(deadData.LastBleedingItem2);
-                    if (a != null)
-                    {
-                        args.Item2Name = a.FriendlyName;
-                        args.Flags |= EDeathFlags.ITEM2;
-                    }
-                    args.KillDistance = deadData.LastBleedingDistance;
-                    args.DeathCause = deadData.LastBleedingHit.cause;
-                    args.Flags |= EDeathFlags.BLEEDING;
                 }
                 break;
             case EDeathCause.INFECTION:
@@ -310,6 +315,7 @@ public class DeathTracker : BaseReloadSingleton
                         if (Assets.find(killerData.ExplodingVehicle.LastItem) is ItemAsset a)
                         {
                             args.Item2Name = a.itemName;
+                            args.Item2Guid = a.GUID;
                             args.Flags |= EDeathFlags.ITEM2;
                         }
                     }
@@ -324,7 +330,8 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.GRENADE:
                 if (killerData != null)
                 {
-                    ThrowableComponent comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.isActiveAndEnabled && x.IsExplosive);
+                    ThrowableComponent? comp = killerData.ActiveThrownItems.FirstOrDefault(x => x.isActiveAndEnabled && x.IsExplosive);
+                    if (comp == null) break;
                     ItemAsset? a = Assets.find<ItemAsset>(comp.Throwable);
                     if (a != null)
                     {
@@ -345,6 +352,8 @@ public class DeathTracker : BaseReloadSingleton
                         args.ItemGuid = a.GUID;
                     }
                 }
+                args.isTeamkill = false;
+                e.WasTeamkill = false;
                 break;
             case EDeathCause.MISSILE:
                 if (killer is not null)
@@ -372,12 +381,12 @@ public class DeathTracker : BaseReloadSingleton
                         args.ItemName = a.FriendlyName;
                         args.Flags |= EDeathFlags.ITEM;
                         args.ItemGuid = a.GUID;
-                    }
+                    }/*
                     if (killer != null && killer.Player.equipment.asset != null && killer.Player.equipment.asset.useableType == typeof(UseableDetonator))
                     {
                         args.Item2Name = killer.Player.equipment.asset.itemName;
                         args.Flags |= EDeathFlags.ITEM2;
-                    }
+                    }*/
                 }
                 else if (deadData != null && deadData.LastExplosiveConsumed != default)
                 {
@@ -412,6 +421,7 @@ public class DeathTracker : BaseReloadSingleton
                         if (item != null && Assets.find(EAssetType.ITEM, item.id) is ItemAsset a)
                         {
                             args.Item2Name = a.itemName;
+                            args.Item2Guid = a.GUID;
                             args.Flags |= EDeathFlags.ITEM2;
                         }
                     }
@@ -430,6 +440,7 @@ public class DeathTracker : BaseReloadSingleton
                 if (item2 != null)
                 {
                     args.Item2Name = item2.FriendlyName;
+                    args.Item2Guid = item2.GUID;
                     args.Flags |= EDeathFlags.ITEM2;
                 }
                 break;
@@ -488,8 +499,8 @@ public class DeathTracker : BaseReloadSingleton
             case EDeathCause.BLEEDING:
                 if (deadData != null)
                 {
-                    item1 = deadData.LastBleedingItem1 != default ? Assets.find(deadData.LastBleedingItem1) : null;
-                    item2 = deadData.LastBleedingItem2 != default ? Assets.find(deadData.LastBleedingItem2) : null;
+                    item1 = Assets.find(deadData.LastBleedingArgs.ItemGuid);
+                    item2 = Assets.find(deadData.LastBleedingArgs.Item2Guid);
                 }
                 else item1 = null;
                 break;
@@ -594,12 +605,13 @@ public class DeathTracker : BaseReloadSingleton
         {
             if (parameters.cause != EDeathCause.BLEEDING)
             {
-                data.LastBleedingHit = parameters;
-                Player? killer = PlayerTool.getPlayer(parameters.killer);
-                GetItems(parameters.cause, parameters.killer.m_SteamID, killer, null, null, parameters.player, out Asset? item1, out Asset? item2);
-                data.LastBleedingItem1 = item1 != null ? item1.GUID : default;
-                data.LastBleedingItem2 = item2 != null ? item2.GUID : default;
-                data.LastBleedingDistance = killer != null ? (parameters.player.transform.position - killer.transform.position).magnitude : 0;
+                UCPlayer? dead = UCPlayer.FromPlayer(parameters.player);
+                if (dead is null) return;
+                DeathMessageArgs args = new DeathMessageArgs();
+                PlayerDied e = new PlayerDied(dead);
+                FillArgs(dead, parameters.cause, parameters.limb, parameters.killer, ref args, e);
+                data.LastBleedingArgs = args;
+                data.LastBleedingEvent = e;
             }
         }
     }

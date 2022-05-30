@@ -64,7 +64,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             AddTeam1Tickets(-1);
         else if (e.DeadTeam == 2)
             AddTeam2Tickets(-1);
-        if (e.Killer is not null)
+        if (e.Killer is not null && e.Killer.Steam64 != e.Player.Steam64)
         {
             if (!e.WasTeamkill)
                 OnEnemyKilled(e.Player, e.Killer);

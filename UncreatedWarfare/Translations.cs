@@ -969,7 +969,7 @@ partial class JSONMethods
             { "APC", "APC" },
             { "IFV", "IFV" },
             { "MBT", "Tank" },
-            { "HELI_TRANSPORT", "Transport heli" },
+            { "HELI_TRANSPORT", "Transport Heli" },
             { "HELI_ATTACK", "Attack Heli" },
             { "JET", "Jet" },
             { "EMPLACEMENT", "Emplacement" },

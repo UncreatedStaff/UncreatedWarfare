@@ -146,7 +146,11 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.NONE, "{0} died to an infection."),
                 new DeathTranslation(EDeathFlags.ITEM, "{0} died to an infection from {3}."),
                 new DeathTranslation(EDeathFlags.BLEEDING, "{0} bled out from an infection."),
-                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after using a {3}.")
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after using a {3}."),
+                new DeathTranslation(EDeathFlags.KILLER, "{0} died to an infection caused by {1}."),
+                new DeathTranslation(EDeathFlags.ITEM, "{0} died to an infection from {3} caused by {1}."),
+                new DeathTranslation(EDeathFlags.BLEEDING, "{0} bled out from an infection caused by {1}."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after {1} used a {3} on them.")
             }
         },
         new DeathCause(EDeathCause.KILL)
@@ -274,16 +278,26 @@ internal static class Localization
         {
             Translations = new DeathTranslation[]
             {
-                new DeathTranslation(EDeathFlags.NONE, "{0} was killed by a sentry."),
-                new DeathTranslation(EDeathFlags.ITEM, "{0} was killed by a sentry's {3}."),
-                new DeathTranslation(EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} was killed by {1}'s sentry's {3}."),
-                new DeathTranslation(EDeathFlags.SUICIDE, "{0} was killed by their own sentry."),
-                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} was killed by their own sentry's {3}."),
-                new DeathTranslation(EDeathFlags.BLEEDING, "{0} bled out after being killed by a sentry."),
-                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being killed by a sentry's {3}."),
-                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} bled out after being killed by {1}'s sentry's {3}."),
-                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE, "{0} bled out after being killed by their own sentry."),
-                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after being killed by their own sentry's {3}."),
+                new DeathTranslation(EDeathFlags.NONE, "{0} was shot by a sentry."),
+                new DeathTranslation(EDeathFlags.ITEM, "{0} was shot by a {3}."),
+                new DeathTranslation(EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} was shot by {1}'s {3}."),
+                new DeathTranslation(EDeathFlags.SUICIDE, "{0} was shot by their own sentry."),
+                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} was shot by their {3}."),
+                new DeathTranslation(EDeathFlags.BLEEDING, "{0} bled out after being shot by a sentry."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being shot by a {3}."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} bled out after being shot by {1}'s {3}."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE, "{0} bled out after being shot by their own sentry."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after being shot by their {3}."),
+                new DeathTranslation(EDeathFlags.ITEM2, "{0} was shot by a sentry using a {6}."),
+                new DeathTranslation(EDeathFlags.ITEM, "{0} was shot by a {3}'s {6}."),
+                new DeathTranslation(EDeathFlags.KILLER | EDeathFlags.ITEM | EDeathFlags.ITEM2, "{0} was shot by {1}'s {3}'s {6}."),
+                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM2, "{0} was shot by their own sentry's {6}."),
+                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM | EDeathFlags.ITEM2, "{0} was shot by their own {3}'s {6}."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM2, "{0} bled out after being shot by a sentry."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.ITEM2, "{0} bled out after being shot by a {3}'s {6}."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM | EDeathFlags.ITEM2, "{0} bled out after being shot by {1}'s {3}'s {6}."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM2, "{0} bled out after being shot by their own sentry's {6}."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM | EDeathFlags.ITEM2, "{0} bled out after being shot by their own {3}'s {6}."),
             }
         },
         new DeathCause(EDeathCause.SHRED)
@@ -395,7 +409,8 @@ internal static class Localization
             Translations = new DeathTranslation[]
             {
                 new DeathTranslation(EDeathFlags.NONE, "{0} tried to consume dangerous food."),
-                new DeathTranslation(EDeathFlags.ITEM, "{0} tried to consume {3}.") // tested
+                new DeathTranslation(EDeathFlags.ITEM, "{0} tried to consume {3}."), // tested
+                new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} suicide bombed {1} with a {3}.") // tested
             }
         },
         new DeathCause() // mortar override
@@ -650,6 +665,7 @@ public struct DeathMessageArgs
     public ELimb Limb;
     public string? ItemName;
     public Guid ItemGuid;
+    public Guid Item2Guid;
     public bool ItemIsVehicle;
     public float KillDistance;
     public string? Player3Name;
