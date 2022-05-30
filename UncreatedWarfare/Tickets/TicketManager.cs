@@ -163,9 +163,9 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                         string message = string.Empty;
 
                         if (vc.IsAircraft)
-                            message = "xp_vehicle_destroyed";
-                        else
                             message = "xp_aircraft_destroyed";
+                        else
+                            message = "xp_vehicle_destroyed";
 
 
                         float totalDamage = 0;

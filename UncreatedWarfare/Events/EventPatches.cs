@@ -32,6 +32,9 @@ internal static class EventPatches
 
         PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public),
             prefix: GetMethodInfo(PreDetonate), postfix: GetMethodInfo(PostDetonate));
+
+        PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic),
+            prefix: GetMethodInfo(ExplodeVehicle));
     }
     private static MethodInfo GetMethodInfo(Delegate method)
     {
@@ -388,7 +391,7 @@ internal static class EventPatches
         UCPlayerData? data = null;
         if (instigator2 != CSteamID.Nil && instigator2.TryGetPlayerData(out data))
             data.ExplodingVehicle = vehicleData;
-
+        L.LogDebug("Decided explosion instigator: " + instigator2.ToString());
         Vector3 force = new Vector3(
             Random.Range(__instance.asset.minExplosionForce.x, __instance.asset.maxExplosionForce.x),
             Random.Range(__instance.asset.minExplosionForce.y, __instance.asset.maxExplosionForce.y),
