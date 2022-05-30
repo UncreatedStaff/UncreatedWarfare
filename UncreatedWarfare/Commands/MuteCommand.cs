@@ -63,11 +63,14 @@ public class MuteCommand : IRocketCommand
         return;
     }
 }
-[Translatable]
+[Translatable("Mute Severity")]
 public enum EMuteType : byte
 {
     NONE = 0,
+    [Translatable("Voice Chat Only")]
     VOICE_CHAT = 1,
+    [Translatable("Text Chat Only")]
     TEXT_CHAT = 2,
+    [Translatable("Voice and Text Chat")]
     BOTH = 3
 }

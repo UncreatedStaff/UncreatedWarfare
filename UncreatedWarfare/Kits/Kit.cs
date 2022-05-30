@@ -1083,13 +1083,15 @@ public class KitClothing : IJsonReadWrite
         }
     }
 }
-[Translatable]
+[Translatable("Branch")]
 public enum EBranch : byte
 {
     DEFAULT,
     INFANTRY,
     ARMOR,
+    [Translatable("Air Force")]
     AIRFORCE,
+    [Translatable("Special Ops")]
     SPECOPS,
     NAVY
 }
@@ -1103,11 +1105,12 @@ public enum EClothingType : byte
     BACKPACK,
     GLASSES
 }
-[Translatable]
+[Translatable("Kit Class")]
 public enum EClass : byte
 {
-    NONE, //0 
+    NONE, //0
     UNARMED, //1
+    [Translatable("Squad Leader")]
     SQUADLEADER, //2
     RIFLEMAN, //3
     MEDIC, //4
@@ -1115,13 +1118,17 @@ public enum EClass : byte
     AUTOMATIC_RIFLEMAN, //6
     GRENADIER, //7
     MACHINE_GUNNER, //8
+    [Translatable("LAT")]
     LAT, //9
+    [Translatable("HAT")]
     HAT, //10
     MARKSMAN, //11
     SNIPER, //12
+    [Translatable("Anti-personnel Rifleman")]
     AP_RIFLEMAN, //13
     COMBAT_ENGINEER, //14
     CREWMAN, //15
     PILOT, //16
+    [Translatable("Special Ops")]
     SPEC_OPS // 17
 }

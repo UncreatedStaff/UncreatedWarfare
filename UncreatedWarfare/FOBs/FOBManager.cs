@@ -1220,8 +1220,10 @@ public class EmplacementData
     public int MaxFobCapacity;
 }
 
+[Translatable("Buildable Type")]
 public enum EBuildableType
 {
+    [Translatable("Bunker")]
     FOB_BUNKER,
     AMMO_CRATE,
     REPAIR_STATION,

@@ -1712,7 +1712,7 @@ public static class Translation
     }
     private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> enumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
     private const string ENUM_TRANSLATION_FILE_NAME = "Enums\\";
-    public static void ReadEnumTranslations(List<Type> extEnumTypes)
+    public static void ReadEnumTranslations(List<KeyValuePair<Type, string?>> extEnumTypes)
     {
         enumTranslations.Clear();
         string def = Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE + "\\";
@@ -1730,13 +1730,21 @@ public static class Translation
                     Directory.CreateDirectory(p);
             }
         }
-        foreach (Type enumType in UCWarfare.Instance.Assembly.GetTypes().Where(t => t.IsEnum && Attribute.GetCustomAttribute(t, typeof(TranslatableAttribute)) is not null).Concat(extEnumTypes.Where(x => x.IsEnum)))
+        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in UCWarfare.Instance.Assembly
+                     .GetTypes()
+                     .Where(x => x.IsEnum)
+                     .Select(x => new KeyValuePair<Type, TranslatableAttribute>(x, (Attribute.GetCustomAttribute(x, typeof(TranslatableAttribute)) as TranslatableAttribute)!))
+                     .Where(t => t.Value != null)
+                     .Concat(extEnumTypes
+                         .Where(x => x.Key.IsEnum)
+                         .Select(x => new KeyValuePair<Type, TranslatableAttribute>(x.Key, new TranslatableAttribute(x.Value)))))
         {
-            if (enumTranslations.ContainsKey(enumType)) continue;
+            if (enumTranslations.ContainsKey(enumType.Key)) continue;
             Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
-            enumTranslations.Add(enumType, k);
-            string fn = def + ENUM_TRANSLATION_FILE_NAME + enumType.FullName + ".json";
-            string[] values = enumType.GetEnumNames();
+            enumTranslations.Add(enumType.Key, k);
+            string fn = def + ENUM_TRANSLATION_FILE_NAME + enumType.Key.FullName + ".json";
+            FieldInfo[] fields = enumType.Key.GetFields(BindingFlags.Public | BindingFlags.Static);
+            string[] values = fields.Select(x => x.GetValue(null).ToString()).ToArray();
             if (!File.Exists(fn))
             {
                 Dictionary<string, string> k2 = new Dictionary<string, string>(values.Length + 1);
@@ -1745,14 +1753,23 @@ public static class Translation
                     Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                     writer.WriteStartObject();
                     writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
-                    string name = enumType.Name;
-                    if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
-                        name = name.Substring(1);
-                    writer.WriteStringValue(name.ToProperCase());
+                    string name;
+                    if (enumType.Value.Default != null)
+                    {
+                        name = enumType.Value.Default;
+                        writer.WriteStringValue(name);
+                    }
+                    else
+                    {
+                        name = enumType.Key.Name;
+                        if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
+                            name = name.Substring(1);
+                        writer.WriteStringValue(name.ToProperCase());
+                    }
                     for (int i = 0; i < values.Length; ++i)
                     {
                         string k0 = values[i];
-                        string k1 = k0.ToProperCase();
+                        string k1 = fields[i].GetCustomAttribute(typeof(TranslatableAttribute)) is TranslatableAttribute attr && attr.Default != null ? attr.Default : k0.ToProperCase();
                         k2.Add(k0, k1);
                         writer.WritePropertyName(k0);
                         writer.WriteStringValue(k1);
@@ -1767,7 +1784,7 @@ public static class Translation
             {
                 DirectoryInfo dir = langDirs[i];
                 if (k.ContainsKey(dir.Name)) continue;
-                fn = dir.FullName + "\\" +  ENUM_TRANSLATION_FILE_NAME + enumType.FullName + ".json";
+                fn = dir.FullName + "\\" +  ENUM_TRANSLATION_FILE_NAME + enumType.Key.FullName + ".json";
                 if (!File.Exists(fn)) continue;
                 Dictionary<string, string> k2 = new Dictionary<string, string>(values.Length + 1);
                 k.Add(dir.Name, k2);
@@ -1855,8 +1872,14 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     public void Dispose() => Reset();
 }
 
-[AttributeUsage(AttributeTargets.Enum, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 public sealed class TranslatableAttribute : Attribute
 {
-    public TranslatableAttribute() { }
+    private readonly string? _default;
+    public TranslatableAttribute(string? @default = null)
+    {
+        _default = @default;
+    }
+
+    public string? Default => _default;
 }

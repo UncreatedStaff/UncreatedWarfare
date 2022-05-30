@@ -32,8 +32,12 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected override void OnReady()
     {
         LoadAllFlags();
-        LoadRotation();
         base.OnReady();
+    }
+    protected override void PreGameStarting(bool isOnLoad)
+    {
+        LoadRotation();
+        base.PreGameStarting(isOnLoad);
     }
     protected override void EventLoopAction()
     {
@@ -88,7 +92,10 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         StringBuilder sb = new StringBuilder(_rotation.Count.ToString(Data.Locale) + " flags:\n");
         for (int i = 0; i < _rotation.Count; i++)
         {
-            sb.Append(i.ToString(Data.Locale) + ") " + _rotation[i].Name + '\n');
+            sb.Append(i.ToString(Data.Locale) + ") " + _rotation[i].Name);
+            if (_rotation[i].DiscoveredT1) sb.Append(" T1");
+            if (_rotation[i].DiscoveredT2) sb.Append(" T2");
+            if (i != _rotation.Count - 1) sb.Append('\n');
         }
         L.Log(sb.ToString(), ConsoleColor.Green);
     }

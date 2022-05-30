@@ -105,8 +105,19 @@ public partial class UCWarfare : RocketPlugin<Config>
             }
         }
 
-        /* DATA CONSTRUCTION */
-        Data.LoadVariables();
+        try
+        {
+            /* DATA CONSTRUCTION */
+            Data.LoadVariables();
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Startup error");
+            L.LogError(ex);
+            UnloadPlugin(Rocket.API.PluginState.Failure);
+            Provider.shutdown(2);
+            return;
+        }
 
         /* START STATS COROUTINE */
         StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
@@ -168,7 +179,6 @@ public partial class UCWarfare : RocketPlugin<Config>
             player.Load();
             player.Play();
         }
-
     }
     private void SubscribeToEvents()
     {

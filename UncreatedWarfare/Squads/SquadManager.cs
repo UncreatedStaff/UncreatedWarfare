@@ -231,14 +231,19 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         int s2 = 0;
         for (int s = 0; s < Squads.Count; s++)
         {
-            if (Squads[s].Team != team) continue;
-            if (s2 == 0)
-                ListUI.Header.SetVisibility(c, true);
             Squad sq = Squads[s];
-            ListUI.Squads[s2].SetVisibility(c, true);
-            ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
-            ListUI.SquadMemberCounts[s2].SetText(c, Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
-            s2++;
+            if (sq is null)
+                Squads.RemoveAt(s--);
+            else
+            {
+                if (sq.Team != team) continue;
+                if (s2 == 0)
+                    ListUI.Header.SetVisibility(c, true);
+                ListUI.Squads[s2].SetVisibility(c, true);
+                ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
+                ListUI.SquadMemberCounts[s2].SetText(c, Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
+                s2++;
+            }
         }
         for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
         {
@@ -675,7 +680,7 @@ public class Squad : IEnumerable<UCPlayer>
         Branch = branch;
         Leader = leader;
         IsLocked = false;
-        Members = new List<UCPlayer> { leader };
+        Members = new List<UCPlayer>(6) { leader };
     }
 
     public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();

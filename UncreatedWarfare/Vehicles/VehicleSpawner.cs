@@ -676,7 +676,7 @@ public class VehicleSpawn
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (spawn.LinkedSign != null && spawn.LinkedSign.SignInteractable != null)
+        if (VehicleBay.Loaded && VehicleSigns.Loaded && VehicleSpawner.Loaded && spawn.LinkedSign != null && spawn.LinkedSign.SignInteractable != null)
         {
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;

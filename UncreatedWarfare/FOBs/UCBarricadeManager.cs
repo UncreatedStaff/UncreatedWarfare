@@ -144,6 +144,28 @@ namespace Uncreated.Warfare
             drop = null!;
             return false;
         }
+        public static bool IsBarricadeNearby(Guid guid, float range, Vector3 origin, out BarricadeDrop drop)
+        {
+            float sqrRange = range * range;
+            for (int x = 0; x < Regions.WORLD_SIZE; x++)
+            {
+                for (int y = 0; y < Regions.WORLD_SIZE; y++)
+                {
+                    BarricadeRegion region = BarricadeManager.regions[x, y];
+                    if (region == null) continue;
+                    for (int i = 0; i < region.drops.Count; i++)
+                    {
+                        if (region.drops[i].asset.GUID == guid && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
+                        {
+                            drop = region.drops[i];
+                            return true;
+                        }
+                    }
+                }
+            }
+            drop = null!;
+            return false;
+        }
         public static IEnumerable<BarricadeDrop> GetBarricadesByGUID(Guid ID)
         {
 #if DEBUG
