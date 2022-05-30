@@ -968,7 +968,7 @@ partial class JSONMethods
             { "SCOUT_CAR", "Scout Car" },
             { "APC", "APC" },
             { "IFV", "IFV" },
-            { "MBT", "Main Battle Tank" },
+            { "MBT", "Tank" },
             { "HELI_TRANSPORT", "Transport heli" },
             { "HELI_ATTACK", "Attack Heli" },
             { "JET", "Jet" },
