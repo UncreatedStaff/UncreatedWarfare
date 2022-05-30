@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
@@ -13,6 +14,7 @@ using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Events;
@@ -33,6 +35,9 @@ public static class EventDispatcher
 
     public static event EventDelegate<ThrowableSpawned> OnThrowableSpawned;
     public static event EventDelegate<ThrowableSpawned> OnThrowableDespawning;
+
+    public static event EventDelegate<ProjectileSpawned> OnProjectileSpawned;
+    public static event EventDelegate<ProjectileSpawned> OnProjectileExploded;
 
     public static event EventDelegate<PlayerPending> OnPlayerPending;
     public static event EventDelegate<PlayerJoined> OnPlayerJoined;
@@ -55,9 +60,12 @@ public static class EventDispatcher
         Provider.onCheckValidWithExplanation += ProviderOnCheckValidWithExplanation;
         Provider.onBattlEyeKick += ProviderOnBattlEyeKick;
         UseableThrowable.onThrowableSpawned += UseableThrowableOnThrowableSpawned;
+        UseableGun.onProjectileSpawned += ProjectileOnProjectileSpawned;
+        UseableGun.onBulletHit += OnBulletHit;
     }
     internal static void UnsubscribeFromAll()
     {
+        UseableGun.onProjectileSpawned -= ProjectileOnProjectileSpawned;
         UseableThrowable.onThrowableSpawned -= UseableThrowableOnThrowableSpawned;
         Provider.onBattlEyeKick -= ProviderOnBattlEyeKick;
         Provider.onCheckValidWithExplanation -= ProviderOnCheckValidWithExplanation;
@@ -345,6 +353,51 @@ public static class EventDispatcher
                 if (component.ActiveThrownItems[i] == null || component.ActiveThrownItems[i].UnityInstanceID == instId)
                     component.ActiveThrownItems.RemoveAt(i);
         }
+    }
+    private static void ProjectileOnProjectileSpawned(UseableGun gun, GameObject projectile)
+    {
+        foreach (SDG.Unturned.Rocket rocket in projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true))
+        {
+            ProjectileComponent c = rocket.gameObject.AddComponent<ProjectileComponent>();
+
+            c.GunID = gun.equippedGunAsset.GUID;
+            c.Owner = gun.player.channel.owner.playerID.steamID.m_SteamID;
+            if (OnProjectileSpawned == null) return;
+            UCPlayer? owner = UCPlayer.FromPlayer(gun.player);
+            if (owner is null) return;
+            ProjectileSpawned args = new ProjectileSpawned(owner, gun.equippedGunAsset, rocket.gameObject, rocket);
+            foreach (EventDelegate<ProjectileSpawned> inv in OnProjectileSpawned.GetInvocationList().Cast<EventDelegate<ProjectileSpawned>>())
+            {
+                if (!args.CanContinue) break;
+                TryInvoke(inv, args, nameof(OnProjectileSpawned));
+            }
+        }
+    }
+    internal static void InvokeOnProjectileExploded(ProjectileComponent projectileComponent, Collider other)
+    {
+        var vehicle = other.GetComponentInParent<InteractableVehicle>();
+
+        if (vehicle != null)
+            VehicleDamageCalculator.RegisterForAdvancedDamage(vehicle, VehicleDamageCalculator.GetDamageMultiplier(projectileComponent, other));
+
+        if (OnProjectileExploded == null) return;
+        UCPlayer? owner = UCPlayer.FromID(projectileComponent.Owner);
+        if (Assets.find(projectileComponent.GunID) is not ItemGunAsset asset) return;
+        ProjectileSpawned args = new ProjectileSpawned(owner, asset, projectileComponent.gameObject, projectileComponent.RocketComponent);
+
+        foreach (EventDelegate<ProjectileSpawned> inv in OnProjectileExploded.GetInvocationList().Cast<EventDelegate<ProjectileSpawned>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnProjectileExploded));
+        }
+    }
+    internal static void OnBulletHit(UseableGun gun, BulletInfo bullet, InputInfo input, ref bool shouldAllow)
+    {
+        //L.Log("     Normal: " + input.normal);
+        //L.Log("     Bullet Forward: " + bullet.);
+
+        if (input.vehicle != null)
+            VehicleDamageCalculator.RegisterForAdvancedDamage(input.vehicle, VehicleDamageCalculator.GetDamageMultiplier(input));
     }
     internal static void InvokeOnLandmineExploding(UCPlayer? owner, BarricadeDrop barricade, InteractableTrap trap, UCPlayer triggerer, GameObject triggerObject, ref bool shouldExplode)
     {

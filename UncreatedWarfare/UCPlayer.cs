@@ -142,6 +142,21 @@ public class UCPlayer : IRocketPlayer
             return team == 1 || team == 2;
         }
     }
+    public List<SpottedComponent> CurrentMarkers { get; private set; }
+    public void ActivateMarker(SpottedComponent marker)
+    {
+        CurrentMarkers.Remove(marker);
+
+        if (CurrentMarkers.Count == 3)
+        {
+            var oldest = CurrentMarkers.Last();
+            oldest.Deactivate();
+            CurrentMarkers.Remove(oldest);
+        }
+
+        CurrentMarkers.Insert(0, marker);
+    }
+    public void DeactivateMarker(SpottedComponent marker) => CurrentMarkers.Remove(marker);
 
     public static implicit operator ulong(UCPlayer player) => player.Steam64;
     public static implicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
@@ -296,6 +311,7 @@ public class UCPlayer : IRocketPlayer
         LifeCounter = 0;
         SuppliesUnloaded = 0;
         AccessibleKits = new List<Kit>();
+        CurrentMarkers = new List<SpottedComponent>();
     }
     public char Icon
     {

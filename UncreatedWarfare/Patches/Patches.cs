@@ -413,5 +413,14 @@ public static partial class Patches
                 }
             }
         }
+        [HarmonyPatch(typeof(SDG.Unturned.Rocket), "OnTriggerEnter")]
+        [HarmonyPrefix]
+        static void OnProjectileCollided(SDG.Unturned.Rocket __instance, Collider other)
+        {
+            if (__instance.gameObject.TryGetComponent(out ProjectileComponent projectile))
+            {
+                projectile.OnCollided(other);
+            }
+        }
     }
 }

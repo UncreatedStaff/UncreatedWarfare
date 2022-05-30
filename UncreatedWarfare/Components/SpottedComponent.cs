@@ -117,10 +117,7 @@ public class SpottedComponent : MonoBehaviour
 
     private void OnDestroy()
     {
-        ActiveMarkers.Remove(this);
-
-        if (_coroutine != null)
-            StopCoroutine(_coroutine);
+        Deactivate();
     }
     public void Activate(Player spotter) => Activate(spotter, _defaultTimer);
     public void Activate(Player spotter, int seconds)
@@ -129,8 +126,22 @@ public class SpottedComponent : MonoBehaviour
             StopCoroutine(_coroutine);
 
         CurrentSpotter = spotter;
+        UCPlayer.FromPlayer(spotter)!.ActivateMarker(this);
 
         _coroutine = StartCoroutine(MarkerLoop(seconds));
+    }
+    public void Deactivate()
+    {
+        if (CurrentSpotter != null)
+            UCPlayer.FromPlayer(CurrentSpotter)!.DeactivateMarker(this);
+
+        _coroutine = null;
+        CurrentSpotter = null;
+
+        ActiveMarkers.Remove(this);
+
+        if (_coroutine != null)
+            StopCoroutine(_coroutine);
     }
     private void SendMarkers()
     {
@@ -169,10 +180,8 @@ public class SpottedComponent : MonoBehaviour
             counter++;
             yield return new WaitForSeconds(_frequency);
         }
-        _coroutine = null;
-        CurrentSpotter = null;
 
-        ActiveMarkers.Remove(this);
+        Deactivate();
     }
     public enum ESpotted
     {
