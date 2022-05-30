@@ -434,7 +434,7 @@ internal static class EventPatches
 #endif
         VehicleManager.sendVehicleExploded(__instance);
         if (__instance.asset.explosion != 0)
-            EffectManager.sendEffect(__instance.asset.explosion, EffectManager.LARGE, __instance.transform.position);
+            EffectManager.sendEffect(__instance.asset.explosion, Level.size, __instance.transform.position);
         if (data != null)
             data.ExplodingVehicle = null;
         return false;
