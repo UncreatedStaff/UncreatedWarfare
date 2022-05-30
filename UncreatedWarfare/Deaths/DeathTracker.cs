@@ -314,6 +314,12 @@ public class DeathTracker : BaseReloadSingleton
                         }
                     }
                 }
+                else
+                {
+                    L.Log((killerData != null).ToString());
+                    L.Log((killerData?.ExplodingVehicle != null).ToString());
+                    L.Log((killerData?.ExplodingVehicle?.Vehicle != null).ToString());
+                }
                 break;
             case EDeathCause.GRENADE:
                 if (killerData != null)

@@ -440,6 +440,9 @@ internal static class Localization
         if (!sentInConsole)
             L.Log(CommandContext.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args)), ConsoleColor.DarkCyan);
 
+        L.Log("Args: " + args.DeathCause);
+        L.Log(" - FLAGS: " + args.Flags);
+
         EventDispatcher.InvokeOnPlayerDied(e);
     }
     internal static void Reload()
