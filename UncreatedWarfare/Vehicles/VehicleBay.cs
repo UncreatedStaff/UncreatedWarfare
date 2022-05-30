@@ -818,7 +818,7 @@ public class VehicleData : IJsonReadWrite
     public bool IsDelayed(out Delay delay)
     {
         delay = Delay.Nil;
-        string gm = Data.Gamemode.Name;
+        string? gm = Data.Gamemode?.Name;
         if (Delays == null || Delays.Length == 0) return false;
         bool anyVal = false;
         bool isNoneYet = false;
@@ -836,7 +836,7 @@ public class VehicleData : IJsonReadWrite
                     gamemode = gamemode.Substring(1); // TeamCTF
                 }
 
-                if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
+                if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
                 {
                     if (blacklist) continue;
                 }
@@ -889,7 +889,7 @@ public class VehicleData : IJsonReadWrite
         }
         return anyVal;
     }
-    private bool TimeDelayed(ref Delay delay) => delay.value > Data.Gamemode.SecondsSinceStart;
+    private bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.value > Data.Gamemode.SecondsSinceStart;
     private bool FlagDelayed(ref Delay delay) => FlagDelayed(ref delay, false);
     private bool FlagPercentDelayed(ref Delay delay) => FlagDelayed(ref delay, true);
     private bool FlagDelayed(ref Delay delay, bool percent)
@@ -1374,18 +1374,26 @@ public class VBarricade : IJsonReadWrite
     }
 }
 
-[Translatable]
+[Translatable("Vehicle Type")]
 public enum EVehicleType
 {
+    [Translatable("Unknown")]
     NONE,
     HUMVEE,
+    [Translatable("Transport Truck")]
     TRANSPORT,
     SCOUT_CAR,
+    [Translatable("Logistics Truck")]
     LOGISTICS,
+    [Translatable("APC")]
     APC,
+    [Translatable("IFV")]
     IFV,
+    [Translatable("Tank")]
     MBT,
+    [Translatable("Transport Heli")]
     HELI_TRANSPORT,
+    [Translatable("Attack Heli")]
     HELI_ATTACK,
     JET,
     EMPLACEMENT,

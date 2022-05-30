@@ -293,12 +293,15 @@ partial class JSONMethods
             
             #region FOB System
             { "build_error_notinradius", "<color=#ffab87>This can only be placed inside FOB RADIUS.</color>" },
+            { "build_error_tick_notinradius", "<color=#ffab87>There's no longer a friendly FOB nearby.</color>" },
             { "build_error_radiustoosmall", "<color=#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a FOB BUNKER.</color>" },
             { "build_error_noradio", "<color=#ffab87>This can only be placed within {0}m of a friendly FOB RADIO.</color>" },
             { "build_error_structureexists", "<color=#ffab87>This FOB already has {0} {1}.</color>" },
+            { "build_error_tick_structureexists", "<color=#ffab87>Too many {0}s have already been built on this FOB.</color>" },
             { "build_error_tooclosetoenemybunker", "<color=#ffab87>You may not build on top of an enemy FOB bunker.</color>" },
             { "build_error_notenoughbuild", "<color=#fae69c>You are missing nearby build! <color=#d1c597>Building Supplies: </color><color=#d1c597>{0}/{1}</color></color>" },
             { "build_error_too_many_fobs", "<color=#ffab87>The max number of FOBs has been reached.</color>" },
+            { "build_error_invalid_collision", "<color=#ffab87>A {0} can't be built here.</color>" },
             { "no_placement_fobs_underwater", "<color=#ffab87>You can't build a FOB underwater.</color>" },
             { "no_placement_fobs_too_high", "<color=#ffab87>You can't build a FOB more than {0}m above the ground.</color>" },
             { "no_placement_fobs_too_near_base", "<color=#ffab87>You can't build a FOB this close to main base.</color>" },

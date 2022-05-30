@@ -70,6 +70,43 @@ namespace Uncreated.Warfare.Vehicles
             vehicles.Clear();
             return newvehicles;
         }
+        public static int CountNearbyVehicles(Guid id, float radius, Vector3 origin)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            float sqrRadius = radius * radius;
+            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+            int amt = 0;
+            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
+            for (int v = 0; v < vehicles.Count; v++)
+            {
+                if (vehicles[v].asset.GUID == id)
+                    ++amt;
+            }
+            vehicles.Clear();
+            return amt;
+        }
+        public static bool IsVehicleNearby(Guid id, float radius, Vector3 origin, out InteractableVehicle vehicle)
+        {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            float sqrRadius = radius * radius;
+            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
+            for (int v = 0; v < vehicles.Count; v++)
+            {
+                if (vehicles[v].asset.GUID == id)
+                {
+                    vehicle = vehicles[v];
+                    return !vehicle.isDead;
+                }
+            }
+            vehicles.Clear();
+            vehicle = null!;
+            return false;
+        }
         public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<Guid> ids, float radius, Vector3 origin)
         {
 #if DEBUG

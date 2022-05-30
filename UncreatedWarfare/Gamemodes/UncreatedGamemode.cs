@@ -89,14 +89,6 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         this._eventLoopSpeed = NewSpeed;
         this.useEventLoop = NewSpeed > 0;
     }
-    public void CancelCoroutine()
-    {
-        isPendingCancel = true;
-        if (EventLoopCoroutine == null)
-            return;
-        StopCoroutine(EventLoopCoroutine);
-        L.Log("Event loop stopped", ConsoleColor.DarkGray);
-    }
     public override void Load()
     {
 #if DEBUG
@@ -675,10 +667,12 @@ public enum EState : byte
     DISCARD
 }
 
-[Translatable]
+[Translatable("Gamemode Type")]
 public enum EGamemode : byte
 {
+    [Translatable("Vanilla")]
     UNDEFINED,
+    [Translatable("Advance and Secure")]
     TEAM_CTF,
     INVASION,
     INSURGENCY

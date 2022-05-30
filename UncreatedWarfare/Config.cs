@@ -56,6 +56,7 @@ namespace Uncreated.Warfare
         public int MinAlphanumericStringLength;
         public bool EnableReporter;
         public bool BlockLandmineFriendlyFire;
+        public bool EnableQuests;
 
         public void LoadDefaults()
         {

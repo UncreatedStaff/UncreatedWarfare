@@ -13,21 +13,23 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests;
 
-[Translatable]
+[Translatable("Weapon Class")]
 public enum EWeaponClass : byte
 {
     UNKNOWN,
     ASSAULT_RIFLE,
     BATTLE_RIFLE,
-    MARKSMAN_RIFLE, // DMR
+    MARKSMAN_RIFLE,
     SNIPER_RIFLE,
     MACHINE_GUN,
     PISTOL,
     SHOTGUN,
+    [Translatable("Rocket Launcher")]
     ROCKET,
+    [Translatable("SMG")]
     SMG
 }
-[Translatable]
+[Translatable("Quest Type")]
 public enum EQuestType : byte
 {
     INVALID,
@@ -50,16 +52,21 @@ public enum EQuestType : byte
     /// <summary><see cref="KillEnemiesQuestFullSquad"/></summary>
     KILL_ENEMIES_IN_FULL_SQUAD,
     /// <summary><see cref="KillEnemiesQuestDefense"/></summary>
+    [Translatable("Kill Enemies While Defending Point")]
     KILL_ENEMIES_ON_POINT_DEFENSE,
     /// <summary><see cref="KillEnemiesQuestAttack"/></summary>
+    [Translatable("Kill Enemies While Attacking Point")]
     KILL_ENEMIES_ON_POINT_ATTACK,
     /// <summary><see cref="HelpBuildQuest"/></summary>
     SHOVEL_BUILDABLES,
     /// <summary><see cref="BuildFOBsQuest"/></summary>
+    [Translatable("Build FOBs")]
     BUILD_FOBS,
     /// <summary><see cref="BuildFOBsNearObjQuest"/></summary>
+    [Translatable("Build FOBs Near Objectives")]
     BUILD_FOBS_NEAR_OBJECTIVES,
     /// <summary><see cref="BuildFOBsOnObjQuest"/></summary>
+    [Translatable("Build FOBs Near Current Objective")]
     BUILD_FOB_ON_ACTIVE_OBJECTIVE,
     /// <summary><see cref="DeliverSuppliesQuest"/></summary>
     DELIVER_SUPPLIES,
@@ -74,28 +81,38 @@ public enum EQuestType : byte
     /// <summary><see cref="RevivePlayersQuest"/></summary>
     REVIVE_PLAYERS,
     /// <summary><see cref="KingSlayerQuest"/></summary>
+    [Translatable("King-slayer")]
     KING_SLAYER,
     /// <summary><see cref="KillStreakQuest"/></summary>
+    [Translatable("Killstreak")]
     KILL_STREAK,
     /// <summary><see cref="XPInGamemodeQuest"/></summary>
+    [Translatable("Earn XP From Gamemode")]
     XP_IN_GAMEMODE,
     /// <summary><see cref="KillEnemiesRangeQuest"/></summary>
+    [Translatable("Kill From Distance")]
     KILL_FROM_RANGE,
     /// <summary><see cref="KillEnemiesRangeQuestWeapon"/></summary>
+    [Translatable("Kill From Distance With Weapon")]
     KILL_FROM_RANGE_WITH_WEAPON,
     /// <summary><see cref="KillEnemiesQuestKitClassRange"/></summary>
+    [Translatable("Kill From Distance With Class")]
     KILL_FROM_RANGE_WITH_CLASS,
     /// <summary><see cref="KillEnemiesQuestKitRange"/></summary>
+    [Translatable("Kill From Distance With Kit")]
     KILL_FROM_RANGE_WITH_KIT,
     /// <summary><see cref="RallyUseQuest"/></summary>
+    [Translatable("Teammates Use Rallypoint")]
     TEAMMATES_DEPLOY_ON_RALLY,
     /// <summary><see cref="FOBUseQuest"/></summary>
+    [Translatable("Teammates Use FOB")]
     TEAMMATES_DEPLOY_ON_FOB,
     /// <summary><see cref="NeutralizeFlagsQuest"/></summary>
     NEUTRALIZE_FLAGS,
     /// <summary><see cref="WinGamemodeQuest"/></summary>
     WIN_GAMEMODE,
     /// <summary><see cref="DiscordKeySetQuest"/></summary>
+    [Translatable("Custom Key")]
     DISCORD_KEY_SET_BOOL,
     /// <summary><see cref="PlaceholderQuest"/></summary>
     PLACEHOLDER

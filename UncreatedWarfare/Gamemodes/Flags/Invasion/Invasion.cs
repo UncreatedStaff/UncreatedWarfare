@@ -64,6 +64,7 @@ public class Invasion :
             _defenseTeam = 2;
         else if (_attackTeam == 2)
             _defenseTeam = 1;
+        L.Log("Attack: " + TeamManager.TranslateName(_attackTeam, 0) + ", Defense: " + TeamManager.TranslateName(_defenseTeam, 0), ConsoleColor.Green);
     }
     public override void LoadRotation()
     {
@@ -120,7 +121,6 @@ public class Invasion :
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            CTFUI.ClearFlagList(pl);
             InvasionUI.SendFlagList(pl);
         }
         PrintFlagRotation();

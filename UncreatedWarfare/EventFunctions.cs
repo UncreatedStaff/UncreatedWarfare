@@ -267,8 +267,7 @@ public static class EventFunctions
                     }
                 }
             }
-            if (hit != null)
-                RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
+            RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
             if (!shouldAllow) return;
 
             if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
