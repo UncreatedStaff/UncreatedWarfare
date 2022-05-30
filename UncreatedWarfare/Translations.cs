@@ -797,6 +797,8 @@ partial class JSONMethods
             { "xp_resupplied_teammate", "RESUPPLIED TEAMMATE" },
             { "xp_repaired_vehicle", "REPAIRED VEHICLE" },
             { "xp_fob_repaired_vehicle", "FOB REPAIRED VEHICLE" },
+            { "xp_vehicle_destroyed", "{0} DESTROYED" },
+            { "xp_aircraft_destroyed", "{0} SHOT DOWN" },
 
             { "xp_flag_captured", "FLAG CAPTURED" },
             { "xp_flag_neutralized", "FLAG NEUTRALIZED" },
@@ -960,17 +962,17 @@ partial class JSONMethods
             #endregion
 
             #region VehicleTypes
-            { "humvee", "Humvee" },
-            { "transport", "Transport Truck" },
-            { "logistics", "Logistics Truck" },
-            { "scout_car", "Scout Car" },
-            { "apc", "APC" },
-            { "ifv", "IFV" },
-            { "mbt", "Main Battle Tank" },
-            { "heli_transport", "Transport heli" },
-            { "heli_attack", "Attack Heli" },
-            { "jet", "Jet" },
-            { "emplacement", "Emplacement" },
+            { "HUMVEE", "Humvee" },
+            { "TRANSPORT", "Transport Truck" },
+            { "LOGISTICS", "Logistics Truck" },
+            { "SCOUT_CAR", "Scout Car" },
+            { "APC", "APC" },
+            { "IFV", "IFV" },
+            { "MBT", "Main Battle Tank" },
+            { "HELI_TRANSPORT", "Transport heli" },
+            { "HELI_ATTACK", "Attack Heli" },
+            { "JET", "Jet" },
+            { "EMPLACEMENT", "Emplacement" },
             #endregion
         };
     }
