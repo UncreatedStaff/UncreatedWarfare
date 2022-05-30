@@ -25,9 +25,6 @@ namespace Uncreated.Warfare;
 
 partial class UCWarfare
 {
-    public delegate void PlayerDeathHandler(DeathEventArgs death);
-    public static event PlayerDeathHandler OnPlayerDeathGlobal;
-    public event Rocket.Unturned.Events.UnturnedPlayerEvents.PlayerDeath OnPlayerDeathPostMessages;
     private void Teamkill(KillEventArgs parameters)
     {
 #if DEBUG
@@ -41,7 +38,6 @@ partial class UCWarfare
         byte team = parameters.killer.GetTeamByte();
         if (team == 1 || team == 2)
         {
-            TicketManager.OnFriendlyKilled(parameters);
             Task.Run(() => Data.DatabaseManager.AddTeamkill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team));
             StatsManager.ModifyStats(parameters.killer.channel.owner.playerID.steamID.m_SteamID, s => s.Teamkills++, false);
             StatsManager.ModifyTeam(team, t => t.Teamkills++, false);
@@ -128,7 +124,6 @@ partial class UCWarfare
         if (team == 1 || team == 2)
         {
             Task.Run(() => Data.DatabaseManager.AddKill(parameters.killer.channel.owner.playerID.steamID.m_SteamID, team));
-            TicketManager.OnEnemyKilled(parameters);
             if (parameters.killer.TryGetPlayerData(out UCPlayerData c))
             {
                 if (c.stats is IPVPModeStats kd)
@@ -310,7 +305,7 @@ partial class UCWarfare
             key = parameters.key,
             limb = parameters.limb
         };
-        OnPlayerDeathGlobal?.Invoke(args);
+        //OnPlayerDeathGlobal?.Invoke(args);
         Data.Gamemode?.OnPlayerDeath(args);
 
         ActionLog.Add(EActionLogType.DEATH, args.ToStringIDs(), parameters.dead.channel.owner.playerID.steamID.m_SteamID);
@@ -318,7 +313,6 @@ partial class UCWarfare
         byte team = parameters.dead.GetTeamByte();
         if (team == 1 || team == 2)
         {
-            TicketManager.OnPlayerSuicide(parameters);
             Task.Run(() => Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team));
             StatsManager.ModifyTeam(team, t => t.Deaths++, false);
             QuestManager.OnDeath(parameters);
@@ -494,7 +488,6 @@ partial class UCWarfare
                     ctf.GameStats.casualtiesT2++;
                 }
             }
-            TicketManager.OnPlayerDeath(parameters);
             if (parameters.dead.TryGetPlayerData(out UCPlayerData c) && c.stats is IPVPModeStats kd)
                 kd.AddDeath();
             Task.Run(() => Data.DatabaseManager.AddDeath(parameters.dead.channel.owner.playerID.steamID.m_SteamID, team));
@@ -527,7 +520,7 @@ partial class UCWarfare
             else
                 StatsManager.ModifyStats(parameters.dead.channel.owner.playerID.steamID.m_SteamID, s => s.Deaths++, false);
         }
-        OnPlayerDeathGlobal?.Invoke(parameters);
+        //OnPlayerDeathGlobal?.Invoke(parameters);
     }
     /*
     private void OnPlayerDeath(UnturnedPlayer dead, EDeathCause cause, ELimb limb, CSteamID murderer)
@@ -1212,8 +1205,8 @@ partial class UCWarfare
         }
         if (killer != null && killer.player.TryGetPlayerData(out UCPlayerData c))
         {
-            if (cause == EDeathCause.GUN && c.lastShot != default)
-                item = c.lastShot;
+            if (cause == EDeathCause.GUN && c.LastGunShot != default)
+                item = c.LastGunShot;
             else if (cause == EDeathCause.GRENADE && c.ActiveThrownItems != default && c.ActiveThrownItems.Count > 0)
             {
                 ThrowableComponent g = c.ActiveThrownItems.FirstOrDefault(x => Assets.find(x.Throwable) is ItemThrowableAsset asset && asset.isExplosive);
@@ -1234,12 +1227,12 @@ partial class UCWarfare
             }
             else if (cause == EDeathCause.LANDMINE)
                 item = c.ExplodingLandmine?.asset?.GUID ?? default;
-            else if (cause == EDeathCause.MISSILE && c.lastProjected != default)
-                item = c.lastProjected;
+            else if (cause == EDeathCause.MISSILE && c.LastRocketShot != default)
+                item = c.LastRocketShot;
             else if (cause == EDeathCause.VEHICLE && c.lastExplodedVehicle != default)
                 item = c.lastExplodedVehicle;
-            else if (cause == EDeathCause.ROADKILL && c.lastRoadkilled != default)
-                item = c.lastRoadkilled;
+            else if (cause == EDeathCause.ROADKILL && c.LastVehicleHitBy != default)
+                item = c.LastVehicleHitBy;
             else if (killer.player.equipment.asset != null) item = killer.player.equipment.asset.GUID;
             else item = default;
         }

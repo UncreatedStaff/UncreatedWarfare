@@ -82,6 +82,8 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
     }
     private void OnVehicleExit(ExitVehicle e)
     {
+        if (e.OldPassengerIndex == 0 && e.Vehicle.transform.TryGetComponent(out VehicleComponent comp))
+            comp.LastDriverTime = Time.realtimeSinceStartup;
         if (KitManager.KitExists(e.Player.KitName, out Kit kit))
         {
             if (kit.Class == EClass.LAT || kit.Class == EClass.HAT)

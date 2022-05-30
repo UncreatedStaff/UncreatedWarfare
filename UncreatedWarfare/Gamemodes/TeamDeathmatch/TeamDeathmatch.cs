@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -74,7 +76,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public override void Subscribe()
     {
         base.Subscribe();
-        UCWarfare.OnPlayerDeathGlobal += OnDeath;
+        EventDispatcher.OnPlayerDied += OnDeath;
     }
     protected override void PostDispose()
     {
@@ -82,7 +84,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     }
     public override void Unsubscribe()
     {
-        UCWarfare.OnPlayerDeathGlobal -= OnDeath;
+        EventDispatcher.OnPlayerDied -= OnDeath;
         base.Unsubscribe();
     }
     public override void DeclareWin(ulong winner)
@@ -120,11 +122,13 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     {
 
     }
-    private void OnDeath(UCWarfare.DeathEventArgs death)
+    private void OnDeath(PlayerDied e)
     {
-        if (death.killerargs is not null && death.killerargs.killer is not null && !death.killerargs.teamkill)
+        if (e.Killer is not null)
         {
-            ulong team = death.killerargs.killer.GetTeam();
+            ulong team = e.Killer.GetTeam();
+            if (team == e.Player.GetTeam())
+                return;
             if (team == 1) ++_t1score;
             else if (team == 2) ++_t2score;
             else return;

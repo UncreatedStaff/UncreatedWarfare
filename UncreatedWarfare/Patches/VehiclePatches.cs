@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare
 {
@@ -114,6 +115,7 @@ namespace Uncreated.Warfare
                     if (seat == 0 && __instance.transform.TryGetComponent(out VehicleComponent c))
                     {   
                         c.LastDriver = player.channel.owner.playerID.steamID.m_SteamID;
+                        c.LastDriverTime = Time.realtimeSinceStartup;
                     }
                 }
             }

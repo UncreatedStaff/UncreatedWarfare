@@ -310,6 +310,7 @@ public static class EventDispatcher
         ThrowableComponent c = throwable.AddComponent<ThrowableComponent>();
         c.Throwable = useable.equippedThrowableAsset.GUID;
         c.Owner = useable.player.channel.owner.playerID.steamID.m_SteamID;
+        c.IsExplosive = useable.equippedThrowableAsset.isExplosive;
         if (OnThrowableSpawned == null) return;
         UCPlayer? owner = UCPlayer.FromPlayer(useable.player);
         if (owner is null) return;

@@ -13,6 +13,7 @@ internal class ThrowableComponent : MonoBehaviour
     internal ulong Owner;
     internal Guid Throwable;
     internal int UnityInstanceID;
+    internal bool IsExplosive;
     private void Start() => UnityInstanceID = gameObject.GetInstanceID();
     private void OnDestroy()
     {

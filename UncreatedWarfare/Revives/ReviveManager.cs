@@ -7,6 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Deaths;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -20,7 +23,6 @@ namespace Uncreated.Warfare.Revives;
 public class ReviveManager : BaseSingleton, IPlayerConnectListener
 {
     public readonly Dictionary<ulong, DownedPlayerData> DownedPlayers;
-    public readonly Dictionary<ulong, DeathInfo> DeathInfo;
     public readonly List<UCPlayer> Medics = new List<UCPlayer>();
     private static ReviveManager Singleton;
     private Coroutine? Updater;
@@ -30,13 +32,21 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
     public ReviveManager()
     {
         DownedPlayers = new Dictionary<ulong, DownedPlayerData>(Provider.maxPlayers);
-        DeathInfo = new Dictionary<ulong, DeathInfo>(Provider.maxPlayers);
         Medics = new List<UCPlayer>(Provider.maxPlayers);
+    }
+
+    public bool CanPlayerInjure(ref DamagePlayerParameters parameters)
+    {
+        return parameters.player.life.isDead &&
+               parameters.damage > parameters.player.life.health &&
+               (parameters.cause is EDeathCause.LANDMINE or EDeathCause.VEHICLE) &&
+               parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && // main campers can't get downed, makes death messages easier
+               parameters.damage < 300;
     }
     public override void Load()
     {
         Medics.AddRange(PlayerManager.OnlinePlayers.Where(x => x.KitClass == EClass.MEDIC).ToList());
-        UCWarfare.I.OnPlayerDeathPostMessages += OnPlayerDeath;
+        EventDispatcher.OnPlayerDied += OnPlayerDeath;
         PlayerLife.OnRevived_Global += OnPlayerRespawned;
         UseableConsumeable.onPerformingAid += OnHealPlayer;
         Singleton = this;
@@ -47,7 +57,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         Singleton = null!;
         UseableConsumeable.onPerformingAid -= OnHealPlayer;
         PlayerLife.OnRevived_Global -= OnPlayerRespawned;
-        UCWarfare.I.OnPlayerDeathPostMessages -= OnPlayerDeath;
+        EventDispatcher.OnPlayerDied -= OnPlayerDeath;
         if (Updater is not null)
         {
             UCWarfare.I.StopCoroutine(Updater);
@@ -60,14 +70,14 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 reviver.FinishKillingPlayer();
         }
         DownedPlayers.Clear();
-        DeathInfo.Clear();
+        DeathTracker.ReviveManagerUnloading();
     }
     void IPlayerConnectListener.OnPlayerConnecting(UCPlayer player)
     {
         if (player.KitClass == EClass.MEDIC)
             Medics.Add(player);
         DownedPlayers.Remove(player.Steam64);
-        DeathInfo.Remove(player.Steam64);
+        DeathTracker.RemovePlayerInfo(player.Steam64);
     }
     private IEnumerator<WaitForSeconds> UpdatePositions()
     {
@@ -126,6 +136,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Medics.RemoveAll(x => x == null || !x.IsOnline || x.Steam64 == player.playerID.steamID.m_SteamID);
+        DeathTracker.RemovePlayerInfo(player.playerID.steamID.m_SteamID);
         if (DownedPlayers.TryGetValue(player.playerID.steamID.m_SteamID, out DownedPlayerData p))
         {
             if (PlayerManager.HasSave(player.playerID.steamID.m_SteamID, out PlayerSave save))
@@ -247,10 +258,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 }
             }
 
-            if (!parameters.player.life.isDead &&
-                parameters.damage > parameters.player.life.health &&
-                parameters.cause != EDeathCause.LANDMINE &&
-                parameters.damage < 300)
+            if (CanPlayerInjure(ref parameters))
             {
                 InjurePlayer(ref shouldAllow, ref parameters, killer);
             }
@@ -300,30 +308,12 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         SpawnInjuredMarker(parameters.player.transform.position, team);
         UpdateMedicMarkers(parameters.player.channel.owner.transportConnection, team, parameters.player.transform.position, false);
         Guid item = Guid.Empty;
+        DeathTracker.OnInjured(ref parameters);
         if (killer != default)
         {
-            if (killer.player.TryGetPlayerData(out Components.UCPlayerData c))
+            if (killer.player.TryGetPlayerData(out UCPlayerData c))
             {
                 c.TryUpdateAttackers(killer.playerID.steamID.m_SteamID);
-            }
-            if (DeathInfo.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DeathInfo info))
-            {
-                UCWarfare.I.GetKillerInfo(out item, out info.distance, out info.killerName, out info.killerTeam, out info.kitName, out info.vehicle, parameters.cause, killer, parameters.player);
-                info.item = item;
-            }
-            else
-            {
-                UCWarfare.I.GetKillerInfo(out item, out float distance, out FPlayerName names, out ulong killerTeam, out string kitname, out ushort turretvehicle, parameters.cause, killer, parameters.player);
-                DeathInfo.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID,
-                    new DeathInfo()
-                    {
-                        distance = distance,
-                        item = item,
-                        killerName = names,
-                        killerTeam = killerTeam,
-                        kitName = kitname,
-                        vehicle = turretvehicle
-                    });
             }
             if (killer.playerID.steamID.m_SteamID != parameters.player.channel.owner.playerID.steamID.m_SteamID) // suicide
             {
@@ -374,32 +364,32 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
             //reviver.StartBleedout();
         }
     }
-    private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
+    private void OnPlayerDeath(PlayerDied e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         //L.Log(player.Player.channel.owner.playerID.playerName + " died in ReviveManager.", ConsoleColor.DarkRed);
-        SetStanceBetter(player.Player, EPlayerStance.STAND);
-        if (DownedPlayers.ContainsKey(player.CSteamID.m_SteamID))
+        SetStanceBetter(e.Player, EPlayerStance.STAND);
+        if (DownedPlayers.ContainsKey(e.Steam64))
         {
-            if (player.Player.transform.TryGetComponent(out Reviver reviver))
+            if (e.Player.Player.transform.TryGetComponent(out Reviver reviver))
             {
                 reviver.FinishKillingPlayer(true);
             }
             else
             {
-                DownedPlayers.Remove(player.CSteamID.m_SteamID);
-                DeathInfo.Remove(player.CSteamID.m_SteamID);
-                player.Player.movement.sendPluginSpeedMultiplier(1.0f);
-                player.Player.movement.sendPluginJumpMultiplier(1.0f);
-                player.Player.life.serverSetBleeding(false);
+                DownedPlayers.Remove(e.Steam64);
+                DeathTracker.RemovePlayerInfo(e.Steam64);
+                e.Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
+                e.Player.Player.movement.sendPluginJumpMultiplier(1.0f);
+                e.Player.Player.life.serverSetBleeding(false);
             }
 
-            EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, player.Player.channel.owner.transportConnection);
-            EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, player.Player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, e.Player.Player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, e.Player.Player.channel.owner.transportConnection);
         }
-        ClearInjuredMarker(player.CSteamID.m_SteamID, player.GetTeam());
+        ClearInjuredMarker(e.Steam64, e.Player.GetTeam());
     }
     public void RegisterMedic(UCPlayer player)
     {
@@ -688,7 +678,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 if (remove)
                 {
                     g.ReviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
-                    g.ReviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
+                    DeathTracker.RemovePlayerInfo(Player.Player.channel.owner.playerID.steamID.m_SteamID);
                 }
             }
         }
@@ -709,7 +699,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                     DamageTool.damagePlayer(parameters, out _);
                 }
                 g.ReviveManager.DownedPlayers.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
-                g.ReviveManager.DeathInfo.Remove(Player.Player.channel.owner.playerID.steamID.m_SteamID);
+                DeathTracker.RemovePlayerInfo(Player.Player.channel.owner.playerID.steamID.m_SteamID);
             }
         }
     }

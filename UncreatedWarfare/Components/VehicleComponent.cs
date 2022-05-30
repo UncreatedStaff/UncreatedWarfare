@@ -15,13 +15,14 @@ namespace Uncreated.Warfare.Components;
 
 public class VehicleComponent : MonoBehaviour
 {
-    public Guid item;
+    public Guid LastItem;
+    public bool LastItemIsVehicle;
     public InteractableVehicle Vehicle;
     public ulong Team { get => Vehicle.lockedGroup.m_SteamID; }
     public VehicleData Data;
     public bool isInVehiclebay { get; private set; }
-    public EDamageOrigin lastDamageOrigin;
-    public ulong lastDamager;
+    public EDamageOrigin LastDamageOrigin;
+    public ulong LastInstigator;
     public Dictionary<ulong, Vector3> TransportTable { get; private set; }
     public Dictionary<ulong, double> UsageTable { get; private set; }
     private Dictionary<ulong, DateTime> TimeEnteredTable;
@@ -121,6 +122,7 @@ public class VehicleComponent : MonoBehaviour
         if (toSeat == 0)
         {
             LastDriver = player.Steam64;
+            LastDriverTime = Time.realtimeSinceStartup;
             totalDistance = 0;
         }
         ActionLog.Add(EActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
@@ -210,6 +212,7 @@ public class VehicleComponent : MonoBehaviour
         {
             // new driver
             LastDriver = e.Player.Steam64;
+            LastDriverTime = Time.realtimeSinceStartup;
             totalDistance = 0;
         }
 
@@ -559,6 +562,7 @@ public class VehicleComponent : MonoBehaviour
     public float TotalDistanceTravelled => totalDistance;
     private float lastCheck;
     public ulong LastDriver;
+    public float LastDriverTime;
     public float LastDriverDistance;
     private void Update()
     {

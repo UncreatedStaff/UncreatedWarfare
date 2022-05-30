@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Point;
@@ -44,8 +45,7 @@ public class UCPlayerData : MonoBehaviour
     public float JoinTime = 0f;
     public Gamemodes.Interfaces.IStats stats;
     public Player player;
-    public Guid lastShot;
-    public Guid lastProjected;
+    public Guid LastRocketShot;
     public ulong lastAttacker;
     public KeyValuePair<ulong, DateTime> secondLastAttacker;
     internal List<ThrowableComponent> ActiveThrownItems = new List<ThrowableComponent>(4);
@@ -53,9 +53,20 @@ public class UCPlayerData : MonoBehaviour
     public BarricadeDrop? TriggeringLandmine;
     internal ThrowableComponent? TriggeringThrowable;
     public Guid lastExplodedVehicle;
-    public Guid lastRoadkilled;
+    public Guid LastVehicleHitBy;
     private Coroutine? _currentTeleportRequest;
     public Vehicles.VehicleSpawn? currentlylinking;
+    public DamagePlayerParameters LastBleedingHit;
+    public Guid LastInfectableConsumed;
+    public Guid LastExplosiveConsumed;
+    public Guid LastBleedingItem1;
+    public Guid LastBleedingItem2;
+    public Guid LastChargeDetonated;
+    public Guid LastShreddedBy;
+    public Guid LastGunShot; // used for amc
+    internal VehicleComponent? ExplodingVehicle;
+    public float LastBleedingDistance;
+    public object PendingFOB;
     private struct ToastMessageInfo
     {
         public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);
@@ -128,6 +139,7 @@ public class UCPlayerData : MonoBehaviour
     }
 
     private ToastChannel[] channels;
+
     public void QueueMessage(ToastMessage message, bool priority = false)
     {
 #if DEBUG
@@ -436,6 +448,4 @@ public class UCPlayerData : MonoBehaviour
         if (startCoolDown)
             CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.Config.DeployFOBCooldown);
     }
-
-    public object PendingFOB;
 }

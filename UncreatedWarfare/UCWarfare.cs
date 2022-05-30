@@ -208,6 +208,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
+        UseableConsumeable.onConsumePerformed += EventFunctions.OnConsume;
         EventDispatcher.OnBarricadeDestroyed += EventFunctions.OnBarricadeDestroyed;
         Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
         PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
@@ -256,6 +257,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         VehicleManager.onDamageVehicleRequested -= EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop -= EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
+        UseableConsumeable.onConsumePerformed -= EventFunctions.OnConsume;
         EventDispatcher.OnBarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
         Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
         PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;

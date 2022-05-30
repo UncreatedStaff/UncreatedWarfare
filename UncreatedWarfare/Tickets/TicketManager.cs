@@ -4,6 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -36,6 +38,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
         Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
         VehicleManager.OnVehicleExploded += OnVehicleExploded;
+        EventDispatcher.OnPlayerDied += OnPlayerDeath;
     }
     public override void Unload()
     {
@@ -52,52 +55,45 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
         UpdateUI(player.Connection, UIID, tickets, message);
     }
-    public static void OnPlayerDeath(UCWarfare.DeathEventArgs eventArgs)
+    private void OnPlayerDeath(PlayerDied e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (TeamManager.IsTeam1(eventArgs.dead))
+        if (e.DeadTeam == 1)
             AddTeam1Tickets(-1);
-        else if (TeamManager.IsTeam2(eventArgs.dead))
+        else if (e.DeadTeam == 2)
             AddTeam2Tickets(-1);
-
+        if (e.Killer is not null)
+        {
+            if (!e.WasTeamkill)
+                OnEnemyKilled(e.Player, e.Killer);
+            else
+                OnFriendlyKilled(e.Player, e.Killer);
+        }
     }
-    public static void OnPlayerSuicide(UCWarfare.SuicideEventArgs eventArgs)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (TeamManager.IsTeam1(eventArgs.dead))
-            AddTeam1Tickets(-1);
-        else if (TeamManager.IsTeam2(eventArgs.dead))
-            AddTeam2Tickets(-1);
-    }
-    public static void OnEnemyKilled(UCWarfare.KillEventArgs parameters)
+    public static void OnEnemyKilled(UCPlayer dead, UCPlayer killer)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (Data.Is(out Insurgency insurgency))
         {
-            if (parameters.dead.quests.groupID.m_SteamID == insurgency.DefendingTeam)
+            if (dead.GetTeam() == insurgency.DefendingTeam)
             {
                 insurgency.AddIntelligencePoints(1);
-                if (parameters.killer.TryGetPlayerData(out UCPlayerData c) && c.stats is InsurgencyPlayerStats s)
+                if (killer.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is InsurgencyPlayerStats s)
                     s._intelligencePointsCollected++;
                 insurgency.GameStats.intelligenceGathered++;
             }
         }
 
-        Points.AwardXP(
-            parameters.killer,
-            Points.XPConfig.EnemyKilledXP,
-            Translation.Translate("xp_enemy_killed", parameters.killer));
+        Points.AwardXP(killer, Points.XPConfig.EnemyKilledXP, Translation.Translate("xp_enemy_killed", killer));
 
-        if (parameters.dead.TryGetPlayerData(out UCPlayerData component))
+        if (dead.Player.TryGetPlayerData(out UCPlayerData component))
         {
-            ulong killerID = parameters.killer.channel.owner.playerID.steamID.m_SteamID;
-            ulong victimID = parameters.dead.channel.owner.playerID.steamID.m_SteamID;
+            ulong killerID = killer.Steam64;
+            ulong victimID = dead.Steam64;
 
                 UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
                 if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
@@ -105,10 +101,10 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                     Points.AwardXP(
                         assister,
                         Points.XPConfig.KillAssistXP,
-                        Translation.Translate("xp_kill_assist", parameters.killer));
+                        Translation.Translate("xp_kill_assist", killer));
                 }
 
-                if (parameters.dead.TryGetComponent(out SpottedComponent spotted))
+                if (dead.Player.TryGetComponent(out SpottedComponent spotted))
                 {
                     spotted.OnTargetKilled(Points.XPConfig.EnemyKilledXP);
                 }
@@ -116,17 +112,14 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                 component.ResetAttackers();
             }
 
-        Points.TryAwardDriverAssist(parameters.killer, Points.XPConfig.EnemyKilledXP, 1);
+        Points.TryAwardDriverAssist(killer, Points.XPConfig.EnemyKilledXP, 1);
     }
-    public static void OnFriendlyKilled(UCWarfare.KillEventArgs parameters)
+    public static void OnFriendlyKilled(UCPlayer dead, UCPlayer killer)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Points.AwardXP(
-            parameters.killer,
-            Points.XPConfig.FriendlyKilledXP,
-            Translation.Translate("xp_friendly_killed", parameters.killer));
+        Points.AwardXP(killer, Points.XPConfig.FriendlyKilledXP, Translation.Translate("xp_friendly_killed", killer));
     }
     private static void OnVehicleExploded(InteractableVehicle vehicle)
     {
@@ -153,7 +146,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                 UCPlayer? owner = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
                 if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
                 {
-                    UCPlayer? player = UCPlayer.FromID(vc.lastDamager);
+                    UCPlayer? player = UCPlayer.FromID(vc.LastInstigator);
 
                     if (player == null)
                         player = UCPlayer.FromID(vc.LastDriver);
@@ -216,7 +209,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
 
                     if (vehicleWasEnemy)
                     {
-                        Asset asset = Assets.find(vc.item);
+                        Asset asset = Assets.find(vc.LastItem);
                         string reason = string.Empty;
                         if (asset != null)
                         {
@@ -250,7 +243,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                                     UCPlayer? attacker = UCPlayer.FromID(entry.Key);
                                     if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
                                     {
-                                        if (attacker.CSteamID.m_SteamID == vc.lastDamager)
+                                        if (attacker.CSteamID.m_SteamID == vc.LastInstigator)
                                         {
                                             Points.AwardXP(attacker, reward, Translation.Translate("xp_" + message, player));
                                             Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
@@ -327,9 +320,9 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                         if (Data.Reporter is not null)
                         {
                             if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
-                                Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+                                Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID, vc.LastInstigator, vehicle.asset.GUID, vc.LastItem, vc.LastDamageOrigin, vehicleWasFriendly);
                             else
-                                Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.lastDamager, vehicle.asset.GUID, vc.item, vc.lastDamageOrigin, vehicleWasFriendly);
+                                Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.LastInstigator, vehicle.asset.GUID, vc.LastItem, vc.LastDamageOrigin, vehicleWasFriendly);
                         }
                     }
                 }
