@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -224,6 +227,14 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
         t1sizetotal = 0;
         t2sizetotal = 0;
     }
+    protected virtual void Start()
+    {
+        EventDispatcher.OnPlayerDied += OnPlayerDied;
+    }
+    protected virtual void OnDestroy()
+    {
+        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+    }
     protected virtual void Update()
     {
         float dt = Time.deltaTime;
@@ -243,6 +254,46 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
             else if (team == 2)
                 t2sizetotal++;
         }
+    }
+    protected virtual void OnPlayerDied(PlayerDied e)
+    {
+        UCPlayerData c;
+        if (e.Killer is not null)
+        {
+            if (e.WasTeamkill)
+            {
+                if (e.DeadTeam == 1)
+                    ++teamkillsT1;
+                else if (e.DeadTeam == 2)
+                    ++teamkillsT2;
+                if (e.Killer.Player.TryGetPlayerData(out c) && c.stats is ITeamPVPModeStats tpvp)
+                    tpvp.AddTeamkill();
+            }
+            else
+            {
+                if (e.Killer.Player.TryGetPlayerData(out c))
+                {
+                    if (c.stats is IPVPModeStats kd)
+                        kd.AddKill();
+                    if (c.stats is BaseCTFStats st && e.Killer.Player.IsOnFlag())
+                        st.AddKillOnPoint();
+                }
+                if (this is ILongestShotTracker ls)
+                {
+                    if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH &&
+                        (ls.LongestShot.Player == 0 || ls.LongestShot.Distance < e.KillDistance))
+                    {
+                        ls.LongestShot = new LongestShot(e.Killer, e.KillDistance, e.PrimaryAsset, e.KillerTeam);
+                    }
+                }
+            }
+        }
+        if (e.Player.Player.TryGetPlayerData(out c) && c.stats is IPVPModeStats kd2)
+            kd2.AddDeath();
+        if (e.DeadTeam == 1)
+            ++casualtiesT1;
+        else if (e.DeadTeam == 2)
+            ++casualtiesT2;
     }
 }
 

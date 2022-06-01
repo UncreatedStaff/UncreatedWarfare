@@ -1,7 +1,10 @@
 ﻿using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
@@ -92,6 +95,48 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
         statsT2.Take(count);
         statsT1.Insert(0, totalT1);
         statsT2.Insert(0, totalT2);
+    }
+    protected override void OnPlayerDied(PlayerDied e)
+    {
+        if (!e.WasTeamkill && e.Killer is not null && Data.Is(out Insurgency ins))
+        {
+            Vector3 pos;
+            if (e.KillerTeam == ins.DefendingTeam)
+            {
+                pos = e.Killer.Position;
+                for (int i = 0; i < ins.Caches.Count; i++)
+                {
+                    Insurgency.CacheData d = ins.Caches[i];
+                    if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
+                        (d.Cache.Structure.model.transform.position - pos)
+                        .sqrMagnitude <=
+                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange *
+                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
+                    {
+                        if (e.Killer.Player.TryGetPlayerData(out UCPlayerData comp) &&
+                            comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
+                    }
+                }
+            }
+            else if (e.KillerTeam == ins.AttackingTeam)
+            {
+                pos = e.Player.Position;
+                for (int i = 0; i < ins.Caches.Count; i++)
+                {
+                    Insurgency.CacheData d = ins.Caches[i];
+                    if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
+                        (d.Cache.Structure.model.transform.position - pos)
+                        .sqrMagnitude <=
+                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange *
+                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
+                    {
+                        if (e.Killer.Player.TryGetPlayerData(out UCPlayerData comp) &&
+                            comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
+                    }
+                }
+            }
+        }
+        base.OnPlayerDied(e);
     }
 }
 

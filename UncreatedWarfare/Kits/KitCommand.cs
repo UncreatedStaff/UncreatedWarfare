@@ -73,7 +73,7 @@ public class KitCommand : IRocketCommand
                 ctx.SendCorrectUsage("/kit <create|c|override> <id> - Creates (or overrides if it already exits) a kit with default values based on the items in your inventory and your clothes.");
                 return;
             }
-            if (ctx.IsConsoleReply()) return;
+            if (!ctx.IsConsoleReply()) return;
             if (ctx.TryGet(1, out string kitName))
             {
                 if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
@@ -162,7 +162,7 @@ public class KitCommand : IRocketCommand
                 ctx.SendCorrectUsage("/kit <give|g> <id> - Equips you with the kit with the id provided.");
                 return;
             }
-            if (ctx.IsConsoleReply()) return;
+            if (!ctx.IsConsoleReply()) return;
             if (ctx.TryGet(1, out string kitName))
             {
                 if (KitManager.KitExists(kitName, out Kit kit))
@@ -452,7 +452,7 @@ public class KitCommand : IRocketCommand
                     ")> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
                 return;
             }
-            if (ctx.IsConsoleReply()) return;
+            if (!ctx.IsConsoleReply()) return;
             if (ctx.TryGet(3, out EClass @class) && ctx.TryGet(2, out ulong team) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
                 if (onlinePlayer is null && !PlayerSave.HasPlayerSave(playerId))

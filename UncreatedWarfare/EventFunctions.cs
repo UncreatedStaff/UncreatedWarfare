@@ -34,35 +34,6 @@ namespace Uncreated.Warfare;
 
 public static class EventFunctions
 {
-    public delegate void GroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup);
-    public static event GroupChanged OnGroupChanged;
-    internal static void OnGroupChangedInvoke(SteamPlayer player, ulong oldGroup, ulong newGroup) => OnGroupChanged?.Invoke(player, oldGroup, newGroup);
-    internal static void GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ulong oldteam = oldGroup.GetTeam();
-        ulong newteam = newGroup.GetTeam();
-        UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
-        if (ucplayer != null)
-        {
-            PlayerManager.ApplyTo(ucplayer);
-            Data.Gamemode?.OnGroupChanged(ucplayer, oldGroup, newGroup, oldteam, newteam);
-
-            if (newteam == 1 || newteam == 2)
-                FOBManager.SendFOBList(ucplayer);
-            Points.OnGroupChanged(ucplayer, oldGroup, newGroup);
-            IconManager.DrawNewMarkers(ucplayer, true);
-        }
-        SquadManager.OnGroupChanged(player, oldGroup, newGroup);
-        TicketManager.OnGroupChanged(player, oldGroup, newGroup);
-
-        RequestSigns.UpdateAllSigns(player);
-
-        PlayerManager.NetCalls.SendTeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
-
-    }
     internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
     internal static Dictionary<ulong, List<uint>> droppeditems = new Dictionary<ulong, List<uint>>();
     internal static Dictionary<uint, ulong> droppeditemsInverse = new Dictionary<uint, ulong>();
@@ -190,6 +161,19 @@ public static class EventFunctions
         if (gun.player.TryGetPlayerData(out UCPlayerData c))
         {
             c.LastRocketShot = gun.equippedGunAsset.GUID;
+            c.LastRocketShotVehicle = default;
+            InteractableVehicle? veh = gun.player.movement.getVehicle();
+            if (veh != null)
+            {
+                for (int i = 0; i < veh.turrets.Length; ++i)
+                {
+                    if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == gun.equippedGunAsset.id)
+                    {
+                        c.LastRocketShotVehicle = veh.asset.GUID;
+                        break;
+                    }
+                }
+            }
         }
     }
     internal static void BulletSpawned(UseableGun gun, BulletInfo bullet)
@@ -1001,6 +985,20 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (Data.Gamemode.State != EState.ACTIVE)
+        {
+            shouldAllow = false;
+            return;
+        }
+        Vector3 pos = parameters.player.transform.position;
+        if (Data.Gamemode is ITeams)
+        {
+            if (TeamManager.LobbyZone != null && TeamManager.LobbyZone.IsInside(pos))
+            {
+                shouldAllow = false;
+                return;
+            }
+        }
         if (Data.Gamemode is TeamGamemode gm && gm.EnableAMC && parameters.killer != CSteamID.Nil && parameters.killer != Provider.server && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
         {
             Player killer = PlayerTool.getPlayer(parameters.killer);
@@ -1008,8 +1006,8 @@ public static class EventFunctions
             {
                 ulong killerteam = killer.GetTeam();
                 ulong deadteam = parameters.player.GetTeam();
-                if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(parameters.player.transform.position)) ||
-                    (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(parameters.player.transform.position)))
+                if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(pos)) ||
+                    (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(pos)))
                 {
                     // if the player has shot since they died
                     if (!killer.TryGetPlayerData(out UCPlayerData comp) || comp.LastGunShot != default)
@@ -1051,7 +1049,8 @@ public static class EventFunctions
                     isBleeding = amount < parameters.player.life.health && Provider.modeConfigData.Players.Can_Start_Bleeding && amount >= 20;
                     break;
             }
-            DeathTracker.OnWillStartBleeding(ref parameters);
+            if (isBleeding)
+                DeathTracker.OnWillStartBleeding(ref parameters);
         }
     }
     internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)

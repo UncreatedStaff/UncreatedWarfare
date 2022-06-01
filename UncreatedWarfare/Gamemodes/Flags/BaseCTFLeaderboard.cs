@@ -58,7 +58,7 @@ public class BaseCTFStats : TeamPlayerStats, IExperienceStats, IFlagStats, IFOBS
     }
 }
 
-public abstract class BaseCTFTracker<T> : TeamStatTracker<T> where T : BaseCTFStats
+public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracker where T : BaseCTFStats
 {
     public int fobsPlacedT1;
     public int fobsPlacedT2;
@@ -66,6 +66,7 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T> where T : BaseCTFSt
     public int fobsDestroyedT2;
     public int flagOwnerChanges;
     public LongestShot LongestShot = LongestShot.Nil;
+    LongestShot ILongestShotTracker.LongestShot { get => LongestShot; set => LongestShot = value; }
 
     public override void Reset()
     {

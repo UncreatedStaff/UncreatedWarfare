@@ -443,7 +443,12 @@ internal static class Localization
             string msg = TranslateMessage(set.Language, args);
             if (!sentInConsole && set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
             {
-                L.Log(CommandContext.RemoveRichText(msg), ConsoleColor.DarkCyan);
+                string log = CommandContext.RemoveRichText(msg);
+                L.Log(log, ConsoleColor.DarkCyan);
+                if (e.Killer is not null)
+                    ActionLog.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
+                else
+                    ActionLog.Add(EActionLogType.DEATH, log, e.Player.Steam64);
                 sentInConsole = true;
             }
             while (set.MoveNext())
@@ -453,11 +458,14 @@ internal static class Localization
         }
 
         if (!sentInConsole)
-            L.Log(CommandContext.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args)), ConsoleColor.DarkCyan);
-
-        L.Log("Args: " + args.DeathCause);
-        L.Log(" - FLAGS: " + args.Flags);
-
+        {
+            string log = CommandContext.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args));
+            L.Log(log, ConsoleColor.DarkCyan);
+            if (e.Killer is not null)
+                ActionLog.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
+            else
+                ActionLog.Add(EActionLogType.DEATH, log, e.Player.Steam64);
+        }
         EventDispatcher.InvokeOnPlayerDied(e);
     }
     internal static void Reload()

@@ -51,7 +51,7 @@ public class DeathTracker : BaseReloadSingleton
                 {
                     deadData.LastBleedingArgs.Flags |= EDeathFlags.BLEEDING;
                     Localization.BroadcastDeath(deadData.LastBleedingEvent, deadData.LastBleedingArgs);
-                    return;
+                    goto clear;
                 }
             }
         }
@@ -68,6 +68,15 @@ public class DeathTracker : BaseReloadSingleton
             DeathMessageArgs args = new DeathMessageArgs();
             FillArgs(dead, cause, limb, instigator, ref args, e);
             Localization.BroadcastDeath(e, args);
+        }
+    clear:
+        if (dead.Player.TryGetPlayerData(out UCPlayerData data))
+        {
+            data.LastInfectableConsumed = default;
+            data.LastBleedingArgs = default;
+            data.LastBleedingEvent = null;
+            data.LastShreddedBy = default;
+            data.LastVehicleHitBy = default;
         }
     }
     internal static void OnInjured(ref DamagePlayerParameters parameters)
@@ -160,6 +169,7 @@ public class DeathTracker : BaseReloadSingleton
             if (drop != null)
             {
                 args.Flags |= EDeathFlags.ITEM;
+                e.PrimaryAsset = drop.asset.GUID;
                 args.ItemName = drop.asset.itemName;
                 args.ItemGuid = drop.asset.GUID;
                 if (!isTriggerer)
@@ -191,6 +201,7 @@ public class DeathTracker : BaseReloadSingleton
                         {
                             drop = triggererData.TriggeringLandmine;
                             args.Flags |= EDeathFlags.ITEM;
+                            e.PrimaryAsset = drop.asset.GUID;
                             args.ItemName = drop.asset.itemName;
                             args.ItemGuid = drop.asset.GUID;
                             triggerer = pl;
@@ -229,19 +240,9 @@ public class DeathTracker : BaseReloadSingleton
             if (throwable != null && Assets.find(throwable.Throwable) is ItemThrowableAsset asset)
             {
                 args.Flags |= EDeathFlags.ITEM2;
+                e.SecondaryItem = asset.GUID;
                 args.Item2Name = asset.itemName;
             }
-
-            L.Log("Dead: " + dead.CharacterName);
-            if (triggerer != null)
-                L.Log("Triggerer: " + triggerer.CharacterName);
-            if (killer != null)
-                L.Log("Placer: " + killer.CharacterName);
-            if (args.ItemName != null)
-                L.Log("Item: " + args.ItemName);
-            if (args.Item2Name != null)
-                L.Log("Item2: " + args.Item2Name);
-            L.Log("Flags: " + args.Flags.ToString());
         }
         else if (killer is not null && killer.Steam64 == dead.Steam64)
         {
@@ -256,6 +257,7 @@ public class DeathTracker : BaseReloadSingleton
                 e.KillerTeam = args.KillerTeam;
                 args.Flags |= EDeathFlags.KILLER;
                 args.KillDistance = (killer.Position - dead.Position).magnitude;
+                e.KillDistance = args.KillDistance;
                 if (deadTeam == args.KillerTeam)
                 {
                     args.isTeamkill = true;
@@ -275,7 +277,20 @@ public class DeathTracker : BaseReloadSingleton
                 {
                     args.ItemName = killer.Player.equipment.asset.itemName;
                     args.ItemGuid = killer.Player.equipment.asset.GUID;
+                    e.PrimaryAsset = killer.Player.equipment.asset.GUID;
                     args.Flags |= EDeathFlags.ITEM;
+                    InteractableVehicle? veh = killer.Player.movement.getVehicle();
+                    if (veh != null)
+                    {
+                        for (int i = 0; i < veh.turrets.Length; ++i)
+                        {
+                            if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == killer.Player.equipment.asset.id)
+                            {
+                                e.TurretVehicleOwner = veh.asset.GUID;
+                                break;
+                            }
+                        }
+                    }
                 }
                 break;
             case EDeathCause.INFECTION:
@@ -285,6 +300,7 @@ public class DeathTracker : BaseReloadSingleton
                     if (a != null)
                     {
                         args.ItemName = a.itemName;
+                        e.PrimaryAsset = a.GUID;
                         args.Flags |= EDeathFlags.ITEM;
                         args.ItemGuid = a.GUID;
                     }
@@ -297,6 +313,8 @@ public class DeathTracker : BaseReloadSingleton
                     if (a != null)
                     {
                         args.ItemName = a.vehicleName;
+                        e.PrimaryAsset = a.GUID;
+                        e.PrimaryAssetIsVehicle = true;
                         args.Flags |= EDeathFlags.ITEM;
                         args.ItemIsVehicle = true;
                         args.ItemGuid = a.GUID;
@@ -308,6 +326,7 @@ public class DeathTracker : BaseReloadSingleton
                 {
                     args.ItemName = killerData.ExplodingVehicle.Vehicle.asset.vehicleName;
                     args.Flags |= EDeathFlags.ITEM;
+                    e.PrimaryAsset = killerData.ExplodingVehicle.Vehicle.asset.GUID;
                     args.ItemIsVehicle = true;
                     args.ItemGuid = killerData.ExplodingVehicle.Vehicle.asset.GUID;
                     if (killerData.ExplodingVehicle.LastItem != default)
@@ -316,6 +335,7 @@ public class DeathTracker : BaseReloadSingleton
                         {
                             args.Item2Name = a.itemName;
                             args.Item2Guid = a.GUID;
+                            e.SecondaryItem = a.GUID;
                             args.Flags |= EDeathFlags.ITEM2;
                         }
                     }
@@ -337,6 +357,7 @@ public class DeathTracker : BaseReloadSingleton
                     {
                         args.ItemName = a.itemName;
                         args.Flags |= EDeathFlags.ITEM;
+                        e.PrimaryAsset = a.GUID;
                         args.ItemGuid = a.GUID;
                     }
                 }
@@ -349,6 +370,7 @@ public class DeathTracker : BaseReloadSingleton
                     {
                         args.ItemName = a.FriendlyName;
                         args.Flags |= EDeathFlags.ITEM;
+                        e.PrimaryAsset = a.GUID;
                         args.ItemGuid = a.GUID;
                     }
                 }
@@ -362,13 +384,28 @@ public class DeathTracker : BaseReloadSingleton
                     {
                         args.ItemName = asset.itemName;
                         args.ItemGuid = asset.GUID;
+                        e.PrimaryAsset = asset.GUID;
                         args.Flags |= EDeathFlags.ITEM;
+                        e.TurretVehicleOwner = data.LastRocketShotVehicle;
                     }
                     else if (killer.Player.equipment.asset is not null)
                     {
                         args.ItemName = killer.Player.equipment.asset.itemName;
                         args.ItemGuid = killer.Player.equipment.asset.GUID;
+                        e.PrimaryAsset = killer.Player.equipment.asset.GUID;
                         args.Flags |= EDeathFlags.ITEM;
+                        InteractableVehicle? veh = killer.Player.movement.getVehicle();
+                        if (veh != null)
+                        {
+                            for (int i = 0; i < veh.turrets.Length; ++i)
+                            {
+                                if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == killer.Player.equipment.asset.id)
+                                {
+                                    e.TurretVehicleOwner = veh.asset.GUID;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
                 break;
@@ -379,6 +416,7 @@ public class DeathTracker : BaseReloadSingleton
                     if (a != null)
                     {
                         args.ItemName = a.FriendlyName;
+                        e.PrimaryAsset = a.GUID;
                         args.Flags |= EDeathFlags.ITEM;
                         args.ItemGuid = a.GUID;
                     }/*
@@ -394,6 +432,7 @@ public class DeathTracker : BaseReloadSingleton
                     if (a != null)
                     {
                         args.ItemName = a.FriendlyName;
+                        e.PrimaryAsset = a.GUID;
                         args.Flags = EDeathFlags.ITEM; // intentional
                         args.ItemGuid = a.GUID;
                         args.SpecialKey = "explosive-consumable";
@@ -417,11 +456,13 @@ public class DeathTracker : BaseReloadSingleton
                         args.ItemName = drop.asset.itemName;
                         args.ItemGuid = drop.asset.GUID;
                         args.Flags |= EDeathFlags.ITEM;
+                        e.PrimaryAsset = drop.asset.GUID;
                         Item? item = sentry.items.items.FirstOrDefault()?.item;
                         if (item != null && Assets.find(EAssetType.ITEM, item.id) is ItemAsset a)
                         {
                             args.Item2Name = a.itemName;
                             args.Item2Guid = a.GUID;
+                            e.SecondaryItem = a.GUID;
                             args.Flags |= EDeathFlags.ITEM2;
                         }
                     }
@@ -435,12 +476,15 @@ public class DeathTracker : BaseReloadSingleton
                     args.ItemName = item1.FriendlyName;
                     args.ItemIsVehicle = item1 is VehicleAsset;
                     args.Flags |= EDeathFlags.ITEM;
+                    e.PrimaryAsset = item1.GUID;
+                    e.PrimaryAssetIsVehicle = args.ItemIsVehicle;
                     args.ItemGuid = item1.GUID;
                 }
                 if (item2 != null)
                 {
                     args.Item2Name = item2.FriendlyName;
                     args.Item2Guid = item2.GUID;
+                    e.SecondaryItem = item2.GUID;
                     args.Flags |= EDeathFlags.ITEM2;
                 }
                 break;

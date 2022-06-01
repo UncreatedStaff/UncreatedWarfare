@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
@@ -1850,6 +1851,13 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = default;
         this.type = EDynamicValueType.CONSTANT;
         this.assetType = GetAssetType();
+        if (this.assetType == EAssetType.NONE)
+        {
+            Asset? a = Assets.find(constant);
+            if (a != null)
+                this.assetType = a.assetCategory;
+        }
+
     }
     public DynamicAssetValue(GuidSet set, EChoiceBehavior choiceBehavior = EChoiceBehavior.ALLOW_ONE)
     {
@@ -1857,6 +1865,12 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = set;
         this.type = EDynamicValueType.SET;
         this.assetType = GetAssetType();
+        if (this.assetType == EAssetType.NONE && set.Set.Length > 0)
+        {
+            Asset? a = Assets.find(set.Set[0]);
+            if (a != null)
+                this.assetType = a.assetCategory;
+        }
         this._choiceBehavior = choiceBehavior;
     }
     public DynamicAssetValue(ref GuidSet set, EChoiceBehavior choiceBehavior = EChoiceBehavior.ALLOW_ONE)
@@ -1865,6 +1879,12 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = set;
         this.type = EDynamicValueType.SET;
         this.assetType = GetAssetType();
+        if (this.assetType == EAssetType.NONE && set.Set.Length > 0)
+        {
+            Asset? a = Assets.find(set.Set[0]);
+            if (a != null)
+                this.assetType = a.assetCategory;
+        }
         this._choiceBehavior = choiceBehavior;
     }
     public readonly Choice GetValue()
@@ -2837,12 +2857,11 @@ public interface IQuestPreset
 #region Notification Interfaces
 public interface INotifyOnKill : INotifyTracker
 {
-    public void OnKill(UCWarfare.KillEventArgs kill);
+    public void OnKill(PlayerDied e);
 }
 public interface INotifyOnDeath : INotifyTracker
 {
-    public void OnDeath(UCWarfare.DeathEventArgs death);
-    public void OnSuicide(UCWarfare.SuicideEventArgs death);
+    public void OnDeath(PlayerDied e);
 }
 public interface INotifyOnObjectiveCaptured : INotifyTracker
 {

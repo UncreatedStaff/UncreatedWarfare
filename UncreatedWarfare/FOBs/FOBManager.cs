@@ -18,6 +18,7 @@ using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Events.Players;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
@@ -38,6 +39,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
     {
         EventDispatcher.OnBarricadePlaced += OnBarricadePlaced;
         EventDispatcher.OnBarricadeDestroyed += OnBarricadeDestroyed;
+        EventDispatcher.OnGroupChanged += OnGroupChanged;
         Singleton = this;
         base.Load();
     }
@@ -54,6 +56,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
     public override void Unload()
     {
         Singleton = null!;
+        EventDispatcher.OnGroupChanged -= OnGroupChanged;
         EventDispatcher.OnBarricadeDestroyed -= OnBarricadeDestroyed;
         EventDispatcher.OnBarricadePlaced -= OnBarricadePlaced;
         Team1FOBs.Clear();
@@ -617,6 +620,11 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
         else return;
 
         UpdateUIList(team, player.Connection, FOBList, player);
+    }
+    private void OnGroupChanged(GroupChanged e)
+    {
+        if (e.NewGroup.GetTeam() is > 0 and < 3)
+            SendFOBList(e.Player);
     }
     public static void UpdateResourceUIString(FOB fob)
     {

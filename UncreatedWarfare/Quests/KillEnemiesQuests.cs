@@ -2,9 +2,11 @@
 using System;
 using System.Linq;
 using System.Text.Json;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Teams;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -74,9 +76,9 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         {
             writer.WriteProperty("kills", _kills);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam())
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -163,9 +165,11 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
             writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && kill.distance >= Range && kill.item != default)
+            if (e.Killer!.Steam64 == _player.Steam64 && 
+                e.KillDistance >= Range && 
+                e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -252,11 +256,11 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
             writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && kill.item != default)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.Cause != EDeathCause.SHRED)
             {
-                if (Weapon.IsMatch(kill.item))
+                if (Weapon.IsMatch(e.PrimaryAsset))
                 {
                     _kills++;
                     if (_kills >= KillThreshold)
@@ -357,11 +361,12 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
             writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && kill.distance >= Range && kill.item != default)
+            if (e.Killer!.Steam64 == _player.Steam64 && e.PrimaryAsset != default && e.KillDistance >= Range
+                && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH && e.Cause != EDeathCause.SHRED)
             {
-                if (Weapon.IsMatch(kill.item))
+                if (Weapon.IsMatch(e.PrimaryAsset))
                 {
                     _kills++;
                     if (_kills >= KillThreshold)
@@ -447,10 +452,9 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
             writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() &&
-                KitManager.HasKit(kill.killer, out Kit kit) && Kit.IsMatch(kit.Name))
+            if (e.Killer!.Steam64 == _player.Steam64 && KitManager.HasKit(e.Killer, out Kit kit) && Kit.IsMatch(kit.Name) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -548,10 +552,11 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
             writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && kill.distance <= Range &&
-                KitManager.HasKit(kill.killer, out Kit kit) && Kit.IsMatch(kit.Name))
+            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= Range
+                && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH
+                && KitManager.HasKit(e.Killer, out Kit kit) && Kit.IsMatch(kit.Name) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -639,17 +644,15 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
             writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() &&
-                KitManager.HasKit(kill.killer, out Kit kit) && Class.IsMatch(kit.Class))
+            if (e.Killer!.Steam64 == _player.Steam64 && KitManager.HasKit(e.Killer, out Kit kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
-                return;
             }
         }
         protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1);
@@ -744,17 +747,17 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
             writer.WriteProperty("kills", _kills);
         }
         public override void ResetToDefaults() => _kills = 0;
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && kill.distance >= Range &&
-                KitManager.HasKit(kill.killer, out Kit kit) && Class.IsMatch(kit.Class))
+            if (e.Killer!.Steam64 == _player.Steam64 && e.KillDistance >= Range 
+                && e.Cause is EDeathCause.GUN or EDeathCause.MISSILE or EDeathCause.GRENADE or EDeathCause.MELEE or EDeathCause.VEHICLE or EDeathCause.LANDMINE or EDeathCause.CHARGE or EDeathCause.SPLASH &&
+                KitManager.HasKit(e.Killer, out Kit kit) && Class.IsMatch(kit.Class) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
-                return;
             }
         }
         protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, Range.ToString(Data.Locale), translationCache1);
@@ -836,16 +839,15 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         {
             writer.WriteProperty("kills", _kills);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam() && Class.IsMatch(kill.item.GetWeaponClass()))
+            if (e.Killer!.Steam64 == _player.Steam64 && !e.PrimaryAssetIsVehicle && Class.IsMatch(e.PrimaryAsset.GetWeaponClass()) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
-                return;
             }
         }
         protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1);
@@ -927,16 +929,15 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         {
             writer.WriteProperty("kills", _kills);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && Branch.IsMatch(_player.Branch) && kill.dead.GetTeam() != kill.killer.GetTeam())
+            if (e.Killer!.Steam64 == _player.Steam64 && Branch.IsMatch(_player.Branch) && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
                     TellCompleted();
                 else
                     TellUpdated();
-                return;
             }
         }
         protected override string Translate(bool forAsset) => QuestData!.Translate(forAsset, _player, _kills, KillThreshold, translationCache1);
@@ -1017,16 +1018,17 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
         {
             writer.WriteProperty("kills", _kills);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != kill.killer.GetTeam())
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
             {
-                InteractableVehicle veh = kill.killer.movement.getVehicle();
+                InteractableVehicle? veh = e.Killer.Player.movement.getVehicle();
                 if (veh == null) return;
                 for (int i = 0; i < veh.turrets.Length; i++)
                 {
-                    if (veh.turrets[i] != null && veh.turrets[i].player?.player.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && 
-                        veh.turrets[i].turret != null && Weapon.IsMatch(veh.turrets[i].turret.itemID))
+                    Passenger passenger = veh.turrets[i];
+                    if (passenger != null && passenger.player != null && passenger.player.playerID.steamID.m_SteamID == _player.Steam64 &&
+                        passenger.turret != null && Weapon.IsMatch(passenger.turret.itemID))
                     {
                         _kills++;
                         if (_kills >= KillThreshold)
@@ -1099,9 +1101,9 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
         {
             writer.WriteProperty("kills", _kills);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && _player.Squad != null && _player.Squad.Members.Count > 1 && kill.dead.GetTeam() != kill.killer.GetTeam())
+            if (e.Killer!.Steam64 == _player.Steam64 && _player.Squad != null && _player.Squad.Members.Count > 1 && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -1171,9 +1173,9 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
         {
             writer.WriteProperty("kills", _kills);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && _player.Squad != null && _player.Squad.IsFull() && kill.dead.GetTeam() != kill.killer.GetTeam())
+            if (e.Killer!.Steam64 == _player.Steam64 && _player.Squad != null && _player.Squad.IsFull() && e.Cause != EDeathCause.SHRED)
             {
                 _kills++;
                 if (_kills >= KillThreshold)
@@ -1243,18 +1245,20 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
         {
             writer.WriteProperty("kills", _kills);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            ulong team = kill.killer.GetTeam();
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != team)
+            ulong team = e.KillerTeam;
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
             {
                 if (Data.Is(out Gamemodes.Interfaces.IFlagTeamObjectiveGamemode fr))
                 {
+                    Vector3 deadPos = e.Player.Position;
+                    Vector3 killerPos = e.Killer.Position;
                     if (Data.Is<Gamemodes.Flags.TeamCTF.TeamCTF>(out _))
                     {
                         if (
-                            (team == 1 && fr.ObjectiveTeam1 != null && fr.ObjectiveTeam1.Owner == 1 && (fr.ObjectiveTeam1.PlayerInRange(kill.killer.transform.position) || fr.ObjectiveTeam1.PlayerInRange(kill.dead.transform.position))) ||
-                            (team == 2 && fr.ObjectiveTeam2 != null && fr.ObjectiveTeam2.Owner == 2 && (fr.ObjectiveTeam2.PlayerInRange(kill.killer.transform.position) || fr.ObjectiveTeam2.PlayerInRange(kill.dead.transform.position))))
+                            (team == 1 && fr.ObjectiveTeam1 != null && fr.ObjectiveTeam1.Owner == 1 && (fr.ObjectiveTeam1.PlayerInRange(killerPos) || fr.ObjectiveTeam1.PlayerInRange(deadPos))) ||
+                            (team == 2 && fr.ObjectiveTeam2 != null && fr.ObjectiveTeam2.Owner == 2 && (fr.ObjectiveTeam2.PlayerInRange(killerPos) || fr.ObjectiveTeam2.PlayerInRange(deadPos))))
                         {
                             goto add;
                         }
@@ -1265,12 +1269,12 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
                         {
                             if (inv.AttackingTeam == 1)
                             {
-                                if (inv.ObjectiveTeam1 != null && fr.ObjectiveTeam1!.Owner == TeamManager.Other(team) && (inv.ObjectiveTeam1.PlayerInRange(kill.killer.transform.position) || inv.ObjectiveTeam1.PlayerInRange(kill.dead.transform.position)))
+                                if (inv.ObjectiveTeam1 != null && fr.ObjectiveTeam1!.Owner == TeamManager.Other(team) && (inv.ObjectiveTeam1.PlayerInRange(killerPos) || inv.ObjectiveTeam1.PlayerInRange(deadPos)))
                                     goto add;
                             }
                             else if (inv.AttackingTeam == 2)
                             {
-                                if (inv.ObjectiveTeam2 != null && fr.ObjectiveTeam2!.Owner == TeamManager.Other(team) && (inv.ObjectiveTeam2.PlayerInRange(kill.killer.transform.position) || inv.ObjectiveTeam2.PlayerInRange(kill.dead.transform.position)))
+                                if (inv.ObjectiveTeam2 != null && fr.ObjectiveTeam2!.Owner == TeamManager.Other(team) && (inv.ObjectiveTeam2.PlayerInRange(killerPos) || inv.ObjectiveTeam2.PlayerInRange(deadPos)))
                                     goto add;
                             }
                         }
@@ -1282,7 +1286,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
                             for (int i = 0; i < ins.Caches.Count; i++)
                             {
                                 Gamemodes.Insurgency.Insurgency.CacheData cache = ins.Caches[i];
-                                if (cache != null && cache.IsActive && (cache.Cache.Position - kill.killer.transform.position).sqrMagnitude > 3600) // 60m
+                                if (cache != null && cache.IsActive && (cache.Cache.Position - killerPos).sqrMagnitude > 3600) // 60m
                                     goto add;
                             }
                         }
@@ -1358,18 +1362,20 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
         {
             writer.WriteProperty("kills", _kills);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            ulong team = kill.killer.GetTeam();
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != team)
+            ulong team = e.KillerTeam;
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
             {
+                Vector3 deadPos = e.Player.Position;
+                Vector3 killerPos = e.Killer.Position;
                 if (Data.Is(out Gamemodes.Interfaces.IFlagTeamObjectiveGamemode fr))
                 {
                     if (Data.Is<Gamemodes.Flags.TeamCTF.TeamCTF>(out _))
                     {
                         if (
-                            (team == 1 && fr.ObjectiveTeam1 != null && fr.ObjectiveTeam1.Owner == 2 && (fr.ObjectiveTeam1.PlayerInRange(kill.killer.transform.position) || fr.ObjectiveTeam1.PlayerInRange(kill.dead.transform.position))) ||
-                            (team == 2 && fr.ObjectiveTeam2 != null && fr.ObjectiveTeam2.Owner == 1 && (fr.ObjectiveTeam2.PlayerInRange(kill.killer.transform.position) || fr.ObjectiveTeam2.PlayerInRange(kill.dead.transform.position))))
+                            (team == 1 && fr.ObjectiveTeam1 != null && fr.ObjectiveTeam1.Owner == 2 && (fr.ObjectiveTeam1.PlayerInRange(killerPos) || fr.ObjectiveTeam1.PlayerInRange(deadPos))) ||
+                            (team == 2 && fr.ObjectiveTeam2 != null && fr.ObjectiveTeam2.Owner == 1 && (fr.ObjectiveTeam2.PlayerInRange(killerPos) || fr.ObjectiveTeam2.PlayerInRange(deadPos))))
                         {
                             goto add;
                         }
@@ -1380,12 +1386,12 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
                         {
                             if (inv.AttackingTeam == 1)
                             {
-                                if (inv.ObjectiveTeam1 != null && fr.ObjectiveTeam1!.Owner == TeamManager.Other(team) && (inv.ObjectiveTeam1.PlayerInRange(kill.killer.transform.position) || inv.ObjectiveTeam1.PlayerInRange(kill.dead.transform.position)))
+                                if (inv.ObjectiveTeam1 != null && fr.ObjectiveTeam1!.Owner == TeamManager.Other(team) && (inv.ObjectiveTeam1.PlayerInRange(killerPos) || inv.ObjectiveTeam1.PlayerInRange(deadPos)))
                                     goto add;
                             }
                             else if (inv.AttackingTeam == 2)
                             {
-                                if (inv.ObjectiveTeam2 != null && fr.ObjectiveTeam2!.Owner == TeamManager.Other(team) && (inv.ObjectiveTeam2.PlayerInRange(kill.killer.transform.position) || inv.ObjectiveTeam2.PlayerInRange(kill.dead.transform.position)))
+                                if (inv.ObjectiveTeam2 != null && fr.ObjectiveTeam2!.Owner == TeamManager.Other(team) && (inv.ObjectiveTeam2.PlayerInRange(killerPos) || inv.ObjectiveTeam2.PlayerInRange(deadPos)))
                                     goto add;
                             }
                         }
@@ -1397,7 +1403,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
                             for (int i = 0; i < ins.Caches.Count; i++)
                             {
                                 Gamemodes.Insurgency.Insurgency.CacheData cache = ins.Caches[i];
-                                if (cache != null && cache.IsActive && (cache.Cache.Position - kill.killer.transform.position).sqrMagnitude > 3600) // 60m
+                                if (cache != null && cache.IsActive && (cache.Cache.Position - killerPos).sqrMagnitude > 3600) // 60m
                                     goto add;
                             }
                         }
@@ -1476,10 +1482,10 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
         }
 
         private int prevInd = -1;
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            ulong team = kill.killer.GetTeam();
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != team)
+            ulong team = e.Killer!.GetTeam();
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
             {
                 int maxXp = 0;
                 int ind = -1;
@@ -1498,7 +1504,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
                 if (ind != -1)
                 {
                     _kingSlayer = PlayerManager.OnlinePlayers[ind];
-                    if (PlayerManager.OnlinePlayers[ind].Steam64 == kill.dead.channel.owner.playerID.steamID.m_SteamID)
+                    if (_kingSlayer.Steam64 == e.Player.Steam64)
                     {
                         _kills++;
                         if (_kills >= KillThreshold)
@@ -1598,10 +1604,10 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
             writer.WriteProperty("current_streak_progress", _streakProgress);
             writer.WriteProperty("streaks_completed", _streaks);
         }
-        public void OnKill(UCWarfare.KillEventArgs kill)
+        public void OnKill(PlayerDied e)
         {
-            ulong team = kill.killer.GetTeam();
-            if (kill.killer.channel.owner.playerID.steamID.m_SteamID == _player.Steam64 && kill.dead.GetTeam() != team)
+            ulong team = e.Killer!.GetTeam();
+            if (e.Killer!.Steam64 == _player.Steam64 && e.Cause != EDeathCause.SHRED)
             {
                 _streakProgress++;
                 if (_streakProgress >= StreakLength)
@@ -1615,17 +1621,9 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
                 }
             }
         }
-        public void OnDeath(UCWarfare.DeathEventArgs death)
+        public void OnDeath(PlayerDied e)
         {
-            if (death.dead.channel.owner.playerID.steamID.m_SteamID == _player.Steam64)
-            {
-                _streakProgress = 0;
-                TellUpdated();
-            }
-        }
-        public void OnSuicide(UCWarfare.SuicideEventArgs death)
-        {
-            if (death.dead.channel.owner.playerID.steamID.m_SteamID == _player.Steam64)
+            if (e.Steam64 == _player.Steam64)
             {
                 _streakProgress = 0;
                 TellUpdated();

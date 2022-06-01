@@ -10,6 +10,8 @@ using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using SteamGameServerNetworkingUtils = SDG.Unturned.SteamGameServerNetworkingUtils;
 
 namespace Uncreated.Warfare;
@@ -17,6 +19,10 @@ namespace Uncreated.Warfare;
 public static class OffenseManager
 {
     private const int HWIDS_COLUMN_SIZE = 161;
+    static OffenseManager()
+    {
+        EventDispatcher.OnPlayerDied += OnPlayerDied;
+    }
     public enum EBanResponse : byte
     {
         ALL_GOOD,
@@ -510,6 +516,16 @@ public static class OffenseManager
                 }
             }
         }).ConfigureAwait(false);
+    }
+    private static void OnPlayerDied(PlayerDied e)
+    {
+        if (e.WasTeamkill && e.Killer is not null)
+        {
+            Asset a = Assets.find(e.PrimaryAsset);
+            string itemName = a?.FriendlyName ?? e.PrimaryAsset.ToString("N");
+            Data.DatabaseManager.AddTeamkill(e.Killer, e.Player, e.Cause.ToString(), itemName, a == null ? (ushort)0 : a.id, e.KillDistance);
+            NetCalls.SendTeamkill.NetInvoke(e.Killer, e.Player, e.Cause.ToString(), itemName, DateTime.Now);
+        }
     }
     public static class NetCalls
     {

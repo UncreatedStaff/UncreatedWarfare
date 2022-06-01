@@ -37,9 +37,9 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
 
     public bool CanPlayerInjure(ref DamagePlayerParameters parameters)
     {
-        return parameters.player.life.isDead &&
+        return !parameters.player.life.isDead &&
                parameters.damage > parameters.player.life.health &&
-               (parameters.cause is EDeathCause.LANDMINE or EDeathCause.VEHICLE) &&
+               (parameters.cause is not EDeathCause.LANDMINE or EDeathCause.VEHICLE) &&
                parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && // main campers can't get downed, makes death messages easier
                parameters.damage < 300;
     }
@@ -230,16 +230,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.Gamemode.State != EState.ACTIVE)
-        {
-            shouldAllow = false;
-            return;
-        }
-        if (Data.Gamemode is ITeams)
-        {
-            if (Teams.TeamManager.LobbyZone != null && Teams.TeamManager.LobbyZone.IsInside(parameters.player.transform.position))
-                return;
-        }
         if (!DownedPlayers.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out DownedPlayerData p))
         {
             SteamPlayer? killer = PlayerTool.getSteamPlayer(parameters.killer);

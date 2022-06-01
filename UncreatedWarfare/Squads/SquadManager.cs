@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
@@ -41,6 +43,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         base.Load();
         Squads.Clear();
         KitManager.OnKitChanged += OnKitChanged;
+        EventDispatcher.OnGroupChanged += OnGroupChanged;
         _singleton = this;
     }
     public override void Reload()
@@ -52,6 +55,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         _singleton = null!;
         base.Unload();
         Squads.Clear();
+        EventDispatcher.OnGroupChanged -= OnGroupChanged;
         KitManager.OnKitChanged -= OnKitChanged;
     }
     private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
@@ -59,21 +63,20 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         _singleton.IsLoaded();
         ReplicateKitChange(player);
     }
-    public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
+    private void OnGroupChanged(GroupChanged e)
     {
-        _singleton.IsLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromSteamPlayer(steamplayer);
-        if (player == null) return;
-        if (player.Squad != null)
+        if (e.Player.Squad != null)
         {
-            LeaveSquad(player, player.Squad);
+            LeaveSquad(e.Player, e.Player.Squad);
         }
-        ulong team = newGroup.GetTeam();
-        if (team == 1 || team == 2)
-            SendSquadList(player, team);
+        ulong team = e.NewGroup.GetTeam();
+        if (team is > 0 and < 3)
+            SendSquadList(e.Player, team);
+        else
+            ClearAll(e.Player);
     }
     public static void ClearAll(Player player)
     {

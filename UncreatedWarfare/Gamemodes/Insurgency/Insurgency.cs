@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -80,7 +81,7 @@ public class Insurgency :
     public List<CacheData> DiscoveredCaches => Caches.Where(c => c.IsActive && !c.IsDestroyed && c.IsDestroyed).ToList();
     public int ActiveCachesCount => Caches.Count(c => c.IsActive && !c.IsDestroyed);
     public bool isScreenUp => _isScreenUp;
-    public InsurgencyTracker GameStats => _gameStats;
+    public InsurgencyTracker WarstatsTracker => _gameStats;
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
     object IGameStats.GameStats => _gameStats;
     public TicketManager TicketManager { get => _ticketManager; }
@@ -205,17 +206,17 @@ public class Insurgency :
         StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
 
 
-        foreach (InsurgencyPlayerStats played in GameStats.stats.Values)
+        foreach (InsurgencyPlayerStats played in _gameStats.stats.Values)
         {
             // Any player who was online for 70% of the match will be awarded a win or punished with a loss
-            if ((float)played.onlineCount1 / GameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
+            if ((float)played.onlineCount1 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
             {
                 if (winner == 1)
                     StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
                 else
                     StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
             }
-            else if ((float)played.onlineCount2 / GameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
+            else if ((float)played.onlineCount2 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
             {
                 if (winner == 2)
                     StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
@@ -317,7 +318,7 @@ public class Insurgency :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
         }
-        GameStats.OnPlayerJoin(player.Player);
+        _gameStats.OnPlayerJoin(player.Player);
         if (isScreenUp && _endScreen != null)
         {
             _endScreen.OnPlayerJoined(player);
@@ -334,23 +335,28 @@ public class Insurgency :
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
     }
-    public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+    public override void OnGroupChanged(GroupChanged e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (State == EState.STAGING)
         {
-            if (newteam != 1 && newteam != 2)
-                ClearStagingUI(player);
+            if (e.NewTeam is < 1 or > 2)
+                ClearStagingUI(e.Player);
             else
-                ShowStagingUI(player);
+                ShowStagingUI(e.Player);
         }
-        InsurgencyUI.SendCacheList(player);
-        int bleed = TicketManager.GetTeamBleed(newGroup);
-        TicketManager.GetUIDisplayerInfo(newGroup, bleed, out ushort UIID, out string tickets, out string message);
-        TicketManager.UpdateUI(player.Connection, UIID, tickets, message);
-        base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
+        if (e.NewTeam is < 1 or > 2)
+        {
+            InsurgencyUI.SendCacheList(e.Player);
+        }
+        else
+        {
+            CTFUI.ClearFlagList(e.Player);
+            CTFUI.ClearCaptureUI(e.Player);
+        }
+        base.OnGroupChanged(e);
     }
     public bool AddIntelligencePoints(int points)
     {

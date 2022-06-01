@@ -150,7 +150,7 @@ public struct CommandContext
         if (length < 1) return null;
         if (start + length >= ArgumentCount)
             length = ArgumentCount - start;
-        return string.Join(" ", Parameters, start, ArgumentCount - start);
+        return string.Join(" ", Parameters, start, length);
     }
     public bool TryGet(int parameter, out int value)
     {
@@ -582,9 +582,12 @@ public struct CommandContext
     }
     public bool IsConsoleReply()
     {
-        if (IsConsole)
+        if (IsConsole || Caller is null)
+        {
             SendPlayerOnlyError();
-        return IsConsole;
+            return false;
+        }
+        return true;
     }
     public bool IsPlayerReply()
     {

@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Linq;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -55,14 +56,14 @@ public class TeamCTF :
         else if (capturedTeam == 2)
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
     }
-    public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+    public override void OnGroupChanged(GroupChanged e)
     {
-        CTFUI.ClearFlagList(player);
-        if (_onFlag.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out int id))
-            CTFUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == id)
-                ?? _rotation[0], player.Player.movement.getVehicle() != null).SendToPlayer(player.Player.channel.owner);
-        CTFUI.SendFlagList(player);
-        base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
+        CTFUI.ClearFlagList(e.Player);
+        if (_onFlag.TryGetValue(e.Player, out int id))
+            CTFUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
+                ?? _rotation[0], e.Player.Player.movement.getVehicle() != null).SendToPlayer(e.Player);
+        CTFUI.SendFlagList(e.Player);
+        base.OnGroupChanged(e);
     }
     public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {

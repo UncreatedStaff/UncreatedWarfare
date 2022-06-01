@@ -10,6 +10,8 @@ using System.Reflection;
 using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
@@ -27,6 +29,7 @@ public static class PlayerManager
     {
         OnlinePlayers = new List<UCPlayer>(50);
         _dict = new Dictionary<ulong, UCPlayer>(50);
+        EventDispatcher.OnGroupChanged += OnGroupChagned;
     }
     public static UCPlayer? FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
     public static bool HasSave(ulong playerID, out PlayerSave save) => PlayerSave.TryReadSaveFile(playerID, out save!);
@@ -98,6 +101,11 @@ public static class PlayerManager
 
         SquadManager.OnPlayerJoined(player, save.SquadName);
         FOBManager.SendFOBList(player);
+    }
+    private static void OnGroupChagned(GroupChanged e)
+    {
+        ApplyTo(e.Player);
+        NetCalls.SendTeamChanged.NetInvoke(e.Steam64, F.GetTeamByte(e.NewGroup));
     }
     private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
     {

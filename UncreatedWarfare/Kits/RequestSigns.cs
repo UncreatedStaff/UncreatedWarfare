@@ -5,6 +5,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -21,9 +23,11 @@ public class RequestSigns : ListSingleton<RequestSign>
     public override void Load()
     {
         Singleton = this;
+        EventDispatcher.OnGroupChanged += OnGroupChanged;
     }
     public override void Unload()
     {
+        EventDispatcher.OnGroupChanged -= OnGroupChanged;
         Singleton = null!;
     }
     public static void DropAllSigns()
@@ -102,6 +106,10 @@ public class RequestSigns : ListSingleton<RequestSign>
         }
         found = null!;
         return false;
+    }
+    private void OnGroupChanged(GroupChanged e)
+    {
+        UpdateAllSigns(e.Player);
     }
     public static bool SignExists(uint instance_id, out RequestSign found)
     {

@@ -5,12 +5,22 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using UnityEngine;
 
 namespace Uncreated.Warfare.ReportSystem;
 
 public class Reporter : MonoBehaviour
 {
+    void Start()
+    {
+        EventDispatcher.OnPlayerDied += OnPlayerDied;
+    }
+    void OnDestroy()
+    {
+        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+    }
     public Report? CreateReport(ulong reporter, ulong violator, string message)
     {
         for (int i = 0; i < data.Count; ++i)
@@ -210,6 +220,27 @@ public class Reporter : MonoBehaviour
         }
         if (tickTime) lastTick = Time.realtimeSinceStartup;
     }
+    private void OnPlayerDied(PlayerDied e)
+    {
+        if (e.WasTeamkill && e.Killer is not null)
+        {
+            ulong k = e.Killer;
+            for (int i = 0; i < data.Count; ++i)
+            {
+                if (data[i].Steam64 == k)
+                {
+                    data[i].teamkills.Add(new Teamkill()
+                    {
+                        cause = e.Cause,
+                        dead = e.Player,
+                        time = Time.realtimeSinceStartup,
+                        weapon = e.PrimaryAsset
+                    });
+                    return;
+                }
+            }
+        }
+    }
     internal void OnVehicleRequest(ulong player, Guid vehicle, uint bayInstID)
     {
 #if DEBUG
@@ -369,26 +400,6 @@ public class Reporter : MonoBehaviour
             return 0;
         }
         else return RecentPlayerNameCheck(name, UCPlayer.ENameSearchType.CHARACTER_NAME);
-    }
-    internal void OnTeamkill(ulong killer, Guid weapon, ulong dead, EDeathCause cause)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        for (int i = 0; i < data.Count; ++i)
-        {
-            if (data[i].Steam64 == killer)
-            {
-                data[i].teamkills.Add(new Teamkill()
-                {
-                    cause = cause,
-                    dead = dead,
-                    time = Time.realtimeSinceStartup,
-                    weapon = weapon
-                });
-                return;
-            }
-        }
     }
     internal void OnPlayerChat(ulong player, string message)
     {

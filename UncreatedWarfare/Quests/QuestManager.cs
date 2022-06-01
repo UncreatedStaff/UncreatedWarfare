@@ -9,6 +9,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Ranks;
@@ -25,6 +27,10 @@ public static class QuestManager
     public static List<BaseQuestTracker> RegisteredTrackers = new List<BaseQuestTracker>(128);
     public static readonly string QUEST_FOLDER = Data.DATA_DIRECTORY + "Quests\\";
     public static readonly string QUEST_LOCATION = QUEST_FOLDER + "quest_data.json";
+    static QuestManager()
+    {
+        EventDispatcher.OnPlayerDied += OnPlayerDied;
+    }
     public static void Init()
     {
 #if DEBUG
@@ -285,6 +291,16 @@ public static class QuestManager
 #endif
         if (player._completedQuests == null) GetCompletedQuests(player);
         return player._completedQuests!.Contains(key);
+    }
+    private static void OnPlayerDied(PlayerDied e)
+    {
+        if (!e.WasTeamkill && e.Killer is not null)
+        {
+            foreach (INotifyOnKill tracker in RegisteredTrackers.OfType<INotifyOnKill>())
+                tracker.OnKill(e);
+        }
+        foreach (INotifyOnDeath tracker in RegisteredTrackers.OfType<INotifyOnDeath>())
+            tracker.OnDeath(e);
     }
 
     #region read/write
@@ -595,21 +611,6 @@ public static class QuestManager
     }
     #endregion
     #region events
-    public static void OnKill(UCWarfare.KillEventArgs kill)
-    {
-        foreach (INotifyOnKill tracker in RegisteredTrackers.OfType<INotifyOnKill>())
-            tracker.OnKill(kill);
-    }
-    public static void OnDeath(UCWarfare.DeathEventArgs death)
-    {
-        foreach (INotifyOnDeath tracker in RegisteredTrackers.OfType<INotifyOnDeath>())
-            tracker.OnDeath(death);
-    }
-    public static void OnDeath(UCWarfare.SuicideEventArgs death)
-    {
-        foreach (INotifyOnDeath tracker in RegisteredTrackers.OfType<INotifyOnDeath>())
-            tracker.OnSuicide(death);
-    }
     public static void OnBuildableBuilt(UCPlayer constructor, FOBs.BuildableData buildable)
     {
         foreach (INotifyBuildableBuilt tracker in RegisteredTrackers.OfType<INotifyBuildableBuilt>())

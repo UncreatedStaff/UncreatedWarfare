@@ -8,6 +8,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
 using UnityEngine;
+using Uncreated.Warfare.Events.Players;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion;
 
@@ -465,18 +466,18 @@ public class Invasion :
         base.InvokeOnFlagNeutralized(flag, capturedTeam, lostTeam);
         InvasionUI.ReplicateFlagUpdate(flag, true);
     }
-    public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+    public override void OnGroupChanged(GroupChanged e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CTFUI.ClearFlagList(player);
-        if (_onFlag.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out int id))
-            InvasionUI.RefreshStaticUI(newteam, _rotation.FirstOrDefault(x => x.ID == id)
-                ?? _rotation[0], player.Player.movement.getVehicle() != null, AttackingTeam)
-                .SendToPlayer(player.Player.channel.owner);
-        InvasionUI.SendFlagList(player);
-        base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
+        CTFUI.ClearFlagList(e.Player);
+        if (_onFlag.TryGetValue(e.Player, out int id))
+            InvasionUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
+                ?? _rotation[0], e.Player.Player.movement.getVehicle() != null, AttackingTeam)
+                .SendToPlayer(e.Player);
+        InvasionUI.SendFlagList(e.Player);
+        base.OnGroupChanged(e);
     }
     public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {

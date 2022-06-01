@@ -39,6 +39,7 @@ public static class EventDispatcher
     public static event EventDelegate<PlayerEvent> OnPlayerLeaving;
     public static event EventDelegate<BattlEyeKicked> OnPlayerBattlEyeKicked;
     public static event EventDelegate<PlayerDied> OnPlayerDied;
+    public static event EventDelegate<GroupChanged> OnGroupChanged;
     internal static void SubscribeToAll()
     {
         EventPatches.TryPatchAll();
@@ -356,6 +357,16 @@ public static class EventDispatcher
             TryInvoke(inv, request, nameof(OnLandmineExploding));
         }
         if (!request.CanContinue) shouldExplode = false;
+    }
+    internal static void InvokeOnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup)
+    {
+        if (OnGroupChanged == null || player is null) return;
+        GroupChanged args = new GroupChanged(player, oldGroup, newGroup);
+        foreach (EventDelegate<GroupChanged> inv in OnGroupChanged.GetInvocationList().Cast<EventDelegate<GroupChanged>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnGroupChanged));
+        }
     }
 }
 public delegate void EventDelegate<T>(T e) where T : EventState;

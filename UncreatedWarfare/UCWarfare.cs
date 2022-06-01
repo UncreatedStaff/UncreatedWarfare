@@ -186,6 +186,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Data.Gamemode?.Subscribe();
+        StatsManager.LoadEvents();
         U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
         U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
@@ -205,7 +206,6 @@ public partial class UCWarfare : RocketPlugin<Config>
         Patches.OnPlayerGesture_Global += EventFunctions.OnPlayerGestureRequested;
         Patches.OnPlayerMarker_Global += EventFunctions.OnPlayerMarkedPosOnMap;
         DamageTool.damagePlayerRequested += EventFunctions.OnPlayerDamageRequested;
-        EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
         BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
         BarricadeManager.onDamageBarricadeRequested += EventFunctions.OnBarricadeDamaged;
         StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
@@ -254,7 +254,6 @@ public partial class UCWarfare : RocketPlugin<Config>
         Patches.OnPlayerGesture_Global -= EventFunctions.OnPlayerGestureRequested;
         Patches.OnPlayerMarker_Global -= EventFunctions.OnPlayerMarkedPosOnMap;
         DamageTool.damagePlayerRequested -= EventFunctions.OnPlayerDamageRequested;
-        EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
         BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
         BarricadeManager.onDamageBarricadeRequested -= EventFunctions.OnBarricadeDamaged;
         StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
@@ -272,6 +271,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
         PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
+        StatsManager.UnloadEvents();
         if (R.Commands is not null)
             R.Commands.OnExecuteCommand -= EventFunctions.OnCommandExecuted;
         if (!InitialLoadEventSubscription)
