@@ -1630,15 +1630,14 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             }
             else if (value.type == EDynamicValueType.ANY && _isKitSelector)
             {
-                KitManager singleton = Data.Singletons.GetSingleton<KitManager>();
-                if (singleton is null)
+                Kit? rand = KitManager.GetRandomPublicKit();
+                if (rand is null)
+                {
                     _value = value.constant;
+                }
                 else
                 {
-                    IEnumerable<Kit> kits = singleton.Kits.Values.Where(x => !x.IsPremium && !x.IsLoadout);
-                    int ct = kits.Count();
-                    int el = UnityEngine.Random.Range(0, ct);
-                    _value = kits.ElementAt(el).Name;
+                    _value = rand.Name;
                 }
             }
             else

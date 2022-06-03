@@ -133,6 +133,7 @@ public class UI_CONFIG
     public JsonAssetReference<EffectAsset> SquadMenuGUID;
     public JsonAssetReference<EffectAsset> RallyGUID;
     public JsonAssetReference<EffectAsset> OrderUI;
+    public JsonAssetReference<EffectAsset> MutedUI;
     public Guid XPGUID;
     public Guid OfficerGUID;
     public JsonAssetReference<EffectAsset> CTFLeaderboardGUID;
@@ -168,6 +169,7 @@ public class UI_CONFIG
         RallyGUID =             "a280ac3fe8c1486cadc8eca331e8ce32";
         OrderUI =               "57a08eb9c4cb4fd2ad30a3e413e29b27";
         JoinUIGUID =            "0ce74ee0a7534851838e967ed4ea4c5e";
+        MutedUI =               "c5e31c7357134be09732c1930e0e4ff0";
         XPGUID =       new Guid("d6de0a8025de44d29a99a41937a58a59");
         OfficerGUID =  new Guid("9fd31b776b744b72847f2dc00dba93a8");
         CTFLeaderboardGUID =    "b83389df1245438db18889af94f04960";

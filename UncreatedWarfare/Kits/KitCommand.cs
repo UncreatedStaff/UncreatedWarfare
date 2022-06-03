@@ -1,6 +1,7 @@
 ﻿using Rocket.API;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands;
@@ -47,21 +48,10 @@ public class KitCommand : IRocketCommand
             }
             if (ctx.TryGetRange(1, out string searchTerm))
             {
-                int c = 0;
-                StringBuilder sb = new StringBuilder();
-                foreach (KeyValuePair<int, Kit> v in singleton.Kits)
-                {
-                    if (v.Value.GetDisplayName().IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) != -1)
-                    {
-                        if (c != 0)
-                            sb.Append(", ");
-                        sb.Append(v.Value.Name);
-                        if (++c > 8) break;
-                    }
-                }
-                if (c > 0)
-                    sb.Append("--");
-                ctx.Reply("kit_search_results", sb.ToString());
+                string res = KitManager.Search(searchTerm);
+                if (res.Length < 0)
+                    res += "--";
+                ctx.Reply("kit_search_results", res);
             }
             else
                 ctx.SendCorrectUsage("/kit <search|find> <term>");

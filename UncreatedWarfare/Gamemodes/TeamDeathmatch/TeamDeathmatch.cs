@@ -118,7 +118,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         _t1score = 0;
         _t2score = 0;
     }
-    protected override void EventLoopAction() 
+    protected override void EventLoopAction()
     {
 
     }

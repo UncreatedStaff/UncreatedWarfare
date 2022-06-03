@@ -8,9 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
@@ -22,6 +24,7 @@ namespace Uncreated.Warfare;
 
 public class UCPlayer : IRocketPlayer
 {
+    public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UI.MutedUI, false, false);
     public readonly ulong Steam64;
     public string Id => Steam64.ToString();
     public string DisplayName => Player.channel.owner.playerID.playerName;
@@ -99,13 +102,14 @@ public class UCPlayer : IRocketPlayer
     }
     public void UpdateMedals(int newTW) => _medals.Update(newTW);
     public float LastSpoken = 0f;
+    private float lastUiSpoken = 0f;
 
     private bool _otherDonator;
     /// <summary>Slow, loops through all kits, only use once.</summary>
     /// <exception cref="SingletonUnloadedException"/>
     public bool IsDonator
     {
-        get => _otherDonator || KitManager.GetSingleton().Kits.Values.FirstOrDefault(x => ((x.IsPremium && x.PremiumCost > 0f) || x.IsLoadout) && KitManager.HasAccessFast(x, this)) != null;
+        get => _otherDonator || AccessibleKits.Any(x => x.IsPremium && x.PremiumCost > 0f || x.IsLoadout);
     }
     public Vector3 Position
     {
@@ -436,6 +440,26 @@ public class UCPlayer : IRocketPlayer
             pl.KitName = save.KitName;
             pl._otherDonator = save.IsOtherDonator;
         }
+    }
+    private bool isTalking = false;
+    private bool lastMuted = false;
+    
+    internal void Update()
+    {
+
+    }
+    internal void OnUseVoice(bool isMuted)
+    {
+        float t = Time.realtimeSinceStartup;
+        if (isMuted != lastMuted)
+        {
+            if (isMuted)
+                MutedUI.SendToPlayer(Connection);
+            else
+                MutedUI.ClearFromPlayer(Connection);
+        }
+        LastSpoken = t;
+        isTalking = true;
     }
     public int CompareTo(object obj) => obj is UCPlayer player ? Steam64.CompareTo(player.Steam64) : -1;
 }

@@ -572,6 +572,8 @@ public static class EventFunctions
                 VoiceMutedUseTick();
                 isMuted = true;
             }
+
+            ucplayer.OnUseVoice(isMuted);
         }
         if (isMuted)
         {
