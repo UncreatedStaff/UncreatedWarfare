@@ -429,6 +429,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     }
     public virtual void PlayerLeave(UCPlayer player)
     {
+        if (State is not EState.ACTIVE or EState.STAGING && PlayerSave.TryReadSaveFile(player, out PlayerSave save))
+        {
+            save.ShouldRespawnOnJoin = true;
+            PlayerSave.WriteToSaveFile(save);
+        }
         foreach (IPlayerDisconnectListener listener in _singletons.OfType<IPlayerDisconnectListener>())
             listener.OnPlayerDisconnecting(player);
     }

@@ -380,7 +380,7 @@ partial class JSONMethods
             { "sign_class_desc_autorifleman", "\n\n<color=#cecece>Equipped with a high-capacity and powerful <color=#f0a31c>LMG</color> to spray-and-pray your enemies.</color>\n<color=#f01f1c>\\/</color>" },
             { "sign_class_desc_machinegunner", "\n\n<color=#cecece>Equipped with a powerful <color=#f0a31c>Machine Gun</color> to shred the enemy team in combat.</color>\n<color=#f01f1c>\\/</color>" },
             { "sign_class_desc_lat", "\n\n<color=#cecece>A balance between an anti-tank and combat loadout, used to conveniently destroy armored enemy vehicles.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_hat", "\n\n<color=#cecece>Equipped with multiple powerful color=#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_hat", "\n\n<color=#cecece>Equipped with multiple powerful <color=#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<color=#f01f1c>\\/</color>" },
             { "sign_class_desc_grenadier", "\n\n<color=#cecece>Equipped with a <color=#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<color=#f01f1c>\\/</color>" },
             { "sign_class_desc_marksman", "\n\n<color=#cecece>Equipped with a <color=#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.</color>\n<color=#f01f1c>\\/</color>" },
             { "sign_class_desc_sniper", "\n\n<color=#cecece>Equipped with a high-powered <color=#f0a31c>sniper rifle</color> to take out enemies from great distances.</color>\n<color=#f01f1c>\\/</color>" },

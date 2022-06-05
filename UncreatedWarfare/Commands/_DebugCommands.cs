@@ -18,6 +18,7 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
@@ -761,6 +762,31 @@ internal class _DebugCommand : IRocketCommand
                     break;
                 }
             }
+        }
+    }
+
+    private void setsign(CommandContext ctx)
+    {
+        if (ctx.IsConsole || ctx.Caller is null)
+        {
+            ctx.SendPlayerOnlyError();
+            return;
+        }
+        if (ctx.TryGetRange(1, out string text) && ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
+        {
+            BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
+            if (RequestSigns.Loaded && RequestSigns.SignExists(sign, out RequestSign sign2))
+            {
+                sign2.SignText = text;
+                RequestSigns.SaveSingleton();
+            }
+            if (StructureSaver.Loaded && StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structures.Structure str))
+            {
+                str.state = Convert.ToBase64String(drop.GetServersideData().barricade.state);
+                StructureSaver.SaveSingleton();
+            }
+            if (BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _) && plant == ushort.MaxValue)
+                F.InvokeSignUpdateForAll(sign, x, y, text);
         }
     }
     private void saveall(CommandContext ctx)

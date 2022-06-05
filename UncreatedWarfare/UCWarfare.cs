@@ -198,6 +198,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
+        Provider.onLoginSpawning += EventFunctions.OnCalculateSpawnDuringJoin;
         BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
         StructureManager.onStructureSpawned += EventFunctions.OnStructurePlaced;
         Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
@@ -243,6 +244,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
+        Provider.onLoginSpawning -= EventFunctions.OnCalculateSpawnDuringJoin;
         BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
         StructureManager.onStructureSpawned -= EventFunctions.OnStructurePlaced;
         Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;

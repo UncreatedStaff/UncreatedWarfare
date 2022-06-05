@@ -208,8 +208,10 @@ public static partial class Patches
             }
             else
             {
-
-                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", "");
+                if (caller is not null && caller.OnDutyOrAdmin())
+                    text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
+                else
+                    text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", "");
                 if (mode == EChatMode.GROUP)
                     text = "[T] " + text;
             }

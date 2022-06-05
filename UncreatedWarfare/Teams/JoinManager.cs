@@ -123,6 +123,7 @@ public class JoinManager : BaseSingletonComponent
 #endif
         if (!isNewPlayer)
         {
+            LobbyPlayers.RemoveAll(x => x.Steam64 == player.Steam64);
             LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());
             lobbyPlayer.IsInLobby = false;
             LobbyPlayers.Add(lobbyPlayer);
@@ -149,8 +150,7 @@ public class JoinManager : BaseSingletonComponent
                 {
                     if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
                         save.ShouldRespawnOnJoin = true;
-                    else
-                        save.ShouldRespawnOnJoin = false;
+                    else PlayerManager.AddSave(new PlayerSave(player.Steam64) { ShouldRespawnOnJoin = true });
                 }
                 if (LobbyPlayers[i].current != null)
                 {

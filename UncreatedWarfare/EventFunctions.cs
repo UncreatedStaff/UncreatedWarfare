@@ -1241,6 +1241,24 @@ public static class EventFunctions
         position = team.GetBaseSpawnFromTeam();
         yaw = team.GetBaseAngle();
     }
+    internal static void OnCalculateSpawnDuringJoin(SteamPlayerID playerID, ref Vector3 point, ref float yaw, ref EPlayerStance initialStance, ref bool needsNewSpawnpoint)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ulong team;
+        if (PlayerSave.TryReadSaveFile(playerID.steamID.m_SteamID, out PlayerSave save))
+        {
+            if (Data.Gamemode is not null && Data.Gamemode.GameID == save.LastGame && !save.ShouldRespawnOnJoin)
+                return;
+            team = save.Team;
+        }
+        else team = 0;
+        point = team.GetBaseSpawnFromTeam();
+        yaw = team.GetBaseAngle();
+        initialStance = EPlayerStance.STAND;
+        needsNewSpawnpoint = false;
+    }
     internal static void OnPlayerDisconnected(PlayerEvent e)
     {
 #if DEBUG
@@ -1430,7 +1448,7 @@ public static class EventFunctions
         if (e.Transform.TryGetComponent(out BuildableComponent buildable))
             buildable.Destroy();
         if (e.Transform.TryGetComponent(out RepairableComponent repairable))
-            repairable.Destroy();
+            repairable.Destroy(e);
 
         IconRenderer[] iconrenderers = e.Barricade.model.GetComponents<IconRenderer>();
         foreach (IconRenderer iconRenderer in iconrenderers)

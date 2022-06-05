@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
@@ -47,7 +48,7 @@ namespace Uncreated.Warfare.Components
                 // give XP?
             }
         }
-        public void Destroy()
+        public void Destroy(BarricadeDestroyed e)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -59,15 +60,11 @@ namespace Uncreated.Warfare.Components
                 string structureName = Assets.find<ItemBarricadeAsset>(buildable.Foundation).itemName;
                 string message = structureName + " DESTROYED";
 
-                UCPlayer? player = null;
-                if (Structure.model.TryGetComponent(out BarricadeComponent component))
-                {
-                    player = UCPlayer.FromID(component.LastDamager);
-                }
-
+                UCPlayer? player = e.Instigator;
                 if (player != null)
                 {
-                    bool teamkilled = Structure.GetServersideData().group == player.GetTeam();
+                    ulong bteam = Structure.GetServersideData().group.GetTeam();
+                    bool teamkilled = bteam != 0 && bteam == player.GetTeam();
 
                     int amount = 0;
                     float vehicleQuota = 0;

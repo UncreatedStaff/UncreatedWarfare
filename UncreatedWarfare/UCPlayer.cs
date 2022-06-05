@@ -495,7 +495,6 @@ public class PlayerSave
 {
     public const uint CURRENT_DATA_VERSION = 1;
     public uint DATA_VERSION = CURRENT_DATA_VERSION;
-    [JsonSettable]
     public readonly ulong Steam64;
     [JsonSettable]
     public ulong Team;
