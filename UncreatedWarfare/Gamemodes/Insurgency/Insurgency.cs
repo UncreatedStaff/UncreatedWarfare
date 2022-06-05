@@ -318,12 +318,12 @@ public class Insurgency :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
         }
-        _gameStats.OnPlayerJoin(player.Player);
+        _gameStats.OnPlayerJoin(player);
         if (isScreenUp && _endScreen != null)
         {
             _endScreen.OnPlayerJoined(player);
         }
-        else
+        else if (!UseJoinUI)
         {
             if (State == EState.STAGING)
                 this.ShowStagingUI(player);
@@ -347,7 +347,7 @@ public class Insurgency :
             else
                 ShowStagingUI(e.Player);
         }
-        if (e.NewTeam is < 1 or > 2)
+        if (e.NewTeam is > 0 and < 3)
         {
             InsurgencyUI.SendCacheList(e.Player);
         }

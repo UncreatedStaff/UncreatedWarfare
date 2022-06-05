@@ -233,29 +233,40 @@ public class KitCommand : IRocketCommand
                     }
                     else
                     {
+                        if (property.Equals("team", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (newValue.Equals(TeamManager.Team1Code, StringComparison.OrdinalIgnoreCase) || newValue.Equals(TeamManager.Team1Name, StringComparison.OrdinalIgnoreCase) || newValue == "t1")
+                                newValue = "1";
+                            else if (newValue.Equals(TeamManager.Team2Code, StringComparison.OrdinalIgnoreCase) || newValue.Equals(TeamManager.Team2Name, StringComparison.OrdinalIgnoreCase) || newValue == "t2")
+                                newValue = "2";
+                            else if (newValue.Equals(TeamManager.AdminCode, StringComparison.OrdinalIgnoreCase) || newValue.Equals(TeamManager.AdminName, StringComparison.OrdinalIgnoreCase) || newValue == "t3")
+                                newValue = "3";
+                        }
                         bool wasLoadout = kit.IsLoadout;
-                        KitEx.SetProperty(kit, property, newValue, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
-                        if (!allowedToChange) // error - invalid argument value
+                        ESetFieldResult result = KitEx.SetProperty(kit, property, newValue);
+                        switch (result)
                         {
-                            ctx.Reply("kit_e_invalidarg_not_allowed", property);
-                            return;
-                        }
-                        if (!parsed) // error - invalid argument value
-                        {
-                            ctx.Reply("kit_e_invalidarg", newValue, property);
-                            return;
-                        }
-                        if (!foundproperty || !set) // error - invalid property name
-                        {
-                            ctx.Reply("kit_e_invalidprop", property);
-                            return;
-                        }
-                        ctx.Reply("kit_setprop", property, kitName, newValue);
-                        ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
-                        RequestSigns.UpdateSignsOfKit(kitName);
-                        if ((wasLoadout || kit.IsLoadout) && RequestSigns.Loaded)
-                        {
-                            RequestSigns.UpdateLoadoutSigns();
+                            default:
+                            case ESetFieldResult.INVALID_INPUT:
+                                ctx.Reply("kit_e_invalidarg", newValue, property);
+                                return;
+                            case ESetFieldResult.FIELD_PROTECTED:
+                                ctx.Reply("kit_e_invalidarg_not_allowed", property);
+                                return;
+                            case ESetFieldResult.FIELD_NOT_SERIALIZABLE:
+                            case ESetFieldResult.FIELD_NOT_FOUND:
+                                ctx.Reply("kit_e_invalidprop", property);
+                                return;
+                            case ESetFieldResult.OBJECT_NOT_FOUND:
+                                ctx.Reply("kit_e_noexist", kitName);
+                                return;
+                            case ESetFieldResult.SUCCESS:
+                                ctx.Reply("kit_setprop", property, kitName, newValue);
+                                ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                                RequestSigns.UpdateSignsOfKit(kitName);
+                                if ((wasLoadout != kit.IsLoadout) && RequestSigns.Loaded)
+                                    RequestSigns.UpdateLoadoutSigns();
+                                return;
                         }
                     }
                 }

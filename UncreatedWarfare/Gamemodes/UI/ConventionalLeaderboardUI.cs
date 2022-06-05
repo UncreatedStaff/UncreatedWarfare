@@ -17,8 +17,8 @@ public class ConventionalLeaderboardUI : UnturnedUI
     private const string STAT_TIME_FORMAT = "h\\:mm\\:ss";
     private const string STAT_FLOAT_FORMAT = "F1";
     private const string STAT_PRECISION_FLOAT_FORMAT = "F2";
-    public readonly UnturnedLabel Title = new UnturnedLabel("title_winner");
-    public readonly UnturnedLabel Gamemode = new UnturnedLabel("title_gamemode");
+    public readonly UnturnedLabel Title = new UnturnedLabel("TitleWinner");
+    public readonly UnturnedLabel Gamemode = new UnturnedLabel("TitleGamemode");
 
     public readonly UnturnedLabel NextGameStartLabel = new UnturnedLabel("NextGameStartsIn");
     public readonly UnturnedLabel NextGameSeconds = new UnturnedLabel("NextGameSeconds");
@@ -332,12 +332,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel TeamTeamkillsLabel = new UnturnedLabel("lblTeamkillingCasualties");
     public readonly UnturnedLabel TeamLongestShotLabel = new UnturnedLabel("lblTopRankingOfficer");
 
-    public readonly UnturnedLabel TeamT1FOBsPlaced = new UnturnedLabel("DurationValue");
-    public readonly UnturnedLabel TeamT2FOBsPlaced = new UnturnedLabel("CasualtiesValueT1");
-    public readonly UnturnedLabel TeamT1FOBsDestroyed = new UnturnedLabel("CasualtiesValueT2");
-    public readonly UnturnedLabel TeamT2FOBsDestroyed = new UnturnedLabel("FlagCapturesValue");
-    public readonly UnturnedLabel TeamTeamkills = new UnturnedLabel("AveragePlayerCountsT1Value");
-    public readonly UnturnedLabel TeamLongestShot = new UnturnedLabel("AveragePlayerCountsT2Value");
+    public readonly UnturnedLabel TeamT1FOBsPlaced = new UnturnedLabel("FOBsPlacedT1Value");
+    public readonly UnturnedLabel TeamT2FOBsPlaced = new UnturnedLabel("FOBsPlacedT2Value");
+    public readonly UnturnedLabel TeamT1FOBsDestroyed = new UnturnedLabel("FOBsDestroyedT1Value");
+    public readonly UnturnedLabel TeamT2FOBsDestroyed = new UnturnedLabel("FOBsDestroyedT2Value");
+    public readonly UnturnedLabel TeamTeamkills = new UnturnedLabel("TeamkillingCasualtiesValue");
+    public readonly UnturnedLabel TeamLongestShot = new UnturnedLabel("TopRankingOfficerValue");
     #endregion
 
     #region Personal Stats
@@ -755,8 +755,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             {
                 Stats stats = t1Stats[i];
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() :
-                    stats.Player == null ? F.GetPlayerOriginalNames(stats.Steam64).CharacterName : stats.Player.channel.owner.playerID.playerName;
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -772,8 +771,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             {
                 Stats stats = t2Stats[i];
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() :
-                    stats.Player == null ? F.GetPlayerOriginalNames(stats.Steam64).CharacterName : stats.Player.channel.owner.playerID.playerName;
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1061,8 +1059,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             {
                 Stats stats = t1Stats[i];
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() :
-                    stats.Player == null ? F.GetPlayerOriginalNames(stats.Steam64).CharacterName : stats.Player.channel.owner.playerID.playerName;
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1078,8 +1075,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             {
                 Stats stats = t2Stats[i];
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() :
-                    stats.Player == null ? F.GetPlayerOriginalNames(stats.Steam64).CharacterName : stats.Player.channel.owner.playerID.playerName;
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);

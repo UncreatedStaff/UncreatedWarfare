@@ -37,6 +37,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         "GOLF",
         "HOTEL"
     };
+    public static bool Loaded => _singleton.IsLoaded();
 
     public override void Load()
     {
@@ -392,14 +393,14 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         return SQUAD_NAMES[SQUAD_NAMES.Length - 1];
     }
 
-    public static Squad CreateSquad(UCPlayer leader, ulong team, EBranch branch)
+    public static Squad CreateSquad(UCPlayer leader, ulong team)
     {
         _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         string name = FindUnusedSquadName(team);
-        Squad squad = new Squad(name, leader, team, branch);
+        Squad squad = new Squad(name, leader, team, leader.Branch);
         Squads.Add(squad);
         SortSquadListABC();
         leader.Squad = squad;

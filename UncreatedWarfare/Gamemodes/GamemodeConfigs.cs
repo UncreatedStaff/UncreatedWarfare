@@ -21,6 +21,7 @@ public sealed class GamemodeConfig : Config<GamemodeConfigData>
         CTFUI.ListUI.LoadFromConfig(ui.FlagListGUID);
         CTFUI.CaptureUI.LoadFromConfig(ui.CaptureGUID);
         Teams.JoinManager.JoinUI.LoadFromConfig(ui.JoinUIGUID);
+        UCPlayer.MutedUI.LoadFromConfig(ui.MutedUI);
     }
 }
 [JsonSerializable(typeof(GamemodeConfigData))]

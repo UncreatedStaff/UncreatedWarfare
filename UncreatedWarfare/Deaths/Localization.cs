@@ -129,14 +129,23 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.ITEM, "{0} was shot with a {3} in the {2} from {4}m away."),
                 new DeathTranslation(EDeathFlags.KILLER, "{0} was shot by {1} in the {2} from {4}m away."),
                 new DeathTranslation(EDeathFlags.KILLER | EDeathFlags.ITEM, "{1} shot {0} with a {3} in the {2} from {4}m away."),
-                new DeathTranslation(EDeathFlags.SUICIDE, "{0} shot themselves in the {2}."),
-                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} shot themselves in the {2} with a {3}."),
                 new DeathTranslation(EDeathFlags.BLEEDING, "{0} bled out after being shot in the {2}."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being shot with a {3} in the {2} from {4}m away."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.KILLER, "{0} bled out after being shot by {1} in the {2} from {4}m away."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} bled out after being shot by {1} with a {3} in the {2} from {4}m away."),
-                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE, "{0} bled out after shooting themselves in the {2}."),
-                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after shooting themselves in the {2} with a {3}.")
+                new DeathTranslation(EDeathFlags.PLAYER3, "{0} was shot in the {2} by a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.KILLER, "{0} was shot in the {2} by {1} in a vehicle driven by {5} from {4}m away."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.KILLER | EDeathFlags.ITEM, "{1} shot {0} in the {2} with a {3} from {4}m away while in a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.KILLER, "{0} bled out after being shot in the {2} by {1} in a vehicle driven by {5} from {4}m away."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} bled out after being shot in the {2} by {1} while in a vehicle driven by {5} with a {3} from {4}m away."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.KILLER, "{0} was shot by {1} in the {2} from {4}m away from a {6}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.KILLER | EDeathFlags.ITEM, "{1} shot {0} with a {3} in the {2} from a {6} {4}m away."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.KILLER, "{0} bled out after being shot by {1} in the {2} from a {6} {4}m away."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} bled out after being shot by {1} with a {3} in the {2} from a {6} {4}m away."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.KILLER, "{0} was shot in the {2} by {1} in a vehicle driven by {5} from a {6} {4}m away."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.KILLER | EDeathFlags.ITEM, "{1} shot {0} in the {2} with a {3} from {4}m away while in a {6} driven by {5}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.KILLER, "{0} bled out after being shot in the {2} by {1} in a {6} driven by {5} from {4}m away."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} bled out after being shot in the {2} by {1} while in a {6} driven by {5} with a {3} from {4}m away."),
             }
         },
         new DeathCause(EDeathCause.INFECTION)
@@ -227,7 +236,7 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.BLEEDING, "{0} bled out after being struck in the {2}."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being struck by a {3} in the {2}."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.KILLER, "{0} bled out after being struck by {1} in the {2}."),
-                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} bled out after being struck by {1} with a {3} in the {2}."),
+                new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.KILLER | EDeathFlags.ITEM, "{0} bled out after being struck by {1} with a {3} in the {2}.")
             }
         },
         new DeathCause(EDeathCause.MISSILE)
@@ -348,6 +357,28 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation from {4}m away."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE, "{0} bled out after hitting themselves with fragmentation."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after hitting themselves with {3} fragmentation."),
+                new DeathTranslation(EDeathFlags.PLAYER3, "{0} was killed by fragmentation from a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.ITEM, "{0} was killed by {3} fragmentation from {4}m away from a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed {1}'s {3} fragmentation from {4}m away from a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.SUICIDE, "{0} killed themselves with fragmentation while in a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} killed themselves with {3} fragmentation while in a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING, "{0} bled out after being hit by fragmentation from a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being hit by {3} fragmentation from a vehicle driven by {5} from {4}m away."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation from a vehicle driven by {5} from {4}m away."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.SUICIDE, "{0} bled out after hitting themselves with fragmentation while in a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after hitting themselves with {3} fragmentation while in a vehicle driven by {5}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.ITEM, "{0} was killed by {3} fragmentation from {4}m away from a {6}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed {1}'s {3} fragmentation from {4}m away using a {6}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} killed themselves with {3} fragmentation while in a {6}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being hit by {3} fragmentation from {4}m away using a {6}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation from {4}m away using a {6}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after hitting themselves with {3} fragmentation using a {6}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM, "{0} was killed by {3} fragmentation from {4}m away using a {6} driven by {5}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed {1}'s {3} fragmentation from {4}m away using a {6} driven by {5}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} killed themselves with {3} fragmentation while in a {6} driven by {5}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being hit by {3} fragmentation using a {6} driven by {5} from {4}m away."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation using a {6} driven by {5} from {4}m away."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after hitting themselves with {3} fragmentation while in a {6} driven by {5}."),
             }
         },
         new DeathCause(EDeathCause.SUICIDE, new DeathTranslation(EDeathFlags.NONE, "{0} commited suicide.")),
@@ -359,18 +390,24 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.NONE, "{0} was blown up inside a vehicle."),
                 new DeathTranslation(EDeathFlags.ITEM, "{0} was blown up inside a {3}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.ITEM2 | EDeathFlags.KILLER, "{0} was blown up by {1} inside a {3} with a {6} from {4}m away."),
+                new DeathTranslation(EDeathFlags.NO_DISTANCE | EDeathFlags.ITEM | EDeathFlags.ITEM2 | EDeathFlags.KILLER, "{0} was blown up by {1} inside a {3} with a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.ITEM2 | EDeathFlags.PLAYER3, "{0} was blown up inside {5}'s {3} with a {6} from {4}m away."),
+                new DeathTranslation(EDeathFlags.NO_DISTANCE | EDeathFlags.ITEM | EDeathFlags.ITEM2 | EDeathFlags.PLAYER3, "{0} was blown up inside {5}'s {3} with a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.ITEM2 | EDeathFlags.KILLER | EDeathFlags.PLAYER3, "{0} was blown up by {1} inside {5}'s {3} with a {6} from {4}m away."),
+                new DeathTranslation(EDeathFlags.NO_DISTANCE | EDeathFlags.ITEM | EDeathFlags.ITEM2 | EDeathFlags.KILLER | EDeathFlags.PLAYER3, "{0} was blown up by {1} inside {5}'s {3} with a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.ITEM2, "{0} was blown up inside a {3} with a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.KILLER | EDeathFlags.PLAYER3, "{0} was blown up by {1} inside {5}'s {3} from {4}m away."),
+                new DeathTranslation(EDeathFlags.NO_DISTANCE | EDeathFlags.ITEM | EDeathFlags.KILLER | EDeathFlags.PLAYER3, "{0} was blown up by {1} inside {5}'s {3}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.PLAYER3, "{0} was blown up inside {5}'s {3} from {4}m away."),
+                new DeathTranslation(EDeathFlags.NO_DISTANCE | EDeathFlags.ITEM | EDeathFlags.PLAYER3, "{0} was blown up inside {5}'s {3}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was blown up by {1} inside a {3} from {4}m away."),
-                new DeathTranslation(EDeathFlags.SUICIDE, "{0} went down with their vehicle."),
-                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} went down with their {3}."),
-                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM | EDeathFlags.ITEM2, "{0} went down with their {3} using a {6}."),
-                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM | EDeathFlags.ITEM2 | EDeathFlags.PLAYER3, "{0} went down with {5}'s {3} using a {6}."),
-                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM | EDeathFlags.PLAYER3, "{0} went down with {5}'s {3}."),
-                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.PLAYER3, "{0} went down with {5}'s vehicle."),
+                new DeathTranslation(EDeathFlags.NO_DISTANCE | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was blown up by {1} inside a {3}."),
+                new DeathTranslation(EDeathFlags.SUICIDE, "{0} blew themselves up with their vehicle."),
+                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} blew themselves up with their {3}."),
+                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM | EDeathFlags.ITEM2, "{0} blew themselves up with their {3} using a {6}."),
+                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM | EDeathFlags.ITEM2 | EDeathFlags.PLAYER3, "{0} blew themselves up with {5}'s {3} using a {6}."),
+                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM | EDeathFlags.PLAYER3, "{0} blew themselves up with {5}'s {3}."),
+                new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.PLAYER3, "{0} blew themselves up with {5}'s vehicle."),
             }
         },
         new DeathCause(EDeathCause.WATER, new DeathTranslation(EDeathFlags.NONE, "{0} dehydrated.")),
@@ -390,9 +427,11 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.NONE, "{0} died trying to main-camp."),
                 new DeathTranslation(EDeathFlags.ITEM, "{0} tried to main-camp with a {3}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} tried to main-camp {1} with a {3} from {4}m away."),
+                new DeathTranslation(EDeathFlags.NO_DISTANCE | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} tried to main-camp {1} with a {3}."),
                 new DeathTranslation(EDeathFlags.BLEEDING, "{0} bled out trying to main-camp."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out trying to main-camp with a {3}."),
                 new DeathTranslation(EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out trying to main-camp {1} with a {3} from {4}m away."),
+                new DeathTranslation(EDeathFlags.NO_DISTANCE | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out trying to main-camp {1} with a {3}."),
             }
         },
         new DeathCause()
@@ -617,14 +656,29 @@ internal static class Localization
     private static string? Translate(string language, DeathCause cause, DeathMessageArgs args)
     {
         EDeathFlags flags = args.Flags;
+    redo:
         for (int i = 0; i < cause.Translations.Length; ++i)
         {
             ref DeathTranslation d = ref cause.Translations[i];
             if (d.Flags == flags)
                 return args.Translate(d.Value, language);
         }
-
-        L.Log("Exact match not found for " + flags.ToString());
+        L.LogWarning("Exact match not found for " + flags.ToString());
+        if ((flags & EDeathFlags.NO_DISTANCE) == EDeathFlags.NO_DISTANCE)
+        {
+            flags &= ~EDeathFlags.NO_DISTANCE;
+            goto redo;
+        }
+        if ((flags & EDeathFlags.PLAYER3) == EDeathFlags.PLAYER3)
+        {
+            flags &= ~EDeathFlags.PLAYER3;
+            goto redo;
+        }
+        if ((flags & EDeathFlags.ITEM2) == EDeathFlags.ITEM2)
+        {
+            flags &= ~EDeathFlags.ITEM2;
+            goto redo;
+        }
         if ((flags & EDeathFlags.KILLER) == EDeathFlags.KILLER)
         {
             for (int i = 0; i < cause.Translations.Length; ++i)
@@ -854,5 +908,6 @@ public enum EDeathFlags : byte
     SUICIDE = 4,
     PLAYER3 = 8,
     ITEM2 = 16,
-    BLEEDING = 32
+    BLEEDING = 32,
+    NO_DISTANCE = 64
 }

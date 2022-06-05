@@ -127,18 +127,19 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
             stats = new Dictionary<ulong, IndividualStats>();
         coroutinect = 0;
 
-        for (int i = 0; i < Provider.clients.Count; i++)
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            if (stats.TryGetValue(Provider.clients[i].playerID.steamID.m_SteamID, out IndividualStats p))
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (stats.TryGetValue(pl.Steam64, out IndividualStats p))
             {
-                p.Player = Provider.clients[i].player;
+                p.Player = pl;
                 p.Reset();
             }
             else
             {
-                IndividualStats s = BasePlayerStats.New<IndividualStats>(Provider.clients[i].player);
-                stats.Add(Provider.clients[i].playerID.steamID.m_SteamID, s);
-                if (Provider.clients[i].player.TryGetPlayerData(out UCPlayerData pt))
+                IndividualStats s = BasePlayerStats.New<IndividualStats>(pl);
+                stats.Add(pl.Steam64, s);
+                if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
                     pt.stats = s;
             }
         }
@@ -151,25 +152,25 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
         StartTracking();
         L.Log("Reset game stats, " + stats.Count + " trackers");
     }
-    public void OnPlayerJoin(Player player)
+    public void OnPlayerJoin(UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!stats.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out IndividualStats s))
+        if (!stats.TryGetValue(player.Steam64, out IndividualStats s))
         {
             s = BasePlayerStats.New<IndividualStats>(player);
-            stats.Add(player.channel.owner.playerID.steamID.m_SteamID, s);
-            if (player.TryGetPlayerData(out UCPlayerData c))
+            stats.Add(player.Steam64, s);
+            if (player.Player.TryGetPlayerData(out UCPlayerData c))
                 c.stats = s;
         }
         else
         {
             s.Player = player;
-            if (player.TryGetPlayerData(out UCPlayerData c))
+            if (player.Player.TryGetPlayerData(out UCPlayerData c))
                 c.stats = s;
         }
-        L.LogDebug(player.name + " added to playerstats, " + stats.Count + " trackers");
+        L.LogDebug(player.CharacterName + " added to playerstats, " + stats.Count + " trackers");
     }
     public virtual void StartTracking()
     {
@@ -299,12 +300,12 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
 
 public abstract class BasePlayerStats : IStats
 {
-    protected Player _player;
-    public Player Player { get => _player; set => _player = value; }
+    protected UCPlayer _player;
+    public UCPlayer Player { get => _player; set => _player = value; }
     public int onlineCount;
     public readonly ulong _id;
     public ulong Steam64 => _id;
-    public static T New<T>(Player player) where T : BasePlayerStats
+    public static T New<T>(UCPlayer player) where T : BasePlayerStats
     {
         return (T)Activator.CreateInstance(typeof(T), new object[1] { player });
     }
@@ -312,7 +313,10 @@ public abstract class BasePlayerStats : IStats
     {
         return (T)Activator.CreateInstance(typeof(T), new object[1] { player });
     }
-    public BasePlayerStats(Player player) : this(player.channel.owner.playerID.steamID.m_SteamID) { }
+    public BasePlayerStats(UCPlayer player) : this(player.Steam64)
+    {
+        _player = player;
+    }
     public BasePlayerStats(ulong player)
     {
         _id = player;
@@ -323,13 +327,11 @@ public abstract class BasePlayerStats : IStats
     }
     public virtual void Tick()
     {
-        if (_player == null)
+        if (_player is null || !_player.IsOnline)
         {
-            SteamPlayer pl = PlayerTool.getSteamPlayer(_id);
-            if (pl == null) return;
-            else _player = pl.player;
+            _player = UCPlayer.FromID(_id)!;
         }
-        if (_player != null)
+        if (_player is not null)
         {
             OnlineTick();
         }
@@ -352,7 +354,7 @@ public abstract class FFAPlayerStats : BasePlayerStats, IPVPModeStats
     public void AddDamage(float amount) => damage += amount;
     public void AddDeath() => deaths++;
     public void AddKill() => kills++;
-    public FFAPlayerStats(Player player) : base(player) { }
+    public FFAPlayerStats(UCPlayer player) : base(player) { }
     public FFAPlayerStats(ulong player) : base(player) { }
     public override void Reset()
     {
@@ -373,7 +375,7 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats
     public float damage;
     public float timeonpoint;
     public float timedeployed;
-    public TeamPlayerStats(Player player) : base(player) { }
+    public TeamPlayerStats(UCPlayer player) : base(player) { }
     public TeamPlayerStats(ulong player) : base(player) { }
     public int Teamkills => teamkills;
     public int Kills => kills;
@@ -386,13 +388,13 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats
     public void AddTeamkill() => teamkills++;
     public void Update(float dt)
     {
-        if (_player == null) return;
-        if (_player.IsOnFlag())
+        if (_player is null || !_player.IsOnline) return;
+        if (_player.Player.IsOnFlag())
         {
             timeonpoint += dt;
             timedeployed += dt;
         }
-        else if (!_player.IsInMain())
+        else if (!_player.Player.IsInMain())
             timedeployed += dt;
     }
 
@@ -411,7 +413,7 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats
     protected override void OnlineTick()
     {
         base.OnlineTick();
-        byte team = _player.GetTeamByte();
+        byte team = _player.Player.GetTeamByte();
         if (team == 1)
             onlineCount1++;
         else if (team == 2)

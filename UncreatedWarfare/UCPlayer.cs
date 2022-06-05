@@ -35,6 +35,7 @@ public class UCPlayer : IRocketPlayer
     public Kit? Kit;
     public Squad? Squad;
     public Player Player { get; internal set; }
+    public bool IsTalking => !lastMuted && isTalking && IsOnline;
     public CSteamID CSteamID { get; internal set; }
     public string CharacterName;
     public string NickName;
@@ -102,7 +103,6 @@ public class UCPlayer : IRocketPlayer
     }
     public void UpdateMedals(int newTW) => _medals.Update(newTW);
     public float LastSpoken = 0f;
-    private float lastUiSpoken = 0f;
 
     private bool _otherDonator;
     /// <summary>Slow, loops through all kits, only use once.</summary>
@@ -178,7 +178,7 @@ public class UCPlayer : IRocketPlayer
     public static UCPlayer? FromName(string name, bool includeContains = false)
     {
         if (name == null) return null;
-        UCPlayer player = PlayerManager.OnlinePlayers.Find(
+        UCPlayer? player = PlayerManager.OnlinePlayers.Find(
             s =>
             s.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
             s.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
@@ -187,6 +187,24 @@ public class UCPlayer : IRocketPlayer
         if (includeContains && player == null)
         {
             player = PlayerManager.OnlinePlayers.Find(s =>
+                s.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
+                s.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
+                s.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1);
+        }
+        return player;
+    }
+    public static UCPlayer? FromName(string name, bool includeContains, IEnumerable<UCPlayer> selection)
+    {
+        if (name == null) return null;
+        UCPlayer? player = selection.FirstOrDefault(
+            s =>
+            s.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+            s.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+            s.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.OrdinalIgnoreCase)
+            );
+        if (includeContains && player == null)
+        {
+            player = selection.FirstOrDefault(s =>
                 s.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
                 s.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
                 s.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1);
@@ -446,7 +464,15 @@ public class UCPlayer : IRocketPlayer
     
     internal void Update()
     {
-
+        if (isTalking && Time.realtimeSinceStartup - LastSpoken > 0.5f)
+        {
+            isTalking = false;
+            if (lastMuted)
+            {
+                MutedUI.ClearFromPlayer(Connection);
+                lastMuted = false;
+            }
+        }
     }
     internal void OnUseVoice(bool isMuted)
     {
@@ -457,6 +483,7 @@ public class UCPlayer : IRocketPlayer
                 MutedUI.SendToPlayer(Connection);
             else
                 MutedUI.ClearFromPlayer(Connection);
+            lastMuted = isMuted;
         }
         LastSpoken = t;
         isTalking = true;

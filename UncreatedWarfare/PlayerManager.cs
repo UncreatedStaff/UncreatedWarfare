@@ -73,50 +73,48 @@ public static class PlayerManager
         }
         return rtn;
     }
-    public static void InvokePlayerConnected(UnturnedPlayer player) => OnPlayerConnected(player);
-    public static void InvokePlayerDisconnected(UnturnedPlayer player) => OnPlayerDisconnected(player);
+    public static void InvokePlayerConnected(Player player) => OnPlayerConnected(player);
+    public static void InvokePlayerDisconnected(UCPlayer player) => OnPlayerDisconnected(player);
     public static void AddSave(PlayerSave save) => PlayerSave.WriteToSaveFile(save);
-    private static void OnPlayerConnected(UnturnedPlayer rocketplayer)
+    private static void OnPlayerConnected(Player player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!PlayerSave.TryReadSaveFile(rocketplayer.CSteamID.m_SteamID, out PlayerSave? save) || save == null)
+        if (!PlayerSave.TryReadSaveFile(player.channel.owner.playerID.steamID.m_SteamID, out PlayerSave? save) || save == null)
         {
-            save = new PlayerSave(rocketplayer.CSteamID.m_SteamID);
+            save = new PlayerSave(player.channel.owner.playerID.steamID.m_SteamID);
             PlayerSave.WriteToSaveFile(save);
         }
-        UCPlayer player = new UCPlayer(
-                rocketplayer.CSteamID,
-                save.KitName,
-                rocketplayer.Player,
-                rocketplayer.Player.channel.owner.playerID.characterName,
-                rocketplayer.Player.channel.owner.playerID.nickName,
-                save.IsOtherDonator
-            );
+        UCPlayer ucplayer = new UCPlayer(
+            player.channel.owner.playerID.steamID,
+            save.KitName,
+            player,
+            player.channel.owner.playerID.characterName,
+            player.channel.owner.playerID.nickName,
+            save.IsOtherDonator
+        );
 
 
-        OnlinePlayers.Add(player);
-        _dict.Add(player.Steam64, player);
+        OnlinePlayers.Add(ucplayer);
+        _dict.Add(ucplayer.Steam64, ucplayer);
 
-        SquadManager.OnPlayerJoined(player, save.SquadName);
-        FOBManager.SendFOBList(player);
+        SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
+        FOBManager.SendFOBList(ucplayer);
     }
     private static void OnGroupChagned(GroupChanged e)
     {
         ApplyTo(e.Player);
         NetCalls.SendTeamChanged.NetInvoke(e.Steam64, F.GetTeamByte(e.NewGroup));
     }
-    private static void OnPlayerDisconnected(UnturnedPlayer rocketplayer)
+    private static void OnPlayerDisconnected(UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromUnturnedPlayer(rocketplayer);
-        if (player == null) return;
         player.IsOnline = false;
 
-        OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == rocketplayer.CSteamID.m_SteamID);
+        OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
         _dict.Remove(player.Steam64);
         SquadManager.OnPlayerDisconnected(player);
     }

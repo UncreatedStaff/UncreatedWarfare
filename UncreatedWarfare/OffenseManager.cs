@@ -5,6 +5,8 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
@@ -18,11 +20,154 @@ namespace Uncreated.Warfare;
 
 public static class OffenseManager
 {
-    private const int HWIDS_COLUMN_SIZE = 161;
-    static OffenseManager()
+    // calls the type initializer
+    internal static void Init()
     {
         EventDispatcher.OnPlayerDied += OnPlayerDied;
+        EventDispatcher.OnPlayerJoined += OnPlayerJoined;
+        EventDispatcher.OnPlayerPending += OnPlayerPending;
     }
+    internal static void Deinit()
+    {
+        EventDispatcher.OnPlayerPending -= OnPlayerPending;
+        EventDispatcher.OnPlayerJoined -= OnPlayerJoined;
+        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+    }
+    private static void OnPlayerPending(PlayerPending e)
+    {
+        List<uint> packs = new List<uint>(4);
+        Data.DatabaseManager.Query("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, R =>
+        {
+            packs.Add(R.GetUInt32(0));
+        });
+        for (int i = 0; i < SteamBlacklist.list.Count; ++i)
+        {
+            uint ip = SteamBlacklist.list[i].ip;
+            for (int j = 0; j < packs.Count; ++j)
+            {
+                if (ip == j)
+                {
+                    e.Reject("Your IP is banned for: " + SteamBlacklist.list[i].reason);
+                    return;
+                }
+            }
+        }
+    }
+    private static void OnPlayerJoined(PlayerJoined e)
+    {
+        byte[][] bytes = (e.Player.SteamPlayer.playerID.GetHwids() as byte[][])!;
+        int[] update = new int[bytes.Length];
+        int updates = 0;
+        ulong s64 = e.Steam64;
+        uint packed = e.Player.SteamPlayer.transportConnection.TryGetIPv4Address(out uint ip) ? ip : 0u;
+        Task.Run(async () =>
+        {
+            try
+            {
+                await Data.DatabaseManager.QueryAsync("SELECT `Id`, `Index`, `HWID` FROM `hwids` WHERE `Steam64` = @0 ORDER BY `LastLogin` DESC;",
+                    new object[] { s64 },
+                    R =>
+                    {
+                        int id = R.GetInt32(0);
+                        byte[] buffer = new byte[20];
+                        R.GetBytes(2, 0, buffer, 0, 20);
+                        for (int i = 0; i < update.Length; ++i)
+                        {
+                            if (update[i] > 0) continue;
+                            byte[] b = bytes[i];
+                            if (b is null) continue;
+                            for (int x = 0; x < 20; ++x)
+                                if (b[x] != buffer[x])
+                                    goto cont;
+                            update[i] = id;
+                            ++updates;
+                            break;
+                        cont:;
+                        }
+                    });
+
+                uint? id = null;
+                await Data.DatabaseManager.QueryAsync("SELECT `Id` FROM `ip_addresses` WHERE `Steam64` = @0 AND `Packed` = @1 LIMIT 1;", new object[] { s64, packed },
+                    R => id = R.GetUInt32(0));
+                StringBuilder sbq = new StringBuilder(64);
+                StringBuilder sbq2 = new StringBuilder(64);
+                int c = 1;
+                for (int i = 0; i < update.Length; ++i)
+                {
+                    if (update[i] < 1 && bytes[i] is not null && bytes[i].Length == 20 && i < 8)
+                        c += 2;
+                }
+                object[] objs = new object[c];
+                objs[0] = s64;
+                c = 0;
+                int d = 0;
+                object[] o2 = new object[update.Length];
+                for (int i = 0; i < update.Length; ++i)
+                {
+                    if (update[i] > 0)
+                    {
+                        sbq2.Append("UPDATE `hwids` SET `LoginCount` = `LoginCount` + 1, `LastLogin` = NOW() WHERE `Id` = @" + i + ";");
+                        ++d;
+                        o2[i] = update[i];
+                        continue;
+                    }
+                    else if (bytes[i] is not null && bytes[i].Length == 20 && i < 8)
+                    {
+                        if (c != 0)
+                            sbq.Append(',');
+                        sbq.Append('(').Append("@0, @").Append(c * 2 + 1).Append(", @").Append(c * 2 + 2).Append(')');
+                        objs[c * 2 + 1] = i;
+                        objs[c * 2 + 2] = bytes[i];
+                        ++c;
+                    }
+
+                    o2[i] = 0;
+                }
+                if (c > 0)
+                {
+                    sbq.Insert(0, "INSERT INTO `hwids` (`Steam64`, `Index`, `HWID`) VALUES ");
+                    sbq.Append(';');
+                    string query = sbq.ToString();
+
+                    await Data.DatabaseManager.NonQueryAsync(query, objs);
+                }
+                if (d > 0)
+                {
+                    await Data.DatabaseManager.NonQueryAsync(sbq2.ToString(), o2);
+                }
+                if (id.HasValue)
+                    await Data.DatabaseManager.NonQueryAsync(
+                        "UPDATE `ip_addresses` SET `LoginCount` = `LoginCount` + 1, `LastLogin` = NOW() WHERE `Id` = @0 LIMIT 1;",
+                        new object[] { id.Value });
+                else
+                    await Data.DatabaseManager.NonQueryAsync(
+                        "INSERT INTO `ip_addresses` (`Steam64`, `Packed`, `Unpacked`) VALUES (@0, @1, @2);",
+                        new object[] { s64, packed, Parser.getIPFromUInt32(packed) });
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error handling player connect: ");
+                L.LogError(ex);
+                await UCWarfare.ToUpdate();
+                Provider.kick(e.Player.CSteamID, "There was a fatal error connecting you to the server.");
+            }
+        }).ConfigureAwait(false);
+    }
+    public static async Task<List<byte[]>> GetAllHWIDs(ulong s64)
+    {
+        List<byte[]> bytes = new List<byte[]>(8);
+        await Data.DatabaseManager.QueryAsync("SELECT `Id`, `Index`, `HWID` FROM `hwids` WHERE `Steam64` = @0 ORDER BY `Index` ASC, `LastLogin` DESC;",
+            new object[] { s64 },
+            R =>
+            {
+                int id = R.GetInt32(0);
+                byte[] buffer = new byte[20];
+                R.GetBytes(2, 0, buffer, 0, 20);
+                bytes.Add(buffer);
+            });
+        return bytes;
+    }
+
     public enum EBanResponse : byte
     {
         ALL_GOOD,
@@ -30,152 +175,6 @@ public static class OffenseManager
         BANNED_ON_SAME_IP,
         BANNED_ON_SAME_HWID,
         UNABLE_TO_GET_IP
-    }
-    public static unsafe EBanResponse VerifyJoin(SteamPending player, ref string reason, ref int remainingDuration)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        EBanResponse state = EBanResponse.ALL_GOOD;
-        byte[][] hwids = (byte[][])player.playerID.GetHwids();
-        string? banreason = null;
-        if (!player.transportConnection.TryGetIPv4Address(out uint ipv4))
-        {
-            state = EBanResponse.UNABLE_TO_GET_IP;
-            goto State;
-        }
-        byte[] buffer = new byte[HWIDS_COLUMN_SIZE];
-        remainingDuration = -2;
-        Data.DatabaseManager.Query("SELECT `Violator`, `HWIDs`, `IP`, `Reason` FROM `ban_offenses` WHERE `Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 > `Duration`;",
-            new object[1] { player.playerID.steamID.m_SteamID },
-            (R) =>
-            {
-                ulong steam64 = R.GetUInt64(0);
-                banreason = R.GetString(3);
-                if (player.playerID.steamID.m_SteamID == steam64)
-                {
-                    state = EBanResponse.BANNED_ON_CONNECTING_ACCOUNT;
-                    return true;
-                }
-                long i = R.GetBytes(1, 0, buffer, 0, HWIDS_COLUMN_SIZE);
-                if (i == 0)
-                    return false;
-                i = buffer[0];
-                if (i == 0) return false;
-                i--;
-                for (; i >= 0L; i--)
-                {
-                    fixed (byte* ptr = &buffer[1 + i * 20])
-                    {
-                        fixed (byte* ptr2 = hwids[i])
-                        {
-                            for (int i2 = 0; i2 < 20; i2++)
-                                if (*(ptr + i2) != *(ptr2 + i2))
-                                    goto DifferentHWIDs;
-                        }
-                    }
-                }
-                state = EBanResponse.BANNED_ON_SAME_HWID;
-                return true;
-                DifferentHWIDs:
-                uint ip = R.GetUInt32(2);
-                if (ip == ipv4)
-                {
-                    state = EBanResponse.BANNED_ON_SAME_IP;
-                    return true;
-                }
-                return false;
-            });
-        State:  
-        switch (state)
-        {
-            default:
-            case EBanResponse.ALL_GOOD:
-                reason = string.Empty;
-                AssertLoginInformation(player, ipv4, hwids);
-                break;
-            case EBanResponse.BANNED_ON_CONNECTING_ACCOUNT:
-                string dur;
-                if (remainingDuration < 0)
-                    dur = "permanently";
-                else 
-                    dur = "for another " + Translation.GetTimeFromMinutes(remainingDuration, player.playerID.steamID.m_SteamID);
-                if (!string.IsNullOrEmpty(banreason))
-                    dur = "because \"" + banreason + "\" " + dur;
-                reason = "You're currently banned " + dur + ", talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
-                AssertLoginInformation(player, ipv4, hwids);
-                break;
-            case EBanResponse.BANNED_ON_SAME_IP:
-            case EBanResponse.BANNED_ON_SAME_HWID:
-                if (remainingDuration < 0)
-                    dur = "permanently";
-                else
-                    dur = "for another " + Translation.GetTimeFromMinutes(remainingDuration, player.playerID.steamID.m_SteamID);
-                if (!string.IsNullOrEmpty(banreason))
-                    dur = "because \"" + banreason + "\" " + dur;
-                reason = "You're currently banned " + dur + " on another account, talk to the Directors in discord to appeal at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
-                AssertLoginInformation(player, ipv4, hwids);
-                break;
-            case EBanResponse.UNABLE_TO_GET_IP:
-                reason = "We were unable to verify your ban information, contact a Director if this keeps happening at: \"https://discord.gg/" + UCWarfare.Config.DiscordInviteCode + "\"";
-                break;
-        }
-        return state;
-    }
-    public static unsafe void AssertLoginInformation(SteamPending player, uint ipv4, byte[][] hwids)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        byte[] hwidsList = new byte[HWIDS_COLUMN_SIZE];
-        byte[] searchBuffer = new byte[HWIDS_COLUMN_SIZE];
-        int len = hwids.Length;
-        hwidsList[0] = (byte)len;
-        for (int i = 0; i < len; i++)
-            Buffer.BlockCopy(hwids[i], 0, hwidsList, 1 + i * 20, 20);
-        int ct = 0;
-        bool entered = false;
-        List<ulong> S64s = new List<ulong>(2);
-        Data.DatabaseManager.Query(
-            "SELECT `HWIDs`, `IP` FROM `anti_alt` WHERE `Steam64` = @0;",
-            new object[1] { player.playerID.steamID.m_SteamID },
-            (R) =>
-            {
-                ct++;
-                if (!entered)
-                {
-                    uint ip = R.GetUInt32(1);
-                    if (ip == 0) return;
-                    if (ip == ipv4)
-                    {
-                        long length = R.GetBytes(0, 0L, searchBuffer, 0, HWIDS_COLUMN_SIZE);
-                        if (length == 0) return;
-                        length = searchBuffer[0];
-                        length--;
-                        for (; length >= 0L; length--)
-                        {
-                            fixed (byte* ptr = &searchBuffer[1 + length * 20])
-                            {
-                                fixed (byte* ptr2 = hwids[length])
-                                {
-                                    for (int i2 = 0; i2 < 20; i2++)
-                                        if (*(ptr + i2) != *(ptr2 + i2))
-                                            return;
-                                }
-                            }
-                        }
-                        entered = true;
-                    }
-                }
-                return;
-            });
-        if (entered) return;
-        Data.DatabaseManager.NonQuery(
-            "INSERT INTO `anti_alt` (`Steam64`, `EntryID`, `HWIDs`, `IP`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `HWIDs` = @2, `IP` = @3;",
-            new object[4]
-            {
-                player.playerID.steamID.m_SteamID, ct, hwidsList, ipv4
-            });
     }
     public static async Task ApplyMuteSettings(UCPlayer joining)
     {
@@ -189,14 +188,21 @@ public static class OffenseManager
         EMuteType type = EMuteType.NONE;
         await Data.DatabaseManager.QueryAsync(
             "SELECT `Reason`, `Duration`, `Timestamp`, `Type` FROM `muted` WHERE `Steam64` = @0 AND `Deactivated` = 0 AND " +
-            "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 > `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60) - `Duration` LIMIT 1;",
+            "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 < `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60) - `Duration` LIMIT 1;",
             new object[1] { joining.Steam64 },
             R =>
             {
-                reason = R.GetString(0);
-                duration = R.GetInt32(1);
-                timestamp = R.GetDateTime(2);
-                type = (EMuteType)R.GetByte(3);
+                int dir = R.GetInt32(1);
+                DateTime ts = R.GetDateTime(2);
+                if (dir == -1 || dir > duration)
+                {
+                    duration = dir;
+                    timestamp = ts;
+                    reason = R.GetString(0);
+                }
+                else if (reason is null)
+                    reason = R.GetString(0);
+                type |= (EMuteType)R.GetByte(3);
             }
         );
         if (type == EMuteType.NONE) return;
@@ -225,84 +231,90 @@ public static class OffenseManager
         FPlayerName name;
         FPlayerName callerName;
         uint ipv4;
-        if (target is not null) // player is online
+        Task.Run(async () =>
         {
-            CSteamID id = target.Player.channel.owner.playerID.steamID;
-            ipv4 = SteamGameServerNetworkingUtils.getIPv4AddressOrZero(id);
-            name = F.GetPlayerOriginalNames(target);
-            Provider.requestBanPlayer(Provider.server, id, ipv4, reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration) * 60);
-        }
-        else
-        {
-            ipv4 = Data.DatabaseManager.GetPackedIP(targetId);
-            name = F.GetPlayerOriginalNames(targetId);
-            F.OfflineBan(targetId, ipv4, caller is null ? CSteamID.Nil : caller.Player.channel.owner.playerID.steamID,
-                reason!, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration) * 60);
-        }
-        if (callerId != 0)
-            callerName = F.GetPlayerOriginalNames(callerId);
-        else
-            callerName = FPlayerName.Console;
-        ActionLog.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
-            (duration == -1 ? "PERMANENT" : duration.ToString(Data.Locale)), callerId);
-        if (UCWarfare.Config.AdminLoggerSettings.LogBans)
-        {
-            Data.DatabaseManager.AddBan(targetId, callerId, duration, reason!);
-            NetCalls.SendPlayerBanned.NetInvoke(targetId, callerId, reason!, duration, DateTime.Now);
-        }
-        if (duration == -1)
-        {
-            if (callerId == 0)
+            List<byte[]> hwids = await OffenseManager.GetAllHWIDs(targetId);
+            await UCWarfare.ToUpdate();
+            if (target is not null) // player is online
             {
-                L.Log(Translation.Translate("ban_permanent_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
-                Chat.Broadcast("ban_permanent_broadcast_operator", name.CharacterName);
+                CSteamID id = target.Player.channel.owner.playerID.steamID;
+                ipv4 = SteamGameServerNetworkingUtils.getIPv4AddressOrZero(id);
+                name = F.GetPlayerOriginalNames(target);
+                Provider.requestBanPlayer(Provider.server, id, ipv4, hwids, reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration) * 60);
             }
             else
             {
-                L.Log(Translation.Translate("ban_permanent_console", 0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
-                    callerId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
-                Chat.BroadcastToAllExcept(callerId, "ban_permanent_broadcast", name.CharacterName, callerName.CharacterName);
-                caller?.SendChat("ban_permanent_feedback", name.CharacterName);
+                ipv4 = Data.DatabaseManager.GetPackedIP(targetId);
+                name = F.GetPlayerOriginalNames(targetId);
+                F.OfflineBan(targetId, ipv4, caller is null ? CSteamID.Nil : caller.Player.channel.owner.playerID.steamID,
+                    reason!, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration) * 60, hwids.ToArray());
             }
-        }
-        else
-        {
-            string time = Translation.GetTimeFromMinutes(duration, JSONMethods.DEFAULT_LANGUAGE);
-            if (callerId == 0)
+            if (callerId != 0)
+                callerName = F.GetPlayerOriginalNames(callerId);
+            else
+                callerName = FPlayerName.Console;
+            ActionLog.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
+                (duration == -1 ? "PERMANENT" : duration.ToString(Data.Locale)), callerId);
+            if (UCWarfare.Config.AdminLoggerSettings.LogBans)
             {
-                L.Log(Translation.Translate("ban_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
-                bool f = false;
-                foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+                await Data.DatabaseManager.AddBan(targetId, callerId, duration, reason!);
+                await UCWarfare.ToUpdate();
+                NetCalls.SendPlayerBanned.NetInvoke(targetId, callerId, reason!, duration, DateTime.Now);
+            }
+            if (duration == -1)
+            {
+                if (callerId == 0)
                 {
-                    if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
-                    {
-                        time = duration.GetTimeFromMinutes(set.Language);
-                        f = true;
-                    }
-                    Chat.Broadcast(set, "ban_broadcast_operator", name.PlayerName, time);
+                    L.Log(Translation.Translate("ban_permanent_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
+                    Chat.Broadcast("ban_permanent_broadcast_operator", name.CharacterName);
+                }
+                else
+                {
+                    L.Log(Translation.Translate("ban_permanent_console", 0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
+                        callerId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
+                    Chat.BroadcastToAllExcept(callerId, "ban_permanent_broadcast", name.CharacterName, callerName.CharacterName);
+                    caller?.SendChat("ban_permanent_feedback", name.CharacterName);
                 }
             }
             else
             {
-                L.Log(Translation.Translate("ban_console", 0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
-                    callerId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
-                bool f = false;
-                foreach (LanguageSet set in Translation.EnumerateLanguageSetsExclude(callerId))
+                string time = Translation.GetTimeFromMinutes(duration, JSONMethods.DEFAULT_LANGUAGE);
+                if (callerId == 0)
                 {
-                    if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                    L.Log(Translation.Translate("ban_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
+                    bool f = false;
+                    foreach (LanguageSet set in Translation.EnumerateLanguageSets())
                     {
-                        time = duration.GetTimeFromMinutes(set.Language);
-                        f = true;
+                        if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                        {
+                            time = duration.GetTimeFromMinutes(set.Language);
+                            f = true;
+                        }
+                        Chat.Broadcast(set, "ban_broadcast_operator", name.PlayerName, time);
                     }
-                    Chat.Broadcast(set, "ban_broadcast", name.CharacterName, callerName.CharacterName, time);
                 }
-                if (f)
-                    time = duration.GetTimeFromMinutes(callerId);
-                else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
-                    time = duration.GetTimeFromMinutes(lang);
-                caller?.SendChat("ban_feedback", name.CharacterName, time);
+                else
+                {
+                    L.Log(Translation.Translate("ban_console", 0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
+                        callerId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
+                    bool f = false;
+                    foreach (LanguageSet set in Translation.EnumerateLanguageSetsExclude(callerId))
+                    {
+                        if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                        {
+                            time = duration.GetTimeFromMinutes(set.Language);
+                            f = true;
+                        }
+                        Chat.Broadcast(set, "ban_broadcast", name.CharacterName, callerName.CharacterName, time);
+                    }
+                    if (f)
+                        time = duration.GetTimeFromMinutes(callerId);
+                    else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                        time = duration.GetTimeFromMinutes(lang);
+                    caller?.SendChat("ban_feedback", name.CharacterName, time);
+                }
             }
-        }
+        });
     }
     public static void KickPlayer(ulong target, ulong caller, string reason)
     {

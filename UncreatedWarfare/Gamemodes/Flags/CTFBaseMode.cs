@@ -688,7 +688,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
         }
-        _gameStats.OnPlayerJoin(player.Player);
+        _gameStats.OnPlayerJoin(player);
         if (isScreenUp && _endScreen != null)
         {
             _endScreen.OnPlayerJoined(player);

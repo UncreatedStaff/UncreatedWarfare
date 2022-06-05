@@ -1157,423 +1157,66 @@ public static class KitEx
             return false;
         return currentPlayers + 1 > allowedPlayers;
     }
-    private static readonly FieldInfo[] fields = typeof(Kit).GetFields();
-    /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-    private static FieldInfo? GetField(string property, out byte reason)
+    private static readonly FieldInfo[] fields = typeof(Kit).GetFields(BindingFlags.Instance | BindingFlags.Public);
+    public static ESetFieldResult SetProperty(Kit kit, string property, string value)
     {
-        for (int i = 0; i < fields.Length; i++)
+        if (kit is null) return ESetFieldResult.OBJECT_NOT_FOUND;
+        if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
+        FieldInfo? field = GetField(property, out ESetFieldResult reason);
+        if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
-            if (fields[i].Name == property) // case sensitive search
-            {
-                if (ValidateField(fields[i], out reason))
-                {
-                    return fields[i];
-                }
-            }
-        }
-        for (int i = 0; i < fields.Length; i++)
-        {
-            if (fields[i].Name.ToLower() == property.ToLower()) // case insensitive search if case sensitive search netted no results
-            {
-                if (ValidateField(fields[i], out reason))
-                {
-                    return fields[i];
-                }
-            }
-        }
-        reason = 1;
-        return default;
-    }
-    private static object? ParseInput(string input, Type type, out bool parsed)
-    {
-        if (input == default || type == default)
-        {
-            parsed = false;
-            return default;
-        }
-        if (type == typeof(object))
-        {
-            parsed = true;
-            return input;
-        }
-        if (type == typeof(string))
-        {
-            parsed = true;
-            return input;
-        }
-        if (type == typeof(bool))
-        {
-            string lowercase = input.ToLower();
-            if (lowercase == "true")
-            {
-                parsed = true;
-                return true;
-            }
-            else if (lowercase == "false")
-            {
-                parsed = true;
-                return false;
-            }
-            else
-            {
-                parsed = false;
-                return default;
-            }
-        }
-        if (type == typeof(char))
-        {
-            if (input.Length == 1)
-            {
-                parsed = true;
-                return input[0];
-            }
-        }
-        if (type.IsEnum)
-        {
-            try
-            {
-                object output = Enum.Parse(type, input, true);
-                if (output == default)
-                {
-                    parsed = false;
-                    return default;
-                }
-                parsed = true;
-                return output;
-            }
-            catch (ArgumentNullException)
-            {
-                parsed = false;
-                return default;
-            }
-            catch (ArgumentException)
-            {
-                parsed = false;
-                return default;
-            }
-        }
-        if (!type.IsPrimitive)
-        {
-            L.LogError("Can not parse non-primitive types except for strings and enums.");
-            parsed = false;
-            return default;
-        }
-
-        if (type == typeof(int))
-        {
-            if (int.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out int result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(ushort))
-        {
-            if (ushort.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ushort result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(ulong))
-        {
-            if (ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(float))
-        {
-            if (float.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out float result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(decimal))
-        {
-            if (decimal.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out decimal result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(double))
-        {
-            if (double.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out double result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(byte))
-        {
-            if (byte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out byte result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(sbyte))
-        {
-            if (sbyte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out sbyte result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(short))
-        {
-            if (short.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out short result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(uint))
-        {
-            if (uint.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out uint result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(long))
-        {
-            if (long.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out long result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        parsed = false;
-        return default;
-    }
-    /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
-    public static Kit SetProperty(Kit obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
-    {
-        FieldInfo? field = GetField(property, out byte reason);
-        if (reason != 0)
-        {
-            if (reason == 1 || reason == 2)
-            {
-                set = false;
-                parsed = false;
-                found = false;
-                allowedToChange = false;
-                return obj;
-            }
-            else if (reason == 3)
-            {
-                set = false;
-                parsed = false;
-                found = true;
-                allowedToChange = false;
-                return obj;
-            }
-        }
-        found = true;
-        allowedToChange = true;
-        object? parsedValue;
-        if (field == null)
-        {
-            parsed = false;
-            parsedValue = null;
-        }
-        else parsedValue = ParseInput(value, field.FieldType, out parsed);
-        if (parsed)
-        {
-            if (field != default)
+            if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
             {
                 try
                 {
-                    field.SetValue(obj, parsedValue);
-                    set = true;
-                    Task.Run(async () => await KitManager.AddKit(obj)).ConfigureAwait(false);
-                    return obj;
+                    field.SetValue(kit, val);
                 }
-                catch (FieldAccessException ex)
+                catch (Exception ex)
                 {
                     L.LogError(ex);
-                    set = false;
-                    return obj;
+                    return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
                 }
-                catch (TargetException ex)
-                {
-                    L.LogError(ex);
-                    set = false;
-                    return obj;
-                }
-                catch (ArgumentException ex)
-                {
-                    L.LogError(ex);
-                    set = false;
-                    return obj;
-                }
+                return ESetFieldResult.SUCCESS;
             }
-            else
-            {
-                set = false;
-                return obj;
-            }
+            return ESetFieldResult.INVALID_INPUT;
         }
-        else
-        {
-            set = false;
-            return obj;
-        }
+        else return reason;
     }
-    /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-    private static bool ValidateField(FieldInfo field, out byte reason)
+    private static FieldInfo? GetField(string property, out ESetFieldResult reason)
     {
-        if (field == default)
+        for (int i = 0; i < fields.Length; i++)
         {
-            L.LogError("Kit saver: field not found.");
-            reason = 1;
-            return false;
+            FieldInfo fi = fields[i];
+            if (fi.Name.Equals(property, StringComparison.Ordinal))
+                return ValidateField(fi, out reason) ? fi : null;
         }
-        if (field.IsStatic)
+        for (int i = 0; i < fields.Length; i++)
         {
-            L.LogError("Kit saver tried to save to a static property.");
-            reason = 2;
-            return false;
+            FieldInfo fi = fields[i];
+            if (fi.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
+                return ValidateField(fi, out reason) ? fi : null;
         }
-        if (field.IsInitOnly)
-        {
-            L.LogError("Kit saver tried to save to a readonly property.");
-            reason = 2;
-            return false;
-        }
-        IEnumerator<CustomAttributeData> attributes = field.CustomAttributes.GetEnumerator();
-        bool settable = false;
-        while (attributes.MoveNext())
-        {
-            if (attributes.Current.AttributeType == typeof(JsonSettable))
-            {
-                settable = true;
-                break;
-            }
-        }
-        attributes.Dispose();
-        if (!settable)
-        {
-            L.LogError("Kit saver tried to save to a non json-savable property.");
-            reason = 3;
-            return false;
-        }
-        reason = 0;
-        return true;
+        reason = ESetFieldResult.FIELD_NOT_FOUND;
+        return default;
     }
-    /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
-    public static bool SetProperty(Func<Kit, bool> selector, string property, string value, out bool foundObject, out bool setSuccessfully, out bool parsed, out bool found, out bool allowedToChange)
+    private static bool ValidateField(FieldInfo field, out ESetFieldResult reason)
     {
-        if (KitManager.KitExists(selector, out Kit selected))
+        if (field == null || field.IsStatic || field.IsInitOnly)
         {
-            foundObject = true;
-            SetProperty(selected, property, value, out setSuccessfully, out parsed, out found, out allowedToChange);
-            return setSuccessfully;
-        }
-        else
-        {
-            foundObject = false;
-            setSuccessfully = false;
-            parsed = false;
-            found = false;
-            allowedToChange = false;
+            reason = ESetFieldResult.FIELD_NOT_FOUND;
             return false;
         }
-    }
-    public static bool SetProperty<V>(Func<Kit, bool> selector, string property, V value, out bool foundObject, out bool setSuccessfully, out bool foundproperty, out bool allowedToChange)
-    {
-        if (KitManager.KitExists(selector, out Kit selected))
+        Attribute atr = Attribute.GetCustomAttribute(field, typeof(JsonSettable));
+        if (atr is not null)
         {
-            foundObject = true;
-            SetProperty(selected, property, value, out setSuccessfully, out foundproperty, out allowedToChange);
-            return setSuccessfully;
-        }
-        else
-        {
-            foundObject = false;
-            setSuccessfully = false;
-            foundproperty = false;
-            allowedToChange = false;
-            return false;
-        }
-    }
-    public static Kit SetProperty<V>(Kit obj, string property, V value, out bool success, out bool found, out bool allowedToChange)
-    {
-        FieldInfo? field = GetField(property, out byte reason);
-        if (reason != 0)
-        {
-            if (reason == 1 || reason == 2)
-            {
-                found = false;
-                allowedToChange = false;
-                success = false;
-                return obj;
-            }
-            else if (reason == 3)
-            {
-                found = true;
-                allowedToChange = false;
-                success = false;
-                return obj;
-            }
-        }
-        found = true;
-        allowedToChange = true;
-        if (field != default)
-        {
-            if (field.FieldType.IsAssignableFrom(typeof(V)))
-            {
-                try
-                {
-                    field.SetValue(obj, value);
-                    success = true;
-                    Task.Run(async () => await KitManager.AddKit(obj)).ConfigureAwait(false);
-                    return obj;
-                }
-                catch (FieldAccessException ex)
-                {
-                    L.LogError(ex);
-                    success = false;
-                    return obj;
-                }
-                catch (TargetException ex)
-                {
-                    L.LogError(ex);
-                    success = false;
-                    return obj;
-                }
-                catch (ArgumentException ex)
-                {
-                    L.LogError(ex);
-                    success = false;
-                    return obj;
-                }
-            }
-            else
-            {
-                success = false;
-                return obj;
-            }
-        }
-        else
-        {
-            success = false;
-            return obj;
-        }
-    }
-    public static bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
-    {
-        if (Enum.TryParse<TEnum>(name.ToString(), out var p))
-        {
-            property = p;
+            reason = ESetFieldResult.SUCCESS;
             return true;
         }
-        property = p;
-        return false;
+        else
+        {
+            reason = ESetFieldResult.FIELD_PROTECTED;
+            return false;
+        }
     }
     public static class NetCalls
     {

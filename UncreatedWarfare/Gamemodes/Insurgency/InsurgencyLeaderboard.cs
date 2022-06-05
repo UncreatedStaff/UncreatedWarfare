@@ -52,12 +52,10 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
         stats.RemoveAll(p =>
         {
             if (p == null) return true;
-            if (p.Player == null)
+            if (p.Player is null || !p.Player.IsOnline)
             {
-                SteamPlayer player = PlayerTool.getSteamPlayer(p.Steam64);
-                if (player == default || player.player == default) return true;
-                else p.Player = player.player;
-                return false;
+                p.Player = UCPlayer.FromID(p._id)!;
+                return p.Player is null || !p.Player.IsOnline;
             }
             else return false;
         });
@@ -142,7 +140,7 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
 
 public class InsurgencyPlayerStats : TeamPlayerStats, IExperienceStats, IFOBStats, IRevivesStats
 {
-    public InsurgencyPlayerStats(Player player) : base(player) { }
+    public InsurgencyPlayerStats(UCPlayer player) : base(player) { }
     public InsurgencyPlayerStats(ulong player) : base(player) { }
 
     protected int _xp;

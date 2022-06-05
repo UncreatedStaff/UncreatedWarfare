@@ -279,15 +279,27 @@ public class DeathTracker : BaseReloadSingleton
                     args.ItemGuid = killer.Player.equipment.asset.GUID;
                     e.PrimaryAsset = killer.Player.equipment.asset.GUID;
                     args.Flags |= EDeathFlags.ITEM;
-                    InteractableVehicle? veh = killer.Player.movement.getVehicle();
-                    if (veh != null)
+                    if (cause != EDeathCause.MELEE)
                     {
-                        for (int i = 0; i < veh.turrets.Length; ++i)
+                        InteractableVehicle? veh = killer.Player.movement.getVehicle();
+                        if (veh != null)
                         {
-                            if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == killer.Player.equipment.asset.id)
+                            for (int i = 0; i < veh.turrets.Length; ++i)
                             {
-                                e.TurretVehicleOwner = veh.asset.GUID;
-                                break;
+                                if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == killer.Player.equipment.asset.id)
+                                {
+                                    e.TurretVehicleOwner = veh.asset.GUID;
+                                    args.Item2Guid = veh.asset.GUID;
+                                    args.Item2Name = veh.asset.vehicleName;
+                                    args.Flags |= EDeathFlags.ITEM2;
+                                    if (veh.passengers.Length > 0 && veh.passengers[0].player is not null && veh.passengers[0].player.player != null)
+                                    {
+                                        args.Player3Name = F.GetPlayerOriginalNames(veh.passengers[0].player).CharacterName;
+                                        args.Player3Team = veh.passengers[0].player.GetTeam();
+                                        args.Flags |= EDeathFlags.PLAYER3;
+                                    }
+                                    break;
+                                }
                             }
                         }
                     }
@@ -331,20 +343,27 @@ public class DeathTracker : BaseReloadSingleton
                     args.ItemGuid = killerData.ExplodingVehicle.Vehicle.asset.GUID;
                     if (killerData.ExplodingVehicle.LastItem != default)
                     {
-                        if (Assets.find(killerData.ExplodingVehicle.LastItem) is ItemAsset a)
+                        if (Assets.find(killerData.ExplodingVehicle.LastItem) is Asset a)
                         {
-                            args.Item2Name = a.itemName;
+                            args.Item2Name = a.FriendlyName;
                             args.Item2Guid = a.GUID;
                             e.SecondaryItem = a.GUID;
                             args.Flags |= EDeathFlags.ITEM2;
                         }
                     }
-                }
-                else
-                {
-                    L.Log((killerData != null).ToString());
-                    L.Log((killerData?.ExplodingVehicle != null).ToString());
-                    L.Log((killerData?.ExplodingVehicle?.Vehicle != null).ToString());
+                    if (killer is not null)
+                    {
+                        // removes distance if the driver is blamed
+                        InteractableVehicle? veh = killer.Player.movement.getVehicle();
+                        if (veh != null)
+                        {
+                            if (veh.passengers.Length > 0 && veh.passengers[0].player is not null && veh.passengers[0].player.player != null)
+                            {
+                                if (killer.Steam64 == veh.passengers[0].player.playerID.steamID.m_SteamID)
+                                    args.Flags |= EDeathFlags.NO_DISTANCE;
+                            }
+                        }
+                    }
                 }
                 break;
             case EDeathCause.GRENADE:

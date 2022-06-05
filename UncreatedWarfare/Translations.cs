@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
+using UnityEngine;
 
 namespace Uncreated.Warfare;
 
@@ -207,6 +208,7 @@ partial class JSONMethods
             #endregion
             
             #region SquadCommand
+            { "squad_not_in_team", "<color=#a89791>You can't join a squad unless you're on a team.</color>" },
             { "squad_created", "<color=#a0ad8e>You created the squad <color=#ffffff>{0}</color></color>" },
             { "squad_ui_reloaded", "<color=#a0ad8e>Squad UI has been reloaded.</color>" },
             { "squad_joined", "<color=#a0ad8e>You joined <color=#ffffff>{0}</color>.</color>" },
@@ -457,8 +459,20 @@ partial class JSONMethods
             { "mute_dm_permanent", "<color=#ffff00><color=#00ffff>{0}</color> <color=#9cffb3>permanently</color> {2} muted you for: <color=#9cffb3><b>{1}</b></color>.</color>" },
             { "mute_dm_operator", "<color=#ffff00>An operator {2} muted you for <color=#9cffb3>{1}</color> because: <color=#9cffb3><b>{0}</b></color>.</color>" },
             { "mute_dm_operator_permanent", "<color=#ffff00>An operator <color=#9cffb3>permanently</color> {1} muted you for: <color=#9cffb3><b>{0}</b></color>.</color>" },
+            { "text_chat_feedback_muted_permanent", "<color=#ffff00>You're permanently muted in text chat because: {0}.</color>" },
+            { "text_chat_feedback_muted", "<color=#ffff00>You're muted in text chat until {0} because {1}.</color>" },
             #endregion
-            
+
+            #region UnmuteCommnad
+            { "unmute_not_found", "<color=#9cffb3>\"{0}\" doesn't match a player. To unmute an offline player use their Steam64 ID.</color>" },
+            { "unmute_not_muted", "<color=#9cffb3>{0} is not currently muted.</color>" },
+            { "unmute_unmuted_broadcast", "<color=#ffff00><color=#d8addb>{0}</color> was unmuted by <color=#00ffff>{1}</color>.</color>" },
+            { "unmute_unmuted_broadcast_operator", "<color=#ffff00><color=#d8addb>{0}</color> was unmuted by an operator.</color>" },
+            { "unmute_unmuted_dm", "<color=#ffff00><color=#00ffff>{0}</color> has lifted your mute.</color>" },
+            { "unmute_unmuted_dm_operator", "<color=#ffff00>Your mute has been lifted.</color>" },
+            { "unmute_unmuted", "<color=#ffff00><color=#d8addb>{0}</color> was successfully unmuted.</color>" },
+            #endregion
+
             #region Anti-Main-Camp
             { "amc_reverse_damage", "<color=#f53b3b>Stop <b><color=#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.</color>" },
             #endregion
@@ -1053,12 +1067,12 @@ partial class JSONMethods
             UseMapCoordinates = true,
             UseCase = EZoneUseCase.FLAG
         };
-        mdl.ZoneData.Points = new UnityEngine.Vector2[]
+        mdl.ZoneData.Points = new Vector2[]
         {
-            new UnityEngine.Vector2(635, 738),
-            new UnityEngine.Vector2(713, 873),
-            new UnityEngine.Vector2(873, 780),
-            new UnityEngine.Vector2(796, 645)
+            new Vector2(635, 738),
+            new Vector2(713, 873),
+            new Vector2(873, 780),
+            new Vector2(796, 645)
         };
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
@@ -1073,13 +1087,13 @@ partial class JSONMethods
             UseMapCoordinates = true,
             UseCase = EZoneUseCase.FLAG
         };
-        mdl.ZoneData.Points = new UnityEngine.Vector2[]
+        mdl.ZoneData.Points = new Vector2[]
         {
-            new UnityEngine.Vector2(500, 446),
-            new UnityEngine.Vector2(514, 527),
-            new UnityEngine.Vector2(710, 492),
-            new UnityEngine.Vector2(748, 466),
-            new UnityEngine.Vector2(710, 411)
+            new Vector2(500, 446),
+            new Vector2(514, 527),
+            new Vector2(710, 492),
+            new Vector2(748, 466),
+            new Vector2(710, 411)
         };
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
@@ -1102,7 +1116,7 @@ partial class JSONMethods
         mdl = new ZoneModel()
         {
             Id = 6,
-            Name = "Hill123",
+            Name = "Hill13",
             X = 338,
             Z = -15,
             ZoneType = EZoneType.CIRCLE,
@@ -1123,17 +1137,17 @@ partial class JSONMethods
             UseMapCoordinates = true,
             UseCase = EZoneUseCase.FLAG
         };
-        mdl.ZoneData.Points = new UnityEngine.Vector2[]
+        mdl.ZoneData.Points = new Vector2[]
         {
-            new UnityEngine.Vector2(7,-283),
-            new UnityEngine.Vector2(-6,-270),
-            new UnityEngine.Vector2(-6,-160),
-            new UnityEngine.Vector2(7,-147),
-            new UnityEngine.Vector2(72,-147),
-            new UnityEngine.Vector2(111,-160),
-            new UnityEngine.Vector2(111,-257),
-            new UnityEngine.Vector2(104,-264),
-            new UnityEngine.Vector2(40,-283)
+            new Vector2(7,-283),
+            new Vector2(-6,-270),
+            new Vector2(-6,-160),
+            new Vector2(7,-147),
+            new Vector2(72,-147),
+            new Vector2(111,-160),
+            new Vector2(111,-257),
+            new Vector2(104,-264),
+            new Vector2(40,-283)
         };
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
@@ -1231,7 +1245,6 @@ partial class JSONMethods
         mdl.ZoneData.SizeZ = 559;
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
-
     }
     public static List<Point3D> DefaultExtraPoints = new List<Point3D>
     {

@@ -67,9 +67,9 @@ public class MuteCommand : IRocketCommand
 public enum EMuteType : byte
 {
     NONE = 0,
-    [Translatable("Voice Chat Only")]
+    [Translatable("Voice Chat")]
     VOICE_CHAT = 1,
-    [Translatable("Text Chat Only")]
+    [Translatable("Text Chat")]
     TEXT_CHAT = 2,
     [Translatable("Voice and Text Chat")]
     BOTH = 3

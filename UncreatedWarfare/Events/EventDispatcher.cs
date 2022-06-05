@@ -214,12 +214,35 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(OnPlayerLeaving));
         }
+        try
+        {
+            PlayerManager.InvokePlayerDisconnected(player);
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Failed to remove a player from player manager.");
+            L.LogError(ex);
+        }
     }
     private static void ProviderOnServerConnected(CSteamID steamID)
     {
         if (OnPlayerJoined == null) return;
+        try
+        {
+            Player pl = PlayerTool.getPlayer(steamID);
+            if (pl is null)
+                goto error;
+            PlayerManager.InvokePlayerConnected(pl);
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Error in EventDispatcher.ProviderOnServerConnected loading player into OnlinePlayers:");
+            L.LogError(ex);
+            goto error;
+        }
         UCPlayer? player = UCPlayer.FromCSteamID(steamID);
-        if (player is null) return;
+        if (player is null)
+            goto error;
         PlayerSave.TryReadSaveFile(steamID.m_SteamID, out PlayerSave? save);
         PlayerJoined args = new PlayerJoined(player, save);
         foreach (EventDelegate<PlayerJoined> inv in OnPlayerJoined.GetInvocationList().Cast<EventDelegate<PlayerJoined>>())
@@ -227,6 +250,9 @@ public static class EventDispatcher
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(OnPlayerJoined));
         }
+        return;
+    error:
+        Provider.kick(steamID, "There was a fatal error connecting you to the server.");
     }
     private static void ProviderOnCheckValidWithExplanation(ValidateAuthTicketResponse_t callback, ref bool isValid, ref string explanation)
     {

@@ -6,6 +6,7 @@ using System;
 using System.Text;
 using Uncreated.Framework;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
@@ -143,12 +144,6 @@ public static partial class Patches
             if (!UCWarfare.Config.Patches.ReceiveChatRequest) return true;
             SteamPlayer callingPlayer = context.GetCallingPlayer();
             UCPlayer? caller = UCPlayer.FromSteamPlayer(callingPlayer);
-            if (caller != null && (caller.MuteType & Commands.EMuteType.TEXT_CHAT) == Commands.EMuteType.TEXT_CHAT && caller.TimeUnmuted > DateTime.Now)
-            {
-                caller.SendChat("text_chat_feedback_muted", caller.MuteReason ?? string.Empty,
-                    caller.TimeUnmuted.ToString("g") + " EST");
-                return false;
-            }
             if (callingPlayer == null || callingPlayer.player == null || Time.realtimeSinceStartup - callingPlayer.lastChat < ChatManager.chatrate)
                 return false;
             callingPlayer.lastChat = Time.realtimeSinceStartup;
@@ -164,11 +159,8 @@ public static partial class Patches
             if (CommandWindow.shouldLogChat)
             {
                 FPlayerName n = F.GetPlayerOriginalNames(callingPlayer);
-                StringBuilder name = new StringBuilder($"[{n.PlayerName} ({n.CharacterName})]:");
-                for (int i = name.Length; i < 40; i++)
-                {
-                    name.Append(' ');
-                }
+                string name = $"[{n.PlayerName} ({n.CharacterName})]:";
+                name += new string(' ', 40 - name.Length);
                 switch (mode)
                 {
                     case EChatMode.GLOBAL:
@@ -202,27 +194,31 @@ public static partial class Patches
             ChatManager.onChatted?.Invoke(callingPlayer, mode, ref chatted, ref isRich, text, ref isVisible);
             if (!(ChatManager.process(callingPlayer, text, fromUnityEvent) && isVisible))
                 return false;
+            if (caller != null && (caller.MuteType & Commands.EMuteType.TEXT_CHAT) == Commands.EMuteType.TEXT_CHAT && caller.TimeUnmuted > DateTime.Now)
+            {
+                if (caller.TimeUnmuted == DateTime.MaxValue)
+                    caller.SendChat("text_chat_feedback_muted_permanent", caller.MuteReason ?? "unknown");
+                else
+                    caller.SendChat("text_chat_feedback_muted", caller.TimeUnmuted.ToString("g") + " EST", caller.MuteReason ?? string.Empty);
+                return false;
+            }
             if (ChatManager.onServerFormattingMessage != null)
             {
                 ChatManager.onServerFormattingMessage(callingPlayer, mode, ref text);
             }
             else
             {
-                text = text.Replace('>', '<');
-                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
-                if (mode != EChatMode.LOCAL)
-                {
-                    if (mode == EChatMode.GROUP)
-                        text = "[T] " + text;
-                }
+
+                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", "");
+                if (mode == EChatMode.GROUP)
+                    text = "[T] " + text;
             }
             if (mode == EChatMode.GLOBAL)
                 ChatManager.serverSendMessage(text, chatted, callingPlayer, mode: EChatMode.GLOBAL, useRichTextFormatting: isRich);
             else if (mode == EChatMode.LOCAL)
             {
                 float num = 16384f;
-                UCPlayer? player = UCPlayer.FromSteamPlayer(callingPlayer);
-                if (player == null || player.Squad == null || player.Squad.Members == null)
+                if (caller == null || caller.Squad == null || caller.Squad.Members == null)
                 {
                     foreach (SteamPlayer client in Provider.clients)
                     {
@@ -234,7 +230,7 @@ public static partial class Patches
                 {
                     foreach (SteamPlayer client in Provider.clients)
                     {
-                        if (player.Squad.Members.Exists(x => x.Steam64 == client.playerID.steamID.m_SteamID))
+                        if (caller.Squad.Members.Exists(x => x.Steam64 == client.playerID.steamID.m_SteamID))
                             ChatManager.serverSendMessage("[SQ] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);
                         else if (client.player != null && (client.player.transform.position - callingPlayer.player.transform.position).sqrMagnitude < num)
                             ChatManager.serverSendMessage("[A] " + text, chatted, callingPlayer, client, EChatMode.LOCAL, useRichTextFormatting: isRich);

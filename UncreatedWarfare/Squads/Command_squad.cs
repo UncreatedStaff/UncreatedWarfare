@@ -1,190 +1,143 @@
 ﻿using Rocket.API;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
-namespace Uncreated.Warfare.Squads
+namespace Uncreated.Warfare.Squads;
+
+public class SquadCommand : IRocketCommand
 {
-    public class SquadCommand : IRocketCommand
+    private readonly List<string> _permissions = new List<string>() { "uc.squad" };
+    private readonly List<string> _aliases = new List<string>(0);
+    public AllowedCaller AllowedCaller => AllowedCaller.Player;
+    public string Name => "squad";
+    public string Help => "Creates or disbands a squad";
+    public string Syntax => "/squad <create|join|(un)lock|kick|leave|disband|promote> [parameters...]";
+    public List<string> Aliases => _aliases;
+	public List<string> Permissions => _permissions;
+    public void Execute(IRocketPlayer caller, string[] command)
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
-        public string Name => "squad";
-        public string Help => "Creates or disbands a squad";
-        public string Syntax => "/squad";
-        private readonly List<string> _aliases = new List<string>(0);
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>() { "uc.squad" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] command)
-        {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-            if (player == null) return;
-            if (!Data.Is(out ISquads ctf))
+        CommandContext ctx = new CommandContext(caller, command);
+        if (!ctx.IsConsoleReply() || !ctx.CheckGamemodeAndSend<ISquads>()) return;
+        if (!UCWarfare.Config.EnableSquads || !SquadManager.Loaded)
+        {
+            ctx.Reply("squads_disabled");
+            return;
+        }
+        if (!ctx.HasArg(0))
+        {
+            ctx.SendCorrectUsage(Syntax);
+            return;
+        }
+        ulong team = ctx.Caller!.GetTeam();
+        if (team is < 1 or > 2)
+        {
+            ctx.Reply("squad_not_in_team");
+            return;
+        }
+        if (ctx.MatchParameter(0, "create"))
+        {
+            if (ctx.Caller!.Squad is not null)
+                ctx.Reply("squad_e_insquad");
+            else if (SquadManager.Squads.Count(x => x.Team == team) >= SquadManager.ListUI.Squads.Length)
+                ctx.Reply("squad_too_many");
+            else
             {
-                player.SendChat("command_e_gamemode");
-                return;
+                Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
+                ctx.Reply("squad_created", squad.Name);
             }
-            if (!UCWarfare.Config.EnableSquads)
+        }
+        else if (ctx.MatchParameter(0, "join"))
+        {
+            if (!ctx.TryGetRange(1, out string name))
+                ctx.SendCorrectUsage("/squad join <squad name or first letter>");
+            else if (ctx.Caller!.Squad is not null)
+                ctx.Reply("squad_e_insquad");
+            else if (SquadManager.FindSquad(name, team, out Squad squad))
             {
-                player.SendChat("squads_disabled");
-                return;
-            }
-            string name = "";
-            for (int i = 1; i < command.Length; i++)
-            {
-                name += command[i];
-                if (i < command.Length - 1)
-                    name += " ";
-            }
-            ulong team = player.GetTeam();
-            string op = command.Length > 0 ? command[0].ToLower() : string.Empty;
-            if (command.Length >= 1 && op == "create")
-            {
-                if (SquadManager.Squads.Count(x => x.Team == team) >= 8)
-                {
-                    player.SendChat("squad_too_many");
-                    return;
-                }
-                if (player.Squad == null)
-                {
-                    Squad squad = SquadManager.CreateSquad(player, team, player.Branch);
-
-                    player.SendChat("squad_created", squad.Name);
-                }
+                if (squad.IsLocked && squad.Leader.SteamPlayer.playerID.group.m_SteamID != ctx.Caller.SteamPlayer.playerID.group.m_SteamID)
+                    // lets the player join if they were originally a part of the same group
+                    ctx.Reply("squad_e_locked");
+                else if (squad.IsFull())
+                    ctx.Reply("squad_e_full");
                 else
-                    player.SendChat("squad_e_insquad");
-            }
-            else if (command.Length >= 1 && op == "join")
-            {
-                if (command.Length < 2)
-                {
-                    player.SendChat("correct_usage", "/squad join <squad name>");
-                    return;
-                }
-
-                if (SquadManager.FindSquad(name, team, out Squad squad))
-                {
-                    if (player.Squad == null)
-                    {
-                        if (squad.Members.Count < 6)
-                        {
-                            if (!squad.IsLocked)
-                            {
-                                SquadManager.JoinSquad(player, squad);
-                            }
-                            else
-                                player.SendChat("squad_e_locked");
-                        }
-                        else
-                            player.SendChat("squad_e_full");
-                    }
-                    else
-                        player.SendChat("squad_e_insquad", name);
-                }
-                else
-                    player.SendChat("squad_e_noexist", name);
-            }
-            else if (command.Length >= 1 && op == "promote")
-            {
-                if (command.Length < 2)
-                {
-                    player.SendChat("correct_usage", "/squad promote <player name>");
-                    return;
-                }
-                if (player.Squad != null && player.Squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID)
-                {
-                    UCPlayer? target = UCPlayer.FromName(name, true);
-                    if (target != null)
-                    {
-                        if (target.Squad == player.Squad)
-                        {
-                            SquadManager.PromoteToLeader(player.Squad, target);
-                        }
-                        else
-                            player.SendChat("squad_e_playernotinsquad", name);
-                    }
-                    else
-                        player.SendChat("squad_e_playernotfound", name);
-                }
-                else
-                    player.SendChat("squad_e_notsquadleader", name);
-            }
-            else if (command.Length >= 1 && op == "kick")
-            {
-                if (command.Length < 2)
-                {
-                    player.SendChat("correct_usage", "/squad kick <player name>");
-                    return;
-                }
-                if (player.Squad != null && player.Squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID)
-                {
-                    UCPlayer? target = UCPlayer.FromName(name);
-                    if (target != null)
-                    {
-                        if (target.Squad == player.Squad)
-                        {
-                            SquadManager.KickPlayerFromSquad(target, player.Squad);
-                        }
-                        else
-                            player.SendChat("squad_e_playernotinsquad", name);
-                    }
-                    else
-                        player.SendChat("squad_e_playernotfound", name);
-                }
-                else
-                    player.SendChat("squad_e_notsquadleader", name);
-            }
-            else if (command.Length == 1)
-            {
-                if (op == "leave")
-                {
-                    if (player.Squad != null)
-                    {
-                        SquadManager.LeaveSquad(player, player.Squad);
-                    }
-                    else
-                        player.SendChat("squad_e_notinsquad");
-                }
-                else if (op == "disband")
-                {
-                    if (player.Squad != null && player.Squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID)
-                    {
-                        SquadManager.DisbandSquad(player.Squad);
-                    }
-                    else
-                        player.SendChat("squad_e_notsquadleader");
-                }
-                else if (op == "lock" || op == "unlock")
-                {
-                    if (player.Squad != null && player.Squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID)
-                    {
-                        if (op == "lock")
-                        {
-                            SquadManager.SetLocked(player.Squad, true);
-                            player.SendChat("squad_locked");
-                        }
-                        else if (op == "unlock")
-                        {
-                            SquadManager.SetLocked(player.Squad, false);
-                            player.SendChat("squad_unlocked");
-                        }
-                    }
-                    else
-                        player.SendChat("squad_e_notsquadleader");
-                }
-                else if (op == "testui")
-                {
-                    SquadManager.UpdateUIMemberCount(player.GetTeam());
-
-                    player.SendChat("squad_ui_reloaded");
-                }
+                    SquadManager.JoinSquad(ctx.Caller!, squad);
             }
             else
-                player.SendChat("correct_usage", "/squad <join|create|leave>");
+                ctx.Reply("squad_e_noexist", name);
         }
+        else if (ctx.MatchParameter(0, "promote"))
+        {
+            if (!ctx.HasArg(1))
+                ctx.SendCorrectUsage("/squad promote <member name>");
+            else if (ctx.Caller!.Squad is null || ctx.Caller!.Squad.Leader.Steam64 != ctx.CallerID)
+                ctx.Reply("squad_e_notsquadleader");
+            else if (ctx.TryGet(1, out ulong playerId, out UCPlayer member, ctx.Caller!.Squad.Members))
+            {
+                if (playerId == ctx.CallerID)
+                    ctx.Reply("squad_e_playernotfound", ctx.Get(1)!);
+                else
+                    SquadManager.PromoteToLeader(ctx.Caller!.Squad, member);
+            }
+            else
+                ctx.Reply("squad_e_playernotfound", ctx.Get(1)!);
+        }
+        else if (ctx.MatchParameter(0, "kick"))
+        {
+            if (!ctx.HasArg(1))
+                ctx.SendCorrectUsage("/squad kick <member name>");
+            else if (ctx.Caller!.Squad is null || ctx.Caller!.Squad.Leader.Steam64 != ctx.CallerID)
+                ctx.Reply("squad_e_notsquadleader");
+            else if (ctx.TryGet(1, out ulong playerId, out UCPlayer member, ctx.Caller!.Squad.Members))
+            {
+                if (playerId == ctx.CallerID)
+                    ctx.Reply("squad_e_playernotfound", ctx.Get(1)!);
+                else
+                    SquadManager.KickPlayerFromSquad(member, ctx.Caller!.Squad);
+            }
+            else
+                ctx.Reply("squad_e_playernotfound", ctx.Get(1)!);
+        }
+        else if (ctx.MatchParameter(0, "leave"))
+        {
+            if (ctx.Caller!.Squad is null)
+                ctx.Reply("squad_e_notinsquad");
+            else
+                SquadManager.LeaveSquad(ctx.Caller!, ctx.Caller!.Squad);
+        }
+        else if (ctx.MatchParameter(0, "disband"))
+        {
+            if (ctx.Caller!.Squad is null || ctx.Caller!.Squad.Leader.Steam64 != ctx.CallerID)
+                ctx.Reply("squad_e_notsquadleader");
+            else
+                SquadManager.DisbandSquad(ctx.Caller!.Squad);
+        }
+        else if (ctx.MatchParameter(0, "lock"))
+        {
+            if (ctx.Caller!.Squad is null || ctx.Caller!.Squad.Leader.Steam64 != ctx.CallerID)
+                ctx.Reply("squad_e_notsquadleader");
+            else
+            {
+                SquadManager.SetLocked(ctx.Caller!.Squad, true);
+                ctx.Reply("squad_locked");
+            }
+        }
+        else if (ctx.MatchParameter(0, "unlock"))
+        {
+            if (ctx.Caller!.Squad is null || ctx.Caller!.Squad.Leader.Steam64 != ctx.CallerID)
+                ctx.Reply("squad_e_notsquadleader");
+            else
+            {
+                SquadManager.SetLocked(ctx.Caller!.Squad, false);
+                ctx.Reply("squad_unlocked");
+            }
+        }
+        else ctx.SendCorrectUsage(Syntax);
     }
 }

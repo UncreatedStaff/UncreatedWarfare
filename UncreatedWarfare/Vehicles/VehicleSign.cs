@@ -137,7 +137,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
         if (drop != null)
         {
-            return Singleton.ObjectExists(x => x != default && x.instance_id == drop.instanceID, out vbsign);
+            return Singleton.ObjectExists(x => x != default && x.instance_id == drop.instanceID, out vbsign) && vbsign.bay != null;
         }
         vbsign = default!;
         return false;

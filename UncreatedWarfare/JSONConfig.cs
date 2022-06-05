@@ -143,41 +143,49 @@ namespace Uncreated
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig Reload -> " + _dir);
 #endif
-            using (FileStream stream = new FileStream(_dir, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read))
+            if (!File.Exists(this._dir))
             {
-                long len = stream.Length;
-                if (len > int.MaxValue)
+                LoadDefaults();
+                OnReload();
+            }
+            else
+            {
+                using (FileStream stream = new FileStream(_dir, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read))
                 {
-                    L.LogError($"Config file for {Type.Name} config.");
-                    return;
-                }
-                byte[] bytes = new byte[len];
-                stream.Read(bytes, 0, (int)len);
-                try
-                {
-                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                    if (useCustomDeserializer)
+                    long len = stream.Length;
+                    if (len > int.MaxValue)
                     {
-                        if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                        {
-                            Data = customDeserializer!.Invoke(ref reader);
-                        }
-                        if (Data is not null)
-                        {
-                            if (!isFirst)
-                                OnReload();
-                            return;
-                        }
+                        L.LogError($"Config file for {Type.Name} config.");
+                        return;
                     }
+                    byte[] bytes = new byte[len];
+                    stream.Read(bytes, 0, (int)len);
+                    try
+                    {
+                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                        if (useCustomDeserializer)
+                        {
+                            if (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
+                            {
+                                Data = customDeserializer!.Invoke(ref reader);
+                            }
+                            if (Data is not null)
+                            {
+                                if (!isFirst)
+                                    OnReload();
+                                return;
+                            }
+                        }
 
-                    Data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings)!;
-                    if (!isFirst)
-                        OnReload();
-                }
-                catch (Exception ex)
-                {
-                    L.LogError($"Failed to run auto-deserializer for {Type.Name}.");
-                    L.LogError(ex);
+                        Data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings)!;
+                        if (!isFirst)
+                            OnReload();
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError($"Failed to run auto-deserializer for {Type.Name}.");
+                        L.LogError(ex);
+                    }
                 }
             }
         }
