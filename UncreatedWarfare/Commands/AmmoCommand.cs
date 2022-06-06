@@ -131,7 +131,7 @@ public class AmmoCommand : IRocketCommand
 
             if (barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is<Insurgency>(out _) && barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
             {
-                if (!(Assets.find(Gamemode.Config.Items.T1Ammo) is ItemAsset t1ammo) || !(Assets.find(Gamemode.Config.Items.T2Ammo) is ItemAsset t2ammo))
+                if (Assets.find(Gamemode.Config.Items.T1Ammo) is not ItemAsset t1ammo || Assets.find(Gamemode.Config.Items.T2Ammo) is not ItemAsset t2ammo)
                 {
                     L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
                     return;
