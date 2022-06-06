@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -23,6 +24,7 @@ public delegate void KitChangedHandler(UCPlayer player, Kit kit, string oldKit);
 public class KitManager : BaseReloadSingleton
 {
     public static bool Loaded => _singleton.IsLoaded();
+    private readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 5);
     public KitManager() : base("kits") { }
     public static event KitChangedHandler OnKitChanged;
     public Dictionary<int, Kit> Kits = new Dictionary<int, Kit>(256);
@@ -49,6 +51,33 @@ public class KitManager : BaseReloadSingleton
                 L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
         }).ConfigureAwait(false);
     }
+
+    internal static string Search(string searchTerm)
+    {
+        KitManager singleton = GetSingleton();
+        StringBuilder sb = new StringBuilder();
+        singleton._threadLocker.Wait();
+        try
+        {
+            int c = 0;
+            foreach (Kit v in singleton.Kits.Values)
+            {
+                if (v.GetDisplayName().IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) != -1)
+                {
+                    if (c != 0)
+                        sb.Append(", ");
+                    sb.Append(v.Name);
+                    if (++c > 12) break;
+                }
+            }
+        }
+        finally
+        {
+            singleton._threadLocker.Release();
+        }
+        return sb.ToString();
+    }
+
     public override void Unload()
     {
         _isLoaded = false;
@@ -58,109 +87,120 @@ public class KitManager : BaseReloadSingleton
     public async Task ReloadKits()
     {
         SingletonEx.AssertLoaded<KitManager>(_isLoaded);
-        Kits.Clear();
-        await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_data`;", new object[0], R =>
+        try
         {
-            Kit kit = new Kit(true);
-            kit.PrimaryKey = R.GetInt32(0);
-            kit.Name = R.GetString(1);
-            kit.Class = (EClass)R.GetInt32(2);
-            kit.Branch = (EBranch)R.GetInt32(3);
-            kit.Team = R.GetUInt64(4);
-            kit.CreditCost = R.GetUInt16(5);
-            kit.UnlockLevel = R.GetUInt16(6);
-            kit.IsPremium = R.GetBoolean(7);
-            kit.PremiumCost = R.GetFloat(8);
-            kit.IsLoadout = R.GetBoolean(9);
-            kit.TeamLimit = R.GetFloat(10);
-            kit.Cooldown = R.GetInt32(11);
-            kit.Disabled = R.GetBoolean(12);
-            kit.Weapons = R.GetString(13);
-            kit.Items = new List<KitItem>(12);
-            kit.Clothes = new List<KitClothing>(5);
-            kit.SignTexts = new Dictionary<string, string>(1);
-            kit.UnlockRequirements = new BaseUnlockRequirement[0];
-            kit.Skillsets = new Skillset[0];
-            Kits.Add(kit.PrimaryKey, kit);
-        });
-        await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_items`;", new object[0], R =>
-        {
-            int kitPk = R.GetInt32(1);
-            if (Kits.TryGetValue(kitPk, out Kit kit))
+            await _threadLocker.WaitAsync();
+            Kits.Clear();
+            await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_data`;", new object[0], R =>
             {
-                KitItem item = new KitItem();
-                item.id = new Guid((byte[])R[2]);
-                item.x = R.GetByte(3);
-                item.y = R.GetByte(4);
-                item.rotation = R.GetByte(5);
-                item.page = R.GetByte(6);
-                item.amount = R.GetByte(7);
-                item.metadata = (byte[])R[8];
-                kit.Items.Add(item);
-            }
-        });
-        await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_clothes`;", new object[0], R =>
-        {
-            int kitPk = R.GetInt32(1);
-            if (Kits.TryGetValue(kitPk, out Kit kit))
+                Kit kit = new Kit(true);
+                kit.PrimaryKey = R.GetInt32(0);
+                kit.Name = R.GetString(1);
+                kit.Class = (EClass)R.GetInt32(2);
+                kit.Branch = (EBranch)R.GetInt32(3);
+                kit.Team = R.GetUInt64(4);
+                kit.CreditCost = R.GetUInt16(5);
+                kit.UnlockLevel = R.GetUInt16(6);
+                kit.IsPremium = R.GetBoolean(7);
+                kit.PremiumCost = R.GetFloat(8);
+                kit.IsLoadout = R.GetBoolean(9);
+                kit.TeamLimit = R.GetFloat(10);
+                kit.Cooldown = R.GetInt32(11);
+                kit.Disabled = R.GetBoolean(12);
+                kit.Weapons = R.GetString(13);
+                kit.Items = new List<KitItem>(12);
+                kit.Clothes = new List<KitClothing>(5);
+                kit.SignTexts = new Dictionary<string, string>(1);
+                kit.UnlockRequirements = new BaseUnlockRequirement[0];
+                kit.Skillsets = new Skillset[0];
+                Kits.Add(kit.PrimaryKey, kit);
+            });
+            await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_items`;", new object[0], R =>
             {
-                KitClothing item = new KitClothing();
-                item.id = new Guid((byte[])R[2]);
-                item.type = (EClothingType)R.GetByte(3);
-                kit.Clothes.Add(item);
-            }
-        });
-        await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_skillsets`;", new object[0], R =>
-        {
-            int kitPk = R.GetInt32(1);
-            if (Kits.TryGetValue(kitPk, out Kit kit))
-            {
-                EPlayerSpeciality type = (EPlayerSpeciality)R.GetByte(2);
-                Skillset set;
-                byte v = R.GetByte(3);
-                byte lvl = R.GetByte(4);
-                switch (type)
+                int kitPk = R.GetInt32(1);
+                if (Kits.TryGetValue(kitPk, out Kit kit))
                 {
-                    case EPlayerSpeciality.OFFENSE:
-                        set = new Skillset((EPlayerOffense)v, lvl);
-                        break;
-                    case EPlayerSpeciality.DEFENSE:
-                        set = new Skillset((EPlayerDefense)v, lvl);
-                        break;
-                    case EPlayerSpeciality.SUPPORT:
-                        set = new Skillset((EPlayerSupport)v, lvl);
-                        break;
-                    default:
-                        return;
+                    KitItem item = new KitItem();
+                    item.id = new Guid((byte[])R[2]);
+                    item.x = R.GetByte(3);
+                    item.y = R.GetByte(4);
+                    item.rotation = R.GetByte(5);
+                    item.page = R.GetByte(6);
+                    item.amount = R.GetByte(7);
+                    item.metadata = (byte[])R[8];
+                    kit.Items.Add(item);
                 }
-                kit.AddSkillset(set);
-            }
-        });
-        await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_lang`;", new object[0], R =>
-        {
-            int kitPk = R.GetInt32(1);
-            if (Kits.TryGetValue(kitPk, out Kit kit))
+            });
+            await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_clothes`;", new object[0], R =>
             {
-                string lang = R.GetString(2);
-                if (!kit.SignTexts.ContainsKey(lang))
-                    kit.SignTexts.Add(lang, R.GetString(3));
-                else
-                    L.LogWarning("Duplicate translation for kit " + kit.Name + " (" + kit.PrimaryKey + ") for language " + lang);
-            }
-        });
-        await Data.DatabaseManager.QueryAsync("SELECT `Kit`, `JSON` FROM `kit_unlock_requirements`;", new object[0], R =>
-        {
-            int kitPk = R.GetInt32(0);
-            if (Kits.TryGetValue(kitPk, out Kit kit))
-            {
-                Utf8JsonReader reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(R.GetString(1)));
-                BaseUnlockRequirement? req = BaseUnlockRequirement.Read(ref reader);
-                if (req != null)
+                int kitPk = R.GetInt32(1);
+                if (Kits.TryGetValue(kitPk, out Kit kit))
                 {
-                    kit.AddUnlockRequirement(req);
+                    KitClothing item = new KitClothing();
+                    item.id = new Guid((byte[])R[2]);
+                    item.type = (EClothingType)R.GetByte(3);
+                    kit.Clothes.Add(item);
                 }
-            }
-        });
+            });
+            await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_skillsets`;", new object[0], R =>
+            {
+                int kitPk = R.GetInt32(1);
+                if (Kits.TryGetValue(kitPk, out Kit kit))
+                {
+                    EPlayerSpeciality type = (EPlayerSpeciality)R.GetByte(2);
+                    Skillset set;
+                    byte v = R.GetByte(3);
+                    byte lvl = R.GetByte(4);
+                    switch (type)
+                    {
+                        case EPlayerSpeciality.OFFENSE:
+                            set = new Skillset((EPlayerOffense)v, lvl);
+                            break;
+                        case EPlayerSpeciality.DEFENSE:
+                            set = new Skillset((EPlayerDefense)v, lvl);
+                            break;
+                        case EPlayerSpeciality.SUPPORT:
+                            set = new Skillset((EPlayerSupport)v, lvl);
+                            break;
+                        default:
+                            return;
+                    }
+
+                    kit.AddSkillset(set);
+                }
+            });
+            await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_lang`;", new object[0], R =>
+            {
+                int kitPk = R.GetInt32(1);
+                if (Kits.TryGetValue(kitPk, out Kit kit))
+                {
+                    string lang = R.GetString(2);
+                    if (!kit.SignTexts.ContainsKey(lang))
+                        kit.SignTexts.Add(lang, R.GetString(3));
+                    else
+                        L.LogWarning("Duplicate translation for kit " + kit.Name + " (" + kit.PrimaryKey +
+                                     ") for language " + lang);
+                }
+            });
+            await Data.DatabaseManager.QueryAsync("SELECT `Kit`, `JSON` FROM `kit_unlock_requirements`;", new object[0],
+                R =>
+                {
+                    int kitPk = R.GetInt32(0);
+                    if (Kits.TryGetValue(kitPk, out Kit kit))
+                    {
+                        Utf8JsonReader reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(R.GetString(1)));
+                        BaseUnlockRequirement? req = BaseUnlockRequirement.Read(ref reader);
+                        if (req != null)
+                        {
+                            kit.AddUnlockRequirement(req);
+                        }
+                    }
+                });
+        }
+        finally
+        {
+            _threadLocker.Release();
+        }
     }
     private void PlayerLife_OnPreDeath(PlayerLife life)
     {
@@ -202,24 +242,27 @@ public class KitManager : BaseReloadSingleton
         KitManager singleton = GetSingleton();
         if (kit != null)
         {
-            bool hasPk = kit.PrimaryKey > -1;
-            int pk = -1;
-            await Data.DatabaseManager.QueryAsync(
-                "INSERT INTO `kit_data` (`InternalName`, `Class`, `Branch`, `Team`, `CreditCost`, " +
-                "`UnlockLevel`, `IsPremium`, `PremiumCost`, `IsLoadout`, `TeamLimit`, `Cooldown`, `Disabled`, `WeaponText`" + (hasPk ? ", `pk`" : string.Empty) + ") VALUES " +
-                "(@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12" + (hasPk ? ", @13" : string.Empty) + ")" +
-                "ON DUPLICATE KEY UPDATE " +
-                "`InternalName` = @0, `Class` = @1, `Branch` = @2, `Team` = @3, `CreditCost` = @4, `UnlockLevel` = @5, `IsPremium` = @6, `PremiumCost` = @7, `IsLoadout` = @8, " +
-                "`TeamLimit` = @9, `Cooldown` = @10, `Disabled` = @11, `WeaponText` = @12, `pk` = LAST_INSERT_ID(`pk`); " +
-                "SET @kitPk := (SELECT LAST_INSERT_ID() AS `pk`); " +
-                "DELETE FROM `kit_lang` WHERE `Kit` = @kitPk; " +
-                "DELETE FROM `kit_items` WHERE `Kit` = @kitPk; " +
-                "DELETE FROM `kit_clothes` WHERE `Kit` = @kitPk; " +
-                "DELETE FROM `kit_skillsets` WHERE `Kit` = @kitPk; " +
-                "DELETE FROM `kit_unlock_requirements` WHERE `Kit` = @kitPk; " +
-                "SELECT @kitPk;", 
-                hasPk ? new object[14]
-                {
+            await singleton._threadLocker.WaitAsync();
+            try
+            {
+                bool hasPk = kit.PrimaryKey > -1;
+                int pk = -1;
+                await Data.DatabaseManager.QueryAsync(
+                    "INSERT INTO `kit_data` (`InternalName`, `Class`, `Branch`, `Team`, `CreditCost`, " +
+                    "`UnlockLevel`, `IsPremium`, `PremiumCost`, `IsLoadout`, `TeamLimit`, `Cooldown`, `Disabled`, `WeaponText`" + (hasPk ? ", `pk`" : string.Empty) + ") VALUES " +
+                    "(@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12" + (hasPk ? ", @13" : string.Empty) + ")" +
+                    "ON DUPLICATE KEY UPDATE " +
+                    "`InternalName` = @0, `Class` = @1, `Branch` = @2, `Team` = @3, `CreditCost` = @4, `UnlockLevel` = @5, `IsPremium` = @6, `PremiumCost` = @7, `IsLoadout` = @8, " +
+                    "`TeamLimit` = @9, `Cooldown` = @10, `Disabled` = @11, `WeaponText` = @12, `pk` = LAST_INSERT_ID(`pk`); " +
+                    "SET @kitPk := (SELECT LAST_INSERT_ID() AS `pk`); " +
+                    "DELETE FROM `kit_lang` WHERE `Kit` = @kitPk; " +
+                    "DELETE FROM `kit_items` WHERE `Kit` = @kitPk; " +
+                    "DELETE FROM `kit_clothes` WHERE `Kit` = @kitPk; " +
+                    "DELETE FROM `kit_skillsets` WHERE `Kit` = @kitPk; " +
+                    "DELETE FROM `kit_unlock_requirements` WHERE `Kit` = @kitPk; " +
+                    "SELECT @kitPk;",
+                    hasPk ? new object[14]
+                    {
                     kit.Name,
                     (int)kit.Class,
                     (int)kit.Branch,
@@ -234,9 +277,9 @@ public class KitManager : BaseReloadSingleton
                     kit.Disabled,
                     kit.Weapons,
                     kit.PrimaryKey
-                } 
-                : new object[13]
-                {
+                    }
+                    : new object[13]
+                    {
                     kit.Name,
                     (int)kit.Class,
                     (int)kit.Branch,
@@ -250,155 +293,160 @@ public class KitManager : BaseReloadSingleton
                     kit.Cooldown,
                     kit.Disabled,
                     kit.Weapons
-                }, R =>
-                {
-                    pk = R.GetInt32(0);
-                });
-            if (pk == -1) return null;
-            kit.PrimaryKey = pk;
-            if (kit.Items.Count > 0)
-            {
-                StringBuilder builder = new StringBuilder("INSERT INTO `kit_items` (`Kit`, `GUID`, `PosX`, `PosY`, `Rotation`, `Page`, `Amount`, `Metadata`) VALUES ", 512);
-                object[] objs = new object[kit.Items.Count * 8];
-                for (int i = 0; i < kit.Items.Count; ++i)
-                {
-                    KitItem item = kit.Items[i];
-                    if (i != 0)
-                        builder.Append(", ");
-                    builder.Append('(');
-                    int index = i * 8;
-                    for (int j = 0; j < 8; ++j)
+                    }, R =>
                     {
-                        if (j != 0)
-                            builder.Append(", ");
-                        builder.Append('@').Append(index + j);
-                    }
-                    objs[index++] = pk;
-                    objs[index++] = item.id.ToByteArray();
-                    objs[index++] = item.x;
-                    objs[index++] = item.y;
-                    objs[index++] = item.rotation;
-                    objs[index++] = item.page;
-                    objs[index++] = item.amount;
-                    objs[index++] = item.metadata;
-                    builder.Append(')');
-                }
-                builder.Append(';');
-                await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
-            }
-            if (kit.Clothes.Count > 0)
-            {
-                StringBuilder builder = new StringBuilder("INSERT INTO `kit_clothes` (`Kit`, `GUID`, `Type`) VALUES ", 128);
-                object[] objs = new object[kit.Clothes.Count * 3];
-                for (int i = 0; i < kit.Clothes.Count; ++i)
+                        pk = R.GetInt32(0);
+                    });
+                if (pk == -1) return null;
+                kit.PrimaryKey = pk;
+                if (kit.Items.Count > 0)
                 {
-                    KitClothing clothes = kit.Clothes[i];
-                    if (i != 0)
-                        builder.Append(", ");
-                    builder.Append('(');
-                    int index = i * 3;
-                    for (int j = 0; j < 3; ++j)
+                    StringBuilder builder = new StringBuilder("INSERT INTO `kit_items` (`Kit`, `GUID`, `PosX`, `PosY`, `Rotation`, `Page`, `Amount`, `Metadata`) VALUES ", 512);
+                    object[] objs = new object[kit.Items.Count * 8];
+                    for (int i = 0; i < kit.Items.Count; ++i)
                     {
-                        if (j != 0)
-                            builder.Append(", ");
-                        builder.Append('@').Append(index + j);
-                    }
-                    objs[index++] = pk;
-                    objs[index++] = clothes.id.ToByteArray();
-                    objs[index++] = (int)clothes.type;
-                    builder.Append(')');
-                }
-                builder.Append(';');
-                await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
-            }
-            if (kit.SignTexts.Count > 0)
-            {
-                StringBuilder builder = new StringBuilder("INSERT INTO `kit_lang` (`Kit`, `Language`, `Text`) VALUES ", 128);
-                object[] objs = new object[kit.SignTexts.Count * 3];
-                int i = 0;
-                foreach (KeyValuePair<string, string> pair in kit.SignTexts)
-                {
-                    if (pair.Key.Length != 5) continue;
-                    if (i != 0)
-                        builder.Append(", ");
-                    builder.Append('(');
-                    int index = i * 3;
-                    for (int j = 0; j < 3; ++j)
-                    {
-                        if (j != 0)
-                            builder.Append(", ");
-                        builder.Append('@').Append(index + j);
-                    }
-                    objs[index++] = pk;
-                    objs[index++] = pair.Key;
-                    objs[index++] = pair.Value;
-                    builder.Append(')');
-                    ++i;
-                }
-                builder.Append(';');
-                await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
-            }
-            if (kit.Skillsets.Length > 0)
-            {
-                StringBuilder builder = new StringBuilder("INSERT INTO `kit_skillsets` (`Kit`, `Type`, `Skill`, `Level`) VALUES ", 128);
-                object[] objs = new object[kit.Skillsets.Length * 4];
-                for (int i = 0; i < kit.Skillsets.Length; ++i)
-                {
-                    Skillset set = kit.Skillsets[i];
-                    if (i != 0)
-                        builder.Append(", ");
-                    builder.Append('(');
-                    int index = i * 4;
-                    for (int j = 0; j < 4; ++j)
-                    {
-                        if (j != 0)
-                            builder.Append(", ");
-                        builder.Append('@').Append(index + j);
-                    }
-                    objs[index++] = pk;
-                    objs[index++] = (byte)set.Speciality;
-                    objs[index++] = (byte)set.SkillIndex;
-                    objs[index++] = (byte)set.Level;
-                    builder.Append(')');
-                }
-                builder.Append(';');
-                await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
-            }
-            if (kit.UnlockRequirements.Length > 0)
-            {
-                StringBuilder builder = new StringBuilder("INSERT INTO `kit_unlock_requirements` (`Kit`, `JSON`) VALUES ", 128);
-                object[] objs = new object[kit.UnlockRequirements.Length * 2];
-                using (MemoryStream str = new MemoryStream(128))
-                {
-                    for (int i = 0; i < kit.UnlockRequirements.Length; ++i)
-                    {
+                        KitItem item = kit.Items[i];
                         if (i != 0)
                             builder.Append(", ");
                         builder.Append('(');
-                        int index = i * 3;
-                        for (int j = 0; j < 2; ++j)
+                        int index = i * 8;
+                        for (int j = 0; j < 8; ++j)
                         {
                             if (j != 0)
                                 builder.Append(", ");
                             builder.Append('@').Append(index + j);
                         }
                         objs[index++] = pk;
-                        Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
-                        BaseUnlockRequirement.Write(writer, kit.UnlockRequirements[i]);
-                        writer.Dispose();
-                        objs[index++] = System.Text.Encoding.UTF8.GetString(str.ToArray());
-                        str.Position = 0;
-                        str.SetLength(0);
+                        objs[index++] = item.id.ToByteArray();
+                        objs[index++] = item.x;
+                        objs[index++] = item.y;
+                        objs[index++] = item.rotation;
+                        objs[index++] = item.page;
+                        objs[index++] = item.amount;
+                        objs[index++] = item.metadata;
                         builder.Append(')');
                     }
+                    builder.Append(';');
+                    await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
                 }
-                builder.Append(';');
-                await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
+                if (kit.Clothes.Count > 0)
+                {
+                    StringBuilder builder = new StringBuilder("INSERT INTO `kit_clothes` (`Kit`, `GUID`, `Type`) VALUES ", 128);
+                    object[] objs = new object[kit.Clothes.Count * 3];
+                    for (int i = 0; i < kit.Clothes.Count; ++i)
+                    {
+                        KitClothing clothes = kit.Clothes[i];
+                        if (i != 0)
+                            builder.Append(", ");
+                        builder.Append('(');
+                        int index = i * 3;
+                        for (int j = 0; j < 3; ++j)
+                        {
+                            if (j != 0)
+                                builder.Append(", ");
+                            builder.Append('@').Append(index + j);
+                        }
+                        objs[index++] = pk;
+                        objs[index++] = clothes.id.ToByteArray();
+                        objs[index++] = (int)clothes.type;
+                        builder.Append(')');
+                    }
+                    builder.Append(';');
+                    await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
+                }
+                if (kit.SignTexts.Count > 0)
+                {
+                    StringBuilder builder = new StringBuilder("INSERT INTO `kit_lang` (`Kit`, `Language`, `Text`) VALUES ", 128);
+                    object[] objs = new object[kit.SignTexts.Count * 3];
+                    int i = 0;
+                    foreach (KeyValuePair<string, string> pair in kit.SignTexts)
+                    {
+                        if (pair.Key.Length != 5) continue;
+                        if (i != 0)
+                            builder.Append(", ");
+                        builder.Append('(');
+                        int index = i * 3;
+                        for (int j = 0; j < 3; ++j)
+                        {
+                            if (j != 0)
+                                builder.Append(", ");
+                            builder.Append('@').Append(index + j);
+                        }
+                        objs[index++] = pk;
+                        objs[index++] = pair.Key;
+                        objs[index++] = pair.Value;
+                        builder.Append(')');
+                        ++i;
+                    }
+                    builder.Append(';');
+                    await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
+                }
+                if (kit.Skillsets.Length > 0)
+                {
+                    StringBuilder builder = new StringBuilder("INSERT INTO `kit_skillsets` (`Kit`, `Type`, `Skill`, `Level`) VALUES ", 128);
+                    object[] objs = new object[kit.Skillsets.Length * 4];
+                    for (int i = 0; i < kit.Skillsets.Length; ++i)
+                    {
+                        Skillset set = kit.Skillsets[i];
+                        if (i != 0)
+                            builder.Append(", ");
+                        builder.Append('(');
+                        int index = i * 4;
+                        for (int j = 0; j < 4; ++j)
+                        {
+                            if (j != 0)
+                                builder.Append(", ");
+                            builder.Append('@').Append(index + j);
+                        }
+                        objs[index++] = pk;
+                        objs[index++] = (byte)set.Speciality;
+                        objs[index++] = (byte)set.SkillIndex;
+                        objs[index++] = (byte)set.Level;
+                        builder.Append(')');
+                    }
+                    builder.Append(';');
+                    await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
+                }
+                if (kit.UnlockRequirements.Length > 0)
+                {
+                    StringBuilder builder = new StringBuilder("INSERT INTO `kit_unlock_requirements` (`Kit`, `JSON`) VALUES ", 128);
+                    object[] objs = new object[kit.UnlockRequirements.Length * 2];
+                    using (MemoryStream str = new MemoryStream(128))
+                    {
+                        for (int i = 0; i < kit.UnlockRequirements.Length; ++i)
+                        {
+                            if (i != 0)
+                                builder.Append(", ");
+                            builder.Append('(');
+                            int index = i * 3;
+                            for (int j = 0; j < 2; ++j)
+                            {
+                                if (j != 0)
+                                    builder.Append(", ");
+                                builder.Append('@').Append(index + j);
+                            }
+                            objs[index++] = pk;
+                            Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
+                            BaseUnlockRequirement.Write(writer, kit.UnlockRequirements[i]);
+                            writer.Dispose();
+                            objs[index++] = System.Text.Encoding.UTF8.GetString(str.ToArray());
+                            str.Position = 0;
+                            str.SetLength(0);
+                            builder.Append(')');
+                        }
+                    }
+                    builder.Append(';');
+                    await Data.DatabaseManager.NonQueryAsync(builder.ToString(), objs);
+                }
+                if (singleton.Kits.ContainsKey(pk))
+                    singleton.Kits[pk] = kit;
+                else
+                    singleton.Kits.Add(pk, kit);
             }
-            if (singleton.Kits.ContainsKey(pk))
-                singleton.Kits[pk] = kit;
-            else
-                singleton.Kits.Add(pk, kit);
+            finally
+            {
+                singleton._threadLocker.Release();
+            }
         }
 
         return kit;
@@ -569,36 +617,57 @@ public class KitManager : BaseReloadSingleton
     {
         if (primaryKey == -1) return false;
         KitManager singleton = GetSingleton();
+        await singleton._threadLocker.WaitAsync();
         singleton.Kits.Remove(primaryKey);
+        singleton._threadLocker.Release();
         return await Data.DatabaseManager.NonQueryAsync("DELETE FROM `kit_data` WHERE `pk` = @0;", new object[1] { primaryKey }) > 0;
     }
     public static async Task<bool> DeleteKit(string name)
     {
         KitManager singleton = GetSingleton();
+        await singleton._threadLocker.WaitAsync();
         KeyValuePair<int, Kit> fod = singleton.Kits.FirstOrDefault(x => x.Value.Name.Equals(name, StringComparison.Ordinal));
         if (fod.Value != null)
             singleton.Kits.Remove(fod.Key);
+        singleton._threadLocker.Release();
         return await Data.DatabaseManager.NonQueryAsync("SET @pk := (SELECT `pk` FROM `kit_data` WHERE `InternalName` = @0 LIMIT 1); " +
             "DELETE FROM `kit_data` WHERE @pk IS NOT NULL AND `pk` = @pk;", new object[1]
         {
             name
         }) > 0;
     }
-    public static IEnumerable<Kit> GetKitsWhere(Func<Kit, bool> predicate)
+    internal static Kit? GetRandomPublicKit()
+    {
+        List<Kit> selection = GetAllPublicKits();
+        if (selection.Count == 0) return null;
+        return selection[UnityEngine.Random.Range(0, selection.Count)];
+    }
+    internal static List<Kit> GetAllPublicKits()
+    {
+        return GetKitsWhere(x => !x.IsPremium && !x.IsLoadout && !x.Disabled && x.Class > EClass.UNARMED);
+    }
+    public static List<Kit> GetKitsWhere(Func<Kit, bool> predicate)
     {
         KitManager singleton = GetSingleton();
-        return singleton.Kits.Values.Where(predicate);
+        singleton._threadLocker.Wait();
+        List<Kit> rtn = singleton.Kits.Values.Where(predicate).ToList();
+        singleton._threadLocker.Release();
+        return rtn;
     }
     public static bool KitExists(string kitName, out Kit kit)
     {
         KitManager singleton = GetSingleton();
+        singleton._threadLocker.Wait();
         kit = singleton.Kits.Values.FirstOrDefault(x => x.Name.Equals(kitName, StringComparison.Ordinal));
+        singleton._threadLocker.Release();
         return kit != null;
     }
     public static bool KitExists(Func<Kit, bool> predicate, out Kit kit)
     {
         KitManager singleton = GetSingleton();
+        singleton._threadLocker.Wait();
         kit = singleton.Kits.Values.FirstOrDefault(predicate);
+        singleton._threadLocker.Release();
         return kit != null;
     }
     private static KitManager _singleton;
@@ -674,59 +743,74 @@ public class KitManager : BaseReloadSingleton
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         KitManager singleton = GetSingleton();
-        foreach (Kit kit in singleton.Kits.Values)
+        singleton._threadLocker.Wait();
+        try
         {
-            if (!kit.IsLoadout && kit.UnlockRequirements != null)
+            foreach (Kit kit in singleton.Kits.Values)
             {
-                for (int j = 0; j < kit.UnlockRequirements.Length; j++)
+                if (!kit.IsLoadout && kit.UnlockRequirements != null)
                 {
-                    if (kit.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
+                    for (int j = 0; j < kit.UnlockRequirements.Length; j++)
                     {
-                        if (Assets.find(req.QuestID) is QuestAsset quest)
+                        if (kit.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
                         {
-                            player.Player.quests.sendAddQuest(quest.id);
-                        }
-                        else
-                        {
-                            L.LogWarning("Unknown quest id " + req.QuestID + " in kit requirement for " + kit.Name);
-                        }
-                        for (int r = 0; r < req.UnlockPresets.Length; r++)
-                        {
-                            BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
-                            if (tracker == null)
+                            if (Assets.find(req.QuestID) is QuestAsset quest)
                             {
-                                L.LogWarning("Failed to create tracker for kit " + kit.Name + ", player " + player.Name.PlayerName);
+                                player.Player.quests.sendAddQuest(quest.id);
+                            }
+                            else
+                            {
+                                L.LogWarning("Unknown quest id " + req.QuestID + " in kit requirement for " + kit.Name);
+                            }
+                            for (int r = 0; r < req.UnlockPresets.Length; r++)
+                            {
+                                BaseQuestTracker? tracker = QuestManager.CreateTracker(player, req.UnlockPresets[r]);
+                                if (tracker == null)
+                                {
+                                    L.LogWarning("Failed to create tracker for kit " + kit.Name + ", player " + player.Name.PlayerName);
+                                }
                             }
                         }
                     }
                 }
             }
         }
-
+        finally
+        {
+            singleton._threadLocker.Release();
+        }
         RequestSigns.UpdateAllSigns(player.Player.channel.owner);
     }
     public static bool OnQuestCompleted(UCPlayer player, Guid presetKey)
     {
         KitManager singleton = GetSingleton();
         bool affectedKit = false;
-        foreach (Kit kit in singleton.Kits.Values)
+        singleton._threadLocker.Wait();
+        try
         {
-            if (!kit.IsLoadout && kit.UnlockRequirements != null)
+            foreach (Kit kit in singleton.Kits.Values)
             {
-                for (int j = 0; j < kit.UnlockRequirements.Length; j++)
+                if (!kit.IsLoadout && kit.UnlockRequirements != null)
                 {
-                    if (kit.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
+                    for (int j = 0; j < kit.UnlockRequirements.Length; j++)
                     {
-                        for (int r = 0; r < req.UnlockPresets.Length; r++)
+                        if (kit.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
                         {
-                            if (req.UnlockPresets[r] == presetKey)
+                            for (int r = 0; r < req.UnlockPresets.Length; r++)
                             {
-                                return true;
+                                if (req.UnlockPresets[r] == presetKey)
+                                {
+                                    return true;
+                                }
                             }
                         }
                     }
                 }
             }
+        }
+        finally
+        {
+            singleton._threadLocker.Release();
         }
         return affectedKit;
     }
@@ -944,7 +1028,7 @@ public class KitManager : BaseReloadSingleton
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        string unarmedKit = "";
+        string unarmedKit = string.Empty;
         if (player.IsTeam1())
             unarmedKit = TeamManager.Team1UnarmedKit;
         if (player.IsTeam2())
@@ -986,7 +1070,7 @@ public class KitManager : BaseReloadSingleton
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? player = UCPlayer.FromID(steamID);
-
+        
         if (player == null)
         {
             PlayerSave? save = PlayerManager.GetSave(steamID);
@@ -1073,423 +1157,66 @@ public static class KitEx
             return false;
         return currentPlayers + 1 > allowedPlayers;
     }
-    private static readonly FieldInfo[] fields = typeof(Kit).GetFields();
-    /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-    private static FieldInfo? GetField(string property, out byte reason)
+    private static readonly FieldInfo[] fields = typeof(Kit).GetFields(BindingFlags.Instance | BindingFlags.Public);
+    public static ESetFieldResult SetProperty(Kit kit, string property, string value)
     {
-        for (int i = 0; i < fields.Length; i++)
+        if (kit is null) return ESetFieldResult.OBJECT_NOT_FOUND;
+        if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
+        FieldInfo? field = GetField(property, out ESetFieldResult reason);
+        if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
-            if (fields[i].Name == property) // case sensitive search
-            {
-                if (ValidateField(fields[i], out reason))
-                {
-                    return fields[i];
-                }
-            }
-        }
-        for (int i = 0; i < fields.Length; i++)
-        {
-            if (fields[i].Name.ToLower() == property.ToLower()) // case insensitive search if case sensitive search netted no results
-            {
-                if (ValidateField(fields[i], out reason))
-                {
-                    return fields[i];
-                }
-            }
-        }
-        reason = 1;
-        return default;
-    }
-    private static object? ParseInput(string input, Type type, out bool parsed)
-    {
-        if (input == default || type == default)
-        {
-            parsed = false;
-            return default;
-        }
-        if (type == typeof(object))
-        {
-            parsed = true;
-            return input;
-        }
-        if (type == typeof(string))
-        {
-            parsed = true;
-            return input;
-        }
-        if (type == typeof(bool))
-        {
-            string lowercase = input.ToLower();
-            if (lowercase == "true")
-            {
-                parsed = true;
-                return true;
-            }
-            else if (lowercase == "false")
-            {
-                parsed = true;
-                return false;
-            }
-            else
-            {
-                parsed = false;
-                return default;
-            }
-        }
-        if (type == typeof(char))
-        {
-            if (input.Length == 1)
-            {
-                parsed = true;
-                return input[0];
-            }
-        }
-        if (type.IsEnum)
-        {
-            try
-            {
-                object output = Enum.Parse(type, input, true);
-                if (output == default)
-                {
-                    parsed = false;
-                    return default;
-                }
-                parsed = true;
-                return output;
-            }
-            catch (ArgumentNullException)
-            {
-                parsed = false;
-                return default;
-            }
-            catch (ArgumentException)
-            {
-                parsed = false;
-                return default;
-            }
-        }
-        if (!type.IsPrimitive)
-        {
-            L.LogError("Can not parse non-primitive types except for strings and enums.");
-            parsed = false;
-            return default;
-        }
-
-        if (type == typeof(int))
-        {
-            if (int.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out int result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(ushort))
-        {
-            if (ushort.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ushort result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(ulong))
-        {
-            if (ulong.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out ulong result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(float))
-        {
-            if (float.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out float result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(decimal))
-        {
-            if (decimal.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out decimal result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(double))
-        {
-            if (double.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out double result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(byte))
-        {
-            if (byte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out byte result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(sbyte))
-        {
-            if (sbyte.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out sbyte result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(short))
-        {
-            if (short.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out short result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(uint))
-        {
-            if (uint.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out uint result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        else if (type == typeof(long))
-        {
-            if (long.TryParse(input, System.Globalization.NumberStyles.Any, Data.Locale, out long result))
-            {
-                parsed = true;
-                return result;
-            }
-        }
-        parsed = false;
-        return default;
-    }
-    /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
-    public static Kit SetProperty(Kit obj, string property, string value, out bool set, out bool parsed, out bool found, out bool allowedToChange)
-    {
-        FieldInfo? field = GetField(property, out byte reason);
-        if (reason != 0)
-        {
-            if (reason == 1 || reason == 2)
-            {
-                set = false;
-                parsed = false;
-                found = false;
-                allowedToChange = false;
-                return obj;
-            }
-            else if (reason == 3)
-            {
-                set = false;
-                parsed = false;
-                found = true;
-                allowedToChange = false;
-                return obj;
-            }
-        }
-        found = true;
-        allowedToChange = true;
-        object? parsedValue;
-        if (field == null)
-        {
-            parsed = false;
-            parsedValue = null;
-        }
-        else parsedValue = ParseInput(value, field.FieldType, out parsed);
-        if (parsed)
-        {
-            if (field != default)
+            if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
             {
                 try
                 {
-                    field.SetValue(obj, parsedValue);
-                    set = true;
-                    Task.Run(async () => await KitManager.AddKit(obj)).ConfigureAwait(false);
-                    return obj;
+                    field.SetValue(kit, val);
                 }
-                catch (FieldAccessException ex)
+                catch (Exception ex)
                 {
                     L.LogError(ex);
-                    set = false;
-                    return obj;
+                    return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
                 }
-                catch (TargetException ex)
-                {
-                    L.LogError(ex);
-                    set = false;
-                    return obj;
-                }
-                catch (ArgumentException ex)
-                {
-                    L.LogError(ex);
-                    set = false;
-                    return obj;
-                }
+                return ESetFieldResult.SUCCESS;
             }
-            else
-            {
-                set = false;
-                return obj;
-            }
+            return ESetFieldResult.INVALID_INPUT;
         }
-        else
-        {
-            set = false;
-            return obj;
-        }
+        else return reason;
     }
-    /// <summary>reason [ 0: success, 1: no field, 2: invalid field, 3: non-saveable property ]</summary>
-    private static bool ValidateField(FieldInfo field, out byte reason)
+    private static FieldInfo? GetField(string property, out ESetFieldResult reason)
     {
-        if (field == default)
+        for (int i = 0; i < fields.Length; i++)
         {
-            L.LogError("Kit saver: field not found.");
-            reason = 1;
-            return false;
+            FieldInfo fi = fields[i];
+            if (fi.Name.Equals(property, StringComparison.Ordinal))
+                return ValidateField(fi, out reason) ? fi : null;
         }
-        if (field.IsStatic)
+        for (int i = 0; i < fields.Length; i++)
         {
-            L.LogError("Kit saver tried to save to a static property.");
-            reason = 2;
-            return false;
+            FieldInfo fi = fields[i];
+            if (fi.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
+                return ValidateField(fi, out reason) ? fi : null;
         }
-        if (field.IsInitOnly)
-        {
-            L.LogError("Kit saver tried to save to a readonly property.");
-            reason = 2;
-            return false;
-        }
-        IEnumerator<CustomAttributeData> attributes = field.CustomAttributes.GetEnumerator();
-        bool settable = false;
-        while (attributes.MoveNext())
-        {
-            if (attributes.Current.AttributeType == typeof(JsonSettable))
-            {
-                settable = true;
-                break;
-            }
-        }
-        attributes.Dispose();
-        if (!settable)
-        {
-            L.LogError("Kit saver tried to save to a non json-savable property.");
-            reason = 3;
-            return false;
-        }
-        reason = 0;
-        return true;
+        reason = ESetFieldResult.FIELD_NOT_FOUND;
+        return default;
     }
-    /// <summary>Fields must be instanced, non-readonly, and have the <see cref="JsonSettable"/> attribute to be set.</summary>
-    public static bool SetProperty(Func<Kit, bool> selector, string property, string value, out bool foundObject, out bool setSuccessfully, out bool parsed, out bool found, out bool allowedToChange)
+    private static bool ValidateField(FieldInfo field, out ESetFieldResult reason)
     {
-        if (KitManager.KitExists(selector, out Kit selected))
+        if (field == null || field.IsStatic || field.IsInitOnly)
         {
-            foundObject = true;
-            SetProperty(selected, property, value, out setSuccessfully, out parsed, out found, out allowedToChange);
-            return setSuccessfully;
-        }
-        else
-        {
-            foundObject = false;
-            setSuccessfully = false;
-            parsed = false;
-            found = false;
-            allowedToChange = false;
+            reason = ESetFieldResult.FIELD_NOT_FOUND;
             return false;
         }
-    }
-    public static bool SetProperty<V>(Func<Kit, bool> selector, string property, V value, out bool foundObject, out bool setSuccessfully, out bool foundproperty, out bool allowedToChange)
-    {
-        if (KitManager.KitExists(selector, out Kit selected))
+        Attribute atr = Attribute.GetCustomAttribute(field, typeof(JsonSettable));
+        if (atr is not null)
         {
-            foundObject = true;
-            SetProperty(selected, property, value, out setSuccessfully, out foundproperty, out allowedToChange);
-            return setSuccessfully;
-        }
-        else
-        {
-            foundObject = false;
-            setSuccessfully = false;
-            foundproperty = false;
-            allowedToChange = false;
-            return false;
-        }
-    }
-    public static Kit SetProperty<V>(Kit obj, string property, V value, out bool success, out bool found, out bool allowedToChange)
-    {
-        FieldInfo? field = GetField(property, out byte reason);
-        if (reason != 0)
-        {
-            if (reason == 1 || reason == 2)
-            {
-                found = false;
-                allowedToChange = false;
-                success = false;
-                return obj;
-            }
-            else if (reason == 3)
-            {
-                found = true;
-                allowedToChange = false;
-                success = false;
-                return obj;
-            }
-        }
-        found = true;
-        allowedToChange = true;
-        if (field != default)
-        {
-            if (field.FieldType.IsAssignableFrom(typeof(V)))
-            {
-                try
-                {
-                    field.SetValue(obj, value);
-                    success = true;
-                    Task.Run(async () => await KitManager.AddKit(obj)).ConfigureAwait(false);
-                    return obj;
-                }
-                catch (FieldAccessException ex)
-                {
-                    L.LogError(ex);
-                    success = false;
-                    return obj;
-                }
-                catch (TargetException ex)
-                {
-                    L.LogError(ex);
-                    success = false;
-                    return obj;
-                }
-                catch (ArgumentException ex)
-                {
-                    L.LogError(ex);
-                    success = false;
-                    return obj;
-                }
-            }
-            else
-            {
-                success = false;
-                return obj;
-            }
-        }
-        else
-        {
-            success = false;
-            return obj;
-        }
-    }
-    public static bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
-    {
-        if (Enum.TryParse<TEnum>(name.ToString(), out var p))
-        {
-            property = p;
+            reason = ESetFieldResult.SUCCESS;
             return true;
         }
-        property = p;
-        return false;
+        else
+        {
+            reason = ESetFieldResult.FIELD_PROTECTED;
+            return false;
+        }
     }
     public static class NetCalls
     {

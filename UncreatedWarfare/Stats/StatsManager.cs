@@ -1,11 +1,17 @@
-﻿using SDG.Unturned;
+﻿using Rocket.Unturned.Enumerations;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Networking;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Stats;
 
@@ -27,6 +33,14 @@ public static class StatsManager
     public static readonly List<WarfareStats> OnlinePlayers = new List<WarfareStats>();
     private static int teamBackupCounter = 0;
     private static int minsCounter = 0;
+    public static void LoadEvents()
+    {
+        EventDispatcher.OnPlayerDied += OnPlayerDied;
+    }
+    internal static void UnloadEvents()
+    {
+        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+    }
     public static void LoadTeams()
     {
 #if DEBUG
@@ -480,6 +494,139 @@ public static class StatsManager
         NetCalls.BackupStats.NetInvoke(stats);
         OnlinePlayers.Remove(stats);
     }
+    private static void OnPlayerDied(PlayerDied e)
+    {
+        Kit kit;
+        if (e.Killer is not null)
+        {
+            if (e.WasTeamkill)
+            {
+                Task.Run(() => Data.DatabaseManager.AddTeamkill(e.Killer, e.KillerTeam));
+                ModifyStats(e.Killer, s => s.Teamkills++, false);
+                ModifyTeam(e.KillerTeam, t => t.Teamkills++, false);
+            }
+            else
+            {
+                Task.Run(() => Data.DatabaseManager.AddKill(e.Killer, e.KillerTeam));
+                ModifyStats(e.Killer, s => s.Kills++, false);
+                ModifyTeam(e.KillerTeam, t => t.Kills++, false);
+                if (e.TurretVehicleOwner != default && Assets.find(e.TurretVehicleOwner) is VehicleAsset vasset)
+                    ModifyVehicle(vasset.id, v => v.KillsWithGunner++);
+                bool atk = false;
+                bool def = false;
+                Vector3 kilPos = e.Killer.Position;
+                if (Data.Is(out IFlagRotation fg))
+                {
+                    for (int f = 0; f < fg.Rotation.Count; f++)
+                    {
+                        Gamemodes.Flags.Flag flag = fg.Rotation[f];
+                        if (flag.ZoneData.IsInside(kilPos))
+                        {
+                            def = flag.IsContested(out ulong winner) || winner != e.KillerTeam;
+                            atk = !def;
+                            break;
+                        }
+                    }
+                }
+                if (KitManager.HasKit(e.Killer, out kit))
+                {
+                    ModifyStats(e.Killer, s =>
+                    {
+                        s.Kills++;
+                        WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == e.KillerTeam);
+                        if (kitData == default)
+                        {
+                            kitData = new WarfareStats.KitData() { KitID = kit.Name, Team = (byte)e.KillerTeam, Kills = 1 };
+                            if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
+                                kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
+                            s.Kits.Add(kitData);
+                        }
+                        else
+                        {
+                            kitData.Kills++;
+                            if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH)
+                                kitData.AverageGunKillDistance = (kitData.AverageGunKillDistance * kitData.AverageGunKillDistanceCounter + e.KillDistance) / ++kitData.AverageGunKillDistanceCounter;
+                        }
+                        if (atk)
+                        {
+                            s.KillsWhileAttackingFlags++;
+                        }
+                        else if (def)
+                        {
+                            s.KillsWhileDefendingFlags++;
+                        }
+                    }, false);
+                }
+                else
+                    ModifyStats(e.Killer, s =>
+                    {
+                        s.Kills++;
+                        if (atk) s.KillsWhileAttackingFlags++;
+                        else if (def) s.KillsWhileDefendingFlags++;
+                    }, false);
+
+                if (e.KitName is not null && KitManager.KitExists(e.KitName, out kit) && !e.PrimaryAssetIsVehicle && Assets.find(e.PrimaryAsset) is ItemAsset asset)
+                {
+                    ModifyWeapon(asset.id, kit.Name, x =>
+                    {
+                        x.Kills++;
+                        switch (e.Limb)
+                        {
+                            case ELimb.SKULL:
+                                x.SkullKills++;
+                                break;
+                            case ELimb.SPINE or ELimb.LEFT_FRONT or ELimb.RIGHT_FRONT or ELimb.LEFT_BACK or ELimb.RIGHT_BACK:
+                                x.BodyKills++;
+                                break;
+                            case ELimb.LEFT_HAND or ELimb.RIGHT_HAND or ELimb.LEFT_ARM or ELimb.RIGHT_ARM:
+                                x.BodyKills++;
+                                break;
+                            case ELimb.LEFT_FOOT or ELimb.RIGHT_FOOT or ELimb.LEFT_LEG or ELimb.RIGHT_LEG:
+                                x.LegKills++;
+                                break;
+                        }
+                        x.AverageKillDistance = (x.AverageKillDistance * x.AverageKillDistanceCounter + e.KillDistance) / ++x.AverageKillDistanceCounter;
+                    }, true);
+                    ModifyKit(kit.Name, k =>
+                    {
+                        k.Kills++;
+                        if (e.Cause == EDeathCause.GUN)
+                            k.AverageGunKillDistance =
+                                (k.AverageGunKillDistance * k.AverageGunKillDistanceCounter + e.KillDistance) / ++k.AverageGunKillDistanceCounter;
+                    }, true);
+                }
+            }
+        }
+
+        Task.Run(() => Data.DatabaseManager.AddDeath(e.Player, e.DeadTeam));
+        ModifyTeam(e.DeadTeam, t => t.Deaths++, false);
+        if (KitManager.HasKit(e.Player, out kit))
+        {
+            ModifyStats(e.Player, s =>
+            {
+                s.Deaths++;
+                WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == e.DeadTeam);
+                if (kitData == default)
+                {
+                    kitData = new WarfareStats.KitData() { KitID = kit.Name, Team = (byte)e.DeadTeam, Deaths = 1 };
+                    s.Kits.Add(kitData);
+                }
+                else
+                {
+                    kitData.Deaths++;
+                }
+            }, false);
+            ItemJar primary = e.Player.Player.inventory.items[(int)InventoryGroup.Primary].items.FirstOrDefault();
+            ItemJar secondary = e.Player.Player.inventory.items[(int)InventoryGroup.Secondary].items.FirstOrDefault();
+            if (primary != null)
+                ModifyWeapon(primary.item.id, kit.Name, x => x.Deaths++, true);
+            if (secondary != null && (primary == null || primary.item.id != secondary.item.id)) // prevents 2 of the same gun from counting twice
+                ModifyWeapon(secondary.item.id, kit.Name, x => x.Deaths++, true);
+            ModifyKit(kit.Name, k => k.Deaths++, true);
+        }
+        else
+            ModifyStats(e.Player, s => s.Deaths++, false);
+    }
     public static class NetCalls
     {
         public static readonly NetCall<ulong> RequestPlayerData = new NetCall<ulong>(ReceiveRequestPlayerData);
@@ -584,7 +731,7 @@ public static class StatsManager
 
         [NetCall(ENetCall.FROM_SERVER, 2010)]
         internal static void ReceiveRequestKitList(MessageContext context) 
-            => context.Reply(SendKitList, KitManager.GetSingleton().Kits.Values.Where(k => !k.IsLoadout).Select(k => k.Name).ToArray());
+            => context.Reply(SendKitList, KitManager.GetKitsWhere(k => !k.IsLoadout).Select(k => k.Name).ToArray());
 
         [NetCall(ENetCall.FROM_SERVER, 2012)]
         internal static void ReceiveRequestTeamData(MessageContext context) => context.Reply(SendTeams, Team1Stats, Team2Stats);

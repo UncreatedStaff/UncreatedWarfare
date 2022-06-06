@@ -8,9 +8,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
@@ -22,6 +24,7 @@ namespace Uncreated.Warfare;
 
 public class UCPlayer : IRocketPlayer
 {
+    public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UI.MutedUI, false, false);
     public readonly ulong Steam64;
     public string Id => Steam64.ToString();
     public string DisplayName => Player.channel.owner.playerID.playerName;
@@ -32,6 +35,7 @@ public class UCPlayer : IRocketPlayer
     public Kit? Kit;
     public Squad? Squad;
     public Player Player { get; internal set; }
+    public bool IsTalking => !lastMuted && isTalking && IsOnline;
     public CSteamID CSteamID { get; internal set; }
     public string CharacterName;
     public string NickName;
@@ -105,7 +109,7 @@ public class UCPlayer : IRocketPlayer
     /// <exception cref="SingletonUnloadedException"/>
     public bool IsDonator
     {
-        get => _otherDonator || KitManager.GetSingleton().Kits.Values.FirstOrDefault(x => ((x.IsPremium && x.PremiumCost > 0f) || x.IsLoadout) && KitManager.HasAccessFast(x, this)) != null;
+        get => _otherDonator || AccessibleKits.Any(x => x.IsPremium && x.PremiumCost > 0f || x.IsLoadout);
     }
     public Vector3 Position
     {
@@ -189,7 +193,7 @@ public class UCPlayer : IRocketPlayer
     public static UCPlayer? FromName(string name, bool includeContains = false)
     {
         if (name == null) return null;
-        UCPlayer player = PlayerManager.OnlinePlayers.Find(
+        UCPlayer? player = PlayerManager.OnlinePlayers.Find(
             s =>
             s.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
             s.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
@@ -198,6 +202,24 @@ public class UCPlayer : IRocketPlayer
         if (includeContains && player == null)
         {
             player = PlayerManager.OnlinePlayers.Find(s =>
+                s.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
+                s.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
+                s.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1);
+        }
+        return player;
+    }
+    public static UCPlayer? FromName(string name, bool includeContains, IEnumerable<UCPlayer> selection)
+    {
+        if (name == null) return null;
+        UCPlayer? player = selection.FirstOrDefault(
+            s =>
+            s.Player.channel.owner.playerID.characterName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+            s.Player.channel.owner.playerID.nickName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+            s.Player.channel.owner.playerID.playerName.Equals(name, StringComparison.OrdinalIgnoreCase)
+            );
+        if (includeContains && player == null)
+        {
+            player = selection.FirstOrDefault(s =>
                 s.Player.channel.owner.playerID.characterName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
                 s.Player.channel.owner.playerID.nickName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1 ||
                 s.Player.channel.owner.playerID.playerName.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1);
@@ -453,6 +475,35 @@ public class UCPlayer : IRocketPlayer
             pl._otherDonator = save.IsOtherDonator;
         }
     }
+    private bool isTalking = false;
+    private bool lastMuted = false;
+    
+    internal void Update()
+    {
+        if (isTalking && Time.realtimeSinceStartup - LastSpoken > 0.5f)
+        {
+            isTalking = false;
+            if (lastMuted)
+            {
+                MutedUI.ClearFromPlayer(Connection);
+                lastMuted = false;
+            }
+        }
+    }
+    internal void OnUseVoice(bool isMuted)
+    {
+        float t = Time.realtimeSinceStartup;
+        if (isMuted != lastMuted)
+        {
+            if (isMuted)
+                MutedUI.SendToPlayer(Connection);
+            else
+                MutedUI.ClearFromPlayer(Connection);
+            lastMuted = isMuted;
+        }
+        LastSpoken = t;
+        isTalking = true;
+    }
     public int CompareTo(object obj) => obj is UCPlayer player ? Steam64.CompareTo(player.Steam64) : -1;
 }
 
@@ -460,7 +511,6 @@ public class PlayerSave
 {
     public const uint CURRENT_DATA_VERSION = 1;
     public uint DATA_VERSION = CURRENT_DATA_VERSION;
-    [JsonSettable]
     public readonly ulong Steam64;
     [JsonSettable]
     public ulong Team;

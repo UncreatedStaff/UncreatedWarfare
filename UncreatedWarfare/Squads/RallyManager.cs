@@ -35,7 +35,7 @@ namespace Uncreated.Warfare.Squads
         public static void OnBarricadePlaceRequested(
             Barricade barricade,
             ItemBarricadeAsset asset,
-            Transform hit,
+            Transform? hit,
             ref Vector3 point,
             ref float angle_x,
             ref float angle_y,

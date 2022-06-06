@@ -10,6 +10,7 @@ using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
@@ -34,35 +35,6 @@ namespace Uncreated.Warfare;
 
 public static class EventFunctions
 {
-    public delegate void GroupChanged(SteamPlayer player, ulong oldGroup, ulong newGroup);
-    public static event GroupChanged OnGroupChanged;
-    internal static void OnGroupChangedInvoke(SteamPlayer player, ulong oldGroup, ulong newGroup) => OnGroupChanged?.Invoke(player, oldGroup, newGroup);
-    internal static void GroupChangedAction(SteamPlayer player, ulong oldGroup, ulong newGroup)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ulong oldteam = oldGroup.GetTeam();
-        ulong newteam = newGroup.GetTeam();
-        UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
-        if (ucplayer != null)
-        {
-            PlayerManager.ApplyTo(ucplayer);
-            Data.Gamemode?.OnGroupChanged(ucplayer, oldGroup, newGroup, oldteam, newteam);
-
-            if (newteam == 1 || newteam == 2)
-                FOBManager.SendFOBList(ucplayer);
-            Points.OnGroupChanged(ucplayer, oldGroup, newGroup);
-            IconManager.DrawNewMarkers(ucplayer, true);
-        }
-        SquadManager.OnGroupChanged(player, oldGroup, newGroup);
-        TicketManager.OnGroupChanged(player, oldGroup, newGroup);
-
-        RequestSigns.UpdateAllSigns(player);
-
-        PlayerManager.NetCalls.SendTeamChanged.NetInvoke(player.playerID.steamID.m_SteamID, F.GetTeamByte(newGroup));
-
-    }
     internal static Dictionary<Item, PlayerInventory> itemstemp = new Dictionary<Item, PlayerInventory>();
     internal static Dictionary<ulong, List<uint>> droppeditems = new Dictionary<ulong, List<uint>>();
     internal static Dictionary<uint, ulong> droppeditemsInverse = new Dictionary<uint, ulong>();
@@ -190,6 +162,19 @@ public static class EventFunctions
         if (gun.player.TryGetPlayerData(out UCPlayerData c))
         {
             c.LastRocketShot = gun.equippedGunAsset.GUID;
+            c.LastRocketShotVehicle = default;
+            InteractableVehicle? veh = gun.player.movement.getVehicle();
+            if (veh != null)
+            {
+                for (int i = 0; i < veh.turrets.Length; ++i)
+                {
+                    if (veh.turrets[i].turret != null && veh.turrets[i].turret.itemID == gun.equippedGunAsset.id)
+                    {
+                        c.LastRocketShotVehicle = veh.asset.GUID;
+                        break;
+                    }
+                }
+            }
         }
     }
     internal static void BulletSpawned(UseableGun gun, BulletInfo bullet)
@@ -267,8 +252,7 @@ public static class EventFunctions
                     }
                 }
             }
-            if (hit != null)
-                RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
+            RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
             if (!shouldAllow) return;
 
             if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
@@ -445,109 +429,93 @@ public static class EventFunctions
         }
     }
 
-    internal static void OnPostPlayerConnected(UnturnedPlayer player)
+    internal static void OnPostPlayerConnected(PlayerJoined e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         try
         {
-            PlayerManager.InvokePlayerConnected(player); // must always be first
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Error in the main OnPostPlayerConnected loading player into OnlinePlayers:");
-            L.LogError(ex);
-            Provider.kick(player.CSteamID, "There was a fatal error connecting you to the server.");
-        }
-        try
-        {
             // reset the player to spawn if they have joined in a different game as they last played in.
-            UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
+            UCPlayer ucplayer = e.Player;
 
             bool g = Data.Is(out ITeams t);
             bool shouldRespawn = false;
-            bool isNewPlayer = !PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save);
-            if (!isNewPlayer && (save.LastGame != Data.Gamemode.GameID || save.ShouldRespawnOnJoin))
+            bool isNewPlayer = e.IsNewPlayer;
+            if (!isNewPlayer && (e.SaveData!.LastGame != Data.Gamemode.GameID || e.SaveData.ShouldRespawnOnJoin))
             {
                 shouldRespawn = true;
 
-                save.ShouldRespawnOnJoin = false;
+                e.SaveData.ShouldRespawnOnJoin = false;
             }
 
-            save.LastGame = Data.Gamemode.GameID;
+            if (e.SaveData is not null)
+                e.SaveData.LastGame = Data.Gamemode.GameID;
 
-            if (player.Player.life.isDead)
-                player.Player.life.ServerRespawn(false);
+            if (ucplayer.Player.life.isDead)
+                ucplayer.Player.life.ServerRespawn(false);
             else if (shouldRespawn)
             {
-                player.Player.life.sendRevive();
-                player.Player.teleportToLocation(F.GetBaseSpawn(player.Player, out ulong team), team.GetBaseAngle());
+                ucplayer.Player.life.sendRevive();
+                ucplayer.Player.teleportToLocation(F.GetBaseSpawn(ucplayer.Player, out ulong team2), team2.GetBaseAngle());
             }
 
-            if (ucplayer != null)
-                PlayerManager.ApplyTo(ucplayer);
+            PlayerManager.ApplyTo(ucplayer);
 
-            FPlayerName names = F.GetPlayerOriginalNames(player);
+            ulong team = ucplayer.GetTeam();
+            FPlayerName names = F.GetPlayerOriginalNames(ucplayer);
             if (Data.Is<ITeams>())
             {
-                ulong team = player.GetTeam();
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", player,
+                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Translation.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", ucplayer,
                     UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO));
             }
             else
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", player,
+                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Translation.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", ucplayer,
                     UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO));
             }
-            if (Data.PlaytimeComponents.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
+            if (Data.PlaytimeComponents.ContainsKey(ucplayer.Steam64))
             {
-                UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[player.Player.channel.owner.playerID.steamID.m_SteamID]);
-                Data.PlaytimeComponents.Remove(player.Player.channel.owner.playerID.steamID.m_SteamID);
+                UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[ucplayer.Steam64]);
+                Data.PlaytimeComponents.Remove(ucplayer.Steam64);
             }
-            player.Player.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.INFANTRY);
+            ucplayer.Player.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.INFANTRY);
 
-            UCPlayerData pt = player.Player.transform.gameObject.AddComponent<UCPlayerData>();
-            pt.StartTracking(player.Player);
-            Data.PlaytimeComponents.Add(player.Player.channel.owner.playerID.steamID.m_SteamID, pt);
+            UCPlayerData pt = ucplayer.Player.transform.gameObject.AddComponent<UCPlayerData>();
+            pt.StartTracking(ucplayer.Player);
+            Data.PlaytimeComponents.Add(ucplayer.Steam64, pt);
             Task.Run(async () =>
             {
                 Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
-                Task<int> t2 = Data.DatabaseManager.GetXP(player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam());
-                Task<int> t3 = Data.DatabaseManager.GetCredits(player.Player.channel.owner.playerID.steamID.m_SteamID, player.GetTeam());
-                Task<List<Kit>> t4 = Data.DatabaseManager.GetAccessibleKits(player.Player.channel.owner.playerID.steamID.m_SteamID);
-                await Data.DatabaseManager.RegisterLogin(player.Player);
+                Task<int> t2 = Data.DatabaseManager.GetXP(ucplayer.Steam64, team);
+                Task<int> t3 = Data.DatabaseManager.GetCredits(ucplayer.Steam64, team);
+                Task<List<Kit>> t4 = Data.DatabaseManager.GetAccessibleKits(ucplayer.Steam64);
+                await Data.DatabaseManager.RegisterLogin(ucplayer.Player);
                 await t1;
-                if (ucplayer != null)
-                {
-                    ucplayer.CachedXP = await t2;
-                    ucplayer.CachedCredits = await t3;
-                    ucplayer.AccessibleKits = await t4;
-                    await OffenseManager.ApplyMuteSettings(ucplayer);
-                    await UCWarfare.ToUpdate();
-                    RequestSigns.UpdateAllSigns(ucplayer.Player.channel.owner);
-                    VehicleSpawner.UpdateSigns(ucplayer);
-                    Points.UpdateCreditsUI(ucplayer);
-                    Points.UpdateXPUI(ucplayer);
-                    player.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
-                }
+                ucplayer.CachedXP = await t2;
+                ucplayer.CachedCredits = await t3;
+                ucplayer.AccessibleKits = await t4;
+                await OffenseManager.ApplyMuteSettings(ucplayer);
+                await UCWarfare.ToUpdate();
+                RequestSigns.UpdateAllSigns(ucplayer.Player.channel.owner);
+                VehicleSpawner.UpdateSigns(ucplayer);
+                Points.UpdateCreditsUI(ucplayer);
+                Points.UpdateXPUI(ucplayer);
+                ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
             }).ConfigureAwait(false);
 
-            if (ucplayer != null)
+            try
             {
-                try
-                {
-                    Data.Gamemode.OnPlayerJoined(ucplayer);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerJoined:");
-                    L.LogError(ex);
-                }
-                ActionLog.Add(EActionLogType.CONNECT, null, ucplayer);
+                Data.Gamemode.OnPlayerJoined(ucplayer);
             }
+            catch (Exception ex)
+            {
+                L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerJoined:");
+                L.LogError(ex);
+            }
+            ActionLog.Add(EActionLogType.CONNECT, null, ucplayer);
             Chat.Broadcast("player_connected", names.CharacterName);
-            Data.Reporter?.OnPlayerJoin(player.Player.channel.owner);
+            Data.Reporter?.OnPlayerJoin(ucplayer.SteamPlayer);
             if (ucplayer != null)
             {
                 PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new PlayerListEntry
@@ -555,7 +523,7 @@ public static class EventFunctions
                     Duty = ucplayer.OnDuty(),
                     Name = names.CharacterName,
                     Steam64 = ucplayer.Steam64,
-                    Team = player.GetTeamByte()
+                    Team = ucplayer.Player.GetTeamByte()
                 });
                 //Quests.DailyQuests.RegisterDailyTrackers(ucplayer);
                 //KitManager.OnPlayerJoinedQuestHandling(ucplayer);
@@ -569,11 +537,6 @@ public static class EventFunctions
             L.LogError("Error in the main OnPostPlayerConnected:");
             L.LogError(ex);
         }
-    }
-
-    private static void VoiceMutedUseTick()
-    {
-        // send ui or something
     }
     private static readonly PlayerVoice.RelayVoiceCullingHandler NO_COMMS = (a, b) => false;
     internal static void OnRelayVoice2(PlayerVoice speaker, bool wantsToUseWalkieTalkie, ref bool shouldAllow,
@@ -590,10 +553,9 @@ public static class EventFunctions
         if (ucplayer is not null)
         {
             if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
-            {
-                VoiceMutedUseTick();
                 isMuted = true;
-            }
+
+            ucplayer.OnUseVoice(isMuted);
         }
         if (isMuted)
         {
@@ -634,10 +596,7 @@ public static class EventFunctions
             ucplayer.LastSpoken = Time.realtimeSinceStartup;
             team = ucplayer.GetTeam();
             if (ucplayer.MuteType != Commands.EMuteType.NONE && ucplayer.TimeUnmuted > DateTime.Now)
-            {
-                VoiceMutedUseTick();
                 isMuted = true;
-            }
             else if (ucplayer.Squad is not null && ucplayer.Squad.Members.Count > 1)
             {
                 shouldBroadcastOverRadio = true;
@@ -1007,6 +966,20 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (Data.Gamemode.State != EState.ACTIVE)
+        {
+            shouldAllow = false;
+            return;
+        }
+        Vector3 pos = parameters.player.transform.position;
+        if (Data.Gamemode is ITeams)
+        {
+            if (TeamManager.LobbyZone != null && TeamManager.LobbyZone.IsInside(pos))
+            {
+                shouldAllow = false;
+                return;
+            }
+        }
         if (Data.Gamemode is TeamGamemode gm && gm.EnableAMC && parameters.killer != CSteamID.Nil && parameters.killer != Provider.server && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
         {
             Player killer = PlayerTool.getPlayer(parameters.killer);
@@ -1014,8 +987,8 @@ public static class EventFunctions
             {
                 ulong killerteam = killer.GetTeam();
                 ulong deadteam = parameters.player.GetTeam();
-                if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(parameters.player.transform.position)) ||
-                    (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(parameters.player.transform.position)))
+                if ((deadteam == 1 && killerteam == 2 && TeamManager.Team1AMC.IsInside(pos)) ||
+                    (deadteam == 2 && killerteam == 1 && TeamManager.Team2AMC.IsInside(pos)))
                 {
                     // if the player has shot since they died
                     if (!killer.TryGetPlayerData(out UCPlayerData comp) || comp.LastGunShot != default)
@@ -1057,7 +1030,8 @@ public static class EventFunctions
                     isBleeding = amount < parameters.player.life.health && Provider.modeConfigData.Players.Can_Start_Bleeding && amount >= 20;
                     break;
             }
-            DeathTracker.OnWillStartBleeding(ref parameters);
+            if (isBleeding)
+                DeathTracker.OnWillStartBleeding(ref parameters);
         }
     }
     internal static void OnPlayerMarkedPosOnMap(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed)
@@ -1272,71 +1246,77 @@ public static class EventFunctions
         position = team.GetBaseSpawnFromTeam();
         yaw = team.GetBaseAngle();
     }
-    internal static void OnPlayerDisconnected(UnturnedPlayer player)
+    internal static void OnCalculateSpawnDuringJoin(SteamPlayerID playerID, ref Vector3 point, ref float yaw, ref EPlayerStance initialStance, ref bool needsNewSpawnpoint)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong s64 = player.Player.channel.owner.playerID.steamID.m_SteamID;
+        ulong team;
+        if (PlayerSave.TryReadSaveFile(playerID.steamID.m_SteamID, out PlayerSave save))
+        {
+            if (Data.Gamemode is not null && Data.Gamemode.GameID == save.LastGame && !save.ShouldRespawnOnJoin)
+                return;
+            team = save.Team;
+        }
+        else team = 0;
+        point = team.GetBaseSpawnFromTeam();
+        yaw = team.GetBaseAngle();
+        initialStance = EPlayerStance.STAND;
+        needsNewSpawnpoint = false;
+    }
+    internal static void OnPlayerDisconnected(PlayerEvent e)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ulong s64 = e.Steam64;
         droppeditems.Remove(s64);
         TeamManager.PlayerBaseStatus.Remove(s64);
         RemoveDamageMessageTicks(s64);
         Tips.OnPlayerDisconnected(s64);
-        UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
+        UCPlayer ucplayer = e.Player;
         string kit = string.Empty;
-        FPlayerName names = F.GetPlayerOriginalNames(player.Player.channel.owner);
+        FPlayerName names = F.GetPlayerOriginalNames(ucplayer.Player.channel.owner);
         try
         {
-            if (ucplayer != null)
+            Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
+            Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
+            if (Data.Is(out ITeams gm) && gm.UseJoinUI)
+                gm.JoinManager.OnPlayerDisconnected(ucplayer);
+            kit = ucplayer.KitName;
+            if (ucplayer.OnDuty())
             {
-                Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
-                Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
-                if (Data.Is(out ITeams gm) && gm.UseJoinUI)
-                    gm.JoinManager.OnPlayerDisconnected(ucplayer);
-                kit = ucplayer.KitName;
-                if (player.OnDuty())
-                {
-                    if (player.IsAdmin())
-                        Commands.DutyCommand.AdminOnToOff(ucplayer, names);
-                    else if (player.IsIntern())
-                        Commands.DutyCommand.InternOnToOff(ucplayer, names);
-                }
-                try
-                {
-                    Data.Gamemode.PlayerLeave(ucplayer);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerLeft:");
-                    L.LogError(ex);
-                }
+                if (ucplayer.IsAdmin())
+                    Commands.DutyCommand.AdminOnToOff(ucplayer, names);
+                else if (ucplayer.IsIntern())
+                    Commands.DutyCommand.InternOnToOff(ucplayer, names);
             }
-            UCPlayerData? c = player.CSteamID.GetPlayerData(out bool gotptcomp);
+            try
+            {
+                Data.Gamemode.PlayerLeave(ucplayer);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerLeft:");
+                L.LogError(ex);
+            }
+            UCPlayerData? c = ucplayer.Player.GetPlayerData(out bool gotptcomp);
             Data.OriginalNames.Remove(s64);
             ulong id = s64;
             Chat.Broadcast("player_disconnected", names.CharacterName);
             if (c != null)
             {
-                ActionLog.Add(EActionLogType.DISCONNECT, "PLAYED FOR " + ((uint)Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime)).GetTimeFromSeconds(0).ToUpper(), player.CSteamID.m_SteamID);
+                ActionLog.Add(EActionLogType.DISCONNECT, "PLAYED FOR " + ((uint)Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime)).GetTimeFromSeconds(0).ToUpper(), ucplayer.Steam64);
                 UnityEngine.Object.Destroy(c);
-                Data.PlaytimeComponents.Remove(player.CSteamID.m_SteamID);
+                Data.PlaytimeComponents.Remove(ucplayer.Steam64);
             }
             else
-                ActionLog.Add(EActionLogType.DISCONNECT, null, player.CSteamID.m_SteamID);
-            PlayerManager.NetCalls.SendPlayerLeft.NetInvoke(player.CSteamID.m_SteamID);
+                ActionLog.Add(EActionLogType.DISCONNECT, null, ucplayer.Steam64);
+            PlayerManager.NetCalls.SendPlayerLeft.NetInvoke(ucplayer.Steam64);
         }
         catch (Exception ex)
         {
             L.LogError("Error in the main OnPlayerDisconnected:");
-            L.LogError(ex);
-        }
-        try
-        {
-            PlayerManager.InvokePlayerDisconnected(player);
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Failed to remove a player from the list:");
             L.LogError(ex);
         }
         try
@@ -1362,15 +1342,6 @@ public static class EventFunctions
         try
         {
             ActionLog.Add(EActionLogType.TRY_CONNECT, $"Steam Name: {player.playerID.playerName}, Public Name: {player.playerID.characterName}, Private Name: {player.playerID.nickName}, Character ID: {player.playerID.characterID}.", ticket.m_SteamID.m_SteamID);
-            int remainingDuration = 0;
-            OffenseManager.EBanResponse response = OffenseManager.VerifyJoin(player, ref explanation, ref remainingDuration);
-            if (response > OffenseManager.EBanResponse.ALL_GOOD)
-            {
-                isValid = false;
-                L.Log("Rejecting " + player.playerID.playerName + " (" + player.playerID.steamID.m_SteamID.ToString(Data.Locale) + ") because " + response.ToString());
-                return;
-            }
-
             bool kick = false;
             string? cn = null;
             string? nn = null;
@@ -1482,7 +1453,7 @@ public static class EventFunctions
         if (e.Transform.TryGetComponent(out BuildableComponent buildable))
             buildable.Destroy();
         if (e.Transform.TryGetComponent(out RepairableComponent repairable))
-            repairable.Destroy();
+            repairable.Destroy(e);
 
         IconRenderer[] iconrenderers = e.Barricade.model.GetComponents<IconRenderer>();
         foreach (IconRenderer iconRenderer in iconrenderers)

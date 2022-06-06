@@ -7,9 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Kits;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Teams;
 
@@ -22,97 +20,39 @@ public static class TeamManager
 
     public static ushort Team1Tickets;
     public static ushort Team2Tickets;
-
-    public static void CheckGroups()
-    {
-        object val = typeof(GroupManager).GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic);
-        if (val is Dictionary<CSteamID, GroupInfo> val2)
-        {
-            foreach (KeyValuePair<CSteamID, GroupInfo> kv in val2)
-            {
-                if (kv.Key.m_SteamID == _data.Data.team1id)
-                {
-                    if (kv.Value.name != Team1Name)
-                    {
-                        L.Log("Renamed T1 group " + kv.Value.name + " to " + Team1Name, ConsoleColor.Magenta);
-                        kv.Value.name = Team1Name;
-                    }
-                }
-                else if (kv.Key.m_SteamID == _data.Data.team2id)
-                {
-                    if (kv.Value.name != Team2Name)
-                    {
-                        L.Log("Renamed T2 group " + kv.Value.name + " to " + Team2Name, ConsoleColor.Magenta);
-                        kv.Value.name = Team2Name;
-                    }
-                }
-                else if (kv.Key.m_SteamID == _data.Data.adminid)
-                {
-                    if (kv.Value.name != AdminName)
-                    {
-                        L.Log("Renamed Admin group " + kv.Value.name + " to " + AdminName, ConsoleColor.Magenta);
-                        kv.Value.name = AdminName;
-                    }
-                }
-                GroupManager.save();
-            }
-        }
-    }
-    public static ulong Team1ID { get => 1; }
-    public static ulong Team2ID { get => 2; }
-    public static ulong AdminID { get => 3; }
-    public static string Team1Name { get => _data.Data.team1name; }
-    public static string Team2Name { get => _data.Data.team2name; }
-    public static string AdminName { get => _data.Data.adminname; }
-    public static string Team1Code { get => _data.Data.team1code; }
-    public static string Team2Code { get => _data.Data.team2code; }
-    public static string AdminCode { get => _data.Data.admincode; }
-    public static Color Team1Color { get => _data.Data.Team1Color; }
-    public static Color Team2Color { get => _data.Data.Team2Color; }
-    public static Color AdminColor { get => _data.Data.AdminColor; }
-    public static Color NeutralColor { get => _data.Data.AdminColor; }
-    public static string Team1ColorHex { get => _data.Data.Team1ColorHex; }
-    public static string Team2ColorHex { get => _data.Data.Team2ColorHex; }
-    public static string AdminColorHex { get => _data.Data.AdminColorHex; }
-    public static string NeutralColorHex { get => _data.Data.AdminColorHex; }
-    public static string Team1UnarmedKit { get => _data.Data.team1unarmedkit; }
-    public static string Team2UnarmedKit { get => _data.Data.team2unarmedkit; }
-    public static float Team1SpawnAngle { get => _data.Data.team1spawnangle; }
-    public static float Team2SpawnAngle { get => _data.Data.team2spawnangle; }
-    public static float LobbySpawnAngle { get => _data.Data.lobbyspawnangle; }
-    public static float TeamSwitchCooldown { get => _data.Data.team_switch_cooldown; }
-    public static string DefaultKit { get => _data.Data.defaultkit; }
-    internal static void ResetLocations()
-    {
-        _t1main = null;
-        _t2main = null;
-        _t1amc = null;
-        _t2amc = null;
-        _lobbyZone = null;
-        _lobbySpawn = default;
-    }
     private static Zone? _t1main;
     private static Zone? _t1amc;
     private static Zone? _t2main;
     private static Zone? _t2amc;
     private static Zone? _lobbyZone;
     private static Vector3 _lobbySpawn = default;
-    internal static void OnReloadFlags()
-    {
-        _lobbySpawn = default;
-        _t1main = null;
-        _t1amc = null;
-        _t2main = null;
-        _t2amc = null;
-        _lobbyZone = null;
-
-        // cache them all
-        _ = LobbyZone;
-        _ = Team1Main;
-        _ = Team2Main;
-        _ = Team1AMC;
-        _ = Team2AMC;
-    }
+    internal static readonly Dictionary<ulong, byte> PlayerBaseStatus = new Dictionary<ulong, byte>();
+    public static event PlayerTeamDelegate OnPlayerEnteredMainBase;
+    public static event PlayerTeamDelegate OnPlayerLeftMainBase;
+    public static ulong Team1ID => 1;
+    public static ulong Team2ID => 2;
+    public static ulong AdminID => 3;
+    public static string Team1Name => _data.Data.Team1Name;
+    public static string Team2Name => _data.Data.Team2Name;
+    public static string AdminName => _data.Data.AdminTeamName;
+    public static string Team1Code => _data.Data.Team1Abbreviation;
+    public static string Team2Code => _data.Data.Team2Abbreviation;
+    public static string AdminCode => _data.Data.AdminTeamAbbreviation;
+    public static Color Team1Color => _data.Data.Team1Color;
+    public static Color Team2Color => _data.Data.Team2Color;
+    public static Color AdminColor => _data.Data.AdminColor;
+    public static Color NeutralColor => _data.Data.NeutralColor;
+    public static string Team1ColorHex => _data.Data.Team1ColorHex;
+    public static string Team2ColorHex => _data.Data.Team2ColorHex;
+    public static string AdminColorHex => _data.Data.AdminColorHex;
+    public static string NeutralColorHex => _data.Data.NeutralColorHex;
+    public static string Team1UnarmedKit => _data.Data.Team1UnarmedKit;
+    public static string Team2UnarmedKit => _data.Data.Team2UnarmedKit;
+    public static float Team1SpawnAngle => _data.Data.Team1SpawnYaw;
+    public static float Team2SpawnAngle => _data.Data.Team2SpawnYaw;
+    public static float LobbySpawnAngle => _data.Data.LobbySpawnpointYaw;
+    public static float TeamSwitchCooldown => _data.Data.TeamSwitchCooldown;
+    public static string DefaultKit => _data.Data.DefaultKit;
     public static Zone Team1Main
     {
         get
@@ -272,6 +212,63 @@ public static class TeamManager
             return _lobbySpawn;
         }
     }
+    internal static void ResetLocations()
+    {
+        _t1main = null;
+        _t2main = null;
+        _t1amc = null;
+        _t2amc = null;
+        _lobbyZone = null;
+        _lobbySpawn = default;
+    }
+    internal static void OnReloadFlags()
+    {
+        ResetLocations();
+
+        // cache them all
+        _ = LobbyZone;
+        _ = Team1Main;
+        _ = Team2Main;
+        _ = Team1AMC;
+        _ = Team2AMC;
+    }
+    public static void CheckGroups()
+    {
+        object? val = typeof(GroupManager).GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic)?.GetValue(null);
+        if (val is Dictionary<CSteamID, GroupInfo> val2)
+        {
+            foreach (KeyValuePair<CSteamID, GroupInfo> kv in val2.ToList())
+            {
+                if (kv.Key.m_SteamID == _data.Data.Team1ID)
+                {
+                    if (kv.Value.name != Team1Name)
+                    {
+                        L.Log("Renamed T1 group " + kv.Value.name + " to " + Team1Name, ConsoleColor.Magenta);
+                        kv.Value.name = Team1Name;
+                    }
+                }
+                else if (kv.Key.m_SteamID == _data.Data.Team2ID)
+                {
+                    if (kv.Value.name != Team2Name)
+                    {
+                        L.Log("Renamed T2 group " + kv.Value.name + " to " + Team2Name, ConsoleColor.Magenta);
+                        kv.Value.name = Team2Name;
+                    }
+                }
+                else if (kv.Key.m_SteamID == _data.Data.AdminID)
+                {
+                    if (kv.Value.name != AdminName)
+                    {
+                        L.Log("Renamed Admin group " + kv.Value.name + " to " + AdminName, ConsoleColor.Magenta);
+                        kv.Value.name = AdminName;
+                    }
+                }
+                else if (kv.Key.m_SteamID > _data.Data.AdminID || kv.Key.m_SteamID < _data.Data.Team1ID)
+                    val2.Remove(kv.Key);
+            }
+            GroupManager.save();
+        }
+    }
     public static ulong Other(ulong team)
     {
         if (team == 1) return 2;
@@ -284,7 +281,6 @@ public static class TeamManager
     public static bool IsTeam1(Player player) => player.quests.groupID.m_SteamID == Team1ID;
     public static bool IsTeam2(ulong ID) => ID == Team2ID;
     public static bool IsTeam2(CSteamID steamID) => steamID.m_SteamID == Team2ID;
-
     public static bool IsInMain(UnturnedPlayer player)
     {
         ulong team = player.GetTeam();
@@ -405,53 +401,25 @@ public static class TeamManager
     }
     public static string GetTeamHexColor(ulong team)
     {
-        switch (team)
+        return team switch
         {
-            case 1:
-                return Team1ColorHex;
-            case 2:
-                return Team2ColorHex;
-            case 3:
-                return AdminColorHex;
-            case ZOMBIE_TEAM_ID:
-                return UCWarfare.GetColorHex("death_zombie_name_color");
-            default:
-                return NeutralColorHex;
-        }
+            1 => Team1ColorHex,
+            2 => Team2ColorHex,
+            3 => AdminColorHex,
+            ZOMBIE_TEAM_ID => UCWarfare.GetColorHex("death_zombie_name_color"),
+            _ => NeutralColorHex,
+        };
     }
     public static Color GetTeamColor(ulong team)
     {
-        switch (team)
+        return team switch
         {
-            case 1:
-                return Team1Color;
-            case 2:
-                return Team2Color;
-            case 3:
-                return AdminColor;
-            case ZOMBIE_TEAM_ID:
-                return UCWarfare.GetColor("death_zombie_name_color");
-            default:
-                return NeutralColor;
-        }
-    }
-    public static List<SteamPlayer> Team1Players => Provider.clients.Where(sp => sp.player.quests.groupID.m_SteamID == Team1ID).ToList();
-    public static List<SteamPlayer> Team2Players => Provider.clients.Where(sp => sp.player.quests.groupID.m_SteamID == Team2ID).ToList();
-    public static void GetBothTeamPlayersFast(out List<SteamPlayer> t1, out List<SteamPlayer> t2)
-    {
-        t1 = new List<SteamPlayer>();
-        t2 = new List<SteamPlayer>();
-        foreach (SteamPlayer player in Provider.clients)
-        {
-            if (player.player.quests.groupID.m_SteamID == Team1ID) t1.Add(player);
-            else if (player.player.quests.groupID.m_SteamID == Team2ID) t2.Add(player);
-        }
-    }
-    public static List<SteamPlayer> GetTeamPlayers(ulong team)
-    {
-        if (team == 1) return Team1Players;
-        else if (team == 2) return Team2Players;
-        else return Provider.clients.Where(sp => sp.player.quests.groupID.m_SteamID == team).ToList();
+            1 => Team1Color,
+            2 => Team2Color,
+            3 => AdminColor,
+            ZOMBIE_TEAM_ID => UCWarfare.GetColor("death_zombie_name_color"),
+            _ => NeutralColor,
+        };
     }
     public static ulong GetGroupID(ulong team)
     {
@@ -485,9 +453,8 @@ public static class TeamManager
     {
         if (UCWarfare.Config.TeamSettings.BalanceTeams)
         {
-            GetBothTeamPlayersFast(out List<SteamPlayer> t1, out List<SteamPlayer> t2);
-            int Team1Count = t1.Count;
-            int Team2Count = t2.Count;
+            int Team1Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 1);
+            int Team2Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 2);
             if (Team1Count == Team2Count) return true;
             if (team == 1)
             {
@@ -502,10 +469,6 @@ public static class TeamManager
         }
         return true;
     }
-    internal static readonly Dictionary<ulong, byte> PlayerBaseStatus = new Dictionary<ulong, byte>();
-
-    public static event PlayerTeamDelegate OnPlayerEnteredMainBase;
-    public static event PlayerTeamDelegate OnPlayerLeftMainBase;
 
     public static void EvaluateBases()
     {
@@ -560,22 +523,38 @@ public static class TeamManager
 
 public class TeamConfig : ConfigData
 {
-    public ulong team1id;
-    public ulong team2id;
-    public ulong adminid;
-    public string team1name;
-    public string team2name;
-    public string adminname;
-    public string team1code;
-    public string team2code;
-    public string admincode;
-    public string team1unarmedkit;
-    public string team2unarmedkit;
-    public string defaultkit;
-    public float team1spawnangle;
-    public float team2spawnangle;
-    public float lobbyspawnangle;
-    public float team_switch_cooldown;
+    [JsonPropertyName("team1id")]
+    public ulong Team1ID;
+    [JsonPropertyName("team2id")]
+    public ulong Team2ID;
+    [JsonPropertyName("adminid")]
+    public ulong AdminID;
+    [JsonPropertyName("team1name")]
+    public string Team1Name;
+    [JsonPropertyName("team2name")]
+    public string Team2Name;
+    [JsonPropertyName("adminname")]
+    public string AdminTeamName;
+    [JsonPropertyName("team1code")]
+    public string Team1Abbreviation;
+    [JsonPropertyName("team2code")]
+    public string Team2Abbreviation;
+    [JsonPropertyName("admincode")]
+    public string AdminTeamAbbreviation;
+    [JsonPropertyName("team1unarmedkit")]
+    public string Team1UnarmedKit;
+    [JsonPropertyName("team2unarmedkit")]
+    public string Team2UnarmedKit;
+    [JsonPropertyName("defaultkit")]
+    public string DefaultKit;
+    [JsonPropertyName("team1spawnangle")]
+    public float Team1SpawnYaw;
+    [JsonPropertyName("team2spawnangle")]
+    public float Team2SpawnYaw;
+    [JsonPropertyName("lobbyspawnangle")]
+    public float LobbySpawnpointYaw;
+    [JsonPropertyName("team_switch_cooldown")]
+    public float TeamSwitchCooldown;
     [JsonIgnore]
     public Color Team1Color
     {
@@ -664,52 +643,52 @@ public class TeamConfig : ConfigData
         ulong adminid,
         string team1name,
         string team2name,
-        string adminname,
-        string team1code,
-        string team2code,
-        string admincode,
+        string adminteamname,
+        string team1Abbreviation,
+        string team2Abbreviation,
+        string adminTeamAbbreviation,
         string team1unarmedkit,
         string team2unarmedkit,
         string defaultkit,
-        float team1spawnangle,
-        float team2spawnangle,
-        float lobbyspawnangle,
-        float team_switch_cooldown)
+        float team1spawnyaw,
+        float team2spawnyaw,
+        float lobbySpawnpointYaw,
+        float teamSwitchCooldown)
     {
-        this.team1id = team1id;
-        this.team2id = team2id;
-        this.adminid = adminid;
-        this.team1name = team1name ?? "USA";
-        this.team2name = team2name ?? "MEC";
-        this.adminname = adminname ?? "Admins";
-        this.team1code = team1code ?? "us";
-        this.team2code = team2code ?? "me";
-        this.admincode = admincode ?? "ad";
-        this.team1unarmedkit = team1unarmedkit ?? "usunarmed";
-        this.team2unarmedkit = team2unarmedkit ?? "meunarmed";
-        this.defaultkit = defaultkit ?? "default";
-        this.team1spawnangle = team1spawnangle;
-        this.team2spawnangle = team2spawnangle;
-        this.lobbyspawnangle = lobbyspawnangle;
-        this.team_switch_cooldown = team_switch_cooldown;
+        this.Team1ID = team1id;
+        this.Team2ID = team2id;
+        this.AdminID = adminid;
+        this.Team1Name = team1name ?? "United States";
+        this.Team2Name = team2name ?? "Middle Eastern Coalition";
+        this.AdminTeamName = adminteamname ?? "Admins";
+        this.Team1Abbreviation = team1Abbreviation ?? "USA";
+        this.Team2Abbreviation = team2Abbreviation ?? "MEC";
+        this.AdminTeamAbbreviation = adminTeamAbbreviation ?? "ADMIN";
+        this.Team1UnarmedKit = team1unarmedkit ?? "usunarmed";
+        this.Team2UnarmedKit = team2unarmedkit ?? "meunarmed";
+        this.DefaultKit = defaultkit ?? "default";
+        this.Team1SpawnYaw = team1spawnyaw;
+        this.Team2SpawnYaw = team2spawnyaw;
+        this.LobbySpawnpointYaw = lobbySpawnpointYaw;
+        this.TeamSwitchCooldown = teamSwitchCooldown;
     }
     public override void SetDefaults()
     {
-        team1id = 1;
-        team2id = 2;
-        adminid = 3;
-        team1name = "USA";
-        team2name = "MEC";
-        adminname = "Admins";
-        team1code = "us";
-        team2code = "me";
-        admincode = "ad";
-        team1unarmedkit = "usunarmed";
-        team2unarmedkit = "meunarmed";
-        defaultkit = "default";
-        team1spawnangle = 0;
-        team2spawnangle = 0;
-        lobbyspawnangle = 90;
-        team_switch_cooldown = 1200;
+        Team1ID = 1;
+        Team2ID = 2;
+        AdminID = 3;
+        Team1Name = "United States";
+        Team2Name = "Middle Eastern Coalition";
+        AdminTeamName = "Admins";
+        Team1Abbreviation = "USA";
+        Team2Abbreviation = "MEC";
+        AdminTeamAbbreviation = "ADMIN";
+        Team1UnarmedKit = "usunarmed";
+        Team2UnarmedKit = "meunarmed";
+        DefaultKit = "default";
+        Team1SpawnYaw = 0;
+        Team2SpawnYaw = 0;
+        LobbySpawnpointYaw = 90;
+        TeamSwitchCooldown = 1200;
     }
 }

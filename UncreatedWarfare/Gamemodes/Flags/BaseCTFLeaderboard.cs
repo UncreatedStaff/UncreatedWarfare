@@ -20,7 +20,7 @@ public class BaseCTFLeaderboard<Stats, StatTracker> : ConventionalLeaderboard<St
 
 public class BaseCTFStats : TeamPlayerStats, IExperienceStats, IFlagStats, IFOBStats, IRevivesStats
 {
-    public BaseCTFStats(Player player) : base(player) { }
+    public BaseCTFStats(UCPlayer player) : base(player) { }
     public BaseCTFStats(ulong player) : base(player) { }
 
     protected int _xp;
@@ -58,7 +58,7 @@ public class BaseCTFStats : TeamPlayerStats, IExperienceStats, IFlagStats, IFOBS
     }
 }
 
-public abstract class BaseCTFTracker<T> : TeamStatTracker<T> where T : BaseCTFStats
+public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracker where T : BaseCTFStats
 {
     public int fobsPlacedT1;
     public int fobsPlacedT2;
@@ -66,6 +66,7 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T> where T : BaseCTFSt
     public int fobsDestroyedT2;
     public int flagOwnerChanges;
     public LongestShot LongestShot = LongestShot.Nil;
+    LongestShot ILongestShotTracker.LongestShot { get => LongestShot; set => LongestShot = value; }
 
     public override void Reset()
     {
@@ -87,12 +88,10 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T> where T : BaseCTFSt
         stats.RemoveAll(p =>
         {
             if (p == null) return true;
-            if (p.Player == null)
+            if (p.Player is null || !p.Player.IsOnline)
             {
-                SteamPlayer player = PlayerTool.getSteamPlayer(p.Steam64);
-                if (player == default || player.player == default) return true;
-                else p.Player = player.player;
-                return false;
+                p.Player = UCPlayer.FromID(p._id)!;
+                return p.Player is null || !p.Player.IsOnline;
             }
             else return false;
         });

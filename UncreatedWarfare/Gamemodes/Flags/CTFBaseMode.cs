@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Players;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -77,7 +78,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     public StructureSaver StructureSaver => _structureSaver;
     Leaderboard<Stats, StatTracker> IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
     public bool isScreenUp => _isScreenUp;
-    public StatTracker GameStats => _gameStats;
+    public StatTracker WarstatsTracker => _gameStats;
     object IGameStats.GameStats => _gameStats;
     public CTFBaseMode(string name, float timing) : base(name, timing)
     {
@@ -195,7 +196,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             Team2Tickets = Team2Tickets.Colorize("969696");
 
         ushort winToastUI = 0;
-        if (Assets.find(Gamemode.Config.UI.WinToastGUID) is EffectAsset e)
+        if (Assets.find(Config.UI.WinToastGUID) is EffectAsset e)
         {
             winToastUI = e.id;
         }
@@ -219,17 +220,17 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         }
         StatsManager.ModifyTeam(winner, t => t.Wins++, false);
         StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
-        foreach (Stats played in GameStats.stats.Values)
+        foreach (Stats played in _gameStats.stats.Values)
         {
             // Any player who was online for 70% of the match will be awarded a win or punished with a loss
-            if ((float)played.onlineCount1 / GameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
+            if ((float)played.onlineCount1 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
             {
                 if (winner == 1)
                     StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
                 else
                     StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
             }
-            else if ((float)played.onlineCount2 / GameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
+            else if ((float)played.onlineCount2 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
             {
                 if (winner == 2)
                     StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
@@ -256,7 +257,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
         _endScreen.SetShutdownConfig(shutdownAfterGame, shutdownMessage);
         _isScreenUp = true;
-        _endScreen.StartLeaderboard(winner, GameStats);
+        _endScreen.StartLeaderboard(winner, _gameStats);
     }
     private void OnShouldStartNewGame()
     {
@@ -273,7 +274,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     }
     protected override void PostGameStarting(bool isOnLoad)
     {
-        GameStats.Reset();
+        _gameStats.Reset();
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
         base.PostGameStarting(isOnLoad);
@@ -346,8 +347,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
 #endif
         if (Team != 0)
         {
-            if (GameStats != null)
-                GameStats.flagOwnerChanges++;
+            if (_gameStats != null)
+                _gameStats.flagOwnerChanges++;
             L.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
             if (Config.TeamCTF.DiscoveryForesight > 0)
             {
@@ -637,19 +638,19 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
                 (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(player.channel.owner);
         }
     }
-    public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
+    public override void OnGroupChanged(GroupChanged e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (State == EState.STAGING)
         {
-            if (newteam != 1 && newteam != 2)
-                ClearStagingUI(player);
+            if (e.NewTeam is < 1 or > 2)
+                ClearStagingUI(e.Player);
             else
-                ShowStagingUI(player);
+                ShowStagingUI(e.Player);
         }
-        base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
+        base.OnGroupChanged(e);
     }
     public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
@@ -687,7 +688,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
         }
-        GameStats.OnPlayerJoin(player.Player);
+        _gameStats.OnPlayerJoin(player);
         if (isScreenUp && _endScreen != null)
         {
             _endScreen.OnPlayerJoined(player);

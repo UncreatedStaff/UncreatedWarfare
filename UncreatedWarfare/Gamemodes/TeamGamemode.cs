@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Players;
 using Uncreated.Warfare.Deaths;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -230,10 +231,10 @@ public abstract class TeamGamemode : Gamemode, ITeams
             _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t2),
                 TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
     }
-    public override void OnPlayerDeath(UCWarfare.DeathEventArgs args)
+    public override void OnPlayerDeath(PlayerDied e)
     {
-        base.OnPlayerDeath(args);
-        InAMC.Remove(args.dead.channel.owner.playerID.steamID.m_SteamID);
-        EventFunctions.RemoveDamageMessageTicks(args.dead.channel.owner.playerID.steamID.m_SteamID);
+        base.OnPlayerDeath(e);
+        InAMC.Remove(e.Player.Steam64);
+        EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
 }

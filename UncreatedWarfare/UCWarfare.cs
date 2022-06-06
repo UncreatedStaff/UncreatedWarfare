@@ -86,6 +86,7 @@ public partial class UCWarfare : RocketPlugin<Config>
 
         EventDispatcher.SubscribeToAll();
 
+        OffenseManager.Init();
 
         /* DEBUG MYSQL LOADING */
         if (LoadMySQLDataFromElsewhere)
@@ -105,8 +106,19 @@ public partial class UCWarfare : RocketPlugin<Config>
             }
         }
 
-        /* DATA CONSTRUCTION */
-        Data.LoadVariables();
+        try
+        {
+            /* DATA CONSTRUCTION */
+            Data.LoadVariables();
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Startup error");
+            L.LogError(ex);
+            UnloadPlugin(Rocket.API.PluginState.Failure);
+            Provider.shutdown(2);
+            return;
+        }
 
         /* START STATS COROUTINE */
         StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
@@ -168,7 +180,6 @@ public partial class UCWarfare : RocketPlugin<Config>
             player.Load();
             player.Play();
         }
-
     }
     private void SubscribeToEvents()
     {
@@ -176,8 +187,9 @@ public partial class UCWarfare : RocketPlugin<Config>
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Data.Gamemode?.Subscribe();
-        U.Events.OnPlayerConnected += EventFunctions.OnPostPlayerConnected;
-        U.Events.OnPlayerDisconnected += EventFunctions.OnPlayerDisconnected;
+        StatsManager.LoadEvents();
+        EventDispatcher.OnPlayerJoined += EventFunctions.OnPostPlayerConnected;
+        EventDispatcher.OnPlayerLeaving += EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
         Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
@@ -186,6 +198,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint += EventFunctions.OnCalculateSpawnDuringRevive;
+        Provider.onLoginSpawning += EventFunctions.OnCalculateSpawnDuringJoin;
         BarricadeManager.onBarricadeSpawned += EventFunctions.OnBarricadePlaced;
         StructureManager.onStructureSpawned += EventFunctions.OnStructurePlaced;
         Patches.OnPlayerTogglesCosmetics_Global += EventFunctions.StopCosmeticsToggleEvent;
@@ -195,7 +208,6 @@ public partial class UCWarfare : RocketPlugin<Config>
         Patches.OnPlayerGesture_Global += EventFunctions.OnPlayerGestureRequested;
         Patches.OnPlayerMarker_Global += EventFunctions.OnPlayerMarkedPosOnMap;
         DamageTool.damagePlayerRequested += EventFunctions.OnPlayerDamageRequested;
-        EventFunctions.OnGroupChanged += EventFunctions.GroupChangedAction;
         BarricadeManager.onTransformRequested += EventFunctions.BarricadeMovedInWorkzone;
         BarricadeManager.onDamageBarricadeRequested += EventFunctions.OnBarricadeDamaged;
         StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
@@ -223,11 +235,8 @@ public partial class UCWarfare : RocketPlugin<Config>
         Data.Gamemode?.Unsubscribe();
         EventDispatcher.UnsubscribeFromAll();
         Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
-        if (U.Events is not null)
-        {
-            U.Events.OnPlayerConnected -= EventFunctions.OnPostPlayerConnected;
-            U.Events.OnPlayerDisconnected -= EventFunctions.OnPlayerDisconnected;
-        }
+        EventDispatcher.OnPlayerJoined -= EventFunctions.OnPostPlayerConnected;
+        EventDispatcher.OnPlayerLeaving -= EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation -= EventFunctions.OnPrePlayerConnect;
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
         Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
@@ -235,6 +244,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
         PlayerLife.OnSelectingRespawnPoint -= EventFunctions.OnCalculateSpawnDuringRevive;
+        Provider.onLoginSpawning -= EventFunctions.OnCalculateSpawnDuringJoin;
         BarricadeManager.onBarricadeSpawned -= EventFunctions.OnBarricadePlaced;
         StructureManager.onStructureSpawned -= EventFunctions.OnStructurePlaced;
         Patches.OnPlayerTogglesCosmetics_Global -= EventFunctions.StopCosmeticsToggleEvent;
@@ -244,7 +254,6 @@ public partial class UCWarfare : RocketPlugin<Config>
         Patches.OnPlayerGesture_Global -= EventFunctions.OnPlayerGestureRequested;
         Patches.OnPlayerMarker_Global -= EventFunctions.OnPlayerMarkedPosOnMap;
         DamageTool.damagePlayerRequested -= EventFunctions.OnPlayerDamageRequested;
-        EventFunctions.OnGroupChanged -= EventFunctions.GroupChangedAction;
         BarricadeManager.onTransformRequested -= EventFunctions.BarricadeMovedInWorkzone;
         BarricadeManager.onDamageBarricadeRequested -= EventFunctions.OnBarricadeDamaged;
         StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
@@ -262,6 +271,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
         PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
+        StatsManager.UnloadEvents();
         if (R.Commands is not null)
             R.Commands.OnExecuteCommand -= EventFunctions.OnCommandExecuted;
         if (!InitialLoadEventSubscription)
@@ -274,7 +284,7 @@ public partial class UCWarfare : RocketPlugin<Config>
     internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests = new Queue<MainThreadTask.MainThreadResult>();
     public static MainThreadTask ToUpdate() => new MainThreadTask();
     public static PoolTask ToPool() => new PoolTask();
-    public static bool IsMainThread => System.Threading.Thread.CurrentThread.IsGameThread();
+    public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
     public static void RunOnMainThread(System.Action action)
     {
         MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask());
@@ -368,6 +378,8 @@ public partial class UCWarfare : RocketPlugin<Config>
                 res?.Complete();
             }
         }
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            PlayerManager.OnlinePlayers[i].Update();
     }
     internal static void ForceUnload()
     {
@@ -391,7 +403,7 @@ public partial class UCWarfare : RocketPlugin<Config>
 
             Data.Singletons.UnloadSingleton(ref Data.DeathTracker, false);
             Data.Singletons.UnloadSingleton(ref Data.Gamemode);
-
+            OffenseManager.Deinit();
             if (Announcer != null)
                 Destroy(Announcer);
             //if (Queue != null)

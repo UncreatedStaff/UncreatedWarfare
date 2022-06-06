@@ -187,22 +187,22 @@ public static class F
     public static bool IsHelper(this IRocketPlayer player) => player.PermissionCheck(EAdminType.HELPER);
     /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
     /// <param name="duration">Duration of ban IN SECONDS</param>
-    public static void OfflineBan(ulong offender, uint ipAddress, CSteamID banner, string reason, uint duration)
+    public static void OfflineBan(ulong offender, uint ipAddress, CSteamID banner, string reason, uint duration, byte[][] hwids)
     {
         CSteamID banned = new CSteamID(offender);
         Provider.ban(banned, reason, duration);
+        SteamBlacklistID id = new SteamBlacklistID(banned, ipAddress, banner, reason, duration, Provider.time, hwids);
         for (int index = 0; index < SteamBlacklist.list.Count; ++index)
         {
             if (SteamBlacklist.list[index].playerID.m_SteamID == offender)
             {
-                SteamBlacklist.list[index].judgeID = banner;
-                SteamBlacklist.list[index].reason = reason;
-                SteamBlacklist.list[index].duration = duration;
-                SteamBlacklist.list[index].banned = Provider.time;
-                return;
+                SteamBlacklist.list[index] = id;
+                goto save;
             }
         }
-        SteamBlacklist.list.Add(new SteamBlacklistID(banned, ipAddress, banner, reason, duration, Provider.time));
+        SteamBlacklist.list.Add(id);
+    save:
+        SteamBlacklist.save();
     }
     public static string An(this string word)
     {

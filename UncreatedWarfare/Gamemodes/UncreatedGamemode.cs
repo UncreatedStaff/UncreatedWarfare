@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -89,14 +91,6 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         this._eventLoopSpeed = NewSpeed;
         this.useEventLoop = NewSpeed > 0;
     }
-    public void CancelCoroutine()
-    {
-        isPendingCancel = true;
-        if (EventLoopCoroutine == null)
-            return;
-        StopCoroutine(EventLoopCoroutine);
-        L.Log("Event loop stopped", ConsoleColor.DarkGray);
-    }
     public override void Load()
     {
 #if DEBUG
@@ -113,6 +107,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         PreInit();
         _isPreLoading = false;
         Data.Singletons.LoadSingletonsInOrder(_singletons);
+        InternalSubscribe();
         Subscribe();
         InternalPostInit();
         PostInit();
@@ -138,6 +133,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         using IDisposable profiler = ProfilingUtils.StartTracking(Name + " Unload Sequence");
 #endif
         Unsubscribe();
+        InternalUnsubscribe();
         PreDispose();
         InternalPreDispose();
         Data.Singletons.UnloadSingletonsInOrder(_singletons);
@@ -236,6 +232,15 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             PostOnReady();
             _hasOnReadyRan = true;
         }
+    }
+
+    private void InternalSubscribe()
+    {
+        EventDispatcher.OnGroupChanged += OnGroupChangedIntl;
+    }
+    private void InternalUnsubscribe()
+    {
+        EventDispatcher.OnGroupChanged -= OnGroupChangedIntl;
     }
     protected void InvokeOnTeamWin(ulong winner)
     {
@@ -417,13 +422,22 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             listener.OnPlayerConnecting(player);
         InternalPlayerInit(player, false);
     }
-    public virtual void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam) { }
+    public virtual void OnGroupChanged(GroupChanged e) { }
+    private void OnGroupChangedIntl(GroupChanged e)
+    {
+        OnGroupChanged(e);
+    }
     public virtual void PlayerLeave(UCPlayer player)
     {
+        if (State is not EState.ACTIVE or EState.STAGING && PlayerSave.TryReadSaveFile(player, out PlayerSave save))
+        {
+            save.ShouldRespawnOnJoin = true;
+            PlayerSave.WriteToSaveFile(save);
+        }
         foreach (IPlayerDisconnectListener listener in _singletons.OfType<IPlayerDisconnectListener>())
             listener.OnPlayerDisconnecting(player);
     }
-    public virtual void OnPlayerDeath(UCWarfare.DeathEventArgs args) { }
+    public virtual void OnPlayerDeath(PlayerDied e) { }
     public static Type? FindGamemode(string name)
     {
 #if DEBUG
@@ -675,10 +689,12 @@ public enum EState : byte
     DISCARD
 }
 
-[Translatable]
+[Translatable("Gamemode Type")]
 public enum EGamemode : byte
 {
+    [Translatable("Vanilla")]
     UNDEFINED,
+    [Translatable("Advance and Secure")]
     TEAM_CTF,
     INVASION,
     INSURGENCY

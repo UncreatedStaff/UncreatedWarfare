@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Kits;
@@ -122,6 +123,7 @@ public class JoinManager : BaseSingletonComponent
 #endif
         if (!isNewPlayer)
         {
+            LobbyPlayers.RemoveAll(x => x.Steam64 == player.Steam64);
             LobbyPlayer lobbyPlayer = LobbyPlayer.CreateNew(player, player.GetTeam());
             lobbyPlayer.IsInLobby = false;
             LobbyPlayers.Add(lobbyPlayer);
@@ -148,8 +150,7 @@ public class JoinManager : BaseSingletonComponent
                 {
                     if (PlayerManager.HasSave(player.CSteamID.m_SteamID, out PlayerSave save))
                         save.ShouldRespawnOnJoin = true;
-                    else
-                        save.ShouldRespawnOnJoin = false;
+                    else PlayerManager.AddSave(new PlayerSave(player.Steam64) { ShouldRespawnOnJoin = true });
                 }
                 if (LobbyPlayers[i].current != null)
                 {
@@ -190,7 +191,7 @@ public class JoinManager : BaseSingletonComponent
 
         lobbyPlayer.IsInLobby = true;
 
-        EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, 0);
+        EventDispatcher.InvokeOnGroupChanged(player, oldgroup, 0);
         
         ShowUI(lobbyPlayer);
 
@@ -410,7 +411,7 @@ public class JoinManager : BaseSingletonComponent
         player.Player.quests.ServerAssignToGroup(group.groupID, EPlayerGroupRank.MEMBER, true);
         GroupManager.save();
 
-        EventFunctions.OnGroupChangedInvoke(player.Player.channel.owner, oldgroup, newTeam);
+        EventDispatcher.InvokeOnGroupChanged(player, oldgroup, newTeam);
 
         FPlayerName names = F.GetPlayerOriginalNames(player.Player);
         L.Log(Translation.Translate("join_player_joined_console", 0, out _,

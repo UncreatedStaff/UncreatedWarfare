@@ -403,7 +403,7 @@ namespace Uncreated.Warfare.Components
 
                                 QuestManager.OnSuppliesConsumed(this, playerID, player.SuppliesUnloaded);
 
-                                InteractableVehicle vehicle = player.Player.movement.getVehicle();
+                                InteractableVehicle? vehicle = player.Player.movement.getVehicle();
                                 if (vehicle is not null && vehicle.transform.TryGetComponent(out VehicleComponent component))
                                 {
                                     component.Quota += 0.33F;

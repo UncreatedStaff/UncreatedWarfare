@@ -1,4 +1,5 @@
 ﻿using System;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Tickets;
 
@@ -36,10 +37,5 @@ public abstract class TicketGamemode : FlagGamemode, ITickets
         {
             TicketManager.OnFlag20Seconds();
         }
-    }
-    public override void OnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup, ulong oldteam, ulong newteam)
-    {
-        TicketManager.OnGroupChanged(player.Player.channel.owner, oldteam, newteam);
-        base.OnGroupChanged(player, oldGroup, newGroup, oldteam, newteam);
     }
 }

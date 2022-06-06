@@ -205,6 +205,7 @@ public enum EActionLogType : byte
     LOAD_SUPPLIES,
     LOAD_OLD_BANS,
     MUTE_PLAYER,
+    UNMUTE_PLAYER,
     RELOAD_COMPONENT,
     REQUEST_KIT,
     REQUEST_VEHICLE,

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
@@ -13,21 +14,23 @@ using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Quests;
 
-[Translatable]
+[Translatable("Weapon Class")]
 public enum EWeaponClass : byte
 {
     UNKNOWN,
     ASSAULT_RIFLE,
     BATTLE_RIFLE,
-    MARKSMAN_RIFLE, // DMR
+    MARKSMAN_RIFLE,
     SNIPER_RIFLE,
     MACHINE_GUN,
     PISTOL,
     SHOTGUN,
+    [Translatable("Rocket Launcher")]
     ROCKET,
+    [Translatable("SMG")]
     SMG
 }
-[Translatable]
+[Translatable("Quest Type")]
 public enum EQuestType : byte
 {
     INVALID,
@@ -50,16 +53,21 @@ public enum EQuestType : byte
     /// <summary><see cref="KillEnemiesQuestFullSquad"/></summary>
     KILL_ENEMIES_IN_FULL_SQUAD,
     /// <summary><see cref="KillEnemiesQuestDefense"/></summary>
+    [Translatable("Kill Enemies While Defending Point")]
     KILL_ENEMIES_ON_POINT_DEFENSE,
     /// <summary><see cref="KillEnemiesQuestAttack"/></summary>
+    [Translatable("Kill Enemies While Attacking Point")]
     KILL_ENEMIES_ON_POINT_ATTACK,
     /// <summary><see cref="HelpBuildQuest"/></summary>
     SHOVEL_BUILDABLES,
     /// <summary><see cref="BuildFOBsQuest"/></summary>
+    [Translatable("Build FOBs")]
     BUILD_FOBS,
     /// <summary><see cref="BuildFOBsNearObjQuest"/></summary>
+    [Translatable("Build FOBs Near Objectives")]
     BUILD_FOBS_NEAR_OBJECTIVES,
     /// <summary><see cref="BuildFOBsOnObjQuest"/></summary>
+    [Translatable("Build FOBs Near Current Objective")]
     BUILD_FOB_ON_ACTIVE_OBJECTIVE,
     /// <summary><see cref="DeliverSuppliesQuest"/></summary>
     DELIVER_SUPPLIES,
@@ -74,28 +82,38 @@ public enum EQuestType : byte
     /// <summary><see cref="RevivePlayersQuest"/></summary>
     REVIVE_PLAYERS,
     /// <summary><see cref="KingSlayerQuest"/></summary>
+    [Translatable("King-slayer")]
     KING_SLAYER,
     /// <summary><see cref="KillStreakQuest"/></summary>
+    [Translatable("Killstreak")]
     KILL_STREAK,
     /// <summary><see cref="XPInGamemodeQuest"/></summary>
+    [Translatable("Earn XP From Gamemode")]
     XP_IN_GAMEMODE,
     /// <summary><see cref="KillEnemiesRangeQuest"/></summary>
+    [Translatable("Kill From Distance")]
     KILL_FROM_RANGE,
     /// <summary><see cref="KillEnemiesRangeQuestWeapon"/></summary>
+    [Translatable("Kill From Distance With Weapon")]
     KILL_FROM_RANGE_WITH_WEAPON,
     /// <summary><see cref="KillEnemiesQuestKitClassRange"/></summary>
+    [Translatable("Kill From Distance With Class")]
     KILL_FROM_RANGE_WITH_CLASS,
     /// <summary><see cref="KillEnemiesQuestKitRange"/></summary>
+    [Translatable("Kill From Distance With Kit")]
     KILL_FROM_RANGE_WITH_KIT,
     /// <summary><see cref="RallyUseQuest"/></summary>
+    [Translatable("Teammates Use Rallypoint")]
     TEAMMATES_DEPLOY_ON_RALLY,
     /// <summary><see cref="FOBUseQuest"/></summary>
+    [Translatable("Teammates Use FOB")]
     TEAMMATES_DEPLOY_ON_FOB,
     /// <summary><see cref="NeutralizeFlagsQuest"/></summary>
     NEUTRALIZE_FLAGS,
     /// <summary><see cref="WinGamemodeQuest"/></summary>
     WIN_GAMEMODE,
     /// <summary><see cref="DiscordKeySetQuest"/></summary>
+    [Translatable("Custom Key")]
     DISCORD_KEY_SET_BOOL,
     /// <summary><see cref="PlaceholderQuest"/></summary>
     PLACEHOLDER
@@ -1612,15 +1630,14 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             }
             else if (value.type == EDynamicValueType.ANY && _isKitSelector)
             {
-                KitManager singleton = Data.Singletons.GetSingleton<KitManager>();
-                if (singleton is null)
+                Kit? rand = KitManager.GetRandomPublicKit();
+                if (rand is null)
+                {
                     _value = value.constant;
+                }
                 else
                 {
-                    IEnumerable<Kit> kits = singleton.Kits.Values.Where(x => !x.IsPremium && !x.IsLoadout);
-                    int ct = kits.Count();
-                    int el = UnityEngine.Random.Range(0, ct);
-                    _value = kits.ElementAt(el).Name;
+                    _value = rand.Name;
                 }
             }
             else
@@ -1833,6 +1850,13 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = default;
         this.type = EDynamicValueType.CONSTANT;
         this.assetType = GetAssetType();
+        if (this.assetType == EAssetType.NONE)
+        {
+            Asset? a = Assets.find(constant);
+            if (a != null)
+                this.assetType = a.assetCategory;
+        }
+
     }
     public DynamicAssetValue(GuidSet set, EChoiceBehavior choiceBehavior = EChoiceBehavior.ALLOW_ONE)
     {
@@ -1840,6 +1864,12 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = set;
         this.type = EDynamicValueType.SET;
         this.assetType = GetAssetType();
+        if (this.assetType == EAssetType.NONE && set.Set.Length > 0)
+        {
+            Asset? a = Assets.find(set.Set[0]);
+            if (a != null)
+                this.assetType = a.assetCategory;
+        }
         this._choiceBehavior = choiceBehavior;
     }
     public DynamicAssetValue(ref GuidSet set, EChoiceBehavior choiceBehavior = EChoiceBehavior.ALLOW_ONE)
@@ -1848,6 +1878,12 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = set;
         this.type = EDynamicValueType.SET;
         this.assetType = GetAssetType();
+        if (this.assetType == EAssetType.NONE && set.Set.Length > 0)
+        {
+            Asset? a = Assets.find(set.Set[0]);
+            if (a != null)
+                this.assetType = a.assetCategory;
+        }
         this._choiceBehavior = choiceBehavior;
     }
     public readonly Choice GetValue()
@@ -2820,12 +2856,11 @@ public interface IQuestPreset
 #region Notification Interfaces
 public interface INotifyOnKill : INotifyTracker
 {
-    public void OnKill(UCWarfare.KillEventArgs kill);
+    public void OnKill(PlayerDied e);
 }
 public interface INotifyOnDeath : INotifyTracker
 {
-    public void OnDeath(UCWarfare.DeathEventArgs death);
-    public void OnSuicide(UCWarfare.SuicideEventArgs death);
+    public void OnDeath(PlayerDied e);
 }
 public interface INotifyOnObjectiveCaptured : INotifyTracker
 {

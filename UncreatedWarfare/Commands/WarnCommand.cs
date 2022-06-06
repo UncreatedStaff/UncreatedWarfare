@@ -37,7 +37,6 @@ public class WarnCommand : IRocketCommand
             else
             {
                 FPlayerName targetNames = F.GetPlayerOriginalNames(target);
-                Provider.kick(target.Player.channel.owner.playerID.steamID, reason!);
                 if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
                 {
                     Data.DatabaseManager.AddWarning(targetId, ctx.CallerID, reason!);

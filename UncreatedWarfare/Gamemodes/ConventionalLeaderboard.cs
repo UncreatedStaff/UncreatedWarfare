@@ -21,11 +21,8 @@ public abstract class ConventionalLeaderboard<Stats, StatTracker> : Leaderboard<
     public abstract void SendLeaderboard(LanguageSet set);
     public override void SendLeaderboard()
     {
-        states = new bool[2][]
-        {
-            new bool[Math.Min(LeaderboardUI.Team1PlayerVCs.Length, statsT1!.Count - 1)],
-            new bool[Math.Min(LeaderboardUI.Team2PlayerVCs.Length, statsT2!.Count - 1)]
-        };
+        state1 = new bool[Math.Min(LeaderboardUI.Team1PlayerVCs.Length, statsT1!.Count - 1)];
+        state2 = new bool[Math.Min(LeaderboardUI.Team2PlayerVCs.Length, statsT2!.Count - 1)];
         foreach (LanguageSet set in Translation.EnumerateLanguageSets())
         {
             while (set.MoveNext()) LeaderboardEx.ApplyLeaderboardModifiers(set.Next);
@@ -40,57 +37,51 @@ public abstract class ConventionalLeaderboard<Stats, StatTracker> : Leaderboard<
         SendLeaderboard(single);
     }
 
-    bool[][]? states;
+    bool[]? state1;
+    bool[]? state2;
     protected override void Update()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (state1 is null || state2 is null) return;
         float rt = Time.realtimeSinceStartup;
         int num = Math.Min(LeaderboardUI.Team1PlayerVCs.Length + 1, statsT1!.Count);
         for (int i = 1; i < num; i++)
         {
-            UCPlayer? pl = statsT1[i].Player == null ? null : UCPlayer.FromPlayer(statsT1[i].Player);
-            if (states![0][i - 1])
+            UCPlayer? pl = statsT1[i].Player;
+            if (state1[i - 1])
             {
-                if (pl == null || rt - pl.LastSpoken > 1f)
-                {
+                if (pl is null || !pl.IsTalking)
                     UpdateStateT1(false, i);
-                }
             }
-            else if (pl != null && rt - pl.LastSpoken <= 1f)
-            {
+            else if (pl is not null && pl.IsTalking)
                 UpdateStateT1(true, i);
-            }
         }
         num = Math.Min(LeaderboardUI.Team2PlayerVCs.Length + 1, statsT2!.Count);
         for (int i = 1; i < num; i++)
         {
-            UCPlayer? pl = statsT2[i].Player == null ? null : UCPlayer.FromPlayer(statsT2[i].Player);
-            if (states![1][i - 1])
+            UCPlayer? pl = statsT2[i].Player;
+            if (state2[i - 1])
             {
-                if (pl == null || rt - pl.LastSpoken > 1f)
-                {
+                if (pl is null || !pl.IsTalking)
                     UpdateStateT2(false, i);
-                }
             }
-            else if (pl != null && rt - pl.LastSpoken <= 1f)
-            {
+            else if (pl is not null && pl.IsTalking)
                 UpdateStateT2(true, i);
-            }
         }
     }
     private void UpdateStateT1(bool newval, int index)
     {
         --index;
-        states![0][index] = newval;
+        state1![index] = newval;
         for (int i = 0; i < Provider.clients.Count; i++)
             LeaderboardUI.Team1PlayerVCs[index].SetVisibility(Provider.clients[i].transportConnection, newval);
     }
     private void UpdateStateT2(bool newval, int index)
     {
         --index;
-        states![1][index] = newval;
+        state2![index] = newval;
         for (int i = 0; i < Provider.clients.Count; i++)
             LeaderboardUI.Team2PlayerVCs[index].SetVisibility(Provider.clients[i].transportConnection, newval);
     }

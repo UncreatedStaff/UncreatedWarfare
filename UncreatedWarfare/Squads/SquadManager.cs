@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Framework.UI;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
@@ -35,12 +37,14 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         "GOLF",
         "HOTEL"
     };
+    public static bool Loaded => _singleton.IsLoaded();
 
     public override void Load()
     {
         base.Load();
         Squads.Clear();
         KitManager.OnKitChanged += OnKitChanged;
+        EventDispatcher.OnGroupChanged += OnGroupChanged;
         _singleton = this;
     }
     public override void Reload()
@@ -52,6 +56,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         _singleton = null!;
         base.Unload();
         Squads.Clear();
+        EventDispatcher.OnGroupChanged -= OnGroupChanged;
         KitManager.OnKitChanged -= OnKitChanged;
     }
     private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
@@ -59,21 +64,20 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         _singleton.IsLoaded();
         ReplicateKitChange(player);
     }
-    public static void OnGroupChanged(SteamPlayer steamplayer, ulong oldGroup, ulong newGroup)
+    private void OnGroupChanged(GroupChanged e)
     {
-        _singleton.IsLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromSteamPlayer(steamplayer);
-        if (player == null) return;
-        if (player.Squad != null)
+        if (e.Player.Squad != null)
         {
-            LeaveSquad(player, player.Squad);
+            LeaveSquad(e.Player, e.Player.Squad);
         }
-        ulong team = newGroup.GetTeam();
-        if (team == 1 || team == 2)
-            SendSquadList(player, team);
+        ulong team = e.NewGroup.GetTeam();
+        if (team is > 0 and < 3)
+            SendSquadList(e.Player, team);
+        else
+            ClearAll(e.Player);
     }
     public static void ClearAll(Player player)
     {
@@ -231,14 +235,19 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         int s2 = 0;
         for (int s = 0; s < Squads.Count; s++)
         {
-            if (Squads[s].Team != team) continue;
-            if (s2 == 0)
-                ListUI.Header.SetVisibility(c, true);
             Squad sq = Squads[s];
-            ListUI.Squads[s2].SetVisibility(c, true);
-            ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
-            ListUI.SquadMemberCounts[s2].SetText(c, Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
-            s2++;
+            if (sq is null)
+                Squads.RemoveAt(s--);
+            else
+            {
+                if (sq.Team != team) continue;
+                if (s2 == 0)
+                    ListUI.Header.SetVisibility(c, true);
+                ListUI.Squads[s2].SetVisibility(c, true);
+                ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? Translation.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Translation.Translate("squad_ui_leader_name", player, sq.Name));
+                ListUI.SquadMemberCounts[s2].SetText(c, Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
+                s2++;
+            }
         }
         for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
         {
@@ -384,14 +393,14 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         return SQUAD_NAMES[SQUAD_NAMES.Length - 1];
     }
 
-    public static Squad CreateSquad(UCPlayer leader, ulong team, EBranch branch)
+    public static Squad CreateSquad(UCPlayer leader, ulong team)
     {
         _singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         string name = FindUnusedSquadName(team);
-        Squad squad = new Squad(name, leader, team, branch);
+        Squad squad = new Squad(name, leader, team, leader.Branch);
         Squads.Add(squad);
         SortSquadListABC();
         leader.Squad = squad;
@@ -675,7 +684,7 @@ public class Squad : IEnumerable<UCPlayer>
         Branch = branch;
         Leader = leader;
         IsLocked = false;
-        Members = new List<UCPlayer> { leader };
+        Members = new List<UCPlayer>(6) { leader };
     }
 
     public IEnumerator<UCPlayer> GetEnumerator() => Members.GetEnumerator();

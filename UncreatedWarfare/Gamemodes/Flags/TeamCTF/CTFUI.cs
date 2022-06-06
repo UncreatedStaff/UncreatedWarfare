@@ -283,7 +283,6 @@ public static class CTFUI
                 if (!flag.Discovered(team)) continue;
                 ITransportConnection c = player.Player.channel.owner.transportConnection;
                 int i3 = team == 2 ? rotation.Count - index - 1 : index;
-                string i2 = i3.ToString();
                 string objective = string.Empty;
                 if (team == 1 || team == 2)
                 {
@@ -302,8 +301,8 @@ public static class CTFUI
                             objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
                     }
                     if (ownerChanged)
-                        ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
-                    ListUI.Icons[i].SetText(c, objective);
+                        ListUI.Names[i3].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
+                    ListUI.Icons[i3].SetText(c, objective);
                 }
                 else
                 {
@@ -319,10 +318,10 @@ public static class CTFUI
                         if (flag.Owner == 1)
                             objective += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
                     }
-                    ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
-                        $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
-                        $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
-                    ListUI.Icons[i].SetText(c, objective);
+                    ListUI.Names[i3].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
+                                                $"{(flag.Discovered(1) ? "" : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
+                                                $"{(flag.Discovered(2) ? "" : $" <color=#{TeamManager.Team2ColorHex}>?</color>")}");
+                    ListUI.Icons[i3].SetText(c, objective);
                 }
             }
         }

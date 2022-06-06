@@ -377,9 +377,11 @@ public static class Data
             L.LogWarning("Singleton failed to load | " + singleton.GetType().Name, ConsoleColor.Red);
     }
 
-    internal static readonly List<Type> TranslatableEnumTypes = new List<Type>()
+    internal static readonly List<KeyValuePair<Type, string?>> TranslatableEnumTypes = new List<KeyValuePair<Type, string?>>()
     {
-        typeof(EDamageOrigin), typeof(EDeathCause), typeof(ELimb)
+        new KeyValuePair<Type, string?>(typeof(EDamageOrigin), "Damage Origin"), 
+        new KeyValuePair<Type, string?>(typeof(EDeathCause), "Death Cause"),
+        new KeyValuePair<Type, string?>(typeof(ELimb), "Limb")
     };
     private static void OnClientReceivedMessage(IConnection connection, byte[] message)
     {
@@ -492,6 +494,7 @@ public static class Data
                 new Permission("uc.whitelist"),
                 new Permission("uc.build"),
                 new Permission("uc.mute"),
+                new Permission("uc.unmute"),
                 new Permission("uc.kit"),
                 new Permission("uc.ammo"),
                 new Permission("uc.squad"),
@@ -519,6 +522,7 @@ public static class Data
                 new Permission("uc.unban"),
                 new Permission("uc.warn"),
                 new Permission("uc.mute"),
+                new Permission("uc.unmute"),
                 new Permission("uc.build"),
                 new Permission("uc.ammo"),
                 new Permission("uc.squad"),

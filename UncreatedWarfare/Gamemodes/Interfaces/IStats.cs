@@ -4,7 +4,7 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
     public interface IStats
     {
-        Player Player { get; set; }
+        UCPlayer Player { get; set; }
         ulong Steam64 { get; }
     }
     public interface IPVPModeStats : IStats

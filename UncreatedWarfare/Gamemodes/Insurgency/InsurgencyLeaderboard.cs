@@ -1,7 +1,10 @@
 ﻿using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
@@ -49,12 +52,10 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
         stats.RemoveAll(p =>
         {
             if (p == null) return true;
-            if (p.Player == null)
+            if (p.Player is null || !p.Player.IsOnline)
             {
-                SteamPlayer player = PlayerTool.getSteamPlayer(p.Steam64);
-                if (player == default || player.player == default) return true;
-                else p.Player = player.player;
-                return false;
+                p.Player = UCPlayer.FromID(p._id)!;
+                return p.Player is null || !p.Player.IsOnline;
             }
             else return false;
         });
@@ -93,11 +94,53 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
         statsT1.Insert(0, totalT1);
         statsT2.Insert(0, totalT2);
     }
+    protected override void OnPlayerDied(PlayerDied e)
+    {
+        if (!e.WasTeamkill && e.Killer is not null && Data.Is(out Insurgency ins))
+        {
+            Vector3 pos;
+            if (e.KillerTeam == ins.DefendingTeam)
+            {
+                pos = e.Killer.Position;
+                for (int i = 0; i < ins.Caches.Count; i++)
+                {
+                    Insurgency.CacheData d = ins.Caches[i];
+                    if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
+                        (d.Cache.Structure.model.transform.position - pos)
+                        .sqrMagnitude <=
+                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange *
+                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
+                    {
+                        if (e.Killer.Player.TryGetPlayerData(out UCPlayerData comp) &&
+                            comp.stats is InsurgencyPlayerStats ps) ps._killsDefense++;
+                    }
+                }
+            }
+            else if (e.KillerTeam == ins.AttackingTeam)
+            {
+                pos = e.Player.Position;
+                for (int i = 0; i < ins.Caches.Count; i++)
+                {
+                    Insurgency.CacheData d = ins.Caches[i];
+                    if (d.IsActive && !d.IsDestroyed && d.Cache != null && d.Cache.Structure != null &&
+                        (d.Cache.Structure.model.transform.position - pos)
+                        .sqrMagnitude <=
+                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange *
+                        Gamemode.ConfigObj.Data.Insurgency.CacheDiscoverRange)
+                    {
+                        if (e.Killer.Player.TryGetPlayerData(out UCPlayerData comp) &&
+                            comp.stats is InsurgencyPlayerStats ps) ps._killsAttack++;
+                    }
+                }
+            }
+        }
+        base.OnPlayerDied(e);
+    }
 }
 
 public class InsurgencyPlayerStats : TeamPlayerStats, IExperienceStats, IFOBStats, IRevivesStats
 {
-    public InsurgencyPlayerStats(Player player) : base(player) { }
+    public InsurgencyPlayerStats(UCPlayer player) : base(player) { }
     public InsurgencyPlayerStats(ulong player) : base(player) { }
 
     protected int _xp;

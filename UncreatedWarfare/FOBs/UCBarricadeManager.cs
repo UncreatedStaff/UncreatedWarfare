@@ -26,74 +26,14 @@ namespace Uncreated.Warfare
                 storage.items.tryAddItem(new Item(iasset.id, true));
             }
         }
-        public static InteractableSign? GetSignFromLook(UnturnedPlayer player)
-        {
-            Transform look = player.Player.look.aim;
-            Ray ray = new Ray
-            {
-                direction = look.forward,
-                origin = look.position
-            };
-            //4 units for normal reach
-            if (Physics.Raycast(ray, out RaycastHit hit, 4, RayMasks.BARRICADE))
-            {
-                return hit.transform.GetComponent<InteractableSign>();
-            }
-            else
-            {
-                return null;
-            }
-        }
         public static BarricadeDrop? GetSignFromInteractable(InteractableSign sign)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            for (int x = 0; x < Regions.WORLD_SIZE; x++)
-            {
-                for (int y = 0; y < Regions.WORLD_SIZE; y++)
-                {
-                    BarricadeRegion region = BarricadeManager.regions[x, y];
-                    if (region == null) continue;
-                    for (int i = 0; i < region.drops.Count; i++)
-                    {
-                        if (region.drops[i].interactable is InteractableSign sign2 && sign2.gameObject == sign.gameObject)
-                        {
-                            return region.drops[i];
-                        }
-                    }
-                }
-            }
-            return null;
+            return BarricadeManager.FindBarricadeByRootTransform(sign.transform);
         }
-        public static SDG.Unturned.StructureData? GetStructureDataFromLook(UnturnedPlayer player, out StructureDrop? drop)
-        {
-            Transform? structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);
-            if (structureTransform == null)
-            {
-                drop = null;
-                return null;
-            }
-            drop = StructureManager.FindStructureByRootTransform(structureTransform);
-            if (drop == null)
-                return null;
-            return drop.GetServersideData();
-        }
-        public static SDG.Unturned.StructureData? GetStructureDataFromLook(UCPlayer player, out StructureDrop? drop)
-        {
-            Transform? structureTransform = GetTransformFromLook(player.Player.look, RayMasks.STRUCTURE);
-            if (structureTransform == null)
-            {
-                drop = null;
-                return null;
-            }
-            drop = StructureManager.FindStructureByRootTransform(structureTransform);
-            if (drop == null)
-                return null;
-            return drop.GetServersideData();
-        }
-        public static SDG.Unturned.BarricadeData? GetBarricadeDataFromLook(PlayerLook look) => GetBarricadeDataFromLook(look, out _);
-        public static SDG.Unturned.BarricadeData? GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop? drop)
+        public static BarricadeData? GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop? drop)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -112,7 +52,6 @@ namespace Uncreated.Warfare
         public static Transform? GetTransformFromLook(PlayerLook look, int Raymask) =>
             Physics.Raycast(look.aim.position, look.aim.forward, out RaycastHit hit, 4, Raymask) ? hit.transform : default;
         public static Transform? GetBarricadeTransformFromLook(PlayerLook look) => GetTransformFromLook(look, RayMasks.BARRICADE);
-        public static Transform? GetVehicleTransformFromLook(PlayerLook look) => GetTransformFromLook(look, RayMasks.VEHICLE);
         public static T? GetInteractableFromLook<T>(PlayerLook look, int Raymask = RayMasks.BARRICADE) where T : Interactable
         {
             Transform? barricadeTransform = GetTransformFromLook(look, Raymask);
@@ -121,8 +60,7 @@ namespace Uncreated.Warfare
                 return interactable;
             else return null;
         }
-        [Obsolete]
-        public static bool IsBarricadeNearby(ushort id, float range, Vector3 origin, out BarricadeDrop drop)
+        public static bool IsBarricadeNearby(Guid guid, float range, Vector3 origin, out BarricadeDrop drop)
         {
             float sqrRange = range * range;
             for (int x = 0; x < Regions.WORLD_SIZE; x++)
@@ -133,7 +71,7 @@ namespace Uncreated.Warfare
                     if (region == null) continue;
                     for (int i = 0; i < region.drops.Count; i++)
                     {
-                        if (region.drops[i].GetServersideData().barricade.id == id && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
+                        if (region.drops[i].asset.GUID == guid && (region.drops[i].model.position - origin).sqrMagnitude <= sqrRange)
                         {
                             drop = region.drops[i];
                             return true;
@@ -552,7 +490,7 @@ namespace Uncreated.Warfare
         }
 #pragma warning disable CS0612 // Type or member is obsolete
         [Obsolete]
-        public static List<SDG.Unturned.ItemData> GetNearbyItems(ushort id, float range, Vector3 origin)
+        public static List<ItemData> GetNearbyItems(ushort id, float range, Vector3 origin)
         {
             lock (regionBuffer)
             {
@@ -561,7 +499,7 @@ namespace Uncreated.Warfare
 #endif
                 regionBuffer.Clear();
                 float sqrRange = range * range;
-                List<SDG.Unturned.ItemData> list = new List<SDG.Unturned.ItemData>();
+                List<ItemData> list = new List<ItemData>();
                 Regions.getRegionsInRadius(origin, range, regionBuffer);
                 for (int r = 0; r < regionBuffer.Count; r++)
                 {
@@ -578,15 +516,15 @@ namespace Uncreated.Warfare
                 return list;
             }
         }
-        public static List<SDG.Unturned.ItemData> GetNearbyItems(Guid id, float range, Vector3 origin)
+        public static List<ItemData> GetNearbyItems(Guid id, float range, Vector3 origin)
         {
             if (Assets.find(id) is ItemAsset iasset)
             {
                 return GetNearbyItems(iasset.id, range, origin);
             }
-            return new List<SDG.Unturned.ItemData>();
+            return new List<ItemData>();
         }
-        public static List<SDG.Unturned.ItemData> GetNearbyItems(ItemAsset id, float range, Vector3 origin)
+        public static List<ItemData> GetNearbyItems(ItemAsset id, float range, Vector3 origin)
         {
             return GetNearbyItems(id.id, range, origin);
         }
@@ -653,7 +591,7 @@ namespace Uncreated.Warfare
         }
         public static InteractableVehicle? GetVehicleFromLook(PlayerLook look) => GetInteractableFromLook<InteractableVehicle>(look, RayMasks.VEHICLE);
 
-        public static BarricadeDrop GetDropFromBarricadeData(SDG.Unturned.BarricadeData data)
+        public static BarricadeDrop GetDropFromBarricadeData(BarricadeData data)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -672,7 +610,7 @@ namespace Uncreated.Warfare
             List<BarricadeRegion> barricadeRegions = BarricadeManager.regions.Cast<BarricadeRegion>().ToList();
             return barricadeRegions.SelectMany(brd => brd.drops).Where(d => d.instanceID == data.instanceID).FirstOrDefault();
         }
-        public static SDG.Unturned.BarricadeData? GetBarricadeFromInstID(uint instanceID, out BarricadeDrop? drop)
+        public static BarricadeData? GetBarricadeFromInstID(uint instanceID, out BarricadeDrop? drop)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -741,7 +679,7 @@ namespace Uncreated.Warfare
             }
             return default;
         }
-        public static SDG.Unturned.StructureData? GetStructureFromInstID(uint instanceID, out StructureDrop? drop)
+        public static StructureData? GetStructureFromInstID(uint instanceID, out StructureDrop? drop)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -851,7 +789,7 @@ namespace Uncreated.Warfare
                         {
                             if (removed_count < amount)
                             {
-                                SDG.Unturned.ItemData item = ItemManager.regions[r.x, r.y].items[j];
+                                ItemData item = ItemManager.regions[r.x, r.y].items[j];
                                 if (item.item.id == asset.id && (item.point - center).sqrMagnitude <= sqrRadius)
                                 {
                                     Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,

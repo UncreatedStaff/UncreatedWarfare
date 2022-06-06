@@ -69,8 +69,8 @@ public static class UCAssetManager
     public static class NetCalls
     {
         public static readonly NetCall<ushort, EAssetType> RequestAssetName = new NetCall<ushort, EAssetType>(ReceiveRequestAssetName);
-        public static readonly NetCall<ushort> RequestItemInfo = new NetCall<ushort>(ReceiveItemInfoRequest);
-        public static readonly NetCall<ushort[]> RequestItemInfos = new NetCall<ushort[]>(ReceiveItemInfosRequest);
+        public static readonly NetCall<Guid> RequestItemInfo = new NetCall<Guid>(ReceiveItemInfoRequest);
+        public static readonly NetCall<Guid[]> RequestItemInfos = new NetCall<Guid[]>(ReceiveItemInfosRequest);
         public static readonly NetCall RequestAllItemInfos = new NetCall(ReceiveAllItemInfosRequest);
 
         public static readonly NetCall<ushort, EAssetType, string> SendAssetName = new NetCall<ushort, EAssetType, string>(1026);
@@ -89,20 +89,20 @@ public static class UCAssetManager
             context.Reply(SendAssetName, id, type, a.FriendlyName);
         }
         [NetCall(ENetCall.FROM_SERVER, 1119)]
-        internal static void ReceiveItemInfoRequest(MessageContext context, ushort item)
+        internal static void ReceiveItemInfoRequest(MessageContext context, Guid item)
         {
-            if (Assets.find(EAssetType.ITEM, item) is ItemAsset asset)
+            if (Assets.find(item) is ItemAsset asset)
                 context.Reply(SendItemInfo, ItemData.FromAsset(asset));
             else
                 context.Reply(SendItemInfo, null);
         }
         [NetCall(ENetCall.FROM_SERVER, 1121)]
-        internal static void ReceiveItemInfosRequest(MessageContext context, ushort[] items)
+        internal static void ReceiveItemInfosRequest(MessageContext context, Guid[] items)
         {
             ItemData[] rtn = new ItemData[items.Length];
             for (int i = 0; i < items.Length; i++)
             {
-                if (Assets.find(EAssetType.ITEM, items[i]) is ItemAsset asset)
+                if (Assets.find(items[i]) is ItemAsset asset)
                     rtn[i] = ItemData.FromAsset(asset);
             }
             context.Reply(SendItemInfos, rtn);

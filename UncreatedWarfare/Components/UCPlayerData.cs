@@ -47,6 +47,7 @@ public class UCPlayerData : MonoBehaviour
     public Gamemodes.Interfaces.IStats stats;
     public Player player;
     public Guid LastRocketShot;
+    public Guid LastRocketShotVehicle;
     public ulong lastAttacker;
     public KeyValuePair<ulong, DateTime> secondLastAttacker;
     internal List<ThrowableComponent> ActiveThrownItems = new List<ThrowableComponent>(4);

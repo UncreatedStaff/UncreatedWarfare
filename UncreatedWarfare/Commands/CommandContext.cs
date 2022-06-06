@@ -150,7 +150,7 @@ public struct CommandContext
         if (length < 1) return null;
         if (start + length >= ArgumentCount)
             length = ArgumentCount - start;
-        return string.Join(" ", Parameters, start, ArgumentCount - start);
+        return string.Join(" ", Parameters, start, length);
     }
     public bool TryGet(int parameter, out int value)
     {
@@ -231,6 +231,36 @@ public struct CommandContext
             return true;
         }
         onlinePlayer = UCPlayer.FromName(s, true);
+        if (onlinePlayer is not null)
+        {
+            steam64 = onlinePlayer.Steam64;
+            return true;
+        }
+        else
+            return false;
+    }
+    public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            steam64 = 0;
+            onlinePlayer = null!;
+            return false;
+        }
+
+        string s = Parameters[parameter];
+        if (ulong.TryParse(s, NumberStyles.Any, Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        {
+            foreach (UCPlayer player in selection)
+            {
+                if (player.Steam64 == steam64)
+                {
+                    onlinePlayer = player;
+                    return true;
+                }
+            }
+        }
+        onlinePlayer = UCPlayer.FromName(s, true, selection)!;
         if (onlinePlayer is not null)
         {
             steam64 = onlinePlayer.Steam64;
@@ -582,9 +612,12 @@ public struct CommandContext
     }
     public bool IsConsoleReply()
     {
-        if (IsConsole)
+        if (IsConsole || Caller is null)
+        {
             SendPlayerOnlyError();
-        return IsConsole;
+            return false;
+        }
+        return true;
     }
     public bool IsPlayerReply()
     {

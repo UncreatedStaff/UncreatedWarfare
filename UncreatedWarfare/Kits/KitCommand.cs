@@ -1,6 +1,7 @@
 ﻿using Rocket.API;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands;
@@ -47,21 +48,10 @@ public class KitCommand : IRocketCommand
             }
             if (ctx.TryGetRange(1, out string searchTerm))
             {
-                int c = 0;
-                StringBuilder sb = new StringBuilder();
-                foreach (KeyValuePair<int, Kit> v in singleton.Kits)
-                {
-                    if (v.Value.GetDisplayName().IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) != -1)
-                    {
-                        if (c != 0)
-                            sb.Append(", ");
-                        sb.Append(v.Value.Name);
-                        if (++c > 8) break;
-                    }
-                }
-                if (c > 0)
-                    sb.Append("--");
-                ctx.Reply("kit_search_results", sb.ToString());
+                string res = KitManager.Search(searchTerm);
+                if (res.Length < 0)
+                    res += "--";
+                ctx.Reply("kit_search_results", res);
             }
             else
                 ctx.SendCorrectUsage("/kit <search|find> <term>");
@@ -73,7 +63,7 @@ public class KitCommand : IRocketCommand
                 ctx.SendCorrectUsage("/kit <create|c|override> <id> - Creates (or overrides if it already exits) a kit with default values based on the items in your inventory and your clothes.");
                 return;
             }
-            if (ctx.IsConsoleReply()) return;
+            if (!ctx.IsConsoleReply()) return;
             if (ctx.TryGet(1, out string kitName))
             {
                 if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
@@ -162,7 +152,7 @@ public class KitCommand : IRocketCommand
                 ctx.SendCorrectUsage("/kit <give|g> <id> - Equips you with the kit with the id provided.");
                 return;
             }
-            if (ctx.IsConsoleReply()) return;
+            if (!ctx.IsConsoleReply()) return;
             if (ctx.TryGet(1, out string kitName))
             {
                 if (KitManager.KitExists(kitName, out Kit kit))
@@ -243,29 +233,40 @@ public class KitCommand : IRocketCommand
                     }
                     else
                     {
+                        if (property.Equals("team", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (newValue.Equals(TeamManager.Team1Code, StringComparison.OrdinalIgnoreCase) || newValue.Equals(TeamManager.Team1Name, StringComparison.OrdinalIgnoreCase) || newValue == "t1")
+                                newValue = "1";
+                            else if (newValue.Equals(TeamManager.Team2Code, StringComparison.OrdinalIgnoreCase) || newValue.Equals(TeamManager.Team2Name, StringComparison.OrdinalIgnoreCase) || newValue == "t2")
+                                newValue = "2";
+                            else if (newValue.Equals(TeamManager.AdminCode, StringComparison.OrdinalIgnoreCase) || newValue.Equals(TeamManager.AdminName, StringComparison.OrdinalIgnoreCase) || newValue == "t3")
+                                newValue = "3";
+                        }
                         bool wasLoadout = kit.IsLoadout;
-                        KitEx.SetProperty(kit, property, newValue, out bool set, out bool parsed, out bool foundproperty, out bool allowedToChange);
-                        if (!allowedToChange) // error - invalid argument value
+                        ESetFieldResult result = KitEx.SetProperty(kit, property, newValue);
+                        switch (result)
                         {
-                            ctx.Reply("kit_e_invalidarg_not_allowed", property);
-                            return;
-                        }
-                        if (!parsed) // error - invalid argument value
-                        {
-                            ctx.Reply("kit_e_invalidarg", newValue, property);
-                            return;
-                        }
-                        if (!foundproperty || !set) // error - invalid property name
-                        {
-                            ctx.Reply("kit_e_invalidprop", property);
-                            return;
-                        }
-                        ctx.Reply("kit_setprop", property, kitName, newValue);
-                        ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
-                        RequestSigns.UpdateSignsOfKit(kitName);
-                        if ((wasLoadout || kit.IsLoadout) && RequestSigns.Loaded)
-                        {
-                            RequestSigns.UpdateLoadoutSigns();
+                            default:
+                            case ESetFieldResult.INVALID_INPUT:
+                                ctx.Reply("kit_e_invalidarg", newValue, property);
+                                return;
+                            case ESetFieldResult.FIELD_PROTECTED:
+                                ctx.Reply("kit_e_invalidarg_not_allowed", property);
+                                return;
+                            case ESetFieldResult.FIELD_NOT_SERIALIZABLE:
+                            case ESetFieldResult.FIELD_NOT_FOUND:
+                                ctx.Reply("kit_e_invalidprop", property);
+                                return;
+                            case ESetFieldResult.OBJECT_NOT_FOUND:
+                                ctx.Reply("kit_e_noexist", kitName);
+                                return;
+                            case ESetFieldResult.SUCCESS:
+                                ctx.Reply("kit_setprop", property, kitName, newValue);
+                                ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                                RequestSigns.UpdateSignsOfKit(kitName);
+                                if ((wasLoadout != kit.IsLoadout) && RequestSigns.Loaded)
+                                    RequestSigns.UpdateLoadoutSigns();
+                                return;
                         }
                     }
                 }
@@ -452,7 +453,7 @@ public class KitCommand : IRocketCommand
                     ")> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
                 return;
             }
-            if (ctx.IsConsoleReply()) return;
+            if (!ctx.IsConsoleReply()) return;
             if (ctx.TryGet(3, out EClass @class) && ctx.TryGet(2, out ulong team) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
                 if (onlinePlayer is null && !PlayerSave.HasPlayerSave(playerId))

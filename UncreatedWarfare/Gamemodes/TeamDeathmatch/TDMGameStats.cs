@@ -30,22 +30,22 @@ public class TDMGameStatsTracker : MonoBehaviour
     {
         durationCounter += Time.deltaTime;
     }
-    public void AddPlayer(Player player)
+    public void AddPlayer(UCPlayer player)
     {
-        if (!playerstats.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out TDMPlayerStats s))
+        if (!playerstats.TryGetValue(player.Steam64, out TDMPlayerStats s))
         {
             s = new TDMPlayerStats(player);
-            playerstats.Add(player.channel.owner.playerID.steamID.m_SteamID, s);
-            if (player.TryGetPlayerData(out Components.UCPlayerData c))
+            playerstats.Add(player.Steam64, s);
+            if (player.Player.TryGetPlayerData(out Components.UCPlayerData c))
                 c.stats = s;
         }
         else
         {
             s.player = player;
-            if (player.TryGetPlayerData(out Components.UCPlayerData c))
+            if (player.Player.TryGetPlayerData(out Components.UCPlayerData c))
                 c.stats = s;
         }
-        L.Log(player.name + " added to playerstats, " + playerstats.Count + " trackers");
+        L.Log(player.CharacterName + " added to playerstats, " + playerstats.Count + " trackers");
     }
     public void Start() => Reset(true);
     public void Reset(bool start = false)
@@ -54,18 +54,19 @@ public class TDMGameStatsTracker : MonoBehaviour
             StopCounting();
         if (playerstats == null)
             playerstats = new Dictionary<ulong, TDMPlayerStats>();
-        for (int i = 0; i < Provider.clients.Count; i++)
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            if (playerstats.TryGetValue(Provider.clients[i].playerID.steamID.m_SteamID, out TDMPlayerStats p))
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (playerstats.TryGetValue(pl.Steam64, out TDMPlayerStats p))
             {
-                p.player = Provider.clients[i].player;
+                p.player = pl;
                 p.Reset();
             }
             else
             {
-                TDMPlayerStats s = new TDMPlayerStats(Provider.clients[i].player);
-                playerstats.Add(Provider.clients[i].playerID.steamID.m_SteamID, s);
-                if (Provider.clients[i].player.TryGetPlayerData(out Components.UCPlayerData pt))
+                TDMPlayerStats s = new TDMPlayerStats(pl);
+                playerstats.Add(pl.Steam64, s);
+                if (pl.Player.TryGetPlayerData(out Components.UCPlayerData pt))
                     pt.stats = s;
             }
         }
@@ -138,13 +139,11 @@ public class TDMGameStatsTracker : MonoBehaviour
 
         stats.RemoveAll(p =>
         {
-            if (p == null) return true;
-            if (p.Player == null)
+            if (p is null) return true;
+            if (p.Player is null || !p.Player.IsOnline)
             {
-                SteamPlayer player = PlayerTool.getSteamPlayer(p.Steam64);
-                if (player == default || player.player == default) return true;
-                else p.Player = player.player;
-                return false;
+                p.Player = UCPlayer.FromID(p.id)!;
+                return p.Player is null || !p.Player.IsOnline;
             }
             else return false;
         });
@@ -268,9 +267,9 @@ public class TDMGameStatsTracker : MonoBehaviour
 }
 public class TDMPlayerStats : IStats, ITeamPVPModeStats, IRevivesStats, IExperienceStats
 {
-    public Player player;
+    public UCPlayer player;
     public readonly ulong id;
-    public Player Player { get => player; set => player = value; }
+    public UCPlayer Player { get => player; set => player = value; }
     public ulong Steam64 => id;
     public int kills;
     public int deaths;
@@ -294,10 +293,10 @@ public class TDMPlayerStats : IStats, ITeamPVPModeStats, IRevivesStats, IExperie
     public int onlineCount1;
     public int onlineCount2;
     public int revives;
-    public TDMPlayerStats(Player player)
+    public TDMPlayerStats(UCPlayer player)
     {
         this.player = player;
-        this.id = player.channel.owner.playerID.steamID.m_SteamID;
+        this.id = player.Steam64;
         Reset();
     }
     public TDMPlayerStats()
@@ -333,9 +332,9 @@ public class TDMPlayerStats : IStats, ITeamPVPModeStats, IRevivesStats, IExperie
     public void AddRevive() => revives++;
     public void CheckGame()
     {
-        if (player != null)
+        if (player != null && player.IsOnline)
         {
-            byte team = player.GetTeamByte();
+            byte team = player.Player.GetTeamByte();
             if (team == 1)
                 onlineCount1++;
             else if (team == 2)

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
+using UnityEngine;
 
 namespace Uncreated.Warfare;
 
@@ -207,6 +208,7 @@ partial class JSONMethods
             #endregion
             
             #region SquadCommand
+            { "squad_not_in_team", "<color=#a89791>You can't join a squad unless you're on a team.</color>" },
             { "squad_created", "<color=#a0ad8e>You created the squad <color=#ffffff>{0}</color></color>" },
             { "squad_ui_reloaded", "<color=#a0ad8e>Squad UI has been reloaded.</color>" },
             { "squad_joined", "<color=#a0ad8e>You joined <color=#ffffff>{0}</color>.</color>" },
@@ -293,12 +295,15 @@ partial class JSONMethods
             
             #region FOB System
             { "build_error_notinradius", "<color=#ffab87>This can only be placed inside FOB RADIUS.</color>" },
+            { "build_error_tick_notinradius", "<color=#ffab87>There's no longer a friendly FOB nearby.</color>" },
             { "build_error_radiustoosmall", "<color=#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a FOB BUNKER.</color>" },
             { "build_error_noradio", "<color=#ffab87>This can only be placed within {0}m of a friendly FOB RADIO.</color>" },
             { "build_error_structureexists", "<color=#ffab87>This FOB already has {0} {1}.</color>" },
+            { "build_error_tick_structureexists", "<color=#ffab87>Too many {0}s have already been built on this FOB.</color>" },
             { "build_error_tooclosetoenemybunker", "<color=#ffab87>You may not build on top of an enemy FOB bunker.</color>" },
             { "build_error_notenoughbuild", "<color=#fae69c>You are missing nearby build! <color=#d1c597>Building Supplies: </color><color=#d1c597>{0}/{1}</color></color>" },
             { "build_error_too_many_fobs", "<color=#ffab87>The max number of FOBs has been reached.</color>" },
+            { "build_error_invalid_collision", "<color=#ffab87>A {0} can't be built here.</color>" },
             { "no_placement_fobs_underwater", "<color=#ffab87>You can't build a FOB underwater.</color>" },
             { "no_placement_fobs_too_high", "<color=#ffab87>You can't build a FOB more than {0}m above the ground.</color>" },
             { "no_placement_fobs_too_near_base", "<color=#ffab87>You can't build a FOB this close to main base.</color>" },
@@ -368,6 +373,34 @@ partial class JSONMethods
             #region Custom Signs
             { "sign_rules", "Rules\nNo suicide vehicles.\netc." },
             { "sign_kitdelay", "<color=#e6e6e6>All <color=#3bede1>Elite Kits</color> and <color=#32a852>Loadouts</color> are locked for the two weeks of the season.\nThey will be available again after <color=#d8addb>April 1st</color></color>" },
+            { "sign_class_desc_squadleader", "\n\n<color=#cecece>Help your squad by supplying them with <color=#f0a31c>rally points</color> and placing <color=#f0a31c>FOB radios</color>.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_rifleman", "\n\n<color=#cecece>Resupply your teammates in the field with an <color=#f0a31c>Ammo Bag</color>.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_medic", "\n\n<color=#cecece><color=#f0a31c>Revive</color> your teammates after they've been injured.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_breacher", "\n\n<color=#cecece>Use <color=#f0a31c>high-powered explosives</color> to take out <color=#f01f1c>enemy FOBs</color>.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_autorifleman", "\n\n<color=#cecece>Equipped with a high-capacity and powerful <color=#f0a31c>LMG</color> to spray-and-pray your enemies.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_machinegunner", "\n\n<color=#cecece>Equipped with a powerful <color=#f0a31c>Machine Gun</color> to shred the enemy team in combat.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_lat", "\n\n<color=#cecece>A balance between an anti-tank and combat loadout, used to conveniently destroy armored enemy vehicles.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_hat", "\n\n<color=#cecece>Equipped with multiple powerful <color=#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_grenadier", "\n\n<color=#cecece>Equipped with a <color=#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_marksman", "\n\n<color=#cecece>Equipped with a <color=#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_sniper", "\n\n<color=#cecece>Equipped with a high-powered <color=#f0a31c>sniper rifle</color> to take out enemies from great distances.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_aprifleman", "\n\n<color=#cecece>Equipped with <color=#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_engineer", "\n\n<color=#cecece>Features 200% <color=#f0a31c>build speed</color> and are equipped with <color=#f0a31c>fortifications</color> and traps to help defend their team's FOBs.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_crewman", "\n\n<color=#cecece>The only kits than can man <color=#f0a31c>armored vehicles</color>.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_pilot", "\n\n<color=#cecece>The only kits that can fly <color=#f0a31c>aircraft</color>.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_class_desc_specops", "\n\n<color=#cecece>Equipped with <color=#f0a31c>night-vision</color> to help see at night.</color>\n<color=#f01f1c>\\/</color>" },
+            { "sign_bundle_misc", "<color=#f0a31c>Misc.</color>" },
+            { "sign_bundle_caf", "<color=#f0a31c>Canadian Bundle</color>" },
+            { "sign_bundle_fr", "<color=#f0a31c>French Bundle</color>" },
+            { "sign_bundle_ger", "<color=#f0a31c>German Bundle</color>" },
+            { "sign_bundle_usmc", "<color=#f0a31c>USMC Bundle</color>" },
+            { "sign_bundle_usa", "<color=#f0a31c>USA Bundle</color>" },
+            { "sign_bundle_pl", "<color=#f0a31c>Polish Bundle</color>" },
+            { "sign_bundle_idf", "<color=#f0a31c>IDF Bundle</color>" },
+            { "sign_bundle_militia", "<color=#f0a31c>Militia Bundle</color>" },
+            { "sign_bundle_ru", "<color=#f0a31c>Russia Bundle</color>" },
+            { "sign_bundle_soviet", "<color=#f0a31c>Soviet Bundle</color>" },
+            { "sign_loadout_info", "<color=#cecece>Loadouts and elite kits can be purchased\nin our <color=#7483c4>Discord</color> server.\n\n<color=#7483c4>/discord</color>" },
             #endregion
             
             #region KickOverrideCommand
@@ -426,8 +459,20 @@ partial class JSONMethods
             { "mute_dm_permanent", "<color=#ffff00><color=#00ffff>{0}</color> <color=#9cffb3>permanently</color> {2} muted you for: <color=#9cffb3><b>{1}</b></color>.</color>" },
             { "mute_dm_operator", "<color=#ffff00>An operator {2} muted you for <color=#9cffb3>{1}</color> because: <color=#9cffb3><b>{0}</b></color>.</color>" },
             { "mute_dm_operator_permanent", "<color=#ffff00>An operator <color=#9cffb3>permanently</color> {1} muted you for: <color=#9cffb3><b>{0}</b></color>.</color>" },
+            { "text_chat_feedback_muted_permanent", "<color=#ffff00>You're permanently muted in text chat because: {0}.</color>" },
+            { "text_chat_feedback_muted", "<color=#ffff00>You're muted in text chat until {0} because {1}.</color>" },
             #endregion
-            
+
+            #region UnmuteCommnad
+            { "unmute_not_found", "<color=#9cffb3>\"{0}\" doesn't match a player. To unmute an offline player use their Steam64 ID.</color>" },
+            { "unmute_not_muted", "<color=#9cffb3>{0} is not currently muted.</color>" },
+            { "unmute_unmuted_broadcast", "<color=#ffff00><color=#d8addb>{0}</color> was unmuted by <color=#00ffff>{1}</color>.</color>" },
+            { "unmute_unmuted_broadcast_operator", "<color=#ffff00><color=#d8addb>{0}</color> was unmuted by an operator.</color>" },
+            { "unmute_unmuted_dm", "<color=#ffff00><color=#00ffff>{0}</color> has lifted your mute.</color>" },
+            { "unmute_unmuted_dm_operator", "<color=#ffff00>Your mute has been lifted.</color>" },
+            { "unmute_unmuted", "<color=#ffff00><color=#d8addb>{0}</color> was successfully unmuted.</color>" },
+            #endregion
+
             #region Anti-Main-Camp
             { "amc_reverse_damage", "<color=#f53b3b>Stop <b><color=#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.</color>" },
             #endregion
@@ -1022,12 +1067,12 @@ partial class JSONMethods
             UseMapCoordinates = true,
             UseCase = EZoneUseCase.FLAG
         };
-        mdl.ZoneData.Points = new UnityEngine.Vector2[]
+        mdl.ZoneData.Points = new Vector2[]
         {
-            new UnityEngine.Vector2(635, 738),
-            new UnityEngine.Vector2(713, 873),
-            new UnityEngine.Vector2(873, 780),
-            new UnityEngine.Vector2(796, 645)
+            new Vector2(635, 738),
+            new Vector2(713, 873),
+            new Vector2(873, 780),
+            new Vector2(796, 645)
         };
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
@@ -1042,13 +1087,13 @@ partial class JSONMethods
             UseMapCoordinates = true,
             UseCase = EZoneUseCase.FLAG
         };
-        mdl.ZoneData.Points = new UnityEngine.Vector2[]
+        mdl.ZoneData.Points = new Vector2[]
         {
-            new UnityEngine.Vector2(500, 446),
-            new UnityEngine.Vector2(514, 527),
-            new UnityEngine.Vector2(710, 492),
-            new UnityEngine.Vector2(748, 466),
-            new UnityEngine.Vector2(710, 411)
+            new Vector2(500, 446),
+            new Vector2(514, 527),
+            new Vector2(710, 492),
+            new Vector2(748, 466),
+            new Vector2(710, 411)
         };
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
@@ -1071,7 +1116,7 @@ partial class JSONMethods
         mdl = new ZoneModel()
         {
             Id = 6,
-            Name = "Hill123",
+            Name = "Hill13",
             X = 338,
             Z = -15,
             ZoneType = EZoneType.CIRCLE,
@@ -1092,17 +1137,17 @@ partial class JSONMethods
             UseMapCoordinates = true,
             UseCase = EZoneUseCase.FLAG
         };
-        mdl.ZoneData.Points = new UnityEngine.Vector2[]
+        mdl.ZoneData.Points = new Vector2[]
         {
-            new UnityEngine.Vector2(7,-283),
-            new UnityEngine.Vector2(-6,-270),
-            new UnityEngine.Vector2(-6,-160),
-            new UnityEngine.Vector2(7,-147),
-            new UnityEngine.Vector2(72,-147),
-            new UnityEngine.Vector2(111,-160),
-            new UnityEngine.Vector2(111,-257),
-            new UnityEngine.Vector2(104,-264),
-            new UnityEngine.Vector2(40,-283)
+            new Vector2(7,-283),
+            new Vector2(-6,-270),
+            new Vector2(-6,-160),
+            new Vector2(7,-147),
+            new Vector2(72,-147),
+            new Vector2(111,-160),
+            new Vector2(111,-257),
+            new Vector2(104,-264),
+            new Vector2(40,-283)
         };
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
@@ -1200,7 +1245,6 @@ partial class JSONMethods
         mdl.ZoneData.SizeZ = 559;
         mdl.ValidateRead();
         DefaultZones.Add(mdl);
-
     }
     public static List<Point3D> DefaultExtraPoints = new List<Point3D>
     {
