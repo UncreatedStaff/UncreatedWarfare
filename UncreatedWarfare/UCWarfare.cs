@@ -34,7 +34,7 @@ public delegate void VoidDelegate();
 public partial class UCWarfare : RocketPlugin<Config>
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
-    public static readonly Version Version      = new Version(2, 0, 2, 1);
+    public static readonly Version Version      = new Version(2, 5, 0, 0);
     public static UCWarfare Instance;
     public Coroutine? StatsRoutine;
     public UCAnnouncer Announcer;

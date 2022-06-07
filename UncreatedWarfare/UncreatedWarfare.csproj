@@ -4,7 +4,7 @@
     <AssemblyTitle>Uncreated Warfare</AssemblyTitle>
     <Product>Uncreated Warfare</Product>
     <OutputPath>C:\SteamCMD\steamapps\common\U3DS\Servers\UncreatedRewrite\Rocket\Plugins</OutputPath>
-	<Version>3.22.0.0</Version>
+	<Version>2.5.0.0</Version>
     <Authors>BlazingFlame, 420DankMeister (Daniel Willett, Ben Valkin)</Authors>
     <Company>Uncreated Network</Company>
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
@@ -23,8 +23,8 @@
     <PackageTags>Plugin</PackageTags>
     <NeutralLanguage>en-US</NeutralLanguage>
     <RootNamespace>Uncreated.Warfare</RootNamespace>
-    <AssemblyVersion>3.22.0.0</AssemblyVersion>
-    <FileVersion>3.22.0.0</FileVersion>
+    <AssemblyVersion>2.5.0.0</AssemblyVersion>
+    <FileVersion>2.5.0.0</FileVersion>
     <BaseIntermediateOutputPath></BaseIntermediateOutputPath>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <BaseOutputPath>C:\SteamCMD\steamapps\common\U3DS\Servers\UncreatedRewrite\Rocket\Plugins</BaseOutputPath>
@@ -51,7 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="com.rlabrecque.steamworks.net">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
