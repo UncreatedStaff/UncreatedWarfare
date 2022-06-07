@@ -47,7 +47,7 @@ public class SpottedComponent : MonoBehaviour
                 break;
             case ESpotted.ARMOR:
                 EffectGUID = new Guid("1a25daa6f506441282cd30be48d27883");
-                _defaultTimer = 45;
+                _defaultTimer = 12;
                 _frequency = 0.5f;
                 break;
             case ESpotted.AIRCRAFT:
