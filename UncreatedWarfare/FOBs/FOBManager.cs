@@ -35,7 +35,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public readonly List<FOB> Team2FOBs = new List<FOB>();
     public static FOBConfigData Config => _config.Data;
     public IEnumerable<FOB> AllFOBs => Team1FOBs.Concat(Team2FOBs);
-    public FOBManager() : base() { }
+    public FOBManager() { }
     public override void Load()
     {
         EventDispatcher.OnBarricadePlaced += OnBarricadePlaced;

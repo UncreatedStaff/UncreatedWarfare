@@ -95,7 +95,7 @@ public class RequestCommand : IRocketCommand
                             List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, caller2));
                             if (loadoutId > 0 && loadoutId <= loadouts.Count)
                             {
-                                Kit loadout = loadouts[loadoutId];
+                                Kit loadout = loadouts[loadoutId - 1];
 
                                 if (loadout.IsClassLimited(out int currentPlayers, out int allowedPlayers, bteam))
                                 {
