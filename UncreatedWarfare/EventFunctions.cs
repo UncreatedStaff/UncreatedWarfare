@@ -323,8 +323,8 @@ public static class EventFunctions
 
                 VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
             }
-            if (damageOrigin == EDamageOrigin.Rocket_Explosion)
-                VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
+            //if (damageOrigin == EDamageOrigin.Rocket_Explosion)
+            //    VehicleDamageCalculator.ApplyAdvancedDamage(vehicle, ref pendingTotalDamage);
 
             if (!vehicle.TryGetComponent(out VehicleComponent c))
             {

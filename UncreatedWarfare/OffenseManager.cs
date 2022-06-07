@@ -45,7 +45,7 @@ public static class OffenseManager
             uint ip = SteamBlacklist.list[i].ip;
             for (int j = 0; j < packs.Count; ++j)
             {
-                if (ip == j)
+                if (ip != 0 && ip == packs[j])
                 {
                     e.Reject("Your IP is banned for: " + SteamBlacklist.list[i].reason);
                     return;
