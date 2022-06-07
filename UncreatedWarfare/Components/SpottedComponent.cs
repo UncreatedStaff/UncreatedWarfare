@@ -63,7 +63,7 @@ public class SpottedComponent : MonoBehaviour
             case ESpotted.FOB:
                 EffectGUID = new Guid("de142d979e12442fb9d44baf8f520751");
                 _defaultTimer = 90;
-                _frequency = 2;
+                _frequency = 0.5f;
                 break;
         }
 
@@ -97,12 +97,16 @@ public class SpottedComponent : MonoBehaviour
                 spotted.Activate(spotter);
             }
         }
-        else if (transform.TryGetComponent(out BarricadeDrop barricade) && barricade.GetServersideData().group != spotter.GetTeam())
+        else
         {
-            if (barricade.model.gameObject.gameObject.TryGetComponent(out SpottedComponent spotted))
+            var drop = BarricadeManager.FindBarricadeByRootTransform(transform);
+            if (drop != null && drop.GetServersideData().group != spotter.GetTeam())
             {
-                spotted.TryAnnounce(spotter, "FOB".Colorize("ff7e5e"));
-                spotted.Activate(spotter);
+                if (drop.model.gameObject.gameObject.TryGetComponent(out SpottedComponent spotted))
+                {
+                    spotted.TryAnnounce(spotter, "FOB".Colorize("ff7e5e"));
+                    spotted.Activate(spotter);
+                }
             }
         }
     }
