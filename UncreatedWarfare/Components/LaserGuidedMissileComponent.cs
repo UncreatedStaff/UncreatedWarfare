@@ -121,9 +121,9 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
         {
             if (spotted.CurrentSpotter!.GetTeam() == firer.quests.groupID.m_SteamID && !(spotted.Type == SpottedComponent.ESpotted.AIRCRAFT || spotted.Type == SpottedComponent.ESpotted.INFANTRY))
             {
-                if ((spotted.transform.position - aim.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
+                if ((spotted.transform.position - projectile.transform.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
                 {
-                    float angleBetween = Vector3.Angle(spotted.transform.position - lookOrigin.position, lookOrigin.forward);
+                    float angleBetween = Vector3.Angle(spotted.transform.position - projectile.transform.position, projectile.transform.forward);
                     if (angleBetween < minAngle)
                     {
                         minAngle = angleBetween;

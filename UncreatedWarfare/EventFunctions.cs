@@ -156,7 +156,7 @@ public static class EventFunctions
             else if (VehicleBay.Config.AirAAWeapons.HasGUID(gun.equippedGunAsset.GUID))
                 projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
             else if (VehicleBay.Config.LaserGuidedWeapons.HasGUID(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 700, 8, 0.6f);
+                projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 150, 15, 0.6f);
 
         Patches.DeathsPatches.lastProjected = projectile;
         if (gun.player.TryGetPlayerData(out UCPlayerData c))

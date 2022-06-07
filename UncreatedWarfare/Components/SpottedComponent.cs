@@ -126,22 +126,25 @@ public class SpottedComponent : MonoBehaviour
             StopCoroutine(_coroutine);
 
         CurrentSpotter = spotter;
-        UCPlayer.FromPlayer(spotter)!.ActivateMarker(this);
 
         _coroutine = StartCoroutine(MarkerLoop(seconds));
+        
+        UCPlayer.FromPlayer(spotter)!.ActivateMarker(this);
+
+        
     }
     public void Deactivate()
     {
         if (CurrentSpotter != null)
             UCPlayer.FromPlayer(CurrentSpotter)!.DeactivateMarker(this);
 
+        if (_coroutine != null)
+            StopCoroutine(_coroutine);
+
         _coroutine = null;
         CurrentSpotter = null;
 
         ActiveMarkers.Remove(this);
-
-        if (_coroutine != null)
-            StopCoroutine(_coroutine);
     }
     private void SendMarkers()
     {
@@ -149,7 +152,7 @@ public class SpottedComponent : MonoBehaviour
         {
             var player = PlayerManager.OnlinePlayers[i];
 
-            if (player.GetTeam() == CurrentSpotter!.GetTeam())
+            if (player.GetTeam() == CurrentSpotter!.GetTeam() && (player.Position - transform.position).sqrMagnitude < Math.Pow(650, 2))
                 EffectManager.sendEffect(EffectID, player.Connection, transform.position);
         }
     }
