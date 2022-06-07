@@ -107,7 +107,7 @@ namespace Uncreated.Warfare.Squads
             rallypoints.Clear();
             SquadManager.RallyUI.ClearFromAllPlayers();
 
-            IEnumerator<BarricadeDrop> barricades = GetRallyPointBarricades().ToList().GetEnumerator();
+            IEnumerator<BarricadeDrop> barricades = GetRallyPointBarricades().GetEnumerator();
             while (barricades.MoveNext())
             {
                 if (Regions.tryGetCoordinate(barricades.Current.model.position, out byte x, out byte y))
@@ -258,7 +258,7 @@ namespace Uncreated.Warfare.Squads
         }
         public void TeleportPlayer(UCPlayer player)
         {
-            if (player.Player.life.isDead || player.Player.movement.getVehicle() != null)
+            if (!player.IsOnline || player.Player.life.isDead || player.Player.movement.getVehicle() != null)
                 return;
 
             ActionLog.Add(EActionLogType.TELEPORTED_TO_RALLY, "AT " + drop.model.position.ToString() + " PLACED BY " + squad.Leader.Steam64.ToString(), player);

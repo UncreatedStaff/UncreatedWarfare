@@ -88,6 +88,7 @@ public class CooldownConfig : ConfigData
     public float DeployMainCooldown;
     public float DeployFOBCooldown;
     public float RequestKitCooldown;
+    public float RequestVehicleCooldown;
     public override void SetDefaults()
     {
         EnableCombatLogger = true;
@@ -95,6 +96,7 @@ public class CooldownConfig : ConfigData
         DeployMainCooldown = 3;
         DeployFOBCooldown = 30;
         RequestKitCooldown = 120;
+        RequestVehicleCooldown = 240;
     }
     public CooldownConfig() { }
 }

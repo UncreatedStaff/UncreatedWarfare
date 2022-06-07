@@ -49,15 +49,29 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
     }
     public override void Reload()
     {
+        ClearSquads();
         base.Reload();
     }
     public override void Unload()
     {
         _singleton = null!;
         base.Unload();
-        Squads.Clear();
+        ClearSquads();
         EventDispatcher.OnGroupChanged -= OnGroupChanged;
         KitManager.OnKitChanged -= OnKitChanged;
+    }
+    private void ClearSquads()
+    {
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            pl.Squad = null;
+            ClearMenu(pl);
+        }
+
+        RallyManager.WipeAllRallies();
+
+        Squads.Clear();
     }
     private static void OnKitChanged(UCPlayer player, Kit kit, string oldkit)
     {

@@ -414,7 +414,7 @@ public class RequestCommand : IRocketCommand
             Stats.StatsManager.ModifyStats(ucplayer.Steam64, x => x.VehiclesRequested++, false);
             Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
             Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
-
+            CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, CooldownManager.Config.RequestVehicleCooldown, vehicle.id);
             Points.AwardCredits(ucplayer, -data.CreditCost);
         }
         else

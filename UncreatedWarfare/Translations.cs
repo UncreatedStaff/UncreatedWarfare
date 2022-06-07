@@ -285,11 +285,17 @@ partial class JSONMethods
             
             #region Time Formatting
             { "time_second", "second" },
+            { "time_seconds", "seconds" },
             { "time_minute", "minute" },
+            { "time_minutes", "minutes" },
             { "time_hour", "hour" },
+            { "time_hours", "hours" },
             { "time_day", "day" },
+            { "time_days", "days" },
             { "time_month", "month" },
+            { "time_months", "months" },
             { "time_year", "year" },
+            { "time_years", "years" },
             { "time_and", "and" },
             #endregion
             

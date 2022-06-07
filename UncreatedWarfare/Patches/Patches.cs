@@ -160,7 +160,9 @@ public static partial class Patches
             {
                 FPlayerName n = F.GetPlayerOriginalNames(callingPlayer);
                 string name = $"[{n.PlayerName} ({n.CharacterName})]:";
-                name += new string(' ', 40 - name.Length);
+                int len = 40 - name.Length;
+                if (len > 0)
+                    name += new string(' ', len);
                 switch (mode)
                 {
                     case EChatMode.GLOBAL:
@@ -241,11 +243,11 @@ public static partial class Patches
             }
             else
             {
-                if (mode != EChatMode.GROUP || !(callingPlayer.player.quests.groupID != CSteamID.Nil))
+                if (mode != EChatMode.GROUP || callingPlayer.player.quests.groupID == CSteamID.Nil)
                     return false;
                 foreach (SteamPlayer client in Provider.clients)
                 {
-                    if (!(client.player == null) && client.player.quests.isMemberOfSameGroupAs(callingPlayer.player))
+                    if (client.player.quests.isMemberOfSameGroupAs(callingPlayer.player))
                         ChatManager.serverSendMessage(text, chatted, callingPlayer, client, EChatMode.GROUP, useRichTextFormatting: isRich);
                 }
             }

@@ -114,31 +114,9 @@ public class BuildableComponent : MonoBehaviour
 
         if (Hits >= Buildable.RequiredHits)
         {
-            if (CollisionCheck(Foundation.model.position, Buildable, builder))
-                Build();
-            else
-                builder?.SendChat("build_error_invalid_collision", Buildable.BuildableBarricade.Asset?.itemName ?? "null");
+            Build();
         }
     }
-    private static Collider[] results = new Collider[1];
-    public static bool CollisionCheck(Vector3 position, BuildableData buildable, UCPlayer? builder)
-    {
-        ItemBarricadeAsset? asset = buildable.BuildableBarricade.Asset;
-        if (asset is null)
-        {
-            return false;
-        }
-        if (!asset.AllowPlacementInsideClipVolumes && !Level.checkSafeIncludingClipVolumes(position))
-        {
-            return false;
-        }
-        if (Physics.OverlapSphereNonAlloc(position, asset.radius, results, RayMasks.BLOCK_BARRICADE) > 0)
-        {
-            return false;
-        }
-        return true;
-    }
-
     private class CollisionChecker : MonoBehaviour
     {
         public List<GameObject> ActiveColliders = new List<GameObject>();
@@ -405,26 +383,32 @@ public class BuildableComponent : MonoBehaviour
                     return false;
                 }
             }
+
             if (fob is null)
+            {
                 return true;
-            if (buildable.Type == EBuildableType.REPAIR_STATION)
-            {
-                int existing = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, fob.Radius, fob.Position, team, false).Count();
-                if (existing >= 1)
-                {
-                    // repair station already exists
-                    placer?.Message("build_error_structureexists", "a", "Repair Station");
-                    return false;
-                }
             }
-            if (buildable.Type == EBuildableType.EMPLACEMENT && buildable.Emplacement != null)
+            else
             {
-                int existing = UCVehicleManager.GetNearbyVehicles(buildable.Emplacement.EmplacementVehicle, fob.Radius, fob.Position).Count();
-                if (existing >= buildable.Emplacement.MaxFobCapacity)
+                if (buildable.Type == EBuildableType.REPAIR_STATION)
                 {
-                    // max emplacements of this type reached
-                    placer?.Message("build_error_structureexists", buildable.Emplacement.MaxFobCapacity.ToString(), foundation.asset.itemName + (buildable.Emplacement.MaxFobCapacity == 1 ? "" : "s"));
-                    return false;
+                    int existing = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, fob.Radius, fob.Position, team, false).Count();
+                    if (existing >= 1)
+                    {
+                        // repair station already exists
+                        placer?.Message("build_error_structureexists", "a", "Repair Station");
+                        return false;
+                    }
+                }
+                if (buildable.Type == EBuildableType.EMPLACEMENT && buildable.Emplacement != null)
+                {
+                    int existing = UCVehicleManager.GetNearbyVehicles(buildable.Emplacement.EmplacementVehicle, fob.Radius, fob.Position).Count();
+                    if (existing >= buildable.Emplacement.MaxFobCapacity)
+                    {
+                        // max emplacements of this type reached
+                        placer?.Message("build_error_structureexists", buildable.Emplacement.MaxFobCapacity.ToString(), foundation.asset.itemName + (buildable.Emplacement.MaxFobCapacity == 1 ? "" : "s"));
+                        return false;
+                    }
                 }
             }
         }
