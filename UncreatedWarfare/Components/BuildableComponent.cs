@@ -427,13 +427,6 @@ public class BuildableComponent : MonoBehaviour
                     return false;
                 }
             }
-            if (buildable.BuildableBarricade.Exists)
-            {
-                if (!CollisionCheck(point, buildable, placer))
-                {
-                    return false;
-                }    
-            }
         }
 
         if (fob.Build < buildable.RequiredBuild)

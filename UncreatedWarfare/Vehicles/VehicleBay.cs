@@ -434,12 +434,13 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (FOBManager.Config.Buildables.Exists(v => v.Type == EBuildableType.EMPLACEMENT && v.BuildableBarricade == e.Vehicle.asset.GUID)) return;
         if (!e.Player.OnDuty() && e.ExitLocation.y - F.GetHeightAt2DPoint(e.ExitLocation.x, e.ExitLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
         {
-            e.Player.SendChat("vehicle_too_high");
-            e.Break();
-            return;
+            if (!FOBManager.Config.Buildables.Exists(v => v.Type == EBuildableType.EMPLACEMENT && v.BuildableBarricade.Guid == e.Vehicle.asset.GUID))
+            {
+                e.Player.SendChat("vehicle_too_high");
+                e.Break();
+            }
         }
     }
     private void OnVehicleEnterRequested(EnterVehicleRequested e)

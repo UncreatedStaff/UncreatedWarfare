@@ -25,9 +25,9 @@ public class VehicleBayData : ConfigData
 
     public override void SetDefaults()
     {
-        MissileWarningID       = 26033;
-        MissileWarningDriverID = 26034;
-        CountermeasureEffectID = 26035;
+        MissileWarningID       = (JsonAssetReference<EffectAsset>)26033;
+        MissileWarningDriverID = (JsonAssetReference<EffectAsset>)26034;
+        CountermeasureEffectID = (JsonAssetReference<EffectAsset>)26035;
         CountermeasureGUID     = "16dbd4e5928e498783675529ca53fc61";
         TOWMissileWeapons = new JsonAssetReference<ItemGunAsset>[]
         {
@@ -48,8 +48,8 @@ public class VehicleBayData : ConfigData
         };
         LaserGuidedWeapons = new JsonAssetReference<ItemGunAsset>[]
         {
-            new Guid("433ea5249699420eb7adb67791a98134"), // F-15 Laser Guided
-            new Guid("3754ca2527ee40e2ad0951c8930efb07"), // Su-34 Laser Guided
+            "433ea5249699420eb7adb67791a98134", // F-15 Laser Guided
+            "3754ca2527ee40e2ad0951c8930efb07", // Su-34 Laser Guided
         };
     }
 }

@@ -77,6 +77,13 @@ public class ReloadCommand : IRocketCommand
             ctx.Reply("reload_reloaded_rocket");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "ROCKET");
         }
+        else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload.colors")) return;
+            ReloadColors();
+            ctx.Reply("reload_reloaded_generic", "colors");
+            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "COLORS");
+        }
         else if (module.Equals("tcp", StringComparison.OrdinalIgnoreCase))
         {
             if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload.tcp")) return;
@@ -126,6 +133,11 @@ public class ReloadCommand : IRocketCommand
         return;
     notFound:
         ctx.Reply("reload_syntax");
+    }
+
+    private void ReloadColors()
+    {
+        throw new NotImplementedException();
     }
     internal static void ReloadRocket()
     {

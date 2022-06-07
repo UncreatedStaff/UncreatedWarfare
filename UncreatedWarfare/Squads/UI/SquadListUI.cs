@@ -66,7 +66,7 @@ public class SquadListUI : UnturnedUI
             SquadName_6,
             SquadName_7,
         };
-        SquadNames = new UnturnedLabel[]
+        SquadMemberCounts = new UnturnedLabel[]
         {
             SquadMemberCount_0,
             SquadMemberCount_1,

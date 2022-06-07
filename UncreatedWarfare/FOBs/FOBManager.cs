@@ -22,9 +22,10 @@ using Uncreated.Warfare.Events.Players;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
-public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener
+public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener
 {
     private static FOBManager Singleton;
+    private static readonly FOBConfig _config = new FOBConfig();
     public static bool Loaded => Singleton.IsLoaded();
     public static readonly FOBListUI ListUI = new FOBListUI();
     public static readonly NearbyResourceUI ResourceUI = new NearbyResourceUI();
@@ -32,26 +33,15 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
     public readonly List<Cache> Caches  = new List<Cache>();
     public readonly List<FOB> Team1FOBs = new List<FOB>();
     public readonly List<FOB> Team2FOBs = new List<FOB>();
-    public new static FOBConfigData Config => Loaded ? Singleton.ConfigurationFile.Data : null!;
+    public static FOBConfigData Config => _config.Data;
     public IEnumerable<FOB> AllFOBs => Team1FOBs.Concat(Team2FOBs);
-    public FOBManager() : base("fobs") { }
+    public FOBManager() : base() { }
     public override void Load()
     {
         EventDispatcher.OnBarricadePlaced += OnBarricadePlaced;
         EventDispatcher.OnBarricadeDestroyed += OnBarricadeDestroyed;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
         Singleton = this;
-        base.Load();
-    }
-    public override void Reload()
-    {
-        base.Reload();
-        Team1FOBs.Clear();
-        Team2FOBs.Clear();
-        SpecialFOBs.Clear();
-        Caches.Clear();
-        SendFOBListToTeam(1);
-        SendFOBListToTeam(2);
     }
     public override void Unload()
     {
@@ -63,7 +53,6 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
         Team2FOBs.Clear();
         SpecialFOBs.Clear();
         Caches.Clear();
-        base.Unload();
     }
     void ILevelStartListener.OnLevelReady()
     {
@@ -126,7 +115,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
         Guid guid = e.ServersideData.barricade.asset.GUID;
         bool isRadio = Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == guid);
         BarricadeDrop drop = e.Barricade;
-        BuildableData? buildable = ConfigurationFile.Data.Buildables.Find(b => b.Foundation == drop.asset.GUID);
+        BuildableData? buildable = Config.Buildables.Find(b => b.Foundation == drop.asset.GUID);
         if (buildable != null)
         {
             drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
@@ -137,7 +126,7 @@ public class FOBManager : ConfigSingleton<FOBConfig, FOBConfigData>, ILevelStart
             if (Team1FOBs.FirstOrDefault(f => f.Position == pos) is null && Team2FOBs.FirstOrDefault(f => f.Position == pos) is null)
                 RegisterNewFOB(e.Barricade);
         }
-        BuildableData? repairable = isRadio ? null : ConfigurationFile.Data.Buildables.Find(b => b.BuildableBarricade == drop.asset.GUID || 
+        BuildableData? repairable = isRadio ? null : Config.Buildables.Find(b => b.BuildableBarricade == drop.asset.GUID || 
             (b.Type == EBuildableType.EMPLACEMENT && b.Emplacement != null && b.Emplacement.BaseBarricade == drop.asset.GUID));
         if (repairable != null || isRadio)
         {
@@ -1054,7 +1043,7 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // M2A1
-                BuildableBarricade = Guid.Empty,
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = "80396c361d3040d7beb3921964ec2997",
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 10,
@@ -1063,7 +1052,7 @@ public class FOBConfigData : ConfigData
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = "aa3c6af4911243b5b5c9dc95ca1263bf",
-                    BaseBarricade = Guid.Empty,
+                    BaseBarricade =  new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = "523c49ce4df44d46ba37be0dd6b4504b",
                     AmmoCount = 2,
                     MaxFobCapacity = 2
@@ -1072,7 +1061,7 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // Kord
-                BuildableBarricade = Guid.Empty,
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = "e44ba62f763c432e882ddc7eabaa9c77",
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 10,
@@ -1081,7 +1070,7 @@ public class FOBConfigData : ConfigData
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = "86cfe1eb8be144aeae7659c9c74ff11a",
-                    BaseBarricade = Guid.Empty,
+                    BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = "6e9bc2083a1246b49b1656c2ec6f535a",
                     AmmoCount = 2,
                     MaxFobCapacity = 2
@@ -1090,7 +1079,7 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // TOW
-                BuildableBarricade = Guid.Empty,
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = "a68ae466fb804829a0eb0d4556071801",
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
@@ -1099,7 +1088,7 @@ public class FOBConfigData : ConfigData
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = "9d305050a6a142349376d6c49fb38362",
-                    BaseBarricade = Guid.Empty,
+                    BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = "3128a69d06ac4bbbbfddc992aa7185a6",
                     AmmoCount = 1,
                     MaxFobCapacity = 1
@@ -1108,7 +1097,7 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // Kornet
-                BuildableBarricade = Guid.Empty,
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = "37811b1847744c958fcb30a0b759874b",
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
@@ -1117,7 +1106,7 @@ public class FOBConfigData : ConfigData
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = "677b1084-dffa-4633-84d2-9167a3fae25b",
-                    BaseBarricade = Guid.Empty,
+                    BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = "d7774b017c404adbb0a0fe8e902b9689",
                     AmmoCount = 1,
                     MaxFobCapacity = 1
@@ -1126,7 +1115,7 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // Stinger
-                BuildableBarricade = Guid.Empty,
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = "3c2dd7febc854b7f8859852b8c736c8e",
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
@@ -1135,7 +1124,7 @@ public class FOBConfigData : ConfigData
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = "1883345cbdad40aa81e49c84e6c872ef",
-                    BaseBarricade = Guid.Empty,
+                    BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = "3c0a94af5af24901a9e3207f3e9ed0ba",
                     AmmoCount = 1,
                     MaxFobCapacity = 1
@@ -1144,7 +1133,7 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // Igla
-                BuildableBarricade = Guid.Empty,
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = "b50cb548734946ffa5f88d6691a2c7ce",
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
@@ -1153,7 +1142,7 @@ public class FOBConfigData : ConfigData
                 Emplacement = new EmplacementData
                 {
                     EmplacementVehicle = "8add59a2e2b94f93ab0d6b727d310097",
-                    BaseBarricade = Guid.Empty,
+                    BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                     Ammo = "a54d571983c2432a9624eec39d602997",
                     AmmoCount = 1,
                     MaxFobCapacity = 1
@@ -1162,7 +1151,7 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // Mortar
-                BuildableBarricade = Guid.Empty,
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
                 Foundation = "6ff4826eaeb14c7cac1cf25a55d24bd3",
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 22,
