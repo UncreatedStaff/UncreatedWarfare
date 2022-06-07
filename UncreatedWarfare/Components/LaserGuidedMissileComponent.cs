@@ -115,7 +115,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        float minAngle = 3;
+        float minAngle = 45;
 
         foreach (var spotted in SpottedComponent.ActiveMarkers)
         {
