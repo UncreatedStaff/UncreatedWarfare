@@ -280,8 +280,6 @@ namespace Uncreated.Warfare.Components
                     Creator = component.LastDriver;
                 }
 
-                L.Log("is driven: " + nearestLogi.isDriven);
-
                 if (!nearestLogi.isDriven)
                 {
                     int supplyCount = Mathf.Clamp(nearestLogi.trunkItems.getItemCount(), 0, 26);
@@ -318,26 +316,22 @@ namespace Uncreated.Warfare.Components
                     int buildRemoved = 0;
                     int ammoRemoved = 0;
 
-                    L.Log("trunk count: " + nearestLogi.trunkItems.getItemCount());
                     for (int i = 0; i < nearestLogi.trunkItems.getItemCount(); i++)
                     {
                         ItemJar item = nearestLogi.trunkItems.items[i];
                         bool shouldRemove = false;
                         if (item.item.id == shortBuildID && buildRemoved < 16)
                         {
-                            L.Log("should remove build");
                             shouldRemove = true;
                             buildRemoved++;
                         }
                         if (item.item.id == shortAmmoID && ammoRemoved < 12)
                         {
-                            L.Log("should remove ammo");
                             shouldRemove = true;
                             ammoRemoved++;
                         }
                         if (shouldRemove)
                         {
-                            L.Log("removed item");
                             ItemManager.dropItem(new Item(item.item.id, true), nearestLogi.transform.position, false, true, true);
                             nearestLogi.trunkItems.removeItem(nearestLogi.trunkItems.getIndex(item.x, item.y));
                             i--;

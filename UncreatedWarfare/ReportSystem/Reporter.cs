@@ -188,7 +188,7 @@ public class Reporter : MonoBehaviour
                 }
             }
             else player.onlineTime += dt;
-            for (int j = 0; j < player.recentRequests.Count; i++)
+            for (int j = 0; j < player.recentRequests.Count; j++)
             {
                 VehicleLifeData data = player.recentRequests[i];
                 if (!data.died)

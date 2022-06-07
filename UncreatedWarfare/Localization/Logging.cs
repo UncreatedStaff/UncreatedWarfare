@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Uncreated.Framework;
@@ -115,30 +117,47 @@ public static class L
     }
     public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "", [CallerFilePath] string filepath = "", [CallerLineNumber] int ln = 0)
     {
-        string message = $"EXCEPTION - {ex.GetType().Name}\nSource: {filepath}::{method}( ... ) LN# {ln}\n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
-        try
+        int i = 0;
+        do
         {
-            if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.OutputToConsoleMethod == null)
+            string message = $"EXCEPTION - {ex.GetType().Name}\nSource: {filepath}::{method}( ... ) LN# {ln}\n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
+            try
             {
-                CommandWindow.LogError(message);
+                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red ||
+                    Data.OutputToConsoleMethod == null)
+                {
+                    CommandWindow.LogError(message);
+                }
+                else
+                {
+                    AddLine(message, color);
+                    UnturnedLog.warn($"[EX] {ex.Message}");
+                    UnturnedLog.warn($"[ST] {ex.StackTrace}");
+                    Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry()
+                        { Message = message, RCON = true, Severity = Rocket.Core.Logging.ELogType.Exception });
+                }
             }
-            else
+            catch (Exception ex2)
             {
-                AddLine(message, color);
-                UnturnedLog.warn($"[EX] {ex.Message}");
-                UnturnedLog.warn($"[ST] {ex.StackTrace}");
-                Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = message, RCON = true, Severity = Rocket.Core.Logging.ELogType.Exception });
+                CommandWindow.LogError($"{message}\nEXCEPTION LOGGING \n\n{ex2.Message}\n{ex2.StackTrace}\n\nFINISHED");
             }
+
+            if (ex is TypeLoadException t)
+            {
+                L.LogError("Type: " + t.TypeName);
+            }
+            else if (ex is ReflectionTypeLoadException t2)
+            {
+                foreach (Exception ex2 in t2.LoaderExceptions)
+                    L.LogError(ex2, color, method, filepath, ln);
+            }
+            ++i;
+            ex = ex.InnerException;
+            if (ex != null)
+                LogError("INNER EXCEPTION");
+            else break;
         }
-        catch (Exception ex2)
-        {
-            CommandWindow.LogError($"{message}\nEXCEPTION LOGGING \n\n{ex2.Message}\n{ex2.StackTrace}\n\nFINISHED");
-        }
-        if (ex.InnerException != null && ex.InnerException.InnerException == null)
-        {
-            LogError("INNER EXCEPTION: ", method: method);
-            LogError(ex.InnerException, method: method, filepath: filepath, ln: ln);
-        }
+        while (i < 8);
     }
     public static List<LogMessage> ReadRocketLog()
     {

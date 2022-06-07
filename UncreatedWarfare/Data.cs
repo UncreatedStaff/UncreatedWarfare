@@ -8,6 +8,8 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Uncreated.Homebase.Unturned;
+using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
@@ -556,5 +558,10 @@ public static class Data
                 new Permission("uc.structure"),
                 new Permission("uc.structure.examine")
             };
+    }
+
+    public class NetCalls
+    {
+        public static readonly NetCallRaw<WarfareServerInfo> SendServerInfo = new NetCallRaw<WarfareServerInfo>(1008, WarfareServerInfo.Read, WarfareServerInfo.Write);
     }
 }

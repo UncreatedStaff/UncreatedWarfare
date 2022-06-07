@@ -46,9 +46,10 @@ public partial class UCWarfare : RocketPlugin<Config>
     public bool CoroutineTiming = false;
     private bool InitialLoadEventSubscription;
     private DateTime NextRestartTime;
+    public static bool IsLoaded => Instance is not null;
     public static UCWarfare I { get => Instance; }
-    public static Config Config { get => Instance.Configuration.Instance; }
-    public static bool CanUseNetCall => Instance?.Configuration?.Instance is not null && Instance.Configuration.Instance.PlayerStatsSettings.EnableTCPServer && Data.NetClient is not null && Data.NetClient.IsActive;
+    public static Config Config { get => Instance?.Configuration?.Instance!; }
+    public static bool CanUseNetCall => IsLoaded && Instance.Configuration is not null && Instance.Configuration.Instance is not null && Config.PlayerStatsSettings.EnableTCPServer && Data.NetClient is not null && Data.NetClient.IsActive;
     public static int Season => Version.Major;
     public MySqlData SQL => LoadMySQLDataFromElsewhere && _sqlElsewhere is not null ? _sqlElsewhere : Configuration.Instance.SQL;
     protected override void Load()

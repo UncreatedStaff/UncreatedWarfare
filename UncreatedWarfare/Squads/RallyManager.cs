@@ -193,6 +193,7 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+            if (BarricadeManager.regions is null) return new BarricadeDrop[0];
             IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
 
             return barricadeDrops.Where(b =>

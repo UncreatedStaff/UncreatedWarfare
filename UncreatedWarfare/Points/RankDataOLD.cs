@@ -192,7 +192,10 @@ public struct RankData
         Abbreviation = GetRankAbbreviation(Level);
         NextName = GetRankName(Level + 1);
         NextAbbreviation = GetRankAbbreviation(Level + 1);
-        ProgressBar = Points.GetProgressBar(CurrentXP, RequiredXP);
+        if (UCWarfare.IsLoaded)
+            ProgressBar = Points.GetProgressBar(CurrentXP, RequiredXP);
+        else
+            ProgressBar = string.Empty;
     }
     public static string GetRankName(int level)
     {
