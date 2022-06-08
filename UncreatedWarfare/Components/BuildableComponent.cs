@@ -250,7 +250,7 @@ public class BuildableComponent : MonoBehaviour
 #endif
         if (IsSalvaged)
         {
-            FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
+            FOB? fob = FOB.GetNearestFOB(Foundation.GetServersideData().point, EFOBRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
             if (fob is not null)
             {
                 fob.AddBuild(Buildable.RequiredBuild);

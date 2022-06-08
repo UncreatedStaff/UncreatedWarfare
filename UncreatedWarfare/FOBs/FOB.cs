@@ -652,18 +652,22 @@ namespace Uncreated.Warfare.Components
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             float radius2 = GetRadius(radius);
-            List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(radius2, point, b =>
+            List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>
                 {
+                    var data = b.GetServersideData();
+
                     if (!b.model.TryGetComponent(out FOBComponent f)) return false;
+
+                    if (team != 0 && data.group != team) return false;
                     if (radius == EFOBRadius.FULL_WITH_BUNKER_CHECK)
                     {
-                        if ((b.model.position - point).sqrMagnitude <= 30 * 30)
+                        if ((data.point - point).sqrMagnitude <= 30 * 30)
                             return true;
                         else
-                            return f.parent.Bunker != null && (b.model.position - point).sqrMagnitude <= radius2;
+                            return f.parent.Bunker != null && (data.point - point).sqrMagnitude <= radius2;
                     }
-                    else if (radius2 > 0) 
-                        return (b.model.position - point).sqrMagnitude <= radius2;
+                    else if (radius2 > 0)
+                        return (data.point - point).sqrMagnitude <= radius2;
 
                     return false;
                 }
@@ -673,8 +677,7 @@ namespace Uncreated.Warfare.Components
 
             foreach (BarricadeDrop barricade in barricades)
             {
-                if (team == 0 || barricade.GetServersideData().group.GetTeam() == team)
-                    fobs.Add(barricade.model.GetComponent<FOBComponent>().parent);
+                fobs.Add(barricade.model.GetComponent<FOBComponent>().parent);
             }
 
             return fobs;

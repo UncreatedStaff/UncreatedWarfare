@@ -44,6 +44,7 @@ namespace Uncreated.Warfare
                                 if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
                                 {
                                     __result = false;
+                                    return;
                                 }
                             }
                             else if (vehicleData.Type == EVehicleType.JET)
@@ -51,49 +52,19 @@ namespace Uncreated.Warfare
                                 if (VehicleBay.CountCrewmen(__instance, vehicleData) >= 2)
                                 {
                                     __result = false;
+                                    return;
                                 }
                             }
-                            else
+
+                            UCPlayer? owner = UCPlayer.FromCSteamID(__instance.lockedOwner);
+
+                            if (vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
                             {
-                                UCPlayer? owner = UCPlayer.FromCSteamID(__instance.lockedOwner);
-
-                                if (vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
-                                {
-                                    if (enterer.KitClass == vehicleData.RequiredClass) // for crewman trying to enter a crewed vehicle
-                                    {
-                                        if (seat == 0)
-                                        {
-                                            bool canEnterDriverSeat = owner is null || enterer == owner || VehicleBay.IsOwnerInVehicle(__instance, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || (owner!.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2));
-
-                                            if (!canEnterDriverSeat)
-                                            {
-                                                if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
-                                                {
-                                                    if (owner!.Squad == null)
-                                                        enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
-                                                    else
-                                                        enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
-
-                                                    __result = false;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else // for non crewman trying to enter a crewed vehicle
-                                    {
-                                        if (!VehicleBay.TryGetFirstNonCrewSeat(__instance, vehicleData, out seat))
-                                        {
-
-                                            enterer.Message("vehicle_no_passenger_seats");
-                                            __result = false;
-                                        }
-                                    }
-                                }
-                                else
+                                if (enterer.KitClass == vehicleData.RequiredClass) // for crewman trying to enter a crewed vehicle
                                 {
                                     if (seat == 0)
                                     {
-                                        bool canEnterDriverSeat = owner is null || enterer == owner || (owner.Squad != null && owner.Squad.Members.Contains(enterer)) || (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) || (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(__instance.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
+                                        bool canEnterDriverSeat = owner is null || enterer == owner || VehicleBay.IsOwnerInVehicle(__instance, owner) || (owner is not null && owner.Squad != null && owner.Squad.Members.Contains(enterer) || (owner!.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2));
 
                                         if (!canEnterDriverSeat)
                                         {
@@ -108,6 +79,36 @@ namespace Uncreated.Warfare
                                             }
                                         }
                                     }
+                                }
+                                else // for non crewman trying to enter a crewed vehicle
+                                {
+                                    if (!VehicleBay.TryGetFirstNonCrewSeat(__instance, vehicleData, out seat))
+                                    {
+
+                                        enterer.Message("vehicle_no_passenger_seats");
+                                        __result = false;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (seat == 0)
+                                {
+                                    bool canEnterDriverSeat = owner is null || enterer == owner || (owner.Squad != null && owner.Squad.Members.Contains(enterer)) || (owner.Position - __instance.transform.position).sqrMagnitude > Math.Pow(200, 2) || (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(__instance.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, __instance.lockedGroup.m_SteamID) != null);
+
+                                    if (!canEnterDriverSeat)
+                                    {
+                                        if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
+                                        {
+                                            if (owner!.Squad == null)
+                                                enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
+                                            else
+                                                enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
+
+                                            __result = false;
+                                        }
+                                    }
+
                                 }
                             }
                         }

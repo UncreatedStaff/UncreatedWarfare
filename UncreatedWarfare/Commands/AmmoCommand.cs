@@ -48,7 +48,7 @@ public class AmmoCommand : IRocketCommand
                 ctx.Reply("ammo_vehicle_cant_rearm");
                 return;
             }
-            if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
+            if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
             {
                 ctx.Reply("ammo_auto_resupply");
                 return;
