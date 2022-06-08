@@ -194,7 +194,7 @@ public class Reporter : MonoBehaviour
                 if (!data.died)
                 {
                     data.lifeTime += dt;
-                    player.recentRequests[i] = data;
+                    player.recentRequests[j] = data;
                 }
             }
             if (tickTime)
