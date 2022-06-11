@@ -119,9 +119,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             L.Log("STEP " + step.ToString(Data.Locale));
             if (step == 0)
             {
-                if (File.Exists(Level.info.path + @"\Map.png"))
+                string levelMap = Path.Combine(Level.info.path, "Map.png");
+                if (File.Exists(levelMap))
                 {
-                    byte[] fileData = File.ReadAllBytes(Level.info.path + @"\Map.png");
+                    byte[] fileData = File.ReadAllBytes(levelMap);
                     img.LoadImage(fileData, false);
                 }
                 img.Apply();
@@ -180,7 +181,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             else if (step == -1) // finalizing image
             {
                 img.Apply();
-                F.SavePhotoToDisk(filename == default ? Data.FlagStorage + "zonearea.png" : (filename + ".png"), img);
+                F.SavePhotoToDisk(filename == default ? Path.Combine(Data.FlagStorage, "zonearea.png") : (filename + ".png"), img);
                 UnityEngine.Object.Destroy(img);
                 complete = true;
             }
@@ -209,9 +210,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             Color color2missingpath = new Color(0, 0, 1);
             int thickness = 8;
             Texture2D img = new Texture2D(Level.size, Level.size);
-            if (File.Exists(Level.info.path + @"\Map.png"))
+            string mapPath = Path.Combine(Level.info.path, "Map.png");
+            if (File.Exists(mapPath))
             {
-                byte[] fileData = File.ReadAllBytes(Level.info.path + @"\Map.png");
+                byte[] fileData = File.ReadAllBytes(mapPath);
                 img.LoadImage(fileData, false);
             }
             Dictionary<Flag, float> flags = new Dictionary<Flag, float>();
@@ -279,7 +281,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 DrawLineGradient(line, thickness / 2, img, color1missingpath, color2missingpath, false);
             }
             img.Apply();
-            F.SavePhotoToDisk(filename == default ? Data.FlagStorage + "zonemap.png" : filename + ".png", img);
+            F.SavePhotoToDisk(filename == default ? Path.Combine(Data.FlagStorage, "zonemap.png") : (filename + ".png"), img);
             UnityEngine.Object.Destroy(img);
         }
 
@@ -391,22 +393,5 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 texture.Apply();
         }
         public static Vector2 GetPositionOnCircle(float radians, float radius = 1) => new Vector2(Mathf.Cos(radians) * radius, Mathf.Sin(radians) * radius);
-
-        public class TextureLite
-        {
-            public byte[] Data;
-            public int SizeX;
-            public int SizeY;
-            public TextureLite(int sizeX, int sizeY)
-            {
-                Data = new byte[sizeX * sizeY];
-                this.SizeX = sizeX;
-                this.SizeY = sizeY;
-            }
-            public void DrawLine(Line line, Color color)
-            {
-
-            }
-        }
     }
 }

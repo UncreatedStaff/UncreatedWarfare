@@ -17,11 +17,11 @@ namespace Uncreated.Warfare.Stats;
 
 public static class StatsManager
 {
-    public static readonly string SaveDirectory = Data.DATA_DIRECTORY + @"Stats\";
-    public static readonly string StatsDirectory = SaveDirectory + @"Players\";
-    public static readonly string WeaponsDirectory = SaveDirectory + @"Weapons\";
-    public static readonly string VehiclesDirectory = SaveDirectory + @"Vehicles\";
-    public static readonly string KitsDirectory = SaveDirectory + @"Kits\";
+    public static readonly string SaveDirectory = Path.Combine(Data.DATA_DIRECTORY, "Stats") + Path.DirectorySeparatorChar;
+    public static readonly string StatsDirectory = Path.Combine(SaveDirectory, "Players") + Path.DirectorySeparatorChar;
+    public static readonly string WeaponsDirectory = Path.Combine(SaveDirectory, "Weapons") + Path.DirectorySeparatorChar;
+    public static readonly string VehiclesDirectory = Path.Combine(SaveDirectory, "Vehicles") + Path.DirectorySeparatorChar;
+    public static readonly string KitsDirectory = Path.Combine(SaveDirectory, "Kits") + Path.DirectorySeparatorChar;
     public static WarfareTeam Team1Stats;
     public static WarfareTeam Team2Stats;
     public static readonly List<WarfareWeapon> Weapons = new List<WarfareWeapon>();
@@ -46,6 +46,8 @@ public static class StatsManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        string t1 = Path.Combine(SaveDirectory, "team1.dat");
+        string t2 = Path.Combine(SaveDirectory, "team2.dat");
         WarfareTeam.IO.InitializeTo(
             () => new WarfareTeam()
             {
@@ -67,7 +69,7 @@ public static class StatsManager
                 VehiclesRequested = 0,
                 Wins = 0
             },
-            SaveDirectory + "team1.dat"
+            t1
         );
         WarfareTeam.IO.InitializeTo(
             () => new WarfareTeam()
@@ -90,21 +92,21 @@ public static class StatsManager
                 VehiclesRequested = 0,
                 Wins = 0
             },
-            SaveDirectory + "team1.dat"
+            t2
         );
-        WarfareTeam.IO.ReadFrom(SaveDirectory + "team1.dat", out Team1Stats);
-        WarfareTeam.IO.ReadFrom(SaveDirectory + "team2.dat", out Team2Stats);
+        WarfareTeam.IO.ReadFrom(t1, out Team1Stats);
+        WarfareTeam.IO.ReadFrom(t2, out Team2Stats);
         if (Team1Stats.DATA_VERSION != WarfareTeam.CURRENT_DATA_VERSION || Team1Stats.Team != 1)
         {
             Team1Stats.DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION;
             Team1Stats.Team = 1;
-            WarfareTeam.IO.WriteTo(Team1Stats, SaveDirectory + "team1.dat");
+            WarfareTeam.IO.WriteTo(Team1Stats, t1);
         }
         if (Team2Stats.DATA_VERSION != WarfareTeam.CURRENT_DATA_VERSION || Team2Stats.Team != 2)
         {
             Team2Stats.DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION;
             Team2Stats.Team = 2;
-            WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
+            WarfareTeam.IO.WriteTo(Team2Stats, t2);
         }
     }
     const int TICK_SPEED_MINS = 5;
@@ -175,12 +177,12 @@ public static class StatsManager
         if (team == 1)
         {
             modification.Invoke(Team1Stats);
-            if (save) WarfareTeam.IO.WriteTo(Team1Stats, SaveDirectory + "team1.dat");
+            if (save) WarfareTeam.IO.WriteTo(Team1Stats, Path.Combine(SaveDirectory, "team1.dat"));
         }
         else if (team == 2)
         {
             modification.Invoke(Team2Stats);
-            if (save) WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
+            if (save) WarfareTeam.IO.WriteTo(Team2Stats, Path.Combine(SaveDirectory, "team2.dat"));
         }
     }
     public static void ModifyTeam(ulong team, Action<WarfareTeam> modification, bool save = true)
@@ -192,12 +194,12 @@ public static class StatsManager
         if (team == 1)
         {
             modification.Invoke(Team1Stats);
-            if (save) WarfareTeam.IO.WriteTo(Team1Stats, SaveDirectory + "team1.dat");
+            if (save) WarfareTeam.IO.WriteTo(Team1Stats, Path.Combine(SaveDirectory, "team1.dat"));
         }
         else if (team == 2)
         {
             modification.Invoke(Team2Stats);
-            if (save) WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
+            if (save) WarfareTeam.IO.WriteTo(Team2Stats, Path.Combine(SaveDirectory, "team2.dat"));
         }
     }
     public static void SaveTeams()
@@ -205,8 +207,8 @@ public static class StatsManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        WarfareTeam.IO.WriteTo(Team1Stats, SaveDirectory + "team1.dat");
-        WarfareTeam.IO.WriteTo(Team2Stats, SaveDirectory + "team2.dat");
+        WarfareTeam.IO.WriteTo(Team1Stats, Path.Combine(SaveDirectory, "team1.dat"));
+        WarfareTeam.IO.WriteTo(Team2Stats, Path.Combine(SaveDirectory, "team2.dat"));
     }
     public static void LoadWeapons()
     {
@@ -296,7 +298,7 @@ public static class StatsManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = WeaponsDirectory + GetWeaponName(ID, KitID);
+        string dir = Path.Combine(WeaponsDirectory, GetWeaponName(ID, KitID));
         for (int i = 0; i < Weapons.Count; i++)
         {
             if (Weapons[i].ID == ID && Weapons[i].KitID == KitID)
@@ -331,7 +333,7 @@ public static class StatsManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = VehiclesDirectory + ID.ToString(Data.Locale) + ".dat";
+        string dir = Path.Combine(VehiclesDirectory, ID.ToString(Data.Locale) + ".dat");
         for (int i = 0; i < Vehicles.Count; i++)
         {
             if (Vehicles[i].ID == ID)
@@ -365,7 +367,7 @@ public static class StatsManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = StatsDirectory + Steam64.ToString(Data.Locale) + ".dat";
+        string dir = Path.Combine(StatsDirectory, Steam64.ToString(Data.Locale) + ".dat");
         for (int i = 0; i < OnlinePlayers.Count; i++)
         {
             if (OnlinePlayers[i].Steam64 == Steam64)
@@ -398,7 +400,7 @@ public static class StatsManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = KitsDirectory + KitID + ".dat";
+        string dir = Path.Combine(KitsDirectory, KitID + ".dat");
         for (int i = 0; i < Kits.Count; i++)
         {
             if (Kits[i].KitID == KitID)
@@ -433,7 +435,7 @@ public static class StatsManager
 #endif
         if (!Directory.Exists(StatsDirectory))
             Directory.CreateDirectory(StatsDirectory);
-        string dir = StatsDirectory + Steam64.ToString(Data.Locale) + ".dat";
+        string dir = Path.Combine(StatsDirectory, Steam64.ToString(Data.Locale) + ".dat");
         if (!OnlinePlayers.Exists(x => x.Steam64 == Steam64))
         {
             if (File.Exists(dir))
@@ -490,7 +492,7 @@ public static class StatsManager
 #endif
         WarfareStats stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == s64);
         if (stats == default) return;
-        WarfareStats.IO.WriteTo(stats, StatsDirectory + s64.ToString(Data.Locale) + ".dat");
+        WarfareStats.IO.WriteTo(stats, Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat"));
         NetCalls.BackupStats.NetInvoke(stats);
         OnlinePlayers.Remove(stats);
     }
@@ -665,7 +667,7 @@ public static class StatsManager
         internal static void ReceiveRequestPlayerData(MessageContext context, ulong Player)
         {
             bool online = Provider.clients.Exists(x => x.playerID.steamID.m_SteamID == Player);
-            string dir = StatsDirectory + Player.ToString() + ".dat";
+            string dir = Path.Combine(StatsDirectory, Player.ToString() + ".dat");
             if (WarfareStats.IO.ReadFrom(dir, out WarfareStats stats))
             {
                 context.Reply(SendPlayerData, stats, online);
@@ -684,7 +686,7 @@ public static class StatsManager
                     if (GameKit.SignTexts.Count > 0)
                         sname = GameKit.SignTexts.Values.ElementAt(0);
             }
-            string dir = KitsDirectory + KitID + ".dat";
+            string dir = Path.Combine(KitsDirectory, KitID + ".dat");
             if (WarfareKit.IO.ReadFrom(dir, out WarfareKit kit))
             {
                 context.Reply(SendKitData, kit, sname, (byte)@class);
@@ -723,7 +725,7 @@ public static class StatsManager
         [NetCall(ENetCall.FROM_SERVER, 2008)]
         internal static void ReceiveRequestVehicleData(MessageContext context, ushort vehicleID)
         {
-            string dir = VehiclesDirectory + vehicleID.ToString() + ".dat";
+            string dir = Path.Combine(VehiclesDirectory, vehicleID.ToString() + ".dat");
             string name = Assets.find(EAssetType.VEHICLE, vehicleID) is VehicleAsset asset ? asset.vehicleName : vehicleID.ToString();
             if (WarfareVehicle.IO.ReadFrom(dir, out WarfareVehicle vehicle))
                 context.Reply(SendVehicleData, vehicle, name);

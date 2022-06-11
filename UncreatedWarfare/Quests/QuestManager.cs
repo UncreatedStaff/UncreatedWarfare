@@ -25,8 +25,8 @@ public static class QuestManager
     public static List<BaseQuestData> Quests = new List<BaseQuestData>();
     /// <summary>Complete list of all registered quest trackers (1 per player).</summary>
     public static List<BaseQuestTracker> RegisteredTrackers = new List<BaseQuestTracker>(128);
-    public static readonly string QUEST_FOLDER = Data.DATA_DIRECTORY + "Quests\\";
-    public static readonly string QUEST_LOCATION = QUEST_FOLDER + "quest_data.json";
+    public static readonly string QUEST_FOLDER = Path.Combine(Data.DATA_DIRECTORY, "Quests") + Path.DirectorySeparatorChar;
+    public static readonly string QUEST_LOCATION = Path.Combine(QUEST_FOLDER, "quest_data.json");
     static QuestManager()
     {
         EventDispatcher.OnPlayerDied += OnPlayerDied;
@@ -474,8 +474,8 @@ public static class QuestManager
             }
         }
     }
-    private static string GetSavePath(ulong steam64, Guid key, ulong team) => ReadWrite.PATH + ServerSavedata.directory + "\\" + Provider.serverID + "\\Players\\" + steam64.ToString(Data.Locale) +
-                                                                              "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\Quests\\" + team + "_" + key.ToString("N") + ".json";
+    private static string GetSavePath(ulong steam64, Guid key, ulong team) => Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", steam64.ToString(Data.Locale) +
+                                                                              "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale), "Quests", team + "_" + key.ToString("N") + ".json");
     public static void SaveProgress(BaseQuestTracker t, ulong team)
     {
         if (t.PresetKey == default) return;
@@ -561,8 +561,8 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        string folder = ReadWrite.PATH + ServerSavedata.directory + "\\" + Provider.serverID + "\\Players\\" + player.Steam64.ToString(Data.Locale) +
-                        "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\Quests\\";
+        string folder = Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", player.Steam64.ToString(Data.Locale) +
+                        "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale), "Quests") + Path.DirectorySeparatorChar;
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);

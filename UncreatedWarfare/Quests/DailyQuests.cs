@@ -34,7 +34,7 @@ public static class DailyQuests
     }
     public static void OnLoad()
     {
-        string p = QuestManager.QUEST_FOLDER + "DailyQuests\\";
+        string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests") + Path.DirectorySeparatorChar;
         if (Directory.Exists(p))
         {
             L.Log("Loading DailyQuests mod");
@@ -300,7 +300,7 @@ public static class DailyQuests
     [NetCall(ENetCall.FROM_SERVER, 1126)]
     public static async Task ReceiveQuestData(MessageContext context, Folder folder)
     {
-        string p = QuestManager.QUEST_FOLDER + "DailyQuests\\";
+        string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests") + Path.DirectorySeparatorChar;
         folder.WriteToDisk(p);
         await UCWarfare.ToUpdate();
         L.Log("Received mod folder: " + folder.name);
@@ -309,7 +309,7 @@ public static class DailyQuests
     }
     public static void SaveQuests()
     {
-        using (FileStream stream = new FileStream(QuestManager.QUEST_FOLDER + "daily_quests.json", FileMode.Create, FileAccess.Write, FileShare.Read))
+        using (FileStream stream = new FileStream(Path.Combine(QuestManager.QUEST_FOLDER, "daily_quests.json"), FileMode.Create, FileAccess.Write, FileShare.Read))
         {
             Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
             writer.WriteStartObject();
@@ -353,7 +353,7 @@ public static class DailyQuests
     }
     public static void ReadQuests()
     {
-        string p = QuestManager.QUEST_FOLDER + "daily_quests.json";
+        string p = Path.Combine(QuestManager.QUEST_FOLDER, "daily_quests.json");
         if (!File.Exists(p))
         {
             CreateNewModContent();
@@ -473,8 +473,8 @@ public static class DailyQuests
             }
         }
     }
-    private static string GetDailySavePath(ulong steam64) => ReadWrite.PATH + ServerSavedata.directory + "\\" + Provider.serverID + "\\Players\\" + steam64.ToString(Data.Locale) +
-                                                             "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\daily_quest_progress.json";
+    private static string GetDailySavePath(ulong steam64) => Path.Combine(ReadWrite.PATH, ServerSavedata.directory, Provider.serverID, "Players", steam64.ToString(Data.Locale) +
+                                                             "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale), "daily_quest_progress.json");
     public static void SaveProgress(DailyQuestTracker tracker)
     {
 #if DEBUG

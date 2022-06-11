@@ -29,55 +29,55 @@ namespace Uncreated.Warfare;
 public static class Data
 {
     public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
-    public static readonly string DATA_DIRECTORY = System.Environment.CurrentDirectory + @"\Plugins\UncreatedWarfare\";
-    private static readonly string _flagStorage = DATA_DIRECTORY + @"Maps\{0}\Flags\";
+    public static readonly string DATA_DIRECTORY = Path.Combine(System.Environment.CurrentDirectory, "Plugins", "UncreatedWarfare") + Path.DirectorySeparatorChar;
+    private static readonly string _flagStorage = Path.Combine(DATA_DIRECTORY, "Maps", "{0}", "Flags") + Path.DirectorySeparatorChar;
     private static string? _flagStorageTemp;
     public static string FlagStorage
     {
         get
         {
-            if (Provider.map == default) return DATA_DIRECTORY + @"Maps\Unloaded\Flags\";
+            if (Provider.map == default) return Path.Combine(DATA_DIRECTORY, "Maps", "Unloaded", "Flags") + Path.DirectorySeparatorChar;
             if (_flagStorageTemp == default)
                 _flagStorageTemp = string.Format(_flagStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
             return _flagStorageTemp;
         }
     }
-    private static readonly string _structuresStorage = DATA_DIRECTORY + @"Maps\{0}\Structures\";
+    private static readonly string _structuresStorage = Path.Combine(DATA_DIRECTORY, "Maps", "{0}", "Structures") + Path.DirectorySeparatorChar;
     private static string? _structStorageTemp = null;
     public static string StructureStorage
     {
         get
         {
-            if (Provider.map == default) return DATA_DIRECTORY + @"Maps\Unloaded\Structures\";
+            if (Provider.map == default) return Path.Combine(DATA_DIRECTORY, "Maps", "Unloaded", "Structures");
             if (_structStorageTemp == default)
                 _structStorageTemp = string.Format(_structuresStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
             return _structStorageTemp;
         }
     }
-    public static readonly string TeamStorage = DATA_DIRECTORY + @"Teams\";
-    public static readonly string TicketStorage = DATA_DIRECTORY + @"Tickets\";
-    public static readonly string PointsStorage = DATA_DIRECTORY + @"Points\";
-    public static readonly string OfficerStorage = DATA_DIRECTORY + @"Officers\";
-    public static readonly string CooldownStorage = DATA_DIRECTORY + @"Cooldowns\";
-    public static readonly string SquadStorage = DATA_DIRECTORY + @"Squads\";
-    public static readonly string KitsStorage = DATA_DIRECTORY + @"Kits\";
-    public static readonly string SQLStorage = DATA_DIRECTORY + @"SQL\";
-    private static readonly string _vehicleStorage = DATA_DIRECTORY + @"Maps\{0}\Vehicles\";
+    public static readonly string TeamStorage = Path.Combine(DATA_DIRECTORY, "Teams") + Path.DirectorySeparatorChar;
+    public static readonly string TicketStorage = Path.Combine(DATA_DIRECTORY, "Tickets") + Path.DirectorySeparatorChar;
+    public static readonly string PointsStorage = Path.Combine(DATA_DIRECTORY, "Points") + Path.DirectorySeparatorChar;
+    public static readonly string OfficerStorage = Path.Combine(DATA_DIRECTORY, "Officers") + Path.DirectorySeparatorChar;
+    public static readonly string CooldownStorage = Path.Combine(DATA_DIRECTORY, "Cooldowns") + Path.DirectorySeparatorChar;
+    public static readonly string SquadStorage = Path.Combine(DATA_DIRECTORY, "Squads") + Path.DirectorySeparatorChar;
+    public static readonly string KitsStorage = Path.Combine(DATA_DIRECTORY, "Kits") + Path.DirectorySeparatorChar;
+    public static readonly string SQLStorage = Path.Combine(DATA_DIRECTORY, "SQL") + Path.DirectorySeparatorChar;
+    private static readonly string _vehicleStorage = Path.Combine(DATA_DIRECTORY, "Maps", "{0}", "Vehicles") + Path.DirectorySeparatorChar;
     private static string? _vehicleStorageTemp;
     public static string VehicleStorage
     {
         get
         {
-            if (Provider.map == default) return DATA_DIRECTORY + @"Maps\Unloaded\Vehicles\";
+            if (Provider.map == default) return Path.Combine(DATA_DIRECTORY, "Maps", "Unloaded", "Vehicles");
             if (_vehicleStorageTemp == default)
                 _vehicleStorageTemp = string.Format(_vehicleStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
             return _vehicleStorageTemp;
         }
     }
-    public static readonly string FOBStorage = DATA_DIRECTORY + @"FOBs\";
-    public static readonly string LangStorage = DATA_DIRECTORY + @"Lang\";
+    public static readonly string FOBStorage = Path.Combine(DATA_DIRECTORY, "FOBs") + Path.DirectorySeparatorChar;
+    public static readonly string LangStorage = Path.Combine(DATA_DIRECTORY, "Lang") + Path.DirectorySeparatorChar;
     public static readonly string ElseWhereSQLPath = @"C:\sql.json";
-    public static readonly string LOG_DIRECTORY = System.Environment.CurrentDirectory + @"\Logs\ActionLogs\";
+    public static readonly string LOG_DIRECTORY = Path.Combine(System.Environment.CurrentDirectory, "Logs", "ActionLogs");
     public static readonly CultureInfo Locale = new CultureInfo("en-US");
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;
@@ -201,7 +201,7 @@ public static class Data
         F.CheckDir(TeamStorage, out _, true);
         F.CheckDir(OfficerStorage, out _, true);
 
-        ZoneProvider = new JsonZoneProvider(new FileInfo(FlagStorage + "zones.json"));
+        ZoneProvider = new JsonZoneProvider(new FileInfo(Path.Combine(FlagStorage, "zones.json")));
 
         /* LOAD LOCALIZATION ASSETS */
         L.Log("Loading JSON Data...", ConsoleColor.Magenta);

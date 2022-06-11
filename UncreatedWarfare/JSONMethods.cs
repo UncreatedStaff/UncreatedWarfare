@@ -314,12 +314,13 @@ public static partial class JSONMethods
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         F.CheckDir(Data.DATA_DIRECTORY, out bool fileExists);
+        string chatColors = Path.Combine(Data.DATA_DIRECTORY, "chat_colors.json");
         if (fileExists)
         {
-            if (!File.Exists(Data.DATA_DIRECTORY + "chat_colors.json"))
+            if (!File.Exists(chatColors))
             {
                 Dictionary<string, Color> defaultColors2 = new Dictionary<string, Color>(DefaultColors.Count);
-                using (FileStream stream = new FileStream(Data.DATA_DIRECTORY + "chat_colors.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                using (FileStream stream = new FileStream(chatColors, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                 {
                     Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                     writer.WriteStartObject();
@@ -337,7 +338,7 @@ public static partial class JSONMethods
                 HexValues = DefaultColors;
                 return defaultColors2;
             }
-            using (FileStream stream = new FileStream(Data.DATA_DIRECTORY + "chat_colors.json", FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (FileStream stream = new FileStream(chatColors, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 long len = stream.Length;
                 if (len > int.MaxValue)
@@ -409,13 +410,15 @@ public static partial class JSONMethods
 #endif
         string[] langDirs = Directory.GetDirectories(Data.LangStorage, "*", SearchOption.TopDirectoryOnly);
         Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
-        F.CheckDir(Data.LangStorage + DEFAULT_LANGUAGE, out bool folderIsThere);
+        string defLang = Path.Combine(Data.LangStorage, DEFAULT_LANGUAGE);
+        F.CheckDir(defLang, out bool folderIsThere);
         if (folderIsThere)
         {
-            if (!File.Exists(Data.LangStorage + DEFAULT_LANGUAGE + @"\localization.json"))
+            string loc = Path.Combine(defLang, "localization.json");
+            if (!File.Exists(loc))
             {
                 Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-                using (FileStream stream = new FileStream(Data.LangStorage + DEFAULT_LANGUAGE + @"\localization.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                using (FileStream stream = new FileStream(loc, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                 {
                     Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                     writer.WriteStartObject();
@@ -518,10 +521,11 @@ public static partial class JSONMethods
         F.CheckDir(Data.FlagStorage, out bool dirExists);
         if (dirExists)
         {
-            if (!File.Exists(Data.FlagStorage + "extra_points.json"))
+            string xtraPts = Path.Combine(Data.FlagStorage, "extra_points.json");
+            if (!File.Exists(xtraPts))
             {
                 Dictionary<string, Vector3> defaultXtraPoints2 = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
-                using (FileStream stream = new FileStream(Data.FlagStorage + "extra_points.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                using (FileStream stream = new FileStream(xtraPts, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                 {
                     Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                     writer.WriteStartObject();
@@ -543,7 +547,7 @@ public static partial class JSONMethods
                 }
                 return defaultXtraPoints2;
             }
-            using (FileStream stream = new FileStream(Data.FlagStorage + "extra_points.json", FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (FileStream stream = new FileStream(xtraPts, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 long len = stream.Length;
                 if (len > int.MaxValue)
@@ -603,7 +607,7 @@ public static partial class JSONMethods
                     }
                     catch (Exception e)
                     {
-                        L.LogError("Failed to read " + Data.FlagStorage + "extra_zones.json.");
+                        L.LogError("Failed to read " + xtraPts);
                         L.LogError(e);
                         goto def;
                     }
@@ -617,7 +621,7 @@ public static partial class JSONMethods
         }
 
 
-        def:
+    def:
         Dictionary<string, Vector3> defaultXtraPoints = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
         for (int i = 0; i < DefaultExtraPoints.Count; i++)
         {
@@ -632,11 +636,12 @@ public static partial class JSONMethods
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         F.CheckDir(Data.LangStorage, out bool dirExists);
+        string langPrefs = Path.Combine(Data.LangStorage, "preferences.json");
         if (dirExists)
         {
-            if (!File.Exists(Data.LangStorage + "preferences.json"))
+            if (!File.Exists(langPrefs))
             {
-                using (FileStream stream = new FileStream(Data.LangStorage + "preferences.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                using (FileStream stream = new FileStream(langPrefs, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                 {
                     byte[] utf8 = System.Text.Encoding.UTF8.GetBytes("[]");
                     stream.Write(utf8, 0, utf8.Length);
@@ -645,7 +650,7 @@ public static partial class JSONMethods
                 }
                 return new Dictionary<ulong, string>();
             }
-            using (FileStream stream = new FileStream(Data.LangStorage + "preferences.json", FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (FileStream stream = new FileStream(langPrefs, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 long len = stream.Length;
                 if (len > int.MaxValue)
@@ -684,7 +689,7 @@ public static partial class JSONMethods
                     }
                     catch (Exception ex)
                     {
-                        L.LogError("Failed to read language preferences at preferences.json.");
+                        L.LogError("Failed to read language preferences at " + langPrefs);
                         L.LogError(ex);
                         return new Dictionary<ulong, string>();
                     }
@@ -703,19 +708,23 @@ public static partial class JSONMethods
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (languages == null) return;
-        using (FileStream stream = new FileStream(Data.LangStorage + "preferences.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+        F.CheckDir(Data.LangStorage, out bool dirExists);
+        if (dirExists)
         {
-            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-            writer.WriteStartObject();
-            foreach (KeyValuePair<ulong, string> languagePref in languages)
+            using (FileStream stream = new FileStream(Path.Combine(Data.LangStorage, "preferences.json"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
             {
-                writer.WritePropertyName(languagePref.Key.ToString(Data.Locale));
-                writer.WriteStringValue(languagePref.Value);
+                Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+                writer.WriteStartObject();
+                foreach (KeyValuePair<ulong, string> languagePref in languages)
+                {
+                    writer.WritePropertyName(languagePref.Key.ToString(Data.Locale));
+                    writer.WriteStringValue(languagePref.Value);
+                }
+                writer.WriteEndObject();
+                writer.Dispose();
+                stream.Close();
+                stream.Dispose();
             }
-            writer.WriteEndObject();
-            writer.Dispose();
-            stream.Close();
-            stream.Dispose();
         }
     }
     public static void SetLanguage(ulong player, string language)
@@ -740,12 +749,13 @@ public static partial class JSONMethods
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         F.CheckDir(Data.LangStorage, out bool dirExists);
+        string langAliases = Path.Combine(Data.LangStorage, "aliases.json");
         if (dirExists)
         {
-            if (!File.Exists(Data.LangStorage + "aliases.json"))
+            if (!File.Exists(langAliases))
             {
                 Dictionary<string, LanguageAliasSet> defaultLanguageAliasSets2 = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
-                using (FileStream stream = new FileStream(Data.LangStorage + "aliases.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                using (FileStream stream = new FileStream(langAliases, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                 {
                     Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                     writer.WriteStartArray();
@@ -764,7 +774,7 @@ public static partial class JSONMethods
                 }
                 return defaultLanguageAliasSets2;
             }
-            using (FileStream stream = new FileStream(Data.LangStorage + "aliases.json", FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (FileStream stream = new FileStream(langAliases, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 long len = stream.Length;
                 if (len > int.MaxValue)
