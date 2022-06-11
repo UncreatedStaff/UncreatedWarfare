@@ -133,7 +133,7 @@ public static class EventFunctions
 
             if (gun.isAiming && gun.equippedGunAsset.GUID == SpottedComponent.LaserDesignatorGUID)
             {
-                if (Physics.Raycast(new Ray(projectile.transform.position, projectile.transform.up), out RaycastHit hit, 700, RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.GROUND))
+                if (Physics.SphereCast(projectile.transform.position, 2, projectile.transform.up, out RaycastHit hit, 700, RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.GROUND))
                 {
                     if (hit.transform != null)
                     {
