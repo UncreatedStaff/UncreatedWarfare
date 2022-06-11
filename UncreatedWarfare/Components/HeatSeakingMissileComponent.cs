@@ -127,7 +127,7 @@ namespace Uncreated.Warfare.Components
 #endif
             float minAngle = 10;
 
-            if (Physics.Raycast(new Ray(projectile.transform.position, projectile.transform.up), out var hit, aquisitionRange, RayMasks.VEHICLE))
+            if (Physics.SphereCast(projectile.transform.position, 4, projectile.transform.up, out var hit, aquisitionRange, RayMasks.VEHICLE))
             {
                 if (hit.transform != null && hit.transform.TryGetComponent(out InteractableVehicle v))
                 {
@@ -198,11 +198,11 @@ namespace Uncreated.Warfare.Components
 #endif
             countermeasureLockedOn = null;
 
-            float minAngle = 30;
+            float minAngle = 10;
 
             foreach (Transform countermeasure in ActiveCountermeasures)
             {
-                if ((countermeasure.position - projectile.transform.position).sqrMagnitude < Math.Pow(250, 2))
+                if ((countermeasure.position - projectile.transform.position).sqrMagnitude < Math.Pow(150, 2))
                 {
                     Vector3 idealDirection = countermeasure.position - lookOrigin.position;
 
