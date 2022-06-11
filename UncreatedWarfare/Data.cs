@@ -76,7 +76,7 @@ public static class Data
     }
     public static readonly string FOBStorage = Path.Combine(DATA_DIRECTORY, "FOBs") + Path.DirectorySeparatorChar;
     public static readonly string LangStorage = Path.Combine(DATA_DIRECTORY, "Lang") + Path.DirectorySeparatorChar;
-    public static readonly string ElseWhereSQLPath = @"C:\sql.json";
+    public static readonly string ElseWhereSQLPath = "C" + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar + "sql.json";
     public static readonly string LOG_DIRECTORY = Path.Combine(System.Environment.CurrentDirectory, "Logs", "ActionLogs");
     public static readonly CultureInfo Locale = new CultureInfo("en-US");
     public static Dictionary<string, Color> Colors;

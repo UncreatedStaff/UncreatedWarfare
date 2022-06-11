@@ -36,7 +36,7 @@ public class ActionLog : MonoBehaviour
             F.CheckDir(Data.LOG_DIRECTORY, out bool success);
             if (success)
             {
-                string path2 = Data.LOG_DIRECTORY + "current.txt";
+                string path2 = Path.Combine(Data.LOG_DIRECTORY, "current.txt");
                 FileInfo info = new FileInfo(path2);
                 bool replaced = false;
                 if (info.Exists)
@@ -44,7 +44,7 @@ public class ActionLog : MonoBehaviour
                     DateTime creation = info.CreationTime;
                     if ((DateTime.Now - creation).TotalHours > 1d)
                     {
-                        string path = Data.LOG_DIRECTORY + creation.ToString(DATE_HEADER_FORMAT) + ".txt";
+                        string path = Path.Combine(Data.LOG_DIRECTORY, creation.ToString(DATE_HEADER_FORMAT) + ".txt");
                         try
                         {
                             info.CopyTo(path);
@@ -117,14 +117,14 @@ public class ActionLog : MonoBehaviour
         [NetCall(ENetCall.FROM_SERVER, 1128)]
         internal static void ReceiveAckLog(MessageContext context, DateTime fileReceived)
         {
-            string path = Data.LOG_DIRECTORY + fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt";
+            string path = Path.Combine(Data.LOG_DIRECTORY, fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt");
             if (File.Exists(path))
                 File.Delete(path);
         }
         [NetCall(ENetCall.FROM_SERVER, 1129)]
         internal static void ReceiveCurrentLogRequest(MessageContext context)
         {
-            string path2 = Data.LOG_DIRECTORY + "current.txt";
+            string path2 = Path.Combine(Data.LOG_DIRECTORY, "current.txt");
             FileInfo info = new FileInfo(path2);
             if (!info.Exists)
             {

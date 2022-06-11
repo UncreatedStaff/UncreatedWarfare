@@ -50,13 +50,14 @@ namespace Uncreated.Warfare.Components
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             F.CheckDir(Data.DATA_DIRECTORY, out bool folderExists);
+            string broadcastFile = Path.Combine(Data.DATA_DIRECTORY, "autobroadcast.json");
             Messages.Clear();
             if (folderExists)
             {
-                if (!File.Exists(Data.DATA_DIRECTORY + "autobroadcast.json"))
+                if (!File.Exists(broadcastFile))
                 {
                     Dictionary<string, TranslationData> enUs = new Dictionary<string, TranslationData>(DefaultMessages.Count);
-                    using (FileStream stream = new FileStream(Data.DATA_DIRECTORY + "autobroadcast.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                    using (FileStream stream = new FileStream(broadcastFile, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
                         Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                         writer.WriteStartObject();
@@ -79,7 +80,7 @@ namespace Uncreated.Warfare.Components
                     }
                     return;
                 }
-                using (FileStream stream = new FileStream(Data.DATA_DIRECTORY + "autobroadcast.json", FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (FileStream stream = new FileStream(broadcastFile, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     long len = stream.Length;
                     if (len > int.MaxValue)
