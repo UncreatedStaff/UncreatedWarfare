@@ -53,8 +53,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -2, out _, filename, false);
                 GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -1, out _, filename, false);
                 if (player != null)
-                    player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
-                else L.Log("Picture finished generating, check the Config\\Maps\\Flags folder menu");
+                    player.SendChat("Picture finished generating, check the Config/Maps/Flags folder menu.", UCWarfare.GetColor("default"));
+                else L.Log("Picture finished generating, check the Config/Maps/Flags folder menu");
             }
             else
             {
@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                                 GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename, false);
                             GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename, false);
                             if (player != default)
-                                player.SendChat("Picture finished generating, check the Config\\Maps\\Flags folder menu.", UCWarfare.GetColor("default"));
+                                player.SendChat("Picture finished generating, check the Config/Maps/Flags folder menu.", UCWarfare.GetColor("default"));
                             overlayStep = 0;
                         }
                     }
@@ -119,9 +119,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             L.Log("STEP " + step.ToString(Data.Locale));
             if (step == 0)
             {
-                if (File.Exists(Level.info.path + @"\Map.png"))
+                string directory = Path.Combine(Level.info.path, "Map.png");
+                if (File.Exists(directory))
                 {
-                    byte[] fileData = File.ReadAllBytes(Level.info.path + @"\Map.png");
+                    byte[] fileData = File.ReadAllBytes(directory);
                     img.LoadImage(fileData, false);
                 }
                 img.Apply();
@@ -209,9 +210,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             Color color2missingpath = new Color(0, 0, 1);
             int thickness = 8;
             Texture2D img = new Texture2D(Level.size, Level.size);
-            if (File.Exists(Level.info.path + @"\Map.png"))
+            string directory = Path.Combine(Level.info.path, "Map.png");
+            if (File.Exists(directory))
             {
-                byte[] fileData = File.ReadAllBytes(Level.info.path + @"\Map.png");
+                byte[] fileData = File.ReadAllBytes(directory);
                 img.LoadImage(fileData, false);
             }
             Dictionary<Flag, float> flags = new Dictionary<Flag, float>();
