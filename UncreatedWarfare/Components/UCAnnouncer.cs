@@ -53,10 +53,11 @@ namespace Uncreated.Warfare.Components
             Messages.Clear();
             if (folderExists)
             {
-                if (!File.Exists(Data.DATA_DIRECTORY + "autobroadcast.json"))
+                string directory = Data.DATA_DIRECTORY + "autobroadcast.json";
+                if (!File.Exists(directory))
                 {
                     Dictionary<string, TranslationData> enUs = new Dictionary<string, TranslationData>(DefaultMessages.Count);
-                    using (FileStream stream = new FileStream(Data.DATA_DIRECTORY + "autobroadcast.json", FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+                    using (FileStream stream = new FileStream(directory, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                     {
                         Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                         writer.WriteStartObject();
@@ -79,7 +80,7 @@ namespace Uncreated.Warfare.Components
                     }
                     return;
                 }
-                using (FileStream stream = new FileStream(Data.DATA_DIRECTORY + "autobroadcast.json", FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (FileStream stream = new FileStream(directory, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     long len = stream.Length;
                     if (len > int.MaxValue)
