@@ -266,8 +266,9 @@ internal class _DebugCommand : IRocketCommand
             if (!ctx.TryGet(1, out uint times))
                 times = 1U;
             List<Zone> zones = new List<Zone>();
-            if (!Directory.Exists(Data.FlagStorage + "ZoneExport\\"))
-                Directory.CreateDirectory(Data.FlagStorage + "ZoneExport\\");
+            string directory = Path.Combine(Data.FlagStorage, "ZoneExport", Path.DirectorySeparatorChar.ToString());
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
             for (int i = 0; i < times; i++)
             {
                 zones.Clear();
@@ -289,8 +290,9 @@ internal class _DebugCommand : IRocketCommand
             if (!ctx.TryGet(1, out uint times))
                 times = 1U;
             List<Zone> zones = new List<Zone>();
-            if (!Directory.Exists(Data.FlagStorage + "GraphExport\\"))
-                Directory.CreateDirectory(Data.FlagStorage + "GraphExport\\");
+            string directory = Path.Combine(Data.FlagStorage, "GraphExport", Path.DirectorySeparatorChar.ToString());
+            if (!Directory.Exists(directory))
+                Directory.CreateDirectory(directory);
             for (int i = 0; i < times; i++)
             {
                 zones.Clear();

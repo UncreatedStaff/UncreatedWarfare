@@ -736,7 +736,7 @@ public static class F
             {
                 Directory.CreateDirectory(path);
                 success = true;
-                L.Log("Created directory: \"" + path + "\".", ConsoleColor.Magenta);
+                L.Log("Created directory: " + path + ".", ConsoleColor.Magenta);
             }
             catch (Exception ex)
             {
@@ -750,9 +750,10 @@ public static class F
     }
     public static void SaveProfilingData()
     {
-        CheckDir(Data.DATA_DIRECTORY + "Profiling\\", out _);
-        string fi = Data.DATA_DIRECTORY + "Profiling\\" + DateTime.Now.ToString("yyyy-mm-dd_HH-mm-ss") + "_profile.csv";
-        L.Log("Flushing profiling information to \"" + fi + "\"", ConsoleColor.Cyan);
+        string directory = Path.Combine(Data.DATA_DIRECTORY, "Profiling", Path.DirectorySeparatorChar.ToString());
+        CheckDir(directory, out _);
+        string fi = Path.Combine(directory, DateTime.Now.ToString("yyyy-mm-dd_HH-mm-ss") + "_profile.csv");
+        L.Log("Flushing profiling information to " + fi, ConsoleColor.Cyan);
         ProfilingUtils.WriteAllDataToCSV(fi);
         ProfilingUtils.Clear();
     }

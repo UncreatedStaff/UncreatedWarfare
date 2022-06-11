@@ -514,9 +514,10 @@ internal static class Localization
         F.CheckDir(Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE, out bool folderIsThere);
         if (folderIsThere)
         {
-            if (!File.Exists(Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE + @"\deaths.json"))
+            string directory = Path.Combine(Data.LangStorage, JSONMethods.DEFAULT_LANGUAGE, "deaths.json");
+            if (!File.Exists(directory))
             {
-                using (FileStream stream = File.Create(Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE + @"\deaths.json"))
+                using (FileStream stream = File.Create(directory))
                 {
                     Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                     writer.WriteStartArray();
