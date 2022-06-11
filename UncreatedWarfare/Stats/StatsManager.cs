@@ -455,7 +455,7 @@ public static class StatsManager
                         fs.Close();
                         fs.Dispose();
                     }
-                    using (FileStream fs = new FileStream(StatsDirectory + Steam64.ToString(Data.Locale) + "_corrupt.dat", FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                    using (FileStream fs = new FileStream(Path.Combine(StatsDirectory, Steam64.ToString(Data.Locale) + "_corrupt.dat"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
                     {
                         fs.Write(bytes, 0, bytes.Length);
                         fs.Close();
