@@ -64,7 +64,7 @@ public class StructureSaver : ListSingleton<Structure>, ILevelStartListener
             return false;
         }
     }
-    public static bool AddStructure(BarricadeDrop drop, SDG.Unturned.BarricadeData data, out Structure structureadded)
+    public static bool AddStructure(BarricadeDrop drop, BarricadeData data, out Structure structureadded)
     {
         Singleton.AssertLoaded<StructureSaver, Structure>();
         if (data == default || drop == default)

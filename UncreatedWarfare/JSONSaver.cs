@@ -403,7 +403,6 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
 public static class JsonEx
 {
     private static readonly JavaScriptEncoder jsEncoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
-    //private static readonly JsonAssetReferenceConverterFactory jsonAssetRefFactory = new JsonAssetReferenceConverterFactory();
     public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions()
     {
         WriteIndented = true, 
@@ -416,7 +415,7 @@ public static class JsonEx
     public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };
     static JsonEx()
     {
-        //serializerSettings.Converters.Add(jsonAssetRefFactory);
+
     }
     public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, bool value)
     {
