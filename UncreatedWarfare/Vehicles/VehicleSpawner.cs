@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Events;
@@ -20,7 +21,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
     private static VehicleSpawner Singleton;
     public static bool Loaded => Singleton.IsLoaded<VehicleSpawner, VehicleSpawn>();
     public const float VEHICLE_HEIGHT_OFFSET = 5f;
-    public VehicleSpawner() : base("vehiclespawns", Data.VehicleStorage + "vehiclespawns.json") { }
+    public VehicleSpawner() : base("vehiclespawns", Path.Combine(Data.VehicleStorage, "vehiclespawns.json")) { }
     protected override string LoadDefaults() => EMPTY_LIST;
     public static IEnumerable<VehicleSpawn> Spawners => Loaded ? Singleton : null!;
     public override void Load()

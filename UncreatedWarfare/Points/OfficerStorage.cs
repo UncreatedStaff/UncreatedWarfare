@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,7 +14,7 @@ public class OfficerStorage : ListSingleton<OfficerData>
     internal const int OFFICER_RANK_ORDER = 9;
     private static OfficerStorage Singleton;
     public static bool Loaded => Singleton.IsLoaded<OfficerStorage, OfficerData>();
-    public OfficerStorage() : base("officers", Data.PointsStorage + "officers.json")
+    public OfficerStorage() : base("officers", Path.Combine(Data.PointsStorage, "officers.json"))
     {
 
     }

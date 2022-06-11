@@ -50,14 +50,12 @@ public class DevCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "gencaches"))
         {
-            // DO NOT USE THIS COMMAND ON LINUX
-
             if (Data.Is(out Insurgency insurgency))
             {
                 IEnumerable<BarricadeDrop> caches = UCBarricadeManager.AllBarricades.Where(b =>
                     b.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID);
 
-                FileStream writer = File.Create(Path.Combine("C:\\Users\\USER\\Desktop\\cachespanws.json"));
+                FileStream writer = File.Create("C" + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar + Path.Combine("Users", "USER", "Desktop", "cachespanws.json"));
 
                 string line = "";
 

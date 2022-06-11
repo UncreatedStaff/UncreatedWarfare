@@ -37,7 +37,7 @@ namespace Uncreated
         private bool isFirst = true;
         public Config(string directory, string filename)
         {
-            this._dir = directory + filename;
+            this._dir = Path.Combine(directory, filename);
             customDeserializer = null;
             useCustomDeserializer = false;
             customSerializer = null;

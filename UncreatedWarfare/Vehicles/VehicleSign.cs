@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
@@ -14,7 +15,7 @@ namespace Uncreated.Warfare.Vehicles;
 [SingletonDependency(typeof(StructureSaver))]
 public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
 {
-    public VehicleSigns() : base("vehiclesigns", Data.VehicleStorage + "signs.json") { }
+    public VehicleSigns() : base("vehiclesigns", Path.Combine(Data.VehicleStorage, "signs.json")) { }
     private static VehicleSigns Singleton;
     public static bool Loaded => Singleton.IsLoaded<VehicleSigns, VehicleSign>();
     public override void Load()

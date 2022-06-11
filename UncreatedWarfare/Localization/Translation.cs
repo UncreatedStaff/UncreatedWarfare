@@ -1715,7 +1715,7 @@ public static class Translation
     public static void ReadEnumTranslations(List<KeyValuePair<Type, string?>> extEnumTypes)
     {
         enumTranslations.Clear();
-        string def = Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE + "\\";
+        string def = Path.Combine(Data.LangStorage, JSONMethods.DEFAULT_LANGUAGE) + Path.DirectorySeparatorChar;
         if (!Directory.Exists(def))
             Directory.CreateDirectory(def);
         DirectoryInfo info = new DirectoryInfo(Data.LangStorage);
@@ -1725,7 +1725,7 @@ public static class Translation
         {
             if (langDirs[i].Name.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
             {
-                string p = langDirs[i].FullName + "\\" + ENUM_TRANSLATION_FILE_NAME;
+                string p = Path.Combine(langDirs[i].FullName, ENUM_TRANSLATION_FILE_NAME);
                 if (!Directory.Exists(p))
                     Directory.CreateDirectory(p);
             }
@@ -1742,7 +1742,7 @@ public static class Translation
             if (enumTranslations.ContainsKey(enumType.Key)) continue;
             Dictionary<string, Dictionary<string, string>> k = new Dictionary<string, Dictionary<string, string>>();
             enumTranslations.Add(enumType.Key, k);
-            string fn = def + ENUM_TRANSLATION_FILE_NAME + enumType.Key.FullName + ".json";
+            string fn = Path.Combine(def, ENUM_TRANSLATION_FILE_NAME, enumType.Key.FullName + ".json");
             FieldInfo[] fields = enumType.Key.GetFields(BindingFlags.Public | BindingFlags.Static);
             string[] values = fields.Select(x => x.GetValue(null).ToString()).ToArray();
             if (!File.Exists(fn))
@@ -1784,7 +1784,7 @@ public static class Translation
             {
                 DirectoryInfo dir = langDirs[i];
                 if (k.ContainsKey(dir.Name)) continue;
-                fn = dir.FullName + "\\" +  ENUM_TRANSLATION_FILE_NAME + enumType.Key.FullName + ".json";
+                fn = Path.Combine(dir.FullName, ENUM_TRANSLATION_FILE_NAME, enumType.Key.FullName + ".json");
                 if (!File.Exists(fn)) continue;
                 Dictionary<string, string> k2 = new Dictionary<string, string>(values.Length + 1);
                 k.Add(dir.Name, k2);

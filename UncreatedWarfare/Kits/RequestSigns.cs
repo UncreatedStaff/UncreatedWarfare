@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -18,7 +19,7 @@ public class RequestSigns : ListSingleton<RequestSign>
 {
     private static RequestSigns Singleton;
     public static bool Loaded => Singleton.IsLoaded<RequestSigns, RequestSign>();
-    public RequestSigns() : base("kitsigns", Data.StructureStorage + "request_signs.json", RequestSign.WriteRequestSign, RequestSign.ReadRequestSign) { }
+    public RequestSigns() : base("kitsigns", Path.Combine(Data.StructureStorage, "request_signs.json"), RequestSign.WriteRequestSign, RequestSign.ReadRequestSign) { }
     protected override string LoadDefaults() => EMPTY_LIST;
     public override void Load()
     {

@@ -2,6 +2,7 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Uncreated.Framework;
 using Uncreated.Warfare.Kits;
@@ -14,7 +15,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
 {
     private static Whitelister Singleton;
     public static bool Loaded => Singleton.IsLoaded<Whitelister, WhitelistItem>();
-    public Whitelister() : base("whitelist", Data.KitsStorage + "whitelist.json")
+    public Whitelister() : base("whitelist", Path.Combine(Data.KitsStorage, "whitelist.json"))
     {
     }
     protected override string LoadDefaults() => "[]";
