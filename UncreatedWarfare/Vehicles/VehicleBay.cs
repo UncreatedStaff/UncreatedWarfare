@@ -436,7 +436,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
 #endif
         if (!e.Player.OnDuty() && e.ExitLocation.y - F.GetHeightAt2DPoint(e.ExitLocation.x, e.ExitLocation.z) > UCWarfare.Config.MaxVehicleHeightToLeave)
         {
-            if (!FOBManager.Config.Buildables.Exists(v => v.Type == EBuildableType.EMPLACEMENT && v.BuildableBarricade.Guid == e.Vehicle.asset.GUID))
+            if (!FOBManager.Config.Buildables.Exists(v => v.Type == EBuildableType.EMPLACEMENT && v.Emplacement is not null && v.Emplacement.EmplacementVehicle is not null && v.Emplacement.EmplacementVehicle.Guid == e.Vehicle.asset.GUID))
             {
                 e.Player.SendChat("vehicle_too_high");
                 e.Break();
