@@ -84,7 +84,7 @@ public class SpottedComponent : MonoBehaviour
                 {
                     spotted.TryAnnounce(spotter, Translation.Translate(vc.Data.Type.ToString(), JSONMethods.DEFAULT_LANGUAGE).ToUpper().Colorize("f2a172"));
                 }
-
+                L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
                 spotted.Activate(spotter);
             }
         }
@@ -93,6 +93,7 @@ public class SpottedComponent : MonoBehaviour
             if (player.transform.gameObject.TryGetComponent(out SpottedComponent spotted))
             {
                 spotted.TryAnnounce(spotter, "contact");
+                L.LogDebug("Spotting player " + player.name);
 
                 spotted.Activate(spotter);
             }
@@ -105,6 +106,7 @@ public class SpottedComponent : MonoBehaviour
                 if (drop.model.gameObject.gameObject.TryGetComponent(out SpottedComponent spotted))
                 {
                     spotted.TryAnnounce(spotter, "FOB".Colorize("ff7e5e"));
+                    L.LogDebug("Spotting barricade " + drop.asset.itemName);
                     spotted.Activate(spotter);
                 }
             }

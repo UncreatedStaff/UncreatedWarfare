@@ -786,7 +786,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
     {
         checkTime = true;
     }
-    void Update()
+    void FixedUpdate()
     {
         if (state == EVehicleBayState.NOT_INITIALIZED) return;
 #if DEBUG
@@ -809,17 +809,20 @@ public sealed class VehicleBayComponent : MonoBehaviour
                 else if (state != EVehicleBayState.DELAYED)
                 {
                     state = EVehicleBayState.DELAYED;
+                    lastSignUpdate = time;
                     UpdateSign();
                 }
             }
             else if (vehicle != null && spawnData.HasLinkedVehicle(out InteractableVehicle veh) && !veh.lockedOwner.IsValid())
             {
                 state = EVehicleBayState.READY;
+                lastSignUpdate = time;
                 UpdateSign();
             }
             else
             {
                 state = EVehicleBayState.IN_USE;
+                lastSignUpdate = time;
                 UpdateSign();
             }
         }
@@ -831,6 +834,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
                 if (state != EVehicleBayState.IN_USE)
                 {
                     state = EVehicleBayState.IN_USE;
+                    lastSignUpdate = time;
                     UpdateSign();
                 }
             }
@@ -839,12 +843,13 @@ public sealed class VehicleBayComponent : MonoBehaviour
                 idleStartTime = time;
                 IdleTime = 0f;
                 state = EVehicleBayState.IDLE;
+                lastSignUpdate = time;
                 UpdateSign();
             }
         }
         if (state != EVehicleBayState.DEAD && state >= EVehicleBayState.READY && state <= EVehicleBayState.IN_USE)
         {
-            if (vehicle == null || vehicle.isDead || vehicle.isExploded)
+            if (vehicle is null || vehicle.isDead || vehicle.isExploded)
             {
                 // carry over idle time to dead timer
                 if (state == EVehicleBayState.IDLE)
@@ -858,6 +863,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
                     DeadTime = 0f;
                 }
                 state = EVehicleBayState.DEAD;
+                lastSignUpdate = time;
                 UpdateSign();
             }
         }
@@ -872,6 +878,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
                 {
                     lastLocIndex = ind;
                     CurrentLocation = ((LocationNode)LevelNodes.nodes[ind]).name;
+                    lastSignUpdate = time;
                     UpdateSign();
                 }
             }
@@ -883,9 +890,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
         if ((state == EVehicleBayState.IDLE && IdleTime > vehicleData.RespawnTime) || (state == EVehicleBayState.DEAD && DeadTime > vehicleData.RespawnTime))
         {
             if (vehicle != null)
-            {
                 VehicleBay.DeleteVehicle(vehicle);
-            }
             vehicle = null;
             spawnData.SpawnVehicle();
         }

@@ -818,6 +818,9 @@ public class VehicleData : IJsonReadWrite
     // TODO: gamemode blacklist not working
     public bool IsDelayed(out Delay delay)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         delay = Delay.Nil;
         string? gm = Data.Gamemode?.Name;
         if (Delays == null || Delays.Length == 0) return false;

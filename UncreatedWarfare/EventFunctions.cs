@@ -130,33 +130,74 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-
-            if (gun.isAiming && gun.equippedGunAsset.GUID == SpottedComponent.LaserDesignatorGUID)
+        const float RADIUS = 3;
+        const float LENGTH = 700;
+        const int RAY_MASK = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE |
+                             RayMasks.MEDIUM | RayMasks.GROUND | RayMasks.GROUND2;
+        const int RAY_MASK_BACKUP = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE;
+        if (gun.isAiming && gun.equippedGunAsset.GUID == SpottedComponent.LaserDesignatorGUID)
+        {
+            float grndDist = float.NaN;
+            if (Physics.Raycast(projectile.transform.position, projectile.transform.up, out RaycastHit hit, LENGTH,
+                    RAY_MASK))
             {
-                if (Physics.SphereCast(projectile.transform.position, 2, projectile.transform.up, out RaycastHit hit, 700, RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.GROUND))
+                if (hit.transform != null)
                 {
-                    if (hit.transform != null)
+                    if ((ELayerMask)hit.transform.gameObject.layer is ELayerMask.GROUND or ELayerMask.GROUND2
+                        or ELayerMask.LARGE or ELayerMask.MEDIUM or ELayerMask.SMALL)
+                        grndDist = (projectile.transform.position - hit.transform.position).sqrMagnitude;
+                    else
                     {
                         SpottedComponent.MarkTarget(hit.transform, gun.player);
+                        return;
                     }
                 }
+            }
+
+            List<RaycastHit> hits = new List<RaycastHit>(Physics.SphereCastAll(projectile.transform.position, RADIUS,
+                projectile.transform.up, LENGTH, RAY_MASK_BACKUP));
+            Vector3 strtPos = projectile.transform.position;
+            hits.RemoveAll(
+                x =>
+            {
+                if (x.transform == null || !x.transform.gameObject.TryGetComponent<SpottedComponent>(out _))
+                    return true;
+                float dist = (x.transform.position - strtPos).sqrMagnitude;
+                return dist < RADIUS * RADIUS + 1 || dist > grndDist;
+            });
+            if (hits.Count == 0) return;
+            if (hits.Count == 1)
+            {
+                SpottedComponent.MarkTarget(hits[0].transform, gun.player);
                 return;
             }
-
-            SDG.Unturned.Rocket[] rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true);
-            foreach (SDG.Unturned.Rocket rocket in rockets)
+            hits.Sort((a, b) =>
             {
-                rocket.killer = gun.player.channel.owner.playerID.steamID;
-            }
+                return (strtPos - b.point).sqrMagnitude.CompareTo((strtPos - a.point).sqrMagnitude);
+            });
+            hits.Sort((a, b) =>
+            {
+                return (ELayerMask)a.transform.gameObject.layer is ELayerMask.PLAYER ? -1 : 1;
+            });
 
-            if (VehicleBay.Config.TOWMissileWeapons.HasGUID(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, gun.player, 90, 0.33f, 800);
-            else if (VehicleBay.Config.GroundAAWeapons.HasGUID(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 4, 0.33f);
-            else if (VehicleBay.Config.AirAAWeapons.HasGUID(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
-            else if (VehicleBay.Config.LaserGuidedWeapons.HasGUID(gun.equippedGunAsset.GUID))
-                projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 150, 15, 0.6f);
+            SpottedComponent.MarkTarget(hits[0].transform, gun.player);
+            return;
+        }
+
+        SDG.Unturned.Rocket[] rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true);
+        foreach (SDG.Unturned.Rocket rocket in rockets)
+        {
+            rocket.killer = gun.player.channel.owner.playerID.steamID;
+        }
+
+        if (VehicleBay.Config.TOWMissileWeapons.HasGUID(gun.equippedGunAsset.GUID))
+            projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, gun.player, 90, 0.33f, 800);
+        else if (VehicleBay.Config.GroundAAWeapons.HasGUID(gun.equippedGunAsset.GUID))
+            projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 4, 0.33f);
+        else if (VehicleBay.Config.AirAAWeapons.HasGUID(gun.equippedGunAsset.GUID))
+            projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
+        else if (VehicleBay.Config.LaserGuidedWeapons.HasGUID(gun.equippedGunAsset.GUID))
+            projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 150, 15, 0.6f);
 
         Patches.DeathsPatches.lastProjected = projectile;
         if (gun.player.TryGetPlayerData(out UCPlayerData c))
