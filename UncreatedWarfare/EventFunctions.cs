@@ -28,6 +28,7 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 #pragma warning disable IDE0060 // Remove unused parameter
@@ -992,9 +993,8 @@ public static class EventFunctions
 
         if (Data.Is<IFlagRotation>(out _) && e.Player.Player.IsOnFlag(out Flag flag))
         {
-            SendUIParameters p = CTFUI.RefreshStaticUI(e.Player.GetTeam(), flag, true);
-            if (p.status != EFlagStatus.BLANK && p.status != EFlagStatus.DONT_DISPLAY)
-                p.SendToPlayer(e.Player.SteamPlayer);
+            CaptureUIParameters p = CTFUI.RefreshStaticUI(e.Player.GetTeam(), flag, true);
+            CTFUI.CaptureUI.Send(e.Player, ref p);
         }
     }
     static readonly Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();

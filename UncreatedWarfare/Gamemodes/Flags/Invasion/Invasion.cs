@@ -9,6 +9,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
 using UnityEngine;
 using Uncreated.Warfare.Events.Players;
+using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion;
 
@@ -30,10 +31,10 @@ public class Invasion :
         foreach (SteamPlayer player in Provider.clients)
         {
             CTFUI.ClearFlagList(player.transportConnection);
-            SendUIParameters.Nil.SendToPlayer(player);
             if (player.player.TryGetPlayerData(out Components.UCPlayerData c))
                 c.stats = null!;
         }
+        CTFUI.CaptureUI.ClearFromAllPlayers();
         base.PostDispose();
     }
     protected override void PreGameStarting(bool isOnLoad)
@@ -232,10 +233,14 @@ public class Invasion :
         ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
-        SendUIParameters t1 = SendUIParameters.Nil;
-        SendUIParameters t2 = SendUIParameters.Nil;
-        SendUIParameters t1v = SendUIParameters.Nil;
-        SendUIParameters t2v = SendUIParameters.Nil;
+        UpdateFlag(flag);
+    }
+    private void UpdateFlag(Flag flag)
+    {
+        CaptureUIParameters t1 = default;
+        CaptureUIParameters t2 = default;
+        CaptureUIParameters t1v = default;
+        CaptureUIParameters t2v = default;
         if (flag.Team1TotalCappers > 0)
             t1 = InvasionUI.RefreshStaticUI(1, flag, false, _attackTeam);
         if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
@@ -244,23 +249,24 @@ public class Invasion :
             t2 = InvasionUI.RefreshStaticUI(2, flag, false, _attackTeam);
         if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
             t2v = InvasionUI.RefreshStaticUI(2, flag, true, _attackTeam);
-        foreach (Player capper in flag.PlayersOnFlag)
+        for (int i = 0; i < flag.PlayersOnFlag.Count; i++)
         {
+            Player capper = flag.PlayersOnFlag[i];
             ulong t = capper.GetTeam();
 
             if (t == 1)
             {
                 if (capper.movement.getVehicle() == null)
-                    t1.SendToPlayer(capper.channel.owner);
+                    CTFUI.CaptureUI.Send(capper, ref t1);
                 else
-                    t1v.SendToPlayer(capper.channel.owner);
+                    CTFUI.CaptureUI.Send(capper, ref t1v);
             }
             else if (t == 2)
             {
                 if (capper.movement.getVehicle() == null)
-                    t2.SendToPlayer(capper.channel.owner);
+                    CTFUI.CaptureUI.Send(capper, ref t2);
                 else
-                    t2v.SendToPlayer(capper.channel.owner);
+                    CTFUI.CaptureUI.Send(capper, ref t2v);
             }
         }
     }
@@ -273,36 +279,7 @@ public class Invasion :
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
         player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
-        SendUIParameters t1 = SendUIParameters.Nil;
-        SendUIParameters t2 = SendUIParameters.Nil;
-        SendUIParameters t1v = SendUIParameters.Nil;
-        SendUIParameters t2v = SendUIParameters.Nil;
-        if (flag.Team1TotalCappers > 0)
-            t1 = InvasionUI.RefreshStaticUI(1, flag, false, AttackingTeam);
-        if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-            t1v = InvasionUI.RefreshStaticUI(1, flag, true, AttackingTeam);
-        if (flag.Team2TotalCappers > 0)
-            t2 = InvasionUI.RefreshStaticUI(2, flag, false, AttackingTeam);
-        if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-            t2v = InvasionUI.RefreshStaticUI(2, flag, true, AttackingTeam);
-        foreach (Player capper in flag.PlayersOnFlag)
-        {
-            ulong t = capper.GetTeam();
-            if (t == 1)
-            {
-                if (capper.movement.getVehicle() == null)
-                    t1.SendToPlayer(capper.channel.owner);
-                else
-                    t1v.SendToPlayer(capper.channel.owner);
-            }
-            else if (t == 2)
-            {
-                if (capper.movement.getVehicle() == null)
-                    t2.SendToPlayer(capper.channel.owner);
-                else
-                    t2v.SendToPlayer(capper.channel.owner);
-            }
-        }
+        UpdateFlag(flag);
     }
     protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
     {
@@ -387,24 +364,7 @@ public class Invasion :
                 }
             }
         }
-        SendUIParameters t1 = SendUIParameters.Nil;
-        SendUIParameters t2 = SendUIParameters.Nil;
-        SendUIParameters t1v = SendUIParameters.Nil;
-        SendUIParameters t2v = SendUIParameters.Nil;
-        if (flag.Team1TotalCappers > 0)
-            t1 = InvasionUI.RefreshStaticUI(1, flag, false, AttackingTeam);
-        if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-            t1v = InvasionUI.RefreshStaticUI(1, flag, true, AttackingTeam);
-        if (flag.Team2TotalCappers > 0)
-            t2 = InvasionUI.RefreshStaticUI(2, flag, false, AttackingTeam);
-        if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-            t2v = InvasionUI.RefreshStaticUI(2, flag, true, AttackingTeam);
-        if (flag.Team1TotalPlayers > 0)
-            foreach (Player player in flag.PlayersOnFlagTeam1)
-                (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(player.channel.owner);
-        if (flag.Team2TotalPlayers > 0)
-            foreach (Player player in flag.PlayersOnFlagTeam2)
-                (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(player.channel.owner);
+        UpdateFlag(flag);
         if (NewOwner == 0)
         {
             foreach (SteamPlayer client in Provider.clients)
@@ -433,26 +393,7 @@ public class Invasion :
 #endif
         if (NewPoints == 0)
             flag.SetOwner(0);
-        SendUIParameters t1 = SendUIParameters.Nil;
-        SendUIParameters t2 = SendUIParameters.Nil;
-        SendUIParameters t1v = SendUIParameters.Nil;
-        SendUIParameters t2v = SendUIParameters.Nil;
-        if (flag.Team1TotalCappers > 0)
-            t1 = InvasionUI.RefreshStaticUI(1, flag, false, AttackingTeam);
-        if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-            t1v = InvasionUI.RefreshStaticUI(1, flag, true, AttackingTeam);
-        if (flag.Team2TotalCappers > 0)
-            t2 = InvasionUI.RefreshStaticUI(2, flag, false, AttackingTeam);
-        if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-            t2v = InvasionUI.RefreshStaticUI(2, flag, true, AttackingTeam);
-        foreach (Player player in flag.PlayersOnFlag)
-        {
-            byte team = player.GetTeamByte();
-            if (team == 1)
-                (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(player.channel.owner);
-            else if (team == 2)
-                (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(player.channel.owner);
-        }
+        UpdateFlag(flag);
     }
     protected override void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
@@ -473,9 +414,12 @@ public class Invasion :
 #endif
         CTFUI.ClearFlagList(e.Player);
         if (_onFlag.TryGetValue(e.Player, out int id))
-            InvasionUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
-                ?? _rotation[0], e.Player.Player.movement.getVehicle() != null, AttackingTeam)
-                .SendToPlayer(e.Player);
+        {
+            CaptureUIParameters p = InvasionUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
+                                                                          ?? _rotation[0], e.Player.Player.movement.getVehicle() != null, AttackingTeam);
+            CTFUI.CaptureUI.Send(e.Player, ref p);
+        }
+
         InvasionUI.SendFlagList(e.Player);
         base.OnGroupChanged(e);
     }

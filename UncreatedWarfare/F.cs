@@ -748,15 +748,17 @@ public static class F
         }
         else success = true;
     }
+#if DEBUG
     public static void SaveProfilingData()
     {
-        string directory = Path.Combine(Data.DATA_DIRECTORY, "Profiling", Path.DirectorySeparatorChar.ToString());
+        string directory = Path.Combine(Data.DATA_DIRECTORY, "Profiling") + Path.DirectorySeparatorChar;
         CheckDir(directory, out _);
         string fi = Path.Combine(directory, DateTime.Now.ToString("yyyy-mm-dd_HH-mm-ss") + "_profile.csv");
         L.Log("Flushing profiling information to " + fi, ConsoleColor.Cyan);
         ProfilingUtils.WriteAllDataToCSV(fi);
         ProfilingUtils.Clear();
     }
+#endif
     public static void SendSteamURL(this SteamPlayer player, string message, ulong SteamID) => player.SendURL(message, $"https://steamcommunity.com/profiles/{SteamID}/");
     public static void SendURL(this SteamPlayer player, string message, string url)
     {

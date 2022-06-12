@@ -1276,100 +1276,18 @@ partial class JSONMethods
         { "insurgency_cache_undiscovered_color", "b780d9" },
         { "insurgency_cache_discovered_color", "555bcf" },
 
+        // capture ui
+        { "contested", "ffdc8a" },
+        { "secured", "80ff80" },
+        { "nocap", "855a5a" },
+        { "locked", "855a5a" },
+        { "invehicle", "855a5a" },
+
         // Team Colors
         { "team_1_color", "78b2ff" },
         { "team_2_color", "ffcd8c" },
         { "team_3_color", "0099ff" },
         { "neutral_color", "c2c2c2" },
-
-        // Team 1 Circle
-        { "capturing_team_1", "78b2ff " },
-        { "losing_team_1", "ffcd8c" },
-        { "clearing_team_1", "78b2ff " },
-        { "contested_team_1", "ffff1a" },
-        { "secured_team_1", "00ff00" },
-        { "nocap_team_1", "ff8c69" },
-        { "locked_team_1", "ff8c69" },
-        { "in_vehicle_team_1", "ff8c69" },
-
-        // Team 1 Background Circle
-        { "capturing_team_1_bkgr", "002266" },
-        { "losing_team_1_bkgr", "994d00" },
-        { "clearing_team_1_bkgr", "002266" },
-        { "contested_team_1_bkgr", "666600" },
-        { "secured_team_1_bkgr", "006600" },
-        { "nocap_team_1_bkgr", "660000" },
-        { "notowned_team_1_bkgr", "660000" },
-        { "locked_team_1_bkgr", "660000" },
-        { "in_vehicle_team_1_bkgr", "660000" },
-
-        // Team 1 Words
-        { "capturing_team_1_words", "78b2ff " },
-        { "losing_team_1_words", "ffcd8c" },
-        { "clearing_team_1_words", "78b2ff " },
-        { "contested_team_1_words", "ffff1a" },
-        { "secured_team_1_words", "00ff00" },
-        { "nocap_team_1_words", "ff8c69" },
-        { "notowned_team_1_words", "ff8c69" },
-        { "locked_team_1_words", "ff8c69" },
-        { "in_vehicle_team_1_words", "ff8c69" },
-
-        // Team 2 Circle
-        { "capturing_team_2", "ffcd8c" },
-        { "losing_team_2", "78b2ff " },
-        { "clearing_team_2", "ffcd8c" },
-        { "contested_team_2", "ffff1a" },
-        { "secured_team_2", "00ff00" },
-        { "nocap_team_2", "ff8c69" },
-        { "notowned_team_2", "ff8c69" },
-        { "locked_team_2", "ff8c69" },
-        { "in_vehicle_team_2", "ff8c69" },
-
-        // Team 2 Background Circle
-        { "capturing_team_2_bkgr", "994d00" },
-        { "losing_team_2_bkgr", "002266" },
-        { "clearing_team_2_bkgr", "994d00" },
-        { "contested_team_2_bkgr", "666600" },
-        { "secured_team_2_bkgr", "006600" },
-        { "nocap_team_2_bkgr", "660000" },
-        { "notowned_team_2_bkgr", "660000" },
-        { "locked_team_2_bkgr", "660000" },
-        { "in_vehicle_team_2_bkgr", "660000" },
-
-        // Team 2 Words
-        { "capturing_team_2_words", "ffcd8c" },
-        { "losing_team_2_words", "78b2ff " },
-        { "clearing_team_2_words", "ffcd8c" },
-        { "contested_team_2_words", "ffff1a" },
-        { "secured_team_2_words", "00ff00" },
-        { "nocap_team_2_words", "ff8c69" },
-        { "notowned_team_2_words", "ff8c69" },
-        { "locked_team_2_words", "ff8c69" },
-        { "in_vehicle_team_2_words", "ff8c69" },
-
-        // Flag Chats
-        { "entered_cap_radius_team_1", "e6e3d5" },
-        { "entered_cap_radius_team_2", "e6e3d5" },
-        { "left_cap_radius_team_1", "e6e3d5" },
-        { "left_cap_radius_team_2", "e6e3d5" },
-
-        // Team 1 Chat
-        { "capturing_team_1_chat", "e6e3d5" },
-        { "losing_team_1_chat", "e6e3d5" },
-        { "clearing_team_1_chat", "e6e3d5" },
-        { "contested_team_1_chat", "e6e3d5" },
-        { "secured_team_1_chat", "e6e3d5" },
-        { "notowned_team_1_chat", "e6e3d5" },
-        { "locked_team_1_chat", "e6e3d5" },
-
-        // Team 2 Chat
-        { "capturing_team_2_chat", "e6e3d5" },
-        { "losing_team_2_chat", "e6e3d5" },
-        { "clearing_team_2_chat", "e6e3d5" },
-        { "contested_team_2_chat", "e6e3d5" },
-        { "secured_team_2_chat", "e6e3d5" },
-        { "notowned_team_2_chat", "e6e3d5" },
-        { "locked_team_2_chat", "e6e3d5" },
 
         // Other Flag Chats
         { "flag_neutralized", "e6e3d5" },

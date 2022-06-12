@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;
+using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
@@ -17,10 +18,10 @@ public class TeamCTF :
         foreach (SteamPlayer player in Provider.clients)
         {
             CTFUI.ClearFlagList(player.transportConnection);
-            SendUIParameters.Nil.SendToPlayer(player);
             if (player.player.TryGetPlayerData(out Components.UCPlayerData c))
                 c.stats = null!;
         }
+        CTFUI.CaptureUI.ClearFromAllPlayers();
         base.PostDispose();
     }
     protected override void PostGameStarting(bool isOnLoad)
@@ -60,8 +61,11 @@ public class TeamCTF :
     {
         CTFUI.ClearFlagList(e.Player);
         if (_onFlag.TryGetValue(e.Player, out int id))
-            CTFUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
-                ?? _rotation[0], e.Player.Player.movement.getVehicle() != null).SendToPlayer(e.Player);
+        {
+            CaptureUIParameters p = CTFUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
+                                                                          ?? _rotation[0], e.Player.Player.movement.getVehicle() != null);
+            CTFUI.CaptureUI.Send(e.Player, ref p);
+        }
         CTFUI.SendFlagList(e.Player);
         base.OnGroupChanged(e);
     }

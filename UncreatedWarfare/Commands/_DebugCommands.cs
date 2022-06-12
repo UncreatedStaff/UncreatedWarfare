@@ -791,10 +791,12 @@ internal class _DebugCommand : IRocketCommand
                 F.InvokeSignUpdateForAll(sign, x, y, text);
         }
     }
+#if DEBUG
     private void saveall(CommandContext ctx)
     {
         F.SaveProfilingData();
     }
+#endif
     private void questtest(CommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)

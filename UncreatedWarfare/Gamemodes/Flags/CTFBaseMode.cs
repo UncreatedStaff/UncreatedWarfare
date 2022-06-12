@@ -17,6 +17,7 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -432,10 +433,29 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
-        SendUIParameters t1 = SendUIParameters.Nil;
-        SendUIParameters t2 = SendUIParameters.Nil;
-        SendUIParameters t1v = SendUIParameters.Nil;
-        SendUIParameters t2v = SendUIParameters.Nil;
+        UpdateFlag(flag);
+    }
+    protected override void PlayerLeftFlagRadius(Flag flag, Player player)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        ITransportConnection channel = player.channel.owner.transportConnection;
+        ulong team = player.GetTeam();
+        L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
+        player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
+        CTFUI.ClearCaptureUI(channel);
+        UpdateFlag(flag);
+    }
+    private void UpdateFlag(Flag flag)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        CaptureUIParameters t1 = default;
+        CaptureUIParameters t2 = default;
+        CaptureUIParameters t1v = default;
+        CaptureUIParameters t2v = default;
         if (flag.Team1TotalCappers > 0)
             t1 = CTFUI.RefreshStaticUI(1, flag, false);
         if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
@@ -451,57 +471,16 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             if (t == 1)
             {
                 if (capper.movement.getVehicle() == null)
-                    t1.SendToPlayer(capper.channel.owner);
+                    CTFUI.CaptureUI.Send(capper, ref t1);
                 else
-                    t1v.SendToPlayer(capper.channel.owner);
+                    CTFUI.CaptureUI.Send(capper, ref t1v);
             }
             else if (t == 2)
             {
                 if (capper.movement.getVehicle() == null)
-                    t2.SendToPlayer(capper.channel.owner);
+                    CTFUI.CaptureUI.Send(capper, ref t2);
                 else
-                    t2v.SendToPlayer(capper.channel.owner);
-            }
-        }
-    }
-    protected override void PlayerLeftFlagRadius(Flag flag, Player player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ITransportConnection channel = player.channel.owner.transportConnection;
-        ulong team = player.GetTeam();
-        L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
-        player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
-        CTFUI.ClearCaptureUI(channel);
-        SendUIParameters t1 = SendUIParameters.Nil;
-        SendUIParameters t2 = SendUIParameters.Nil;
-        SendUIParameters t1v = SendUIParameters.Nil;
-        SendUIParameters t2v = SendUIParameters.Nil;
-        if (flag.Team1TotalCappers > 0)
-            t1 = CTFUI.RefreshStaticUI(1, flag, false);
-        if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-            t1v = CTFUI.RefreshStaticUI(1, flag, true);
-        if (flag.Team2TotalCappers > 0)
-            t2 = CTFUI.RefreshStaticUI(2, flag, false);
-        if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-            t2v = CTFUI.RefreshStaticUI(2, flag, true);
-        foreach (Player capper in flag.PlayersOnFlag)
-        {
-            ulong t = capper.GetTeam();
-            if (t == 1)
-            {
-                if (capper.movement.getVehicle() == null)
-                    t1.SendToPlayer(capper.channel.owner);
-                else
-                    t1v.SendToPlayer(capper.channel.owner);
-            }
-            else if (t == 2)
-            {
-                if (capper.movement.getVehicle() == null)
-                    t2.SendToPlayer(capper.channel.owner);
-                else
-                    t2v.SendToPlayer(capper.channel.owner);
+                    CTFUI.CaptureUI.Send(capper, ref t2v);
             }
         }
     }
@@ -573,24 +552,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
                 InvokeOnFlagNeutralized(flag, 1, 2);
             }
         }
-        SendUIParameters t1 = SendUIParameters.Nil;
-        SendUIParameters t2 = SendUIParameters.Nil;
-        SendUIParameters t1v = SendUIParameters.Nil;
-        SendUIParameters t2v = SendUIParameters.Nil;
-        if (flag.Team1TotalCappers > 0)
-            t1 = CTFUI.RefreshStaticUI(1, flag, false);
-        if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-            t1v = CTFUI.RefreshStaticUI(1, flag, true);
-        if (flag.Team2TotalCappers > 0)
-            t2 = CTFUI.RefreshStaticUI(2, flag, false);
-        if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-            t2v = CTFUI.RefreshStaticUI(2, flag, true);
-        if (flag.Team1TotalPlayers > 0)
-            foreach (Player player in flag.PlayersOnFlagTeam1)
-                (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(player.channel.owner);
-        if (flag.Team2TotalPlayers > 0)
-            foreach (Player player in flag.PlayersOnFlagTeam2)
-                (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(player.channel.owner);
+
+        UpdateFlag(flag);
         if (NewOwner == 0)
         {
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
@@ -617,26 +580,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
 #endif
         if (NewPoints == 0)
             flag.SetOwner(0);
-        SendUIParameters t1 = SendUIParameters.Nil;
-        SendUIParameters t2 = SendUIParameters.Nil;
-        SendUIParameters t1v = SendUIParameters.Nil;
-        SendUIParameters t2v = SendUIParameters.Nil;
-        if (flag.Team1TotalCappers > 0)
-            t1 = CTFUI.RefreshStaticUI(1, flag, false);
-        if (flag.Team1TotalPlayers - flag.Team1TotalCappers > 0)
-            t1v = CTFUI.RefreshStaticUI(1, flag, true);
-        if (flag.Team2TotalCappers > 0)
-            t2 = CTFUI.RefreshStaticUI(2, flag, false);
-        if (flag.Team2TotalPlayers - flag.Team2TotalCappers > 0)
-            t2v = CTFUI.RefreshStaticUI(2, flag, true);
-        foreach (Player player in flag.PlayersOnFlag)
-        {
-            byte team = player.GetTeamByte();
-            if (team == 1)
-                (player.movement.getVehicle() == null ? t1 : t1v).SendToPlayer(player.channel.owner);
-            else if (team == 2)
-                (player.movement.getVehicle() == null ? t2 : t2v).SendToPlayer(player.channel.owner);
-        }
+        UpdateFlag(flag);
     }
     public override void OnGroupChanged(GroupChanged e)
     {
