@@ -37,27 +37,27 @@ public class SpottedComponent : MonoBehaviour
         {
             case ESpotted.INFANTRY:
                 EffectGUID = new Guid("70f75e38a90e481190ba147f25bd6e24");
-                _defaultTimer = 8;
+                _defaultTimer = 12;
                 _frequency = 0.5f;
                 break;
             case ESpotted.LIGHT_VEHICLE:
                 EffectGUID = new Guid("34fea0ab821141bd935b001ee82a7049");
-                _defaultTimer = 12;
+                _defaultTimer = 20;
                 _frequency = 0.5f;
                 break;
             case ESpotted.ARMOR:
                 EffectGUID = new Guid("1a25daa6f506441282cd30be48d27883");
-                _defaultTimer = 12;
+                _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
             case ESpotted.AIRCRAFT:
                 EffectGUID = new Guid("0e90e68eff624456b76fee28a4875d14");
-                _defaultTimer = 10;
+                _defaultTimer = 20;
                 _frequency = 0.5f;
                 break;
             case ESpotted.EMPLACEMENT:
-                EffectGUID = new Guid("0e90e68eff624456b76fee28a4875d14");
-                _defaultTimer = 10;
+                EffectGUID = new Guid("f7816f7d06e1475f8e68ed894c282a74");
+                _defaultTimer = 90;
                 _frequency = 0.5f;
                 break;
             case ESpotted.FOB:
