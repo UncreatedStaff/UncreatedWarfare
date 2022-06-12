@@ -41,7 +41,7 @@ public class ReportCommand : IRocketCommand
         {
             goto Help;
         }
-        if (!UCWarfare.CanUseNetCall || UCWarfare.Config.EnableReporter)
+        if (!UCWarfare.CanUseNetCall || !UCWarfare.Config.EnableReporter)
         {
             player.SendChat("report_not_connected");
             return;

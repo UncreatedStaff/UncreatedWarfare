@@ -674,9 +674,9 @@ public class ConventionalLeaderboardUI : UnturnedUI
         string lang = set.Language;
         int len = 47;
         if (t1Stats is not null)
-            len += t1Stats.Count * 7;
+            len += Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1) * 7;
         if (t2Stats is not null)
-            len += t2Stats.Count * 7;
+            len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
         string[] values = new string[len];
         int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
 
@@ -751,7 +751,8 @@ public class ConventionalLeaderboardUI : UnturnedUI
         int index = 46;
         if (t1Stats is not null && t1Stats.Count > 0)
         {
-            for (int i = 0; i < t1Stats.Count; ++i)
+            int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);
+            for (int i = 0; i < num; ++i)
             {
                 Stats stats = t1Stats[i];
                 values[++index] = i == 0 ?
@@ -767,7 +768,8 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         if (t2Stats is not null && t2Stats.Count > 0)
         {
-            for (int i = 0; i < t2Stats.Count; ++i)
+            int num = Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1);
+            for (int i = 0; i < num; ++i)
             {
                 Stats stats = t2Stats[i];
                 values[++index] = i == 0 ?
@@ -916,7 +918,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
                     {
                         if (t1Stats[i].Steam64 == pl.Steam64)
                         {
-                            for (int i2 = index + 1; i2 < index + 8; ++i2)
+                            for (int i2 = index + 1; i2 < index + 7; ++i2)
                                 values[i2] = values[i2].Colorize("dbffdc");
                         }
                         int i3 = i - 1;
@@ -978,9 +980,9 @@ public class ConventionalLeaderboardUI : UnturnedUI
         string lang = set.Language;
         int len = 47;
         if (t1Stats is not null)
-            len += t1Stats.Count * 7;
+            len += Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1) * 7;
         if (t2Stats is not null)
-            len += t2Stats.Count * 7;
+            len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
         string[] values = new string[len];
         int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
 
@@ -1055,7 +1057,8 @@ public class ConventionalLeaderboardUI : UnturnedUI
         int index = 40;
         if (t1Stats is not null && t1Stats.Count > 0)
         {
-            for (int i = 0; i < t1Stats.Count; ++i)
+            int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);
+            for (int i = 0; i < num; ++i)
             {
                 Stats stats = t1Stats[i];
                 values[++index] = i == 0 ?
@@ -1071,7 +1074,8 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         if (t2Stats is not null && t2Stats.Count > 0)
         {
-            for (int i = 0; i < t2Stats.Count; ++i)
+            int num = Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1);
+            for (int i = 0; i < num; ++i)
             {
                 Stats stats = t2Stats[i];
                 values[++index] = i == 0 ?

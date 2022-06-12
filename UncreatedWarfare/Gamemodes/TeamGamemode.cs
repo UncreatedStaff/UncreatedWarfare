@@ -35,10 +35,13 @@ public abstract class TeamGamemode : Gamemode, ITeams
         if (HasOnReadyRan)
             DestroyBlockers();
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    protected override void PreGameStarting(bool isOnLoad)
     {
         if (UseJoinUI)
-            _joinManager.OnPlayerConnected(player, !wasAlreadyOnline);
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                _joinManager.JoinLobby(PlayerManager.OnlinePlayers[i]);
+        }
     }
     protected override void OnReady()
     {

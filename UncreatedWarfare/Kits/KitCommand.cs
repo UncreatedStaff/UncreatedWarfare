@@ -217,6 +217,7 @@ public class KitCommand : IRocketCommand
                         {
                             newValue = newValue.Replace("\\n", "\n");
                             KitManager.UpdateText(kit, newValue, language);
+                            Task.Run(async () => await KitManager.AddKit(kit)).ConfigureAwait(false);
                             newValue = newValue.Replace('\n', '\\');
                             ctx.Reply("kit_setprop", "sign text", command[2], command[3] + " : " + newValue);
                             ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, command[2] + ": SIGN TEXT >> \"" + newValue + "\"");
@@ -263,6 +264,7 @@ public class KitCommand : IRocketCommand
                             case ESetFieldResult.SUCCESS:
                                 ctx.Reply("kit_setprop", property, kitName, newValue);
                                 ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                                Task.Run(async () => await KitManager.AddKit(kit)).ConfigureAwait(false);
                                 RequestSigns.UpdateSignsOfKit(kitName);
                                 if ((wasLoadout != kit.IsLoadout) && RequestSigns.Loaded)
                                     RequestSigns.UpdateLoadoutSigns();

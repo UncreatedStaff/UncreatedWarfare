@@ -190,7 +190,7 @@ public class Reporter : MonoBehaviour
             else player.onlineTime += dt;
             for (int j = 0; j < player.recentRequests.Count; j++)
             {
-                VehicleLifeData data = player.recentRequests[i];
+                VehicleLifeData data = player.recentRequests[j];
                 if (!data.died)
                 {
                     data.lifeTime += dt;

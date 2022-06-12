@@ -103,7 +103,8 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
         {
             T stat = enumerator.Current;
 
-            if (stat.Steam64.GetTeamFromPlayerSteam64ID() == 1)
+            ulong team = stat.Player.GetTeam();
+            if (team == 1)
             {
                 totalT1.kills += stat.kills;
                 totalT1.deaths += stat.deaths;
@@ -112,7 +113,7 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
                 totalT1.AddCaptures(stat.Captures);
                 totalT1.AddDamage(stat.DamageDone);
             }
-            else if (stat.Steam64.GetTeamFromPlayerSteam64ID() == 2)
+            else if (team == 2)
             {
                 totalT2.kills += stat.kills;
                 totalT2.deaths += stat.deaths;

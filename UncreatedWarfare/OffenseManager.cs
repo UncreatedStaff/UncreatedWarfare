@@ -403,7 +403,6 @@ public static class OffenseManager
             return;
         UCPlayer? caller = UCPlayer.FromID(callerId);
         FPlayerName targetNames = F.GetPlayerOriginalNames(target);
-        Provider.kick(target.Player.channel.owner.playerID.steamID, reason!);
         if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
         {
             Data.DatabaseManager.AddWarning(targetId, callerId, reason!);
