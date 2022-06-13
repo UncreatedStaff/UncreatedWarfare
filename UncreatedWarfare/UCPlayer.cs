@@ -5,6 +5,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
@@ -560,9 +561,11 @@ public class PlayerSave
         this.ShouldRespawnOnJoin = ShouldRespawnOnJoin;
         this.IsOtherDonator = IsOtherDonator;
     }
+
     /// <summary>Players / 76561198267927009_0 / Uncreated_S2 / PlayerSave.dat</summary>
-    private static string GetPath(ulong steam64) => "\\Players\\" + steam64.ToString(Data.Locale) +
-                                                    "_0\\Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale) + "\\PlayerSave.dat";
+    private static string GetPath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players",
+        steam64.ToString(Data.Locale) + "_0", "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale),
+        "PlayerSave.dat");
     public static void WriteToSaveFile(PlayerSave save)
     {
         Block block = new Block();
