@@ -499,7 +499,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         if (Data.Is(out Invasion invasion))
         {
             int attack = Gamemode.Config.Invasion.AttackStartingTickets;
-            int defence = Gamemode.Config.Invasion.AttackStartingTickets + (invasion.Rotation.Count * Gamemode.Config.Invasion.TicketsFlagCaptured);
+            int defence = Gamemode.Config.Invasion.AttackStartingTickets + invasion.Rotation.Count * Gamemode.Config.Invasion.TicketsFlagCaptured;
 
             if (invasion.AttackingTeam == 1)
             {

@@ -218,7 +218,7 @@ public static class Data
         {
             DuplicateKeyError(ex);
             return;
-        } 
+        }
 
         Quests.QuestManager.Init();
 

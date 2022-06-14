@@ -279,24 +279,25 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             DateTime start = DateTime.Now;
             for (int i = 0; i < Provider.clients.Count; i++)
             {
+                SteamPlayer sp = Provider.clients[i];
                 try
                 {
-                    if (Provider.clients[i].player.transform == null)
+                    if (sp.player.transform == null)
                     {
-                        L.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                        Provider.kick(Provider.clients[i].playerID.steamID, Translation.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
+                        L.Log($"Kicking {F.GetPlayerOriginalNames(sp).PlayerName} ({sp.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
+                        Provider.kick(sp.playerID.steamID, Translation.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
                         continue;
                     }
                 }
                 catch (NullReferenceException)
                 {
-                    L.Log($"Kicking {F.GetPlayerOriginalNames(Provider.clients[i]).PlayerName} ({Provider.clients[i].playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                    Provider.kick(Provider.clients[i].playerID.steamID, Translation.Translate("null_transform_kick_message", Provider.clients[i], UCWarfare.Config.DiscordInviteCode));
+                    L.Log($"Kicking {F.GetPlayerOriginalNames(sp).PlayerName} ({sp.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
+                    Provider.kick(sp.playerID.steamID, Translation.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
                     continue;
                 }
                 // TODO: Fix
-                if (Data.Is(out ITeams t) && Teams.TeamManager.LobbyZone.IsInside(Provider.clients[i].player.transform.position) && 
-                    t.UseJoinUI && UCPlayer.FromSteamPlayer(Provider.clients[i]) is UCPlayer pl && !t.JoinManager.IsInLobby(pl))
+                if (Data.Is(out ITeams t) && t.UseJoinUI && Teams.TeamManager.LobbyZone.IsInside(sp.player.transform.position) && sp.player.movement.getVehicle() == null &&
+                    UCPlayer.FromSteamPlayer(sp) is UCPlayer pl && !t.JoinManager.IsInLobby(pl))
                 {
                     L.Log($"{pl.Steam64} was stuck in lobby and was auto-rejoined.");
                     t.JoinManager.OnPlayerDisconnected(pl);
@@ -396,6 +397,8 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public void StartNextGame(bool onLoad = false)
     {
         PreGameStarting(onLoad);
+        foreach (IGameStartListener listener in _singletons.OfType<IGameStartListener>())
+            listener.OnGameStarting(onLoad);
         CooldownManager.OnGameStarting();
         L.Log($"Loading new {DisplayName} game.", ConsoleColor.Cyan);
         _state = EState.ACTIVE;

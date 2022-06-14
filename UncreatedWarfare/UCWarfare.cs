@@ -2,8 +2,6 @@
 
 using Rocket.Core;
 using Rocket.Core.Plugins;
-using Rocket.Unturned;
-using Rocket.Unturned.Events;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -23,7 +21,6 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -34,7 +31,7 @@ public delegate void VoidDelegate();
 public partial class UCWarfare : RocketPlugin<Config>
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
-    public static readonly Version Version      = new Version(2, 5, 0, 1);
+    public static readonly Version Version      = new Version(2, 5, 1, 2);
     public static UCWarfare Instance;
     public Coroutine? StatsRoutine;
     public UCAnnouncer Announcer;
@@ -169,7 +166,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         Data.ZoneProvider.Reload();
         Data.ZoneProvider.Save();
 
-        Announcer = gameObject.AddComponent<UCAnnouncer>();
+        Announcer = Data.Singletons.LoadSingleton<UCAnnouncer>();
         Data.ExtraPoints = JSONMethods.LoadExtraPoints();
         //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
 
@@ -406,7 +403,7 @@ public partial class UCWarfare : RocketPlugin<Config>
             Data.Singletons.UnloadSingleton(ref Data.Gamemode);
             OffenseManager.Deinit();
             if (Announcer != null)
-                Destroy(Announcer);
+                Data.Singletons.UnloadSingleton(ref Announcer);
             //if (Queue != null)
             //Destroy(Queue);
             Data.DatabaseManager?.Dispose();

@@ -547,7 +547,7 @@ public class INVASION
         DiscoveryForesight = 2;
         SpecialFOBName = "VCP";
         TicketsFlagCaptured = 100;
-        AttackStartingTickets = 200;
+        AttackStartingTickets = 250;
         TicketXPInterval = 10;
     }
 }

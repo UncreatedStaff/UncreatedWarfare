@@ -58,7 +58,7 @@ public class BuildableComponent : MonoBehaviour
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL, Foundation.GetServersideData().group.GetTeam());
-        if (fob == null && Buildable.Type != EBuildableType.RADIO)
+        if (fob == null && Buildable.Type != EBuildableType.RADIO && (builder.KitClass is not EClass.COMBAT_ENGINEER || Buildable.Type is not EBuildableType.FORTIFICATION))
         {
             builder.SendChat("build_error_tick_notinradius");
             return;
