@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
@@ -233,7 +234,7 @@ public class ReloadCommand : IRocketCommand
 #endif
         try
         {
-            UCWarfare.I.Announcer.Reload();
+            Data.Singletons.ReloadSingleton("announcer");
             IEnumerable<FieldInfo> objects = typeof(Data).GetFields(BindingFlags.Static | BindingFlags.Public).Where(x => x.FieldType.IsClass);
             foreach (FieldInfo obj in objects)
             {

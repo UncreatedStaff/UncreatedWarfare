@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Gamemodes.UI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -129,8 +130,6 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
 
         statsT1 = stats.Where(p => p.Player.GetTeam() == 1).ToList();
         statsT2 = stats.Where(p => p.Player.GetTeam() == 2).ToList();
-        statsT1.Take(count);
-        statsT2.Take(count);
         statsT1.Insert(0, totalT1);
         statsT2.Insert(0, totalT2);
     }

@@ -134,14 +134,19 @@ public enum EZoneType : byte
     RECTANGLE = 2,
     POLYGON = 4
 }
-
+[Translatable("Use Case")]
 public enum EZoneUseCase : byte
 {
+    [Translatable("Unknown")]
     OTHER = 0,
     FLAG = 1,
+    [Translatable("Main Base: Team 1")]
     T1_MAIN = 2,
+    [Translatable("Main Base: Team 2")]
     T2_MAIN = 3,
+    [Translatable("AMC Zone: Team 1")]
     T1_AMC = 4,
+    [Translatable("AMC Zone: Team 2")]
     T2_AMC = 5,
     LOBBY = 6
 }

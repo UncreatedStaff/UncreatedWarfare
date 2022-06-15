@@ -34,10 +34,10 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         DownedPlayers = new Dictionary<ulong, DownedPlayerData>(Provider.maxPlayers);
         Medics = new List<UCPlayer>(Provider.maxPlayers);
     }
-
     public bool CanPlayerInjure(ref DamagePlayerParameters parameters)
     {
-        return !parameters.player.life.isDead &&
+        return parameters.player != null && SafezoneManager.checkPointValid(parameters.player.transform.position) &&
+               !parameters.player.life.isDead &&
                parameters.damage > parameters.player.life.health &&
                (parameters.cause is not EDeathCause.LANDMINE or EDeathCause.VEHICLE) &&
                parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && // main campers can't get downed, makes death messages easier
@@ -253,18 +253,15 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 InjurePlayer(ref shouldAllow, ref parameters, killer);
             }
         }
+        else if ((DateTime.Now - p.start).TotalSeconds >= 0.4)
+        {
+            float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
+            parameters = p.parameters;
+            parameters.damage *= UCWarfare.Config.InjuredDamageMultiplier / 10 * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
+        }
         else
         {
-            if ((DateTime.Now - p.start).TotalSeconds >= 0.4)
-            {
-                float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
-                parameters = p.parameters;
-                parameters.damage *= UCWarfare.Config.InjuredDamageMultiplier / 10 * bleedsPerSecond * UCWarfare.Config.InjuredLifeTimeSeconds;
-            }
-            else
-            {
-                shouldAllow = false;
-            }
+            shouldAllow = false;
         }
     }
     private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer? killer)

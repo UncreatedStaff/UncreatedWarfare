@@ -48,7 +48,6 @@ internal class ZonePlayerComponent : MonoBehaviour
         this.player = player;
         Update();
     }
-#pragma warning disable IDE0051
     private void Update()
     {
         if (_currentBuilder is not null && Time.time - _lastZonePreviewRefresh > 55f)
@@ -56,7 +55,6 @@ internal class ZonePlayerComponent : MonoBehaviour
             RefreshPreview();
         }
     }
-#pragma warning restore IDE0051
     internal void UtilCommand(string[] args)
     {
         ThreadUtil.assertIsGameThread();
@@ -272,6 +270,8 @@ internal class ZonePlayerComponent : MonoBehaviour
             return;
         }
         Vector3 pos = player.Position;
+        if (pos == default)
+            return;
         string operation = args[1];
         if (operation.Equals("existing", StringComparison.OrdinalIgnoreCase) || operation.Equals("open", StringComparison.OrdinalIgnoreCase))
         {
@@ -774,7 +774,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     else
                     {
-                        if (_currentPoints == null || _currentPoints.Count < index || index < 0)
+                        if (_currentPoints == null || _currentPoints.Count < index || index < 1)
                         {
                             player.SendChat("edit_zone_point_number_not_point", index.ToString(Data.Locale));
                             return;
@@ -852,7 +852,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     else
                     {
-                        if (_currentPoints == null || _currentPoints.Count < index || index < 0)
+                        if (_currentPoints == null || _currentPoints.Count < index || index < 1)
                         {
                             player.SendChat("edit_zone_point_number_not_point", index.ToString(Data.Locale));
                             return;
@@ -881,9 +881,153 @@ internal class ZonePlayerComponent : MonoBehaviour
             }
             else if (operation.Equals("orderpoint", StringComparison.OrdinalIgnoreCase) || operation.Equals("orderpt", StringComparison.OrdinalIgnoreCase))
             {
+                if (_currentPoints == null || _currentPoints.Count == 0)
+                {
+                    player.SendChat("edit_zone_point_number_not_point", FromV2(new Vector2(pos.x, pos.z)));
+                    return;
+                }
+                int from;
+                int to;
+                if (args.Length == 2) // <to-index>
+                {
+                    string a = args[1];
+                    if (!int.TryParse(a, System.Globalization.NumberStyles.Any, Data.Locale, out to))
+                    {
+                        if (a.Equals("end", StringComparison.OrdinalIgnoreCase) || a.Equals("bottom", StringComparison.OrdinalIgnoreCase))
+                            to = _currentPoints.Count;
+                        else if (a.Equals("start", StringComparison.OrdinalIgnoreCase) || args[2].Equals("first", StringComparison.OrdinalIgnoreCase) || args[2].Equals("top", StringComparison.OrdinalIgnoreCase))
+                            to = 1;
+                        else
+                        {
+                            player.SendChat("edit_zone_orderpoint_badvalue");
+                            return;
+                        }
+                    }
+                    if (_currentPoints.Count < to || to < 1)
+                    {
+                        player.SendChat("edit_zone_point_number_not_point", to.ToString(Data.Locale));
+                        return;
+                    }
+                    float min = 0f;
+                    from = -1;
+                    Vector2 v = new Vector2(pos.x, pos.z);
+                    for (int i = 0; i < _currentPoints.Count; ++i)
+                    {
+                        float sqrdist = (v - _currentPoints[i]).sqrMagnitude;
+                        if (from == -1 || sqrdist < min)
+                        {
+                            min = sqrdist;
+                            from = i;
+                        }
+                    }
+                    if (from == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
+                    {
+                        player.SendChat("edit_zone_point_none_nearby", FromV2(v));
+                        return;
+                    }
+                    --to;
+                }
+                else if (args.Length == 3) // <from-index> <to-index>
+                {
+                    string a = args[1];
+                    if (!int.TryParse(a, System.Globalization.NumberStyles.Any, Data.Locale, out from))
+                    {
+                        if (a.Equals("end", StringComparison.OrdinalIgnoreCase) || a.Equals("bottom", StringComparison.OrdinalIgnoreCase))
+                            from = _currentPoints.Count;
+                        else if (a.Equals("start", StringComparison.OrdinalIgnoreCase) || args[2].Equals("first", StringComparison.OrdinalIgnoreCase) || args[2].Equals("top", StringComparison.OrdinalIgnoreCase))
+                            from = 1;
+                        else
+                        {
+                            player.SendChat("edit_zone_orderpoint_badvalue");
+                            return;
+                        }
+                    }
+                    a = args[2];
+                    if (!int.TryParse(a, System.Globalization.NumberStyles.Any, Data.Locale, out to))
+                    {
+                        if (a.Equals("end", StringComparison.OrdinalIgnoreCase) || a.Equals("bottom", StringComparison.OrdinalIgnoreCase))
+                            to = _currentPoints.Count;
+                        else if (a.Equals("start", StringComparison.OrdinalIgnoreCase) || args[2].Equals("first", StringComparison.OrdinalIgnoreCase) || args[2].Equals("top", StringComparison.OrdinalIgnoreCase))
+                            to = 1;
+                        else
+                        {
+                            player.SendChat("edit_zone_orderpoint_badvalue");
+                            return;
+                        }
+                    }
+                    if (_currentPoints.Count < to || to < 1)
+                    {
+                        player.SendChat("edit_zone_point_number_not_point", to.ToString(Data.Locale));
+                        return;
+                    }
+                    if (_currentPoints.Count < from || from < 1)
+                    {
+                        player.SendChat("edit_zone_point_number_not_point", from.ToString(Data.Locale));
+                        return;
+                    }
+                    --to;
+                    --from;
+                }
+                else if (args.Length == 4)
+                {
+                    if (!(float.TryParse(args[1], System.Globalization.NumberStyles.Any, Data.Locale, out float x) && !float.IsNaN(x) && !float.IsInfinity(x)) ||
+                        !(float.TryParse(args[2], System.Globalization.NumberStyles.Any, Data.Locale, out float z) && !float.IsNaN(z) && !float.IsInfinity(z)))
+                    {
+                        player.SendChat("edit_zone_setpoint_badvalues");
+                        return;
+                    }
+                    string a = args[3];
+                    if (!int.TryParse(a, System.Globalization.NumberStyles.Any, Data.Locale, out to))
+                    {
+                        if (a.Equals("end", StringComparison.OrdinalIgnoreCase))
+                            to = _currentPoints.Count;
+                        else if (a.Equals("start", StringComparison.OrdinalIgnoreCase) || args[2].Equals("first", StringComparison.OrdinalIgnoreCase) || args[2].Equals("top", StringComparison.OrdinalIgnoreCase))
+                            to = 1;
+                        else
+                        {
+                            player.SendChat("edit_zone_orderpoint_badvalue");
+                            return;
+                        }
+                    }
+                    if (_currentPoints.Count < to || to < 1)
+                    {
+                        player.SendChat("edit_zone_point_number_not_point", to.ToString(Data.Locale));
+                        return;
+                    }
+                    --to;
+                    float min = 0f;
+                    from = -1;
+                    Vector2 v = new Vector2(x, z);
+                    for (int i = 0; i < _currentPoints.Count; ++i)
+                    {
+                        float sqrdist = (v - _currentPoints[i]).sqrMagnitude;
+                        if (from == -1 || sqrdist < min)
+                        {
+                            min = sqrdist;
+                            from = i;
+                        }
+                    }
+                }
+                else
+                {
+                    player.SendChat("edit_zone_setpoint_badvalues");
+                    return;
+                }
+                Vector2 old = _currentPoints[from];
+                _currentPoints.RemoveAt(from);
+                _currentPoints.Insert(to, old);
+                ITransportConnection tc = player.Player.channel.owner.transportConnection;
                 if (!CheckType(EZoneType.POLYGON))
+                {
+                    int ind2 = Math.Min(from, to);
+                    for (int i = ind2; i < _currentPoints.Count; ++i)
+                    {
+                        EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + i, FromV2(_currentPoints[i]));
+                        EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + i, true);
+                    }
                     RefreshPreview();
-                // todo
+                }
+                player.SendChat("edit_zone_orderpoint_success", from.ToString(Data.Locale), to.ToString(Data.Locale));
             }
             else if (operation.Equals("radius", StringComparison.OrdinalIgnoreCase))
             {
@@ -1011,7 +1155,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 if (Enum.TryParse(w2ic ? args[3] : args[2], true, out EZoneUseCase uc))
                 {
                     _currentBuilder.UseCase = uc;
-                    player.SendChat("edit_zone_use_case_success", uc.ToString().ToLower().Replace('_', ' '));
+                    player.SendChat("edit_zone_use_case_success", Translation.TranslateEnum(uc, player));
                 }
                 else
                 {
@@ -1029,6 +1173,10 @@ internal class ZonePlayerComponent : MonoBehaviour
                 string name = args.Length == st + 1 ? args[st] : string.Join(" ", args, st, args.Length - st);
                 _currentBuilder.ShortName = name;
                 player.SendChat("edit_zone_name_success", name);
+            }
+            else
+            {
+                player.SendChat("edit_zone_syntax");
             }
         }
     }

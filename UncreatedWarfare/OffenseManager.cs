@@ -460,10 +460,7 @@ public static class OffenseManager
                     foreach (LanguageSet set in Translation.EnumerateLanguageSets(target, admin))
                     {
                         string e = Translation.TranslateEnum(type, set.Language);
-                        while (set.MoveNext())
-                        {
-                            Chat.Broadcast(set, "mute_broadcast_operator_permanent", names.CharacterName, e);
-                        }
+                        Chat.Broadcast(set, "mute_broadcast_operator_permanent", names.CharacterName, e);
                     }
                     L.Log(Translation.Translate("mute_feedback", 0, out _, names.PlayerName, target.ToString(),
                         dur, Translation.TranslateEnum(type, 0), reason));
@@ -473,10 +470,7 @@ public static class OffenseManager
                     foreach (LanguageSet set in Translation.EnumerateLanguageSets(target, admin))
                     {
                         string e = Translation.TranslateEnum(type, set.Language);
-                        while (set.MoveNext())
-                        {
-                            Chat.Broadcast(set, "mute_broadcast_operator", names.CharacterName, e, dur);
-                        }
+                        Chat.Broadcast(set, "mute_broadcast_operator", names.CharacterName, e, dur);
                     }
                     L.Log(Translation.Translate("mute_feedback_permanent", 0, out _, names.PlayerName, target.ToString(),
                         Translation.TranslateEnum(type, 0), reason));

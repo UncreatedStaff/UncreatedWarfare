@@ -766,7 +766,6 @@ internal class _DebugCommand : IRocketCommand
             }
         }
     }
-
     private void setsign(CommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)

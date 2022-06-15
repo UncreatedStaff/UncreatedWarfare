@@ -901,7 +901,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             index = 46;
             if (t1Stats is not null && t1Stats.Count > 0)
             {
-                int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length);
+                int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);
                 for (int i = 0; i < num; ++i)
                 {
                     if (i == 0)
@@ -916,19 +916,27 @@ public class ConventionalLeaderboardUI : UnturnedUI
                     }
                     else
                     {
+                        int i3 = i - 1;
                         if (t1Stats[i].Steam64 == pl.Steam64)
                         {
-                            for (int i2 = index + 1; i2 < index + 7; ++i2)
-                                values[i2] = values[i2].Colorize("dbffdc");
+                            Team1PlayerNames[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerKills[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerDeaths[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerXP[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerCredits[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerCaptures[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerDamage[i3].SetText(c, values[++index].Colorize("dbffdc"));
                         }
-                        int i3 = i - 1;
-                        Team1PlayerNames[i3].SetText(c, values[++index]);
-                        Team1PlayerKills[i3].SetText(c, values[++index]);
-                        Team1PlayerDeaths[i3].SetText(c, values[++index]);
-                        Team1PlayerXP[i3].SetText(c, values[++index]);
-                        Team1PlayerCredits[i3].SetText(c, values[++index]);
-                        Team1PlayerCaptures[i3].SetText(c, values[++index]);
-                        Team1PlayerDamage[i3].SetText(c, values[++index]);
+                        else
+                        {
+                            Team1PlayerNames[i3].SetText(c, values[++index]);
+                            Team1PlayerKills[i3].SetText(c, values[++index]);
+                            Team1PlayerDeaths[i3].SetText(c, values[++index]);
+                            Team1PlayerXP[i3].SetText(c, values[++index]);
+                            Team1PlayerCredits[i3].SetText(c, values[++index]);
+                            Team1PlayerCaptures[i3].SetText(c, values[++index]);
+                            Team1PlayerDamage[i3].SetText(c, values[++index]);
+                        }
                         if (i != 0)
                             Team1PlayerVCs[i3].SetVisibility(c, false);
                     }
@@ -936,7 +944,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
             if (t2Stats is not null && t2Stats.Count > 0)
             {
-                int num = Math.Min(t2Stats.Count, Team1PlayerNames.Length);
+                int num = Math.Min(t2Stats.Count, Team1PlayerNames.Length + 1);
                 for (int i = 0; i < num; ++i)
                 {
                     if (i == 0)
@@ -1211,7 +1219,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             index = 46;
             if (t1Stats is not null && t1Stats.Count > 0)
             {
-                int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length);
+                int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);
                 for (int i = 0; i < num; ++i)
                 {
                     if (i == 0)
@@ -1226,19 +1234,27 @@ public class ConventionalLeaderboardUI : UnturnedUI
                     }
                     else
                     {
+                        int i3 = i - 1;
                         if (t1Stats[i].Steam64 == pl.Steam64)
                         {
-                            for (int i2 = index + 1; i2 < index + 8; ++i2)
-                                values[i2] = values[i2].Colorize("dbffdc");
+                            Team1PlayerNames[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerKills[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerDeaths[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerXP[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerCredits[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerCaptures[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerDamage[i3].SetText(c, values[++index].Colorize("dbffdc"));
                         }
-                        int i3 = i + 1;
-                        Team1PlayerNames[i3].SetText(c, values[++index]);
-                        Team1PlayerKills[i3].SetText(c, values[++index]);
-                        Team1PlayerDeaths[i3].SetText(c, values[++index]);
-                        Team1PlayerXP[i3].SetText(c, values[++index]);
-                        Team1PlayerCredits[i3].SetText(c, values[++index]);
-                        Team1PlayerCaptures[i3].SetText(c, values[++index]);
-                        Team1PlayerDamage[i3].SetText(c, values[++index]);
+                        else
+                        {
+                            Team1PlayerNames[i3].SetText(c, values[++index]);
+                            Team1PlayerKills[i3].SetText(c, values[++index]);
+                            Team1PlayerDeaths[i3].SetText(c, values[++index]);
+                            Team1PlayerXP[i3].SetText(c, values[++index]);
+                            Team1PlayerCredits[i3].SetText(c, values[++index]);
+                            Team1PlayerCaptures[i3].SetText(c, values[++index]);
+                            Team1PlayerDamage[i3].SetText(c, values[++index]);
+                        }
                         if (i != 0)
                             Team1PlayerVCs[i3].SetVisibility(c, false);
                     }
@@ -1246,7 +1262,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
             if (t2Stats is not null && t2Stats.Count > 0)
             {
-                int num = Math.Min(t2Stats.Count, Team1PlayerNames.Length);
+                int num = Math.Min(t2Stats.Count, Team1PlayerNames.Length + 1);
                 for (int i = 0; i < num; ++i)
                 {
                     if (i == 0)
@@ -1266,7 +1282,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
                             for (int i2 = index + 1; i2 < index + 8; ++i2)
                                 values[i2] = values[i2].Colorize("dbffdc");
                         }
-                        int i3 = i + 1;
+                        int i3 = i - 1;
                         Team2PlayerNames[i3].SetText(c, values[++index]);
                         Team2PlayerKills[i3].SetText(c, values[++index]);
                         Team2PlayerDeaths[i3].SetText(c, values[++index]);

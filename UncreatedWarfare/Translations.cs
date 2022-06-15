@@ -960,6 +960,8 @@ partial class JSONMethods
             { "edit_zone_delpoint_success", "<color=#e6e3d5>Removed point #{0} at {1}.</color>" },
             { "edit_zone_setpoint_badvalues", "<color=#ff8c69>Moving a point requires either: <nearby src x> <nearby src z> <dest x> <dest z>, <pt num> (destination is player position }, <pt num> <dest x> <dest z>, or <nearby src x> <nearby src z> (destination is nearby player).</color>" },
             { "edit_zone_setpoint_success", "<color=#e6e3d5>Moved point #{0} from {1} to {2}.</color>" },
+            { "edit_zone_orderpoint_success", "<color=#e6e3d5>Moved point #{0} to index #{1}.</color>" },
+            { "edit_zone_orderpoint_badvalue", "<color=#ff8c69>Ordering a point requires either: <from-index> <to-index>, <to-index> (from is nearby player), or <src x> <src z> <to-index>.</color>" },
             { "edit_zone_radius_badvalue", "<color=#ff8c69>Radius must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.</color>" },
             { "edit_zone_radius_success", "<color=#e6e3d5>Set radius to {0}.</color>" },
             { "edit_zone_sizex_badvalue", "<color=#ff8c69>Size X must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.</color>" },
