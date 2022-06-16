@@ -39,7 +39,7 @@ public class RequestCommand : IRocketCommand
 #endif
         // dont allow requesting between game end and leaderboard
         if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING) return;
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (!ctx.IsConsoleReply()) return;
         ulong team = ctx.Caller!.GetTeam();
         if (ctx.HasArg(0))

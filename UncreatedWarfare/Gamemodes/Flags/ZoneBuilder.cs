@@ -218,7 +218,8 @@ public class ZoneBuilder
             Z = Z,
             ZoneData = ZoneData,
             UseCase = UseCase,
-            Id = Id
+            Id = Id,
+            Adjacencies = Adjacencies ?? Array.Empty<AdjacentFlagData>()
         };
         mdl.ValidateRead();
         return mdl;

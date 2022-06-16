@@ -206,7 +206,7 @@ public class JsonZoneProvider
                     {
                         if (reader.TokenType == JsonTokenType.StartArray)
                         {
-                            List<AdjacentFlagData> tlist = new List<AdjacentFlagData>(4);
+                            List<AdjacentFlagData> tlist = new List<AdjacentFlagData>(16);
                             while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
                             {
                                 AdjacentFlagData afd = new AdjacentFlagData();

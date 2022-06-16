@@ -17,7 +17,7 @@ public class UnmuteCommand : IRocketCommand
 	public List<string> Permissions => _permissions;
     public void Execute(IRocketPlayer caller, string[] command)
     {
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (!ctx.HasArg(0))
             ctx.SendCorrectUsage(Syntax);
         if (ctx.MatchParameter(0, "help"))

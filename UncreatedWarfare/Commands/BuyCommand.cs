@@ -24,7 +24,7 @@ public class BuyCommand : IRocketCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (ctx.MatchParameter(0, "help"))
         {
             ctx.SendCorrectUsage(Syntax + " - " + Help);

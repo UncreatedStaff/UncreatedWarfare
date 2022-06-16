@@ -28,7 +28,7 @@ public class AmmoCommand : IRocketCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
 
         if (ctx.IsConsole || ctx.Caller is null)
         {

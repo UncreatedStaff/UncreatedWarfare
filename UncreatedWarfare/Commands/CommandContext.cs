@@ -11,7 +11,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands;
-public struct CommandContext
+public struct UCCommandContext
 {
     public readonly UCPlayer? Caller;
     public readonly bool IsConsole;
@@ -21,7 +21,7 @@ public struct CommandContext
     public readonly CSteamID CallerCSteamID;
 
     private static readonly Regex RemoveRichTextRegex = new Regex("<(?:(?:(?=.*<\\/color>)color=#{0,1}[0123456789ABCDEF]{6})|(?:(?<=<color=#{0,1}[0123456789ABCDEF]{6}>.*)\\/color)|(?:(?=.*<\\/b>)b)|(?:(?<=<b>.*)\\/b)|(?:(?=.*<\\/i>)i)|(?:(?<=<i>.*)\\/i)|(?:(?=.*<\\/size>)size=\\d+)|(?:(?<=<size=\\d+>.*)\\/size)|(?:(?=.*<\\/material>)material=\\d+)|(?:(?<=<material=\\d+>.*)\\/material))>", RegexOptions.IgnoreCase);
-    public CommandContext(IRocketPlayer caller, string[] args)
+    public UCCommandContext(IRocketPlayer caller, string[] args)
     {
         if (args is null) args = Array.Empty<string>();
         if (caller is ConsolePlayer)
@@ -68,6 +68,10 @@ public struct CommandContext
     {
         return count > -1 && count <= ArgumentCount;
     }
+    public bool HasArgsExact(int count)
+    {
+        return count == ArgumentCount;
+    }
     public bool MatchParameter(int parameter, string value)
     {
         if (parameter < 0 || parameter >= ArgumentCount)
@@ -87,6 +91,25 @@ public struct CommandContext
             return false;
         string v = Parameters[parameter];
         return v.Equals(value, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate1, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate2, StringComparison.OrdinalIgnoreCase);
+    }
+    public bool MatchParameter(int parameter, params string[] alternates)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+            return false;
+        string v = Parameters[parameter];
+        for (int i = 0; i < alternates.Length; ++i)
+        {
+            if (v.Equals(alternates[i], StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
+    private string GetParamForParse(int index)
+    {
+        string p = Parameters[index];
+        if (index == ArgumentCount - 1 && p.EndsWith("\\"))
+            return p.Substring(0, p.Length - 1);
+        else return p;
     }
     public bool MatchParameterPartial(int parameter, string value)
     {
@@ -108,30 +131,6 @@ public struct CommandContext
         string v = Parameters[parameter];
         return v.IndexOf(value, StringComparison.OrdinalIgnoreCase) != -1 || v.IndexOf(alternate1, StringComparison.OrdinalIgnoreCase) != -1 || v.IndexOf(alternate2, StringComparison.OrdinalIgnoreCase) != -1;
     }
-    public bool TryGet(int parameter, out string value)
-    {
-        if (parameter < 0 || parameter >= ArgumentCount)
-        {
-            value = null!;
-            return false;
-        }
-        value = Parameters[parameter];
-        return true;
-    }
-    public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
-    {
-        if (parameter < 0 || parameter >= ArgumentCount)
-        {
-            value = default;
-            return false;
-        }
-        return Enum.TryParse(Parameters[parameter], true, out value);
-    }
-    public bool TryGetRange(int start, out string value, int length = -1)
-    {
-        value = GetRange(start, length)!;
-        return value is not null;
-    }
     public string? Get(int parameter)
     {
         if (parameter < 0 || parameter >= ArgumentCount)
@@ -152,6 +151,30 @@ public struct CommandContext
             length = ArgumentCount - start;
         return string.Join(" ", Parameters, start, length);
     }
+    public bool TryGetRange(int start, out string value, int length = -1)
+    {
+        value = GetRange(start, length)!;
+        return value is not null;
+    }
+    public bool TryGet(int parameter, out string value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = null!;
+            return false;
+        }
+        value = Parameters[parameter];
+        return true;
+    }
+    public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = default;
+            return false;
+        }
+        return Enum.TryParse(GetParamForParse(parameter), true, out value);
+    }
     public bool TryGet(int parameter, out int value)
     {
         if (parameter < 0 || parameter >= ArgumentCount)
@@ -159,7 +182,7 @@ public struct CommandContext
             value = 0;
             return false;
         }
-        return int.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+        return int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value);
     }
     public bool TryGet(int parameter, out byte value)
     {
@@ -168,7 +191,7 @@ public struct CommandContext
             value = 0;
             return false;
         }
-        return byte.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+        return byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value);
     }
     public bool TryGet(int parameter, out sbyte value)
     {
@@ -177,7 +200,7 @@ public struct CommandContext
             value = 0;
             return false;
         }
-        return sbyte.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+        return sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value);
     }
     public bool TryGet(int parameter, out Guid value)
     {
@@ -186,7 +209,7 @@ public struct CommandContext
             value = default;
             return false;
         }
-        return Guid.TryParse(Parameters[parameter], out value);
+        return Guid.TryParse(GetParamForParse(parameter), out value);
     }
     public bool TryGet(int parameter, out uint value)
     {
@@ -195,7 +218,7 @@ public struct CommandContext
             value = 0;
             return false;
         }
-        return uint.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+        return uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value);
     }
     public bool TryGet(int parameter, out ushort value)
     {
@@ -204,7 +227,7 @@ public struct CommandContext
             value = 0;
             return false;
         }
-        return ushort.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+        return ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value);
     }
     public bool TryGet(int parameter, out ulong value)
     {
@@ -213,7 +236,189 @@ public struct CommandContext
             value = 0;
             return false;
         }
-        return ulong.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
+        return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value);
+    }
+    public bool TryGet(int parameter, out float value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        return float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value) && !float.IsNaN(value) && !float.IsInfinity(value);
+    }
+    public bool TryGet(int parameter, out double value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        return double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value);
+    }
+    public bool TryGet(int parameter, out decimal value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        return decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out value);
+    }
+    // the ref ones are so you can count on your already existing variable not being overwritten
+    public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = default;
+            return false;
+        }
+        if (Enum.TryParse(GetParamForParse(parameter), true, out TEnum value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref int value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (int.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out int value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref byte value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out byte value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref sbyte value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (sbyte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out sbyte value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref Guid value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = default;
+            return false;
+        }
+        if (Guid.TryParse(GetParamForParse(parameter), out Guid value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref uint value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (uint.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out uint value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref ushort value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (ushort.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out ushort value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref ulong value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out ulong value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref float value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (float.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out float value2) && !float.IsNaN(value2) && !float.IsInfinity(value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref double value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (double.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out double value2) && !double.IsNaN(value2) && !double.IsInfinity(value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
+    }
+    public bool TryGetRef(int parameter, ref decimal value)
+    {
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        if (decimal.TryParse(GetParamForParse(parameter), NumberStyles.Number, Data.Locale, out decimal value2))
+        {
+            value = value2;
+            return true;
+        }
+        return false;
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer)
     {
@@ -224,8 +429,8 @@ public struct CommandContext
             return false;
         }
 
-        string s = Parameters[parameter];
-        if (ulong.TryParse(s, NumberStyles.Any, Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        string s = GetParamForParse(parameter);
+        if (ulong.TryParse(s, NumberStyles.Number, Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
         {
             onlinePlayer = UCPlayer.FromID(steam64);
             return true;
@@ -248,8 +453,8 @@ public struct CommandContext
             return false;
         }
 
-        string s = Parameters[parameter];
-        if (ulong.TryParse(s, NumberStyles.Any, Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
+        string s = GetParamForParse(parameter);
+        if (ulong.TryParse(s, NumberStyles.Number, Data.Locale, out steam64) && OffenseManager.IsValidSteam64ID(steam64))
         {
             foreach (UCPlayer player in selection)
             {
@@ -269,33 +474,6 @@ public struct CommandContext
         else
             return false;
     }
-    public bool TryGet(int parameter, out float value)
-    {
-        if (parameter < 0 || parameter >= ArgumentCount)
-        {
-            value = 0;
-            return false;
-        }
-        return float.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
-    }
-    public bool TryGet(int parameter, out double value)
-    {
-        if (parameter < 0 || parameter >= ArgumentCount)
-        {
-            value = 0;
-            return false;
-        }
-        return double.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
-    }
-    public bool TryGet(int parameter, out decimal value)
-    {
-        if (parameter < 0 || parameter >= ArgumentCount)
-        {
-            value = 0;
-            return false;
-        }
-        return decimal.TryParse(Parameters[parameter], NumberStyles.Any, Data.Locale, out value);
-    }
     /// <summary>Get an asset based on a <see cref="Guid"/> search, <see cref="ushort"/> search, then <see cref="Asset.FriendlyName"/> search.</summary>
     /// <typeparam name="TAsset"><see cref="Asset"/> type to find.</typeparam>
     /// <param name="length">Set to 1 to only get one parameter (default), set to -1 to get any remaining parameters.</param>
@@ -310,6 +488,8 @@ public struct CommandContext
             asset = null!;
             return false;
         }
+        if ((remainder || parameter == ArgumentCount - 1) && p.EndsWith("\\"))
+            p = p.Substring(0, p.Length - 1);
         if (Guid.TryParse(p, out Guid guid))
         {
             asset = Assets.find<TAsset>(guid);

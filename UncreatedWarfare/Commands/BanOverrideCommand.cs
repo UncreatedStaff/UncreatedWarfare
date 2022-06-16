@@ -21,7 +21,7 @@ public class BanOverrideCommand : IRocketCommand
 	public List<string> Permissions => _permissions;
     public void Execute(IRocketPlayer caller, string[] command)
     {
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (!ctx.HasArgs(3))
         {
             ctx.Reply("ban_syntax");

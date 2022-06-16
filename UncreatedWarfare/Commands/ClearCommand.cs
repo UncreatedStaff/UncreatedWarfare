@@ -25,7 +25,7 @@ public class ClearCommand : IRocketCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (!ctx.HasArgs(1))
         {
             ctx.SendCorrectUsage(Syntax);

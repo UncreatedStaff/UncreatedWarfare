@@ -25,7 +25,7 @@ public class KitCommand : IRocketCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (!ctx.CheckGamemodeAndSend<IKitRequests>() || !ctx.OnDutyOrReply("kits_notonduty")) return;
         if (!ctx.HasArgs(1))
         {

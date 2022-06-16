@@ -25,7 +25,7 @@ public class VehicleBayCommand : IRocketCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
 
         if (!VehicleSpawner.Loaded || !VehicleBay.Loaded)
         {
@@ -623,7 +623,7 @@ public class VehicleBayCommand : IRocketCommand
     }
 
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private VehicleData? GetVehicleTarget(ref CommandContext ctx)
+    private VehicleData? GetVehicleTarget(ref UCCommandContext ctx)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
         {
@@ -660,7 +660,7 @@ public class VehicleBayCommand : IRocketCommand
         return null;
     }
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private VehicleSpawn? GetBayTarget(ref CommandContext ctx)
+    private VehicleSpawn? GetBayTarget(ref UCCommandContext ctx)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
         {
@@ -691,7 +691,7 @@ public class VehicleBayCommand : IRocketCommand
         return null;
     }
     /// <summary>Sign barricade >> Spawner barricade >> Spawner structure >> Linked Vehicle</summary>
-    private VehicleSign? GetSignTarget(ref CommandContext ctx)
+    private VehicleSign? GetSignTarget(ref UCCommandContext ctx)
     {
         if (!VehicleSigns.Loaded) return null;
         VehicleSpawn spawn;

@@ -47,7 +47,7 @@ internal class _DebugCommand : IRocketCommand
     private readonly Type type = typeof(_DebugCommand);
     public void Execute(IRocketPlayer caller, string[] command)
     {
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (ctx.TryGet(0, out string operation))
         {
             try
@@ -87,7 +87,7 @@ internal class _DebugCommand : IRocketCommand
 #pragma warning disable IDE0060
 #pragma warning disable IDE0051
     private const string GIVE_XP_SYNTAX = "/test givexp <player> <amount> [team - required if offline]";
-    private void givexp(CommandContext ctx)
+    private void givexp(UCCommandContext ctx)
     {
         if (!ctx.HasArgs(3))
         {
@@ -144,7 +144,7 @@ internal class _DebugCommand : IRocketCommand
         }
     }
     private const string GIVE_CREDITS_SYNTAX = "/test givecredits <player> <amount> [team - required if offline]";
-    private void givecredits(CommandContext ctx)
+    private void givecredits(UCCommandContext ctx)
     {
         if (!ctx.HasArgs(3))
         {
@@ -200,7 +200,7 @@ internal class _DebugCommand : IRocketCommand
             ctx.Reply("test_givecredits_invalid_amount", ctx.Get(2)!);
         }
     }
-    private void quickcap(CommandContext ctx)
+    private void quickcap(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -245,7 +245,7 @@ internal class _DebugCommand : IRocketCommand
         }
         else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
     }
-    private void quickwin(CommandContext ctx)
+    private void quickwin(UCCommandContext ctx)
     {
         ulong team;
         if (ctx.TryGet(1, out ulong id))
@@ -259,7 +259,7 @@ internal class _DebugCommand : IRocketCommand
         }
         Data.Gamemode.DeclareWin(team);
     }
-    private void savemanyzones(CommandContext ctx)
+    private void savemanyzones(UCCommandContext ctx)
     {
         if (Data.Is(out IFlagRotation fg))
         {
@@ -283,7 +283,7 @@ internal class _DebugCommand : IRocketCommand
             ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
         }
     }
-    private void savemanygraphs(CommandContext ctx)
+    private void savemanygraphs(UCCommandContext ctx)
     {
         if (Data.Is(out IFlagRotation fg))
         {
@@ -307,7 +307,7 @@ internal class _DebugCommand : IRocketCommand
             ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
         }
     }
-    private void zone(CommandContext ctx)
+    private void zone(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -335,7 +335,7 @@ internal class _DebugCommand : IRocketCommand
         }
         else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
     }
-    private void sign(CommandContext ctx)
+    private void sign(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -350,13 +350,13 @@ internal class _DebugCommand : IRocketCommand
             L.Log(Translation.Translate("test_sign_success", 0, out _, sign.text), ConsoleColor.Green);
         }
     }
-    private void time(CommandContext ctx)
+    private void time(UCCommandContext ctx)
     {
         UCWarfare.I.CoroutineTiming = !UCWarfare.I.CoroutineTiming;
         ctx.Reply("test_time_enabled_console");
     }
     // test zones: test zonearea all true false false true false
-    private void zonearea(CommandContext ctx)
+    private void zonearea(UCCommandContext ctx)
     {
         if (Data.Is(out IFlagRotation fg))
         {
@@ -402,7 +402,7 @@ internal class _DebugCommand : IRocketCommand
         }
         else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
     }
-    private void drawzone(CommandContext ctx)
+    private void drawzone(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -436,7 +436,7 @@ internal class _DebugCommand : IRocketCommand
         }
         else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
     }
-    private void drawgraph(CommandContext ctx)
+    private void drawgraph(UCCommandContext ctx)
     {
         if (Data.Gamemode is FlagGamemode fg)
         {
@@ -445,13 +445,13 @@ internal class _DebugCommand : IRocketCommand
         }
         else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
     }
-    private void rotation(CommandContext ctx)
+    private void rotation(UCCommandContext ctx)
     {
         if (Data.Gamemode is FlagGamemode fg)
             fg.PrintFlagRotation();
     }
     private const byte DOWN_DAMAGE = 55;
-    private void down(CommandContext ctx)
+    private void down(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -462,7 +462,7 @@ internal class _DebugCommand : IRocketCommand
         DamageTool.damage(ctx.Caller.Player, EDeathCause.KILL, ELimb.SPINE, ctx.Caller.CSteamID, Vector3.down, DOWN_DAMAGE, 1, out _, false, false);
         ctx.Reply("test_down_success", (DOWN_DAMAGE * 2).ToString(Data.Locale));
     }
-    private void layer(CommandContext ctx)
+    private void layer(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -471,7 +471,7 @@ internal class _DebugCommand : IRocketCommand
         }
         L.Log(F.GetLayer(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward, RayMasks.BLOCK_COLLISION), ConsoleColor.DarkCyan); // so as to not hit player
     }
-    private void clearui(CommandContext ctx)
+    private void clearui(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -489,7 +489,7 @@ internal class _DebugCommand : IRocketCommand
         ctx.Caller.HasUIHidden = !ctx.Caller.HasUIHidden;
         
     }
-    private void game(CommandContext ctx)
+    private void game(UCCommandContext ctx)
     {
         if (Data.Is(out IFlagRotation fg))
         {
@@ -505,7 +505,7 @@ internal class _DebugCommand : IRocketCommand
         }
     }
     private const string PLAYER_SAVE_USAGE = "/test playersave <player> <property> <value>";
-    private void playersave(CommandContext ctx)
+    private void playersave(UCCommandContext ctx)
     {
         if (!ctx.HasArgs(4))
         {
@@ -550,7 +550,7 @@ internal class _DebugCommand : IRocketCommand
             ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
     }
     private const string GAMEMODE_USAGE = "/test gamemode <gamemode>";
-    private void gamemode(CommandContext ctx)
+    private void gamemode(UCCommandContext ctx)
     {
         if (!ctx.HasArgs(2))
         {
@@ -584,7 +584,7 @@ internal class _DebugCommand : IRocketCommand
         else
             ctx.SendCorrectUsage(GAMEMODE_USAGE);
     }
-    private void trackstats(CommandContext ctx)
+    private void trackstats(UCCommandContext ctx)
     {
         Data.TrackStats = !Data.TrackStats;
         if (Data.TrackStats)
@@ -592,7 +592,7 @@ internal class _DebugCommand : IRocketCommand
         else
             ctx.Reply("test_trackstats_disabled");
     }
-    private void destroyblocker(CommandContext ctx)
+    private void destroyblocker(UCCommandContext ctx)
     {
         int ct = 0;
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
@@ -615,7 +615,7 @@ internal class _DebugCommand : IRocketCommand
         else
             ctx.Reply("test_destroyblocker_success", ct.ToString(Data.Locale), ct.S());
     }
-    private void skipstaging(CommandContext ctx)
+    private void skipstaging(UCCommandContext ctx)
     {
         if (Data.Is(out IStagingPhase gm))
         {
@@ -624,7 +624,7 @@ internal class _DebugCommand : IRocketCommand
         }
         else ctx.SendGamemodeError();
     }
-    private void resetlobby(CommandContext ctx)
+    private void resetlobby(UCCommandContext ctx)
     {
         if (Data.Is(out ITeams t) && t.UseJoinUI)
         {
@@ -649,7 +649,7 @@ internal class _DebugCommand : IRocketCommand
         }
         else ctx.SendGamemodeError();
     }
-    private void clearcooldowns(CommandContext ctx)
+    private void clearcooldowns(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -660,7 +660,7 @@ internal class _DebugCommand : IRocketCommand
             pl = ctx.Caller;
         CooldownManager.RemoveCooldown(pl);
     }
-    private void instid(CommandContext ctx)
+    private void instid(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -711,7 +711,7 @@ internal class _DebugCommand : IRocketCommand
         }
         ctx.Reply("test_instid_not_found");
     }
-    private void fakereport(CommandContext ctx)
+    private void fakereport(UCCommandContext ctx)
     {
         Report report = new ChatAbuseReport()
         {
@@ -730,11 +730,11 @@ internal class _DebugCommand : IRocketCommand
         Reporter.NetCalls.SendReportInvocation.NetInvoke(report, false);
         L.Log("Sent chat abuse report.");
     }
-    private void questdump(CommandContext ctx)
+    private void questdump(UCCommandContext ctx)
     {
         QuestManager.PrintAllQuests(ctx.Caller);
     }
-    private void completequest(CommandContext ctx)
+    private void completequest(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -766,7 +766,7 @@ internal class _DebugCommand : IRocketCommand
             }
         }
     }
-    private void setsign(CommandContext ctx)
+    private void setsign(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {
@@ -796,7 +796,7 @@ internal class _DebugCommand : IRocketCommand
         F.SaveProfilingData();
     }
 #endif
-    private void questtest(CommandContext ctx)
+    private void questtest(UCCommandContext ctx)
     {
         if (ctx.IsConsole || ctx.Caller is null)
         {

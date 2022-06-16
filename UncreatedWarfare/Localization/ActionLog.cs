@@ -14,6 +14,7 @@ public class ActionLog : MonoBehaviour
     private readonly Queue<ActionLogItem> items = new Queue<ActionLogItem>(16);
     private const string DATE_HEADER_FORMAT = "yyyy-MM-dd_HH-mm-ss";
     private static ActionLog Instance;
+    private static DateTime CurrentLogSt = DateTime.MinValue;
     private void Awake()
     {
         if (Instance != null)
@@ -41,8 +42,14 @@ public class ActionLog : MonoBehaviour
                 bool replaced = false;
                 if (info.Exists)
                 {
-                    DateTime creation = info.CreationTime;
-                    if ((DateTime.Now - creation).TotalHours > 1d)
+                    //string name = info.Name;
+                    DateTime creation = CurrentLogSt;/*name.Length < 4
+                        ? DateTime.MinValue
+                        : (DateTime.TryParseExact(name.Substring(0, name.Length - 4), DATE_HEADER_FORMAT, Data.Locale,
+                            System.Globalization.DateTimeStyles.AssumeLocal, out DateTime dt)
+                            ? dt
+                            : DateTime.MinValue);*/
+                    if (creation != DateTime.MinValue && (DateTime.Now - creation).TotalHours > 1d)
                     {
                         string path = Path.Combine(Data.LOG_DIRECTORY, creation.ToString(DATE_HEADER_FORMAT) + ".txt");
                         try
@@ -85,7 +92,10 @@ public class ActionLog : MonoBehaviour
                 }
 
                 if (replaced)
-                    File.SetCreationTime(path2, DateTime.Now);
+                {
+                    CurrentLogSt = DateTime.Now;
+                    File.SetCreationTime(path2, CurrentLogSt);
+                }
             }
         }
     }

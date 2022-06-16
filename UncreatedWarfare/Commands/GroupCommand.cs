@@ -25,7 +25,7 @@ internal class GroupCommand : IRocketCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (!ctx.IsConsoleReply()) return;
         if (!Data.Is(out ITeams gm))
         {

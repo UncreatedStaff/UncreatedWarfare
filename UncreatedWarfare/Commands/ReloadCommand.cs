@@ -43,7 +43,7 @@ public class ReloadCommand : IRocketCommand
 	public List<string> Permissions => _permissions;
     public void Execute(IRocketPlayer caller, string[] command)
     {
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (!ctx.TryGet(0, out string module))
         {
             ctx.Reply("reload_syntax");

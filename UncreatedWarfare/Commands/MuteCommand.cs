@@ -21,7 +21,7 @@ public class MuteCommand : IRocketCommand
 		public List<string> Permissions => _permissions;
     public void Execute(IRocketPlayer caller, string[] command)
     {
-        CommandContext ctx = new CommandContext(caller, command);
+        UCCommandContext ctx = new UCCommandContext(caller, command);
         
         if (command.Length < 4)
             goto Syntax;

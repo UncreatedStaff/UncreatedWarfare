@@ -482,7 +482,7 @@ internal static class Localization
             string msg = TranslateMessage(set.Language, args);
             if (!sentInConsole && set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
             {
-                string log = CommandContext.RemoveRichText(msg);
+                string log = UCCommandContext.RemoveRichText(msg);
                 L.Log(log, ConsoleColor.DarkCyan);
                 if (e.Killer is not null)
                     ActionLog.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
@@ -498,7 +498,7 @@ internal static class Localization
 
         if (!sentInConsole)
         {
-            string log = CommandContext.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args));
+            string log = UCCommandContext.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args));
             L.Log(log, ConsoleColor.DarkCyan);
             if (e.Killer is not null)
                 ActionLog.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
