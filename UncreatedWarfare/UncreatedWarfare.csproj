@@ -56,15 +56,6 @@
     <Reference Include="com.rlabrecque.steamworks.net">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\com.rlabrecque.steamworks.net.dll</HintPath>
     </Reference>
-    <Reference Include="Rocket.API">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Extras\Rocket.Unturned\Rocket.API.dll</HintPath>
-    </Reference>
-    <Reference Include="Rocket.Core">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Extras\Rocket.Unturned\Rocket.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Rocket.Unturned">
-      <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Extras\Rocket.Unturned\Rocket.Unturned.dll</HintPath>
-    </Reference>
     <Reference Include="SDG.NetPak.Runtime">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\SDG.NetPak.Runtime.dll</HintPath>
     </Reference>
