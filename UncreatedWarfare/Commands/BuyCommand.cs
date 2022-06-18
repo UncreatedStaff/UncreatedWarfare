@@ -1,85 +1,68 @@
-﻿using Rocket.API;
-using SDG.Unturned;
-using System;
-using System.Collections.Generic;
+﻿using SDG.Unturned;
 using System.Threading.Tasks;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class BuyCommand : IRocketCommand
+public class BuyCommand : Command
 {
-    private readonly List<string> _aliases = new List<string>(0);
-    private readonly List<string> _permissions = new List<string>(1) { "uc.buy" };
-    public List<string> Permissions => _permissions;
-    public List<string> Aliases => _aliases;
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "buy";
-    public string Help => "Must be looking at a kit request sign. Purchases a kit for credits. Doesn't work on loadouts, premium, free, or exclusive kits, or kits you can't afford.";
-    public string Syntax => "/buy [help]";
-    public void Execute(IRocketPlayer caller, string[] command)
+    const string HELP = "Must be looking at a kit request sign. Purchases a kit for credits.";
+    const string SYNTAX = "/buy [help]";
+    public BuyCommand() : base("buy", EAdminType.MEMBER) { }
+    public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCCommandContext ctx = new UCCommandContext(caller, command);
+        ctx.AssertRanByPlayer();
+
         if (ctx.MatchParameter(0, "help"))
-        {
-            ctx.SendCorrectUsage(Syntax + " - " + Help);
-            return;
-        }
+            throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
         if (!RequestSigns.Loaded || !KitManager.Loaded)
-        {
-            ctx.SendGamemodeError();
-            return;
-        }
+            throw ctx.SendGamemodeError();
         if ((Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING) || ctx.Caller is null)
-        {
-            ctx.SendUnknownError();
-            return;
-        }
+            throw ctx.SendUnknownError();
         ulong team = ctx.Caller.GetTeam();
         if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
             if (!RequestSigns.SignExists(sign, out RequestSign requestsign))
-                ctx.Reply("request_kit_e_kitnoexist");
-            else if (requestsign.kit_name.StartsWith("loadout_"))
-                ctx.Reply("request_kit_e_notbuyablecredits");
-            else if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
-                ctx.Reply("request_kit_e_kitnoexist");
-            else if (ctx.Caller.Rank.Level < kit.UnlockLevel)
-                ctx.Reply("request_kit_e_wronglevel", RankData.GetRankName(kit.UnlockLevel));
-            else if (kit.IsPremium)
-                ctx.Reply("request_kit_e_notbuyablecredits");
-            else if (kit.CreditCost == 0 || KitManager.HasAccessFast(kit, ctx.Caller))
-                ctx.Reply("request_kit_e_alreadyhaskit");
-            else if (ctx.Caller.CachedCredits < kit.CreditCost)
-                ctx.Reply("request_kit_e_notenoughcredits", (kit.CreditCost - ctx.Caller.CachedCredits).ToString());
-            else
+                throw ctx.Reply("request_kit_e_kitnoexist");
+            if (requestsign.kit_name.StartsWith("loadout_"))
+                throw ctx.Reply("request_kit_e_notbuyablecredits");
+            if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
+                throw ctx.Reply("request_kit_e_kitnoexist");
+            if (ctx.Caller.Rank.Level < kit.UnlockLevel)
+                throw ctx.Reply("request_kit_e_wronglevel", RankData.GetRankName(kit.UnlockLevel));
+            if (kit.IsPremium)
+                throw ctx.Reply("request_kit_e_notbuyablecredits");
+            if (kit.CreditCost == 0 || KitManager.HasAccessFast(kit, ctx.Caller))
+                throw ctx.Reply("request_kit_e_alreadyhaskit");
+            if (ctx.Caller.CachedCredits < kit.CreditCost)
+                throw ctx.Reply("request_kit_e_notenoughcredits", (kit.CreditCost - ctx.Caller.CachedCredits).ToString());
+
+            Task.Run(async () =>
             {
-                Task.Run(async () =>
-                {
-                    if (ctx.Caller.AccessibleKits == null)
-                        ctx.Caller.AccessibleKits = await Data.DatabaseManager.GetAccessibleKits(ctx.Caller.Steam64);
+                if (ctx.Caller.AccessibleKits == null)
+                    ctx.Caller.AccessibleKits = await Data.DatabaseManager.GetAccessibleKits(ctx.Caller.Steam64);
 
-                    await KitManager.GiveAccess(kit, ctx.Caller, EKitAccessType.CREDITS);
+                await KitManager.GiveAccess(kit, ctx.Caller, EKitAccessType.CREDITS);
 
-                    await UCWarfare.ToUpdate();
+                await UCWarfare.ToUpdate();
 
-                    RequestSigns.UpdateSignsOfKit(kit.Name, ctx.Caller.SteamPlayer);
-                    EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
-                    ctx.Reply("request_kit_boughtcredits", kit.CreditCost.ToString());
-                    Points.AwardCredits(ctx.Caller, -kit.CreditCost, isPurchase: true);
-                    ctx.LogAction(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS");
-                    L.Log(F.GetPlayerOriginalNames(ctx.Caller).PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Name);
-                });
-            }
+                RequestSigns.UpdateSignsOfKit(kit.Name, ctx.Caller.SteamPlayer);
+                EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
+                ctx.Reply("request_kit_boughtcredits", kit.CreditCost.ToString());
+                Points.AwardCredits(ctx.Caller, -kit.CreditCost, isPurchase: true);
+                ctx.LogAction(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS");
+                L.Log(F.GetPlayerOriginalNames(ctx.Caller).PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Name);
+            });
+            ctx.Defer();
         }
-        else
-        {
-            ctx.Reply("request_not_looking");
-        }
+        else throw ctx.Reply("request_not_looking");
     }
 }

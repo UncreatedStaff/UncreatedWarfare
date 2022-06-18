@@ -1,15 +1,11 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -21,10 +17,11 @@ namespace Uncreated.Warfare;
 
 public static class PlayerManager
 {
-    public static List<UCPlayer> OnlinePlayers;
-    private static Dictionary<ulong, UCPlayer> _dict;
+    public static readonly List<UCPlayer> OnlinePlayers;
+    private static readonly Dictionary<ulong, UCPlayer> _dict;
     public static readonly Type Type = typeof(PlayerSave);
     private static readonly FieldInfo[] fields = Type.GetFields();
+
     static PlayerManager()
     {
         OnlinePlayers = new List<UCPlayer>(50);
@@ -291,9 +288,7 @@ public static class PlayerManager
         [NetCall(ENetCall.FROM_SERVER, 1033)]
         internal static void ReceivePermissionRequest(MessageContext context, ulong target)
         {
-            RocketPlayer player = new RocketPlayer(target.ToString());
-            EAdminType perms = player.GetPermissions();
-            context.Reply(SendPermissions, target, perms);
+            context.Reply(SendPermissions, target, PermissionSaver.Instance.GetPlayerPermissionLevel(target));
         }
         [NetCall(ENetCall.FROM_SERVER, 1035)]
         internal static void ReceivePlayerOnlineCheckRequest(MessageContext context, ulong target)

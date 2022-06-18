@@ -255,12 +255,11 @@ public static class OffenseManager
                 callerName = FPlayerName.Console;
             ActionLog.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
                 (duration == -1 ? "PERMANENT" : duration.ToString(Data.Locale)), callerId);
-            if (UCWarfare.Config.AdminLoggerSettings.LogBans)
-            {
-                await Data.DatabaseManager.AddBan(targetId, callerId, duration, reason!);
-                await UCWarfare.ToUpdate();
-                NetCalls.SendPlayerBanned.NetInvoke(targetId, callerId, reason!, duration, DateTime.Now);
-            }
+
+            await Data.DatabaseManager.AddBan(targetId, callerId, duration, reason!);
+            await UCWarfare.ToUpdate();
+            NetCalls.SendPlayerBanned.NetInvoke(targetId, callerId, reason!, duration, DateTime.Now);
+
             if (duration == -1)
             {
                 if (callerId == 0)
@@ -326,11 +325,10 @@ public static class OffenseManager
             return;
         FPlayerName names = F.GetPlayerOriginalNames(target);
         Provider.kick(targetPlayer.Player.channel.owner.playerID.steamID, reason);
-        if (UCWarfare.Config.AdminLoggerSettings.LogKicks)
-        {
-            NetCalls.SendPlayerKicked.NetInvoke(target, caller, reason, DateTime.Now);
-            Data.DatabaseManager.AddKick(target, caller, reason);
-        }
+
+        NetCalls.SendPlayerKicked.NetInvoke(target, caller, reason, DateTime.Now);
+        Data.DatabaseManager.AddKick(target, caller, reason);
+
         ActionLog.Add(EActionLogType.KICK_PLAYER, $"KICKED {target.ToString(Data.Locale)} FOR \"{reason}\"", caller);
         if (caller == 0)
         {
@@ -355,11 +353,10 @@ public static class OffenseManager
         FPlayerName targetNames = F.GetPlayerOriginalNames(targetId);
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
             return;
-        if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
-        {
-            Data.DatabaseManager.AddUnban(targetId, callerId);
-            NetCalls.SendPlayerUnbanned.NetInvoke(targetId, callerId, DateTime.Now);
-        }
+
+        Data.DatabaseManager.AddUnban(targetId, callerId);
+        NetCalls.SendPlayerUnbanned.NetInvoke(targetId, callerId, DateTime.Now);
+
         string tid = targetId.ToString(Data.Locale);
         ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", callerId);
         if (callerId == 0)
@@ -403,11 +400,10 @@ public static class OffenseManager
             return;
         UCPlayer? caller = UCPlayer.FromID(callerId);
         FPlayerName targetNames = F.GetPlayerOriginalNames(target);
-        if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
-        {
-            Data.DatabaseManager.AddWarning(targetId, callerId, reason!);
-            NetCalls.SendPlayerWarned.NetInvoke(targetId, callerId, reason!, DateTime.Now);
-        }
+
+        Data.DatabaseManager.AddWarning(targetId, callerId, reason!);
+        NetCalls.SendPlayerWarned.NetInvoke(targetId, callerId, reason!, DateTime.Now);
+
         string tid = targetId.ToString(Data.Locale);
         ActionLog.Add(EActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", callerId);
         if (callerId == 0)
@@ -595,12 +591,12 @@ public static class OffenseManager
         {
             RocketPlayer pl = new RocketPlayer(player.ToString());
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
-            if (!groups.Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup))
+            if (!groups.Exists(x => x.Id == UCWarfare.Config.ModerationSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.ModerationSettings.AdminOnDutyGroup))
             {
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.HelperGroup, pl);
-                R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.HelperGroup, pl);
+                R.Permissions.AddPlayerToGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, pl);
             }
         }
 
@@ -615,12 +611,12 @@ public static class OffenseManager
         {
             RocketPlayer pl = new RocketPlayer(player.ToString());
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
-            if (!groups.Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup || x.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup))
+            if (!groups.Exists(x => x.Id == UCWarfare.Config.ModerationSettings.InternOffDutyGroup || x.Id == UCWarfare.Config.ModerationSettings.InternOnDutyGroup))
             {
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.HelperGroup, pl);
-                R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.HelperGroup, pl);
+                R.Permissions.AddPlayerToGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, pl);
             }
         }
 
@@ -635,13 +631,13 @@ public static class OffenseManager
         {
             RocketPlayer pl = new RocketPlayer(player.ToString());
             List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
-            if (!groups.Exists(x => x.Id == UCWarfare.Config.AdminLoggerSettings.HelperGroup))
+            if (!groups.Exists(x => x.Id == UCWarfare.Config.ModerationSettings.HelperGroup))
             {
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, pl);
-                R.Permissions.AddPlayerToGroup(UCWarfare.Config.AdminLoggerSettings.HelperGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, pl);
+                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup, pl);
+                R.Permissions.AddPlayerToGroup(UCWarfare.Config.ModerationSettings.HelperGroup, pl);
             }
         }
 
@@ -653,11 +649,11 @@ public static class OffenseManager
         private static void RevokeAll(ulong player)
         {
             RocketPlayer pl = new RocketPlayer(player.ToString(Data.Locale));
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, pl);
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, pl);
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, pl);
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, pl);
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.AdminLoggerSettings.HelperGroup, pl);
+            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, pl);
+            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup, pl);
+            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, pl);
+            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup, pl);
+            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.HelperGroup, pl);
         }
     }
 }

@@ -635,7 +635,10 @@ public class TeamConfig : ConfigData
             else return "ffffff";
         }
     }
-
+    [JsonPropertyName("allowedTeamGap")]
+    public float AllowedDifferencePercent;
+    [JsonPropertyName("balanceTeams")]
+    public bool BalanceTeams;
     public TeamConfig() => SetDefaults();
     [JsonConstructor]
     public TeamConfig(ulong team1id,

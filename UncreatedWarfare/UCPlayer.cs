@@ -12,6 +12,7 @@ using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
@@ -23,7 +24,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare;
 
-public class UCPlayer : IRocketPlayer
+public class UCPlayer
 {
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UI.MutedUI, false, false);
     public readonly ulong Steam64;
@@ -112,6 +113,8 @@ public class UCPlayer : IRocketPlayer
     {
         get => _otherDonator || AccessibleKits.Any(x => x.IsPremium && x.PremiumCost > 0f || x.IsLoadout);
     }
+    public bool GodMode { get => _godMode; set => _godMode = value; }
+    private bool _godMode = false;
     public Vector3 Position
     {
         get
@@ -167,7 +170,6 @@ public class UCPlayer : IRocketPlayer
     public static implicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
     public static implicit operator Player(UCPlayer player) => player.Player;
     public static implicit operator SteamPlayer(UCPlayer player) => player.Player.channel.owner;
-    public static explicit operator UnturnedPlayer(UCPlayer player) => UnturnedPlayer.FromPlayer(player.Player);
     public static UCPlayer? FromID(ulong steamID)
     {
         if (steamID == 0) return null;
@@ -177,19 +179,10 @@ public class UCPlayer : IRocketPlayer
     public static UCPlayer? FromCSteamID(CSteamID steamID) =>
         steamID == default ? null : FromID(steamID.m_SteamID);
     public static UCPlayer? FromPlayer(Player player) => player == null ? null : FromID(player.channel.owner.playerID.steamID.m_SteamID);
-    public static UCPlayer? FromUnturnedPlayer(UnturnedPlayer player) =>
-        player == null || player.Player == null || player.CSteamID == default ? null : FromID(player.CSteamID.m_SteamID);
     public static UCPlayer? FromSteamPlayer(SteamPlayer player)
     {
         if (player == null) return null;
         return FromID(player.playerID.steamID.m_SteamID);
-    }
-    public static UCPlayer? FromIRocketPlayer(IRocketPlayer caller)
-    {
-        if (caller is not UnturnedPlayer pl)
-            if (caller is UCPlayer uc) return uc;
-            else return null;
-        else return FromUnturnedPlayer(pl);
     }
     public static UCPlayer? FromName(string name, bool includeContains = false)
     {
@@ -370,6 +363,25 @@ public class UCPlayer : IRocketPlayer
             else return 0;
         }
     }
+
+    public EAdminType PermissionLevel
+    {
+        get
+        {
+            if (_pLvl.HasValue) return _pLvl.Value;
+            _pLvl = PermissionSaver.Instance.GetPlayerPermissionLevel(Steam64, true);
+            return _pLvl.Value;
+        }
+        set
+        {
+            if (_pLvl.HasValue && _pLvl.Value == value)
+                return;
+            PermissionSaver.Instance.SetPlayerPermissionLevel(Steam64, value);
+            _pLvl = value;
+        }
+    }
+    private EAdminType? _pLvl = null;
+    internal void ResetPermissionLevel() => _pLvl = null;
     public ushort GetMarkerID() => Squad == null || Squad.Leader == null || Squad.Leader.Steam64 != Steam64 ? MarkerID : SquadLeaderMarkerID;
     public bool IsSquadLeader()
     {

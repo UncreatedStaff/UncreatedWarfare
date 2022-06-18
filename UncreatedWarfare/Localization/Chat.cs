@@ -1,5 +1,4 @@
-﻿using Rocket.Unturned.Player;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -12,25 +11,6 @@ namespace Uncreated.Warfare
 {
     public static class Chat
     {
-        /// <summary>
-        /// Send a message in chat using the translation file.
-        /// </summary>
-        /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
-        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
-        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
-        /// <param name="textColor">The color of the chat.</param>
-        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this UnturnedPlayer player, string text, Color textColor, params string[] formatting) =>
-            SendChat(player.Player.channel.owner, text, textColor, formatting);
-        /// <summary>
-        /// Send a message in chat using the translation file.
-        /// </summary>
-        /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
-        /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.
-        /// </para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
-        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void SendChat(this UnturnedPlayer player, string text, params string[] formatting) =>
-            SendChat(player.Player.channel.owner, text, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
         /// </summary>
@@ -175,14 +155,6 @@ namespace Uncreated.Warfare
             if (sp != null)
                 sp.SendChat(text, formatting);
         }
-        /// <summary>
-        /// Send a white message in chat using the RocketMod translation file.
-        /// </summary>
-        /// <param name="player"><see cref="UnturnedPlayer"/> to send the chat to.</param>
-        /// <param name="message"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
-        /// <param name="formatting">Params array of strings to replace the {#}s in the translations.</param>
-        public static void Message(this UnturnedPlayer player, string message, params string[] formatting) =>
-            SendChat(player.Player.channel.owner, message, formatting);
         /// <summary>
         /// Send a message in chat using the translation file.
         /// </summary>
@@ -513,13 +485,13 @@ namespace Uncreated.Warfare
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
-        public static void BroadcastToAllExcept(ulong[] Excluded, string text, Color textColor, params string[] formatting)
+        public static void BroadcastToAllExcept(ulong[] excluded, string text, Color textColor, params string[] formatting)
         {
             BroadcastToPlayers(Translation.EnumerateLanguageSets(x =>
             {
-                for (int i = 0; i < Excluded.Length; i++)
+                for (int i = 0; i < excluded.Length; i++)
                 {
-                    if (Excluded[i] == x.Steam64) return false;
+                    if (excluded[i] == x.Steam64) return false;
                 }
                 return true;
             }), text, textColor, formatting);
@@ -530,13 +502,13 @@ namespace Uncreated.Warfare
         /// <param name="text"><para>The unlocalized <see cref="string"/> to match with the translation dictionary.</para><para>After localization, the chat message can only be &lt;= 2047 bytes, encoded in UTF-8 format.</para></param>
         /// <param name="textColor">The color of the chat.</param>
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
-        public static void BroadcastToAllExcept(ulong[] Excluded, string text, params string[] formatting)
+        public static void BroadcastToAllExcept(ulong[] excluded, string text, params string[] formatting)
         {
             BroadcastToPlayers(Translation.EnumerateLanguageSets(x =>
             {
-                for (int i = 0; i < Excluded.Length; i++)
+                for (int i = 0; i < excluded.Length; i++)
                 {
-                    if (Excluded[i] == x.Steam64) return false;
+                    if (excluded[i] == x.Steam64) return false;
                 }
                 return true;
             }), text, formatting);

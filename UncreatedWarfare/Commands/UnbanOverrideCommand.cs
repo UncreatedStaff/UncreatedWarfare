@@ -1,28 +1,19 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Generic;
-using Uncreated.Networking;
 using Uncreated.Players;
-using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class UnbanOverrideCommand : IRocketCommand
+public class UnbanOverrideCommand : Command
 {
-    public AllowedCaller AllowedCaller => AllowedCaller.Both;
-    public string Name => "unban";
-    public string Help => "Unban players who have served their time.";
-    public string Syntax => "/unban <player ID>";
-    private readonly List<string> _aliases = new List<string>(0);
-    public List<string> Aliases => _aliases;
-    private readonly List<string> _permissions = new List<string>(1) { "uc.unban" };
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/unban <player>";
+    private const string HELP = "Unban players who have served their time.";
+    public UnbanOverrideCommand() : base("unban", Framework.EAdminType.MODERATOR, 1) { }
+    public override void Execute(CommandInteraction ctx)
     {
-        UCCommandContext ctx = new UCCommandContext(caller, command);
         if (!ctx.HasArgs(1))
         {
             ctx.Reply("unban_syntax");
@@ -39,11 +30,9 @@ public class UnbanOverrideCommand : IRocketCommand
                 ctx.Reply("unban_player_not_banned_console", ctx.IsConsole ? targetNames.PlayerName : targetNames.CharacterName);
                 return;
             }
-            if (UCWarfare.Config.AdminLoggerSettings.LogUnBans)
-            {
-                Data.DatabaseManager.AddUnban(targetId, ctx.CallerID);
-                OffenseManager.NetCalls.SendPlayerUnbanned.NetInvoke(targetId, ctx.CallerID, DateTime.Now);
-            }
+
+            Data.DatabaseManager.AddUnban(targetId, ctx.CallerID);
+            OffenseManager.NetCalls.SendPlayerUnbanned.NetInvoke(targetId, ctx.CallerID, DateTime.Now);
 
             string tid = targetId.ToString(Data.Locale);
             ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", ctx.CallerID);

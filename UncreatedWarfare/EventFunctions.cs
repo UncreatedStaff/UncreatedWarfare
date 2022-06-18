@@ -90,6 +90,7 @@ public static class EventFunctions
     {
         if (!UCWarfare.Config.AllowCosmetics) state = false;
     }
+    [Obsolete]
     internal static void OnCommandExecuted(Rocket.API.IRocketPlayer player, Rocket.API.IRocketCommand command, ref bool cancel)
     {
         if (cancel) return;
@@ -235,7 +236,7 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        foreach (SteamPlayer player in Provider.clients)
+        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             UCWarfare.I.UpdateLangs(player);
     }
 
@@ -284,7 +285,7 @@ public static class EventFunctions
 
             if (hit != null && hit.TryGetComponent<InteractableVehicle>(out _))
             {
-                if (!UCWarfare.Config.AdminLoggerSettings.AllowedBarricadesOnVehicles.Contains(asset.id))
+                if (!UCWarfare.Config.ModerationSettings.AllowedBarricadesOnVehicles.Contains(asset.id))
                 {
                     if (!perms)
                     {
@@ -700,9 +701,9 @@ public static class EventFunctions
         ulong team = client.GetTeam();
         Chat.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
         L.Log(Translation.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
-        if (UCWarfare.Config.AdminLoggerSettings.LogBattleyeKick &&
-            UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions != null &&
-            !UCWarfare.Config.AdminLoggerSettings.BattleyeExclusions.Contains(reason))
+        if (UCWarfare.Config.ModerationSettings.LogBattleyeKick &&
+            UCWarfare.Config.ModerationSettings.BattleyeExclusions != null &&
+            !UCWarfare.Config.ModerationSettings.BattleyeExclusions.Contains(reason))
         {
             ulong id = client.playerID.steamID.m_SteamID;
             Data.DatabaseManager.AddBattleyeKick(id, reason);
@@ -1371,8 +1372,8 @@ public static class EventFunctions
             L.LogError(ex);
         }
     }
-    internal static void LangCommand_OnPlayerChangedLanguage(UnturnedPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet)
-        => UCWarfare.I.UpdateLangs(player.Player.channel.owner);
+    internal static void LangCommand_OnPlayerChangedLanguage(UCPlayer player, LanguageAliasSet oldSet, LanguageAliasSet newSet)
+        => UCWarfare.I.UpdateLangs(player);
     internal static void OnPrePlayerConnect(ValidateAuthTicketResponse_t ticket, ref bool isValid, ref string explanation)
     {
 #if DEBUG

@@ -1,24 +1,20 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using System;
-using System.Collections.Generic;
+﻿using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 
 namespace Uncreated.Warfare.Commands;
 
-public class DiscordCommand : IRocketCommand
+public class DiscordCommand : Command
 {
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "discord";
-    public string Help => "Links you to the Uncreated Discord server.";
-    public string Syntax => "/discord";
-    private readonly List<string> _aliases = new List<string>(0);
-    public List<string> Aliases => _aliases;
-    private readonly List<string> _permissions = new List<string>(1) { "uc.discord" };
-		public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    const string HELP = "Sends the Discord link to the Uncreated Network server.";
+    const string SYNTAX = "/discord";
+    public DiscordCommand() : base("discord", EAdminType.MEMBER) { }
+    public override void Execute(CommandInteraction ctx)
     {
-        UCCommandContext ctx = new UCCommandContext(caller, command);
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
         if (ctx.Caller is not null)
-        ctx.Caller.Player.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+            ctx.Caller.Player.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+        else
+            ctx.Reply("https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
     }
 }

@@ -1,8 +1,4 @@
-﻿using Rocket.API;
-using Rocket.API.Serialisation;
-using Rocket.Core;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,6 +20,18 @@ namespace Uncreated.Warfare;
 
 public static class Translation
 {
+    public static class Common
+    {
+        public const string NOT_IMPLEMENTED = "todo";
+        public const string CORRECT_USAGE = "correct_usage";
+        public const string CONSOLE_ONLY = "command_e_no_console";
+        public const string PLAYERS_ONLY = "command_e_no_player";
+        public const string PLAYER_NOT_FOUND = "command_e_player_not_found";
+        public const string UNKNOWN_ERROR = "command_e_unknown_error";
+        public const string GAMEMODE_ERROR = "command_e_gamemode";
+        public const string NO_PERMISSIONS = "no_permissions";
+    }
+
     public static string ObjectTranslate(string key, string language, params object[] formatting)
     {
 #if DEBUG
@@ -217,10 +225,6 @@ public static class Translation
         Translate(key, player.channel.owner.playerID.steamID.m_SteamID, formatting);
     public static string Translate(string key, Player player, out Color color, params string[] formatting) =>
         Translate(key, player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
-    public static string Translate(string key, UnturnedPlayer player, params string[] formatting) =>
-        Translate(key, player.Player.channel.owner.playerID.steamID.m_SteamID, formatting);
-    public static string Translate(string key, UnturnedPlayer player, out Color color, params string[] formatting) =>
-        Translate(key, player.Player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
     /// <summary>
     /// Tramslate an unlocalized string to a localized translation structure using the translations file.
     /// </summary>
@@ -1501,7 +1505,7 @@ public static class Translation
             languages.Clear();
         }
     }
-    public static IEnumerable<LanguageSet> EnumeratePermissions(EAdminType type = EAdminType.MODERATE_PERMS)
+    public static IEnumerable<LanguageSet> EnumeratePermissions(EAdminType type)
     {
         lock (languages)
         {
@@ -1510,7 +1514,7 @@ public static class Translation
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                if ((type & pl.GetPermissions()) != type) continue;
+                if ((type & pl.PermissionLevel) < type) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                     lang = JSONMethods.DEFAULT_LANGUAGE;
                 bool found = false;
@@ -1730,7 +1734,7 @@ public static class Translation
                     Directory.CreateDirectory(p);
             }
         }
-        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in UCWarfare.Instance.Assembly
+        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in UCWarfare.I.Assembly
                      .GetTypes()
                      .Where(x => x.IsEnum)
                      .Select(x => new KeyValuePair<Type, TranslatableAttribute>(x, (Attribute.GetCustomAttribute(x, typeof(TranslatableAttribute)) as TranslatableAttribute)!))

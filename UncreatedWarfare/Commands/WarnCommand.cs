@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands.CommandSystem;
 
 namespace Uncreated.Warfare.Commands;
 
@@ -18,7 +19,7 @@ public class WarnCommand : IRocketCommand
 	public List<string> Permissions => _permissions;
     public void Execute(IRocketPlayer caller, string[] command)
     {
-        UCCommandContext ctx = new UCCommandContext(caller, command);
+        WarfareContext ctx = new WarfareContext(caller, command);
         if (!ctx.HasArgs(2))
         {
             ctx.Reply("warn_syntax");
@@ -37,7 +38,7 @@ public class WarnCommand : IRocketCommand
             else
             {
                 FPlayerName targetNames = F.GetPlayerOriginalNames(target);
-                if (UCWarfare.Config.AdminLoggerSettings.LogWarning)
+                if (UCWarfare.Config.ModerationSettings.LogWarning)
                 {
                     Data.DatabaseManager.AddWarning(targetId, ctx.CallerID, reason!);
                     OffenseManager.NetCalls.SendPlayerWarned.NetInvoke(targetId, ctx.CallerID, reason!, DateTime.Now);

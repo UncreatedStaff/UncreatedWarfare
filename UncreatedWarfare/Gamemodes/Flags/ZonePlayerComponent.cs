@@ -7,7 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Networking;
 using UnityEngine;
 
@@ -92,7 +92,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         if (old > -1 && old < _currentPoints!.Count)
             EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + old, PointText(old));
     }
-    internal void UtilCommand(UCCommandContext ctx)
+    internal void UtilCommand(WarfareContext ctx)
     {
         ThreadUtil.assertIsGameThread();
         if (!ctx.HasArgs(1))
@@ -111,7 +111,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         }
     }
 
-    internal void DeleteCommand(UCCommandContext ctx)
+    internal void DeleteCommand(WarfareContext ctx)
     {
         ThreadUtil.assertIsGameThread();
         string zoneName;
@@ -237,7 +237,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         _currentBuilder!.Id = nextId;
     }
 
-    internal void CreateCommand(UCCommandContext ctx)
+    internal void CreateCommand(WarfareContext ctx)
     {
         ThreadUtil.assertIsGameThread();
         if (ctx.HasArgs(2))
@@ -427,7 +427,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 break;
         }
     }
-    internal void EditCommand(UCCommandContext ctx)
+    internal void EditCommand(WarfareContext ctx)
     {
         ThreadUtil.assertIsGameThread();
         if (!ctx.HasArgs(1))
@@ -688,7 +688,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     if (_edit != null)
                         EffectManager.askEffectClearByID(_edit.id, player.Player.channel.owner.transportConnection);
                     player.HasUIHidden = false;
-                    UCWarfare.I.UpdateLangs(player.Player.channel.owner);
+                    UCWarfare.I.UpdateLangs(player);
                     _currentBuilderIsExisting = false;
                     RefreshPreview();
                 }
@@ -708,7 +708,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 if (_edit != null)
                     EffectManager.askEffectClearByID(_edit.id, player.Player.channel.owner.transportConnection);
                 player.HasUIHidden = false;
-                UCWarfare.I.UpdateLangs(player.Player.channel.owner);
+                UCWarfare.I.UpdateLangs(player);
                 RefreshPreview();
             }
             else if (ctx.MatchParameter(0, "addpt", "addpoint", "newpt"))

@@ -1,141 +1,128 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-
-public delegate void PlayerChangedLanguageDelegate(UnturnedPlayer player, LanguageAliasSet oldLanguage, LanguageAliasSet newLanguage);
-public class LangCommand : IRocketCommand
+public class LangCommand : Command
 {
-    private readonly List<string> _permissions = new List<string>(1) { "uc.lang" };
-    private readonly List<string> _aliases = new List<string>(0);
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "lang";
-    public string Help => "Switch your language to some of our supported languages.";
-    public string Syntax => "/lang";
-    public List<string> Aliases => _aliases;
-	public List<string> Permissions => _permissions;
+    private const string SYNTAX = "/lang [current|reset|*language*]";
+    private const string HELP = "Switch your language to some of our supported languages.";
+    public static event LanguageChanged OnPlayerChangedLanguage;
+    public LangCommand() : base("lang", EAdminType.MEMBER) { }
 
-    public static event PlayerChangedLanguageDelegate OnPlayerChangedLanguage;
-    public void Execute(IRocketPlayer caller, string[] command)
+    public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UnturnedPlayer player = (UnturnedPlayer)caller;
-        string op = command.Length > 0 ? command[0].ToLower() : string.Empty;
-        if (command.Length == 0)
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
+        if (ctx.HasArgsExact(0))
         {
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < Data.LanguageAliases.Keys.Count; i++)
+            int i = -1;
+            foreach (KeyValuePair<string, LanguageAliasSet> setData in Data.LanguageAliases)
             {
-                string langInput = Data.LanguageAliases.Keys.ElementAt(i);
-                if (!Data.Localization.ContainsKey(langInput)) continue; // only show languages with translations
-                if (i != 0) sb.Append(", ");
-                sb.Append(langInput);
-                LanguageAliasSet aliases;
-                if (Data.LanguageAliases.ContainsKey(langInput))
-                    aliases = Data.LanguageAliases[langInput];
-                else
-                    aliases = Data.LanguageAliases.Values.FirstOrDefault(x => x.values.Contains(langInput));
-                if (!aliases.Equals(default(LanguageAliasSet))) sb.Append(" : ").Append(aliases.display_name);
+                if (!Data.Localization.ContainsKey(setData.Key)) continue; // only show languages with translations
+                if (++i != 0) sb.Append(", ");
+                sb.Append(setData.Key);
+                LanguageAliasSet aliases = setData.Value;
+                sb.Append(" : ").Append(aliases.display_name);
             }
-            player.SendChat("language_list", sb.ToString());
+            ctx.Reply("language_list", sb.ToString());
         }
-        else if (command.Length == 1)
+        else if (ctx.MatchParameter(0, "current"))
         {
-            if (op == "current")
-            {
-                string OldLanguage = JSONMethods.DEFAULT_LANGUAGE;
-                if (Data.Languages.ContainsKey(player.Player.channel.owner.playerID.steamID.m_SteamID))
-                    OldLanguage = Data.Languages[player.Player.channel.owner.playerID.steamID.m_SteamID];
-                LanguageAliasSet oldSet;
-                if (Data.LanguageAliases.ContainsKey(OldLanguage))
-                    oldSet = Data.LanguageAliases[OldLanguage];
-                else
-                    oldSet = new LanguageAliasSet(OldLanguage, OldLanguage, new string[0]);
+            ctx.AssertRanByPlayer();
 
-                player.SendChat("language_current", $"{oldSet.display_name} : {oldSet.key}");
-            }
-            else if (op == "reset")
+            if (!Data.Languages.TryGetValue(ctx.CallerID, out string langCode))
+                langCode = JSONMethods.DEFAULT_LANGUAGE;
+            if (!Data.LanguageAliases.TryGetValue(langCode, out LanguageAliasSet set))
+                set = new LanguageAliasSet(langCode, langCode, Array.Empty<string>());
+
+            ctx.Reply("language_current", $"{set.display_name} : {set.key}");
+        }
+        else if (ctx.MatchParameter(0, "reset"))
+        {
+            ctx.AssertRanByPlayer();
+
+            if (!Data.LanguageAliases.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out LanguageAliasSet set))
+                set = new LanguageAliasSet(JSONMethods.DEFAULT_LANGUAGE, JSONMethods.DEFAULT_LANGUAGE, Array.Empty<string>());
+
+            if (Data.Languages.TryGetValue(ctx.CallerID, out string oldLang))
             {
-                string fullname = JSONMethods.DEFAULT_LANGUAGE;
-                LanguageAliasSet alias;
-                if (Data.LanguageAliases.ContainsKey(JSONMethods.DEFAULT_LANGUAGE))
-                {
-                    alias = Data.LanguageAliases[JSONMethods.DEFAULT_LANGUAGE];
-                    fullname = alias.display_name;
-                }
-                else
-                    alias = new LanguageAliasSet(fullname, fullname, new string[0]);
-                if (Data.Languages.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out string oldLang))
-                {
-                    if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
-                        oldSet = new LanguageAliasSet(oldLang, oldLang, new string[0]);
-                    if (oldLang == JSONMethods.DEFAULT_LANGUAGE)
-                        player.SendChat("reset_language_not_needed", fullname);
-                    else
-                    {
-                        JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, JSONMethods.DEFAULT_LANGUAGE);
-                        ActionLog.Add(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + JSONMethods.DEFAULT_LANGUAGE, player.CSteamID.m_SteamID);
-                        if (OnPlayerChangedLanguage != null)
-                            OnPlayerChangedLanguage.Invoke(player, oldSet, alias);
-                        player.SendChat("reset_language", fullname);
-                    }
-                }
-                else
-                    player.SendChat("reset_language_not_needed", fullname);
-            }
-            else
-            {
-                if (!Data.Languages.TryGetValue(player.Player.channel.owner.playerID.steamID.m_SteamID, out string oldLang))
-                    oldLang = JSONMethods.DEFAULT_LANGUAGE;
                 if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
-                    oldSet = new LanguageAliasSet(oldLang, oldLang, new string[0]);
-                string langInput = op.Trim();
-                bool found = false;
-                if (!Data.LanguageAliases.TryGetValue(langInput, out LanguageAliasSet aliases))
-                {
-                    IEnumerator<LanguageAliasSet> sets = Data.LanguageAliases.Values.GetEnumerator();
-                    found = sets.MoveNext();
-                    while (found)
-                    {
-                        if (sets.Current.key == langInput || sets.Current.values.Contains(langInput))
-                        {
-                            aliases = sets.Current;
-                            break;
-                        }
-                        found = sets.MoveNext();
-                    }
-                    sets.Dispose();
-                }
-                else found = true;
+                    oldSet = new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
 
-                if (found && aliases.key != null && aliases.values != null && aliases.display_name != null)
+                if (oldLang == JSONMethods.DEFAULT_LANGUAGE)
+                    throw ctx.Reply("reset_language_not_needed", set.display_name);
+
+                JSONMethods.SetLanguage(ctx.CallerID, JSONMethods.DEFAULT_LANGUAGE);
+                ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + JSONMethods.DEFAULT_LANGUAGE);
+                if (OnPlayerChangedLanguage != null)
+                    OnPlayerChangedLanguage.Invoke(ctx.Caller, set, oldSet);
+                ctx.Reply("reset_language", set.display_name);
+            }
+            else throw ctx.Reply("reset_language_not_needed", set.display_name);
+        }
+        else if (ctx.TryGetRange(0, out string input) && !string.IsNullOrWhiteSpace(input))
+        {
+            ctx.AssertRanByPlayer();
+
+            if (!Data.Languages.TryGetValue(ctx.CallerID, out string oldLang))
+                oldLang = JSONMethods.DEFAULT_LANGUAGE;
+
+            if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
+                oldSet = new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
+
+            bool found = false;
+            if (!Data.LanguageAliases.TryGetValue(input, out LanguageAliasSet newSet))
+            {
+                foreach (KeyValuePair<string, LanguageAliasSet> set in Data.LanguageAliases)
                 {
-                    if (oldLang == aliases.key)
-                        player.SendChat("change_language_not_needed", aliases.display_name);
+                    if (set.Key.Equals(input, StringComparison.OrdinalIgnoreCase) ||
+                        set.Value.display_name.Equals(input, StringComparison.OrdinalIgnoreCase))
+                    {
+                        newSet = set.Value;
+                        found = true;
+                        break;
+                    }
                     else
                     {
-                        JSONMethods.SetLanguage(player.Player.channel.owner.playerID.steamID.m_SteamID, aliases.key);
-                        ActionLog.Add(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + aliases.key, player.CSteamID.m_SteamID);
-                        if (OnPlayerChangedLanguage != null)
-                            OnPlayerChangedLanguage.Invoke(player, oldSet, aliases);
-                        player.SendChat("changed_language", aliases.display_name);
+                        for (int i = 0; i < set.Value.values.Length; ++i)
+                        {
+                            if (set.Value.values[i].Equals(input, StringComparison.OrdinalIgnoreCase))
+                            {
+                                newSet = set.Value;
+                                found = true;
+                                goto brk;
+                            }
+                        }
+
+                        brk:
+                        break;
                     }
                 }
-                else
-                {
-                    player.SendChat("dont_have_language", langInput);
-                }
             }
+            else found = true;
+
+            if (found)
+            {
+                if (newSet.key.Equals(oldLang, StringComparison.OrdinalIgnoreCase))
+                    throw ctx.Reply("change_language_not_needed", oldSet.display_name);
+
+                JSONMethods.SetLanguage(ctx.CallerID, newSet.key);
+                ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + newSet.key);
+                if (OnPlayerChangedLanguage != null)
+                    OnPlayerChangedLanguage.Invoke(ctx.Caller, newSet, oldSet);
+                ctx.Reply("changed_language", newSet.display_name);
+            }
+            else throw ctx.Reply("dont_have_language", input);
         }
-        else
-        {
-            player.SendChat("reset_language_how");
-        }
+        else throw ctx.Reply("reset_language_how");
     }
 }
+public delegate void LanguageChanged(UCPlayer player, LanguageAliasSet newLanguage, LanguageAliasSet oldLanguage);

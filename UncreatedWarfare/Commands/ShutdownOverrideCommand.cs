@@ -1,237 +1,130 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Text;
+using Uncreated.Framework;
 using Uncreated.Networking;
-using Uncreated.Warfare.Networking;
+using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands
+namespace Uncreated.Warfare.Commands;
+public class ShutdownOverrideCommand : Command
 {
-    public class ShutdownOverrideCommand : IRocketCommand
+    private const string SYNTAX = "/shutdown [instant|after|cancel|*time*] [reason]";
+    private const string HELP = "Does nothing.";
+    public static Coroutine? Messager = null;
+    public ShutdownOverrideCommand() : base("blank", EAdminType.VANILLA_ADMIN, 1) { }
+    public override void Execute(CommandInteraction ctx)
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Both;
-        public string Name => "shutdown";
-        public string Help => "does something";
-        public string Syntax => "/shutdown <aftergame|cancel|*seconds*|instant> <reason (except cancel)>";
-        private readonly List<string> _aliases = new List<string>(0);
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>(1) { "uc.shutdown" };
-		public List<string> Permissions => _permissions;
-        public static Coroutine? Messager = null;
-        public void Execute(IRocketPlayer caller, string[] command)
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        
+        if (ctx.ArgumentCount == 0)
         {
-            if (caller is ConsolePlayer)
+            ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
+            UCWarfare.ShutdownNow("None specified", ctx.CallerID);
+            throw ctx.Defer();
+        }
+        if (ctx.MatchParameter(0, "inst", "instant"))
+        {
+            if (ctx.TryGetRange(1, out string reason))
             {
-                if (command.Length == 0)
-                {
-                    ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT");
-                    NetCalls.SendShuttingDownInstant.NetInvoke(0UL, "None specified.");
-                    UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
-                    Provider.shutdown(3);
-                    return;
-                }
-                string option = command[0].ToLower();
-                if (command.Length < 2 && option != "cancel" && option != "abort")
-                {
-                    L.LogError(Translation.Translate("shutdown_syntax", 0), ConsoleColor.Red);
-                    return;
-                }
-                StringBuilder sb = new StringBuilder();
-                for (int i = 1; i < command.Length; i++)
-                {
-                    if (i != 1) sb.Append(' ');
-                    sb.Append(command[i]);
-                }
-                string reason = sb.ToString();
-                if (option == "instant" || option == "inst" || option == "now")
-                {
-                    ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason);
-                    NetCalls.SendShuttingDownInstant.NetInvoke(0UL, reason);
-                    UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
-                    Provider.shutdown(3, reason);
-                }
-                else if (option == "aftergame" || option == "after" || option == "game")
-                {
-                    ShutdownAfterGame(reason);
-                }
-                else if (option == "cancel" || option == "abort")
-                {
-                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"CANCELLED");
-                    Data.Gamemode.CancelShutdownAfterGame();
-                    Chat.Broadcast("shutdown_broadcast_after_game_canceled");
-                    L.Log(Translation.Translate("shutdown_broadcast_after_game_canceled_console", 0, out _), ConsoleColor.Cyan);
-                    if (Messager != null)
-                    {
-                        try
-                        {
-                            UCWarfare.I.StopCoroutine(Messager);
-                        }
-                        catch { }
-                    }
-                    NetCalls.SendCancelledShuttingDownAfter.NetInvoke(0UL);
-                }
-                else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
-                {
-                    ShutdownIn(seconds, reason);
-                }
-                else
-                {
-                    L.LogError(Translation.Translate("shutdown_syntax", 0), ConsoleColor.Red);
-                    return;
-                }
+                ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT: " + reason, ctx.CallerID);
+                UCWarfare.ShutdownNow(reason, ctx.CallerID);
             }
             else
             {
-                SteamPlayer player = ((UnturnedPlayer)caller).Player.channel.owner;
-                if (command.Length == 0)
-                {
-                    ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT", player.playerID.steamID.m_SteamID);
-                    NetCalls.SendShuttingDownInstant.NetInvoke(0UL, "None specified.");
-                    UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
-                    Provider.shutdown(3);
-                    return;
-                }
-                string option = command[0].ToLower();
-                if (command.Length < 2 && option != "cancel" && option != "abort")
-                {
-                    player.SendChat("shutdown_syntax");
-                    return;
-                }
-                StringBuilder sb = new StringBuilder();
-                for (int i = 1; i < command.Length; i++)
-                {
-                    if (i != 1) sb.Append(' ');
-                    sb.Append(command[i]);
-                }
-                string reason = sb.ToString();
-                if (option == "instant" || option == "inst" || option == "now")
-                {
-                    ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason, player.playerID.steamID.m_SteamID);
-                    NetCalls.SendShuttingDownInstant.NetInvoke(0UL, reason);
-                    UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
-                    Provider.shutdown(2, reason);
-                }
-                else if (option == "aftergame" || option == "after" || option == "game")
-                {
-                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason, player.playerID.steamID.m_SteamID);
-                    Data.Gamemode?.ShutdownAfterGame(reason, player.playerID.steamID.m_SteamID);
-                    Chat.Broadcast("shutdown_broadcast_after_game", reason);
-                    L.Log(Translation.Translate("shutdown_broadcast_after_game_console_player", 0, out _, F.GetPlayerOriginalNames(player).PlayerName, reason), ConsoleColor.Cyan);
-                    if (Messager != null)
-                    {
-                        try
-                        {
-                            UCWarfare.I.StopCoroutine(Messager);
-                        }
-                        catch { }
-                    }
-                    Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
-                    NetCalls.SendShuttingDownAfter.NetInvoke(0UL, reason);
-                }
-                else if (option == "cancel" || option == "abort")
-                {
-                    ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"CANCELLED", player.playerID.steamID.m_SteamID);
-                    Data.Gamemode.CancelShutdownAfterGame();
-                    Chat.Broadcast("shutdown_broadcast_after_game_canceled");
-                    L.Log(Translation.Translate("shutdown_broadcast_after_game_canceled_console_player", 0, out _, F.GetPlayerOriginalNames(player).PlayerName), ConsoleColor.Cyan);
-                    if (Messager != null)
-                    {
-                        try
-                        {
-                            UCWarfare.I.StopCoroutine(Messager);
-                        }
-                        catch { }
-                    }
-                    NetCalls.SendCancelledShuttingDownAfter.NetInvoke(0UL);
-                }
-                else if (uint.TryParse(option, System.Globalization.NumberStyles.Any, Data.Locale, out uint seconds))
-                {
-                    ShutdownIn(seconds, reason);
-                }
+                ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
+                UCWarfare.ShutdownNow("None specified", ctx.CallerID);
+            }
+            ctx.Defer();
+        }
+        else if (ctx.MatchParameter(0, "cancel", "abort"))
+        {
+            ctx.LogAction(EActionLogType.SHUTDOWN_SERVER, $"CANCELLED");
+            Data.Gamemode.CancelShutdownAfterGame();
+            Chat.Broadcast("shutdown_broadcast_after_game_canceled");
+            L.Log(Translation.Translate("shutdown_broadcast_after_game_canceled_console", 0, out _), ConsoleColor.Cyan);
+            if (Messager != null)
+                UCWarfare.I.StopCoroutine(Messager);
+            NetCalls.SendCancelledShuttingDownAfter.NetInvoke(ctx.CallerID);
+            ctx.Defer();
+        }
+        else if (ctx.MatchParameter(0, "after", "aftergame", "game"))
+        {
+            if (ctx.TryGetRange(1, out string reason))
+            {
+                ctx.LogAction(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
+                Data.Gamemode?.ShutdownAfterGame(reason, ctx.CallerID);
+                Chat.Broadcast("shutdown_broadcast_after_game", reason);
+                if (ctx.IsConsole)
+                    L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
                 else
-                {
-                    player.SendChat("shutdown_syntax");
-                    return;
-                }
+                    L.Log(Translation.Translate("shutdown_broadcast_after_game_console_player", 0, out _, F.GetPlayerOriginalNames(ctx.Caller).PlayerName, reason), ConsoleColor.Cyan);
+                if (Messager != null)
+                    UCWarfare.I.StopCoroutine(Messager);
+                Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
+                NetCalls.SendShuttingDownAfter.NetInvoke(0UL, reason);
+                ctx.Defer();
             }
+            else throw ctx.SendCorrectUsage("/shutdown after <reason>");
         }
-        internal static void ShutdownIn(uint seconds, string reason)
+        else if (ctx.TryGet(0, out int seconds) && ctx.TryGetRange(1, out string reason))
         {
-            string time;
-            foreach (SteamPlayer player in Provider.clients)
+            ShutdownIn(seconds, reason, ctx.CallerID);
+            ctx.Defer();
+        }
+        else throw ctx.Reply("shutdown_syntax");
+    }
+    internal static void ShutdownIn(int seconds, string reason, ulong instigator = 0)
+    {
+        string time;
+        bool a = false;
+        foreach (LanguageSet set in Translation.EnumerateLanguageSetsExclude(instigator))
+        {
+            time = Translation.GetTimeFromSeconds(seconds, set.Language);
+            if (set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE))
             {
-                time = seconds.GetTimeFromSeconds(player.playerID.steamID.m_SteamID);
-                player.SendChat("shutdown_broadcast_after_time", time, reason);
+                a = true;
+                L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
+                ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
             }
-            time = seconds.GetTimeFromSeconds(0);
+            Chat.Broadcast(set, "shutdown_broadcast_after_time", time, reason);
+        }
+        if (!a)
+        {
+            time = Translation.GetTimeFromSeconds(seconds, JSONMethods.DEFAULT_LANGUAGE);
             L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
-            ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason);
-            NetCalls.SendShuttingDownInSeconds.NetInvoke(0UL, reason, seconds);
-            Provider.shutdown(checked((int)seconds), reason);
+            ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
         }
-        internal static void ShutdownInstant(string reason)
+        NetCalls.SendShuttingDownInSeconds.NetInvoke(instigator, reason, (uint)seconds);
+        Provider.shutdown(seconds, reason);
+    }
+    public static void ShutdownAfterGameDaily()
+    {
+        string reason = "Daily Restart";
+        ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
+        Chat.Broadcast("shutdown_broadcast_after_game_daily", reason);
+        L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
+        Data.Gamemode?.ShutdownAfterGame(reason, 0);
+        if (Messager != null)
+            UCWarfare.I.StopCoroutine(Messager);
+        Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
+        NetCalls.SendShuttingDownAfter.NetInvoke(0UL, reason);
+    }
+    public static IEnumerator<WaitForSeconds> ShutdownMessageSender(string reason)
+    {
+        if (UCWarfare.Config.ModerationSettings.TimeBetweenShutdownMessages == 0) yield break;
+        while (true)
         {
-            ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, $"INSTANT: " + reason, 0);
-            NetCalls.SendShuttingDownInstant.NetInvoke(0UL, reason);
-            UCWarfare.I.UnloadPlugin(PluginState.Unloaded);
-            Provider.shutdown(0, reason);
+            yield return new WaitForSeconds(UCWarfare.Config.ModerationSettings.TimeBetweenShutdownMessages);
+            Chat.Broadcast("shutdown_broadcast_after_game_reminder", reason);
         }
-
-        private static void ShutdownAfterGame(string reason)
-        {
-            ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
-            Chat.Broadcast("shutdown_broadcast_after_game", reason);
-            L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
-            Data.Gamemode?.ShutdownAfterGame(reason, 0);
-            if (Messager != null)
-            {
-                try
-                {
-                    UCWarfare.I.StopCoroutine(Messager);
-                }
-                catch { }
-            }
-            Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
-            NetCalls.SendShuttingDownAfter.NetInvoke(0UL, reason);
-        }
-        public static void ShutdownAfterGameDaily()
-        {
-            string reason = "Daily Restart";
-            ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
-            Chat.Broadcast("shutdown_broadcast_after_game_daily", reason);
-            L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
-            Data.Gamemode?.ShutdownAfterGame(reason, 0);
-            if (Messager != null)
-            {
-                try
-                {
-                    UCWarfare.I.StopCoroutine(Messager);
-                }
-                catch { }
-            }
-            Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
-            NetCalls.SendShuttingDownAfter.NetInvoke(0UL, reason);
-        }
-
-        public static IEnumerator<WaitForSeconds> ShutdownMessageSender(string reason)
-        {
-            if (UCWarfare.Config.AdminLoggerSettings.TimeBetweenShutdownMessages == 0) yield break;
-            while (true)
-            {
-                yield return new WaitForSeconds(UCWarfare.Config.AdminLoggerSettings.TimeBetweenShutdownMessages);
-                foreach (SteamPlayer player in Provider.clients)
-                    player.SendChat("shutdown_broadcast_after_game_reminder", reason);
-            }
-        }
-        public static class NetCalls
-        {
-            public static readonly NetCall<ulong, string> SendShuttingDownInstant = new NetCall<ulong, string>(1012);
-            public static readonly NetCall<ulong, string> SendShuttingDownAfter = new NetCall<ulong, string>(1013);
-            public static readonly NetCall<ulong> SendCancelledShuttingDownAfter = new NetCall<ulong>(1014);
-            public static readonly NetCall<ulong, string, uint> SendShuttingDownInSeconds = new NetCall<ulong, string, uint>(1015);
-        }
+    }
+    public static class NetCalls
+    {
+        public static readonly NetCall<ulong, string> SendShuttingDownInstant = new NetCall<ulong, string>(1012);
+        public static readonly NetCall<ulong, string> SendShuttingDownAfter = new NetCall<ulong, string>(1013);
+        public static readonly NetCall<ulong> SendCancelledShuttingDownAfter = new NetCall<ulong>(1014);
+        public static readonly NetCall<ulong, string, uint> SendShuttingDownInSeconds = new NetCall<ulong, string, uint>(1015);
     }
 }

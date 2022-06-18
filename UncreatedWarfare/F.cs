@@ -1,8 +1,4 @@
-﻿using Rocket.API;
-using Rocket.API.Serialisation;
-using Rocket.Core;
-using Rocket.Unturned.Player;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -11,12 +7,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Color = UnityEngine.Color;
@@ -26,6 +24,7 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
+    private static readonly Regex RemoveRichTextRegex = new Regex("<(?:(?:(?=.*<\\/color>)color=#{0,1}[0123456789ABCDEF]{6})|(?:(?<=<color=#{0,1}[0123456789ABCDEF]{6}>.*)\\/color)|(?:(?=.*<\\/b>)b)|(?:(?<=<b>.*)\\/b)|(?:(?=.*<\\/i>)i)|(?:(?<=<i>.*)\\/i)|(?:(?=.*<\\/size>)size=\\d+)|(?:(?<=<size=\\d+>.*)\\/size)|(?:(?=.*<\\/material>)material=\\d+)|(?:(?<=<material=\\d+>.*)\\/material))>", RegexOptions.IgnoreCase);
     public static readonly char[] vowels = new char[] { 'a', 'e', 'i', 'o', 'u' };
     /// <summary>Convert an HTMLColor string to a actual color.</summary>
     /// <param name="htmlColorCode">A hexadecimal/HTML color key.</param>
@@ -41,6 +40,18 @@ public static class F
         else if (ColorUtility.TryParseHtmlString(htmlColorCode, out color))
             return color;
         else return Color.white;
+    }
+    public static ConsoleColor GetClosestConsoleColor(Color color)
+    {
+        int i = color.r > 0.5f || color.g > 0.5f || color.b > 0.5f ? 8 : 0;
+        if (color.r > 0.5f) i |= 4;
+        if (color.g > 0.5f) i |= 2;
+        if (color.b > 0.5f) i |= 1;
+        return (ConsoleColor)i;
+    }
+    public static string RemoveRichText(string text)
+    {
+        return RemoveRichTextRegex.Replace(text, string.Empty);
     }
     public static byte[] CloneBytes(byte[] src)
     {
@@ -92,7 +103,7 @@ public static class F
         remainder = (int)Math.Round((answer - Math.Floor(answer)) * dividend);
         return (int)Math.Floor(answer);
     }
-    public static bool PermissionCheck(this IRocketPlayer player, EAdminType type)
+    public static bool PermissionCheck(this UCPlayer player, EAdminType type)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -102,27 +113,27 @@ public static class F
         {
             RocketPermissionsGroup grp = groups[i];
             if (grp.Id.Equals("default", StringComparison.Ordinal)) continue;
-            if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup, StringComparison.Ordinal))
+            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, StringComparison.Ordinal))
             {
                 if ((type & EAdminType.ADMIN_OFF_DUTY) == EAdminType.ADMIN_OFF_DUTY) return true;
                 continue;
             }
-            if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup, StringComparison.Ordinal))
+            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup, StringComparison.Ordinal))
             {
                 if ((type & EAdminType.ADMIN_ON_DUTY) == EAdminType.ADMIN_ON_DUTY) return true;
                 continue;
             }
-            if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup, StringComparison.Ordinal))
+            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, StringComparison.Ordinal))
             {
                 if ((type & EAdminType.TRIAL_ADMIN_OFF_DUTY) == EAdminType.TRIAL_ADMIN_OFF_DUTY) return true;
                 continue;
             }
-            if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup, StringComparison.Ordinal))
+            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.InternOnDutyGroup, StringComparison.Ordinal))
             {
                 if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY) return true;
                 continue;
             }
-            if (grp.Id.Equals(UCWarfare.Config.AdminLoggerSettings.HelperGroup, StringComparison.Ordinal))
+            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.HelperGroup, StringComparison.Ordinal))
             {
                 if ((type & EAdminType.HELPER) == EAdminType.HELPER) return true;
                 continue;
@@ -130,7 +141,7 @@ public static class F
         }
         return false;
     }
-    public static EAdminType GetPermissions(this IRocketPlayer player)
+    public static EAdminType GetPermissions(this ulong player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -141,15 +152,15 @@ public static class F
         {
             RocketPermissionsGroup grp = groups[i];
             if (grp.Id == "default") continue;
-            if (grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup || grp.Id == UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup)
+            if (grp.Id == UCWarfare.Config.ModerationSettings.AdminOffDutyGroup || grp.Id == UCWarfare.Config.ModerationSettings.AdminOnDutyGroup)
             {
                 perms |= EAdminType.ADMIN;
             }
-            else if (grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup || grp.Id == UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup)
+            else if (grp.Id == UCWarfare.Config.ModerationSettings.InternOffDutyGroup || grp.Id == UCWarfare.Config.ModerationSettings.InternOnDutyGroup)
             {
                 perms |= EAdminType.TRIAL_ADMIN;
             }
-            else if (grp.Id == UCWarfare.Config.AdminLoggerSettings.HelperGroup)
+            else if (grp.Id == UCWarfare.Config.ModerationSettings.HelperGroup)
             {
                 perms |= EAdminType.HELPER;
             }
@@ -165,26 +176,28 @@ public static class F
             for (int i = 0; i < input.Length; ++i)
             {
                 char current = *(p + i);
-                if (current == '_') output[i] = ' ';
-                else if (last == ' ' || last == '_')
-                {
+                if (current is '_') output[i] = ' ';
+                else if (last is ' ' or '_' or ',' or '.')
                     output[i] = char.ToUpperInvariant(current);
-                }
                 else
-                {
                     output[i] = char.ToLowerInvariant(current);
-                }
                 last = current;
             }
         }
         return new string(output);
     }
-    public static bool OnDutyOrAdmin(this IRocketPlayer player) => (player is UnturnedPlayer pl && pl.Player.channel.owner.isAdmin) || (player is UCPlayer upl && upl.Player.channel.owner.isAdmin) || player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
-    public static bool OnDuty(this IRocketPlayer player) => player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
-    public static bool OffDuty(this IRocketPlayer player) => !OnDuty(player);
-    public static bool IsIntern(this IRocketPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN);
-    public static bool IsAdmin(this IRocketPlayer player) => player.PermissionCheck(EAdminType.ADMIN);
-    public static bool IsHelper(this IRocketPlayer player) => player.PermissionCheck(EAdminType.HELPER);
+    public static bool OnDutyOrAdmin(this UCPlayer player) => player.Player.channel.owner.isAdmin || player.PermissionCheck(EAdminType.ADMIN_ON_DUTY);
+    public static bool OnDutyOrAdmin(this ulong player) => SteamAdminlist.checkAdmin(new CSteamID(player)) || player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
+    public static bool OnDuty(this UCPlayer player) => player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
+    public static bool OnDuty(this ulong player) => player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
+    public static bool OffDuty(this ulong player) => !OnDuty(player);
+    public static bool OffDuty(this UCPlayer player) => !OnDuty(player);
+    public static bool IsIntern(this ulong player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN);
+    public static bool IsIntern(this UCPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN);
+    public static bool IsAdmin(this ulong player) => player.PermissionCheck(EAdminType.ADMIN);
+    public static bool IsAdmin(this UCPlayer player) => player.PermissionCheck(EAdminType.ADMIN);
+    public static bool IsHelper(this ulong player) => player.PermissionCheck(EAdminType.HELPER);
+    public static bool IsHelper(this UCPlayer player) => player.PermissionCheck(EAdminType.HELPER);
     /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
     /// <param name="duration">Duration of ban IN SECONDS</param>
     public static void OfflineBan(ulong offender, uint ipAddress, CSteamID banner, string reason, uint duration, byte[][] hwids)
@@ -246,7 +259,6 @@ public static class F
     public static ulong GetTeam(this UCPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
-    public static ulong GetTeam(this UnturnedPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this ulong groupID)
     {
         if (!Data.Is<ITeams>(out _)) return groupID;
@@ -257,7 +269,6 @@ public static class F
     }
     public static byte GetTeamByte(this SteamPlayer player) => GetTeamByte(player.player.quests.groupID.m_SteamID);
     public static byte GetTeamByte(this Player player) => GetTeamByte(player.quests.groupID.m_SteamID);
-    public static byte GetTeamByte(this UnturnedPlayer player) => GetTeamByte(player.Player.quests.groupID.m_SteamID);
     public static byte GetTeamByte(this ulong groupID)
     {
         if (!Data.Is<ITeams>(out _)) return groupID > byte.MaxValue ? byte.MaxValue : (byte)groupID;
@@ -623,7 +634,6 @@ public static class F
     }
     public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => GetPlayerOriginalNames(player.Player);
     public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
-    public static FPlayerName GetPlayerOriginalNames(UnturnedPlayer player) => GetPlayerOriginalNames(player.Player);
     public static FPlayerName GetPlayerOriginalNames(Player player)
     {
 #if DEBUG
@@ -743,7 +753,7 @@ public static class F
                 L.LogError("Unable to create data directory " + path + ". Check permissions: " + ex.Message);
                 success = false;
                 if (unloadIfFail)
-                    UCWarfare.I?.UnloadPlugin();
+                    throw new SingletonLoadException(ESingletonLoadType.LOAD, UCWarfare.I, ex);
             }
         }
         else success = true;

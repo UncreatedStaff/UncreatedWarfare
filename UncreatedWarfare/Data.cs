@@ -146,7 +146,7 @@ public static class Data
     }
     public static void ReloadTCP()
     {
-        if (UCWarfare.Config.PlayerStatsSettings.EnableTCPServer)
+        if (UCWarfare.Config.TCPSettings.EnableTCPServer)
         {
             if (NetClient is not null)
             {
@@ -162,7 +162,7 @@ public static class Data
                 catch { }
             }
             L.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
-            NetClient = new HomebaseClient(UCWarfare.Config.PlayerStatsSettings.TCPServerIP, UCWarfare.Config.PlayerStatsSettings.TCPServerPort, UCWarfare.Config.PlayerStatsSettings.TCPServerIdentity);
+            NetClient = new HomebaseClient(UCWarfare.Config.TCPSettings.TCPServerIP, UCWarfare.Config.TCPSettings.TCPServerPort, UCWarfare.Config.TCPSettings.TCPServerIdentity);
             NetClient.OnClientVerified += OnClientConnected;
             NetClient.OnClientDisconnected += OnClientDisconnected;
             NetClient.OnSentMessage += OnClientSentMessage;
@@ -331,13 +331,13 @@ public static class Data
         }
 
         /* SET UP ROCKET GROUPS */
-        if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)
+        if (R.Permissions.GetGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup) == default)
             _ = R.Permissions.AddGroup(AdminOnDutyGroup);
-        if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup) == default)
+        if (R.Permissions.GetGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup) == default)
             _ = R.Permissions.AddGroup(AdminOffDutyGroup);
-        if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup) == default)
+        if (R.Permissions.GetGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup) == default)
             _ = R.Permissions.AddGroup(InternOnDutyGroup);
-        if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup) == default)
+        if (R.Permissions.GetGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup) == default)
             _ = R.Permissions.AddGroup(InternOffDutyGroup);
         RocketPermissionsGroup defgroup = R.Permissions.GetGroup("default");
         if (defgroup == default)
@@ -438,26 +438,26 @@ public static class Data
     private static RocketPermissionsGroup AdminOnDutyGroup
     {
         get =>
-            new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup,
+            new RocketPermissionsGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup,
             "Admin", "default", new List<string>(), AdminPerms, "00ffff", 100);
     }
     private static RocketPermissionsGroup AdminOffDutyGroup
     {
         get =>
-            new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.AdminOffDutyGroup,
+            new RocketPermissionsGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup,
             "Admin Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 100);
     }
 
     private static RocketPermissionsGroup InternOnDutyGroup
     {
         get =>
-            new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.InternOnDutyGroup,
+            new RocketPermissionsGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup,
             "Intern", "default", new List<string>(), TrialAdminPerms, "66ffff", 50);
     }
     private static RocketPermissionsGroup InternOffDutyGroup
     {
         get =>
-            new RocketPermissionsGroup(UCWarfare.Config.AdminLoggerSettings.InternOffDutyGroup,
+            new RocketPermissionsGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup,
             "Intern Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 50);
     }
 

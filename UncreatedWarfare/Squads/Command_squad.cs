@@ -3,7 +3,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Squads;
@@ -23,7 +23,7 @@ public class SquadCommand : IRocketCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCCommandContext ctx = new UCCommandContext(caller, command);
+        WarfareContext ctx = new WarfareContext(caller, command);
         if (!ctx.IsConsoleReply() || !ctx.CheckGamemodeAndSend<ISquads>()) return;
         if (!UCWarfare.Config.EnableSquads || !SquadManager.Loaded)
         {

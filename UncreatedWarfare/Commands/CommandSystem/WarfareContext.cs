@@ -1,5 +1,4 @@
-﻿using Rocket.API;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -7,11 +6,12 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Uncreated.Framework;
+using Uncreated.Warfare;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Commands;
-public struct UCCommandContext
+namespace Uncreated.Warfare.Commands.CommandSystem;
+public struct WarfareContext
 {
     public readonly UCPlayer? Caller;
     public readonly bool IsConsole;
@@ -21,10 +21,10 @@ public struct UCCommandContext
     public readonly CSteamID CallerCSteamID;
 
     private static readonly Regex RemoveRichTextRegex = new Regex("<(?:(?:(?=.*<\\/color>)color=#{0,1}[0123456789ABCDEF]{6})|(?:(?<=<color=#{0,1}[0123456789ABCDEF]{6}>.*)\\/color)|(?:(?=.*<\\/b>)b)|(?:(?<=<b>.*)\\/b)|(?:(?=.*<\\/i>)i)|(?:(?<=<i>.*)\\/i)|(?:(?=.*<\\/size>)size=\\d+)|(?:(?<=<size=\\d+>.*)\\/size)|(?:(?=.*<\\/material>)material=\\d+)|(?:(?<=<material=\\d+>.*)\\/material))>", RegexOptions.IgnoreCase);
-    public UCCommandContext(IRocketPlayer caller, string[] args)
+    public WarfareContext(UCPlayer? caller, string[] args)
     {
         if (args is null) args = Array.Empty<string>();
-        if (caller is ConsolePlayer)
+        if (caller is null)
         {
             Caller = null;
             IsConsole = true;
@@ -33,7 +33,7 @@ public struct UCCommandContext
         }
         else
         {
-            Caller = UCPlayer.FromIRocketPlayer(caller);
+            Caller = caller;
             if (Caller is null)
             {
                 CallerID = 0;
@@ -51,15 +51,15 @@ public struct UCCommandContext
         ArgumentCount = args.Length;
     }
     public bool CheckPermission(string permission) =>
-        IsConsole || (Caller is not null && Caller.HasPermission(permission));
+        IsConsole || Caller is not null && Caller.HasPermission(permission);
     public bool CheckPermissionOr(string permission1, string permission2) =>
-        IsConsole || (Caller is not null && (Caller.HasPermission(permission1) || Caller.HasPermission(permission2)));
+        IsConsole || Caller is not null && (Caller.HasPermission(permission1) || Caller.HasPermission(permission2));
     public bool CheckPermissionAnd(string permission1, string permission2) =>
-        IsConsole || (Caller is not null && Caller.HasPermission(permission1) && Caller.HasPermission(permission2));
+        IsConsole || Caller is not null && Caller.HasPermission(permission1) && Caller.HasPermission(permission2);
     public bool CheckPermission(EAdminType permission) =>
-        IsConsole || (Caller is not null && F.PermissionCheck(Caller, permission));
+        IsConsole || Caller is not null && F.PermissionCheck(Caller, permission);
     public bool HasDutyPerms() =>
-        IsConsole || (Caller is not null && Caller.OnDuty());
+        IsConsole || Caller is not null && Caller.OnDuty();
     public bool HasArg(int position)
     {
         return position > -1 && position < ArgumentCount;
@@ -585,8 +585,8 @@ public struct UCCommandContext
         if (IsConsole || Caller is null)
         {
             string message = Translation.Translate(translationKey, JSONMethods.DEFAULT_LANGUAGE, out Color color, formatting);
-            message = RemoveRichText(message);
-            ConsoleColor clr = GetClosestConsoleColor(color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -758,14 +758,14 @@ public struct UCCommandContext
     }
     public bool OnDutyOrReply(string noPermissionMessageKey = "no_permissions")
     {
-        bool perm = IsConsole || (Caller is not null && Caller.OnDuty());
+        bool perm = IsConsole || Caller is not null && Caller.OnDuty();
         if (!perm)
             Reply(noPermissionMessageKey);
         return perm;
     }
     public bool OnDutyOrReply(string[] formatting, string noPermissionMessageKey = "no_permissions")
     {
-        bool perm = IsConsole || (Caller is not null && Caller.OnDuty());
+        bool perm = IsConsole || Caller is not null && Caller.OnDuty();
         if (!perm)
             Reply(noPermissionMessageKey, formatting);
         return perm;
@@ -823,17 +823,5 @@ public struct UCCommandContext
     public void SendPlayerNotFound()
     {
         Reply("command_e_player_not_found");
-    }
-    public static ConsoleColor GetClosestConsoleColor(Color color)
-    {
-        int i = (color.r > 0.5f || color.g > 0.5f || color.b > 0.5f) ? 8 : 0;
-        if (color.r > 0.5f) i |= 4;
-        if (color.g > 0.5f) i |= 2;
-        if (color.b > 0.5f) i |= 1;
-        return (ConsoleColor)i;
-    }
-    public static string RemoveRichText(string text)
-    {
-        return RemoveRichTextRegex.Replace(text, string.Empty);
     }
 }

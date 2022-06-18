@@ -46,22 +46,22 @@ public class StructureSaver : ListSingleton<Structure>, ILevelStartListener
                 L.LogError($"Structure {structure.Asset?.itemName ?? structure.id.ToString("N")} ({structure.instance_id}) failed to spawn.");
         }
     }
-    public static bool AddStructure(StructureDrop drop, StructureData data, out Structure? structureadded)
+    public static bool AddStructure(StructureDrop drop, StructureData data, out Structure structureadded)
     {
         Singleton.AssertLoaded<StructureSaver, Structure>();
         if (data == default || drop == default)
         {
-            structureadded = default;
+            structureadded = default!;
             return false;
         }
-        if (!Singleton.ObjectExists(s => s != null && s.instance_id == drop.instanceID, out Structure structure))
+        if (!Singleton.ObjectExists(s => s != null && s.instance_id == drop.instanceID && s.type == EStructType.STRUCTURE, out Structure structure))
         {
             structureadded = Singleton.AddObjectToSave(new Structure(drop, data));
             return structureadded != default;
         }
         else
         {
-            structureadded = default;
+            structureadded = default!;
             return false;
         }
     }
@@ -73,7 +73,7 @@ public class StructureSaver : ListSingleton<Structure>, ILevelStartListener
             structureadded = default!;
             return false;
         }
-        if (!Singleton.ObjectExists(s => s != null && s.instance_id == drop.instanceID, out Structure structure))
+        if (!Singleton.ObjectExists(s => s != null && s.instance_id == drop.instanceID && s.type == EStructType.BARRICADE, out Structure structure))
         {
             structureadded = Singleton.AddObjectToSave(new Structure(drop, data));
             return structureadded != default;
@@ -87,7 +87,7 @@ public class StructureSaver : ListSingleton<Structure>, ILevelStartListener
     public static void RemoveStructure(Structure structure)
     {
         Singleton.AssertLoaded<StructureSaver, Structure>();
-        Singleton.RemoveWhere(x => structure != default && x != default && x.instance_id == structure.instance_id);
+        Singleton.RemoveWhere(x => structure != default && x != default && x.instance_id == structure.instance_id && x.type == structure.type);
     }
 
     public static bool StructureExists(uint instance_id, EStructType type, out Structure found)

@@ -107,6 +107,7 @@ namespace Uncreated.Warfare
 
             return list;
         }
+        /// <summary>Only non-planted barricades.</summary>
         public static IEnumerable<BarricadeDrop> AllBarricades
         {
             get
@@ -117,7 +118,6 @@ namespace Uncreated.Warfare
                     for (int y = 0; y < Regions.WORLD_SIZE; y++)
                     {
                         BarricadeRegion region = BarricadeManager.regions[x, y];
-                        if (region == null) continue;
                         for (int i = 0; i < region.drops.Count; i++)
                         {
                             yield return region.drops[i];

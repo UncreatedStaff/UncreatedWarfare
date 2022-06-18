@@ -1,44 +1,37 @@
-﻿using Rocket.API;
-using System.Collections.Generic;
+﻿using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands
+namespace Uncreated.Warfare.Commands;
+public class RangeCommand : Command
 {
-    public class RangeCommand : IRocketCommand
+    private const string SYNTAX = "/range";
+    private const string HELP = "Shows you your ditance from your squad leader's marker.";
+
+    public RangeCommand() : base("range", EAdminType.MEMBER) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
-        public string Name => "range";
-        public string Help => "shows you the range to your marker";
-        public string Syntax => "/range";
-        private readonly List<string> _aliases = new List<string>(0);
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>(1) { "uc.range" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] command)
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
+        if (!Data.Is<ISquads>())
         {
-            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-            if (player == null) return;
-            if (!Data.Is<ISquads>(out _))
-            {
-                int distance = Mathf.RoundToInt((player.Position - player.Player.quests.markerPosition).magnitude / 10) * 10;
-                player.Message("range", distance.ToString(Data.Locale));
-                return;
-            }
-            if (player.Squad != null)
-            {
-                if (player.Squad.Leader.Player.quests.isMarkerPlaced)
-                {
-                    int distance = Mathf.RoundToInt((player.Position - player.Squad.Leader.Player.quests.markerPosition).magnitude / 10) * 10;
-                    player.Message("range", distance.ToString(Data.Locale));
-                }
-                else
-                {
-                    player.Message("range_nomarker");
-                }
-            }
-            else
-                player.Message("range_notinsquad");
+            int distance = Mathf.RoundToInt((ctx.Caller.Position - ctx.Caller.Player.quests.markerPosition).magnitude / 10) * 10;
+            throw ctx.Reply("range", distance.ToString(Data.Locale));
         }
+        if (ctx.Caller.Squad is not null)
+        {
+            if (ctx.Caller.Squad.Leader.Player.quests.isMarkerPlaced)
+            {
+                int distance = Mathf.RoundToInt((ctx.Caller.Position - ctx.Caller.Squad.Leader.Player.quests.markerPosition).magnitude / 10) * 10;
+                ctx.Reply("range", distance.ToString(Data.Locale));
+            }
+            else throw ctx.Reply("range_nomarker");
+        }
+        else throw ctx.Reply("range_notinsquad");
     }
 }

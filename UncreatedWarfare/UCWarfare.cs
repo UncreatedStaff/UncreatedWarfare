@@ -1,15 +1,14 @@
 ﻿#define USE_DEBUGGER
 
-using Rocket.Core;
-using Rocket.Core.Plugins;
+using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.Json;
 using System.Threading;
 using Uncreated.Networking;
-using Uncreated.SQL;
+using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
@@ -19,6 +18,7 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Tickets;
@@ -28,37 +28,43 @@ using UnityEngine;
 namespace Uncreated.Warfare;
 
 public delegate void VoidDelegate();
-public partial class UCWarfare : RocketPlugin<Config>
+public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
     public static readonly Version Version      = new Version(2, 5, 1, 2);
-    public static UCWarfare Instance;
+    private readonly SystemConfig _config       = new SystemConfig();
+    public static UCWarfare I;
+    internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
     public UCAnnouncer Announcer;
-    //public NetworkingQueue Queue;
-    private MySqlData _sqlElsewhere;
-    public bool LoadMySQLDataFromElsewhere = false; // for having sql password defaults without having them in our source code.
     public event EventHandler UCWarfareLoaded;
     public event EventHandler UCWarfareUnloading;
     public bool CoroutineTiming = false;
     private bool InitialLoadEventSubscription;
     private DateTime NextRestartTime;
-    public static bool IsLoaded => Instance is not null;
-    public static UCWarfare I { get => Instance; }
-    public static Config Config { get => Instance?.Configuration?.Instance!; }
-    public static bool CanUseNetCall => IsLoaded && Instance.Configuration is not null && Instance.Configuration.Instance is not null && Config.PlayerStatsSettings.EnableTCPServer && Data.NetClient is not null && Data.NetClient.IsActive;
     public static int Season => Version.Major;
-    public MySqlData SQL => LoadMySQLDataFromElsewhere && _sqlElsewhere is not null ? _sqlElsewhere : Configuration.Instance.SQL;
-    protected override void Load()
+    bool IUncreatedSingleton.IsLoaded => IsLoaded;
+    public static bool IsLoaded => I != null && I.isActiveAndEnabled;
+    public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
+    public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && Data.NetClient is not null && Data.NetClient.IsActive;
+    private void Awake()
+    {
+        if (I != null) throw new SingletonLoadException(ESingletonLoadType.LOAD, this, new Exception("Uncreated Warfare is already loaded."));
+        I = this;
+    }
+    public void Load()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Instance = this;
+        I = this;
         L.Logs = L.ReadRocketLog();
         Data.LoadColoredConsole();
-        L.Log("Started loading " + Name + " - " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
-            "Please stop using this plugin now.", ConsoleColor.Green);
+        L.Log("Started loading - Uncreated Warfare version " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
+              "Please stop using this plugin now.", ConsoleColor.Green);
+
+        L.Log("Registering Commands: ", ConsoleColor.Magenta);
+        CommandHandler.LoadCommands();
 
         DateTime loadTime = DateTime.Now;
         if (loadTime.TimeOfDay > RestartTime - TimeSpan.FromHours(2)) // dont restart if the restart would be in less than 2 hours
@@ -86,24 +92,6 @@ public partial class UCWarfare : RocketPlugin<Config>
 
         OffenseManager.Init();
 
-        /* DEBUG MYSQL LOADING */
-        if (LoadMySQLDataFromElsewhere)
-        {
-            if (!File.Exists(Data.ElseWhereSQLPath))
-            {
-                TextWriter w = File.CreateText(Data.ElseWhereSQLPath);
-                w.Write(JsonSerializer.Serialize(Config.SQL, JsonEx.serializerSettings));
-                w.Close();
-                w.Dispose();
-                _sqlElsewhere = Config.SQL;
-            }
-            else
-            {
-                string json = File.ReadAllText(Data.ElseWhereSQLPath);
-                _sqlElsewhere = JsonSerializer.Deserialize<MySqlData>(json, JsonEx.serializerSettings)!;
-            }
-        }
-
         try
         {
             /* DATA CONSTRUCTION */
@@ -113,19 +101,19 @@ public partial class UCWarfare : RocketPlugin<Config>
         {
             L.LogError("Startup error");
             L.LogError(ex);
-            UnloadPlugin(Rocket.API.PluginState.Failure);
-            Provider.shutdown(2);
-            return;
+            throw new SingletonLoadException(ESingletonLoadType.LOAD, this, ex);
         }
 
         /* START STATS COROUTINE */
         StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
 
+        L.Log("Subscribing to events...", ConsoleColor.Magenta);
+        SubscribeToEvents();
+
         /* LEVEL SUBSCRIPTIONS */
         if (Level.isLoaded)
         {
             //StartCheckingPlayers(Data.CancelFlags.Token).ConfigureAwait(false); // starts the function without awaiting
-            SubscribeToEvents();
             OnLevelLoaded(2);
             InitialLoadEventSubscription = true;
         }
@@ -133,7 +121,6 @@ public partial class UCWarfare : RocketPlugin<Config>
         {
             InitialLoadEventSubscription = false;
             Level.onLevelLoaded += OnLevelLoaded;
-            R.Plugins.OnPluginsLoaded += OnPluginsLoaded;
         }
 
         /* BASIC CONFIGS */
@@ -144,13 +131,12 @@ public partial class UCWarfare : RocketPlugin<Config>
         Provider.modeConfigData.Barricades.Decay_Time = 0;
         Provider.modeConfigData.Structures.Decay_Time = 0;
 
-        base.Load();
         UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
     }
     private IEnumerator<WaitForSeconds> RestartIn(float seconds)
     {
         yield return new WaitForSeconds(seconds);
-        Commands.ShutdownOverrideCommand.ShutdownAfterGameDaily();
+        ShutdownOverrideCommand.ShutdownAfterGameDaily();
     }
     private void OnLevelLoaded(int level)
     {
@@ -186,12 +172,13 @@ public partial class UCWarfare : RocketPlugin<Config>
 #endif
         Data.Gamemode?.Subscribe();
         StatsManager.LoadEvents();
+
         EventDispatcher.OnPlayerJoined += EventFunctions.OnPostPlayerConnected;
         EventDispatcher.OnPlayerLeaving += EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
-        Commands.LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
-        Commands.ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
+        LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
+        ReloadCommand.OnTranslationsReloaded += EventFunctions.ReloadCommand_onTranslationsReloaded;
         BarricadeManager.onDeployBarricadeRequested += EventFunctions.OnBarricadeTryPlaced;
         UseableGun.onBulletSpawned += EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned += EventFunctions.ProjectileSpawned;
@@ -223,7 +210,6 @@ public partial class UCWarfare : RocketPlugin<Config>
         Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
         PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
         PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
-        R.Commands.OnExecuteCommand += EventFunctions.OnCommandExecuted;
     }
     private void UnsubscribeFromEvents()
     {
@@ -232,12 +218,13 @@ public partial class UCWarfare : RocketPlugin<Config>
 #endif
         Data.Gamemode?.Unsubscribe();
         EventDispatcher.UnsubscribeFromAll();
-        Commands.ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
+
+        ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
         EventDispatcher.OnPlayerJoined -= EventFunctions.OnPostPlayerConnected;
         EventDispatcher.OnPlayerLeaving -= EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation -= EventFunctions.OnPrePlayerConnect;
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
-        Commands.LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
+        LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
         BarricadeManager.onDeployBarricadeRequested -= EventFunctions.OnBarricadeTryPlaced;
         UseableGun.onBulletSpawned -= EventFunctions.BulletSpawned;
         UseableGun.onProjectileSpawned -= EventFunctions.ProjectileSpawned;
@@ -270,30 +257,20 @@ public partial class UCWarfare : RocketPlugin<Config>
         PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
         StatsManager.UnloadEvents();
-        if (R.Commands is not null)
-            R.Commands.OnExecuteCommand -= EventFunctions.OnCommandExecuted;
         if (!InitialLoadEventSubscription)
         {
             Level.onLevelLoaded -= OnLevelLoaded;
-            R.Plugins.OnPluginsLoaded -= OnPluginsLoaded;
         }
-
     }
     internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests = new Queue<MainThreadTask.MainThreadResult>();
     public static MainThreadTask ToUpdate() => new MainThreadTask();
-    public static PoolTask ToPool() => new PoolTask();
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
     public static void RunOnMainThread(System.Action action)
     {
         MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask());
         res.OnCompleted(action);
     }
-    private void OnPluginsLoaded()
-    {
-        L.Log("Subscribing to events...", ConsoleColor.Magenta);
-        SubscribeToEvents();
-    }
-    internal void UpdateLangs(SteamPlayer player)
+    internal void UpdateLangs(UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -379,11 +356,13 @@ public partial class UCWarfare : RocketPlugin<Config>
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             PlayerManager.OnlinePlayers[i].Update();
     }
+    /// <exception cref="SingletonUnloadedException"/>
     internal static void ForceUnload()
     {
-        I.UnloadPlugin();
+        Nexus.UnloadNow();
+        throw new SingletonUnloadedException(typeof(UCWarfare));
     }
-    protected override void Unload()
+    public void Unload()
     {
 #if DEBUG
         IDisposable profiler = ProfilingUtils.StartTracking();
@@ -397,7 +376,7 @@ public partial class UCWarfare : RocketPlugin<Config>
             }
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
 
-            L.Log("Unloading " + Name, ConsoleColor.Magenta);
+            L.Log("Unloading Uncreated Warfare", ConsoleColor.Magenta);
 
             Data.Singletons.UnloadSingleton(ref Data.DeathTracker, false);
             Data.Singletons.UnloadSingleton(ref Data.Gamemode);
@@ -438,6 +417,7 @@ public partial class UCWarfare : RocketPlugin<Config>
         }
         Data.Singletons.UnloadAll();
         L.Log("Warfare unload complete", ConsoleColor.Blue);
+        I = null!;
         Thread.Sleep(1000);
 #if DEBUG
         profiler.Dispose();
@@ -457,5 +437,94 @@ public partial class UCWarfare : RocketPlugin<Config>
         if (Data.ColorsHex.TryGetValue(key, out string color)) return color;
         else if (Data.ColorsHex.TryGetValue("default", out color)) return color;
         else return "ffffff";
+    }
+
+    public static void ShutdownIn(string reason, ulong instigator, int seconds)
+    {
+        I.StartCoroutine(I.ShutdownIn2(reason, instigator, seconds));
+    }
+    public static void ShutdownNow(string reason, ulong instigator)
+    {
+        for (int i = 0; i < Provider.clients.Count; ++i)
+            Provider.kick(Provider.clients[i].playerID.steamID, "Intentional Shutdown: " + reason);
+        if (CanUseNetCall)
+        {
+            ShutdownOverrideCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
+            I.StartCoroutine(I.ShutdownIn(reason, 4));
+        }
+        else
+        {
+            Nexus.Unload();
+            Provider.shutdown(2, reason);
+        }
+    }
+    private IEnumerator<WaitForSeconds> ShutdownIn(string reason, float seconds)
+    {
+        yield return new WaitForSeconds(seconds / 2);
+        Nexus.Unload();
+        Provider.shutdown(Mathf.RoundToInt(seconds / 2), reason);
+    }
+    private IEnumerator<WaitForSeconds> ShutdownIn2(string reason, ulong instigator, float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        ShutdownOverrideCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
+        yield return new WaitForSeconds(1f);
+        Nexus.Unload();
+        Provider.shutdown(2, reason);
+    }
+}
+
+public class UCWarfareNexus : IModuleNexus
+{
+    public bool Loaded { get; private set; } = false;
+    void IModuleNexus.initialize()
+    {
+        UCWarfare.Nexus = this;
+
+        GameObject go = new GameObject("UCWarfare " + UCWarfare.Version.ToString());
+        UnityEngine.Object.DontDestroyOnLoad(go);
+        UCWarfare warfare = go.AddComponent<UCWarfare>();
+        try
+        {
+            warfare.Load();
+            Loaded = true;
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
+            Loaded = false;
+            Type t = ex.GetType();
+            ShutdownOverrideCommand.ShutdownIn(10, "Uncreated Warfare failed to load: " + t.Name);
+            if (typeof(SingletonLoadException).IsAssignableFrom(t))
+                throw;
+            else
+                throw new SingletonLoadException(ESingletonLoadType.LOAD, warfare, ex);
+        }
+    }
+    public void UnloadNow()
+    {
+        Unload();
+        ShutdownOverrideCommand.ShutdownIn(10, "Uncreated Warfare unloading.");
+    }
+    public void Unload()
+    {
+        try
+        {
+            UCWarfare.I.Unload();
+            UnityEngine.Object.Destroy(UCWarfare.I.gameObject);
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
+            if (typeof(SingletonLoadException).IsAssignableFrom(ex.GetType()))
+                throw;
+            else
+                throw new SingletonLoadException(ESingletonLoadType.UNLOAD, UCWarfare.I, ex);
+        }
+    }
+    void IModuleNexus.shutdown()
+    {
+        if (!UCWarfare.IsLoaded) return;
+        Unload();
     }
 }

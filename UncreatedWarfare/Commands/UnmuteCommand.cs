@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands.CommandSystem;
+
 namespace Uncreated.Warfare.Commands;
 
 public class UnmuteCommand : IRocketCommand
@@ -17,7 +19,7 @@ public class UnmuteCommand : IRocketCommand
 	public List<string> Permissions => _permissions;
     public void Execute(IRocketPlayer caller, string[] command)
     {
-        UCCommandContext ctx = new UCCommandContext(caller, command);
+        WarfareContext ctx = new WarfareContext(caller, command);
         if (!ctx.HasArg(0))
             ctx.SendCorrectUsage(Syntax);
         if (ctx.MatchParameter(0, "help"))

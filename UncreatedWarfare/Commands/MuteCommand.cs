@@ -1,66 +1,47 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
+﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Players;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-
-public class MuteCommand : IRocketCommand
+public class MuteCommand : Command
 {
-    public AllowedCaller AllowedCaller => AllowedCaller.Both;
-    public string Name => "mute";
-    public string Help => "Mute players in either voice chat or text chat.";
-    public string Syntax => "/mute <voice|text|both> <name or steam64> <permanent | duration in minutes> <reason...>";
-    private readonly List<string> _aliases = new List<string>(0);
-    public List<string> Aliases => _aliases;
-    private readonly List<string> _permissions = new List<string>(1) { "uc.mute" };
-		public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/mute <voice|text|both> <name or steam64> <permanent | duration in minutes> <reason...>";
+    private const string HELP = "Mute players in either voice chat or text chat.";
+
+    public MuteCommand() : base("mute", EAdminType.MEMBER) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
-        UCCommandContext ctx = new UCCommandContext(caller, command);
-        
-        if (command.Length < 4)
-            goto Syntax;
-        EMuteType type;
-        switch (command[0].ToLower())
-        {
-            case "voice":
-                type = EMuteType.VOICE_CHAT;
-                break;
-            case "text":
-                type = EMuteType.TEXT_CHAT;
-                break;
-            case "both":
-                type = EMuteType.BOTH;
-                break;
-            default:
-                goto Syntax;
-        }
+        ctx.AssertHelpCheck(0, SYNTAX + HELP);
+        ctx.AssertHelpCheck(1, SYNTAX + HELP);
+
+        if (!ctx.HasArgs(4))
+            throw ctx.Reply("mute_syntax");
+
+        EMuteType type = ctx.MatchParameter(0, "voice")
+            ? EMuteType.VOICE_CHAT
+            : (ctx.MatchParameter(0, "text")
+                ? EMuteType.TEXT_CHAT
+                : (ctx.MatchParameter(0, "both")
+                    ? EMuteType.BOTH 
+                    : throw ctx.Reply("mute_syntax")));
 
         if (!ctx.TryGet(2, out int duration) || duration < -1 || duration == 0)
-            if (ctx.MatchParameterPartial(2, "perm"))
+        {
+            if (ctx.MatchParameter(2, "perm", "permanent"))
                 duration = -1;
             else
-                goto CantReadDuration;
-        if (!ctx.TryGet(1, out ulong targetId, out _))
-            goto NoPlayerFound;
+                throw ctx.Reply("mute_cant_read_duration");
+        }
 
-        string reason = string.Join(" ", command, 3, command.Length - 3);
-        OffenseManager.MutePlayer(targetId, ctx.Caller is null ? 0ul : ctx.Caller.Steam64, type, duration, reason);
-        return;
-    Syntax:
-        ctx.Reply("mute_syntax");
-        return;
-    NoPlayerFound:
-        ctx.Reply("mute_no_player_found");
-        return;
-    CantReadDuration:
-        ctx.Reply("mute_cant_read_duration");
-        return;
+        if (!ctx.TryGet(1, out ulong targetId, out _))
+            throw ctx.Reply("mute_no_player_found");
+
+        OffenseManager.MutePlayer(targetId, ctx.CallerID, type, duration, ctx.GetRange(3)!);
+        ctx.Defer();
     }
 }
 [Translatable("Mute Severity")]

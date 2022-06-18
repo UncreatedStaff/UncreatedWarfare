@@ -1,31 +1,29 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using SDG.Unturned;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-
-public class ItemCommand : IRocketCommand
+public class ICommand : Command
 {
-    private readonly List<string> _permissions = new List<string>(1) { "uc.i" };
-    private readonly List<string> _aliases = new List<string>(1) { "i" };
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "item";
-    public string Help => "spawns in an item";
-    public string Syntax => "/item";
-    public List<string> Aliases => _aliases;
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/i <item ...> [count = 1]";
+    private const string HELP = "Gives the player [count] amount of an item.";
+    private const int MAX_ITEMS = 100;
+
+    public ICommand() : base("i", EAdminType.MODERATOR)
+    {
+        AddAlias("item");
+    }
+
+    public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-        if (player == null) return;
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertArgs(1, SYNTAX + " - " + HELP);
+        ctx.AssertHelpCheck(1, SYNTAX + " - " + HELP);
 
         int amount = 1;
         string itemName = "";
@@ -36,110 +34,82 @@ public class ItemCommand : IRocketCommand
 
         int similarNamesCount = 0;
 
-        if (command.Length > 0)
+        if (ctx.HasArgsExact(1)) // if there is only one argument, we only have to check a single word
         {
-
-            if (command.Length == 1) // if there is only one argument, we only have to check a single word
+            // first check if single-word argument is a short ID
+            if (ctx.TryGet(0, out shortID) && (Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2))
             {
-                // first check if single-word argument is a short ID
-                if (ushort.TryParse(command[0], out shortID) && (Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2))
+                // success
+                asset = asset2;
+                goto foundItem;
+            }
+            else
+            {
+                itemName = ctx.Get(0)!;
+                asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
+                if (asset != null)
                 {
+                    itemName = asset.itemName;
                     // success
-                    asset = asset2;
-                    goto SpawnItem;
+                    goto foundItem;
                 }
-                else
+                else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+            }
+        }
+        else // there are at least 2 arguments
+        {
+            // first try treat 1st argument as a short ID, and 2nd argument as an amount
+            if (ctx.HasArgsExact(2) && ctx.TryGet(0, out shortID) && (Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2))
+            {
+                if (!ctx.TryGet(1, out amount) || amount > MAX_ITEMS || amount < 0)
                 {
-                    itemName = command[0];
+                    amount = 1;
+                    amountWasValid = false;
+                }
+
+                // success
+                asset = asset2;
+                goto foundItem;
+            }
+            else
+            {
+                // now try find an asset using all arguments except the last, which could be treated as a number.
+                
+                if (ctx.TryGet(ctx.ArgumentCount - 1, out amount) && amount <= MAX_ITEMS && amount > 0) // if this runs, then the last ID is treated as an amount
+                {
+                    itemName = ctx.GetRange(0, ctx.ArgumentCount - 1)!;
+
                     asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
                     if (asset != null)
                     {
                         // success
-                        goto SpawnItem;
+                        goto foundItem;
                     }
-                    else
-                    {
-                        //failure
-                        player.Message($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
-                    }
-                }
-            }
-            else // there are at least 2 arguments
-            {
-                // first try treat 1st argument as a short ID, and 2nd argument as an amount
-                if (command.Length == 2 &&
-                    ushort.TryParse(command[0], out shortID) && 
-                    (Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2))
-                {
-                    if (!int.TryParse(command[1], out amount))
-                    {
-                        amount = 1;
-                        amountWasValid = false;
-                    }
-
-                    // success
-                    asset = asset2;
-                    goto SpawnItem;
+                    else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
                 }
                 else
                 {
-                    // now try find an asset using all arguments except the last, which could be treated as a number.
-                    
+                    amount = 1;
+                    itemName = ctx.GetRange(0)!;
 
-                    if (int.TryParse(command.Last(), out amount)) // if this runs, then the last ID is treated as an amount
+                    asset = UCAssetManager.FindItemAsset(itemName.Trim(), out similarNamesCount, true);
+                    if (asset != null)
                     {
-                        for (int i = 0; i < command.Length - 1; i++)
-                            itemName += command[i] + ' ';
-
-                        asset = UCAssetManager.FindItemAsset(itemName.Trim(), out similarNamesCount, true);
-                        if (asset != null)
-                        {
-                            // success
-
-                            goto SpawnItem;
-                        }
-                        else
-                        {
-                            // failure
-                            player.Message($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
-                        }
-
+                        // success
+                        goto foundItem;
                     }
-                    else
-                    {
-                        amount = 1;
-
-                        for (int i = 0; i < command.Length; i++)
-                            itemName += command[i] + ' ';
-
-                        asset = UCAssetManager.FindItemAsset(itemName.Trim(), out similarNamesCount, true);
-                        if (asset != null)
-                        {
-                            // success
-                            goto SpawnItem;
-                        }
-                        else
-                        {
-                            //failure
-                            player.Message($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
-                        }
-                    }
+                    else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
                 }
             }
-
         }
-        else
-            player.Message($"Usage: <color=#c7a29f><i>/i <item id | item name | item folder name></i></color>".Colorize("8f9494"));
 
-
-
-        SpawnItem:
+    foundItem:
         if (asset == null) return;
         Item itemFromID = new Item(asset.id, true);
         for (int i = 0; i < amount; i++)
         {
-            if (!player.Player.inventory.tryAddItem(itemFromID, true))
-                ItemManager.dropItem(itemFromID, player.Position, true, true, true);
+            if (!ctx.Caller.Player.inventory.tryAddItem(itemFromID, true))
+                ItemManager.dropItem(itemFromID, ctx.Caller.Position, true, true, true);
         }
 
         string message = $"Giving you {(amount == 1 ? "a" : (amount.ToString() + "x").Colorize("9dc9f5"))} <color=#ffdf91>{asset.itemName}</color> - <color=#a7b6c4>{asset.id}</color>".Colorize("bfb9ac");
@@ -149,7 +119,7 @@ public class ItemCommand : IRocketCommand
         else if (similarNamesCount > 0)
             message += $" ({similarNamesCount} similarly named items exist)".Colorize("7f8182");
 
-        player.Message(message);
-        ActionLog.Add(EActionLogType.GIVE_ITEM, $"GAVE {amount}x {asset.itemName} / {asset.id} / {asset.GUID}", player);
+        ctx.Reply(message);
+        ctx.LogAction(EActionLogType.GIVE_ITEM, $"GAVE {amount}x {asset.itemName} / {asset.id} / {asset.GUID}");
     }
 }

@@ -186,12 +186,8 @@ internal static class EventPatches
         {
             InteractableVehicle? vehicle = DamageTool.getVehicle(other.transform);
             if (vehicle == null) return false;
-            for (int i = 0; i < vehicle.passengers.Length; ++i)
-            {
-                if (vehicle.passengers[i].player == null)
-                    continue;
-                triggerer = UCPlayer.FromPlayer(vehicle.passengers[i].player.player);
-            }
+            if (vehicle.passengers.Length > 0 && vehicle.passengers[0].player != null)
+                triggerer = UCPlayer.FromPlayer(vehicle.passengers[0].player.player);
             if (triggerer == null)
             {
                 if (vehicle.TryGetComponent(out VehicleComponent comp2))

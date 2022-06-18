@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 
@@ -25,7 +25,7 @@ public class KitCommand : IRocketCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCCommandContext ctx = new UCCommandContext(caller, command);
+        WarfareContext ctx = new WarfareContext(caller, command);
         if (!ctx.CheckGamemodeAndSend<IKitRequests>() || !ctx.OnDutyOrReply("kits_notonduty")) return;
         if (!ctx.HasArgs(1))
         {

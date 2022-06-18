@@ -1,27 +1,22 @@
 ﻿/*
-using Rocket.API;
-using Rocket.Unturned.Player;
+using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class Command_blank : IRocketCommand
+public class BlankCommand : Command
 {
-    private readonly List<string> _permissions = new List<string>(1) { "uc.blank" };
-    private readonly List<string> _aliases = new List<string>(0);
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "com";
-    public string Help => "does something";
-    public string Syntax => "/com";
-    public List<string> Aliases => _aliases;
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/blank";
+    private const string HELP = "Does nothing.";
+
+    public BlankCommand() : base("blank", EAdminType.MEMBER) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
-        CommandContext ctx = new CommandContext(caller, command);
-        // TODO
+        throw ctx.SendNotImplemented();
     }
 }
 */

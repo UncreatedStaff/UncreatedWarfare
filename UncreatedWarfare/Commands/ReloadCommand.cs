@@ -1,68 +1,54 @@
-﻿using Rocket.API;
-using Rocket.Core;
-using Rocket.Core.Commands;
-using Rocket.Unturned;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using Uncreated.Warfare.Components;
-using Uncreated.Warfare.FOBs;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Networking;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
-using Uncreated.Warfare.Vehicles;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ReloadCommand : IRocketCommand
+public class ReloadCommand : Command
 {
+    public const string SYNTAX = "/reload [help|module]";
+    public const string HELP = "Reload certain parts of UCWarfare.";
     public static event VoidDelegate OnTranslationsReloaded;
     public static event VoidDelegate OnFlagsReloaded;
 
     public const string RELOAD_ALL_PERMISSION = "uc.reload.all";
 
-    private readonly List<string> _permissions = new List<string>(1) { "uc.reload" };
     public static Dictionary<string, IConfiguration> ReloadableConfigs = new Dictionary<string, IConfiguration>();
-    private readonly List<string> _aliases = new List<string>(0);
-    public AllowedCaller AllowedCaller => AllowedCaller.Both;
-    public string Name => "reload";
-    public string Help => "Reload certain parts of UCWarfare.";
-    public string Syntax => "/reload [help|module]";
-    public List<string> Aliases => _aliases;
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+
+    public ReloadCommand() : base("reload", EAdminType.ADMIN_ON_DUTY | EAdminType.VANILLA_ADMIN)
     {
-        UCCommandContext ctx = new UCCommandContext(caller, command);
+
+    }
+    public override void Execute(CommandInteraction ctx)
+    {
         if (!ctx.TryGet(0, out string module))
         {
             ctx.Reply("reload_syntax");
             return;
         }
+
         if (module.Equals("help", StringComparison.OrdinalIgnoreCase))
+            throw ctx.SendNotImplemented();
+
+        if (module.Equals("translations", StringComparison.OrdinalIgnoreCase) || module.Equals("lang", StringComparison.OrdinalIgnoreCase))
         {
-            ctx.Reply("todo");
-        }
-        else if (module.Equals("translations", StringComparison.OrdinalIgnoreCase) || module.Equals("lang", StringComparison.OrdinalIgnoreCase))
-        {
-            if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload.translations")) return;
             ReloadTranslations();
             ctx.Reply("reload_reloaded_translations");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TRANSLATIONS");
         }
         else if (module.Equals("flags", StringComparison.OrdinalIgnoreCase))
         {
-            if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload.flags")) return;
             if (Data.Is<IFlagRotation>())
             {
                 ReloadFlags();
@@ -71,37 +57,32 @@ public class ReloadCommand : IRocketCommand
             }
             else ctx.Reply("reload_reloaded_flags_gm");
         }
-        else if (module.Equals("rocket", StringComparison.OrdinalIgnoreCase) || module.Equals("ldm", StringComparison.OrdinalIgnoreCase))
+        else if (module.Equals("permissions", StringComparison.OrdinalIgnoreCase))
         {
-            if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload.rocket")) return;
-            ReloadRocket();
-            ctx.Reply("reload_reloaded_rocket");
+            ReloadPermissions();
+            ctx.Reply("reload_reloaded_permissions");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "ROCKET");
         }
         else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
         {
-            if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload.colors")) return;
             ReloadColors();
             ctx.Reply("reload_reloaded_generic", "colors");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "COLORS");
         }
         else if (module.Equals("tcp", StringComparison.OrdinalIgnoreCase))
         {
-            if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload.tcp")) return;
             ReloadTCPServer();
             ctx.Reply("reload_reloaded_tcp");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TCP SERVER");
         }
         else if (module.Equals("sql", StringComparison.OrdinalIgnoreCase))
         {
-            if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload.sql")) return;
             ReloadSQLServer();
             ctx.Reply("reload_reloaded_sql");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "MYSQL CONNECTION");
         }
         else if (module.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
-            if (!ctx.HasPermissionOrReply(RELOAD_ALL_PERMISSION)) return;
             ReloadTranslations();
             ReloadFlags();
             ReloadTCPServer();
@@ -116,7 +97,6 @@ public class ReloadCommand : IRocketCommand
         else
         {
             module = module.ToLowerInvariant();
-            if (!ctx.HasPermissionOrReplyOr(RELOAD_ALL_PERMISSION, "uc.reload." + module)) return;
             if (ReloadableConfigs.TryGetValue(module, out IConfiguration config))
             {
                 config.Reload();
@@ -138,20 +118,11 @@ public class ReloadCommand : IRocketCommand
 
     private void ReloadColors()
     {
-        throw new NotImplementedException();
+        Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
     }
-    internal static void ReloadRocket()
+    private void ReloadPermissions()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        UCWarfare.Instance.Configuration.Load();
-        R.Settings.Load();
-        R.Translation.Load();
-        R.Permissions.Reload();
-        U.Settings.Load();
-        U.Translation.Load();
-        typeof(RocketCommandManager).GetMethod("Reload", BindingFlags.NonPublic | BindingFlags.Instance)?.Invoke(R.Commands, Array.Empty<object>());
+        Permissions.PermissionSaver.Instance.Read();
     }
     internal static void ReloadTranslations()
     {

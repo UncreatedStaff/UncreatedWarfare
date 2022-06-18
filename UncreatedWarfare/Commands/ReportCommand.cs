@@ -1,5 +1,4 @@
-﻿using Rocket.API;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,34 +8,28 @@ using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.ReportSystem;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ReportCommand : IRocketCommand
+public class ReportCommand : Command
 {
-    private readonly List<string> _aliases = new List<string>(0);
-    private readonly List<string> _permissions = new List<string>(1) { "uc.report" };
-    public List<string> Permissions => _permissions;
-    public List<string> Aliases => _aliases;
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "report";
-    public string Help => "Use to report a player for specific actions. Use /report reasons for examples.";
-    public string Syntax => "/report <\"reasons\" | player> <reason> <custom message...>";
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/report <\"reasons\" | player> <reason> <custom message...>";
+    private const string HELP = "Use to report a player for specific actions. Use /report reasons for examples.";
+    public ReportCommand() : base("report", EAdminType.MEMBER) { }
+    public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         // /report john greifing keeps using the mortar on the fobs 
         // /report john teamkilling teamkilled 5 teammates
-        UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-        if (player == null)
-        {
-            L.LogWarning("This command can't be called from console.");
-            return;
-        }
+
+        ctx.AssertRanByPlayer();
+
         if (command.Length < 2)
         {
             goto Help;
@@ -327,7 +320,7 @@ public class ReportCommand : IRocketCommand
     public bool CheckLinked(UCPlayer player) => Data.DatabaseManager.GetDiscordID(player.Steam64, out ulong discordID) && discordID != 0;
     public void NotifyAdminsOfReport(FPlayerName violator, FPlayerName reporter, Report report, EReportType type, string typename)
     {
-        foreach (LanguageSet set in Translation.EnumeratePermissions(EAdminType.MODERATE_PERMS))
+        foreach (LanguageSet set in Translation.EnumeratePermissions(EAdminType.MODERATOR))
         {
             string translation = Translation.Translate("report_notify_admin", set.Language, reporter.CharacterName, violator.CharacterName, report.Message!, typename);
             while (set.MoveNext())

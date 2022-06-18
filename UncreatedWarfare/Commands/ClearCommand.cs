@@ -1,42 +1,26 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using SDG.Unturned;
+using Uncreated.Framework;
 using Uncreated.Players;
-using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Vehicles;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class ClearCommand : IRocketCommand
+public class ClearCommand : Command
 {
-    private readonly List<string> _permissions = new List<string>(1) { "uc.clear" };
-    private readonly List<string> _aliases = new List<string>(0);
-    public AllowedCaller AllowedCaller => AllowedCaller.Both;
-    public string Name => "clear";
-    public string Help => "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
-    public string Syntax => "/clear <inventory|items|vehicles|structures> [player for inventory]";
-    public List<string> Aliases => _aliases;
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/clear <inventory|items|vehicles|structures> [player for inventory]";
+    private const string HELP = "Either clears a player's inventory or wipes items, vehicles, or structures and barricades from the map.";
+    public ClearCommand() : base("clear", EAdminType.MODERATOR) { }
+    public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCCommandContext ctx = new UCCommandContext(caller, command);
-        if (!ctx.HasArgs(1))
-        {
-            ctx.SendCorrectUsage(Syntax);
-            return;
-        }
+        ctx.AssertArgs(1, SYNTAX);
 
         if (ctx.MatchParameter(0, "help"))
-        {
-            ctx.SendCorrectUsage(Syntax + " - " + Help);
-            return;
-        }
+            throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
 
         if (ctx.MatchParameter(0, "inventory", "inv"))
         {
@@ -49,15 +33,10 @@ public class ClearCommand : IRocketCommand
                     FPlayerName names = F.GetPlayerOriginalNames(pl);
                     ctx.Reply("clear_inventory_others", ctx.IsConsole ? names.PlayerName : names.CharacterName);
                 }
-                else
-                {
-                    ctx.Reply("clear_inventory_player_not_found");
-                }
+                else throw ctx.Reply("clear_inventory_player_not_found");
             }
             else if (ctx.IsConsole)
-            {
-                ctx.Reply("clear_inventory_console_identity");
-            }
+                throw ctx.Reply("clear_inventory_console_identity");
             else
             {
                 Kits.UCInventoryManager.ClearInventory(ctx.Caller!);
@@ -84,8 +63,7 @@ public class ClearCommand : IRocketCommand
             ctx.LogAction(EActionLogType.CLEAR_STRUCTURES);
             ctx.Reply("clear_structures_cleared");
         }
-        else
-            ctx.SendCorrectUsage(Syntax);
+        else throw ctx.SendCorrectUsage(SYNTAX);
     }
     public static void WipeVehicles()
     {

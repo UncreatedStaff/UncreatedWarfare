@@ -64,36 +64,4 @@ namespace Uncreated.Warfare
             }
         }
     }
-    public sealed class PoolTask
-    {
-        private readonly PoolTaskResult awaiter;
-        public PoolTask()
-        {
-            awaiter = new PoolTaskResult();
-        }
-        public PoolTaskResult GetAwaiter()
-        {
-            return awaiter;
-        }
-        public sealed class PoolTaskResult : INotifyCompletion
-        {
-            public bool isCompleted = false;
-            public PoolTaskResult() { }
-            public bool IsCompleted { get => isCompleted; }
-            public void OnCompleted(Action continuation)
-            {
-                ThreadPool.QueueUserWorkItem(Callback, continuation);
-            }
-            private void Callback(object state)
-            {
-                if (state is Action a)
-                    a();
-                isCompleted = true;
-            }
-            public void GetResult()
-            {
-
-            }
-        }
-    }
 }
