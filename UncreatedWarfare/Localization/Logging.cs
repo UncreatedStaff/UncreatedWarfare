@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using HarmonyLib;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,32 +16,83 @@ namespace Uncreated.Warfare;
 
 public static class L
 {
-    public const int MAX_LOGS = 1000;
-    internal static List<LogMessage> Logs;
+    //public const int MAX_LOGS = 1000;
+    //internal static List<LogMessage> Logs;
+    private static bool _init = false;
+    private static int indention = 0;
+    private static FileStream _log;
+    private static bool inL = false;
+    private static void Init()
+    {
+        if (_init) return;
+        _init = true;
+        if (File.Exists(Data.Paths.CurrentLog))
+        {
+            string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLog.DATE_HEADER_FORMAT) + ".txt");
+            if (File.Exists(n))
+                File.Delete(n);
+            File.Move(Data.Paths.CurrentLog, n);
+        }
+        _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
+        Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(SDG.Unturned.Logs.printLine)),
+            prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(PrintLinePatch),
+                BindingFlags.Static | BindingFlags.NonPublic)));
+    }
+    private static void PrintLinePatch(string message)
+    {
+        if (!inL && Data.OutputToConsoleMethod is not null)
+            AddLog(message);
+    }
+
+    /// <summary>Indents the log by <paramref name="amount"/> spaces until the returned <see cref="IDisposable"/> is disposed of. Doesn't apply to <see cref="LogError(Exception, ConsoleColor, string, string, int)"/></summary>
+    /// <remarks><code>using LogIndent log = IndentLog(2);</code></remarks>
+    public static IDisposable IndentLog(uint amount) => new LogIndent(amount);
+    private struct LogIndent : IDisposable
+    {
+        public uint Indent;
+        public LogIndent(uint amount)
+        {
+            Indent = amount;
+            indention += (int)amount;
+        }
+        public void Dispose()
+        {
+            if (indention < Indent)
+                indention = 0;
+            else
+                indention -= (int)Indent;
+        }
+    }
+
     private static void AddLine(string text, ConsoleColor color)
     {
-        try
+        if (!_init) Init();
+        if (indention == 0)
         {
-            if (Data.OutputToConsoleMethod != null && Data.defaultIOHandler != null)
-            {
-                Data.OutputToConsoleMethod.Invoke(text, color);
-            }
+            Data.OutputToConsoleMethod!.Invoke(text, color);
+            AddLog(text);
         }
-        catch
+        else if (text.IndexOf('\n') < 1)
         {
-            switch (color)
+            AddLog(text = new string(' ', indention) + text);
+            Data.OutputToConsoleMethod!.Invoke(text, color);
+        }
+        else
+        {
+            string[] lines = text.Split(splitChars);
+            string ind = new string(' ', indention);
+            string l;
+            for (int i = 0; i < lines.Length; ++i)
             {
-                case ConsoleColor.Gray:
-                default:
-                    CommandWindow.Log(text);
-                    break;
-                case ConsoleColor.Yellow:
-                    CommandWindow.LogWarning(text);
-                    break;
-                case ConsoleColor.Red:
-                    CommandWindow.LogError(text);
-                    break;
+                l = ind + lines[i].Trim(trimChars);
+                lock (_log)
+                {
+                    byte[] bytes = System.Text.Encoding.UTF8.GetBytes(l + Environment.NewLine);
+                    _log.Write(bytes, 0, bytes.Length);
+                }
+                Data.OutputToConsoleMethod!.Invoke(l, color);
             }
+            _log.Flush();
         }
     }
     [Conditional("DEBUG")]
@@ -55,74 +107,58 @@ public static class L
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking", filepath: "unknown");
     public static void Log(string info, ConsoleColor color = ConsoleColor.Gray)
     {
-        try
-        {
-            if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Gray || Data.OutputToConsoleMethod == null)
-            {
-                CommandWindow.Log(info);
-            }
-            else
-            {
-                AddLine(info, color);
-                UnturnedLog.info($"[IN] {info}");
-                Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = info, RCON = true, Severity = Rocket.Core.Logging.ELogType.Info });
-            }
-        }
-        catch (Exception ex)
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        if (Data.OutputToConsoleMethod is null)
         {
             CommandWindow.Log(info);
-            LogError(ex);
+        }
+        else
+        {
+            AddLine("[INFO]  " + info, color);
+            inL = true;
+            UnturnedLog.info($"[IN] {info}");
+            inL = false;
         }
     }
     public static void LogWarning(string warning, ConsoleColor color = ConsoleColor.Yellow, [CallerMemberName] string method = "")
     {
-        try
-        {
-            if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Yellow || Data.OutputToConsoleMethod == null)
-            {
-                CommandWindow.LogWarning(warning);
-            }
-            else
-            {
-                AddLine("[" + method.ToUpper() + "] " + warning, color);
-                UnturnedLog.warn($"[WA] {warning}");
-                Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = warning, RCON = true, Severity = Rocket.Core.Logging.ELogType.Warning });
-            }
-        }
-        catch (Exception ex)
+        if (Data.OutputToConsoleMethod is null)
         {
             CommandWindow.LogWarning(warning);
-            LogError(ex);
+        }
+        else
+        {
+            AddLine("[WARN]  [" + method.ToUpper() + "] " + warning, color);
+            inL = true;
+            UnturnedLog.warn($"[WA] {warning}");
+            inL = false;
         }
     }
     public static void LogError(string error, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "")
     {
-        try
-        {
-            if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red || Data.OutputToConsoleMethod == null)
-            {
-                CommandWindow.LogError(error);
-            }
-            else
-            {
-                AddLine("[" + method.ToUpper() + "] " + error, color);
-                UnturnedLog.warn($"[ER] {error}");
-                Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry() { Message = error, RCON = true, Severity = Rocket.Core.Logging.ELogType.Error });
-            }
-        }
-        catch (Exception ex)
+        if (Data.OutputToConsoleMethod is null)
         {
             CommandWindow.LogError(error);
-            UnturnedLog.error(ex);
+        }
+        else
+        {
+            AddLine("[ERROR] [" + method.ToUpper() + "] " + error, color);
+            inL = true;
+            UnturnedLog.warn($"[ER] {error}");
+            inL = false;
         }
     }
 
     private static readonly char[] trimChars = new char[] { '\n', '\r' };
+    private static readonly char[] splitChars = new char[] { '\n' };
     private static readonly List<string> stack = new List<string>(64);
-    private static string CleanStackTrace(string stackTrace)
+    private static readonly StringBuilder _errorBuilder = new StringBuilder(512);
+    private static void CleanStackTrace(string stackTrace)
     {
-        string[] stacks = stackTrace.Split('\n');
-        StringBuilder newTrace = new StringBuilder(stackTrace.Length);
+        if (string.IsNullOrEmpty(stackTrace)) return;
+        string[] stacks = stackTrace.Split(splitChars);
         bool isAsync = false;
         lock (stack)
         {
@@ -158,7 +194,7 @@ public static class L
                                 endingPartSt = stack.IndexOf('(', close);
                                 if (endingPartSt != -1)
                                 {
-                                    endingPartEnd = stack.IndexOf('[', endingPartSt);
+                                    endingPartEnd = stack.IndexOf("[0x", endingPartSt, StringComparison.OrdinalIgnoreCase);
                                     if (endingPartEnd == -1)
                                         endingPartEnd = stack.Length - 1;
                                     stack = "  at async " + owner + "." + methodName + " " + stack.Substring(endingPartSt, endingPartEnd - endingPartSt - 1);
@@ -168,7 +204,7 @@ public static class L
                                 goto repl;
                             }
                         }
-                        endingPartEnd = stack.IndexOf('[');
+                        endingPartEnd = stack.IndexOf("[0x", StringComparison.OrdinalIgnoreCase);
                         if (endingPartEnd != -1)
                         {
                             if (endingPartEnd == -1)
@@ -192,46 +228,47 @@ public static class L
                 }
             }
 
+            _errorBuilder.Append(Environment.NewLine);
             for (int i = stack.Count - 1; i >= 0; --i)
-                newTrace.AppendLine(stack[i]);
+                _errorBuilder.AppendLine(stack[i]);
             stack.Clear();
 
         }
         if (isAsync)
-                newTrace.AppendLine("== SOME LINES WERE HIDDEN FOR READABILITY ==");
-
-        return newTrace.ToString();
+            _errorBuilder.AppendLine("== SOME LINES WERE HIDDEN FOR READABILITY ==");
     }
     public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "", [CallerFilePath] string filepath = "", [CallerLineNumber] int ln = 0)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         int i = 0;
         do
         {
-            string message = $"EXCEPTION - {ex.GetType().Name}\nSource: {filepath}::{method}( ... ) LN# {ln}\n\n{ex.Message}\n{CleanStackTrace(ex.StackTrace)}\n\nFINISHED";
-            try
-            {
-                if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red ||
-                    Data.OutputToConsoleMethod == null)
-                {
-                    CommandWindow.LogError(message);
-                }
-                else
-                {
-                    AddLine(message, color);
-                    UnturnedLog.warn($"[EX] {ex.Message}");
-                    UnturnedLog.warn($"[ST] {ex.StackTrace}");
-                    Rocket.Core.Logging.AsyncLoggerQueue.Current?.Enqueue(new Rocket.Core.Logging.LogEntry()
-                        { Message = message, RCON = true, Severity = Rocket.Core.Logging.ELogType.Exception });
-                }
-            }
-            catch (Exception ex2)
-            {
-                CommandWindow.LogError($"{message}\nEXCEPTION LOGGING \n\n{ex2.Message}\n{ex2.StackTrace}\n\nFINISHED");
-            }
-
+            if (i != 0)
+                _errorBuilder.Append(Environment.NewLine);
+            _errorBuilder
+                .Append("EXCEPTION - ")
+                .Append(ex.GetType().Name)
+                .Append(Environment.NewLine)
+                .Append("Source: ")
+                .Append(filepath)
+                .Append("::")
+                .Append(method)
+                .Append("( ... ) LN# ")
+                .Append(ln.ToString(Data.Locale))
+                .Append(Environment.NewLine)
+                .Append(Environment.NewLine)
+                .Append(ex.Message);
+            CleanStackTrace(ex.StackTrace);
+            _errorBuilder
+                .Append(Environment.NewLine)
+                .Append(Environment.NewLine)
+                .Append("FINISHED")
+                .Append(Environment.NewLine);
             if (ex is TypeLoadException t)
             {
-                L.LogError("Type: " + t.TypeName);
+                _errorBuilder.Append("Type: ").Append(t.TypeName);
             }
             else if (ex is ReflectionTypeLoadException t2)
             {
@@ -240,11 +277,11 @@ public static class L
             }
             else if (ex is AggregateException t3)
             {
-                L.LogError("INNER EXCEPTIONS: ");
+                _errorBuilder.Append(Environment.NewLine).Append("INNER EXCEPTIONS: ");
                 int j = 0;
                 foreach (Exception ex2 in t3.InnerExceptions)
                 {
-                    LogError(" - INNER EXCEPTION #" + ++j);
+                    _errorBuilder.Append(" - INNER EXCEPTION #").Append((++j).ToString(Data.Locale));
                     LogError(ex2, color, method, filepath, ln);
                 }
                 break;
@@ -252,34 +289,24 @@ public static class L
             ++i;
             ex = ex.InnerException;
             if (ex != null)
-                LogError("INNER EXCEPTION");
+                _errorBuilder.Append(Environment.NewLine).Append("INNER EXCEPTION");
             else break;
         }
         while (i < 8);
-    }
-    public static List<LogMessage> ReadRocketLog()
-    {
-        List<LogMessage> logs = new List<LogMessage>();
-        string path = Path.Combine(Rocket.Core.Environment.LogsDirectory, Rocket.Core.Environment.LogFile);
-        if (!File.Exists(path))
-            return logs;
-        using (FileStream str = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+
+        string err = _errorBuilder.ToString();
+        _errorBuilder.Clear();
+
+        if (Data.OutputToConsoleMethod is null)
         {
-            byte[] bytes = new byte[str.Length];
-            str.Read(bytes, 0, bytes.Length);
-            string file = System.Text.Encoding.UTF8.GetString(bytes);
-            string[] lines = file.Split('\n');
-            for (int i = 0; i < lines.Length; i++)
-            {
-                if (logs.Count >= MAX_LOGS)
-                {
-                    logs.RemoveRange(MAX_LOGS - 1, logs.Count - MAX_LOGS - 1);
-                }
-                logs.Insert(0, new LogMessage(lines[i]));
-            }
+            CommandWindow.LogError(err);
         }
-        return logs;
-    }
+        else
+        {
+            Data.OutputToConsoleMethod.Invoke(err, color);
+            AddLog(err);
+        }
+    }/*
     public static void AddLog(LogMessage log)
     {
         if (Logs.Count > MAX_LOGS)
@@ -288,7 +315,7 @@ public static class L
         }
         else if (Logs.Count == MAX_LOGS) Logs.RemoveAt(MAX_LOGS - 1);
         Logs.Insert(0, log);
-    }
+    }*/
     internal static void RunCommand(string command)
     {
         L.Log(command, ConsoleColor.White);
@@ -307,18 +334,28 @@ public static class L
         L.LogError($"Unable to match \"{command}\" with any built-in commands");
     }
     internal static bool isRequestingLog = false;
+    private static void AddLog(string log)
+    {
+        lock (_log)
+        {
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(log + Environment.NewLine);
+            _log.Write(bytes, 0, bytes.Length);
+            _log.Flush();
+        }
+    }
+
     public static class NetCalls
     {
-        public static readonly NetCall RequestFullLog = new NetCall(ReceiveRequestFullLog);
+        //public static readonly NetCall RequestFullLog = new NetCall(ReceiveRequestFullLog);
         public static readonly NetCall<string> RequestRunCommand = new NetCall<string>(ReceiveCommand);
-        public static readonly NetCall<bool> SetRequestLogState = new NetCall<bool>(ReceiveRequestsLogState);
+        //public static readonly NetCall<bool> SetRequestLogState = new NetCall<bool>(ReceiveRequestsLogState);
 
-        public static readonly NetCallRaw<LogMessage, byte> SendLogMessage = new NetCallRaw<LogMessage, byte>(1030, LogMessage.Read, null, LogMessage.Write, null);
-        public static readonly NetCallRaw<LogMessage[], byte> SendFullLog = new NetCallRaw<LogMessage[], byte>(1031, LogMessage.ReadMany, null, LogMessage.WriteMany, null);
+        //public static readonly NetCallRaw<LogMessage, byte> SendLogMessage = new NetCallRaw<LogMessage, byte>(1030, LogMessage.Read, null, LogMessage.Write, null);
+        //public static readonly NetCallRaw<LogMessage[], byte> SendFullLog = new NetCallRaw<LogMessage[], byte>(1031, LogMessage.ReadMany, null, LogMessage.WriteMany, null);
         public static readonly NetCall<string> SendFatalException = new NetCall<string>(1131);
 
-        [NetCall(ENetCall.FROM_SERVER, 1029)]
-        internal static void ReceiveRequestFullLog(MessageContext context) => context.Reply(SendFullLog, Logs.ToArray(), (byte)0);
+        /*[NetCall(ENetCall.FROM_SERVER, 1029)]
+        internal static void ReceiveRequestFullLog(MessageContext context) => context.Reply(SendFullLog, Logs.ToArray(), (byte)0);*/
         [NetCall(ENetCall.FROM_SERVER, 1032)]
         internal static void ReceiveCommand(MessageContext context, string command)
         {
@@ -327,10 +364,10 @@ public static class L
             else
                 UCWarfare.RunOnMainThread(() => RunCommand(command));
         }
-        [NetCall(ENetCall.FROM_SERVER, 1023)]
+        /*[NetCall(ENetCall.FROM_SERVER, 1023)]
         private static void ReceiveRequestsLogState(MessageContext context, bool state)
         {
             isRequestingLog = state;
-        }
+        }*/
     }
 }

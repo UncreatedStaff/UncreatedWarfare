@@ -1,11 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Quests;
 
@@ -20,15 +18,15 @@ public static class RankManager
     {
         try
         {
-            ConfigSave = new Config<RankConfig>(Data.PointsStorage, "rank_data.json", RankConfig.Read, RankConfig.Write);
+            ConfigSave = new Config<RankConfig>(Data.Paths.PointsStorage, "rank_data.json", RankConfig.Read, RankConfig.Write);
         }
         catch (Exception ex)
         {
             L.LogError(ex); 
         }
     }
-    private static string GetSavePath(ulong steam64) => "\\Players\\" + steam64.ToString(Data.Locale) + "_0\\Uncreated_S" + 
-                                                        UCWarfare.Version.Major.ToString(Data.Locale) + "\\RankProgress.dat";
+    private static string GetSavePath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players", steam64.ToString(Data.Locale) + "_0",
+        "Uncreated_S" + UCWarfare.Version.Major.ToString(Data.Locale), "RankProgress.dat");
     public static void WriteRankData(UCPlayer player, RankStatus[] status)
     {
         string path = GetSavePath(player.Steam64);
@@ -286,7 +284,7 @@ public static class RankManager
                 if (nextRank.UnlockRequirements[i] == key)
                 {
                     status.Completions[i] = true;
-                    L.Log("Finished rank requirement " + i.ToString());
+                    L.LogDebug("Finished rank requirement " + i.ToString());
                     write = true;
                     break;
                 }
@@ -298,7 +296,7 @@ public static class RankManager
             if (value)
             {
                 status.IsCompelete = true;
-                L.Log("Finished rank " + nextRank.GetName(0));
+                L.LogDebug("Finished rank " + nextRank.GetName(0));
                 WriteRankData(player, player.RankData);
                 if (Assets.find(nextRank.QuestID) is QuestAsset quest)
                 {

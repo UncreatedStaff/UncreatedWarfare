@@ -19,7 +19,7 @@ public class RequestSigns : ListSingleton<RequestSign>
 {
     private static RequestSigns Singleton;
     public static bool Loaded => Singleton.IsLoaded<RequestSigns, RequestSign>();
-    public RequestSigns() : base("kitsigns", Path.Combine(Data.StructureStorage, "request_signs.json"), RequestSign.WriteRequestSign, RequestSign.ReadRequestSign) { }
+    public RequestSigns() : base("kitsigns", Path.Combine(Data.Paths.StructureStorage, "request_signs.json"), RequestSign.WriteRequestSign, RequestSign.ReadRequestSign) { }
     protected override string LoadDefaults() => EMPTY_LIST;
     public override void Load()
     {

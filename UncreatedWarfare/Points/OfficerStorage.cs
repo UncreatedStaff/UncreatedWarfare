@@ -14,7 +14,7 @@ public class OfficerStorage : ListSingleton<OfficerData>
     internal const int OFFICER_RANK_ORDER = 9;
     private static OfficerStorage Singleton;
     public static bool Loaded => Singleton.IsLoaded<OfficerStorage, OfficerData>();
-    public OfficerStorage() : base("officers", Path.Combine(Data.PointsStorage, "officers.json"))
+    public OfficerStorage() : base("officers", Path.Combine(Data.Paths.PointsStorage, "officers.json"))
     {
 
     }
@@ -36,7 +36,6 @@ public class OfficerStorage : ListSingleton<OfficerData>
         officer = Singleton.GetObject(o => o.Steam64 == playerID && o.Team == team, true);
         return officer != null;
     }
-    // Are we still using this?
     public static void ChangeOfficerRank(ulong playerID, int newOfficerTier, ulong newTeam)
     {
         Singleton.AssertLoaded<OfficerStorage, OfficerData>();

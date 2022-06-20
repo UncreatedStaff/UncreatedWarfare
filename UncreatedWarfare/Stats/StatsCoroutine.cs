@@ -105,7 +105,7 @@ namespace Uncreated.Warfare.Stats
 
                     if (mem >= 1000000000 /* ~1GB */)
                     {
-                        ShutdownOverrideCommand.ShutdownInstant("Memory error, shutdown to prevent corrupted state.");
+                        UCWarfare.ShutdownNow("Memory error, shutdown to prevent corrupted state.", 0);
                     }
                 }
                 catch (Exception ex)

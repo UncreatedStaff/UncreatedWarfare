@@ -1,5 +1,4 @@
-﻿using Rocket.Unturned.Player;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -74,6 +73,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
     }
     void IPlayerConnectListener.OnPlayerConnecting(UCPlayer player)
     {
+        if (!player.Player.transform.gameObject.TryGetComponent<Reviver>(out _))
+            player.Player.transform.gameObject.AddComponent<Reviver>();
         if (player.KitClass == EClass.MEDIC)
             Medics.Add(player);
         DownedPlayers.Remove(player.Steam64);
@@ -209,7 +210,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 else
                     Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s => s.Revives++, false);
             }
-            EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, target.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI, target.channel.owner.transportConnection);
             EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, target.channel.owner.transportConnection);
             ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, tteam);
         }
@@ -239,14 +240,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 return;
             }
             UCPlayer? player = UCPlayer.FromPlayer(parameters.player);
-            if (player != null && player.OnDuty())
-            {
-                if (parameters.player.TryGetComponent(out UnturnedPlayerFeatures features) && features.GodMode)
-                {
-                    shouldAllow = false;
-                    return;
-                }
-            }
 
             if (CanPlayerInjure(ref parameters))
             {
@@ -284,9 +277,12 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         ulong team = parameters.player.GetTeam();
         parameters.player.movement.sendPluginSpeedMultiplier(0.35f);
         parameters.player.movement.sendPluginJumpMultiplier(0);
-        short key = unchecked((short)UCWarfare.Config.GiveUpUI);
-        EffectManager.sendUIEffect(UCWarfare.Config.GiveUpUI, key, parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player), string.Empty);
-        EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", Translation.Translate("injured_ui_give_up", parameters.player));
+        short key = unchecked((short)Gamemode.Config.UI.InjuredUI.Id);
+        if (key != 0)
+        {
+            EffectManager.sendUIEffect(Gamemode.Config.UI.InjuredUI, key, parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player), string.Empty);
+            EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", Translation.Translate("injured_ui_give_up", parameters.player));
+        }
         parameters.player.SendChat("injured_chat");
 
         ActionLog.Add(EActionLogType.INJURED, "by " + (killer == null ? "self" : killer.playerID.steamID.m_SteamID.ToString(Data.Locale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
@@ -373,7 +369,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 e.Player.Player.life.serverSetBleeding(false);
             }
 
-            EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, e.Player.Player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI, e.Player.Player.channel.owner.transportConnection);
             EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, e.Player.Player.channel.owner.transportConnection);
         }
         ClearInjuredMarker(e.Steam64, e.Player.GetTeam());
@@ -563,23 +559,36 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
     }
 
 
-    private class Reviver : UnturnedPlayerComponent
+    private class Reviver : MonoBehaviour
     {
-        private Coroutine? stance;
-#pragma warning disable IDE0051
+        public UCPlayer Player;
         void Start()
         {
-            Player.Player.life.onHurt += OnPlayerPostDamage;
-            Player.Player.inventory.onDropItemRequested += EventFunctions.OnDropItemTry;
-            Player.Player.stance.onStanceUpdated += StanceUpdatedLocal;
-            Player.Player.equipment.onEquipRequested += OnEquipRequested;
+            Player = UCPlayer.FromPlayer(gameObject.GetComponent<Player>())!;
+            if (Player is null)
+            {
+                Destroy(this);
+                L.Log("Failed to set up reviver for " + gameObject.name);
+            }
+            else
+            {
+                Player.Player.life.onHurt += OnPlayerPostDamage;
+                Player.Player.inventory.onDropItemRequested += EventFunctions.OnDropItemTry;
+                Player.Player.stance.onStanceUpdated += StanceUpdatedLocal;
+                Player.Player.equipment.onEquipRequested += OnEquipRequested;
+            }
         }
+        private Coroutine? stance;
+#pragma warning disable IDE0051
         void OnDestroy()
         {
-            Player.Player.stance.onStanceUpdated -= StanceUpdatedLocal;
-            Player.Player.equipment.onEquipRequested -= OnEquipRequested;
-            Player.Player.life.onHurt -= OnPlayerPostDamage;
-            Player.Player.inventory.onDropItemRequested -= EventFunctions.OnDropItemTry;
+            if (Player is not null)
+            {
+                Player.Player.stance.onStanceUpdated -= StanceUpdatedLocal;
+                Player.Player.equipment.onEquipRequested -= OnEquipRequested;
+                Player.Player.life.onHurt -= OnPlayerPostDamage;
+                Player.Player.inventory.onDropItemRequested -= EventFunctions.OnDropItemTry;
+            }
         }
         private void OnEquipRequested(PlayerEquipment equipment, ItemJar jar, ItemAsset asset, ref bool shouldAllow)
         {

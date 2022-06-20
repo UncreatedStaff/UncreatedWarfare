@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Networking;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands.CommandSystem;
@@ -24,6 +25,7 @@ public static class CommandHandler
     static CommandHandler()
     {
         ChatManager.onCheckPermissions += OnChatProcessing;
+        CommandWindow.onCommandWindowInputted += OnCommandInput;
     }
     private static void OnChatProcessing(SteamPlayer player, string text, ref bool shouldExecuteCommand, ref bool shouldList)
     {
@@ -36,12 +38,15 @@ public static class CommandHandler
 
     public static void LoadCommands()
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         RegisterVanillaCommands();
         Type t = typeof(IExecutableCommand);
         Type v = typeof(VanillaCommand);
         foreach (Type cmdType in Assembly.GetCallingAssembly().GetTypes().Where(x => !x.IsAbstract && !x.IsGenericType && !x.IsSpecialName && !x.IsNested && t.IsAssignableFrom(x)))
         {
-            if (cmdType.GetConstructors().Any(x => x.GetParameters().Length == 0))
+            if (cmdType.GetConstructors(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance).Any(x => x.GetParameters().Length == 0))
             {
                 IExecutableCommand cmd = (IExecutableCommand)Activator.CreateInstance(cmdType, true);
                 RegisterCommand(cmd);
@@ -71,7 +76,7 @@ public static class CommandHandler
                 }
                 else if (_commands[i].Priority == priority)
                 {
-                    L.LogWarning("Duplicate command /" + name + " with same priority from assembly: " + cmd.GetType().Assembly.GetName().Name);
+                    L.LogWarning("Duplicate command /" + name.ToLower() + " with same priority from assembly: " + cmd.GetType().Assembly.GetName().Name);
                     return;
                 }
             }
@@ -80,9 +85,9 @@ public static class CommandHandler
         _commands.Add(cmd);
     regCmd:
         if (cmd is VanillaCommand)
-            L.Log("Command /" + name + " registered from Unturned.");
+            L.Log("Command /" + name.ToLower() + " registered from Unturned.", ConsoleColor.DarkGray);
         else
-            L.Log("Command /" + name + " registered from assembly: " + cmd.GetType().Assembly.GetName().Name);
+            L.Log("Command /" + name.ToLower() + " registered from assembly: " + cmd.GetType().Assembly.GetName().Name, ConsoleColor.DarkGray);
     }
     internal static EAdminType GetVanillaPermissions(SDG.Unturned.Command command)
     {
@@ -97,6 +102,9 @@ public static class CommandHandler
     }
     private static unsafe bool CheckRunCommand(UCPlayer? player, string message, bool requirePrefix)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (message == null || message.Length < 2) goto notCommand;
         int cmdStart = -1;
         int cmdEnd = -1;
@@ -381,29 +389,43 @@ public static class CommandHandler
     private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
     {
         IExecutableCommand cmd = _commands[index];
+        L.LogDebug("Running command " + cmd.CommandName + " (" + message + ")");
         CommandInteraction interaction = cmd.SetupCommand(player, args, message, keepSlash);
         if (cmd.CheckPermission(interaction))
         {
             try
             {
                 cmd.Execute(interaction);
-                interaction.Reply(Translation.Common.UNKNOWN_ERROR);
+                if (!interaction.Responded)
+                {
+                    interaction.Reply(Translation.Common.UNKNOWN_ERROR);
+                    interaction.MarkComplete();
+                }
             }
             catch (BaseCommandInteraction i)
             {
                 i.MarkComplete();
+                if (player is not null)
+                    CommandWaitTask.OnCommandExecuted(player, cmd);
                 return;
             }
             catch (Exception ex)
             {
                 interaction.Reply(Translation.Common.UNKNOWN_ERROR);
+                interaction.MarkComplete();
                 L.LogError(ex);
             }
         }
         else
         {
             interaction.Reply(Translation.Common.NO_PERMISSIONS);
+            interaction.MarkComplete();
         }
+    }
+    private static void OnCommandInput(string text, ref bool shouldExecuteCommand)
+    {
+        if (shouldExecuteCommand && CheckRunCommand(null, text, false))
+            shouldExecuteCommand = false;
     }
     private struct ArgumentInfo
     {
@@ -425,6 +447,7 @@ public abstract class BaseCommandInteraction : Exception
 {
     public readonly IExecutableCommand Command;
     protected bool _responded = false;
+    public bool Responded => _responded;
     protected BaseCommandInteraction(IExecutableCommand cmd, string message) : base (message)
     {
         this.Command = cmd;
@@ -653,6 +676,44 @@ public class CommandInteraction : BaseCommandInteraction
             return false;
         }
         return ulong.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+    }
+    public bool TryGetTeam(int parameter, out ulong value)
+    {
+        parameter += offset;
+        if (parameter < 0 || parameter >= ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+
+        string p = GetParamForParse(parameter);
+        if (ulong.TryParse(p, NumberStyles.Number, Warfare.Data.Locale, out value))
+        {
+            return value is > 0 and < 4;
+        }
+        else if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.OrdinalIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.Team1Name, StringComparison.OrdinalIgnoreCase) || p.Equals("t1", StringComparison.OrdinalIgnoreCase))
+        {
+            value = 1ul;
+            return true;
+        }
+        else if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.OrdinalIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.Team2Name, StringComparison.OrdinalIgnoreCase) || p.Equals("t2", StringComparison.OrdinalIgnoreCase))
+        {
+            value = 2ul;
+            return true;
+        }
+        else if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.OrdinalIgnoreCase) ||
+                 p.Equals(Teams.TeamManager.AdminName, StringComparison.OrdinalIgnoreCase) || p.Equals("t3", StringComparison.OrdinalIgnoreCase))
+        {
+            value = 3ul;
+            return true;
+        }
+        else
+        {
+            value = 0ul;
+            return false;
+        }
     }
     public bool TryGet(int parameter, out float value)
     {
@@ -912,10 +973,10 @@ public class CommandInteraction : BaseCommandInteraction
     /// <param name="multipleResultsFound"><see langword="true"/> if <paramref name="allowMultipleResults"/> is <see langword="false"/> and multiple results were found.</param>
     /// <param name="allowMultipleResults">Set to <see langword="false"/> to make the function return <see langword="false"/> if multiple results are found. <paramref name="asset"/> will still be set.</param>
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
-    public bool TryGet<TAsset>(int parameter, out TAsset asset, out bool multipleResultsFound, bool remainder = false, bool allowMultipleResults = false) where TAsset : Asset
+    public bool TryGet<TAsset>(int parameter, out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Func<TAsset, bool>? selector = null) where TAsset : Asset
     {
         parameter += offset;
-        if (!TryGetRange(parameter, out string p, remainder ? -1 : 1))
+        if (!TryGetRange(parameter, out string p, remainder ? -1 : len))
         {
             multipleResultsFound = false;
             asset = null!;
@@ -927,7 +988,7 @@ public class CommandInteraction : BaseCommandInteraction
         {
             asset = Assets.find<TAsset>(guid);
             multipleResultsFound = false;
-            return asset is not null;
+            return asset is not null && (selector is null || selector(asset));
         }
         EAssetType type = JsonAssetReference<TAsset>.AssetTypeHelper.Type;
         if (type != EAssetType.NONE)
@@ -936,13 +997,20 @@ public class CommandInteraction : BaseCommandInteraction
             {
                 if (Assets.find(type, value) is TAsset asset2)
                 {
+                    if (selector is not null && !selector(asset2))
+                    {
+                        asset = null!;
+                        multipleResultsFound = false;
+                        return false;
+                    }
+
                     asset = asset2;
                     multipleResultsFound = false;
                     return true;
                 }
             }
 
-            TAsset[] assets = Assets.find(type).OfType<TAsset>().OrderBy(x => x.FriendlyName.Length).ToArray();
+            TAsset[] assets = selector is null ? Assets.find(type).OfType<TAsset>().OrderBy(x => x.FriendlyName.Length).ToArray() : Assets.find(type).OfType<TAsset>().Where(selector).OrderBy(x => x.FriendlyName.Length).ToArray();
             if (allowMultipleResults)
             {
                 for (int i = 0; i < assets.Length; ++i)
@@ -1161,7 +1229,7 @@ public class CommandInteraction : BaseCommandInteraction
     /// <exception cref="CommandInteraction"/>
     public void AssertRanByPlayer()
     {
-        if (IsConsole)
+        if (IsConsole || !Caller.IsOnline)
             throw SendPlayerOnlyError();
     }
     /// <exception cref="CommandInteraction"/>
@@ -1173,14 +1241,26 @@ public class CommandInteraction : BaseCommandInteraction
     /// <exception cref="CommandInteraction"/>
     public void AssertArgs(int count, string usage)
     {
-        if (HasArgs(count))
-            throw SendCorrectUsage(usage);
+        if (!HasArgs(count))
+            throw JSONMethods.DefaultTranslations.ContainsKey(usage) ? Reply(usage) : SendCorrectUsage(usage);
+    }
+    /// <exception cref="CommandInteraction"/>
+    public void AssertArgs(int count, string usage, params string[] formatting)
+    {
+        if (!HasArgs(count))
+            throw Reply(usage, formatting);
+    }
+    /// <exception cref="CommandInteraction"/>
+    public void AssertArgsExact(int count, string usage, params string[] formatting)
+    {
+        if (!HasArgsExact(count))
+            throw Reply(usage, formatting);
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertArgsExact(int count, string usage)
     {
-        if (HasArgsExact(count))
-            throw SendCorrectUsage(usage);
+        if (!HasArgsExact(count))
+            throw JSONMethods.DefaultTranslations.ContainsKey(usage) ? Reply(usage) : SendCorrectUsage(usage);
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertOnDuty()
@@ -1208,6 +1288,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     
     public Exception SendNotImplemented()   => Reply(Translation.Common.NOT_IMPLEMENTED);
+    public Exception SendNotEnabled()       => Reply(Translation.Common.NOT_ENABLED);
     public Exception SendGamemodeError()    => Reply(Translation.Common.GAMEMODE_ERROR);
     public Exception SendPlayerOnlyError()  => Reply(Translation.Common.PLAYERS_ONLY);
     public Exception SendConsoleOnlyError() => Reply(Translation.Common.CONSOLE_ONLY);

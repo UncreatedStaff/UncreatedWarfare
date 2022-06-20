@@ -13,7 +13,7 @@ public class ShutdownOverrideCommand : Command
     private const string SYNTAX = "/shutdown [instant|after|cancel|*time*] [reason]";
     private const string HELP = "Does nothing.";
     public static Coroutine? Messager = null;
-    public ShutdownOverrideCommand() : base("blank", EAdminType.VANILLA_ADMIN, 1) { }
+    public ShutdownOverrideCommand() : base("shutdown", EAdminType.VANILLA_ADMIN, 1) { }
     public override void Execute(CommandInteraction ctx)
     {
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);

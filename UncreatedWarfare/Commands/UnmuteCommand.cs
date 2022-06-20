@@ -1,30 +1,26 @@
-﻿using Rocket.API;
+﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-
-public class UnmuteCommand : IRocketCommand
+public class UnmuteCommand : Command
 {
-	private readonly List<string> _permissions = new List<string>(1) { "uc.unmute" };
-	private readonly List<string> _aliases = new List<string>(0);
-	public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "unmute";
-    public string Help => "Unmute previously muted players.";
-    public string Syntax => "/unmute <player>";
-    public List<string> Aliases => _aliases;
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/unmute";
+    private const string HELP = "Does nothing.";
+
+    public UnmuteCommand() : base("unmute", EAdminType.MODERATOR) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
-        WarfareContext ctx = new WarfareContext(caller, command);
-        if (!ctx.HasArg(0))
-            ctx.SendCorrectUsage(Syntax);
-        if (ctx.MatchParameter(0, "help"))
-            ctx.SendCorrectUsage(Syntax + " - " + Help);
-        else if (ctx.TryGet(0, out ulong playerId, out UCPlayer? onlinePlayer))
+        ctx.AssertArgs(1, SYNTAX);
+
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
+        if (ctx.TryGet(0, out ulong playerId, out UCPlayer? onlinePlayer))
         {
             if (onlinePlayer is not null)
 			{
@@ -77,6 +73,7 @@ public class UnmuteCommand : IRocketCommand
 		            ctx.Reply("unmute_not_found");
 				}
             });
+            ctx.Defer();
         }
         else ctx.Reply("unmute_not_found");
 	}

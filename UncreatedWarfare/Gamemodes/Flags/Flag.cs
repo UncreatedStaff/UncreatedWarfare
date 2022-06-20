@@ -1,11 +1,8 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
@@ -56,7 +53,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public event EventHandler OnReset;
 
         public Zone ZoneData { get; protected set; }
-        public FlagGamemode Manager { get; protected set; }
+        public IFlagRotation Manager { get; protected set; }
         public int ObjectivePlayerCount
         {
             get
@@ -307,7 +304,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public List<Player> PlayersOnFlag { get; private set; }
 
-        public Flag(Zone zone, FlagGamemode manager)
+        public Flag(Zone zone, IFlagRotation manager)
         {
             this.Manager = manager;
             this._id = zone.Id;
@@ -329,14 +326,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             this.ZoneData = zone;
             this.Adjacencies = zone.Data.Adjacencies;
         }
-        public bool IsFriendly(UnturnedPlayer player) => IsFriendly(player.Player.quests.groupID.m_SteamID);
         public bool IsFriendly(SteamPlayer player) => IsFriendly(player.player.quests.groupID.m_SteamID);
         public bool IsFriendly(Player player) => IsFriendly(player.quests.groupID.m_SteamID);
         public bool IsFriendly(CSteamID groupID) => IsFriendly(groupID.m_SteamID);
         public bool IsFriendly(ulong groupID) => groupID == _owner;
         public bool PlayerInRange(Vector3 position) => ZoneData.IsInside(position);
         public bool PlayerInRange(Vector2 position) => ZoneData.IsInside(position);
-        public bool PlayerInRange(UnturnedPlayer player) => PlayerInRange(player.Position);
         public bool PlayerInRange(SteamPlayer player) => PlayerInRange(player.player.transform.position);
         public bool PlayerInRange(Player player) => PlayerInRange(player.transform.position);
         public void EnterPlayer(Player player)
@@ -413,11 +408,10 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             else if (team == 2) return T2Obj;
             else return false;
         }
-        public bool IsAttackable(ulong team) => (team == 1 && T1Obj) || (team == 2 && T2Obj);
-        public bool IsDefendable(ulong team) => (team == 1 && team == 2 && Owner == 2) || (team == 2 && team == 1 && Owner == 1);
+        public bool IsAttackSite(ulong team) => Manager.IsAttackSite(team, this);
+        public bool IsDefenseSite(ulong team) => Manager.IsDefenseSite(team, this);
         public bool Discovered(ulong team)
         {
-            if (!UCWarfare.Config.FlagSettings.HideUnknownFlags) return true;
             return team switch
             {
                 1 => _discovered1,

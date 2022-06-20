@@ -1,5 +1,4 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -21,11 +20,9 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Networking;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -89,12 +86,6 @@ public static class EventFunctions
     internal static void StopCosmeticsSetStateEvent(ref EVisualToggleType type, SteamPlayer player, ref bool state, ref bool allow)
     {
         if (!UCWarfare.Config.AllowCosmetics) state = false;
-    }
-    [Obsolete]
-    internal static void OnCommandExecuted(Rocket.API.IRocketPlayer player, Rocket.API.IRocketCommand command, ref bool cancel)
-    {
-        if (cancel) return;
-        CommandWaitTask.OnCommandExecuted(player, command);
     }
     internal static void OnStructurePlaced(StructureRegion region, StructureDrop drop)
     {
@@ -701,8 +692,7 @@ public static class EventFunctions
         ulong team = client.GetTeam();
         Chat.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
         L.Log(Translation.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
-        if (UCWarfare.Config.ModerationSettings.LogBattleyeKick &&
-            UCWarfare.Config.ModerationSettings.BattleyeExclusions != null &&
+        if (UCWarfare.Config.ModerationSettings.BattleyeExclusions != null &&
             !UCWarfare.Config.ModerationSettings.BattleyeExclusions.Contains(reason))
         {
             ulong id = client.playerID.steamID.m_SteamID;
@@ -1017,6 +1007,16 @@ public static class EventFunctions
         if (Data.Gamemode is ITeams)
         {
             if (TeamManager.LobbyZone != null && TeamManager.LobbyZone.IsInside(pos))
+            {
+                shouldAllow = false;
+                return;
+            }
+        }
+
+        UCPlayer? ucplayer = UCPlayer.FromPlayer(parameters.player);
+        if (ucplayer != null && ucplayer.OnDuty())
+        {
+            if (ucplayer.GodMode)
             {
                 shouldAllow = false;
                 return;

@@ -1850,12 +1850,6 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = default;
         this.type = EDynamicValueType.CONSTANT;
         this.assetType = GetAssetType();
-        if (this.assetType == EAssetType.NONE)
-        {
-            Asset? a = Assets.find(constant);
-            if (a != null)
-                this.assetType = a.assetCategory;
-        }
 
     }
     public DynamicAssetValue(GuidSet set, EChoiceBehavior choiceBehavior = EChoiceBehavior.ALLOW_ONE)
@@ -1864,12 +1858,6 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = set;
         this.type = EDynamicValueType.SET;
         this.assetType = GetAssetType();
-        if (this.assetType == EAssetType.NONE && set.Set.Length > 0)
-        {
-            Asset? a = Assets.find(set.Set[0]);
-            if (a != null)
-                this.assetType = a.assetCategory;
-        }
         this._choiceBehavior = choiceBehavior;
     }
     public DynamicAssetValue(ref GuidSet set, EChoiceBehavior choiceBehavior = EChoiceBehavior.ALLOW_ONE)
@@ -1878,12 +1866,6 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         this.set = set;
         this.type = EDynamicValueType.SET;
         this.assetType = GetAssetType();
-        if (this.assetType == EAssetType.NONE && set.Set.Length > 0)
-        {
-            Asset? a = Assets.find(set.Set[0]);
-            if (a != null)
-                this.assetType = a.assetCategory;
-        }
         this._choiceBehavior = choiceBehavior;
     }
     public readonly Choice GetValue()
@@ -1896,31 +1878,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         choice.Read(ref reader);
         return choice;
     }
-    private static EAssetType GetAssetType()
-    {
-        Type at = typeof(TAsset);
-        if (at.IsSubclassOf(typeof(ItemAsset)))
-            return EAssetType.ITEM;
-        else if (at.IsSubclassOf(typeof(EffectAsset)))
-            return EAssetType.EFFECT;
-        else if (at.IsSubclassOf(typeof(VehicleAsset)))
-            return EAssetType.VEHICLE;
-        else if (at.IsSubclassOf(typeof(ObjectAsset)))
-            return EAssetType.OBJECT;
-        else if (at.IsSubclassOf(typeof(ResourceAsset)))
-            return EAssetType.RESOURCE;
-        else if (at.IsSubclassOf(typeof(AnimalAsset)))
-            return EAssetType.ANIMAL;
-        else if (at.IsSubclassOf(typeof(MythicAsset)))
-            return EAssetType.MYTHIC;
-        else if (at.IsSubclassOf(typeof(SkinAsset)))
-            return EAssetType.SKIN;
-        else if (at.IsSubclassOf(typeof(SpawnAsset)))
-            return EAssetType.SPAWN;
-        else if (at.IsSubclassOf(typeof(DialogueAsset)) || at.IsSubclassOf(typeof(VendorAsset)) || at.IsSubclassOf(typeof(QuestAsset)))
-            return EAssetType.NPC;
-        return EAssetType.NONE;
-    }
+    private static EAssetType GetAssetType() => JsonAssetReference<TAsset>.AssetTypeHelper.Type;
     IDynamicValue<Guid>.IChoice IDynamicValue<Guid>.GetValue() => GetValue();
 
     public override string ToString()
@@ -2004,7 +1962,15 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             if (value.type == EDynamicValueType.CONSTANT)
             {
                 _value = value.constant;
-                _valueCache = Assets.find<TAsset>(_value);
+                if (Level.isLoaded)
+                {
+                    _valueCache = Assets.find<TAsset>(_value);
+                    _areValuesCached = _valueCache is not null;
+                }
+                else
+                {
+                    _areValuesCached = false;
+                }
             }
             else if (value.type == EDynamicValueType.SET)
             {
@@ -2014,7 +1980,15 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                         _value = value.set.Set[0];
                     else
                         _value = value.set.Set[UnityEngine.Random.Range(0, value.set.Length)];
-                    _valueCache = Assets.find<TAsset>(_value);
+                    if (Level.isLoaded)
+                    {
+                        _valueCache = Assets.find<TAsset>(_value);
+                        _areValuesCached = _valueCache is not null;
+                    }
+                    else
+                    {
+                        _areValuesCached = false;
+                    }
                 }
                 else
                 {
@@ -2023,27 +1997,43 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             }
             else if (value.type == EDynamicValueType.ANY && value._choiceBehavior == EChoiceBehavior.ALLOW_ONE)
             {
-                TAsset[] assets = Assets.find(_assetType).OfType<TAsset>().ToArray();
-                if (assets.Length == 1)
+                if (Level.isLoaded)
                 {
-                    _valueCache = assets[0];
-                    _value = _valueCache.GUID;
+                    TAsset[] assets = Assets.find(_assetType).OfType<TAsset>().ToArray();
+                    if (assets.Length == 1)
+                    {
+                        _valueCache = assets[0];
+                        _value = _valueCache.GUID;
+                    }
+                    else
+                    {
+                        _valueCache = assets[UnityEngine.Random.Range(0, assets.Length)];
+                        _value = _valueCache.GUID;
+                    }
+                    _areValuesCached = true;
                 }
                 else
                 {
-                    _valueCache = assets[UnityEngine.Random.Range(0, assets.Length)];
-                    _value = _valueCache.GUID;
+                    _areValuesCached = false;
                 }
             }
             else
             {
                 _value = value.constant;
-                _valueCache = Assets.find<TAsset>(_value);
+                if (Level.isLoaded)
+                {
+                    _valueCache = Assets.find<TAsset>(_value);
+                    _areValuesCached = _valueCache is not null;
+                }
+                else
+                {
+                    _areValuesCached = false;
+                }
             }
         }
         /// <summary>Will return <see langword="null"/> if <see cref="ChoiceBehavior"/> is <see cref="EChoiceBehavior.ALLOW_ALL"/> and the value is not of type <see cref="EDynamicValueType.CONSTANT"/>.</summary>
         public Guid InsistValue() => _value;
-        public TAsset InsistAssetValue() => _valueCache ?? Assets.find<TAsset>(_value);
+        public TAsset InsistAssetValue() => (_valueCache ?? (Assets.isLoading ? null : Assets.find<TAsset>(_value)))!;
         public TAsset[] GetAssetValueSet()
         {
             if (_areValuesCached) return _valuesCache!;
@@ -2051,16 +2041,19 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             {
                 TAsset[] values = new TAsset[_values!.Length];
                 for (int i = 0; i < values.Length; i++)
-                    values[i] = Assets.find<TAsset>(_values[i]);
-                _valuesCache = values;
-                _areValuesCached = true;
+                    values[i] = (!Level.isLoaded ? null : Assets.find<TAsset>(_values[i]))!;
+                if (Level.isLoaded)
+                {
+                    _valuesCache = values;
+                    _areValuesCached = true;
+                }
                 return values;
             }
             if (_valueCache != null)
                 _valuesCache = new TAsset[1] { _valueCache };
             else 
                 _valuesCache = new TAsset[0];
-            _areValuesCached = true;
+            _areValuesCached = !Assets.isLoading;
             return _valuesCache;
         }
         public string GetCommaList()

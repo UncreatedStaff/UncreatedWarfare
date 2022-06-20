@@ -15,7 +15,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
 {
     private static Whitelister Singleton;
     public static bool Loaded => Singleton.IsLoaded<Whitelister, WhitelistItem>();
-    public Whitelister() : base("whitelist", Path.Combine(Data.KitsStorage, "whitelist.json"))
+    public Whitelister() : base("whitelist", Path.Combine(Data.Paths.KitsStorage, "whitelist.json"))
     {
     }
     protected override string LoadDefaults() => "[]";
@@ -287,10 +287,10 @@ public class Whitelister : ListSingleton<WhitelistItem>
             L.LogError(ex);
         }
     }
-    public static void AddItem(Guid ID)
+    public static void AddItem(Guid ID, byte amount = 255)
     {
         Singleton.AssertLoaded<Whitelister, WhitelistItem>();
-        Singleton.AddObjectToSave(new WhitelistItem(ID, 255));
+        Singleton.AddObjectToSave(new WhitelistItem(ID, amount));
     }
     public static void RemoveItem(Guid ID)
     {
@@ -308,6 +308,15 @@ public class Whitelister : ListSingleton<WhitelistItem>
     {
         Singleton.AssertLoaded<Whitelister, WhitelistItem>();
         return Singleton.ObjectExists(w => w.Item == itemID, out item);
+    }
+    internal static bool IsWhitelistedFast(Guid itemID)
+    {
+        for (int i = 0; i < Singleton.Count; ++i)
+        {
+            if (Singleton[i].Item == itemID)
+                return true;
+        }
+        return false;
     }
 }
 public class WhitelistItem

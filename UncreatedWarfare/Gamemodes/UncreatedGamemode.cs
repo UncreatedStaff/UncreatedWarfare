@@ -536,44 +536,59 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (StructureManager.regions is null)
+            L.LogWarning("Structure regions have not been initialized.");
+        if (BarricadeManager.regions is null)
+            L.LogWarning("Barricade regions have not been initialized.");
         try
         {
             bool isStruct = this is IStructureSaving;
+            int fails = 0;
             for (byte x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (byte y = 0; y < Regions.WORLD_SIZE; y++)
                 {
                     try
                     {
-                        BarricadeRegion barricadeRegion = BarricadeManager.regions[x, y];
-                        for (int i = barricadeRegion.drops.Count - 1; i >= 0; i--)
+                        if (BarricadeManager.regions is not null)
                         {
-                            BarricadeDrop drop = barricadeRegion.drops[i];
-                            uint instid = drop.instanceID;
-                            if (!(isStruct && (StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) || RequestSigns.SignExists(instid, out _))))
+                            BarricadeRegion barricadeRegion = BarricadeManager.regions[x, y];
+                            for (int i = barricadeRegion.drops.Count - 1; i >= 0; i--)
                             {
-                                if (drop.model.TryGetComponent(out FOBComponent fob))
+                                BarricadeDrop drop = barricadeRegion.drops[i];
+                                uint instid = drop.instanceID;
+                                if (!(isStruct && (StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) || RequestSigns.SignExists(instid, out _))))
                                 {
-                                    fob.parent.IsWipedByAuthority = true;
+                                    if (drop.model.TryGetComponent(out FOBComponent fob))
+                                    {
+                                        fob.parent.IsWipedByAuthority = true;
+                                    }
+                                    if (drop.model.transform.TryGetComponent(out InteractableStorage storage))
+                                        storage.despawnWhenDestroyed = true;
+                                    BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                                 }
-                                if (drop.model.transform.TryGetComponent(out InteractableStorage storage))
-                                    storage.despawnWhenDestroyed = true;
-                                BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
                             }
                         }
-                        StructureRegion structureRegion = StructureManager.regions[x, y];
-                        for (int i = structureRegion.drops.Count - 1; i >= 0; i--)
+
+                        if (StructureManager.regions is not null)
                         {
-                            StructureDrop drop = structureRegion.drops[i];
-                            uint instid = drop.instanceID;
-                            if (!(isStruct && StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _)))
-                                StructureManager.destroyStructure(drop, x, y, Vector3.zero);
+                            StructureRegion structureRegion = StructureManager.regions[x, y];
+                            for (int i = structureRegion.drops.Count - 1; i >= 0; i--)
+                            {
+                                StructureDrop drop = structureRegion.drops[i];
+                                uint instid = drop.instanceID;
+                                if (!(isStruct && StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _)))
+                                    StructureManager.destroyStructure(drop, x, y, Vector3.zero);
+                            }
                         }
                     }
                     catch (Exception ex)
                     {
                         L.LogError($"Failed to clear barricades/structures of region ({x}, {y}):");
                         L.LogError(ex);
+                        ++fails;
+                        if (fails > 5)
+                            throw new SingletonLoadException(ESingletonLoadType.LOAD, this, ex);
                     }
                 }
             }

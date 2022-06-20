@@ -25,7 +25,7 @@ public static class QuestManager
     public static List<BaseQuestData> Quests = new List<BaseQuestData>();
     /// <summary>Complete list of all registered quest trackers (1 per player).</summary>
     public static List<BaseQuestTracker> RegisteredTrackers = new List<BaseQuestTracker>(128);
-    public static readonly string QUEST_FOLDER = Path.Combine(Data.DATA_DIRECTORY, "Quests") + Path.DirectorySeparatorChar;
+    public static readonly string QUEST_FOLDER = Path.Combine(Data.Paths.BaseDirectory, "Quests") + Path.DirectorySeparatorChar;
     public static readonly string QUEST_LOCATION = Path.Combine(QUEST_FOLDER, "quest_data.json");
     static QuestManager()
     {
@@ -435,9 +435,11 @@ public static class QuestManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Quests.Clear();
+        F.CheckDir(QUEST_FOLDER, out bool success);
+        if (!success) return;
         if (!File.Exists(QUEST_LOCATION))
         {
-            using (FileStream stream = new FileStream(QUEST_LOCATION, FileMode.Open, FileAccess.Write, FileShare.None))
+            using (FileStream stream = new FileStream(QUEST_LOCATION, FileMode.Create, FileAccess.Write, FileShare.None))
             {
                 byte[] bytes = System.Text.Encoding.UTF8.GetBytes("[]");
                 stream.Write(bytes, 0, bytes.Length);

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Uncreated.Warfare.Gamemodes.Flags;
 
 namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
@@ -17,7 +18,7 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
         Kits.RequestSigns RequestSigns { get; }
         Kits.KitManager KitManager { get; }
     }
-    public interface ISquads : IGamemode
+    public interface ISquads : ITeams
     {
         Squads.SquadManager SquadManager { get; }
     }
@@ -39,6 +40,8 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
         List<Flags.Flag> Rotation { get; }
         List<Flags.Flag> LoadedFlags { get; }
         Dictionary<ulong, int> OnFlag { get; }
+        bool IsAttackSite(ulong team, Flag flag);
+        bool IsDefenseSite(ulong team, Flag flag);
     }
     public interface IFOBs : IGamemode
     {

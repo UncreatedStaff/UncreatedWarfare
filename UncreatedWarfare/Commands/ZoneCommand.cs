@@ -1,153 +1,157 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-
-public class ZeCommand : IRocketCommand
+public class ZeCommand : Command
 {
-    private readonly List<string> _permissions = new List<string>(1) { "uc.zone" };
-    private readonly List<string> _aliases = new List<string>(0);
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "ze";
-    public string Help => "shortcut for /zone edit.";
-    public string Syntax => "/ze <existing|maxheight|minheight|finalize|cancel|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|shortname|type> [value]";
-    public List<string> Aliases => _aliases;
-    public List<string> Permissions => _permissions;
+    private const string SYNTAX = "/ze <existing|maxheight|minheight|finalize|cancel|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|shortname|type> [value]";
+    private const string HELP = "Shortcut for /zone edit.";
 
-    public void Execute(IRocketPlayer caller, string[] command)
+    public ZeCommand() : base("ze", EAdminType.MODERATOR) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
-        UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-        if (player is null) return;
-        if (command.Length == 0)
-        {
-            player.SendChat("edit_zone_syntax");
-            return;
-        }
-        if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
-            comp.EditCommand(new UCCommandContext(caller, command));
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertOnDuty();
+
+        ctx.AssertArgs(1, "edit_zone_syntax");
+
+        if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
+            comp.EditCommand(ctx);
         else
-            player.SendChat("zone_syntax");
+            ctx.Reply("zone_syntax");
     }
 }
 
-public class ZoneCommand : IRocketCommand
+public class ZoneCommand : Command
 {
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "zone";
-    public string Help => "Zone utility commands.";
-    public string Syntax => "/zone <visualize|go|list>";
-    private readonly List<string> _aliases = new List<string>(0);
-    public List<string> Aliases => _aliases;
-    private readonly List<string> _permissions = new List<string>(1) { "uc.zone" };
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/zone <visualize|go|list|delete|create|util>";
+    private const string HELP = "Shortcut for /zone edit.";
+
+    public ZoneCommand() : base("zone", EAdminType.MEMBER) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
-        if (caller is not UnturnedPlayer ucplayer) return;
-        UCPlayer? player = UCPlayer.FromUnturnedPlayer(ucplayer);
-        if (player == null) return;
-        if (command.Length == 0)
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
+        ctx.AssertArgs(1, "zone_syntax");
+
+        if (ctx.MatchParameter(0, "visualize"))
         {
-            player.SendChat("zone_syntax");
-            return;
+            ctx.AssertRanByPlayer();
+
+            ctx.Offset = 1;
+            Visualize(ctx);
+            ctx.Offset = 0;
         }
-        string operation = command[0];
-        string perm = "uc.zone." + operation.ToLower();
-        if (perm == "uc.zone.goto") perm = "uc.zone.go";
-        if (!player.HasPermission(perm))
+        else if (ctx.MatchParameter(0, "go", "tp", "goto", "teleport"))
         {
-            player.SendChat("missing_permission", perm);
+            ctx.AssertRanByPlayer();
+
+            ctx.AssertOnDuty();
+
+            ctx.Offset = 1;
+            Go(ctx);
+            ctx.Offset = 0;
         }
-        if (operation.Equals("visualize", StringComparison.OrdinalIgnoreCase))
+        else if (ctx.MatchParameter(0, "list"))
         {
-            Visualize(command, player);
+            ctx.AssertRanByConsole();
+
+            ctx.Offset = 1;
+            List(ctx);
+            ctx.Offset = 0;
         }
-        else if (operation.Equals("go", StringComparison.OrdinalIgnoreCase) || operation.Equals("goto", StringComparison.OrdinalIgnoreCase))
+        else if (ctx.MatchParameter(0, "edit", "e"))
         {
-            Go(command, player);
-        }
-        else if (operation.Equals("list", StringComparison.OrdinalIgnoreCase))
-        {
-            List(command, player);
-        }
-        else if (operation.Equals("edit", StringComparison.OrdinalIgnoreCase))
-        {
-            if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            ctx.AssertRanByPlayer();
+
+            ctx.AssertOnDuty();
+
+            if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
-                string[] args = new string[command.Length - 1];
-                Array.Copy(command, 1, args, 0, args.Length);
-                comp.EditCommand(new UCCommandContext(caller, args));
+                ctx.Offset = 1;
+                comp.EditCommand(ctx);
+                ctx.Offset = 0;
             }
             else
-                player.SendChat("zone_syntax");
+                throw ctx.Reply("zone_syntax");
         }
-        else if (operation.Equals("create", StringComparison.OrdinalIgnoreCase))
+        else if (ctx.MatchParameter(0, "create", "c"))
         {
-            if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            ctx.AssertRanByPlayer();
+
+            ctx.AssertOnDuty();
+
+            if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
-                string[] args = new string[command.Length - 1];
-                Array.Copy(command, 1, args, 0, args.Length);
-                comp.CreateCommand(new UCCommandContext(caller, args));
+                ctx.Offset = 1;
+                comp.CreateCommand(ctx);
+                ctx.Offset = 0;
             }
             else
-                player.SendChat("zone_syntax");
+                throw ctx.Reply("zone_syntax");
         }
-        else if (operation.Equals("delete", StringComparison.OrdinalIgnoreCase))
+        else if (ctx.MatchParameter(0, "delete", "remove", "d"))
         {
-            if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            ctx.AssertRanByPlayer();
+
+            ctx.AssertOnDuty();
+
+            if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
-                string[] args = new string[command.Length - 1];
-                Array.Copy(command, 1, args, 0, args.Length);
-                comp.DeleteCommand(new UCCommandContext(caller, args));
+                ctx.Offset = 1;
+                comp.DeleteCommand(ctx);
+                ctx.Offset = 0;
             }
             else
-                player.SendChat("zone_syntax");
+                throw ctx.Reply("zone_syntax");
         }
-        else if (operation.Equals("util", StringComparison.OrdinalIgnoreCase))
+        else if (ctx.MatchParameter(0, "util", "u", "tools"))
         {
-            if (player.Player.TryGetComponent(out ZonePlayerComponent comp))
+            ctx.AssertRanByPlayer();
+
+            ctx.AssertOnDuty();
+
+            if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
-                string[] args = new string[command.Length - 1];
-                Array.Copy(command, 1, args, 0, args.Length);
-                comp.UtilCommand(new UCCommandContext(caller, args));
+                ctx.Offset = 1;
+                comp.UtilCommand(ctx);
+                ctx.Offset = 0;
             }
             else
-                player.SendChat("zone_syntax");
+                throw ctx.Reply("zone_syntax");
         }
-        else
-        {
-            player.SendChat("zone_syntax");
-            return;
-        }
+        else throw ctx.Reply("zone_syntax");
     }
-    private void Visualize(string[] command, UCPlayer player)
+    private void Visualize(CommandInteraction ctx)
     {
         Zone? zone;
-        if (command.Length == 1)
-        {
-            Vector3 plpos = player.Position;
-            if (player.Player == null) return; // player got kicked
-            zone = GetZone(plpos);
-        }
+        if (ctx.TryGetRange(0, out string zname))
+            zone = GetZone(zname);
         else
         {
-            string name = string.Join(" ", command, 1, command.Length - 1);
-            zone = GetZone(name);
+            Vector3 plpos = ctx.Caller.Position;
+            if (!ctx.Caller.IsOnline) return; // player got kicked
+            zone = GetZone(plpos);
         }
-        if (zone == null)
-        {
-            player.SendChat("zone_visualize_no_results");
-            return;
-        }
+
+        if (zone == null) throw ctx.Reply("zone_visualize_no_results");
+
         Vector2[] points = zone.GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center);
-        CSteamID channel = player.Player.channel.owner.playerID.steamID;
+        CSteamID channel = ctx.Caller.Player.channel.owner.playerID.steamID;
         bool hasui = ZonePlayerComponent._airdrop != null;
         foreach (Vector2 point in points)
         {   // Border
@@ -172,8 +176,8 @@ public class ZoneCommand : IRocketCommand
             if (hasui)
                 F.TriggerEffectReliable(ZonePlayerComponent._airdrop!.id, channel, pos);
         }
-        player.Player.StartCoroutine(ClearPoints(player));
-        player.SendChat("zone_visualize_success", (points.Length + corners.Length + 1).ToString(Data.Locale), zone.Name);
+        ctx.Caller.Player.StartCoroutine(ClearPoints(ctx.Caller));
+        ctx.Reply("zone_visualize_success", (points.Length + corners.Length + 1).ToString(Data.Locale), zone.Name);
     }
     private IEnumerator<WaitForSeconds> ClearPoints(UCPlayer player)
     {
@@ -186,37 +190,32 @@ public class ZoneCommand : IRocketCommand
         EffectManager.askEffectClearByID(ZonePlayerComponent._corner.id, channel);
         EffectManager.askEffectClearByID(ZonePlayerComponent._center.id, channel);
     }
-    private void List(string[] command, UCPlayer player)
+    private void List(CommandInteraction ctx)
     {
         for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
         {
             L.Log(Data.ZoneProvider.Zones[i].ToString(), ConsoleColor.DarkGray);
         }
     }
-    private void Go(string[] command, UCPlayer player)
+    private void Go(CommandInteraction ctx)
     {
         Zone? zone;
-        if (command.Length == 1)
-        {
-            Vector3 plpos = player.Position;
-            if (player.Player == null) return; // player got kicked
-            zone = GetZone(plpos);
-        }
+        if (ctx.TryGetRange(0, out string zname))
+            zone = GetZone(zname);
         else
         {
-            string name = string.Join(" ", command, 1, command.Length - 1);
-            zone = GetZone(name);
+            Vector3 plpos = ctx.Caller.Position;
+            if (!ctx.Caller.IsOnline) return; // player got kicked
+            zone = GetZone(plpos);
         }
-        if (zone == null)
-        {
-            player.SendChat("zone_go_no_results");
-            return;
-        }
+
+        if (zone == null) throw ctx.Reply("zone_go_no_results");
+
         if (Physics.Raycast(new Ray(new Vector3(zone.Center.x, Level.HEIGHT, zone.Center.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
         {
-            player.Player.teleportToLocationUnsafe(hit.point, 0);
-            player.SendChat("zone_go_success", zone.Name);
-            ActionLog.Add(EActionLogType.TELEPORT, zone.Name.ToUpper(), player.Steam64);
+            ctx.Caller.Player.teleportToLocationUnsafe(hit.point, 0);
+            ctx.Reply("zone_go_success", zone.Name);
+            ctx.LogAction(EActionLogType.TELEPORT, zone.Name.ToUpper());
         }
     }
     internal static Zone? GetZone(string nameInput)

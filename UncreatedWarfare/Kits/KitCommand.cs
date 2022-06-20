@@ -1,51 +1,38 @@
-﻿using Rocket.API;
+﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Kits;
-
-public class KitCommand : IRocketCommand
+namespace Uncreated.Warfare.Commands;
+public class KitCommand : Command
 {
-    public AllowedCaller AllowedCaller => AllowedCaller.Both;
-    public string Name => "kit";
-    public string Help => "creates, renames or deletes a kit";
-    public string Syntax => "/kit <search|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
-    private readonly List<string> _aliases = new List<string>(0);
-    public List<string> Aliases => _aliases;
-    private readonly List<string> _permissions = new List<string>(1) { "uc.kit" };
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/kit <search|create|delete|give|set|giveaccess|removeacces|copyfrom|createloadout>";
+    private const string HELP = "Admin command to manage kits; creating, deleting, editing, and giving/removing access is done through this command.";
+
+    public KitCommand() : base("kit", EAdminType.STAFF) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        WarfareContext ctx = new WarfareContext(caller, command);
-        if (!ctx.CheckGamemodeAndSend<IKitRequests>() || !ctx.OnDutyOrReply("kits_notonduty")) return;
-        if (!ctx.HasArgs(1))
-        {
-            ctx.SendCorrectUsage(Syntax);
-            return;
-        }
-        KitManager singleton = KitManager.GetSingleton();
-        if (singleton is null)
-        {
-            ctx.SendGamemodeError();
-            return;
-        }
+        ctx.AssertGamemode<IKitRequests>();
+
+        ctx.AssertOnDuty();
+
+        ctx.AssertArgs(1, SYNTAX + " - " + HELP);
+
+        KitManager singleton = KitManager.GetSingleton() ?? throw ctx.SendGamemodeError();
 
         if (ctx.MatchParameter(0, "search", "find"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit search <term> - Searches for the search term within display names of all kits and tells you the id of all results.");
-                return;
-            }
+            ctx.AssertHelpCheck(1, "/kit search <term> - Searches for the search term within display names of all kits and tells you the id of all results.");
+
             if (ctx.TryGetRange(1, out string searchTerm))
             {
                 string res = KitManager.Search(searchTerm);
@@ -58,12 +45,10 @@ public class KitCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "create", "c", "override"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit <create|c|override> <id> - Creates (or overrides if it already exits) a kit with default values based on the items in your inventory and your clothes.");
-                return;
-            }
-            if (!ctx.IsConsoleReply()) return;
+            ctx.AssertRanByPlayer();
+
+            ctx.AssertHelpCheck(1, "/kit <create|c|override> <id> - Creates (or overrides if it already exits) a kit with default values based on the items in your inventory and your clothes.");
+
             if (ctx.TryGet(1, out string kitName))
             {
                 if (!KitManager.KitExists(kitName, out Kit kit)) // create kit
@@ -112,11 +97,8 @@ public class KitCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "delete", "d", "remove"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit <delete|d|remove> <id> - Deletes the kit with the provided id.");
-                return;
-            }
+            ctx.AssertHelpCheck(1, "/kit <delete|d|remove> <id> - Deletes the kit with the provided id.");
+
             if (ctx.TryGet(1, out string kitName))
             {
                 if (KitManager.KitExists(kitName, out Kit kit))
@@ -147,12 +129,10 @@ public class KitCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "give", "g"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit <give|g> <id> - Equips you with the kit with the id provided.");
-                return;
-            }
-            if (!ctx.IsConsoleReply()) return;
+            ctx.AssertHelpCheck(1, "/kit <give|g> <id> - Equips you with the kit with the id provided.");
+            
+            ctx.AssertRanByPlayer();
+
             if (ctx.TryGet(1, out string kitName))
             {
                 if (KitManager.KitExists(kitName, out Kit kit))
@@ -181,11 +161,8 @@ public class KitCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "set", "s"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit <set|s> <level|sign|property> <value> - Sets the level requirement, sign text, or other properties to value. To set default sign text use: /kit set sign <kit id> en-us <text>.");
-                return;
-            }
+            ctx.AssertHelpCheck(1, "/kit <set|s> <level|sign|property> <value> - Sets the level requirement, sign text, or other properties to value. To set default sign text use: /kit set sign <kit id> en-us <text>.");
+
             if (ctx.TryGet(3, out string newValue) && ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out string property))
             {
                 if (KitManager.KitExists(kitName, out Kit kit))
@@ -203,15 +180,15 @@ public class KitCommand : IRocketCommand
                             ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                             RequestSigns.UpdateSignsOfKit(kitName);
                             if (kit.IsLoadout && RequestSigns.Loaded)
-                            {
                                 RequestSigns.UpdateLoadoutSigns();
-                            }
                         }
                         else
                             ctx.SendCorrectUsage("/kit <set|s> <level|lvl> <kitname> <value: integer>");
                     }
                     else if (ctx.MatchParameter(1, "sign", "text"))
                     {
+                        ctx.AssertHelpCheck(2, "/kit <set|s> <sign> <language (default: en-us> <text> - Sets the display text for the kit's kit sign.");
+
                         string language = newValue;
                         if (ctx.TryGetRange(4, out newValue))
                         {
@@ -219,15 +196,11 @@ public class KitCommand : IRocketCommand
                             KitManager.UpdateText(kit, newValue, language);
                             Task.Run(async () => await KitManager.AddKit(kit)).ConfigureAwait(false);
                             newValue = newValue.Replace('\n', '\\');
-                            ctx.Reply("kit_setprop", "sign text", command[2], command[3] + " : " + newValue);
-                            ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, command[2] + ": SIGN TEXT >> \"" + newValue + "\"");
-                            ctx.Reply("kit_setprop", property, kitName, newValue);
-                            ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                            ctx.Reply("kit_setprop", "sign text", kitName, language + " : " + newValue);
+                            ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
                             RequestSigns.UpdateSignsOfKit(kitName);
                             if (kit.IsLoadout && RequestSigns.Loaded)
-                            {
                                 RequestSigns.UpdateLoadoutSigns();
-                            }
                         }
                         else
                             ctx.SendCorrectUsage("/kit set sign <kitname> <language> <sign text>");
@@ -280,11 +253,8 @@ public class KitCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "giveaccess", "givea", "ga"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit <giveaccess|givea|ga> <player> <kit id> [access type] - Give the provided player access to the kit with the provided id. Optionally supply an access type: [credits | event | default: purchase]");
-                return;
-            }
+            ctx.AssertHelpCheck(1, "/kit <giveaccess|givea|ga> <player> <kit id> [access type] - Give the provided player access to the kit with the provided id. Optionally supply an access type: [credits | event | default: purchase]");
+
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
                 if (KitManager.KitExists(kitName, out Kit kit))
@@ -340,11 +310,8 @@ public class KitCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "removeaccess", "removea", "ra"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit <removeaccess|removea|ra> <player> <kit id> - Revoke access to the kit with the provided id from the provided player.");
-                return;
-            }
+            ctx.AssertHelpCheck(1, "/kit <removeaccess|removea|ra> <player> <kit id> - Revoke access to the kit with the provided id from the provided player.");
+
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
                 if (KitManager.KitExists(kitName, out Kit kit))
@@ -398,11 +365,8 @@ public class KitCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "copyfrom", "cf"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit <copyfrom|cf> <source kit id> <new kit id> - Creates an exact copy of the source kit renamed to the new kit id.");
-                return;
-            }
+            ctx.AssertHelpCheck(1, "/kit <copyfrom|cf> <source kit id> <new kit id> - Creates an exact copy of the source kit renamed to the new kit id.");
+
             if (ctx.TryGet(2, out string kitName) && ctx.TryGet(1, out string existingName))
             {
                 if (KitManager.KitExists(existingName, out Kit existing))
@@ -448,14 +412,11 @@ public class KitCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "createloadout", "cloadout", "cl"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <team (1 = " + 
-                    TeamManager.TranslateShortName(1, ctx.CallerID, false) + ", 2 = " + TeamManager.TranslateShortName(2, ctx.CallerID, false) + 
-                    ")> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
-                return;
-            }
-            if (!ctx.IsConsoleReply()) return;
+            ctx.AssertHelpCheck(1, "/kit <createloadout|cloadout|cl> <player> <team (1 = " +
+                                   TeamManager.TranslateShortName(1, ctx.CallerID, false) + ", 2 = " + TeamManager.TranslateShortName(2, ctx.CallerID, false) +
+                                   ")> <class> [sign text...] - Creates and prepares a loadout for the provided player with optional sign text.");
+
+            ctx.AssertRanByPlayer();
             if (ctx.TryGet(3, out EClass @class) && ctx.TryGet(2, out ulong team) && ctx.TryGet(1, out ulong playerId, out UCPlayer? onlinePlayer))
             {
                 if (onlinePlayer is null && !PlayerSave.HasPlayerSave(playerId))
@@ -520,6 +481,6 @@ public class KitCommand : IRocketCommand
             else
                 ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <team (1 = " + TeamManager.Team1Code + ", 2 = " + TeamManager.Team2Code + "> <class> <sign text>");
         }
-        else ctx.SendCorrectUsage(Syntax);
+        else ctx.SendCorrectUsage(SYNTAX);
     }
 }

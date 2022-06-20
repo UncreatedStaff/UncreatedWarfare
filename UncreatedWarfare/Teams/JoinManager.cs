@@ -470,7 +470,7 @@ public class JoinManager : BaseSingletonComponent
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!UCWarfare.Config.TeamSettings.BalanceTeams)
+        if (!TeamManager.Config.BalanceTeams)
             return false;
         if (player.Team == team)
             return false;
@@ -485,30 +485,30 @@ public class JoinManager : BaseSingletonComponent
         {
             if (player.Team == 2) // if player is on the opposing team
             {
-                return (Team1Count + 1f) / (Team2Count - 1f) - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                return (Team1Count + 1f) / (Team2Count - 1f) - 1f >= TeamManager.Config.AllowedDifferencePercent;
             }
             else if (player.Team == 1) // if player is already on the specified team
             {
-                return (float)Team1Count / Team2Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                return (float)Team1Count / Team2Count - 1f >= TeamManager.Config.AllowedDifferencePercent;
             }
             else // if player has not joined a team yet
             {
-                return (Team1Count + 1f) / Team2Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                return (Team1Count + 1f) / Team2Count - 1f >= TeamManager.Config.AllowedDifferencePercent;
             }
         }
         else if (team == 2)
         {
             if (player.Team == 1) // if player is on the opposing team
             {
-                return (Team2Count + 1f) / (Team1Count - 1f) - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                return (Team2Count + 1f) / (Team1Count - 1f) - 1f >= TeamManager.Config.AllowedDifferencePercent;
             }
             else if (player.Team == 2) // if player is already on the specified team
             {
-                return (float)(Team2Count) / Team1Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                return (float)(Team2Count) / Team1Count - 1f >= TeamManager.Config.AllowedDifferencePercent;
             }
             else // if player has not joi   ned a team yet
             {
-                return (Team2Count + 1f) / Team1Count - 1f >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent;
+                return (Team2Count + 1f) / Team1Count - 1f >= TeamManager.Config.AllowedDifferencePercent;
             }
         }
         return false;

@@ -1,12 +1,9 @@
 ﻿using HarmonyLib;
-using Rocket.API;
 using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Text;
 using Uncreated.Framework;
 using Uncreated.Players;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using UnityEngine;
@@ -15,11 +12,10 @@ namespace Uncreated.Warfare;
 
 public static partial class Patches
 {
-    public static Harmony Patcher;
+    public static Harmony Patcher = new Harmony("net.uncreated.warfare");
     /// <summary>Patch methods</summary>
     public static void DoPatching()
     {
-        Patcher = new Harmony("net.uncreated.warfare");
         Patcher.PatchAll();
     }
     /// <summary>Unpatch methods</summary>
@@ -48,7 +44,8 @@ public static partial class Patches
     [HarmonyPatch]
     public static class InternalPatches
     {
-        private static readonly string LOG_MESSAGE_ID_STR = L.NetCalls.SendLogMessage.ID.ToString(Data.Locale);
+        /*
+        //private static readonly string LOG_MESSAGE_ID_STR = L.NetCalls.SendLogMessage.ID.ToString(Data.Locale);
         // SDG.Unturned.Provider
         /// <summary>
         /// Prefix of <see cref="Console.WriteLine(string)"/> to send any logs to the tcp server and log them.
@@ -66,7 +63,7 @@ public static partial class Patches
                 if (UCWarfare.CanUseNetCall && value.IndexOf(LOG_MESSAGE_ID_STR, StringComparison.Ordinal) != 21)
                     L.NetCalls.SendLogMessage.Invoke(Data.NetClient!, log, 0);
             }
-        }
+        }*/
         [HarmonyPatch(typeof(SteamPlayerID), "BypassIntegrityChecks", MethodType.Getter)]
         [HarmonyPostfix]
         static void GetBypassIntegrityChecksPrefix(SteamPlayerID __instance, ref bool __result)
@@ -87,17 +84,14 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.EnableQueueSkip) return;
             if (Provider.pending.Count > 0)
             {
                 for (int i = 0; i < Provider.pending.Count; i++)
                 {
                     SteamPending pending = Provider.pending[i];
                     if (pending.hasSentVerifyPacket)
-                        return;
-                    RocketPlayer pl = new RocketPlayer(pending.playerID.steamID.m_SteamID.ToString(Data.Locale), pending.playerID.playerName, false);
-                    if (pl.IsIntern() || pl.IsAdmin() ||   // checks for admin or intern status, then for 'HasQueueSkip' in the player's player save.
-                       (PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip))
+                        continue;
+                    if (F.IsAdmin(pending.playerID.steamID.m_SteamID) || F.IsIntern(pending.playerID.steamID.m_SteamID) || PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip)
                         pending.sendVerifyPacket();
                 }
             }
@@ -141,7 +135,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.ReceiveChatRequest) return true;
             SteamPlayer callingPlayer = context.GetCallingPlayer();
             UCPlayer? caller = UCPlayer.FromSteamPlayer(callingPlayer);
             if (callingPlayer == null || callingPlayer.player == null || Time.realtimeSinceStartup - callingPlayer.lastChat < ChatManager.chatrate)
@@ -265,7 +258,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.ReceiveGestureRequest) return true;
             if (OnPlayerGesture_Global != null)
             {
                 bool allow = true;
@@ -285,7 +277,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.replicateSetMarker) return true;
             bool isAllowed = true;
             OnPlayerMarker_Global.Invoke(__instance.player, ref newMarkerPosition, ref newMarkerTextOverride, ref newIsMarkerPlaced, ref isAllowed);
             return isAllowed;
@@ -301,7 +292,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.ReceiveDragItem) return true;
             bool allow = true;
             ItemJar jar = __instance.getItem(page_0, __instance.getIndex(page_0, x_0, y_0));
             if (page_1 == PlayerInventory.STORAGE)
@@ -320,7 +310,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.requestGroupExit) return true;
             UCPlayer? pl = UCPlayer.FromPlayer(player);
             if (pl == null || pl.OnDutyOrAdmin()) return true;
             player.SendChat("cant_leave_group");
@@ -337,7 +326,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.ReceiveVisualToggleRequest) return true;
             EVisualToggleType newtype = type;
             bool allow = true;
             OnPlayerTogglesCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref allow);
@@ -354,7 +342,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.ServerSetVisualToggleState) return true;
             EVisualToggleType newtype = type;
             bool allow = true;
             OnPlayerSetsCosmetics_Global?.Invoke(ref newtype, __instance.player.channel.owner, ref isVisible, ref allow);
@@ -371,7 +358,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.ReceiveStealVehicleBattery) return true;
             bool allow = true;
             OnBatterySteal_Global?.Invoke(context.GetCallingPlayer(), ref allow);
             return allow;

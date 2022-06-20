@@ -8,12 +8,14 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Singletons;
@@ -105,69 +107,26 @@ public static class F
         remainder = (int)Math.Round((answer - Math.Floor(answer)) * dividend);
         return (int)Math.Floor(answer);
     }
-    public static bool PermissionCheck(this UCPlayer player, EAdminType type)
+    /// <summary>
+    /// Check if <paramref name="permission"/> meets permission requirement <paramref name="check"/>.
+    /// If <paramref name="or"/> is <see langword="true"/>, it will use <paramref name="check"/> as a mask, otherwise, it'll be used as a minimum value.
+    /// </summary>
+    /// <returns><see langword="true"/> if <paramref name="permission"/> meets the requirements of <paramref name="check"/>.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsOfPermission(this EAdminType permission, EAdminType check, bool or = false) => or ? (permission & check) == permission : (permission & check) >= check;
+    public static bool PermissionCheck(this UCPlayer player, EAdminType type, bool or = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
-        for (int i = 0; i < groups.Count; i++)
-        {
-            RocketPermissionsGroup grp = groups[i];
-            if (grp.Id.Equals("default", StringComparison.Ordinal)) continue;
-            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, StringComparison.Ordinal))
-            {
-                if ((type & EAdminType.ADMIN_OFF_DUTY) == EAdminType.ADMIN_OFF_DUTY) return true;
-                continue;
-            }
-            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup, StringComparison.Ordinal))
-            {
-                if ((type & EAdminType.ADMIN_ON_DUTY) == EAdminType.ADMIN_ON_DUTY) return true;
-                continue;
-            }
-            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, StringComparison.Ordinal))
-            {
-                if ((type & EAdminType.TRIAL_ADMIN_OFF_DUTY) == EAdminType.TRIAL_ADMIN_OFF_DUTY) return true;
-                continue;
-            }
-            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.InternOnDutyGroup, StringComparison.Ordinal))
-            {
-                if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY) return true;
-                continue;
-            }
-            if (grp.Id.Equals(UCWarfare.Config.ModerationSettings.HelperGroup, StringComparison.Ordinal))
-            {
-                if ((type & EAdminType.HELPER) == EAdminType.HELPER) return true;
-                continue;
-            }
-        }
-        return false;
+        EAdminType perms = player.PermissionLevel;
+        return perms.IsOfPermission(type, or);
     }
-    public static EAdminType GetPermissions(this ulong player)
+    public static bool PermissionCheck(ulong player, EAdminType type, bool or = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(player, false);
-        EAdminType perms = 0;
-        for (int i = 0; i < groups.Count; i++)
-        {
-            RocketPermissionsGroup grp = groups[i];
-            if (grp.Id == "default") continue;
-            if (grp.Id == UCWarfare.Config.ModerationSettings.AdminOffDutyGroup || grp.Id == UCWarfare.Config.ModerationSettings.AdminOnDutyGroup)
-            {
-                perms |= EAdminType.ADMIN;
-            }
-            else if (grp.Id == UCWarfare.Config.ModerationSettings.InternOffDutyGroup || grp.Id == UCWarfare.Config.ModerationSettings.InternOnDutyGroup)
-            {
-                perms |= EAdminType.TRIAL_ADMIN;
-            }
-            else if (grp.Id == UCWarfare.Config.ModerationSettings.HelperGroup)
-            {
-                perms |= EAdminType.HELPER;
-            }
-        }
-        return perms;
+        EAdminType perms = PermissionSaver.Instance.GetPlayerPermissionLevel(player);
+        return perms.IsOfPermission(type, or);
+    }
+    public static EAdminType GetPermissions(ulong player)
+    {
+        return PermissionSaver.Instance.GetPlayerPermissionLevel(player);
     }
     public static unsafe string ToProperCase(this string input)
     {
@@ -188,18 +147,18 @@ public static class F
         }
         return new string(output);
     }
-    public static bool OnDutyOrAdmin(this UCPlayer player) => player.Player.channel.owner.isAdmin || player.PermissionCheck(EAdminType.ADMIN_ON_DUTY);
-    public static bool OnDutyOrAdmin(this ulong player) => SteamAdminlist.checkAdmin(new CSteamID(player)) || player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
-    public static bool OnDuty(this UCPlayer player) => player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
-    public static bool OnDuty(this ulong player) => player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
+    public static bool OnDutyOrAdmin(this UCPlayer player) => player.Player.channel.owner.isAdmin || player.PermissionCheck(EAdminType.ADMIN_ON_DUTY, true);
+    public static bool OnDutyOrAdmin(this ulong player) => SteamAdminlist.checkAdmin(new CSteamID(player)) || F.PermissionCheck(player, EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, true);
+    public static bool OnDuty(this UCPlayer player) => player.PermissionCheck(EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, true);
+    public static bool OnDuty(this ulong player) => PermissionCheck(player, EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, true);
     public static bool OffDuty(this ulong player) => !OnDuty(player);
     public static bool OffDuty(this UCPlayer player) => !OnDuty(player);
-    public static bool IsIntern(this ulong player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN);
-    public static bool IsIntern(this UCPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN);
-    public static bool IsAdmin(this ulong player) => player.PermissionCheck(EAdminType.ADMIN);
-    public static bool IsAdmin(this UCPlayer player) => player.PermissionCheck(EAdminType.ADMIN);
-    public static bool IsHelper(this ulong player) => player.PermissionCheck(EAdminType.HELPER);
-    public static bool IsHelper(this UCPlayer player) => player.PermissionCheck(EAdminType.HELPER);
+    public static bool IsIntern(this ulong player) => PermissionCheck(player, EAdminType.TRIAL_ADMIN, true);
+    public static bool IsIntern(this UCPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN, true);
+    public static bool IsAdmin(this ulong player) => PermissionCheck(player, EAdminType.ADMIN, true);
+    public static bool IsAdmin(this UCPlayer player) => player.PermissionCheck(EAdminType.ADMIN, true);
+    public static bool IsHelper(this ulong player) => PermissionCheck(player, EAdminType.HELPER, true);
+    public static bool IsHelper(this UCPlayer player) => player.PermissionCheck(EAdminType.HELPER, true);
     /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
     /// <param name="duration">Duration of ban IN SECONDS</param>
     public static void OfflineBan(ulong offender, uint ipAddress, CSteamID banner, string reason, uint duration, byte[][] hwids)
@@ -740,6 +699,7 @@ public static class F
         else if (team == TeamManager.AdminID) return $"<color=#{TeamManager.AdminColorHex}>{innerText}</color>";
         else return $"<color=#{TeamManager.NeutralColorHex}>{innerText}</color>";
     }
+    /// <exception cref="SingletonLoadException"/>
     public static void CheckDir(string path, out bool success, bool unloadIfFail = false)
     {
         if (!Directory.Exists(path))
@@ -763,7 +723,7 @@ public static class F
 #if DEBUG
     public static void SaveProfilingData()
     {
-        string directory = Path.Combine(Data.DATA_DIRECTORY, "Profiling") + Path.DirectorySeparatorChar;
+        string directory = Path.Combine(Data.Paths.BaseDirectory, "Profiling") + Path.DirectorySeparatorChar;
         CheckDir(directory, out _);
         string fi = Path.Combine(directory, DateTime.Now.ToString("yyyy-mm-dd_HH-mm-ss") + "_profile.csv");
         L.Log("Flushing profiling information to " + fi, ConsoleColor.Cyan);

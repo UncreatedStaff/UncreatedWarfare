@@ -313,8 +313,8 @@ public static partial class JSONMethods
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        F.CheckDir(Data.DATA_DIRECTORY, out bool fileExists);
-        string chatColors = Path.Combine(Data.DATA_DIRECTORY, "chat_colors.json");
+        F.CheckDir(Data.Paths.BaseDirectory, out bool fileExists);
+        string chatColors = Path.Combine(Data.Paths.BaseDirectory, "chat_colors.json");
         if (fileExists)
         {
             if (!File.Exists(chatColors))
@@ -408,9 +408,9 @@ public static partial class JSONMethods
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        string[] langDirs = Directory.GetDirectories(Data.LangStorage, "*", SearchOption.TopDirectoryOnly);
+        string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
         Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
-        string defLang = Path.Combine(Data.LangStorage, DEFAULT_LANGUAGE);
+        string defLang = Path.Combine(Data.Paths.LangStorage, DEFAULT_LANGUAGE);
         F.CheckDir(defLang, out bool folderIsThere);
         if (folderIsThere)
         {
@@ -518,10 +518,10 @@ public static partial class JSONMethods
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        F.CheckDir(Data.FlagStorage, out bool dirExists);
+        F.CheckDir(Data.Paths.FlagStorage, out bool dirExists);
         if (dirExists)
         {
-            string xtraPts = Path.Combine(Data.FlagStorage, "extra_points.json");
+            string xtraPts = Path.Combine(Data.Paths.FlagStorage, "extra_points.json");
             if (!File.Exists(xtraPts))
             {
                 Dictionary<string, Vector3> defaultXtraPoints2 = new Dictionary<string, Vector3>(DefaultExtraPoints.Count);
@@ -635,8 +635,8 @@ public static partial class JSONMethods
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        F.CheckDir(Data.LangStorage, out bool dirExists);
-        string langPrefs = Path.Combine(Data.LangStorage, "preferences.json");
+        F.CheckDir(Data.Paths.LangStorage, out bool dirExists);
+        string langPrefs = Path.Combine(Data.Paths.LangStorage, "preferences.json");
         if (dirExists)
         {
             if (!File.Exists(langPrefs))
@@ -708,10 +708,10 @@ public static partial class JSONMethods
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (languages == null) return;
-        F.CheckDir(Data.LangStorage, out bool dirExists);
+        F.CheckDir(Data.Paths.LangStorage, out bool dirExists);
         if (dirExists)
         {
-            using (FileStream stream = new FileStream(Path.Combine(Data.LangStorage, "preferences.json"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
+            using (FileStream stream = new FileStream(Path.Combine(Data.Paths.LangStorage, "preferences.json"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
             {
                 Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                 writer.WriteStartObject();
@@ -748,8 +748,8 @@ public static partial class JSONMethods
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        F.CheckDir(Data.LangStorage, out bool dirExists);
-        string langAliases = Path.Combine(Data.LangStorage, "aliases.json");
+        F.CheckDir(Data.Paths.LangStorage, out bool dirExists);
+        string langAliases = Path.Combine(Data.Paths.LangStorage, "aliases.json");
         if (dirExists)
         {
             if (!File.Exists(langAliases))

@@ -1,139 +1,115 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using static UnityEngine.Physics;
 
-namespace Uncreated.Warfare.Vehicles
+namespace Uncreated.Warfare.Vehicles;
+
+public static class UCVehicleManager
 {
-    public static class UCVehicleManager
+    public static VehicleBarricadeRegion? FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out ushort index, int subvehicleIndex = 0)
     {
-        public static InteractableVehicle? VehicleFromPlayerLook(UnturnedPlayer player)
-        {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            Transform look = player.Player.look.aim;
-            Ray ray = new Ray
-            {
-                direction = look.forward,
-                origin = look.position
-            };
-            //4 units for normal reach
-            if (Raycast(ray, out RaycastHit hit, 4, RayMasks.VEHICLE))
-            {
-                return hit.transform.GetComponent<InteractableVehicle>();
-            }
-            else
-            {
-                return null;
-            }
-        }
-        public static VehicleBarricadeRegion? FindRegionFromVehicleWithIndex(this InteractableVehicle vehicle, out ushort index, int subvehicleIndex = 0)
+        if (vehicle == null)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (vehicle == null)
-            {
-                index = ushort.MaxValue;
-                return null;
-            }
-            for (ushort i = 0; i < BarricadeManager.vehicleRegions.Count; i++)
-            {
-                VehicleBarricadeRegion vehicleRegion = BarricadeManager.vehicleRegions[i];
-                if (vehicleRegion.vehicle == vehicle && vehicleRegion.subvehicleIndex == subvehicleIndex)
-                {
-                    index = i;
-                    return vehicleRegion;
-                }
-            }
             index = ushort.MaxValue;
             return null;
         }
-        public static IEnumerable<InteractableVehicle> GetNearbyVehicles(Guid id, float radius, Vector3 origin)
+        for (ushort i = 0; i < BarricadeManager.vehicleRegions.Count; i++)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            float sqrRadius = radius * radius;
-            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
-            List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
-            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
-            for (int v = 0; v < vehicles.Count; v++)
+            VehicleBarricadeRegion vehicleRegion = BarricadeManager.vehicleRegions[i];
+            if (vehicleRegion.vehicle == vehicle && vehicleRegion.subvehicleIndex == subvehicleIndex)
             {
-                if (vehicles[v].asset.GUID == id)
-                    newvehicles.Add(vehicles[v]);
+                index = i;
+                return vehicleRegion;
             }
-            vehicles.Clear();
-            return newvehicles;
         }
-        public static int CountNearbyVehicles(Guid id, float radius, Vector3 origin)
-        {
+        index = ushort.MaxValue;
+        return null;
+    }
+    public static IEnumerable<InteractableVehicle> GetNearbyVehicles(Guid id, float radius, Vector3 origin)
+    {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            float sqrRadius = radius * radius;
-            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
-            int amt = 0;
-            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
-            for (int v = 0; v < vehicles.Count; v++)
+        float sqrRadius = radius * radius;
+        List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+        List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
+        VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
+        for (int v = 0; v < vehicles.Count; v++)
+        {
+            if (vehicles[v].asset.GUID == id)
+                newvehicles.Add(vehicles[v]);
+        }
+        vehicles.Clear();
+        return newvehicles;
+    }
+    public static int CountNearbyVehicles(Guid id, float radius, Vector3 origin)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        float sqrRadius = radius * radius;
+        List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+        int amt = 0;
+        VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
+        for (int v = 0; v < vehicles.Count; v++)
+        {
+            if (vehicles[v].asset.GUID == id)
+                ++amt;
+        }
+        vehicles.Clear();
+        return amt;
+    }
+    public static bool IsVehicleNearby(Guid id, float radius, Vector3 origin, out InteractableVehicle vehicle)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        float sqrRadius = radius * radius;
+        List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+        VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
+        for (int v = 0; v < vehicles.Count; v++)
+        {
+            if (vehicles[v].asset.GUID == id)
             {
-                if (vehicles[v].asset.GUID == id)
-                    ++amt;
+                vehicle = vehicles[v];
+                return !vehicle.isDead;
             }
-            vehicles.Clear();
-            return amt;
         }
-        public static bool IsVehicleNearby(Guid id, float radius, Vector3 origin, out InteractableVehicle vehicle)
-        {
+        vehicles.Clear();
+        vehicle = null!;
+        return false;
+    }
+    public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<Guid> ids, float radius, Vector3 origin)
+    {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            float sqrRadius = radius * radius;
-            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
-            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
-            for (int v = 0; v < vehicles.Count; v++)
-            {
-                if (vehicles[v].asset.GUID == id)
-                {
-                    vehicle = vehicles[v];
-                    return !vehicle.isDead;
-                }
-            }
-            vehicles.Clear();
-            vehicle = null!;
-            return false;
-        }
-        public static IEnumerable<InteractableVehicle> GetNearbyVehicles(IEnumerable<Guid> ids, float radius, Vector3 origin)
+        float sqrRadius = radius * radius;
+        List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+        List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
+        VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
+        for (int v = 0; v < vehicles.Count; v++)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            float sqrRadius = radius * radius;
-            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
-            List<InteractableVehicle> newvehicles = new List<InteractableVehicle>(vehicles.Count);
-            VehicleManager.getVehiclesInRadius(origin, sqrRadius, vehicles);
-            for (int v = 0; v < vehicles.Count; v++)
-            {
-                if (ids.Contains(vehicles[v].asset.GUID))
-                    newvehicles.Add(vehicles[v]);
-            }
-            vehicles.Clear();
-            return newvehicles;
+            if (ids.Contains(vehicles[v].asset.GUID))
+                newvehicles.Add(vehicles[v]);
         }
-        public static InteractableVehicle GetNearestLogi(Vector3 point, float radius, ulong team = 0)
-        {
+        vehicles.Clear();
+        return newvehicles;
+    }
+    public static InteractableVehicle GetNearestLogi(Vector3 point, float radius, ulong team = 0)
+    {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
-            VehicleManager.getVehiclesInRadius(point, Mathf.Pow(radius, 2), vehicles);
-            return vehicles.FirstOrDefault(v => v.lockedGroup.m_SteamID == team &&
-            VehicleBay.VehicleExists(v.asset.GUID, out VehicleData vehicleData) &&
-            (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT));
-        }
-}
+        List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
+        VehicleManager.getVehiclesInRadius(point, Mathf.Pow(radius, 2), vehicles);
+        return vehicles.FirstOrDefault(v => v.lockedGroup.m_SteamID == team &&
+        VehicleBay.VehicleExists(v.asset.GUID, out VehicleData vehicleData) &&
+        (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT));
+    }
 }

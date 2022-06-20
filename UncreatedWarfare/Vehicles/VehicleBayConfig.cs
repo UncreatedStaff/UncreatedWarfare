@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleBayConfig : Config<VehicleBayData>
 {
-    public VehicleBayConfig() : base(Warfare.Data.VehicleStorage, "config.json") { }
+    public VehicleBayConfig() : base(Warfare.Data.Paths.VehicleStorage, "config.json") { }
 }
 
 

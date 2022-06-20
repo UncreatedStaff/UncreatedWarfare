@@ -2,13 +2,13 @@
 using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
-public class TeamCTF :
-    CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker>
+public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker>
 {
     public override string DisplayName => "Advance and Secure";
     public override EGamemode GamemodeType => EGamemode.TEAM_CTF;
@@ -83,6 +83,8 @@ public class TeamCTF :
                 this.ShowStagingUI(player);
         }
     }
+    public override bool IsAttackSite(ulong team, Flag flag) => flag.IsObj(team);
+    public override bool IsDefenseSite(ulong team, Flag flag) => flag.T1Obj && team == 2 && flag.Owner == 2 || flag.T2Obj && team == 1 && flag.Owner == 1;
 }
 
 public class TeamCTFLeaderboard : BaseCTFLeaderboard<BaseCTFStats, TeamCTFTracker>

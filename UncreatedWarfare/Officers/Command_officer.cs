@@ -1,112 +1,77 @@
-﻿using Rocket.API;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using Uncreated.Framework;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Point;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands
+namespace Uncreated.Warfare.Commands;
+public class OfficerCommand : Command
 {
-    public class OfficerCommand : IRocketCommand
+    private const string SYNTAX = "/officer <discharge|setrank> <player> [value] [team = current team]";
+    private const string HELP = "Promotes or demotes a player to an officer rank.";
+
+    public OfficerCommand() : base("officer", EAdminType.MODERATOR) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
-        public string Name => "officer";
-        public string Help => "promotes or demotes a player to an officer rank";
-        public string Syntax => "/officer";
-        private readonly List<string> _aliases = new List<string>(0);
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>() { "uc.officer" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] command)
-        {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-            if (player == null) return;
+        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotEnabled();
 
-            if (command.Length >= 1 && (command[0].ToLower() == "setrank" || command[0].ToLower() == "set"))
+        ctx.AssertOnDuty();
+
+        ctx.AssertArgs(1, SYNTAX + " - " + HELP);
+
+        if (ctx.MatchParameter(0, "setrank", "set"))
+        {
+            ctx.AssertHelpCheck(1, "/officer set <player> <rank> [team = current team]");
+
+            if (ctx.TryGet(2, out int level) &&
+                ctx.TryGet(1, out ulong steam64, out UCPlayer? onlinePlayer))
             {
-                if (command.Length < 3)
+                if (!ctx.TryGetTeam(3, out ulong team))
                 {
-                    player.SendChat("correct_usage", "/officer promote <player name> <level or rank> <branch>");
-                    return;
-                }
-
-                UCPlayer? target = UCPlayer.FromName(command[1]);
-                ulong Steam64 = 0;
-                string characterName = "";
-                if (ulong.TryParse(command[1], out Steam64) && Data.DatabaseManager.PlayerExistsInDatabase(Steam64, out FPlayerName names))
-                {
-                    characterName = names.CharacterName;
-                    goto CheckLevelAndBranch;
-                }
-                else if (target != null)
-                {
-                    goto CheckLevelAndBranch;
-                }
-                else
-                    player.SendChat("officer_e_playernotfound", command[1]);
-
-                CheckLevelAndBranch:
-                if (int.TryParse(command[2], System.Globalization.NumberStyles.Any, Data.Locale, out var level))
-                {
-                    if (ulong.TryParse(command[3], out ulong team) && team == 1 || team == 2)
-                    {
-                        if (target != null)
-                        {
-                            ActionLog.Add(EActionLogType.SET_OFFICER_RANK, target.Steam64.ToString(Data.Locale) + " to " + level + " on team " + team, player);
-                            OfficerStorage.ChangeOfficerRank(target.Steam64, level, team);
-                            ref Ranks.RankData data = ref Ranks.RankManager.GetRank(target, out _);
-                            player.Message("officer_s_changedrank", target.CharacterName, data.GetName(player.Steam64), Translation.Translate(team.ToString(), player));
-                        }
-                        else
-                        {
-                            ActionLog.Add(EActionLogType.SET_OFFICER_RANK, Steam64.ToString(Data.Locale) + " to " + level + " on team " + team, player);
-                            OfficerStorage.ChangeOfficerRank(Steam64, level, team);
-                            player.Message("officer_s_changedrank", characterName, RankDataOLD.GetOfficerRankName(level), Translation.Translate(team.ToString(), player));
-                        }
-                    }
+                    if (onlinePlayer is not null)
+                        team = onlinePlayer.GetTeam();
+                    else if (PlayerSave.TryReadSaveFile(steam64, out PlayerSave save))
+                        team = save.Team;
                     else
-                        player.SendChat("officer_e_team", command[2]);
+                        throw ctx.SendPlayerNotFound();
                 }
-                else
-                    player.SendChat("officer_invalidrank", command[2]);
 
-                
+                if (team == 3)
+                    throw ctx.SendPlayerNotFound();
+
+                OfficerStorage.ChangeOfficerRank(steam64, level, team);
+                FPlayerName name = F.GetPlayerOriginalNames(steam64);
+                if (onlinePlayer is not null)
+                {
+                    ref Ranks.RankData data = ref Ranks.RankManager.GetRank(onlinePlayer, out _);
+                    ctx.Reply("officer_s_changedrank", name.CharacterName, data.GetName(steam64), Teams.TeamManager.TranslateName(team, ctx.CallerID));
+                }
+                else ctx.Reply("officer_s_changedrank", name.CharacterName, level.ToString(Data.Locale), Teams.TeamManager.TranslateName(team, ctx.CallerID));
+                ctx.LogAction(EActionLogType.SET_OFFICER_RANK, steam64.ToString(Data.Locale) + " to " + level + " on team " + Teams.TeamManager.TranslateName(team, 0));
             }
-            else if (command.Length >= 1 && (command[0].ToLower() == "discharge" || command[0].ToLower() == "disc"))
-            {
-                if (command.Length < 2)
-                {
-                    player.SendChat("correct_usage", "/officer discharge <player name>");
-                    return;
-                }
-
-                UCPlayer? target = UCPlayer.FromName(command[1]);
-                string characterName = string.Empty;
-                if (ulong.TryParse(command[1], out ulong Steam64) && Data.DatabaseManager.PlayerExistsInDatabase(Steam64, out FPlayerName names))
-                {
-                    characterName = names.CharacterName;
-                    goto DischargePlayer;
-                }
-                else if (target != null)
-                {
-                    goto DischargePlayer;
-                }
-                else
-                    player.SendChat("officer_e_playernotfound", command[1]);
-
-                DischargePlayer:
-                if (target != null)
-                {
-                    ActionLog.Add(EActionLogType.DISCHARGE_OFFICER, target.Steam64.ToString(Data.Locale), player);
-                    OfficerStorage.DischargeOfficer(target.Steam64);
-                    player.Message("officer_s_discharged", target.CharacterName);
-                }
-            }
-            else
-                player.SendChat("correct_usage", "/officer <setrank|discharge <player name> <level or rank> <branch>");
+            else throw ctx.SendCorrectUsage("/officer set <player> <rank> [team = current team]");
         }
+        else if (ctx.MatchParameter(0, "discharge", "disc", "remove"))
+        {
+            ctx.AssertHelpCheck(1, "/officer discharge <player>");
+
+            if (!ctx.HasArgs(2))
+                throw ctx.SendCorrectUsage("/officer discharge <player>");
+
+            if (ctx.TryGet(1, out ulong steam64, out UCPlayer? onlinePlayer))
+            {
+                OfficerStorage.DischargeOfficer(steam64);
+                FPlayerName name = F.GetPlayerOriginalNames(steam64);
+                ctx.Reply("officer_s_discharged", name.CharacterName);
+                ctx.LogAction(EActionLogType.DISCHARGE_OFFICER, steam64.ToString(Data.Locale));
+            }
+            else throw ctx.SendPlayerNotFound();
+        }
+        else throw ctx.SendCorrectUsage(SYNTAX);
     }
 }

@@ -31,7 +31,7 @@ internal class _DebugCommand : Command
 {
     public static int currentstep = 0;
     private readonly Type type = typeof(_DebugCommand);
-    internal _DebugCommand() : base("test", EAdminType.MEMBER) { }
+    public _DebugCommand() : base("test", EAdminType.MEMBER) { }
     public override void Execute(CommandInteraction ctx)
     {
         if (ctx.TryGet(0, out string operation))
@@ -67,8 +67,10 @@ internal class _DebugCommand : Command
 #pragma warning disable IDE0060
 #pragma warning disable IDE0051
     private const string GIVE_XP_SYNTAX = "/test givexp <player> <amount> [team - required if offline]";
-    private void givexp(WarfareContext ctx)
+    private void givexp(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+
         if (!ctx.HasArgs(2))
         {
             ctx.SendCorrectUsage(GIVE_XP_SYNTAX);
@@ -92,6 +94,7 @@ internal class _DebugCommand : Command
                                 await UCWarfare.ToUpdate();
                                 ctx.Reply("test_givexp_success", amount.ToString(Data.Locale), ctx.IsConsole ? name.PlayerName : name.CharacterName);
                             });
+                            ctx.Defer();
                         }
                         else
                         {
@@ -124,8 +127,10 @@ internal class _DebugCommand : Command
         }
     }
     private const string GIVE_CREDITS_SYNTAX = "/test givecredits <player> <amount> [team - required if offline]";
-    private void givecredits(WarfareContext ctx)
+    private void givecredits(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+
         if (!ctx.HasArgs(2))
         {
             ctx.SendCorrectUsage(GIVE_CREDITS_SYNTAX);
@@ -149,6 +154,7 @@ internal class _DebugCommand : Command
                                 await UCWarfare.ToUpdate();
                                 ctx.Reply("test_givecredits_success", amount.ToString(Data.Locale), ctx.IsConsole ? name.PlayerName : name.CharacterName);
                             });
+                            ctx.Defer();
                         }
                         else
                         {
@@ -180,53 +186,51 @@ internal class _DebugCommand : Command
             ctx.Reply("test_givecredits_invalid_amount", ctx.Get(1)!);
         }
     }
-    private void quickcap(WarfareContext ctx)
+    private void quickcap(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
+        ctx.AssertPermissions(EAdminType.ADMIN);
+
+        ctx.AssertRanByPlayer();
+        ctx.AssertGamemode(out IFlagRotation fg);
+
+        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller.Player));
+        if (flag == default)
         {
-            ctx.SendPlayerOnlyError();
+            Vector3 pos = ctx.Caller.Position;
+            ctx.Reply("test_zone_not_in_zone",
+                pos.x.ToString(Data.Locale), pos.y.ToString(Data.Locale),
+                pos.z.ToString(Data.Locale), fg.Rotation.Count.ToString(Data.Locale));
             return;
         }
-        if (Data.Is(out IFlagRotation fg))
+        ulong team = ctx.Caller.GetTeam();
+        if (team == 1)
         {
-            Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller.Player));
-            if (flag == default)
+            if (flag.Points < 0)
             {
-                Vector3 pos = ctx.Caller.Position;
-                ctx.Reply("test_zone_not_in_zone",
-                    pos.x.ToString(Data.Locale), pos.y.ToString(Data.Locale),
-                    pos.z.ToString(Data.Locale), fg.Rotation.Count.ToString(Data.Locale));
-                return;
+                flag.CapT1(Math.Abs(flag.Points));
             }
-            ulong team = ctx.Caller.GetTeam();
-            if (team == 1)
+            else
             {
-                if (flag.Points < 0)
-                {
-                    flag.CapT1(Math.Abs(flag.Points));
-                }
-                else
-                {
-                    flag.CapT1(Flag.MAX_POINTS - flag.Points - 1);
-                }
+                flag.CapT1(Flag.MAX_POINTS - flag.Points - 1);
             }
-            else if (team == 2)
-            {
-                if (flag.Points > 0)
-                {
-                    flag.CapT2(flag.Points);
-                }
-                else
-                {
-                    flag.CapT2(Flag.MAX_POINTS - flag.Points - 2);
-                }
-            }
-            else ctx.Reply("gamemode_flag_not_on_cap_team");
         }
-        else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+        else if (team == 2)
+        {
+            if (flag.Points > 0)
+            {
+                flag.CapT2(flag.Points);
+            }
+            else
+            {
+                flag.CapT2(Flag.MAX_POINTS - flag.Points - 2);
+            }
+        }
+        else ctx.Reply("gamemode_flag_not_on_cap_team");
     }
-    private void quickwin(WarfareContext ctx)
+    private void quickwin(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.ADMIN);
+
         ulong team;
         if (ctx.TryGet(0, out ulong id))
             team = id;
@@ -239,89 +243,78 @@ internal class _DebugCommand : Command
         }
         Data.Gamemode.DeclareWin(team);
     }
-    private void savemanyzones(WarfareContext ctx)
+    private void savemanyzones(CommandInteraction ctx)
     {
-        if (Data.Is(out IFlagRotation fg))
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertGamemode(out IFlagRotation fg);
+
+        if (!ctx.TryGet(0, out uint times))
+            times = 1U;
+        List<Zone> zones = new List<Zone>();
+        string directory = Path.Combine(Data.Paths.FlagStorage, "ZoneExport", Path.DirectorySeparatorChar.ToString());
+        if (!Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+        for (int i = 0; i < times; i++)
         {
-            if (!ctx.TryGet(0, out uint times))
-                times = 1U;
-            List<Zone> zones = new List<Zone>();
-            string directory = Path.Combine(Data.FlagStorage, "ZoneExport", Path.DirectorySeparatorChar.ToString());
-            if (!Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
-            for (int i = 0; i < times; i++)
-            {
-                zones.Clear();
-                ReloadCommand.ReloadFlags();
-                fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
-                ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Data.FlagStorage + @"ZoneExport\zonearea_" + i.ToString(Data.Locale));
-                L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
-            }
+            zones.Clear();
+            ReloadCommand.ReloadFlags();
+            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
+            ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, true, true, false, false, true, Path.Combine(directory, "zonearea_" + i.ToString(Data.Locale)));
+            L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+        }
+    }
+    private void savemanygraphs(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertGamemode(out IFlagRotation fg);
+
+        if (!ctx.TryGet(0, out uint times))
+            times = 1U;
+        List<Zone> zones = new List<Zone>();
+        string directory = Path.Combine(Data.Paths.FlagStorage, "GraphExport", Path.DirectorySeparatorChar.ToString());
+        if (!Directory.Exists(directory))
+            Directory.CreateDirectory(directory);
+        for (int i = 0; i < times; i++)
+        {
+            zones.Clear();
+            ReloadCommand.ReloadFlags();
+            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
+            ZoneDrawing.DrawZoneMap(fg, Path.Combine(directory, "zonegraph_" + i.ToString(Data.Locale)));
+            L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+        }
+    }
+    private void zone(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.STAFF);
+
+        ctx.AssertRanByPlayer();
+        ctx.AssertGamemode(out IFlagRotation fg);
+
+        Vector3 pos = ctx.Caller.Position;
+        if (pos == Vector3.zero) return;
+        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos));
+        if (flag == default(Flag))
+        {
+            ctx.Reply("test_zone_not_in_zone",
+                pos.x.ToString(Data.Locale), pos.y.ToString(Data.Locale),
+                pos.z.ToString(Data.Locale), ctx.Caller.Player.transform.eulerAngles.y.ToString(Data.Locale),
+                fg.Rotation.Count.ToString(Data.Locale));
         }
         else
         {
-            ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+            ctx.Reply("test_zone_current_zone", flag.Name,
+                pos.x.ToString(Data.Locale), pos.y.ToString(Data.Locale),
+                pos.z.ToString(Data.Locale));
         }
     }
-    private void savemanygraphs(WarfareContext ctx)
+    private void sign(CommandInteraction ctx)
     {
-        if (Data.Is(out IFlagRotation fg))
-        {
-            if (!ctx.TryGet(0, out uint times))
-                times = 1U;
-            List<Zone> zones = new List<Zone>();
-            string directory = Path.Combine(Data.FlagStorage, "GraphExport", Path.DirectorySeparatorChar.ToString());
-            if (!Directory.Exists(directory))
-                Directory.CreateDirectory(directory);
-            for (int i = 0; i < times; i++)
-            {
-                zones.Clear();
-                ReloadCommand.ReloadFlags();
-                fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
-                ZoneDrawing.DrawZoneMap(fg, Data.FlagStorage + @"GraphExport\zonegraph_" + i.ToString(Data.Locale));
-                L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
-            }
-        }
-        else
-        {
-            ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
-        }
-    }
-    private void zone(WarfareContext ctx)
-    {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
-        if (Data.Is(out IFlagRotation fg))
-        {
-            Vector3 pos = ctx.Caller.Position;
-            if (pos == Vector3.zero) return;
-            Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos));
-            if (flag == default(Flag))
-            {
-                ctx.Reply("test_zone_not_in_zone",
-                    pos.x.ToString(Data.Locale), pos.y.ToString(Data.Locale),
-                    pos.z.ToString(Data.Locale), ctx.Caller.Player.transform.eulerAngles.y.ToString(Data.Locale),
-                    fg.Rotation.Count.ToString(Data.Locale));
-            }
-            else
-            {
-                ctx.Reply("test_zone_current_zone", flag.Name,
-                    pos.x.ToString(Data.Locale), pos.y.ToString(Data.Locale),
-                    pos.z.ToString(Data.Locale));
-            }
-        }
-        else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
-    }
-    private void sign(WarfareContext ctx)
-    {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
+        ctx.AssertPermissions(EAdminType.STAFF);
+
+        ctx.AssertRanByPlayer();
+
         InteractableSign? sign = UCBarricadeManager.GetInteractableFromLook<InteractableSign>(ctx.Caller.Player.look);
         if (sign == null) ctx.Reply("test_sign_no_sign");
         else
@@ -330,134 +323,135 @@ internal class _DebugCommand : Command
             L.Log(Translation.Translate("test_sign_success", 0, out _, sign.text), ConsoleColor.Green);
         }
     }
-    private void time(WarfareContext ctx)
+    private void time(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
         UCWarfare.I.CoroutineTiming = !UCWarfare.I.CoroutineTiming;
         ctx.Reply("test_time_enabled_console");
     }
     // test zones: test zonearea all true false false true false
-    private void zonearea(WarfareContext ctx)
+    private void zonearea(CommandInteraction ctx)
     {
-        if (Data.Is(out IFlagRotation fg))
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertGamemode(out IFlagRotation fg);
+        bool all = false;
+        bool extra = false;
+        bool path = true;
+        bool range = false;
+        bool drawIn = false;
+        bool drawAngles = false;
+        if (ctx.HasArgs(6))
         {
-            bool all = false;
-            bool extra = false;
-            bool path = true;
-            bool range = false;
-            bool drawIn = false;
-            bool drawAngles = false;
-            if (ctx.HasArgs(6))
-            {
-                if (ctx.MatchParameter(0, "all")) all = true;
-                else if (!ctx.MatchParameter(0, "active")) ctx.Reply("test_zonearea_syntax");
-                if (ctx.MatchParameter(1, "true")) extra = true;
-                else if (!ctx.MatchParameter(1, "false")) ctx.Reply("test_zonearea_syntax");
-                if (ctx.MatchParameter(2, "false")) path = false;
-                else if (!ctx.MatchParameter(2, "true")) ctx.Reply("test_zonearea_syntax");
-                if (ctx.MatchParameter(3, "true")) range = true;
-                else if (!ctx.MatchParameter(3, "false")) ctx.Reply("test_zonearea_syntax");
-                if (ctx.MatchParameter(4, "true")) drawIn = true;
-                else if (!ctx.MatchParameter(4, "false")) ctx.Reply("test_zonearea_syntax");
-                if (ctx.MatchParameter(5, "true")) drawAngles = true;
-                else if (!ctx.MatchParameter(5, "false")) ctx.Reply("test_zonearea_syntax");
-            }
-            else if (ctx.ArgumentCount != 1)
-            {
-                ctx.Reply("test_zonearea_syntax");
-                return;
-            }
-            List<Zone> zones = new List<Zone>();
-            if (all)
-            {
-                if (extra)
-                    zones.AddRange(Data.ZoneProvider.Zones);
-                else
-                    zones.AddRange(Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
-            }
-            else
-                zones.AddRange(fg.Rotation.Select(x => x.ZoneData));
-            ctx.Reply("test_zonearea_started");
-            ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "ZONEAREA");
-            ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, path, range, drawIn, drawAngles, true);
+            if (ctx.MatchParameter(0, "all")) all = true;
+            else if (!ctx.MatchParameter(0, "active")) ctx.Reply("test_zonearea_syntax");
+            if (ctx.MatchParameter(1, "true")) extra = true;
+            else if (!ctx.MatchParameter(1, "false")) ctx.Reply("test_zonearea_syntax");
+            if (ctx.MatchParameter(2, "false")) path = false;
+            else if (!ctx.MatchParameter(2, "true")) ctx.Reply("test_zonearea_syntax");
+            if (ctx.MatchParameter(3, "true")) range = true;
+            else if (!ctx.MatchParameter(3, "false")) ctx.Reply("test_zonearea_syntax");
+            if (ctx.MatchParameter(4, "true")) drawIn = true;
+            else if (!ctx.MatchParameter(4, "false")) ctx.Reply("test_zonearea_syntax");
+            if (ctx.MatchParameter(5, "true")) drawAngles = true;
+            else if (!ctx.MatchParameter(5, "false")) ctx.Reply("test_zonearea_syntax");
         }
-        else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
-    }
-    private void drawzone(WarfareContext ctx)
-    {
-        if (ctx.IsConsole || ctx.Caller is null)
+        else if (ctx.ArgumentCount != 1)
         {
-            ctx.SendPlayerOnlyError();
+            ctx.Reply("test_zonearea_syntax");
             return;
         }
+        List<Zone> zones = new List<Zone>();
+        if (all)
+        {
+            if (extra)
+                zones.AddRange(Data.ZoneProvider.Zones);
+            else
+                zones.AddRange(Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
+        }
+        else
+            zones.AddRange(fg.Rotation.Select(x => x.ZoneData));
+        ctx.Reply("test_zonearea_started");
+        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "ZONEAREA");
+        ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, path, range, drawIn, drawAngles, true);
+    }
+    private void drawzone(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertGamemode(out IFlagRotation fg);
         Zone zone;
         string zoneName;
         string zoneColor;
-        if (Data.Is(out IFlagRotation fg))
+        Vector3 pos = ctx.Caller.Position;
+        if (pos == Vector3.zero) return;
+        Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
+        if (flag == default)
         {
-            Vector3 pos = ctx.Caller.Position;
-            if (pos == Vector3.zero) return;
-            Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
-            if (flag == default)
-            {
-                ctx.Reply("test_zone_test_zone_not_in_zone", pos.x.ToString(Data.Locale),
-                    pos.y.ToString(Data.Locale), pos.z.ToString(Data.Locale),
-                    fg.LoadedFlags.Count.ToString(Data.Locale));
-                return;
-            }
-            else
-            {
-                zone = flag.ZoneData;
-                zoneName = flag.Name;
-                zoneColor = flag.TeamSpecificHexColor;
-            }
-            List<Zone> zones = new List<Zone>(1) { zone };
-            ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWZONE");
-            ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, false, true, false, true, true, Data.FlagStorage + "zonerange_" + zoneName);
+            ctx.Reply("test_zone_test_zone_not_in_zone", pos.x.ToString(Data.Locale),
+                pos.y.ToString(Data.Locale), pos.z.ToString(Data.Locale),
+                fg.LoadedFlags.Count.ToString(Data.Locale));
+            return;
         }
-        else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
-    }
-    private void drawgraph(WarfareContext ctx)
-    {
-        if (Data.Gamemode is FlagGamemode fg)
+        else
         {
-            ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWGRAPH");
-            ZoneDrawing.DrawZoneMap(fg, null);
+            zone = flag.ZoneData;
+            zoneName = flag.Name;
+            zoneColor = flag.TeamSpecificHexColor;
         }
-        else ctx.Reply("gamemode_not_flag_gamemode", Data.Gamemode == null ? "null" : Data.Gamemode.Name);
+        List<Zone> zones = new List<Zone>(1) { zone };
+        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWZONE");
+        ZoneDrawing.CreateFlagTestAreaOverlay(fg, ctx.Caller?.Player, zones, false, true, false, true, true, Path.Combine(Data.Paths.FlagStorage, "zonerange_" + zoneName));
     }
-    private void rotation(WarfareContext ctx)
+    private void drawgraph(CommandInteraction ctx)
     {
-        if (Data.Gamemode is FlagGamemode fg)
-            fg.PrintFlagRotation();
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertGamemode(out IFlagRotation fg);
+
+        ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWGRAPH");
+        ZoneDrawing.DrawZoneMap(fg, null);
+    }
+    private void rotation(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.STAFF);
+
+        ctx.AssertGamemode(out FlagGamemode fg);
+        fg.PrintFlagRotation();
     }
     private const byte DOWN_DAMAGE = 55;
-    private void down(WarfareContext ctx)
+    private void down(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
+        ctx.AssertGamemode<IRevives>();
+
+        if (ctx.TryGet(0, out _, out UCPlayer? player))
         {
-            ctx.SendPlayerOnlyError();
-            return;
+            if (player is null)
+                throw ctx.SendPlayerNotFound();
+
+            ctx.AssertPermissions(EAdminType.ADMIN);
         }
-        DamageTool.damage(ctx.Caller.Player, EDeathCause.KILL, ELimb.SPINE, ctx.Caller.CSteamID, Vector3.down, DOWN_DAMAGE, 1, out _, false, false);
-        DamageTool.damage(ctx.Caller.Player, EDeathCause.KILL, ELimb.SPINE, ctx.Caller.CSteamID, Vector3.down, DOWN_DAMAGE, 1, out _, false, false);
+        else
+        {
+            ctx.AssertRanByPlayer();
+            ctx.AssertPermissions(EAdminType.STAFF);
+            player = ctx.Caller;
+        }
+        player.Player.life.askDamage(DOWN_DAMAGE, Vector3.down, EDeathCause.KILL, ELimb.SPINE, ctx.CallerCSteamID, out _, false, ERagdollEffect.ZERO_KELVIN, false, true);
+        player.Player.life.askDamage(DOWN_DAMAGE, Vector3.down, EDeathCause.KILL, ELimb.SPINE, ctx.CallerCSteamID, out _, false, ERagdollEffect.ZERO_KELVIN, false, true);
         ctx.Reply("test_down_success", (DOWN_DAMAGE * 2).ToString(Data.Locale));
     }
-    private void layer(WarfareContext ctx)
+    private void layer(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
+        ctx.AssertRanByPlayer();
+
         L.Log(F.GetLayer(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward, RayMasks.BLOCK_COLLISION), ConsoleColor.DarkCyan); // so as to not hit player
     }
-    private void clearui(WarfareContext ctx)
+    private void clearui(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
+        ctx.AssertRanByPlayer();
+
         if (ctx.Caller.HasUIHidden)
         {
             UCWarfare.I.UpdateLangs(ctx.Caller);
@@ -469,8 +463,10 @@ internal class _DebugCommand : Command
         ctx.Caller.HasUIHidden = !ctx.Caller.HasUIHidden;
         
     }
-    private void game(WarfareContext ctx)
+    private void game(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
         if (Data.Is(out IFlagRotation fg))
         {
             StringBuilder flags = new StringBuilder();
@@ -485,8 +481,10 @@ internal class _DebugCommand : Command
         }
     }
     private const string PLAYER_SAVE_USAGE = "/test playersave <player> <property> <value>";
-    private void playersave(WarfareContext ctx)
+    private void playersave(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+
         if (!ctx.HasArgs(3))
         {
             ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
@@ -530,8 +528,10 @@ internal class _DebugCommand : Command
             ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
     }
     private const string GAMEMODE_USAGE = "/test gamemode <gamemode>";
-    private void gamemode(WarfareContext ctx)
+    private void gamemode(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.ADMIN);
+
         if (!ctx.HasArgs(1))
         {
             ctx.SendCorrectUsage(GAMEMODE_USAGE);
@@ -564,16 +564,20 @@ internal class _DebugCommand : Command
         else
             ctx.SendCorrectUsage(GAMEMODE_USAGE);
     }
-    private void trackstats(WarfareContext ctx)
+    private void trackstats(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
         Data.TrackStats = !Data.TrackStats;
         if (Data.TrackStats)
             ctx.Reply("test_trackstats_enabled");
         else
             ctx.Reply("test_trackstats_disabled");
     }
-    private void destroyblocker(WarfareContext ctx)
+    private void destroyblocker(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+
         int ct = 0;
         for (int x = 0; x < Regions.WORLD_SIZE; x++)
         {
@@ -595,18 +599,22 @@ internal class _DebugCommand : Command
         else
             ctx.Reply("test_destroyblocker_success", ct.ToString(Data.Locale), ct.S());
     }
-    private void skipstaging(WarfareContext ctx)
+    private void skipstaging(CommandInteraction ctx)
     {
-        if (Data.Is(out IStagingPhase gm))
-        {
-            ctx.Reply("test_gamemode_skipped_staging");
-            gm.SkipStagingPhase();
-        }
-        else ctx.SendGamemodeError();
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+
+        ctx.AssertGamemode(out IStagingPhase gm);
+
+        gm.SkipStagingPhase();
+
+        ctx.Reply("test_gamemode_skipped_staging");
     }
-    private void resetlobby(WarfareContext ctx)
+    private void resetlobby(CommandInteraction ctx)
     {
-        if (Data.Is(out ITeams t) && t.UseJoinUI)
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+
+        ctx.AssertGamemode(out ITeams t);
+        if (t.UseJoinUI)
         {
             if (!ctx.HasArgs(1))
             {
@@ -629,24 +637,21 @@ internal class _DebugCommand : Command
         }
         else ctx.SendGamemodeError();
     }
-    private void clearcooldowns(WarfareContext ctx)
+    private void clearcooldowns(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
+        ctx.AssertPermissions(EAdminType.MODERATOR);
+
+        ctx.AssertRanByPlayer();
+        if (Data.Gamemode?.Cooldowns is null) throw ctx.SendNotImplemented();
+
         if (!ctx.TryGet(1, out _, out UCPlayer? pl) || pl is null)
             pl = ctx.Caller;
         CooldownManager.RemoveCooldown(pl);
     }
-    private void instid(WarfareContext ctx)
+    private void instid(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendConsoleOnlyError();
-            return;
-        }
+        ctx.AssertRanByPlayer();
+
         Player player = ctx.Caller.Player;
         Transform? t = UCBarricadeManager.GetTransformFromLook(player.look, RayMasks.BARRICADE | RayMasks.STRUCTURE | RayMasks.LARGE | RayMasks.MEDIUM | RayMasks.SMALL | RayMasks.VEHICLE);
         if (t == null)
@@ -691,14 +696,18 @@ internal class _DebugCommand : Command
         }
         ctx.Reply("test_instid_not_found");
     }
-    private void fakereport(WarfareContext ctx)
+    private void fakereport(CommandInteraction ctx)
     {
+        if (!UCWarfare.Config.EnableReporter) throw ctx.SendNotImplemented();
+
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
         Report report = new ChatAbuseReport()
         {
             Message = ctx.GetRange(0) ?? "No message",
             Reporter = 76561198267927009,
             Time = DateTime.Now,
-            Violator = 76561198267927009,
+            Violator = ctx.CallerID == 0 ? 76561198267927009 : ctx.CallerID,
             ChatRecords = new string[]
             {
                 "%SPEAKER%: chat 1",
@@ -710,17 +719,24 @@ internal class _DebugCommand : Command
         Reporter.NetCalls.SendReportInvocation.NetInvoke(report, false);
         L.Log("Sent chat abuse report.");
     }
-    private void questdump(WarfareContext ctx)
+    private void questdump(CommandInteraction ctx)
     {
+        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
+
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertRanByPlayer();
+
         QuestManager.PrintAllQuests(ctx.Caller);
     }
-    private void completequest(WarfareContext ctx)
+    private void completequest(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
+        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
+
+        ctx.AssertPermissions(EAdminType.ADMIN);
+
+        ctx.AssertRanByPlayer();
+
         if (ctx.TryGet(0, out EQuestType type))
         {
             for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
@@ -746,13 +762,12 @@ internal class _DebugCommand : Command
             }
         }
     }
-    private void setsign(WarfareContext ctx)
+    private void setsign(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertPermissions(EAdminType.STAFF);
+
         if (ctx.TryGetRange(0, out string text) && ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
             BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
@@ -771,18 +786,21 @@ internal class _DebugCommand : Command
         }
     }
 #if DEBUG
-    private void saveall(UCCommandContext ctx)
+    private void saveall(CommandInteraction ctx)
     {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
         F.SaveProfilingData();
     }
 #endif
-    private void questtest(WarfareContext ctx)
+    private void questtest(CommandInteraction ctx)
     {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
+        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
+
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
         foreach (BaseQuestData data in QuestManager.Quests)
         {
             try
@@ -794,35 +812,5 @@ internal class _DebugCommand : Command
                 L.LogError(ex);
             }
         }
-    }
-
-    private void kitspeedtest(UCCommandContext ctx)
-    {
-        if (ctx.IsConsole || ctx.Caller is null)
-        {
-            ctx.SendPlayerOnlyError();
-            return;
-        }
-
-        KitManager.KitExists("prem_sasql1", out Kit kit);
-
-        Stopwatch watch = new Stopwatch();
-        bool ufa = Data.UseFastKits;
-        if (ufa)
-        {
-            watch.Start();
-            KitManager.GiveKit(ctx.Caller, kit);
-            watch.Stop();
-            Data.UseFastKits = false;
-            L.Log("Mode 1 (fast, x1): " + watch.ElapsedTicks.ToString());
-        }
-
-        Thread.Sleep(2000);
-        watch.Restart();
-        KitManager.GiveKit(ctx.Caller, kit);
-        watch.Stop();
-        L.Log("Mode 2 (slow): " + watch.ElapsedTicks.ToString());
-
-        Data.UseFastKits = ufa;
     }
 }

@@ -1,159 +1,272 @@
-﻿using Rocket.API;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Squads;
 using UnityEngine;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
-namespace Uncreated.Warfare.Squads
+namespace Uncreated.Warfare.Commands;
+public class OrderCommand : Command
 {
-    public class OrderCommand : IRocketCommand
+    private const string SYNTAX = "/order <squad> <type>";
+    private const string HELP = "Gives a squad orders to fulfill relating to your current marker.";
+    private const string ACTIONS = "<b>attack</b>, <b>defend</b>, <b>buildfob</b>, <b>move</b>";
+
+    public OrderCommand() : base("order", EAdminType.MEMBER) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
-        public string Name => "order";
-        public string Help => "Gives a squad orders to fulfill";
-        public string Syntax => "/order";
-        private readonly List<string> _aliases = new List<string>(0);
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>() { "uc.order" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] command)
-        {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller) ?? throw new ArgumentNullException(nameof(caller));
-            if (!Data.Is(out ISquads ctf))
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
+        ctx.AssertGamemode<ISquads>();
+
+        ctx.AssertArgs(1, "order_usage_1");
+
+        if (ctx.MatchParameter(0, "actions"))
+            throw ctx.Reply("order_actions");
+
+        string squadName = ctx.Get(0)!;
+
+        if (ctx.Caller.Squad == null || ctx.Caller.Squad.Leader.Steam64 != ctx.Caller.Steam64)
+            throw ctx.Reply("order_e_not_squadleader");
+
+        if (SquadManager.FindSquad(squadName, ctx.Caller.GetTeam(), out Squad squad))
+        {
+            ctx.AssertArgs(2, "order_usage_3", squad.Name);
+
+            if (ctx.TryGet(1, out EOrder type))
             {
-                player.SendChat("command_e_gamemode");
-                return;
-            }
-
-
-            if (command.Length == 0)
-            {
-                player.Message("order_usage_1");
-            }
-            else if (command.Length >= 1)
-            {
-                string actions = "<b>attack</b>, <b>defend</b>, <b>buildfob</b>, <b>move</b>";
-
-                if (command[0].ToLower() == "actions")
-                    player.Message("order_actions", actions);
-
-                bool squadExists = SquadManager.FindSquad(command[0], player.GetTeam(), out var squad);
-
-                if (squadExists)
+                if (Orders.HasOrder(squad, out Order order) && order.Commander != ctx.Caller)
                 {
-                    if (command.Length == 1)
-                        player.Message("order_usage_3", squad.Name);
-                    else
-                    {
-                        if (Enum.TryParse(command[1].ToUpper(), out EOrder type))
-                        {
-                            if (Orders.HasOrder(squad, out Order order) && order.Commander != player)
-                            {
-                                // TODO: check if order can be overwritten
-                                player.Message("order_e_alreadyhasorder", squad.Name, order.Commander.CharacterName);
-                            }
-                            else
-                            {
-                                Vector3 playerMarker = player.Player.quests.markerPosition;
-
-                                if (player.Player.quests.isMarkerPlaced)
-                                {
-                                    if (Physics.Raycast(new Vector3(playerMarker.x, Level.HEIGHT, playerMarker.z), new Vector3(0f, -1, 0f), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
-                                    {
-                                        Vector3 marker = hit.point;
-                                        string message = "";
-
-                                        if (type == EOrder.ATTACK || type == EOrder.DEFEND)
-                                        {
-                                            if (Data.Is(out FlagGamemode flags))
-                                            {
-                                                Gamemodes.Flags.Flag flag = flags.Rotation.Find(f => f.ZoneData.IsInside(new Vector2(marker.x, marker.z)));
-                                                //bool useFlag = false;
-
-                                                if (flag != null && player.Player.quests.isMarkerPlaced)
-                                                {
-                                                    if (type == EOrder.ATTACK && flag.IsAttackable(player.GetTeam()))
-                                                    {
-                                                        //useFlag = true;
-                                                    }
-                                                    if (type == EOrder.DEFEND && flag.IsAttackable(player.GetTeam()))
-                                                    {
-                                                        //useFlag = true;
-                                                    }
-                                                }
-                                            }
-
-                                            ActionLog.Add(EActionLogType.CREATED_ORDER, type.ToString() + " " + marker.ToString("N2"), player);
-
-                                            Orders.GiveOrder(squad, player, type, marker, message);
-                                        }
-                                        if (type == EOrder.BUILDFOB)
-                                        {
-                                            if (FOB.GetNearestFOB(marker, EFOBRadius.FOB_PLACEMENT, player.GetTeam()) != null)
-                                                player.Message("order_e_buildfob_fobexists");
-                                            else if (FOB.GetFOBs(player.GetTeam()).Count >= FOBManager.Config.FobLimit)
-                                                player.Message("order_e_buildfob_foblimit");
-                                            else
-                                            {
-                                                message = $"Build FOB near the marker";
-
-                                                ActionLog.Add(EActionLogType.CREATED_ORDER, "BUILD A FOB AT " + marker.ToString("N2"), player);
-
-                                                Orders.GiveOrder(squad, player, type, marker, message);
-                                            }
-                                        }
-                                        if (type == EOrder.MOVE)
-                                        {
-                                            Vector3 avgMemberPoint = Vector3.zero;
-                                            foreach (var member in squad.Members)
-                                                avgMemberPoint += member.Position;
-
-                                            avgMemberPoint /= squad.Members.Count;
-                                            float distanceToMarker = (avgMemberPoint - marker).magnitude;
-
-                                            if (distanceToMarker >= 100)
-                                            {
-                                                message = $"Move squad to the marker position";
-
-                                                ActionLog.Add(EActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"), player);
-
-                                                Orders.GiveOrder(squad, player, type, marker, message);
-                                            }
-                                            else
-                                                player.Message("order_e_squadtooclose", squad.Name);
-                                        }
-                                    }
-                                    else
-                                        player.Message("order_e_raycast");
-                                }
-                                else
-                                {
-                                    if (type == EOrder.ATTACK) player.Message("order_e_attack_marker");
-                                    else if (type == EOrder.DEFEND) player.Message("order_e_defend_marker");
-                                    else if (type == EOrder.BUILDFOB) player.Message("order_e_buildfob_marker");
-                                    else if (type == EOrder.MOVE) player.Message("order_e_move_marker");
-                                }
-                            }
-                        }
-                        else
-                            player.Message("order_e_actioninvalid", command[1], actions);
-                    }
+                    // TODO: check if order can be overwritten
+                    throw ctx.Reply("order_e_alreadyhasorder", squad.Name, order.Commander.CharacterName);
                 }
                 else
                 {
-                    if (command.Length == 1)
-                        player.Message("order_usage_2", "squad_name");
-                    else
-                        player.Message("order_e_squadnoexist", command[0].ToUpper());
+                    Vector3 playerMarker = ctx.Caller.Player.quests.markerPosition;
+
+                    if (!ctx.Caller.Player.quests.isMarkerPlaced)
+                        goto markerError;
+
+                    ulong team = ctx.Caller.GetTeam();
+                    if (Physics.Raycast(new Vector3(playerMarker.x, Level.HEIGHT, playerMarker.z), new Vector3(0f, -1, 0f), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
+                    {
+                        Vector3 marker = hit.point;
+                        string message;
+                        string[] formatting;
+                        switch (type)
+                        {
+                            case EOrder.ATTACK or EOrder.DEFEND:
+                                ctx.LogAction(EActionLogType.CREATED_ORDER, Translation.TranslateEnum(type, 0) + " " + marker.ToString("N2"));
+                                switch (Data.Gamemode)
+                                {
+                                    case null:
+                                        throw ctx.SendGamemodeError();
+                                    case IFlagRotation rot:
+                                        Vector2 mkr = new Vector2(marker.x, marker.z);
+                                        Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                        if (flag is null)
+                                            goto default;
+                                        formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
+                                        if (type is EOrder.ATTACK)
+                                        {
+                                            if (flag.IsAttackSite(team))
+                                                message = "order_attack_objective";
+                                            else
+                                                message = "order_attack_flag";
+                                        }
+                                        else
+                                        {
+                                            if (flag.IsDefenseSite(team))
+                                                message = "order_defend_objective";
+                                            else
+                                                message = "order_defend_flag";
+                                        }
+                                        break;
+                                    case Insurgency ins:
+                                        float sqrDst = float.NaN;
+                                        int ind = -1;
+                                        if ((type is EOrder.ATTACK && team != ins.AttackingTeam) || type is EOrder.DEFEND && team != ins.DefendingTeam)
+                                            goto default;
+                                        for (int i = 0; i < ins.Caches.Count; ++i)
+                                        {
+                                            float sq2 = (ins.Caches[i].Cache.Position - marker).sqrMagnitude;
+                                            if (type is EOrder.ATTACK ? ins.Caches[i].IsDiscovered : ins.Caches[i].IsActive && (float.IsNaN(sqrDst) || sq2 < sqrDst))
+                                            {
+                                                ind = i;
+                                                sqrDst = sq2;
+                                            }
+                                        }
+
+                                        if (ind == -1 || sqrDst < 22500) // 150 m
+                                            goto default;
+                                        else
+                                        {
+                                            formatting = new string[] { ins.Caches[ind].Cache.Name };
+                                            if (type is EOrder.ATTACK)
+                                                message = "order_attack_cache";
+                                            else
+                                                message = "order_defend_cache";
+                                        }
+                                        break;
+                                    default:
+                                        formatting = new string[] { F.ToGridPosition(marker) };
+                                        if (type is EOrder.ATTACK)
+                                            message = "order_attack_area";
+                                        else
+                                            message = "order_defend_area";
+                                        break;
+                                }
+                                ctx.LogAction(EActionLogType.CREATED_ORDER, (type is EOrder.ATTACK ? "ATTACK" : "DEFEND") + " AT " + marker.ToString("N2"));
+                                break;
+                            case EOrder.BUILDFOB:
+                                ctx.AssertGamemode<IFOBs>();
+
+                                if (FOB.GetNearestFOB(marker, EFOBRadius.FOB_PLACEMENT, team) != null)
+                                    throw ctx.Reply("order_e_buildfob_fobexists");
+                                else if (FOB.GetFOBs(team).Count >= FOBManager.Config.FobLimit)
+                                    throw ctx.Reply("order_e_buildfob_foblimit");
+                                else
+                                {
+                                    switch (Data.Gamemode)
+                                    {
+                                        case null:
+                                            throw ctx.SendGamemodeError();
+                                        case IFlagRotation rot:
+                                            Vector2 mkr = new Vector2(marker.x, marker.z);
+                                            Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                            // flag is not discovered or is taken
+                                            if (flag is null || !flag.Discovered(team) || flag.IsFull(Teams.TeamManager.Other(team)))
+                                                goto default;
+                                            formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
+                                            message = "order_buildfob_flag";
+                                            break;
+                                        case Insurgency ins:
+                                            float sqrDst = float.NaN;
+                                            int ind = -1;
+                                            for (int i = 0; i < ins.Caches.Count; ++i)
+                                            {
+                                                float sq2 = (ins.Caches[i].Cache.Position - marker).sqrMagnitude;
+                                                if (team == ins.AttackingTeam ? ins.Caches[i].IsDiscovered : ins.Caches[i].IsActive && (float.IsNaN(sqrDst) || sq2 < sqrDst))
+                                                {
+                                                    ind = i;
+                                                    sqrDst = sq2;
+                                                }
+                                            }
+
+                                            if (ind == -1 || sqrDst < 22500) // 150 m
+                                                goto default;
+                                            else
+                                            {
+                                                formatting = new string[] { ins.Caches[ind].Cache.Name };
+                                                message = "order_buildfob_cache";
+                                            }
+                                            break;
+                                        default:
+                                            formatting = new string[] { F.ToGridPosition(marker) };
+                                            message = "order_buildfob_area";
+                                            break;
+                                    }
+
+                                    ctx.LogAction(EActionLogType.CREATED_ORDER, "BUILD A FOB AT " + marker.ToString("N2"));
+                                }
+                                break;
+                            case EOrder.MOVE:
+                                Vector3 avgMemberPoint = Vector3.zero;
+                                foreach (var member in squad.Members)
+                                    avgMemberPoint += member.Position;
+
+                                avgMemberPoint /= squad.Members.Count;
+                                avgMemberPoint.y = marker.y;
+                                float distanceToMarker = (avgMemberPoint - marker).sqrMagnitude;
+
+                                if (distanceToMarker >= 10000)
+                                {
+                                    switch (Data.Gamemode)
+                                    {
+                                        case null:
+                                            throw ctx.SendGamemodeError();
+                                        case IFlagRotation rot:
+                                            Vector2 mkr = new Vector2(marker.x, marker.z);
+                                            Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                            // flag is not discovered or is taken
+                                            if (flag is null || !flag.Discovered(team))
+                                                goto default;
+                                            formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
+                                            message = "order_move_flag";
+                                            break;
+                                        case Insurgency ins:
+                                            float sqrDst = float.NaN;
+                                            int ind = -1;
+                                            for (int i = 0; i < ins.Caches.Count; ++i)
+                                            {
+                                                float sq2 = (ins.Caches[i].Cache.Position - marker).sqrMagnitude;
+                                                if (team == ins.AttackingTeam ? ins.Caches[i].IsDiscovered : ins.Caches[i].IsActive && (float.IsNaN(sqrDst) || sq2 < sqrDst))
+                                                {
+                                                    ind = i;
+                                                    sqrDst = sq2;
+                                                }
+                                            }
+
+                                            if (ind == -1 || sqrDst < 22500) // 150 m
+                                                goto default;
+                                            else
+                                            {
+                                                formatting = new string[] { ins.Caches[ind].Cache.Name };
+                                                message = "order_move_cache";
+                                            }
+                                            break;
+                                        default:
+                                            formatting = new string[] { F.ToGridPosition(marker) };
+                                            message = "order_move_area";
+                                            break;
+                                    }
+                                    formatting = new string[] { F.ToGridPosition(marker) };
+                                    message = "order_move_squad";
+
+                                    ctx.LogAction(EActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"));
+
+                                }
+                                else throw ctx.Reply("order_e_squadtooclose", squad.Name);
+                                break;
+                            default:
+                                throw ctx.SendUnknownError();
+                        }
+                        Orders.GiveOrder(squad, ctx.Caller, type, marker, message, formatting);
+                    }
+                    else goto markerError;
                 }
+                return;
+            markerError:
+                throw ctx.Reply(type switch
+                {
+                    EOrder.ATTACK => Data.Is<Insurgency>() ? "order_e_attack_marker_ins" : "order_e_attack_marker",
+                    EOrder.DEFEND => Data.Is<Insurgency>() ? "order_e_defend_marker_ins" : "order_e_defend_marker",
+                    EOrder.BUILDFOB => "order_e_buildfob_marker",
+                    EOrder.MOVE => "order_e_move_marker",
+                    _ => Translation.Common.UNKNOWN_ERROR
+                });
             }
+            else
+                ctx.Reply("order_e_actioninvalid", ctx.Get(1)!, ACTIONS);
+        }
+        else
+        {
+            if (ctx.HasArgsExact(1))
+                ctx.Reply("order_usage_2", "squad_name");
+            else
+                ctx.Reply("order_e_squadnoexist", ctx.Get(0)!);
         }
     }
 }

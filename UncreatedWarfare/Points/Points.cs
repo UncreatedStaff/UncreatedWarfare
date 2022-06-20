@@ -17,9 +17,9 @@ public static class Points
 {
     private const int XPUI_KEY = 26969;
     private const int CREDITSUI_KEY = 26971;
-    private static readonly Config<XPConfig> _xpconfig = UCWarfare.IsLoaded ? new Config<XPConfig>(Data.PointsStorage, "xp.json") : null!;
-    private static readonly Config<TWConfig> _twconfig = UCWarfare.IsLoaded ? new Config<TWConfig>(Data.PointsStorage, "tw.json") : null!;
-    private static readonly Config<CreditsConfig> _creditsconfig = UCWarfare.IsLoaded ? new Config<CreditsConfig>(Data.PointsStorage, "credits.json") : null!;
+    private static readonly Config<XPConfig> _xpconfig = UCWarfare.IsLoaded ? new Config<XPConfig>(Data.Paths.PointsStorage, "xp.json") : null!;
+    private static readonly Config<TWConfig> _twconfig = UCWarfare.IsLoaded ? new Config<TWConfig>(Data.Paths.PointsStorage, "tw.json") : null!;
+    private static readonly Config<CreditsConfig> _creditsconfig = UCWarfare.IsLoaded ? new Config<CreditsConfig>(Data.Paths.PointsStorage, "credits.json") : null!;
     public static XPConfig XPConfig => _xpconfig.Data;
     public static TWConfig TWConfig => _twconfig.Data;
     public static CreditsConfig CreditsConfig => _creditsconfig.Data;

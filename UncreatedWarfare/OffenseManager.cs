@@ -1,17 +1,16 @@
-﻿using Rocket.API;
-using Rocket.API.Serialisation;
-using Rocket.Core;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using SteamGameServerNetworkingUtils = SDG.Unturned.SteamGameServerNetworkingUtils;
@@ -589,15 +588,7 @@ public static class OffenseManager
         [NetCall(ENetCall.FROM_SERVER, 1103)]
         internal static void ReceiveGrantAdmin(MessageContext context, ulong player)
         {
-            RocketPlayer pl = new RocketPlayer(player.ToString());
-            List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
-            if (!groups.Exists(x => x.Id == UCWarfare.Config.ModerationSettings.AdminOffDutyGroup || x.Id == UCWarfare.Config.ModerationSettings.AdminOnDutyGroup))
-            {
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.HelperGroup, pl);
-                R.Permissions.AddPlayerToGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, pl);
-            }
+            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.ADMIN);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1104)]
@@ -609,15 +600,7 @@ public static class OffenseManager
         [NetCall(ENetCall.FROM_SERVER, 1105)]
         internal static void ReceiveGrantIntern(MessageContext context, ulong player)
         {
-            RocketPlayer pl = new RocketPlayer(player.ToString());
-            List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
-            if (!groups.Exists(x => x.Id == UCWarfare.Config.ModerationSettings.InternOffDutyGroup || x.Id == UCWarfare.Config.ModerationSettings.InternOnDutyGroup))
-            {
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.HelperGroup, pl);
-                R.Permissions.AddPlayerToGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, pl);
-            }
+            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.TRIAL_ADMIN);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1106)]
@@ -629,16 +612,7 @@ public static class OffenseManager
         [NetCall(ENetCall.FROM_SERVER, 1107)]
         internal static void ReceiveGrantHelper(MessageContext context, ulong player)
         {
-            RocketPlayer pl = new RocketPlayer(player.ToString());
-            List<RocketPermissionsGroup> groups = R.Permissions.GetGroups(pl, false);
-            if (!groups.Exists(x => x.Id == UCWarfare.Config.ModerationSettings.HelperGroup))
-            {
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, pl);
-                R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup, pl);
-                R.Permissions.AddPlayerToGroup(UCWarfare.Config.ModerationSettings.HelperGroup, pl);
-            }
+            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.HELPER);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1108)]
@@ -648,12 +622,7 @@ public static class OffenseManager
         }
         private static void RevokeAll(ulong player)
         {
-            RocketPlayer pl = new RocketPlayer(player.ToString(Data.Locale));
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup, pl);
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup, pl);
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup, pl);
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup, pl);
-            R.Permissions.RemovePlayerFromGroup(UCWarfare.Config.ModerationSettings.HelperGroup, pl);
+            PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.MEMBER);
         }
     }
 }

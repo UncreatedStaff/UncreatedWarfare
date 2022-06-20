@@ -925,7 +925,6 @@ public class FOBConfigData : ConfigData
             "18a6b283dbd245d0a13e0daa09b84aed", // Mi8
             "855859643f3c49a088a85be7260a5226", // Mi8
             "5613d32e8e194b3caf44aa16c2e19456"  // Mi8
-
         };
         AmmoBagMaxUses = 3;
 
@@ -1163,7 +1162,8 @@ public class FOBConfigData : ConfigData
                     BaseBarricade = "c3eb4dd3fd1d463993ec69c4c3de50d7", // Mortar
                     Ammo = "66f4c76a119e4d6ca9d0b1a866c4d901",
                     AmmoCount = 3,
-                    MaxFobCapacity = 2
+                    MaxFobCapacity = 2,
+                    ShouldWarnFriendliesIncoming = true
                 }
             },
         };
@@ -1215,6 +1215,8 @@ public class EmplacementData
     public int AmmoCount;
     [JsonPropertyName("allowedPerFob")]
     public int MaxFobCapacity;
+    [JsonPropertyName("warnFriendlyProjectiles")]
+    public bool ShouldWarnFriendliesIncoming = false;
 }
 
 [Translatable("Buildable Type")]

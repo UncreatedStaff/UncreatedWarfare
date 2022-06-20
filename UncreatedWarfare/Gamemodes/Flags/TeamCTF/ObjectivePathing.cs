@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
@@ -59,13 +60,13 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 {
                     pick.index = flags.Count;
                     flags.Add(pick);
+                    AdjacentsFlagLoop(flags, selection, t2adjacents);
                 }
                 else
                 {
                     L.LogError("Pick was null after " + lastFlag.Name);
                     return;
                 }
-                AdjacentsFlagLoop(flags, selection, t2adjacents);
             }
             else if (!PickRandomFlagOrMainWithSpecifiedBias(initBiases, mainBias, out Flag? newFlag))
             {
@@ -73,8 +74,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 {
                     newFlag.index = flags.Count;
                     flags.Add(newFlag);
+                    AdjacentsFlagLoop(flags, selection, t2adjacents);
                 }
-                AdjacentsFlagLoop(flags, selection, t2adjacents);
             }
         }
         public static Dictionary<Flag, float> InstantiateFlags(AdjacentFlagData[] flags, List<Flag> selection, List<Flag>? toNotRemove, Flag? current)
@@ -95,10 +96,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
                 else if (current != null)
                 {
                     L.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);
+                    throw new SingletonLoadException(ESingletonLoadType.LOAD, Data.Gamemode, new Exception("Invalid flag id " + afd.flag_id + " in adjacents for flag " + current.Name));
                 }
                 else
                 {
                     L.LogWarning("Invalid flag id in adjacents dictionary for team 1 main base.");
+                    throw new SingletonLoadException(ESingletonLoadType.LOAD, Data.Gamemode, new Exception("Invalid flag id " + afd.flag_id + " in adjacents for team 1 main base."));
                 }
             }
             return rtn;

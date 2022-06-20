@@ -1,31 +1,36 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Vehicles;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
+using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
-namespace Uncreated.Warfare.Vehicles;
-
-public class VehicleBayCommand : IRocketCommand
+namespace Uncreated.Warfare.Commands;
+public class VehicleBayCommand : Command
 {
-    private readonly List<string> _aliases = new List<string>(1) { "vb" };
-    private readonly List<string> _permissions = new List<string>() { "uc.vehiclebay" };
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "vehiclebay";
-    public string Help => "Set's up the vehicle bay";
-    public string Syntax => "/vehiclebay";
-    public List<string> Aliases => _aliases;
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/vehiclebay";
+    private const string HELP = "Sets up the vehicle bay.";
+
+    public VehicleBayCommand() : base("vehiclebay", EAdminType.STAFF)
+    {
+        AddAlias("vb");
+    }
+
+    public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        WarfareContext ctx = new WarfareContext(caller, command);
+        ctx.AssertGamemode<IVehicles>();
+
+        ctx.AssertRanByPlayer();
 
         if (!VehicleSpawner.Loaded || !VehicleBay.Loaded)
         {
@@ -33,14 +38,15 @@ public class VehicleBayCommand : IRocketCommand
             return;
         }
 
+        ctx.AssertHelpCheck(0, "/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...] - Manage vehicle spawners, signs, and the vehicle bay.");
+
         if (ctx.MatchParameter(0, "delay"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode] - Modify request delays of vehicle.");
-                return;
-            }
-            VehicleData? data = GetVehicleTarget(ref ctx);
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay delay <add|remove> <all|time|flag|percent|staging|none> [value] [!][gamemode] - Modify request delays of vehicle.");
+
+            VehicleData? data = GetVehicleTarget(ctx);
             if (data is not null)
             {
                 bool adding;
@@ -89,7 +95,7 @@ public class VehicleBayCommand : IRocketCommand
                         ctx.SendCorrectUsage("/vehiclebay delay remove <all|time|flag|percent|staging|none> [value] [!][gamemode]");
                     return;
                 }
-                if (type == EDelayType.NONE && command.Length < 4)
+                if (type == EDelayType.NONE && ctx.ArgumentCount < 4)
                 {
                     if (adding)
                         ctx.SendCorrectUsage("/vehiclebay delay add none [!]<gamemode>");
@@ -105,7 +111,7 @@ public class VehicleBayCommand : IRocketCommand
                 }
                 else if (ctx.ArgumentCount < 4)
                 {
-                    ctx.Reply("correct_usage", "/vehiclebay delay " + command[1].ToLower() + " " + command[2].ToLower() + " <value> [gamemode]");
+                    ctx.Reply("correct_usage", "/vehiclebay delay " + ctx.Get(1)!.ToLower() + " " + ctx.Get(1)!.ToLower() + " <value> [gamemode]");
                     return;
                 }
                 else if (ctx.ArgumentCount > 4)
@@ -197,11 +203,10 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "add", "a", "create"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <add|a|create> - Adds the vehicle you're looking at to the vehicle bay.");
-                return;
-            }
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay <add|a|create> - Adds the vehicle you're looking at to the vehicle bay.");
+
             if (ctx.TryGetTarget(out InteractableVehicle vehicle))
             {
                 if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out _))
@@ -218,11 +223,10 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "remove", "r", "delete"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <remove|r|delete> - Removes the vehicle you're looking at from the vehicle bay.");
-                return;
-            }
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay <remove|r|delete> - Removes the vehicle you're looking at from the vehicle bay.");
+
             if (ctx.TryGetTarget(out InteractableVehicle vehicle))
             {
                 if (VehicleBay.VehicleExists(vehicle.asset.GUID, out _))
@@ -239,11 +243,10 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "savemeta", "savemetadata", "metadata"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <savemeta|savemetadata|metadata> - Saves the barricades that are placed on the current vehicle to the vehicle bay.");
-                return;
-            }
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay <savemeta|savemetadata|metadata> - Saves the barricades that are placed on the current vehicle to the vehicle bay.");
+
             if (ctx.TryGetTarget(out InteractableVehicle vehicle))
             {
                 if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
@@ -261,14 +264,13 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "set", "s"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <set|s> <items|property> [value] - Sets the trunk items to your current inventory or any other property to the given value.");
-                return;
-            }
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay <set|s> <items|property> [value] - Sets the trunk items to your current inventory or any other property to the given value.");
+
             if (ctx.MatchParameter(1, "items", "item", "inventory"))
             {
-                VehicleData? data = GetVehicleTarget(ref ctx);
+                VehicleData? data = GetVehicleTarget(ctx);
                 if (data is not null)
                 {
                     List<Guid> items = new List<Guid>();
@@ -301,7 +303,7 @@ public class VehicleBayCommand : IRocketCommand
             }
             else if (ctx.TryGet(2, out string value) && ctx.TryGet(1, out string property))
             {
-                VehicleData? data = GetVehicleTarget(ref ctx);
+                VehicleData? data = GetVehicleTarget(ctx);
                 if (data is not null)
                 {
                     ESetFieldResult result = VehicleBay.SetProperty(data, property, value);
@@ -338,14 +340,13 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "crewseats", "seats", "crew"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <crewseats|seats|crew> <add|remove> <seat index> - Registers or deregisters a seat index as requiring crewman to enter.");
-                return;
-            }
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay <crewseats|seats|crew> <add|remove> <seat index> - Registers or deregisters a seat index as requiring crewman to enter.");
+
             if (ctx.MatchParameter(1, "add", "a", "create"))
             {
-                VehicleData? data = GetVehicleTarget(ref ctx);
+                VehicleData? data = GetVehicleTarget(ctx);
                 if (data is not null)
                 {
                     if (ctx.TryGet(2, out byte seat))
@@ -368,7 +369,7 @@ public class VehicleBayCommand : IRocketCommand
             }
             else if (ctx.MatchParameter(1, "remove", "r", "delete"))
             {
-                VehicleData? data = GetVehicleTarget(ref ctx);
+                VehicleData? data = GetVehicleTarget(ctx);
                 if (data is not null)
                 {
                     if (ctx.TryGet(2, out byte seat))
@@ -394,11 +395,10 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "register", "reg"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <register|reg> <vehicle id> - Sets the vehicle spawner you're looking at to spawn the given vehicle id (guid or uint16).");
-                return;
-            }
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay <register|reg> <vehicle id> - Sets the vehicle spawner you're looking at to spawn the given vehicle id (guid or uint16).");
+
             VehicleAsset? asset;
             if (ctx.TryGet(1, out ushort id))
             {
@@ -464,12 +464,11 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "deregister", "dereg"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <deregister|dereg> - Disables the vehicle spawner you're looking at from spawning vehicles.");
-                return;
-            }
-            VehicleSpawn? spawn = GetBayTarget(ref ctx);
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay <deregister|dereg> - Disables the vehicle spawner you're looking at from spawning vehicles.");
+
+            VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
                 VehicleSpawner.DeleteSpawn(spawn.SpawnPadInstanceID, spawn.type);
@@ -488,12 +487,11 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "force", "respawn"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <force|respawn> - Deletes the linked vehicle to the spawner you're looking at from the world and spawns another.");
-                return;
-            }
-            VehicleSpawn? spawn = GetBayTarget(ref ctx);
+            ctx.AssertPermissions(EAdminType.MODERATOR);
+
+            ctx.AssertHelpCheck(1, "/vehiclebay <force|respawn> - Deletes the linked vehicle to the spawner you're looking at from the world and spawns another.");
+
+            VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
                 VehicleAsset? asset;
@@ -519,11 +517,8 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "link"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <link> - Use while looking at a spawner to start linking, then on a sign to link the sign to the spawner.");
-                return;
-            }
+            ctx.AssertHelpCheck(1, "/vehiclebay <link> - Use while looking at a spawner to start linking, then on a sign to link the sign to the spawner.");
+
             if (!VehicleSigns.Loaded)
             {
                 ctx.SendGamemodeError();
@@ -560,7 +555,7 @@ public class VehicleBayCommand : IRocketCommand
             }
             else
             {
-                VehicleSpawn? spawn = GetBayTarget(ref ctx);
+                VehicleSpawn? spawn = GetBayTarget(ctx);
                 if (spawn is not null)
                 {
                     if (ctx.Caller!.Player.TryGetPlayerData(out Components.UCPlayerData c))
@@ -577,17 +572,14 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "unlink"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <unlink> - Use while looking at a sign to unlink it from it's spawner.");
-                return;
-            }
+            ctx.AssertHelpCheck(1, "/vehiclebay <unlink> - Use while looking at a sign to unlink it from it's spawner.");
+
             if (!VehicleSigns.Loaded)
             {
                 ctx.SendGamemodeError();
                 return;
             }
-            VehicleSign? sign = GetSignTarget(ref ctx);
+            VehicleSign? sign = GetSignTarget(ctx);
             if (sign is not null && sign.SignDrop is not null && sign.SignDrop.interactable is InteractableSign sign2)
             {
                 VehicleSigns.UnlinkSign(sign2);
@@ -598,12 +590,9 @@ public class VehicleBayCommand : IRocketCommand
         }
         else if (ctx.MatchParameter(0, "check", "id", "wtf"))
         {
-            if (ctx.MatchParameter(1, "help"))
-            {
-                ctx.SendCorrectUsage("/vehiclebay <check|id|wtf> - Tells you what vehicle spawns from the spawner you're looking at.");
-                return;
-            }
-            VehicleSpawn? spawn = GetBayTarget(ref ctx);
+            ctx.AssertHelpCheck(1, "/vehiclebay <check|id|wtf> - Tells you what vehicle spawns from the spawner you're looking at.");
+
+            VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
                 if (Assets.find(spawn.VehicleID) is VehicleAsset asset)
@@ -614,16 +603,11 @@ public class VehicleBayCommand : IRocketCommand
             else
                 ctx.Reply("vehiclebay_check_notregistered");
         }
-        else if (ctx.MatchParameter(0, "help"))
-        {
-            ctx.SendCorrectUsage("/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...] - " +
-                "Manage vehicle spawners, signs, and the vehicle bay.");
-        }
         else ctx.SendCorrectUsage("/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...]");
     }
 
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private VehicleData? GetVehicleTarget(ref WarfareContext ctx)
+    private VehicleData? GetVehicleTarget(CommandInteraction ctx)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
         {
@@ -660,7 +644,7 @@ public class VehicleBayCommand : IRocketCommand
         return null;
     }
     /// <summary>Linked vehicle >> Sign barricade >> Spawner barricade >> Spawner structure</summary>
-    private VehicleSpawn? GetBayTarget(ref WarfareContext ctx)
+    private VehicleSpawn? GetBayTarget(CommandInteraction ctx)
     {
         if (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
         {
@@ -691,7 +675,7 @@ public class VehicleBayCommand : IRocketCommand
         return null;
     }
     /// <summary>Sign barricade >> Spawner barricade >> Spawner structure >> Linked Vehicle</summary>
-    private VehicleSign? GetSignTarget(ref WarfareContext ctx)
+    private VehicleSign? GetSignTarget(CommandInteraction ctx)
     {
         if (!VehicleSigns.Loaded) return null;
         VehicleSpawn spawn;

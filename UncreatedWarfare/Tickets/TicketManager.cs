@@ -25,7 +25,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
 {
     private static TicketManager Singleton;
     public static bool Loaded => Singleton.IsLoaded();
-    public static Config<TicketData> config = new Config<TicketData>(Data.TicketStorage, "config.json");
+    public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
 
     public static int Team1Tickets;
     public static int Team2Tickets;

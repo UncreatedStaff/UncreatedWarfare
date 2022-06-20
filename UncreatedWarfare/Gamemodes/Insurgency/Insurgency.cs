@@ -195,7 +195,7 @@ public class Insurgency :
         {
             client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
             client.player.movement.forceRemoveFromVehicle();
-            EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
+            EffectManager.askEffectClearByID(Config.UI.InjuredUI, client.transportConnection);
 
             EffectManager.sendUIEffect(winToastUI, 12345, client.transportConnection, true);
             EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Header", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), "ffffff"));

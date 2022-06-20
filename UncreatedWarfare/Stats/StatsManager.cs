@@ -1,5 +1,4 @@
-﻿using Rocket.Unturned.Enumerations;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,7 +16,7 @@ namespace Uncreated.Warfare.Stats;
 
 public static class StatsManager
 {
-    public static readonly string SaveDirectory = Path.Combine(Data.DATA_DIRECTORY, "Stats") + Path.DirectorySeparatorChar;
+    public static readonly string SaveDirectory = Path.Combine(Data.Paths.BaseDirectory, "Stats") + Path.DirectorySeparatorChar;
     public static readonly string StatsDirectory = Path.Combine(SaveDirectory, "Players") + Path.DirectorySeparatorChar;
     public static readonly string WeaponsDirectory = Path.Combine(SaveDirectory, "Weapons") + Path.DirectorySeparatorChar;
     public static readonly string VehiclesDirectory = Path.Combine(SaveDirectory, "Vehicles") + Path.DirectorySeparatorChar;
@@ -291,7 +290,7 @@ public static class StatsManager
             }
         }
     }
-    private static string GetWeaponName(ushort ID, string KitID) => $"{ID}_{KitID.RemoveMany(false, Data.BAD_FILE_NAME_CHARACTERS)}.dat";
+    private static string GetWeaponName(ushort ID, string KitID) => $"{ID}_{KitID.RemoveMany(false, Data.Paths.BAD_FILE_NAME_CHARACTERS)}.dat";
     public static bool ModifyWeapon(ushort ID, string KitID, Action<WarfareWeapon> modification, bool save = true)
     {
 #if DEBUG
@@ -619,8 +618,8 @@ public static class StatsManager
                     kitData.Deaths++;
                 }
             }, false);
-            ItemJar primary = e.Player.Player.inventory.items[(int)InventoryGroup.Primary].items.FirstOrDefault();
-            ItemJar secondary = e.Player.Player.inventory.items[(int)InventoryGroup.Secondary].items.FirstOrDefault();
+            ItemJar primary = e.Player.Player.inventory.items[0].items.FirstOrDefault();
+            ItemJar secondary = e.Player.Player.inventory.items[1].items.FirstOrDefault();
             if (primary != null)
                 ModifyWeapon(primary.item.id, kit.Name, x => x.Deaths++, true);
             if (secondary != null && (primary == null || primary.item.id != secondary.item.id)) // prevents 2 of the same gun from counting twice

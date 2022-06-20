@@ -7,6 +7,7 @@ using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.FOBs;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -28,15 +29,16 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!(UCWarfare.Config.Patches.project && UCWarfare.Config.EnableMortarWarning)) return;
             if (lastProjected != null && lastProjected.activeInHierarchy)
             {
-                if (__instance.equippedGunAsset?.id == UCWarfare.Config.MortarWeapon)
+                if (FOBManager.Loaded && 
+                    FOBManager.Config.Buildables.Any(x => x.Emplacement is not null && x.Emplacement.ShouldWarnFriendliesIncoming && x.Emplacement.EmplacementVehicle.Exists &&
+                                                          x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(x => x.itemID == __instance.equippedGunAsset.id)))
                 {
                     Vector3 yaw = new Vector3(direction.x, 0, direction.z).normalized;
                     float dp = direction.x * yaw.x + direction.y * yaw.y + direction.z * yaw.z;
                     float angle = Mathf.Acos(dp / (direction.magnitude * yaw.magnitude)) - (Mathf.PI / 4);
-                    float range = Mathf.Sin((2f * angle) - (Mathf.PI / 2f)) / (-(9.81f / (133.3f * 133.3f)));
+                    float range = Mathf.Sin(2f * angle - Mathf.PI / 2f) / -(9.81f / (133.3f * 133.3f));
                     Vector3 dest = origin + yaw * range;
                     // dest.y = F.GetTerrainHeightAt2DPoint(new Vector2(dest.x, dest.z)); (not needed)
                     Vector2 dest2d = new Vector2(dest.x, dest.z);
@@ -80,7 +82,6 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!UCWarfare.Config.Patches.BumperOnTriggerEnter) return true;
             if (other == null || !Provider.isServer || ___vehicle == null || ___vehicle.asset == null || other.isTrigger || other.CompareTag("Debris"))
                 return false;
             if (other.transform.CompareTag("Player"))

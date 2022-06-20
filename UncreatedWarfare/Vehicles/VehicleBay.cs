@@ -30,7 +30,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
     public static bool Loaded => Singleton.IsLoaded<VehicleBay, VehicleData>();
     public static VehicleBayData Config => _config.Data;
 
-    public VehicleBay() : base("vehiclebay", Path.Combine(Data.VehicleStorage, "vehiclebay.json"), VehicleData.Write, VehicleData.Read)
+    public VehicleBay() : base("vehiclebay", Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"), VehicleData.Write, VehicleData.Read)
     {
     }
     private bool hasWhitelisted = false;

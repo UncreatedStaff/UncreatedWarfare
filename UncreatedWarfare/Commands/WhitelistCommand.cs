@@ -1,117 +1,101 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands
+namespace Uncreated.Warfare.Commands;
+public class WhitelistCommand : Command
 {
-    public class WhitelistCommand : IRocketCommand
+    private const string SYNTAX = "/whitelist <add|remove|set amount>";
+    private const string SET_AMOUNT_SYNTAX = "/whitelist set amount <item> <amount>";
+    private const string HELP = "Add or remove items from the global whitelist.";
+
+    public WhitelistCommand() : base("whitelist", EAdminType.STAFF)
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
-        public string Name => "whitelist";
-        public string Help => "Whitelists items";
-        public string Syntax => "/whitelist";
-        private readonly List<string> _aliases = new List<string>(2) { "wl", "wh" };
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>(1) { "uc.whitelist" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] arguments)
-        {
+        AddAlias("wh");
+    }
+
+    public override void Execute(CommandInteraction ctx)
+    {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UnturnedPlayer player = (UnturnedPlayer)caller;
-            if (!Data.Gamemode.UseWhitelist)
+        if (!Data.Gamemode.UseWhitelist || Whitelister.Loaded) throw ctx.SendGamemodeError();
+
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
+        ctx.AssertArgs(2, SYNTAX);
+
+        if (ctx.MatchParameter(0, "add", "whitelist", "create"))
+        {
+            ctx.AssertHelpCheck(1, "/whitelist add <item> [amount]");
+            if (!ctx.TryGet(ctx.ArgumentCount - 1, out byte amount))
+                amount = 255;
+            if (ctx.TryGet(1, out ItemAsset asset, out bool multiple, amount == 255, ctx.ArgumentCount - 2, false))
             {
-                player.SendChat("command_e_gamemode");
-                return;
-            }
-            if (arguments.Length == 2)
-            {
-                if (arguments[0].ToLower() == "add")
+                if (!Whitelister.IsWhitelisted(asset.GUID, out _))
                 {
-                    if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out ushort itemID))
-                    {
-                        if (Assets.find(EAssetType.ITEM, itemID) is ItemAsset asset)
-                        {
-                            if (!Whitelister.IsWhitelisted(asset.GUID, out _))
-                            {
-                                Whitelister.AddItem(asset.GUID);
-                                ActionLog.Add(EActionLogType.ADD_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}", player.CSteamID.m_SteamID);
-                                player.SendChat("whitelist_added", arguments[1]);
-                            }
-                            else
-                                player.SendChat("whitelist_e_exist", arguments[1]);
-                        }
-                        else
-                            player.SendChat("whitelist_e_invalidid", arguments[1]);
-                    }
-                    else
-                        player.SendChat("whitelist_e_invalidid", arguments[1]);
-                }
-                else if (arguments[0].ToLower() == "remove")
-                {
-                    if (UInt16.TryParse(arguments[1], System.Globalization.NumberStyles.Any, Data.Locale, out ushort itemID))
-                    {
-                        if (Assets.find(EAssetType.ITEM, itemID) is ItemAsset asset)
-                        {
-                            if (Whitelister.IsWhitelisted(asset.GUID, out _))
-                            {
-                                Whitelister.RemoveItem(asset.GUID);
-                                ActionLog.Add(EActionLogType.REMOVE_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}", player.CSteamID.m_SteamID);
-                                player.SendChat("whitelist_removed", arguments[1]);
-                            }
-                            else
-                                player.SendChat("whitelist_e_noexist", arguments[1]);
-                        }
-                        else
-                            player.SendChat("whitelist_e_invalidid", arguments[1]);
-                    }
-                    else
-                        player.SendChat("whitelist_e_invalidid", arguments[1]);
+                    Whitelister.AddItem(asset.GUID, amount);
+                    ctx.LogAction(EActionLogType.ADD_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                    if (amount != 255)
+                        ctx.LogAction(EActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                    ctx.Reply("whitelist_added", asset.itemName);
                 }
                 else
-                    player.SendChat("correct_usage", "/whitelist <add|remove|set>");
+                    throw ctx.Reply("whitelist_e_exist", ctx.Get(1)!);
             }
-            else if (arguments.Length == 4)
-            {
-                if (arguments[0].ToLower() == "set")
-                {
-                    if (arguments[1].ToLower() == "maxamount" || arguments[1].ToLower() == "a")
-                    {
-                        if (UInt16.TryParse(arguments[2], System.Globalization.NumberStyles.Any, Data.Locale, out ushort itemID))
-                        {
-                            if (Assets.find(EAssetType.ITEM, itemID) is ItemAsset asset)
-                            {
-                                if (UInt16.TryParse(arguments[3], System.Globalization.NumberStyles.Any, Data.Locale, out ushort amount))
-                                {
-                                    if (Whitelister.IsWhitelisted(asset.GUID, out _))
-                                    {
-                                        Whitelister.SetAmount(asset.GUID, amount);
-                                        ActionLog.Add(EActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}", player.CSteamID.m_SteamID);
-                                        player.SendChat("whitelist_removed", arguments[2]);
-                                    }
-                                    else
-                                        player.SendChat("whitelist_e_noexist", arguments[2]);
-                                }
-                                else
-                                    player.SendChat("whitelist_e_invalidamount", arguments[3]);
-                            }
-                            else
-                                player.SendChat("whitelist_e_invalidid", arguments[2]);
-                        }
-                        else
-                            player.SendChat("whitelist_e_invalidid", arguments[2]);
-                    }
-                    else
-                        player.SendChat("correct_usage", "/whitelist set <amount|salvagable> <value>");
-                }
-                else
-                    player.SendChat("correct_usage", "/whitelist <add|remove|set>");
-            }
+            else if (multiple)
+                throw ctx.Reply("whitelist_e_multiple_results");
             else
-                player.SendChat("correct_usage", "/whitelist <add|remove|set>");
+                throw ctx.Reply("whitelist_e_item_not_found");
         }
+        else if (ctx.MatchParameter(1, "remove", "delete", "rem"))
+        {
+            ctx.AssertHelpCheck(1, "/whitelist remove <item>");
+            if (ctx.TryGet(1, out ItemAsset asset, out bool multiple, true, selector: x => Whitelister.IsWhitelistedFast(x.GUID)))
+            {
+                Whitelister.RemoveItem(asset.GUID);
+                ctx.LogAction(EActionLogType.REMOVE_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                ctx.Reply("whitelist_removed", ctx.Get(1)!);
+            }
+            else if (multiple)
+                throw ctx.Reply("whitelist_e_multiple_results");
+            else
+                throw ctx.Reply("whitelist_e_noexist", ctx.Get(1)!);
+        }
+        else if (ctx.MatchParameter(0, "set"))
+        {
+            ctx.AssertArgs(4, SET_AMOUNT_SYNTAX);
+            ctx.AssertHelpCheck(1, SET_AMOUNT_SYNTAX);
+
+            if (!ctx.TryGet(ctx.ArgumentCount - 1, out byte amount))
+                throw ctx.SendCorrectUsage(SET_AMOUNT_SYNTAX);
+
+            if (ctx.MatchParameter(1, "maxamount", "amount", "amt"))
+            {
+                ctx.AssertHelpCheck(2, SET_AMOUNT_SYNTAX);
+
+                if (ctx.TryGet(2, out ItemAsset asset, out bool multiple, false, ctx.ArgumentCount - 2, false))
+                {
+                    if (!Whitelister.IsWhitelisted(asset.GUID, out _))
+                    {
+                        Whitelister.AddItem(asset.GUID, amount);
+                        ctx.LogAction(EActionLogType.ADD_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
+                        if (amount != 255)
+                            ctx.LogAction(EActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                        ctx.Reply("whitelist_added", asset.itemName);
+                    }
+                    else
+                        throw ctx.Reply("whitelist_e_exist", ctx.Get(2)!);
+                }
+                else if (multiple)
+                    throw ctx.Reply("whitelist_e_multiple_results");
+                else
+                    throw ctx.Reply("whitelist_e_item_not_found");
+            }
+        }
+        else throw ctx.SendCorrectUsage(SYNTAX);
     }
 }

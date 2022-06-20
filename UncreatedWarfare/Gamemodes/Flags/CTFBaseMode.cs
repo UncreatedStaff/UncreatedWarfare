@@ -211,7 +211,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         {
             client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
             client.player.movement.forceRemoveFromVehicle();
-            EffectManager.askEffectClearByID(UCWarfare.Config.GiveUpUI, client.transportConnection);
+            EffectManager.askEffectClearByID(Config.UI.InjuredUI, client.transportConnection);
             //ToastMessage.QueueMessage(client.player, new ToastMessage("", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG));
 
             EffectManager.sendUIEffect(winToastUI, 12345, client.transportConnection, true);

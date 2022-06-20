@@ -181,7 +181,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             else if (step == -1) // finalizing image
             {
                 img.Apply();
-                F.SavePhotoToDisk(filename == default ? Path.Combine(Data.FlagStorage, "zonearea.png") : (filename + ".png"), img);
+                F.SavePhotoToDisk(filename == default ? Path.Combine(Data.Paths.FlagStorage, "zonearea.png") : (filename + ".png"), img);
                 UnityEngine.Object.Destroy(img);
                 complete = true;
             }
@@ -281,7 +281,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 DrawLineGradient(line, thickness / 2, img, color1missingpath, color2missingpath, false);
             }
             img.Apply();
-            F.SavePhotoToDisk(filename == default ? Path.Combine(Data.FlagStorage, "zonemap.png") : (filename + ".png"), img);
+            F.SavePhotoToDisk(filename == default ? Path.Combine(Data.Paths.FlagStorage, "zonemap.png") : (filename + ".png"), img);
             UnityEngine.Object.Destroy(img);
         }
 

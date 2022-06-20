@@ -202,7 +202,7 @@ public class DevCommand : Command
 
             ctx.AssertHelpCheck(1, "/dev <aatest|aa>. Spawns an AA target at a specified point.");
 
-            if (ctx.TryGet(1, out VehicleAsset asset, out bool multipleResults, true, false))
+            if (ctx.TryGet(1, out VehicleAsset asset, out bool multipleResults, true))
             {
                 InteractableVehicle? vehicle = VehicleBay.SpawnLockedVehicle(asset.GUID, ctx.Caller!.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), out _);
                 ctx.Reply($"Successfully spawned AA target: {(vehicle == null ? asset.GUID.ToString("N") : vehicle.asset.vehicleName)}".Colorize("ebd491"));

@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Vehicles;
 [SingletonDependency(typeof(StructureSaver))]
 public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
 {
-    public VehicleSigns() : base("vehiclesigns", Path.Combine(Data.VehicleStorage, "signs.json")) { }
+    public VehicleSigns() : base("vehiclesigns", Path.Combine(Data.Paths.VehicleStorage, "signs.json")) { }
     private static VehicleSigns Singleton;
     public static bool Loaded => Singleton.IsLoaded<VehicleSigns, VehicleSign>();
     public override void Load()

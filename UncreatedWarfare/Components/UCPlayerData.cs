@@ -7,6 +7,7 @@ using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
 using UnityEngine;
 
@@ -92,16 +93,35 @@ public class UCPlayerData : MonoBehaviour
                 this.id = ea.id;
         }
     }
+    internal static void ReloadToastIDs()
+    {
+        ref ToastMessageInfo i = ref TOASTS[0];
+        i.guid = Gamemode.Config.UI.InfoToast;
+        i = ref TOASTS[1];
+        i.guid = Gamemode.Config.UI.WarningToast;
+        i = ref TOASTS[2];
+        i.guid = Gamemode.Config.UI.SevereToast;
+        i = ref TOASTS[3];
+        i.guid = Gamemode.Config.UI.XPToast;
+        i = ref TOASTS[4];
+        i.guid = Gamemode.Config.UI.CreditsToast;
+        i = ref TOASTS[5];
+        i.guid = Gamemode.Config.UI.BigToast;
+        i = ref TOASTS[6];
+        i.guid = Gamemode.Config.UI.ProgressToast;
+        i = ref TOASTS[7];
+        i.guid = Gamemode.Config.UI.TipToast;
+    }
     private static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
     {
-        new ToastMessageInfo(EToastMessageSeverity.INFO,        new Guid("d7504683-4b32-4ed4-9191-4b4136ab1bc8"), 0, 12f),      // info
-        new ToastMessageInfo(EToastMessageSeverity.WARNING,     new Guid("5678a559-695e-4d99-9dfe-a9a771b6616f"), 0, 12f),      // warning
-        new ToastMessageInfo(EToastMessageSeverity.SEVERE,      new Guid("26fed656-4ccf-4c46-aac1-df01dbba0aab"), 0, 12f),      // error
-        new ToastMessageInfo(EToastMessageSeverity.MINI,        new Guid("a213915d-61ad-41ce-bab3-4fb12fe6870c"), 1, 1.58f),    // xp
-        new ToastMessageInfo(EToastMessageSeverity.MEDIUM,      new Guid("5f695955-f0da-4d19-adac-ac39140da797"), 2, 4f),       // xp
-        new ToastMessageInfo(EToastMessageSeverity.BIG,         new Guid("9de82ffe-a139-46b3-9109-0eb918bf3991"), 3, 5.5f),     // big
-        new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    new Guid("a113a0f2-d0af-4db8-b5e5-bcbc17fc96c9"), 4, 1.6f),     // progress
-        new ToastMessageInfo(EToastMessageSeverity.TIP,         new Guid("abbf74e8-6f1c-4665-9258-84c70b9433ba"), 1, 4f),       // tip
+        new ToastMessageInfo(EToastMessageSeverity.INFO,        Gamemode.Config.UI.InfoToast, 0, 12f),      // info
+        new ToastMessageInfo(EToastMessageSeverity.WARNING,     Gamemode.Config.UI.WarningToast, 0, 12f),   // warning
+        new ToastMessageInfo(EToastMessageSeverity.SEVERE,      Gamemode.Config.UI.SevereToast, 0, 12f),    // error
+        new ToastMessageInfo(EToastMessageSeverity.MINI,        Gamemode.Config.UI.XPToast, 1, 1.58f),      // xp
+        new ToastMessageInfo(EToastMessageSeverity.MEDIUM,      Gamemode.Config.UI.CreditsToast, 2, 4f),    // xp
+        new ToastMessageInfo(EToastMessageSeverity.BIG,         Gamemode.Config.UI.BigToast, 3, 5.5f),      // big
+        new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    Gamemode.Config.UI.ProgressToast, 4, 1.6f), // progress
+        new ToastMessageInfo(EToastMessageSeverity.TIP,         Gamemode.Config.UI.TipToast, 1, 4f),        // tip
     };
     private struct ToastChannel
     {

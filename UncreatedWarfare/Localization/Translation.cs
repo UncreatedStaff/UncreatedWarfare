@@ -22,6 +22,7 @@ public static class Translation
 {
     public static class Common
     {
+        public const string NOT_ENABLED = "not_enabled";
         public const string NOT_IMPLEMENTED = "todo";
         public const string CORRECT_USAGE = "correct_usage";
         public const string CONSOLE_ONLY = "command_e_no_console";
@@ -1719,10 +1720,10 @@ public static class Translation
     public static void ReadEnumTranslations(List<KeyValuePair<Type, string?>> extEnumTypes)
     {
         enumTranslations.Clear();
-        string def = Path.Combine(Data.LangStorage, JSONMethods.DEFAULT_LANGUAGE) + Path.DirectorySeparatorChar;
+        string def = Path.Combine(Data.Paths.LangStorage, JSONMethods.DEFAULT_LANGUAGE) + Path.DirectorySeparatorChar;
         if (!Directory.Exists(def))
             Directory.CreateDirectory(def);
-        DirectoryInfo info = new DirectoryInfo(Data.LangStorage);
+        DirectoryInfo info = new DirectoryInfo(Data.Paths.LangStorage);
         if (!info.Exists) info.Create();
         DirectoryInfo[] langDirs = info.GetDirectories("*", SearchOption.TopDirectoryOnly);
         for (int i = 0; i < langDirs.Length; ++i)
@@ -1734,7 +1735,7 @@ public static class Translation
                     Directory.CreateDirectory(p);
             }
         }
-        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in UCWarfare.I.Assembly
+        foreach (KeyValuePair<Type, TranslatableAttribute> enumType in Assembly.GetExecutingAssembly()
                      .GetTypes()
                      .Where(x => x.IsEnum)
                      .Select(x => new KeyValuePair<Type, TranslatableAttribute>(x, (Attribute.GetCustomAttribute(x, typeof(TranslatableAttribute)) as TranslatableAttribute)!))

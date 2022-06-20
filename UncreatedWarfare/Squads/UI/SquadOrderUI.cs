@@ -20,7 +20,7 @@ public class SquadOrderUI : UnturnedUI
     {
         ITransportConnection c = player.Connection;
         OrderInfo.SetText(c, Translation.Translate("order_ui_commander", player, order.Commander.CharacterName));
-        OrderText.SetText(c, Translation.Translate("order_ui_text", player, order.Message));
+        OrderText.SetText(c, Translation.Translate("order_ui_text", player, order.Formatting is null ? order.Message : Translation.Translate(order.Message, player, order.Formatting)));
         OrderText.SetText(c, Translation.Translate("order_ui_time", player, order.MinutesLeft));
         OrderText.SetText(c, Translation.Translate("order_ui_reward", player, order.RewardLevel));
     }

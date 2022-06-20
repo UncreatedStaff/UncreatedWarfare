@@ -8,7 +8,7 @@ namespace Uncreated.Warfare;
 
 public class SystemConfig : Config<SystemConfigData>
 {
-    public SystemConfig() : base(Warfare.Data.DATA_DIRECTORY, "sys_config.json", "sysconfig")
+    public SystemConfig() : base(Warfare.Data.Paths.BaseDirectory, "sys_config.json", "sysconfig")
     {
     }
 
@@ -28,22 +28,6 @@ public class SystemConfigData : ConfigData
     public MySqlData SQL;
     [JsonPropertyName("debugMode")]
     public bool Debug;
-
-    [Obsolete]
-    public ushort ToastIDInfo;
-    [Obsolete]
-    public ushort ToastIDWarning;
-    [Obsolete]
-    public ushort ToastIDSevere;
-    [Obsolete]
-    public ushort MiniToastXP;
-    [Obsolete]
-    public ushort MiniToastOfficerPoints;
-    [Obsolete]
-    public ushort BigToast;
-    [Obsolete]
-    public ushort GiveUpUI;
-
     [JsonPropertyName("allowCosmetics")]
     public bool AllowCosmetics;
     [JsonPropertyName("modifySkills")]
@@ -101,13 +85,6 @@ public class SystemConfigData : ConfigData
         this.TCPSettings = new TCPConfig();
         this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
         this.Debug = true;
-        this.ToastIDInfo = 36004;
-        this.ToastIDWarning = 36005;
-        this.ToastIDSevere = 36003;
-        this.MiniToastXP = 36001;
-        this.MiniToastOfficerPoints = 36002;
-        this.BigToast = 36006;
-        this.GiveUpUI = 36009;
         this.AllowCosmetics = false;
         this.ModifySkillLevels = true;
         this.AllowBatteryStealing = false;

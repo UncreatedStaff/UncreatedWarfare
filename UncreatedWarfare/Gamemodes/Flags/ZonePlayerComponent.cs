@@ -92,7 +92,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         if (old > -1 && old < _currentPoints!.Count)
             EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + old, PointText(old));
     }
-    internal void UtilCommand(WarfareContext ctx)
+    internal void UtilCommand(CommandInteraction ctx)
     {
         ThreadUtil.assertIsGameThread();
         if (!ctx.HasArgs(1))
@@ -111,7 +111,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         }
     }
 
-    internal void DeleteCommand(WarfareContext ctx)
+    internal void DeleteCommand(CommandInteraction ctx)
     {
         ThreadUtil.assertIsGameThread();
         string zoneName;
@@ -237,7 +237,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         _currentBuilder!.Id = nextId;
     }
 
-    internal void CreateCommand(WarfareContext ctx)
+    internal void CreateCommand(CommandInteraction ctx)
     {
         ThreadUtil.assertIsGameThread();
         if (ctx.HasArgs(2))
@@ -427,7 +427,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 break;
         }
     }
-    internal void EditCommand(WarfareContext ctx)
+    internal void EditCommand(CommandInteraction ctx)
     {
         ThreadUtil.assertIsGameThread();
         if (!ctx.HasArgs(1))

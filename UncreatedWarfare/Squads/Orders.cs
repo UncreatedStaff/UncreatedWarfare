@@ -15,20 +15,24 @@ namespace Uncreated.Warfare.Squads
     {
         public static List<Order> orders = new List<Order>(16);
 
-        public static Order GiveOrder(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message)
+        public static Order GiveOrder(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, string[] formatting)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             Order order = squad.Leader.Player.gameObject.AddComponent<Order>();
-            order.Initialize(squad, commander, type, marker, message);
+            order.Initialize(squad, commander, type, marker, message, formatting: formatting);
             orders.Add(order);
 
-            commander.Message("order_s_sent", squad.Name, message);
-            foreach (UCPlayer player in squad.Members)
+            commander.Message("order_s_sent", squad.Name, Translation.Translate(message, commander, formatting));
+            foreach (LanguageSet set in Translation.EnumerateLanguageSets(squad))
             {
-                order.SendUI(player);
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("order_s_received", player, commander.CharacterName, message), EToastMessageSeverity.MEDIUM));
+                string msg = Translation.Translate("order_s_received", set.Next, commander.CharacterName, Translation.Translate(message, set.Language, formatting));
+                while (set.MoveNext())
+                {
+                    order.SendUI(set.Next);
+                    ToastMessage.QueueMessage(set.Next, new ToastMessage(msg, EToastMessageSeverity.MEDIUM));
+                }
             }
 
             commander.Player.quests.sendSetMarker(false, marker);
@@ -81,14 +85,9 @@ namespace Uncreated.Warfare.Squads
         public EOrder Type { get; private set; }
         public Vector3 Marker { get; private set; }
         public string Message { get; private set; }
+        public string[]? Formatting { get; private set; }
         public int TimeLeft { get; private set; }
-        public string MinutesLeft
-        {
-            get
-            {
-                return ((int)Math.Ceiling(TimeLeft / 60F)).ToString();
-            }
-        }
+        public string MinutesLeft => Mathf.CeilToInt(TimeLeft / 60F).ToString(Data.Locale);
         public string RewardLevel { get; private set; }
         public int RewardXP { get; private set; }
         public int RewardTW { get; private set; }
@@ -99,7 +98,7 @@ namespace Uncreated.Warfare.Squads
 
         private Coroutine loop;
 
-        public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag? flag = null)
+        public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag? flag = null, string[]? formatting = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -109,6 +108,7 @@ namespace Uncreated.Warfare.Squads
             Type = type;
             Marker = marker;
             Message = message;
+            Formatting = formatting;
             Flag = flag;
 
             switch (Type)
@@ -369,11 +369,12 @@ namespace Uncreated.Warfare.Squads
             }
         }
     }
-
+    [Translatable("Order Type")]
     public enum EOrder
     {
         ATTACK,
         DEFEND,
+        [Translatable("Build FOB")]
         BUILDFOB,
         MOVE
     }

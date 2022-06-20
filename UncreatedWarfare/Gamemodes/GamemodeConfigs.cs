@@ -2,13 +2,14 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Gamemodes;
 
 public sealed class GamemodeConfig : Config<GamemodeConfigData>
 {
-    public GamemodeConfig() : base(Warfare.Data.DATA_DIRECTORY, "gamemode_settings.json", "gameconfig") { }
+    public GamemodeConfig() : base(Warfare.Data.Paths.BaseDirectory, "gamemode_settings.json", "gameconfig") { }
     protected override void OnReload()
     {
         UI_CONFIG ui = Data.UI;
@@ -22,6 +23,8 @@ public sealed class GamemodeConfig : Config<GamemodeConfigData>
         CTFUI.CaptureUI.LoadFromConfig(ui.CaptureGUID);
         Teams.JoinManager.JoinUI.LoadFromConfig(ui.JoinUIGUID);
         UCPlayer.MutedUI.LoadFromConfig(ui.MutedUI);
+        UCPlayerData.ReloadToastIDs();
+        Gamemode.ReadGamemodes();
     }
 }
 [JsonSerializable(typeof(GamemodeConfigData))]
@@ -135,6 +138,15 @@ public class UI_CONFIG
     public JsonAssetReference<EffectAsset> RallyGUID;
     public JsonAssetReference<EffectAsset> OrderUI;
     public JsonAssetReference<EffectAsset> MutedUI;
+    public JsonAssetReference<EffectAsset> InfoToast;
+    public JsonAssetReference<EffectAsset> WarningToast;
+    public JsonAssetReference<EffectAsset> SevereToast;
+    public JsonAssetReference<EffectAsset> XPToast;
+    public JsonAssetReference<EffectAsset> CreditsToast;
+    public JsonAssetReference<EffectAsset> BigToast;
+    public JsonAssetReference<EffectAsset> ProgressToast;
+    public JsonAssetReference<EffectAsset> TipToast;
+    public JsonAssetReference<EffectAsset> InjuredUI;
     public Guid XPGUID;
     public Guid OfficerGUID;
     public JsonAssetReference<EffectAsset> CTFLeaderboardGUID;
@@ -171,6 +183,15 @@ public class UI_CONFIG
         OrderUI =               "57a08eb9c4cb4fd2ad30a3e413e29b27";
         JoinUIGUID =            "0ce74ee0a7534851838e967ed4ea4c5e";
         MutedUI =               "c5e31c7357134be09732c1930e0e4ff0";
+        InfoToast =             "d75046834b324ed491914b4136ab1bc8";
+        WarningToast =          "5678a559695e4d999dfea9a771b6616f";
+        SevereToast =           "26fed6564ccf4c46aac1df01dbba0aab";
+        XPToast =               "a213915d61ad41cebab34fb12fe6870c";
+        CreditsToast =          "5f695955f0da4d19adacac39140da797";
+        BigToast =              "9de82ffea13946b391090eb918bf3991";
+        InjuredUI =             "27b84636ed8d4c0fb557a67d89254b00";
+        ProgressToast =         "a113a0f2d0af4db8b5e5bcbc17fc96c9";
+        TipToast =              "abbf74e86f1c4665925884c70b9433ba";
         XPGUID =       new Guid("d6de0a8025de44d29a99a41937a58a59");
         OfficerGUID =  new Guid("9fd31b776b744b72847f2dc00dba93a8");
         CTFLeaderboardGUID =    "b83389df1245438db18889af94f04960";

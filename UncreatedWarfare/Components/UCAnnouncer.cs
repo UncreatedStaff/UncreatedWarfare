@@ -66,8 +66,8 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        F.CheckDir(Data.DATA_DIRECTORY, out bool folderExists);
-        string broadcastFile = Path.Combine(Data.DATA_DIRECTORY, "autobroadcast.json");
+        F.CheckDir(Data.Paths.BaseDirectory, out bool folderExists);
+        string broadcastFile = Path.Combine(Data.Paths.BaseDirectory, "autobroadcast.json");
         Messages.Clear();
         if (folderExists)
         {

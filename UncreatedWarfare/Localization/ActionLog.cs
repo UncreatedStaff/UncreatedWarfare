@@ -12,7 +12,7 @@ namespace Uncreated.Warfare;
 public class ActionLog : MonoBehaviour
 {
     private readonly Queue<ActionLogItem> items = new Queue<ActionLogItem>(16);
-    private const string DATE_HEADER_FORMAT = "yyyy-MM-dd_HH-mm-ss";
+    public const string DATE_HEADER_FORMAT = "yyyy-MM-dd_HH-mm-ss";
     private static ActionLog Instance;
     private static DateTime CurrentLogSt = DateTime.MinValue;
     private void Awake()
@@ -34,10 +34,10 @@ public class ActionLog : MonoBehaviour
     {
         if (items.Count > 0)
         {
-            F.CheckDir(Data.LOG_DIRECTORY, out bool success);
+            F.CheckDir(Data.Paths.ActionLog, out bool success);
             if (success)
             {
-                string path2 = Path.Combine(Data.LOG_DIRECTORY, "current.txt");
+                string path2 = Path.Combine(Data.Paths.ActionLog, "current.txt");
                 FileInfo info = new FileInfo(path2);
                 bool replaced = false;
                 if (info.Exists)
@@ -51,7 +51,7 @@ public class ActionLog : MonoBehaviour
                             : DateTime.MinValue);*/
                     if (creation != DateTime.MinValue && (DateTime.Now - creation).TotalHours > 1d)
                     {
-                        string path = Path.Combine(Data.LOG_DIRECTORY, creation.ToString(DATE_HEADER_FORMAT) + ".txt");
+                        string path = Path.Combine(Data.Paths.ActionLog, creation.ToString(DATE_HEADER_FORMAT) + ".txt");
                         try
                         {
                             info.CopyTo(path);
@@ -127,7 +127,7 @@ public class ActionLog : MonoBehaviour
         [NetCall(ENetCall.FROM_SERVER, 1128)]
         internal static async Task ReceiveAckLog(MessageContext context, DateTime fileReceived)
         {
-            string path = Path.Combine(Data.LOG_DIRECTORY, fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt");
+            string path = Path.Combine(Data.Paths.ActionLog, fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt");
             await UCWarfare.ToUpdate();
             if (File.Exists(path))
                 File.Delete(path);
@@ -135,7 +135,7 @@ public class ActionLog : MonoBehaviour
         [NetCall(ENetCall.FROM_SERVER, 1129)]
         internal static async Task ReceiveCurrentLogRequest(MessageContext context)
         {
-            string path2 = Path.Combine(Data.LOG_DIRECTORY, "current.txt");
+            string path2 = Path.Combine(Data.Paths.ActionLog, "current.txt");
             FileInfo info = new FileInfo(path2);
             if (!info.Exists)
             {
@@ -165,10 +165,10 @@ public class ActionLog : MonoBehaviour
     }
     internal static void OnConnected()
     {
-        F.CheckDir(Data.LOG_DIRECTORY, out bool success);
+        F.CheckDir(Data.Paths.ActionLog, out bool success);
         if (success)
         {
-            foreach (string file in Directory.EnumerateFiles(Data.LOG_DIRECTORY))
+            foreach (string file in Directory.EnumerateFiles(Data.Paths.ActionLog))
             {
                 try
                 {

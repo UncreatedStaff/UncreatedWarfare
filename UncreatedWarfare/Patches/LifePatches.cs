@@ -15,13 +15,13 @@ namespace Uncreated.Warfare
             /// <summary>Prefix of <see cref="PlayerLife.askStarve(byte)"/> to invoke prevent starving in main base.</summary>
             [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askStarve))]
             [HarmonyPrefix]
-            static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => !UCWarfare.Config.Patches.askStarve || !(Data.Gamemode is TeamGamemode) || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
+            static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => !(Data.Gamemode is TeamGamemode) || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
 
             // SDG.Unturned.PlayerLife
             /// <summary>Prefix of <see cref="PlayerLife.askDehydrate(byte)"/> to invoke prevent dehydrating in main base.</summary>
             [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askDehydrate))]
             [HarmonyPrefix]
-            static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !UCWarfare.Config.Patches.askDehydrate || !(Data.Gamemode is TeamGamemode) || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
+            static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !(Data.Gamemode is TeamGamemode) || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
 
             // SDG.Unturned.PlayerLife
             /// <summary>
@@ -34,7 +34,6 @@ namespace Uncreated.Warfare
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (!UCWarfare.Config.Patches.simulatePlayerLife) return true;
                 if (!Data.Is(out IRevives r)) return true;
                 if (Provider.isServer)
                 {
@@ -66,7 +65,6 @@ namespace Uncreated.Warfare
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (!UCWarfare.Config.Patches.simulatePlayerLife) return;
                 if (!Data.Is(out IRevives r)) return;
                 if (Provider.isServer)
                 {
@@ -99,7 +97,6 @@ namespace Uncreated.Warfare
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (!UCWarfare.Config.Patches.closeStorage) return;
                 UCPlayer? player = UCPlayer.FromPlayer(__instance.player);
                 if (player == null) return;
                 if (player.StorageCoroutine != null)

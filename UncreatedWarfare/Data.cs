@@ -1,6 +1,4 @@
-﻿using Rocket.API.Serialisation;
-using Rocket.Core;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -8,7 +6,6 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Uncreated.Homebase.Unturned;
 using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -28,56 +25,52 @@ namespace Uncreated.Warfare;
 
 public static class Data
 {
-    public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
-    public static readonly string DATA_DIRECTORY = Path.Combine(System.Environment.CurrentDirectory, "Plugins", "UncreatedWarfare") + Path.DirectorySeparatorChar;
-    private static readonly string _flagStorage = Path.Combine(DATA_DIRECTORY, "Maps", "{0}", "Flags") + Path.DirectorySeparatorChar;
-    private static string? _flagStorageTemp;
-    public static string FlagStorage
+    public static class Paths
     {
-        get
+        public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
+        public static readonly string BaseDirectory = Path.Combine(Environment.CurrentDirectory, "Uncreated", "Warfare") + Path.DirectorySeparatorChar;
+        private static string? mapCache;
+        public static string MapStorage
         {
-            if (Provider.map == default) return Path.Combine(DATA_DIRECTORY, "Maps", "Unloaded", "Flags") + Path.DirectorySeparatorChar;
-            if (_flagStorageTemp == default)
-                _flagStorageTemp = string.Format(_flagStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
-            return _flagStorageTemp;
+            get
+            {
+                if (mapCache is null)
+                {
+                    if (Provider.map == default) throw new Exception("Map not yet set.");
+                    mapCache = Path.Combine(BaseDirectory, "Maps", Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS)) + Path.DirectorySeparatorChar;
+                }
+                return mapCache;
+            }
+        }
+        private static string? _flagCache;
+        private static string? _structureCache;
+        private static string? _vehicleCache;
+        public static readonly string TeamStorage      = Path.Combine(BaseDirectory, "Teams")     + Path.DirectorySeparatorChar;
+        public static readonly string TicketStorage    = Path.Combine(BaseDirectory, "Tickets")   + Path.DirectorySeparatorChar;
+        public static readonly string PointsStorage    = Path.Combine(BaseDirectory, "Points")    + Path.DirectorySeparatorChar;
+        public static readonly string OfficerStorage   = Path.Combine(BaseDirectory, "Officers")  + Path.DirectorySeparatorChar;
+        public static readonly string CooldownStorage  = Path.Combine(BaseDirectory, "Cooldowns") + Path.DirectorySeparatorChar;
+        public static readonly string SquadStorage     = Path.Combine(BaseDirectory, "Squads")    + Path.DirectorySeparatorChar;
+        public static readonly string KitsStorage      = Path.Combine(BaseDirectory, "Kits")      + Path.DirectorySeparatorChar;
+        public static readonly string SQLStorage       = Path.Combine(BaseDirectory, "SQL")       + Path.DirectorySeparatorChar;
+        public static readonly string FOBStorage       = Path.Combine(BaseDirectory, "FOBs")      + Path.DirectorySeparatorChar;
+        public static readonly string LangStorage      = Path.Combine(BaseDirectory, "Lang")      + Path.DirectorySeparatorChar;
+        public static readonly string Logs             = Path.Combine(BaseDirectory, "Logs")      + Path.DirectorySeparatorChar;
+        public static readonly string ActionLog        = Path.Combine(Logs,          "ActionLog") + Path.DirectorySeparatorChar;
+
+        public static readonly string CurrentLog       = Path.Combine(Logs,          "current.txt");
+        public static string FlagStorage        => _flagCache is null       ? (_flagCache       = Path.Combine(MapStorage, "Flags")      + Path.DirectorySeparatorChar) : _flagCache;
+        public static string StructureStorage   => _structureCache is null  ? (_structureCache  = Path.Combine(MapStorage, "Structures") + Path.DirectorySeparatorChar) : _structureCache;
+        public static string VehicleStorage     => _vehicleCache is null    ? (_vehicleCache    = Path.Combine(MapStorage, "Vehicles")   + Path.DirectorySeparatorChar) : _vehicleCache;
+        public static void OnMapChanged()
+        {
+            mapCache = null;
+            _flagCache = null;
+            _structureCache = null;
+            _vehicleCache = null;
         }
     }
-    private static readonly string _structuresStorage = Path.Combine(DATA_DIRECTORY, "Maps", "{0}", "Structures") + Path.DirectorySeparatorChar;
-    private static string? _structStorageTemp = null;
-    public static string StructureStorage
-    {
-        get
-        {
-            if (Provider.map == default) return Path.Combine(DATA_DIRECTORY, "Maps", "Unloaded", "Structures");
-            if (_structStorageTemp == default)
-                _structStorageTemp = string.Format(_structuresStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
-            return _structStorageTemp;
-        }
-    }
-    public static readonly string TeamStorage = Path.Combine(DATA_DIRECTORY, "Teams") + Path.DirectorySeparatorChar;
-    public static readonly string TicketStorage = Path.Combine(DATA_DIRECTORY, "Tickets") + Path.DirectorySeparatorChar;
-    public static readonly string PointsStorage = Path.Combine(DATA_DIRECTORY, "Points") + Path.DirectorySeparatorChar;
-    public static readonly string OfficerStorage = Path.Combine(DATA_DIRECTORY, "Officers") + Path.DirectorySeparatorChar;
-    public static readonly string CooldownStorage = Path.Combine(DATA_DIRECTORY, "Cooldowns") + Path.DirectorySeparatorChar;
-    public static readonly string SquadStorage = Path.Combine(DATA_DIRECTORY, "Squads") + Path.DirectorySeparatorChar;
-    public static readonly string KitsStorage = Path.Combine(DATA_DIRECTORY, "Kits") + Path.DirectorySeparatorChar;
-    public static readonly string SQLStorage = Path.Combine(DATA_DIRECTORY, "SQL") + Path.DirectorySeparatorChar;
-    private static readonly string _vehicleStorage = Path.Combine(DATA_DIRECTORY, "Maps", "{0}", "Vehicles") + Path.DirectorySeparatorChar;
-    private static string? _vehicleStorageTemp;
-    public static string VehicleStorage
-    {
-        get
-        {
-            if (Provider.map == default) return Path.Combine(DATA_DIRECTORY, "Maps", "Unloaded", "Vehicles");
-            if (_vehicleStorageTemp == default)
-                _vehicleStorageTemp = string.Format(_vehicleStorage, Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS));
-            return _vehicleStorageTemp;
-        }
-    }
-    public static readonly string FOBStorage = Path.Combine(DATA_DIRECTORY, "FOBs") + Path.DirectorySeparatorChar;
-    public static readonly string LangStorage = Path.Combine(DATA_DIRECTORY, "Lang") + Path.DirectorySeparatorChar;
-    public static readonly string ElseWhereSQLPath = "C" + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar + "sql.json";
-    public static readonly string LOG_DIRECTORY = Path.Combine(System.Environment.CurrentDirectory, "Logs", "ActionLogs");
+
     public static readonly CultureInfo Locale = new CultureInfo("en-US");
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;
@@ -148,13 +141,16 @@ public static class Data
                 {
                     OutputToConsoleMethod = (OutputToConsole)appendConsoleMethod.CreateDelegate(typeof(OutputToConsole), defaultIOHandler);
                     L.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
+                    return;
                 }
             }
+            OutputToConsoleMethod = null;
         }
         catch (Exception ex)
         {
             CommandWindow.LogError("Couldn't get defaultIOHandler from CommandWindow:");
             CommandWindow.LogError(ex);
+            OutputToConsoleMethod = null;
         }
     }
     public static void ReloadTCP()
@@ -188,14 +184,10 @@ public static class Data
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCWarfare.I.gameObject.AddComponent<ActionLog>();
-        Singletons = UCWarfare.I.gameObject.AddComponent<SingletonManager>();
         Singletons.OnSingletonLoaded    += OnSingletonLoaded;
         Singletons.OnSingletonUnloaded  += OnSingletonUnloaded;
         Singletons.OnSingletonReloaded  += OnSingletonReloaded;
 
-
-        ActionLog.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Locale)}");
 
         /* INITIALIZE UNCREATED NETWORKING */
         Logging.OnLogInfo += L.NetLogInfo;
@@ -206,15 +198,16 @@ public static class Data
 
         /* CREATE DIRECTORIES */
         L.Log("Validating directories...", ConsoleColor.Magenta);
-        F.CheckDir(DATA_DIRECTORY, out _, true);
-        F.CheckDir(LangStorage, out _, true);
-        F.CheckDir(KitsStorage, out _, true);
-        F.CheckDir(PointsStorage, out _, true);
-        F.CheckDir(FOBStorage, out _, true);
-        F.CheckDir(TeamStorage, out _, true);
-        F.CheckDir(OfficerStorage, out _, true);
+        F.CheckDir(Paths.BaseDirectory, out _, true);
+        F.CheckDir(Paths.MapStorage, out _, true);
+        F.CheckDir(Paths.LangStorage, out _, true);
+        F.CheckDir(Paths.KitsStorage, out _, true);
+        F.CheckDir(Paths.PointsStorage, out _, true);
+        F.CheckDir(Paths.FOBStorage, out _, true);
+        F.CheckDir(Paths.TeamStorage, out _, true);
+        F.CheckDir(Paths.OfficerStorage, out _, true);
 
-        ZoneProvider = new JsonZoneProvider(new FileInfo(Path.Combine(FlagStorage, "zones.json")));
+        ZoneProvider = new JsonZoneProvider(new FileInfo(Path.Combine(Paths.FlagStorage, "zones.json")));
 
         /* LOAD LOCALIZATION ASSETS */
         L.Log("Loading JSON Data...", ConsoleColor.Magenta);
@@ -245,8 +238,7 @@ public static class Data
 
         /* CONSTRUCT FRAMEWORK */
         L.Log("Instantiating Framework...", ConsoleColor.Magenta);
-        L.Log("Connection string: " + UCWarfare.I.SQL.GetConnectionString());
-        DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
+        DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
         DatabaseManager.Open();
         Points.Initialize();
         CommandWindow.shouldLogDeaths = false;
@@ -256,9 +248,7 @@ public static class Data
         ReloadTCP();
 
         if (UCWarfare.Config.EnableReporter)
-        {
             Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
-        }
 
 
         DeathTracker = Singletons.LoadSingleton<DeathTracker>(false);
@@ -384,21 +374,6 @@ public static class Data
         }
         UseFastKits = !UseFastKits;
 
-        /* SET UP ROCKET GROUPS */
-        if (R.Permissions.GetGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup) == default)
-            _ = R.Permissions.AddGroup(AdminOnDutyGroup);
-        if (R.Permissions.GetGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup) == default)
-            _ = R.Permissions.AddGroup(AdminOffDutyGroup);
-        if (R.Permissions.GetGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup) == default)
-            _ = R.Permissions.AddGroup(InternOnDutyGroup);
-        if (R.Permissions.GetGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup) == default)
-            _ = R.Permissions.AddGroup(InternOffDutyGroup);
-        RocketPermissionsGroup defgroup = R.Permissions.GetGroup("default");
-        if (defgroup == default)
-            _ = R.Permissions.AddGroup(new RocketPermissionsGroup("default", "Guest", string.Empty, new List<string>(), DefaultPerms, priority: 1));
-        else defgroup.Permissions = DefaultPerms;
-        _ = R.Permissions.SaveGroup(defgroup);
-
         /* REGISTER STATS MANAGER */
         StatsManager.LoadTeams();
         StatsManager.LoadWeapons();
@@ -453,10 +428,10 @@ public static class Data
             try
             {
                 ushort id = BitConverter.ToUInt16(message, 0);
-                if (id != L.NetCalls.SendLogMessage.ID)
-                {
-                    L.Log("Sent over TCP server on " + connection.Identity + ": " + message.Length, ConsoleColor.DarkGray);
-                }
+                //if (id != L.NetCalls.SendLogMessage.ID)
+                //{
+                L.Log("Sent over TCP server on " + connection.Identity + ": " + message.Length, ConsoleColor.DarkGray);
+                //}
             }
             catch { }
         }
@@ -482,138 +457,8 @@ public static class Data
         L.LogError(ex);
         if (ex.InnerException != default)
             L.LogError(ex.InnerException);
-        Level.onLevelLoaded += (int level) =>
-        {
-            L.LogError("!!UNCREATED WARFARE DID NOT LOAD!!!");
-            L.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
-        };
-        UCWarfare.I.UnloadPlugin();
+        throw new SingletonLoadException(ESingletonLoadType.LOAD, UCWarfare.I, ex);
     }
-    private static RocketPermissionsGroup AdminOnDutyGroup
-    {
-        get =>
-            new RocketPermissionsGroup(UCWarfare.Config.ModerationSettings.AdminOnDutyGroup,
-            "Admin", "default", new List<string>(), AdminPerms, "00ffff", 100);
-    }
-    private static RocketPermissionsGroup AdminOffDutyGroup
-    {
-        get =>
-            new RocketPermissionsGroup(UCWarfare.Config.ModerationSettings.AdminOffDutyGroup,
-            "Admin Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 100);
-    }
-
-    private static RocketPermissionsGroup InternOnDutyGroup
-    {
-        get =>
-            new RocketPermissionsGroup(UCWarfare.Config.ModerationSettings.InternOnDutyGroup,
-            "Intern", "default", new List<string>(), TrialAdminPerms, "66ffff", 50);
-    }
-    private static RocketPermissionsGroup InternOffDutyGroup
-    {
-        get =>
-            new RocketPermissionsGroup(UCWarfare.Config.ModerationSettings.InternOffDutyGroup,
-            "Intern Off-Duty", "default", new List<string>(), new List<Permission> { new Permission("uc.duty") }, priority: 50);
-    }
-
-    private static List<Permission> AdminPerms
-    {
-        get =>
-            new List<Permission>()
-            {
-                new Permission("uc.duty"),
-                new Permission("uc.reload"),
-                new Permission("uc.test"),
-                new Permission("uc.ban"),
-                new Permission("uc.clear"),
-                new Permission("uc.group"),
-                new Permission("uc.group.current"),
-                new Permission("uc.group.create"),
-                new Permission("uc.group.join"),
-                new Permission("uc.join"),
-                new Permission("uc.kick"),
-                new Permission("uc.lang"),
-                new Permission("uc.rally"),
-                new Permission("uc.reload"),
-                new Permission("uc.reload.all"),
-                new Permission("uc.reload.translations"),
-                new Permission("uc.reload.flags"),
-                new Permission("uc.request"),
-                new Permission("uc.request.save"),
-                new Permission("uc.request.remove"),
-                new Permission("uc.structure"),
-                new Permission("uc.structure.save"),
-                new Permission("uc.structure.remove"),
-                new Permission("uc.structure.pop"),
-                new Permission("uc.structure.examine"),
-                new Permission("uc.unban"),
-                new Permission("uc.warn"),
-                new Permission("uc.whitelist"),
-                new Permission("uc.build"),
-                new Permission("uc.mute"),
-                new Permission("uc.unmute"),
-                new Permission("uc.kit"),
-                new Permission("uc.ammo"),
-                new Permission("uc.squad"),
-                new Permission("uc.vehiclebay")
-            };
-    }
-    private static List<Permission> TrialAdminPerms
-    {
-        get =>
-            new List<Permission>()
-            {
-                new Permission("uc.duty"),
-                new Permission("uc.reload"),
-                new Permission("uc.test"),
-                new Permission("uc.ban"),
-                new Permission("uc.clear"),
-                new Permission("uc.join"),
-                new Permission("uc.kick"),
-                new Permission("uc.lang"),
-                new Permission("uc.rally"),
-                new Permission("uc.request"),
-                new Permission("uc.structure"),
-                new Permission("uc.structure.pop"),
-                new Permission("uc.structure.examine"),
-                new Permission("uc.unban"),
-                new Permission("uc.warn"),
-                new Permission("uc.mute"),
-                new Permission("uc.unmute"),
-                new Permission("uc.build"),
-                new Permission("uc.ammo"),
-                new Permission("uc.squad"),
-            };
-    }
-    private static List<Permission> DefaultPerms
-    {
-        get =>
-            new List<Permission>()
-            {
-                new Permission("uc.request"),
-                new Permission("uc.join"),
-                new Permission("uc.range"),
-                new Permission("uc.repair"),
-                new Permission("uc.lang"),
-                new Permission("uc.discord"),
-                new Permission("uc.ammo"),
-                new Permission("uc.build"),
-                new Permission("uc.deploy"),
-                new Permission("uc.kits"),
-                new Permission("uc.squad"),
-                new Permission("uc.rally"),
-                new Permission("uc.group"),
-                new Permission("uc.group.current"),
-                new Permission("uc.rally"),
-                new Permission("uc.teams"),
-                new Permission("uc.unstuck"),
-                new Permission("uc.confirm"),
-                new Permission("uc.buy"),
-                new Permission("uc.report"),
-                new Permission("uc.structure"),
-                new Permission("uc.structure.examine")
-            };
-    }
-
     public class NetCalls
     {
         public static readonly NetCallRaw<WarfareServerInfo> SendServerInfo = new NetCallRaw<WarfareServerInfo>(1008, WarfareServerInfo.Read, WarfareServerInfo.Write);

@@ -1,5 +1,4 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Commands.CommandSystem;
 
 namespace Uncreated.Warfare.Networking;
 
@@ -16,12 +16,11 @@ public sealed class CommandWaitTask
     private readonly CommandWaitTaskAwaiter _awaiter;
     private readonly UCPlayer player;
     private readonly string command;
-    internal static void OnCommandExecuted(Rocket.API.IRocketPlayer player, Rocket.API.IRocketCommand command)
+    internal static void OnCommandExecuted(UCPlayer player, IExecutableCommand command)
     {
         for (int i = 0; i < awaiters.Count; ++i)
         {
-            if (awaiters[i].command.Equals(command.Name, StringComparison.OrdinalIgnoreCase) && player is UnturnedPlayer pl &&
-                pl.Player.channel.owner.playerID.steamID.m_SteamID == awaiters[i].player.Steam64)
+            if (awaiters[i].command.Equals(command.CommandName, StringComparison.OrdinalIgnoreCase) && player.Steam64 == awaiters[i].player.Steam64)
             {
                 awaiters[i]._awaiter.TellRanCommand();
             }

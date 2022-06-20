@@ -1,45 +1,43 @@
-﻿using Rocket.API;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Teams;
-
-public class TeamsCommand : IRocketCommand
+namespace Uncreated.Warfare.Commands;
+public class TeamsCommand : Command
 {
-    private readonly List<string> _permissions = new List<string>() { "uc.teams" };
-    private readonly List<string> _aliases = new List<string>(0);
-    public AllowedCaller AllowedCaller => AllowedCaller.Player;
-    public string Name => "teams";
-    public string Help => "Pull up the Teams UI";
-    public string Syntax => "/teams";
-    public List<string> Aliases => _aliases;
-	public List<string> Permissions => _permissions;
-    public void Execute(IRocketPlayer caller, string[] command)
+    private const string SYNTAX = "/teams";
+    private const string HELP = "Switch teams without rejoining the server.";
+
+    public TeamsCommand() : base("teams", EAdminType.MEMBER) { }
+
+    public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-        if (player == null) return;
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
-        if (!Data.Is(out ITeams teamgm) && teamgm.UseJoinUI)
+        ctx.AssertGamemode(out ITeams teamgm);
+
+        ctx.AssertRanByPlayer();
+
+        if (!teamgm.UseJoinUI)
+            throw ctx.SendGamemodeError();
+
+        if (!ctx.Caller.OnDuty() && CooldownManager.HasCooldown(ctx.Caller, ECooldownType.CHANGE_TEAMS, out Cooldown cooldown))
         {
-            player.SendChat("command_e_gamemode");
+            ctx.Reply("teams_e_cooldown", cooldown.ToString());
             return;
         }
-        if (!player.OnDuty() && CooldownManager.HasCooldown(player, ECooldownType.CHANGE_TEAMS, out Cooldown cooldown))
+        ulong team = ctx.Caller.GetTeam();
+        if ((team == 1ul || team == 2ul) && !ctx.Caller.Player.IsInMain())
         {
-            player.SendChat("teams_e_cooldown", cooldown.ToString());
+            ctx.Reply("teams_e_notinmain");
             return;
         }
-        ulong team = player.GetTeam();
-        if ((team == 1ul || team == 2ul) && !player.Player.IsInMain())
-        {
-            player.SendChat("teams_e_notinmain");
-            return;
-        }
-        teamgm.JoinManager.JoinLobby(player);
-        
+        teamgm.JoinManager.JoinLobby(ctx.Caller);
+        ctx.Defer();
     }
 }

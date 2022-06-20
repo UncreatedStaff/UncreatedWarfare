@@ -25,7 +25,6 @@ namespace Uncreated.Warfare
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (!UCWarfare.Config.Patches.destroyStructure) return;
                 StructureDestroyedHandler?.Invoke(structure.GetServersideData(), structure, structure.GetServersideData().instanceID);
             }
             // SDG.Unturned.BarricadeManager
@@ -39,7 +38,6 @@ namespace Uncreated.Warfare
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (!UCWarfare.Config.Patches.ServerSetSignTextInternal) return true;
                 if (trimmedText.StartsWith("sign_"))
                 {
                     if (trimmedText.Length > 5)
@@ -141,7 +139,6 @@ namespace Uncreated.Warfare
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (!UCWarfare.Config.Patches.SendRegion) return true;
                 UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
                 if (pl == null) return true;
                 if (region.drops.Count > 0)

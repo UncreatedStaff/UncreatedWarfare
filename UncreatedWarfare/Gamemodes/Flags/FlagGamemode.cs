@@ -158,4 +158,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected abstract void PlayerLeftFlagRadius(Flag flag, Player player);
     protected abstract void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag);
     protected abstract void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag);
+    public abstract bool IsAttackSite(ulong team, Flag flag);
+    public abstract bool IsDefenseSite(ulong team, Flag flag);
 }

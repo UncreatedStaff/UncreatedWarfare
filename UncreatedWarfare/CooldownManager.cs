@@ -9,7 +9,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     private static CooldownManager Singleton;
     public static new CooldownConfig Config => Singleton.IsLoaded() ? Singleton.ConfigurationFile.Data : null!;
     private List<Cooldown> cooldowns;
-    public CooldownManager() : base ("cooldowns", Data.CooldownStorage, "config.json") { }
+    public CooldownManager() : base ("cooldowns", Data.Paths.CooldownStorage, "config.json") { }
     public override void Load()
     {
         cooldowns = new List<Cooldown>(64);
@@ -123,6 +123,7 @@ public class Cooldown
     public override string ToString()
     {
         TimeSpan time = Timeleft;
+        if (time.TotalSeconds <= 1) return "1s";
 
         string line = string.Empty;
         if (time.Hours > 0)

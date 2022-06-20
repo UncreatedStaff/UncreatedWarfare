@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -30,36 +31,33 @@ public class ReportCommand : Command
 
         ctx.AssertRanByPlayer();
 
-        if (command.Length < 2)
-        {
-            goto Help;
-        }
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+        ctx.AssertArgs(2, SYNTAX);
+
         if (!UCWarfare.CanUseNetCall || !UCWarfare.Config.EnableReporter)
-        {
-            player.SendChat("report_not_connected");
-            return;
-        }
+            throw ctx.Reply("report_not_connected");
+
         EReportType type;
         string message;
         ulong target;
-        if (command.Length == 2)
+        if (ctx.HasArgsExact(2))
         {
-            string inPlayer = command[0];
-            string arg1 = command[1].ToLower();
-            if (arg1 == "help")
+            string inPlayer = ctx.Get(0)!;
+
+            if (ctx.MatchParameter(1, "help"))
                 goto Help;
-            else if (arg1 == "reports" || arg1 == "reasons" || arg1 == "types")
+            if (ctx.MatchParameter(1, "reports", "reasons", "types"))
                 goto Types;
 
-            if (!CheckLinked(player))
+            if (!CheckLinked(ctx.Caller))
                 goto DiscordNotLinked;
             message = string.Empty;
-            type = GetReportType(arg1);
+            type = GetReportType(ctx.Get(1)!);
             if (type == EReportType.CUSTOM)
                 goto Help;
             else
             {
-                if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out target)))
+                if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, NumberStyles.Any, Data.Locale, out target)))
                 {
                     UCPlayer.ENameSearchType search = GetNameType(type);
                     target = Data.Reporter.RecentPlayerNameCheck(inPlayer, search);
@@ -71,18 +69,18 @@ public class ReportCommand : Command
         }
         else
         {
-            string inPlayer = command[0];
-            string arg1 = command[1].ToLower();
+            string inPlayer = ctx.Get(0)!;
             string arg2p;
 
-            if (!CheckLinked(player))
+            if (!CheckLinked(ctx.Caller))
                 goto DiscordNotLinked;
 
-            type = GetReportType(arg1);
+            type = GetReportType(ctx.Get(1)!);
             if (type == EReportType.CUSTOM)
-                arg2p = string.Join(" ", command, 1, command.Length - 1);
+                arg2p = ctx.GetRange(1)!;
             else
-                arg2p = string.Join(" ", command, 2, command.Length - 2);
+                arg2p = ctx.GetRange(2)!;
+
             message = arg2p;
 
             if (!(inPlayer.Length == 17 && inPlayer.StartsWith("765") && ulong.TryParse(inPlayer, System.Globalization.NumberStyles.Any, Data.Locale, out target)))
@@ -110,57 +108,49 @@ public class ReportCommand : Command
             {
                 await UCWarfare.ToUpdate();
                 if (!UCWarfare.CanUseNetCall)
-                {
-                    player.SendChat("report_not_connected");
-                    return;
-                }
+                    throw ctx.Reply("report_not_connected");
                 FPlayerName targetNames = F.GetPlayerOriginalNames(target);
-                if (CooldownManager.HasCooldownNoStateCheck(player, ECooldownType.REPORT, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
-                {
-                    player.SendChat("report_cooldown", targetNames.CharacterName);
-                    return;
-                }
 
-                player.SendChat("report_confirm", target.ToString(Data.Locale), targetNames.CharacterName);
-                ActionLog.Add(EActionLogType.START_REPORT, string.Join(", ", command), player);
-                bool didConfirm = await CommandWaitTask.WaitForCommand(player, "confirm", 10000);
+                if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, ECooldownType.REPORT, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
+                    throw ctx.Reply("report_cooldown", targetNames.CharacterName);
+
+                ctx.Reply("report_confirm", target.ToString(Data.Locale), targetNames.CharacterName);
+                ctx.LogAction(EActionLogType.START_REPORT, string.Join(", ", ctx.Parameters));
+                bool didConfirm = await CommandWaitTask.WaitForCommand(ctx.Caller, "confirm", 10000);
                 await UCWarfare.ToUpdate();
                 if (!didConfirm)
                 {
-                    player.SendChat("report_cancelled", targetNames.CharacterName);
+                    ctx.Reply("report_cancelled", targetNames.CharacterName);
                     return;
                 }
                 if (!UCWarfare.CanUseNetCall)
-                {
-                    player.SendChat("report_not_connected");
-                    return;
-                }
-                CooldownManager.StartCooldown(player, ECooldownType.REPORT, 3600f, target);
+                    throw ctx.Reply("report_not_connected");
+                CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REPORT, 3600f, target);
                 Report? report;
                 report = type switch
                 {
-                    EReportType.CHAT_ABUSE => Data.Reporter.CreateChatAbuseReport(player.Steam64, target, message),
-                    EReportType.VOICE_CHAT_ABUSE => Data.Reporter.CreateVoiceChatAbuseReport(player.Steam64, target, message),
-                    EReportType.SOLOING_VEHICLE => Data.Reporter.CreateSoloingReport(player.Steam64, target, message),
-                    EReportType.WASTING_ASSETS => Data.Reporter.CreateWastingAssetsReport(player.Steam64, target, message),
-                    EReportType.INTENTIONAL_TEAMKILL => Data.Reporter.CreateIntentionalTeamkillReport(player.Steam64, target, message),
-                    EReportType.GREIFING_FOBS => Data.Reporter.CreateGreifingFOBsReport(player.Steam64, target, message),
-                    EReportType.CHEATING => Data.Reporter.CreateCheatingReport(player.Steam64, target, message),
-                    _ => Data.Reporter.CreateReport(player.Steam64, target, message),
+                    EReportType.CHAT_ABUSE => Data.Reporter.CreateChatAbuseReport(ctx.CallerID, target, message),
+                    EReportType.VOICE_CHAT_ABUSE => Data.Reporter.CreateVoiceChatAbuseReport(ctx.CallerID, target, message),
+                    EReportType.SOLOING_VEHICLE => Data.Reporter.CreateSoloingReport(ctx.CallerID, target, message),
+                    EReportType.WASTING_ASSETS => Data.Reporter.CreateWastingAssetsReport(ctx.CallerID, target, message),
+                    EReportType.INTENTIONAL_TEAMKILL => Data.Reporter.CreateIntentionalTeamkillReport(ctx.CallerID, target, message),
+                    EReportType.GREIFING_FOBS => Data.Reporter.CreateGreifingFOBsReport(ctx.CallerID, target, message),
+                    EReportType.CHEATING => Data.Reporter.CreateCheatingReport(ctx.CallerID, target, message),
+                    _ => Data.Reporter.CreateReport(ctx.CallerID, target, message),
                 };
                 if (report == null)
                 {
-                    player.SendChat("report_unknown_error");
+                    ctx.Reply("report_unknown_error");
                     return;
                 }
                 SteamPlayer? targetPl = PlayerTool.getSteamPlayer(target);
                 Data.DatabaseManager.AddReport(report);
                 string typename = GetName(type);
-                NotifyAdminsOfReport(targetNames, player.Name, report, type, typename);
-                player.SendChat("report_success_p1", targetNames.CharacterName, string.IsNullOrEmpty(message) ? "---" : message, typename);
-                player.SendChat("report_success_p2");
+                NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, type, typename);
+                ctx.Reply("report_success_p1", targetNames.CharacterName, string.IsNullOrEmpty(message) ? "---" : message, typename);
+                ctx.Reply("report_success_p2");
                 L.Log(Translation.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
-                    player.Player.channel.owner.playerID.playerName, player.Steam64.ToString(Data.Locale),
+                    ctx.Caller.Name.PlayerName, ctx.CallerID.ToString(Data.Locale),
                     targetNames.PlayerName, target.ToString(Data.Locale), report.Message!, typename), ConsoleColor.Cyan);
                 byte[] jpgData =
                     targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE)
@@ -169,10 +159,7 @@ public class ReportCommand : Command
                 report.JpgData = jpgData;
                 L.Log(report.JpgData.Length.ToString());
                 if (!UCWarfare.CanUseNetCall)
-                {
-                    player.SendChat("report_not_connected");
-                    return;
-                }
+                    throw ctx.Reply("report_not_connected");
                 RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(
                     Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient!, report, targetPl != null);
                 await UCWarfare.ToUpdate();
@@ -190,14 +177,14 @@ public class ReportCommand : Command
                         L.Log(
                             Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
                                 string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
-                        ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl2, player);
+                        ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl2, ctx.Caller);
                     }
                     else
                     {
                         L.Log(
                             Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
                                 string.Empty, "0"), ConsoleColor.Cyan);
-                        ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", player);
+                        ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
                     }
                     return;
                 }
@@ -212,7 +199,7 @@ public class ReportCommand : Command
                             targetPl.playerID.playerName,
                             targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl),
                         ConsoleColor.Cyan);
-                    ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl, player);
+                    ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl, ctx.Caller);
                 }
                 else
                 {
@@ -220,7 +207,7 @@ public class ReportCommand : Command
                         Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
                             targetPl.playerID.playerName,
                             targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                    ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", player);
+                    ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
                 }
             }
             catch (Exception ex)
@@ -228,18 +215,16 @@ public class ReportCommand : Command
                 L.LogError(ex);
             }
         });
+        ctx.Defer();
         return;
     PlayerNotFound:
-        player.SendChat("report_player_not_found", player.Steam64.ToString(Data.Locale));
-        return;
+        throw ctx.Reply("report_player_not_found", ctx.TryGet(0, out string pl) ? pl : "null");
     DiscordNotLinked:
-        player.SendChat("report_discord_not_linked", player.Steam64.ToString(Data.Locale));
-        return;
+        throw ctx.Reply("report_discord_not_linked", ctx.CallerID.ToString(Data.Locale));
     Help:
-        player.SendChat("report_syntax");
+        ctx.Reply("report_syntax");
     Types: // not returning here is intentional
-        player.SendChat("report_reasons");
-        return;
+        throw ctx.Reply("report_reasons");
     }
 
     public KeyValuePair<string, EReportType>[] types = new KeyValuePair<string, EReportType>[]

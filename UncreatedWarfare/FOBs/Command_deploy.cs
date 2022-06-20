@@ -1,139 +1,112 @@
-﻿using Rocket.API;
+﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands
+namespace Uncreated.Warfare.Commands;
+public class DeployCommand : Command
 {
-    public class DeployCommand : IRocketCommand
+    private const string SYNTAX = "/deploy main -OR- /deploy <fob name>";
+    private const string HELP = "Deploy to a point of interest such as a main base, FOB, VCP, or cache.";
+
+    public DeployCommand() : base("deploy", EAdminType.MEMBER)
     {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
-        public string Name => "deploy";
-        public string Help => "deploys you to a nearby FOB";
-        public string Syntax => "/deploy";
-        private readonly List<string> _aliases = new List<string>(1) { "dep" };
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>(1) { "uc.deploy" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] command)
-        {
+        AddAlias("dep");
+    }
+
+    public override void Execute(CommandInteraction ctx)
+    {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            UCPlayer? player = UCPlayer.FromIRocketPlayer(caller);
-            if (player == null) return;
+        ctx.AssertRanByPlayer();
 
-            if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(player.Steam64))
-            {
-                player.Message("deploy_e_injured");
-                return;
-            }
+        ctx.AssertGamemode<IFOBs>();
 
-            if (!Data.Is(out IFOBs fobs))
-            {
-                player.SendChat("command_e_gamemode");
-                return;
-            }
+        ctx.AssertArgs(1, SYNTAX + " - " + HELP);
 
-            if (command.Length == 1)
-            {
-                UCPlayerData? c = player.Player.GetPlayerData(out _);
+        if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(ctx.CallerID))
+            throw ctx.Reply("deploy_e_injured");
 
-                ulong team = player.GetTeam();
-                bool IsInMain = player.Player.IsInMain();
-                bool IsInLobby = TeamManager.LobbyZone.IsInside(player.Player.transform.position);
-                bool shouldCancelOnMove = !IsInMain;
-                bool shouldCancelOnDamage = !IsInMain;
+        string destination = ctx.GetRange(0)!;
 
-                if (CooldownManager.HasCooldown(player, ECooldownType.DEPLOY, out Cooldown cooldown))
-                {
-                    player.Message("deploy_e_cooldown", cooldown.ToString());
-                    return;
-                }
-                if (!(IsInMain || IsInLobby))
-                {
-                    if (CooldownManager.HasCooldown(player, ECooldownType.COMBAT, out Cooldown combatlog))
-                    {
-                        player.Message("deploy_e_incombat", combatlog.ToString());
-                        return;
-                    }
-                    if (!(player.IsOnFOB(out _) || 
-                          UCBarricadeManager.CountNearbyBarricades(Gamemode.Config.Barricades.InsurgencyCacheGUID, 10, player.Position, player.GetTeam()) != 0))
-                    {
-                        if (Data.Is(out Insurgency ins))
-                            player.Message("deploy_e_notnearfob_ins");
-                        else
-                            player.Message("deploy_e_notnearfob");
-                        return;
-                    }
-                }
+        UCPlayerData? c = ctx.Caller.Player.GetPlayerData(out _);
+        if (c is null) throw ctx.SendUnknownError();
 
-                if (!FOBManager.FindFOBByName(command[0], player.GetTeam(), out object? deployable))
-                {
-                    if (command[0].ToLower() == "main")
-                        c?.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.Config.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
-                    else if (command[0].ToLower() == "lobby")
-                        player.SendChat("deploy_lobby_removed");
-                    else
-                        player.Message("deploy_e_fobnotfound", command[0]);
-                    return;
-                }
+        ulong team = ctx.Caller.GetTeam();
+        bool IsInMain = ctx.Caller.Player.IsInMain();
+        bool IsInLobby = !IsInMain && TeamManager.LobbyZone.IsInside(ctx.Caller.Position);
+        bool shouldCancelOnMove = !IsInMain;
+        bool shouldCancelOnDamage = !IsInMain;
 
-                if (deployable is FOB FOB)
-                {
-                    if (FOB.Bunker == null)
-                    {
-                        player.Message("deploy_e_nobunker", command[0]);
-                        return;
-                    }
-                    if (FOB.IsBleeding)
-                    {
-                        player.Message("deploy_e_damaged", command[0]);
-                        return;
-                    }
-                    if (FOB.NearbyEnemies.Count != 0)
-                    {
-                        player.Message("deploy_e_enemiesnearby", command[0]);
-                        return;
-                    }
+        if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.DEPLOY, out Cooldown cooldown))
+            throw ctx.Reply("deploy_e_cooldown", cooldown.ToString());
 
-                    c?.TeleportTo(FOB, FOBManager.Config.DeloyFOBDelay, shouldCancelOnMove);
- 
-                }
-                else if (deployable is SpecialFOB special)
-                {
-                    c?.TeleportTo(special, FOBManager.Config.DeloyFOBDelay, shouldCancelOnMove);
-                }
-                else if (deployable is Cache cache)
-                {
-                    if (cache.NearbyAttackers.Count != 0)
-                    {
-                        player.Message("deploy_e_enemiesnearby", command[0]);
-                        return;
-                    }
+        if (!(IsInMain || IsInLobby))
+        {
+            if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.COMBAT, out Cooldown combatlog))
+                throw ctx.Reply("deploy_e_incombat", combatlog.ToString());
 
-                    c?.TeleportTo(cache, FOBManager.Config.DeloyFOBDelay, shouldCancelOnMove);
-                }
-#if false
-                else if (command[0].ToLower() == "lobby")
-                {
-                    c.TeleportDelayed(TeamManager.LobbySpawn, TeamManager.LobbySpawnAngle, FOBManager.Config.DeloyMainDelay, shouldCancelOnMove, shouldCancelOnDamage, true, "<color=#bb80d1>lobby</color>");
-                }
-#endif
-                else
-                {
-                    player.Message("deploy_e_fobnotfound", command[0]);
-                }
-            }
-            else
-            {
-                player.Message("correct_usage", "/deploy main -OR- /deploy <fob name>");
-            }
+            if (!(ctx.Caller.IsOnFOB(out _) || UCBarricadeManager.CountNearbyBarricades(Gamemode.Config.Barricades.InsurgencyCacheGUID, 10, ctx.Caller.Position, team) != 0))
+                throw ctx.Reply(Data.Is<Insurgency>() ? "deploy_e_notnearfob_ins" : "deploy_e_notnearfob");
         }
+
+        if (!FOBManager.FindFOBByName(destination, team, out object? deployable))
+        {
+            if (destination.Equals("main", StringComparison.OrdinalIgnoreCase))
+            {
+                c.TeleportTo(team.GetBaseSpawnFromTeam(), FOBManager.Config.DeloyMainDelay, shouldCancelOnMove, false, team.GetBaseAngle());
+                throw ctx.Defer();
+            }
+            if (destination.Equals("lobby", StringComparison.OrdinalIgnoreCase))
+                throw ctx.Reply("deploy_lobby_removed");
+            else
+                throw ctx.Reply("deploy_e_fobnotfound", destination);
+        }
+
+        if (deployable is FOB FOB)
+        {
+            if (FOB.Bunker == null)
+            {
+                ctx.Reply("deploy_e_nobunker", FOB.Name);
+                return;
+            }
+            if (FOB.IsBleeding)
+            {
+                ctx.Reply("deploy_e_damaged", FOB.Name);
+                return;
+            }
+            if (FOB.NearbyEnemies.Count != 0)
+            {
+                ctx.Reply("deploy_e_enemiesnearby", FOB.Name);
+                return;
+            }
+
+            c.TeleportTo(FOB, FOBManager.Config.DeloyFOBDelay, shouldCancelOnMove);
+            throw ctx.Defer();
+
+        }
+        else if (deployable is SpecialFOB special)
+        {
+            c.TeleportTo(special, FOBManager.Config.DeloyFOBDelay, shouldCancelOnMove);
+            throw ctx.Defer();
+        }
+        else if (deployable is Cache cache)
+        {
+            if (cache.NearbyAttackers.Count != 0)
+                throw ctx.Reply("deploy_e_enemiesnearby", cache.Name);
+
+            c.TeleportTo(cache, FOBManager.Config.DeloyFOBDelay, shouldCancelOnMove);
+        }
+        else
+            throw ctx.Reply("deploy_e_fobnotfound", destination);
     }
 }

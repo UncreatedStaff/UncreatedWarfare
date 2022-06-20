@@ -8,6 +8,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -26,12 +27,15 @@ public class ReloadCommand : Command
 
     public static Dictionary<string, IConfiguration> ReloadableConfigs = new Dictionary<string, IConfiguration>();
 
-    public ReloadCommand() : base("reload", EAdminType.ADMIN_ON_DUTY | EAdminType.VANILLA_ADMIN)
+    public ReloadCommand() : base("reload", EAdminType.ADMIN | EAdminType.VANILLA_ADMIN, 1)
     {
 
     }
     public override void Execute(CommandInteraction ctx)
     {
+        if (!ctx.IsConsole && !ctx.Caller.IsAdmin)
+            ctx.AssertOnDuty();
+
         if (!ctx.TryGet(0, out string module))
         {
             ctx.Reply("reload_syntax");
@@ -191,11 +195,11 @@ public class ReloadCommand : Command
                 RequestSigns.UpdateAllSigns();
             }
             if (!KitManager.KitExists(TeamManager.Team1UnarmedKit, out _))
-                L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+                L.LogError("Team 1's unarmed kit, \"" + TeamManager.Team1UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
             if (!KitManager.KitExists(TeamManager.Team2UnarmedKit, out _))
-                L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+                L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
             if (!KitManager.KitExists(TeamManager.DefaultKit, out _))
-                L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.KitsStorage + "kits.json\".");
+                L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
         });
     }
     internal static void ReloadAllConfigFiles()

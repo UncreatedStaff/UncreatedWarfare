@@ -458,6 +458,8 @@ public class Invasion :
         else
             DestoryBlockerOnT2();
     }
+    public override bool IsAttackSite(ulong team, Flag flag) => flag.IsObj(team);
+    public override bool IsDefenseSite(ulong team, Flag flag) => flag.IsObj(_attackTeam) && flag.Owner == _defenseTeam && team == _defenseTeam;
 }
 
 public class InvasionLeaderboard : BaseCTFLeaderboard<BaseCTFStats, InvasionTracker>

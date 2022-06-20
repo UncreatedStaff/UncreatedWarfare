@@ -9,12 +9,14 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Warfare;
+using Uncreated.Warfare.Singletons;
 
 namespace Uncreated;
 
 public abstract class JSONSaver<T> : List<T> where T : class, new()
 {
     protected const string EMPTY_LIST = "[]";
+    protected string file;
     protected string directory;
     public readonly Type Type = typeof(T);
     private readonly FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Public | BindingFlags.Instance);
@@ -28,7 +30,9 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     public delegate T CustomDeserializer(ref Utf8JsonReader reader);
     public JSONSaver(string _directory, bool loadNow = true) : base()
     {
-        directory = _directory;
+        directory = Path.GetDirectoryName(_directory);
+        file = _directory;
+
         useSerializer = false;
         useDeserializer = false;
         if (loadNow)
@@ -36,7 +40,9 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     }
     public JSONSaver(string _directory, CustomSerializer? serializer, CustomDeserializer? deserializer, bool loadNow = true) : base()
     {
-        directory = _directory;
+        directory = Path.GetDirectoryName(_directory);
+        file = _directory;
+        
         _serializer = serializer;
         useSerializer = serializer is not null;
         _deserializer = deserializer;
@@ -53,11 +59,13 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     }
     protected virtual void OnRead() { }
     protected abstract string LoadDefaults();
+    /// <exception cref="SingletonLoadException"/>
     protected void CreateFileIfNotExists(string text = "[]")
     {
-        if (!File.Exists(directory))
+        F.CheckDir(directory, out _, true);
+        if (!File.Exists(file))
         {
-            using StreamWriter creator = File.CreateText(directory);
+            using StreamWriter creator = File.CreateText(file);
             creator.WriteLine(text);
         }
     }
@@ -88,17 +96,17 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     {
         if (!isInited) Init();
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Save -> " + directory);
+        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Save -> " + file);
 #endif
         _threadLocker.Wait();
         if (useSerializer)
         {
             try
             {
-                if (!File.Exists(directory))
-                    File.Create(directory)?.Close();
+                if (!File.Exists(file))
+                    File.Create(file)?.Close();
 
-                using (FileStream rs = new FileStream(directory, FileMode.Truncate, FileAccess.Write, FileShare.None))
+                using (FileStream rs = new FileStream(file, FileMode.Truncate, FileAccess.Write, FileShare.None))
                 {
                     Utf8JsonWriter writer = new Utf8JsonWriter(rs, JsonEx.writerOptions);
                     writer.WriteStartArray();
@@ -125,7 +133,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
         }
         try
         {
-            using (StreamWriter file = File.CreateText(directory))
+            using (StreamWriter file = File.CreateText(this.file))
             {
                 file.Write(JsonSerializer.Serialize(this as List<T>, JsonEx.serializerSettings));
             }
@@ -140,22 +148,22 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     public void Read()
     {
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Reload -> " + directory);
+        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver Reload -> " + file);
 #endif
         _threadLocker.Wait();
-        if (!File.Exists(directory))
+        if (!File.Exists(file))
             CreateFileIfNotExists(LoadDefaults());
         if (useDeserializer)
         {
             FileStream? rs = null;
             try
             {
-                using (rs = new FileStream(directory, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (rs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     long len = rs.Length;
                     if (len > int.MaxValue)
                     {
-                        L.LogError("File " + directory + " is too large.");
+                        L.LogError("File " + file + " is too large.");
                         return;
                     }
                     byte[] buffer = new byte[len];
@@ -196,7 +204,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
         StreamReader? r = null;
         try
         {
-            r = File.OpenText(directory);
+            r = File.OpenText(file);
             string json = r.ReadToEnd();
             r.Close();
             r.Dispose();
@@ -268,7 +276,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     public void TryUpgrade()
     {
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver TryUpgrade -> " + directory);
+        using IDisposable profiler = ProfilingUtils.StartTracking("JsonSaver TryUpgrade -> " + file);
 #endif
         try
         {

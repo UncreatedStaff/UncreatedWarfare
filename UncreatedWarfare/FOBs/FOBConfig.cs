@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace Uncreated.Warfare.FOBs;
 public class FOBConfig : Config<FOBConfigData>
 {
-    public FOBConfig() : base(Warfare.Data.FOBStorage, "config.json", "fobs")
+    public FOBConfig() : base(Warfare.Data.Paths.FOBStorage, "config.json", "fobs")
     {
     }
 }

@@ -1,35 +1,33 @@
-﻿using Rocket.API;
-using Rocket.Unturned.Player;
-using System.Collections.Generic;
+﻿using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
+using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands
+namespace Uncreated.Warfare.Commands;
+public class UnstuckCommand : Command
 {
-    public class UnstuckCommand : IRocketCommand
-    {
-        public AllowedCaller AllowedCaller => AllowedCaller.Player;
-        public string Name => "unstuck";
-        public string Help => "Unstucks you from lobby.";
-        public string Syntax => "/unstuck";
-        private readonly List<string> _aliases = new List<string>(0);
-        public List<string> Aliases => _aliases;
-        private readonly List<string> _permissions = new List<string>(1) { "uc.unstuck" };
-		public List<string> Permissions => _permissions;
-        public void Execute(IRocketPlayer caller, string[] command)
-        {
-            if (caller is UnturnedPlayer player)
-            {
-                UCPlayer? ucplayer = UCPlayer.FromUnturnedPlayer(player);
-                if (ucplayer == null) return;
+    private const string SYNTAX = "/unstuck";
+    private const string HELP = "Run this command if you're somehow stuck in the lobby.";
 
-                if (Data.Is(out ITeams t) && TeamManager.LobbyZone.IsInside(ucplayer.Position))
-                {
-                    t.JoinManager.OnPlayerDisconnected(ucplayer);
-                    t.JoinManager.CloseUI(ucplayer);
-                    t.JoinManager.OnPlayerConnected(ucplayer, true);
-                }
-            }
+    public UnstuckCommand() : base("unstuck", EAdminType.MEMBER) { }
+
+    public override void Execute(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
+        ctx.AssertGamemode(out ITeams t);
+
+        if (!t.UseJoinUI) throw ctx.SendGamemodeError();
+
+        if (TeamManager.LobbyZone.IsInside(ctx.Caller.Position))
+        {
+            t.JoinManager.OnPlayerDisconnected(ctx.Caller);
+            t.JoinManager.CloseUI(ctx.Caller);
+            t.JoinManager.OnPlayerConnected(ctx.Caller, true);
         }
+        else throw ctx.SendUnknownError();
     }
 }

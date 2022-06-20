@@ -1,5 +1,4 @@
-﻿using Rocket.Unturned.Player;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -15,7 +14,7 @@ public delegate void PlayerTeamDelegate(SteamPlayer player, ulong team);
 public static class TeamManager
 {
     //private static TeamConfig _data;
-    private static readonly Config<TeamConfig> _data = new Config<TeamConfig>(Data.TeamStorage, "teams.json");
+    private static readonly Config<TeamConfig> _data = new Config<TeamConfig>(Data.Paths.TeamStorage, "teams.json");
     public const ulong ZOMBIE_TEAM_ID = ulong.MaxValue;
 
     public static ushort Team1Tickets;
@@ -29,6 +28,7 @@ public static class TeamManager
     internal static readonly Dictionary<ulong, byte> PlayerBaseStatus = new Dictionary<ulong, byte>();
     public static event PlayerTeamDelegate OnPlayerEnteredMainBase;
     public static event PlayerTeamDelegate OnPlayerLeftMainBase;
+    public static TeamConfig Config => _data.Data;
     public static ulong Team1ID => 1;
     public static ulong Team2ID => 2;
     public static ulong AdminID => 3;
@@ -277,23 +277,9 @@ public static class TeamManager
     }
     public static bool IsTeam1(ulong ID) => ID == Team1ID;
     public static bool IsTeam1(CSteamID steamID) => steamID.m_SteamID == Team1ID;
-    public static bool IsTeam1(UnturnedPlayer player) => player.Player.quests.groupID.m_SteamID == Team1ID;
     public static bool IsTeam1(Player player) => player.quests.groupID.m_SteamID == Team1ID;
     public static bool IsTeam2(ulong ID) => ID == Team2ID;
     public static bool IsTeam2(CSteamID steamID) => steamID.m_SteamID == Team2ID;
-    public static bool IsInMain(UnturnedPlayer player)
-    {
-        ulong team = player.GetTeam();
-        if (team == 1)
-        {
-            return Team1Main.IsInside(player.Position);
-        }
-        if (team == 2)
-        {
-            return Team2Main.IsInside(player.Position);
-        }
-        return false;
-    }
     public static bool IsInMain(Player player)
     {
         if (player.life.isDead) return false;
@@ -337,9 +323,7 @@ public static class TeamManager
     {
         return LobbyZone.IsInside(player) || Team1Main.IsInside(player) || Team2Main.IsInside(player) || Team1AMC.IsInside(player) || Team2AMC.IsInside(player);
     }
-    public static bool IsTeam2(UnturnedPlayer player) => player.Player.quests.groupID.m_SteamID == Team2ID;
     public static bool IsTeam2(Player player) => player.quests.groupID.m_SteamID == Team2ID;
-    public static string TranslateName(ulong team, UnturnedPlayer player, bool colorize = false) => TranslateName(team, player.CSteamID.m_SteamID, colorize);
     public static string TranslateName(ulong team, SteamPlayer player, bool colorize = false) => TranslateName(team, player.playerID.steamID.m_SteamID, colorize);
     public static string TranslateName(ulong team, Player player, bool colorize = false) => TranslateName(team, player.channel.owner.playerID.steamID.m_SteamID, colorize);
     public static string TranslateName(ulong team, CSteamID player, bool colorize = false) => TranslateName(team, player.m_SteamID, colorize);
@@ -428,10 +412,8 @@ public static class TeamManager
         else if (team == 3) return AdminID;
         else return 0;
     }
-    public static ulong GetTeam(UnturnedPlayer player) => player.GetTeam();
     public static ulong GetTeam(SteamPlayer player) => player.GetTeam();
     public static ulong GetTeam(Player player) => player.GetTeam();
-    public static bool HasTeam(UnturnedPlayer player) => HasTeam(player.Player);
     public static bool HasTeam(SteamPlayer player) => HasTeam(player.player);
     public static bool HasTeam(Player player)
     {
@@ -440,18 +422,15 @@ public static class TeamManager
     }
     public static bool HasTeam(ulong groupID) => groupID == Team1ID || groupID == Team2ID;
     public static bool IsFriendly(ulong ID1, ulong ID2) => ID1 == ID2;
-    public static bool IsFriendly(UnturnedPlayer player, CSteamID groupID) => player.Player.quests.groupID.m_SteamID == groupID.m_SteamID;
     public static bool IsFriendly(SteamPlayer player, CSteamID groupID) => player.player.quests.groupID.m_SteamID == groupID.m_SteamID;
     public static bool IsFriendly(Player player, CSteamID groupID) => player.quests.groupID.m_SteamID == groupID.m_SteamID;
-    public static bool IsFriendly(UnturnedPlayer player, ulong groupID) => player.Player.quests.groupID.m_SteamID == groupID;
     public static bool IsFriendly(SteamPlayer player, ulong groupID) => player.player.quests.groupID.m_SteamID == groupID;
     public static bool IsFriendly(Player player, ulong groupID) => player.quests.groupID.m_SteamID == groupID;
-    public static bool IsFriendly(UnturnedPlayer player, UnturnedPlayer player2) => player.Player.quests.groupID.m_SteamID == player2.Player.quests.groupID.m_SteamID;
     public static bool IsFriendly(SteamPlayer player, SteamPlayer player2) => player.player.quests.groupID.m_SteamID == player2.player.quests.groupID.m_SteamID;
     public static bool IsFriendly(Player player, Player player2) => player.quests.groupID.m_SteamID == player2.quests.groupID.m_SteamID;
     public static bool CanJoinTeam(ulong team)
     {
-        if (UCWarfare.Config.TeamSettings.BalanceTeams)
+        if (_data.Data.BalanceTeams)
         {
             int Team1Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 1);
             int Team2Count = PlayerManager.OnlinePlayers.Count(x => x.GetTeam() == 2);
@@ -459,12 +438,12 @@ public static class TeamManager
             if (team == 1)
             {
                 if (Team2Count > Team1Count) return true;
-                if ((float)(Team1Count - Team2Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
+                if ((float)(Team1Count - Team2Count) / (Team1Count + Team2Count) >= _data.Data.AllowedDifferencePercent) return false;
             }
             else if (team == 2)
             {
                 if (Team1Count > Team2Count) return true;
-                if ((float)(Team2Count - Team1Count) / (Team1Count + Team2Count) >= UCWarfare.Config.TeamSettings.AllowedDifferencePercent) return false;
+                if ((float)(Team2Count - Team1Count) / (Team1Count + Team2Count) >= _data.Data.AllowedDifferencePercent) return false;
             }
         }
         return true;

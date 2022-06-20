@@ -15,7 +15,7 @@ public class StructureSaver : ListSingleton<Structure>, ILevelStartListener
 {
     private static StructureSaver Singleton;
     public static bool Loaded => Singleton.IsLoaded<StructureSaver, Structure>();
-    public StructureSaver() : base("structures", Path.Combine(Data.StructureStorage, "structures.json"), Structure.WriteStructure, Structure.ReadStructure) { }
+    public StructureSaver() : base("structures", Path.Combine(Data.Paths.StructureStorage, "structures.json"), Structure.WriteStructure, Structure.ReadStructure) { }
     protected override string LoadDefaults() => EMPTY_LIST;
     public override void Load()
     {

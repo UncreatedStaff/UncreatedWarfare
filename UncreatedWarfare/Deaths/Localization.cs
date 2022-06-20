@@ -273,6 +273,7 @@ internal static class Localization
             {
                 new DeathTranslation(EDeathFlags.NONE, "{0} was ran over."),
                 new DeathTranslation(EDeathFlags.ITEM, "{0} was ran over by a {3}."),
+                new DeathTranslation(EDeathFlags.KILLER, "{0} was ran over by {1}."),
                 new DeathTranslation(EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was ran over by {1} using a {3} going {4} mph."),
                 new DeathTranslation(EDeathFlags.SUICIDE, "{0} ran themselves over."),
                 new DeathTranslation(EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} ran themselves over using a {3} going {4} mph."),
@@ -482,7 +483,7 @@ internal static class Localization
             string msg = TranslateMessage(set.Language, args);
             if (!sentInConsole && set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
             {
-                string log = WarfareContext.RemoveRichText(msg);
+                string log = F.RemoveRichText(msg);
                 L.Log(log, ConsoleColor.DarkCyan);
                 if (e.Killer is not null)
                     ActionLog.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
@@ -498,7 +499,7 @@ internal static class Localization
 
         if (!sentInConsole)
         {
-            string log = WarfareContext.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args));
+            string log = F.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args));
             L.Log(log, ConsoleColor.DarkCyan);
             if (e.Killer is not null)
                 ActionLog.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
@@ -509,12 +510,12 @@ internal static class Localization
     }
     internal static void Reload()
     {
-        string[] langDirs = Directory.GetDirectories(Data.LangStorage, "*", SearchOption.TopDirectoryOnly);
+        string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
 
-        F.CheckDir(Data.LangStorage + JSONMethods.DEFAULT_LANGUAGE, out bool folderIsThere);
+        F.CheckDir(Data.Paths.LangStorage + JSONMethods.DEFAULT_LANGUAGE, out bool folderIsThere);
         if (folderIsThere)
         {
-            string directory = Path.Combine(Data.LangStorage, JSONMethods.DEFAULT_LANGUAGE, "deaths.json");
+            string directory = Path.Combine(Data.Paths.LangStorage, JSONMethods.DEFAULT_LANGUAGE, "deaths.json");
             if (!File.Exists(directory))
             {
                 using (FileStream stream = File.Create(directory))
