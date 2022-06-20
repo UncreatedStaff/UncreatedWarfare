@@ -8,22 +8,23 @@ namespace Uncreated.Warfare.Commands.CommandSystem;
 public sealed class VanillaCommand : IExecutableCommand, IComparable<VanillaCommand>, IComparable<SDG.Unturned.Command>
 {
     private readonly SDG.Unturned.Command _cmd;
-    private readonly EAdminType _allowedUsers;
+    private readonly EAdminType allowedUsers;
     string IExecutableCommand.CommandName => _cmd.command;
-    EAdminType IExecutableCommand.AllowedPermissions => _allowedUsers;
+    EAdminType IExecutableCommand.AllowedPermissions => allowedUsers;
     int IExecutableCommand.Priority => 0;
     IReadOnlyList<string>? IExecutableCommand.Aliases => null;
     public VanillaCommand(SDG.Unturned.Command cmd)
     {
         _cmd = cmd;
-        _allowedUsers = CommandHandler.GetVanillaPermissions(cmd);
+        allowedUsers = CommandHandler.GetVanillaPermissions(cmd);
     }
 
     bool IExecutableCommand.CheckPermission(CommandInteraction ctx)
     {
         if (ctx.IsConsole || ctx.Caller!.Player.channel.owner.isAdmin) return true;
         EAdminType perm = F.GetPermissions(ctx.Caller!);
-        return _allowedUsers == 0 || (perm & _allowedUsers) > 0;
+
+        return (perm == EAdminType.MEMBER && allowedUsers == EAdminType.MEMBER) || (perm != EAdminType.MEMBER && (perm & allowedUsers) >= perm);
     }
     void IExecutableCommand.Execute(CommandInteraction interaction)
     {

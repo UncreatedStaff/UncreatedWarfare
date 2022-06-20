@@ -28,7 +28,7 @@ public abstract class Command : IExecutableCommand
     {
         if (ctx.IsConsole || ctx.Caller!.Player.channel.owner.isAdmin) return true;
         EAdminType perm = F.GetPermissions(ctx.Caller!);
-        return (perm & allowedUsers) >= perm;
+        return (perm == EAdminType.MEMBER && allowedUsers == EAdminType.MEMBER) || (perm != EAdminType.MEMBER && (perm & allowedUsers) >= perm);
     }
     public abstract void Execute(CommandInteraction ctx);
     public CommandInteraction SetupCommand(UCPlayer? caller, string[] args, string message, bool keepSlash)
