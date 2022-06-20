@@ -211,6 +211,16 @@ public class RequestCommand : IRocketCommand
                                         ctx.Reply("request_kit_e_notenoughcredits", (kit.CreditCost - caller2.CachedCredits).ToString());
                                     return;
                                 }
+                                if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, caller2.GetTeam()))
+                                {
+                                    ctx.Reply("request_kit_e_limited", currentPlayers.ToString(Data.Locale), allowedPlayers.ToString(Data.Locale));
+                                    return;
+                                }
+                                else if (kit.Class == EClass.SQUADLEADER && caller2.Squad is not null && !caller2.IsSquadLeader())
+                                {
+                                    ctx.Reply("request_kit_e_notsquadleader");
+                                    return;
+                                }
                                 if (kit.Class == EClass.SQUADLEADER && caller2.Squad == null)
                                 {
                                     if (SquadManager.Squads.Count(x => x.Team == team) < 8)
@@ -252,13 +262,11 @@ public class RequestCommand : IRocketCommand
         Stats.StatsManager.ModifyKit(kit.Name, k => k.TimesRequested++);
         ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
-        if (kit.IsPremium)
-        {
+        if (kit.IsPremium && kit.Cooldown > 0)
             CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
-        }
         CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.Config.RequestKitCooldown);
 
-        PlayerManager.ApplyTo(ucplayer);
+        //PlayerManager.ApplyTo(ucplayer);
     }
     private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle) => RequestVehicle(ucplayer, vehicle, ucplayer.GetTeam());
     private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, ulong team)

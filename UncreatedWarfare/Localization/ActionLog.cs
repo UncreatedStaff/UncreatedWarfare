@@ -61,7 +61,7 @@ public class ActionLog : MonoBehaviour
 
                             if (UCWarfare.CanUseNetCall)
                             {
-                                using (FileStream str = info.OpenRead())
+                                using (FileStream str = new FileStream(info.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
                                 {
                                     if (str.Length <= int.MaxValue)
                                     {
@@ -125,14 +125,15 @@ public class ActionLog : MonoBehaviour
         public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
 
         [NetCall(ENetCall.FROM_SERVER, 1128)]
-        internal static void ReceiveAckLog(MessageContext context, DateTime fileReceived)
+        internal static async Task ReceiveAckLog(MessageContext context, DateTime fileReceived)
         {
             string path = Path.Combine(Data.LOG_DIRECTORY, fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt");
+            await UCWarfare.ToUpdate();
             if (File.Exists(path))
                 File.Delete(path);
         }
         [NetCall(ENetCall.FROM_SERVER, 1129)]
-        internal static void ReceiveCurrentLogRequest(MessageContext context)
+        internal static async Task ReceiveCurrentLogRequest(MessageContext context)
         {
             string path2 = Path.Combine(Data.LOG_DIRECTORY, "current.txt");
             FileInfo info = new FileInfo(path2);
@@ -141,6 +142,8 @@ public class ActionLog : MonoBehaviour
                 context.Reply(SendCurrentLog, Array.Empty<byte>(), default);
                 return;
             }
+
+            await UCWarfare.ToUpdate();
             using (FileStream str = info.OpenRead())
             {
                 if (str.Length <= int.MaxValue)

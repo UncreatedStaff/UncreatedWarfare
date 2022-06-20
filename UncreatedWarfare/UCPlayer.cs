@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
@@ -53,6 +54,7 @@ public class UCPlayer : IRocketPlayer
             return cachedName;
         } 
     }
+    internal Action<byte, ItemJar> SendItemRemove; 
     public DateTime TimeUnmuted;
     public string? MuteReason;
     public EMuteType MuteType;
@@ -335,6 +337,18 @@ public class UCPlayer : IRocketPlayer
         SuppliesUnloaded = 0;
         AccessibleKits = new List<Kit>();
         CurrentMarkers = new List<SpottedComponent>();
+        if (Data.UseFastKits)
+        {
+            try
+            {
+                SendItemRemove = (Action<byte, ItemJar>)(typeof(PlayerInventory).GetMethod("sendItemRemove", BindingFlags.Instance | BindingFlags.NonPublic).CreateDelegate(typeof(Action<byte, ItemJar>), Player.inventory));
+            }
+            catch
+            {
+                L.LogError("Failed to get PlayerInventory.sendItemRemove for player " + characterName);
+                Data.UseFastKits = false;
+            }
+        }
     }
     public char Icon
     {

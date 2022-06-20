@@ -1501,7 +1501,7 @@ public static class Translation
             languages.Clear();
         }
     }
-    public static IEnumerable<LanguageSet> EnumeratePermissions(EAdminType type = EAdminType.MODERATE_PERMS)
+    public static IEnumerable<LanguageSet> EnumeratePermissions(EAdminType type = EAdminType.MODERATOR)
     {
         lock (languages)
         {

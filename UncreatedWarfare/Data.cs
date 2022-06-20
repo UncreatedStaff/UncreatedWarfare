@@ -119,9 +119,22 @@ public static class Data
     public static DeathTracker DeathTracker;
     internal static HomebaseClient? NetClient;
     internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
+    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearShirt;
+    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearPants;
+    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearHat;
+    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearBackpack;
+    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearVest;
+    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearMask;
+    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearGlasses;
+    public static bool UseFastKits = false;
+    internal static ClientInstanceMethod SendInventory;
     internal delegate void OutputToConsole(string value, ConsoleColor color);
     internal static OutputToConsole? OutputToConsoleMethod;
     internal static SingletonManager Singletons;
+
+    internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
+    internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
+
     public static void LoadColoredConsole()
     {
         try
@@ -232,6 +245,7 @@ public static class Data
 
         /* CONSTRUCT FRAMEWORK */
         L.Log("Instantiating Framework...", ConsoleColor.Magenta);
+        L.Log("Connection string: " + UCWarfare.I.SQL.GetConnectionString());
         DatabaseManager = new WarfareSQL(UCWarfare.I.SQL);
         DatabaseManager.Open();
         Points.Initialize();
@@ -329,6 +343,46 @@ public static class Data
         {
             L.LogWarning("Couldn't get state from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
         }
+
+        UseFastKits = false;
+        try
+        {
+            SendInventory = (typeof(PlayerInventory).GetField("SendInventory", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod)!;
+        }
+        catch (Exception ex)
+        {
+            UseFastKits |= true;
+            L.LogWarning("Couldn't get SendInventory from PlayerInventory, kits will not work as quick. (" + ex.Message + ").");
+        }
+
+        try
+        {
+            SendWearShirt = (typeof(PlayerClothing).GetField("SendWearShirt", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
+            SendWearPants = (typeof(PlayerClothing).GetField("SendWearPants", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
+            SendWearHat = (typeof(PlayerClothing).GetField("SendWearHat", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
+            SendWearBackpack = (typeof(PlayerClothing).GetField("SendWearBackpack", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
+            SendWearVest = (typeof(PlayerClothing).GetField("SendWearVest", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
+            SendWearMask = (typeof(PlayerClothing).GetField("SendWearMask", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
+            SendWearGlasses = (typeof(PlayerClothing).GetField("SendWearGlasses", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
+        }
+        catch (Exception ex)
+        {
+            UseFastKits |= true;
+            L.LogWarning("Couldn't get one of the SendWear______ methods from PlayerInventory, kits will not work as quick. (" + ex.Message + ").");
+        }
+
+        try
+        {
+            SetOwnerHasInventory = F.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
+            GetOwnerHasInventory = F.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
+        }
+        catch (Exception ex)
+        {
+            UseFastKits |= true;
+            L.LogWarning("Couldn't generate a setter method for ownerHasInventory, kits will not work as quick. (" + ex.Message + ").");
+            L.LogError(ex);
+        }
+        UseFastKits = !UseFastKits;
 
         /* SET UP ROCKET GROUPS */
         if (R.Permissions.GetGroup(UCWarfare.Config.AdminLoggerSettings.AdminOnDutyGroup) == default)

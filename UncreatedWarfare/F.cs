@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -60,7 +62,7 @@ public static class F
             rtn = color;
         else
             rtn = f2.Substring(7); // 7 is "color=#" length
-        if (!int.TryParse(rtn, System.Globalization.NumberStyles.HexNumber, Data.Locale, out _))
+        if (!int.TryParse(rtn, NumberStyles.HexNumber, Data.Locale, out _))
             return UCWarfare.GetColorHex("default");
         else return rtn;
     }
@@ -179,8 +181,8 @@ public static class F
         }
         return new string(output);
     }
-    public static bool OnDutyOrAdmin(this IRocketPlayer player) => (player is UnturnedPlayer pl && pl.Player.channel.owner.isAdmin) || (player is UCPlayer upl && upl.Player.channel.owner.isAdmin) || player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
-    public static bool OnDuty(this IRocketPlayer player) => player.PermissionCheck(EAdminType.MODERATE_PERMS_ON_DUTY);
+    public static bool OnDutyOrAdmin(this IRocketPlayer player) => (player is UnturnedPlayer pl && pl.Player.channel.owner.isAdmin) || (player is UCPlayer upl && upl.Player.channel.owner.isAdmin) || player.PermissionCheck(EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY);
+    public static bool OnDuty(this IRocketPlayer player) => player.PermissionCheck(EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY);
     public static bool OffDuty(this IRocketPlayer player) => !OnDuty(player);
     public static bool IsIntern(this IRocketPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN);
     public static bool IsAdmin(this IRocketPlayer player) => player.PermissionCheck(EAdminType.ADMIN);
@@ -223,9 +225,9 @@ public static class F
                 return "n";
         return string.Empty;
     }
-    public static string S(this int number) => number == 1 ? string.Empty : "s";
+    public static string S(this int number)   => number == 1 ? string.Empty : "s";
     public static string S(this float number) => number == 1 ? string.Empty : "s";
-    public static string S(this uint number) => number == 1 ? string.Empty : "s";
+    public static string S(this uint number)  => number == 1 ? string.Empty : "s";
     public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
     {
         if (!Data.Is<ITeams>(out _))
@@ -1249,4 +1251,70 @@ public static class F
         }
         return false;
     }
+    public static InstanceSetter<TInstance, TValue> GenerateInstanceSetter<TInstance, TValue>(string fieldName, BindingFlags flags)
+    {
+        flags |= BindingFlags.Instance;
+        flags &= ~BindingFlags.Static;
+        FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
+        if (field is null || field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
+            throw new FieldAccessException("Field not found or invalid.");
+        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+        DynamicMethod method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.HasThis, typeof(void), new Type[] { typeof(TInstance), field.FieldType }, typeof(TInstance), true);
+        ILGenerator il = method.GetILGenerator();
+        method.DefineParameter(1, ParameterAttributes.None, "value");
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Stfld, field);
+        il.Emit(OpCodes.Ret);
+        return (InstanceSetter<TInstance, TValue>)method.CreateDelegate(typeof(InstanceSetter<TInstance, TValue>));
+    }
+    public static InstanceGetter<TInstance, TValue> GenerateInstanceGetter<TInstance, TValue>(string fieldName, BindingFlags flags)
+    {
+        flags |= BindingFlags.Instance;
+        flags &= ~BindingFlags.Static;
+        FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
+        if (field is null || field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
+            throw new FieldAccessException("Field not found or invalid.");
+        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+        DynamicMethod method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.HasThis, typeof(TValue), new Type[] { typeof(TInstance) }, typeof(TInstance), true);
+        ILGenerator il = method.GetILGenerator();
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldfld, field);
+        il.Emit(OpCodes.Ret);
+        return (InstanceGetter<TInstance, TValue>)method.CreateDelegate(typeof(InstanceGetter<TInstance, TValue>));
+    }
+    public static StaticSetter<TValue> GenerateStaticSetter<TInstance, TValue>(string fieldName, BindingFlags flags)
+    {
+        flags |= BindingFlags.Static;
+        flags &= ~BindingFlags.Instance;
+        FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
+        if (field is null || !field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
+            throw new FieldAccessException("Field not found or invalid.");
+        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+        DynamicMethod method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { field.FieldType }, typeof(TInstance), true);
+        ILGenerator il = method.GetILGenerator();
+        method.DefineParameter(0, ParameterAttributes.None, "value");
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Stsfld, field);
+        il.Emit(OpCodes.Ret);
+        return (StaticSetter<TValue>)method.CreateDelegate(typeof(StaticSetter<TValue>));
+    }
+    public static StaticGetter<TValue> GenerateStaticGetter<TInstance, TValue>(string fieldName, BindingFlags flags)
+    {
+        flags |= BindingFlags.Static;
+        flags &= ~BindingFlags.Instance;
+        FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
+        if (field is null || !field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
+            throw new FieldAccessException("Field not found or invalid.");
+        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+        DynamicMethod method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), Array.Empty<Type>(), typeof(TInstance), true);
+        ILGenerator il = method.GetILGenerator();
+        il.Emit(OpCodes.Ldsfld, field);
+        il.Emit(OpCodes.Ret);
+        return (StaticGetter<TValue>)method.CreateDelegate(typeof(StaticGetter<TValue>));
+    }
 }
+public delegate void InstanceSetter<T1, T2>(T1 owner, T2 value);
+public delegate T2 InstanceGetter<T1, T2>(T1 owner);
+public delegate void StaticSetter<T>(T value);
+public delegate T StaticGetter<T>();

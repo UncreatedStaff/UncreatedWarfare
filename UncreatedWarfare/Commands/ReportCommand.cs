@@ -327,7 +327,7 @@ public class ReportCommand : IRocketCommand
     public bool CheckLinked(UCPlayer player) => Data.DatabaseManager.GetDiscordID(player.Steam64, out ulong discordID) && discordID != 0;
     public void NotifyAdminsOfReport(FPlayerName violator, FPlayerName reporter, Report report, EReportType type, string typename)
     {
-        foreach (LanguageSet set in Translation.EnumeratePermissions(EAdminType.MODERATE_PERMS))
+        foreach (LanguageSet set in Translation.EnumeratePermissions(EAdminType.MODERATOR))
         {
             string translation = Translation.Translate("report_notify_admin", set.Language, reporter.CharacterName, violator.CharacterName, report.Message!, typename);
             while (set.MoveNext())

@@ -132,7 +132,7 @@ namespace Uncreated.Warfare.Commands
                         {
                             if (StructureSaver.StructureExists(structure.instanceID, EStructType.STRUCTURE, out Structure structureRemoved))
                             {
-                                ActionLog.Add(EActionLogType.SAVE_STRUCTURE, $"{structureRemoved.type}: {structure.asset.itemName} / {structure.asset.id} /" +
+                                ActionLog.Add(EActionLogType.UNSAVE_STRUCTURE, $"{structureRemoved.type}: {structure.asset.itemName} / {structure.asset.id} /" +
                                                                              $" {structure.asset.GUID:N} at {structureRemoved.transform} ({structureRemoved.instance_id})", 
                                                                              player.CSteamID.m_SteamID);
                                 StructureSaver.RemoveStructure(structureRemoved);
@@ -149,7 +149,7 @@ namespace Uncreated.Warfare.Commands
                         {
                             if (StructureSaver.StructureExists(barricade.instanceID, EStructType.BARRICADE, out Structure structureRemoved))
                             {
-                                ActionLog.Add(EActionLogType.SAVE_STRUCTURE, $"{structureRemoved.type}: {barricade.asset.itemName} / {barricade.asset.id} /" +
+                                ActionLog.Add(EActionLogType.UNSAVE_STRUCTURE, $"{structureRemoved.type}: {barricade.asset.itemName} / {barricade.asset.id} /" +
                                                                              $" {barricade.asset.GUID:N} at {structureRemoved.transform} ({structureRemoved.instance_id})",
                                     player.CSteamID.m_SteamID);
                                 StructureSaver.RemoveStructure(structureRemoved);
