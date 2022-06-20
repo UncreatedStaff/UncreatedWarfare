@@ -84,6 +84,7 @@ public class KitManager : BaseReloadSingleton
         _singleton = null!;
         PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
     }
+    private static readonly byte[] GUID_BUFFER = new byte[16];
     public async Task ReloadKits()
     {
         SingletonEx.AssertLoaded<KitManager>(_isLoaded);
@@ -121,7 +122,8 @@ public class KitManager : BaseReloadSingleton
                 if (Kits.TryGetValue(kitPk, out Kit kit))
                 {
                     KitItem item = new KitItem();
-                    item.id = new Guid((byte[])R[2]);
+                    R.GetBytes(2, 0, GUID_BUFFER, 0, 16);
+                    item.id = new Guid(GUID_BUFFER);
                     item.x = R.GetByte(3);
                     item.y = R.GetByte(4);
                     item.rotation = R.GetByte(5);
@@ -137,7 +139,8 @@ public class KitManager : BaseReloadSingleton
                 if (Kits.TryGetValue(kitPk, out Kit kit))
                 {
                     KitClothing item = new KitClothing();
-                    item.id = new Guid((byte[])R[2]);
+                    R.GetBytes(2, 0, GUID_BUFFER, 0, 16);
+                    item.id = new Guid(GUID_BUFFER);
                     item.type = (EClothingType)R.GetByte(3);
                     kit.Clothes.Add(item);
                 }
@@ -856,36 +859,58 @@ public class KitManager : BaseReloadSingleton
                 skillset.ServerSet(player);
             }
         }
-        UCInventoryManager.ClearInventory(player);
-        foreach (KitClothing clothing in kit.Clothes)
-        {
-            if (Assets.find(clothing.id) is ItemAsset asset)
-            {
-                if (clothing.type == EClothingType.SHIRT)
-                    player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);
-                else if (clothing.type == EClothingType.PANTS)
-                    player.Player.clothing.askWearPants(asset.id, 100, asset.getState(true), true);
-                else if (clothing.type == EClothingType.VEST)
-                    player.Player.clothing.askWearVest(asset.id, 100, asset.getState(true), true);
-                else if (clothing.type == EClothingType.HAT)
-                    player.Player.clothing.askWearHat(asset.id, 100, asset.getState(true), true);
-                else if (clothing.type == EClothingType.MASK)
-                    player.Player.clothing.askWearMask(asset.id, 100, asset.getState(true), true);
-                else if (clothing.type == EClothingType.BACKPACK)
-                    player.Player.clothing.askWearBackpack(asset.id, 100, asset.getState(true), true);
-                else if (clothing.type == EClothingType.GLASSES)
-                    player.Player.clothing.askWearGlasses(asset.id, 100, asset.getState(true), true);
-            }
-        }
+        UCInventoryManager.ClearInventory(player, !Data.UseFastKits);
 
-        foreach (KitItem k in kit.Items)
+        if (Data.UseFastKits)
         {
-            if (Assets.find(k.id) is ItemAsset asset)
+            UCInventoryManager.LoadClothes(player, kit.Clothes);
+
+            Items[] p = player.Player.inventory.items;
+            bool ohi = Data.GetOwnerHasInventory(player.Player.inventory);
+            if (ohi)
+                Data.SetOwnerHasInventory(player.Player.inventory, false);
+            for (int i = 0; i < kit.Items.Count; ++i)
             {
-                Item item = new Item(asset.id, k.amount, 100, F.CloneBytes(k.metadata));
-                if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
-                    if (player.Player.inventory.tryAddItem(item, true))
-                        ItemManager.dropItem(item, player.Position, true, true, true);
+                KitItem item = kit.Items[i];
+                if (item.page < PlayerInventory.PAGES - 2 && Assets.find(item.id) is ItemAsset asset)
+                    p[item.page].addItem(item.x, item.y, item.rotation, new Item(asset.id, item.amount, 100, F.CloneBytes(item.metadata)));
+            }
+            if (ohi)
+                Data.SetOwnerHasInventory(player.Player.inventory, ohi);
+            UCInventoryManager.SendPages(player);
+        }
+        else
+        {
+            foreach (KitClothing clothing in kit.Clothes)
+            {
+                if (Assets.find(clothing.id) is ItemAsset asset)
+                {
+                    if (clothing.type == EClothingType.SHIRT)
+                        player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);
+                    else if (clothing.type == EClothingType.PANTS)
+                        player.Player.clothing.askWearPants(asset.id, 100, asset.getState(true), true);
+                    else if (clothing.type == EClothingType.VEST)
+                        player.Player.clothing.askWearVest(asset.id, 100, asset.getState(true), true);
+                    else if (clothing.type == EClothingType.HAT)
+                        player.Player.clothing.askWearHat(asset.id, 100, asset.getState(true), true);
+                    else if (clothing.type == EClothingType.MASK)
+                        player.Player.clothing.askWearMask(asset.id, 100, asset.getState(true), true);
+                    else if (clothing.type == EClothingType.BACKPACK)
+                        player.Player.clothing.askWearBackpack(asset.id, 100, asset.getState(true), true);
+                    else if (clothing.type == EClothingType.GLASSES)
+                        player.Player.clothing.askWearGlasses(asset.id, 100, asset.getState(true), true);
+                }
+            }
+
+            foreach (KitItem k in kit.Items)
+            {
+                if (Assets.find(k.id) is ItemAsset asset)
+                {
+                    Item item = new Item(asset.id, k.amount, 100, F.CloneBytes(k.metadata));
+                    if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
+                        if (player.Player.inventory.tryAddItem(item, true))
+                            ItemManager.dropItem(item, player.Position, true, true, true);
+                }
             }
         }
         string oldkit = player.KitName;

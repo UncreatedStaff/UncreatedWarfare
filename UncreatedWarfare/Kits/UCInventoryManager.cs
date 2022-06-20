@@ -1,12 +1,15 @@
 ﻿using Rocket.Unturned.Player;
+using SDG.NetPak;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
+using System.Collections.Generic;
 
 namespace Uncreated.Warfare.Kits
 {
     public static class UCInventoryManager
     {
-        public static void GiveKitToPlayer(UnturnedPlayer player, Kit kit)
+        public static void GiveKitToPlayer(UCPlayer player, Kit kit)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -41,65 +44,173 @@ namespace Uncreated.Warfare.Kits
                     {
                         Item item = new Item(asset.id, k.amount, 100, F.CloneBytes(k.metadata));
 
-                        if (!player.Inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
-                            player.Inventory.tryAddItem(item, true);
+                        if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
+                            player.Player.inventory.tryAddItem(item, true);
                     }
                 }
             }
         }
+        public static void ClearInventory(UCPlayer player, bool clothes = true)
+        {
+            byte[] blank = Array.Empty<byte>();
+            if (Data.UseFastKits)
+            {
+                // clears the inventory quickly
+                NetId id = player.Player.inventory.GetNetId();
+                player.Player.equipment.dequip();
 
-        public static void ClearInventory(UCPlayer player) => ClearInventory(player.SteamPlayer);
-        public static void ClearInventory(UnturnedPlayer player) => ClearInventory(player.Player.channel.owner);
-        public static void ClearInventory(SteamPlayer player)
+                ITransportConnection tc = player.Connection;
+                Items[] inv = player.Player.inventory.items;
+                inv[0].removeItem(0);
+                inv[1].removeItem(0);
+                //player.Player.inventory.items[PlayerInventory.SLOTS].onItemsResized(PlayerInventory.SLOTS, 5, 3);
+
+                byte m = (byte)(PlayerInventory.PAGES - 2);
+                for (byte i = PlayerInventory.SLOTS; i < m; ++i)
+                {
+                    byte c = inv[i].getItemCount();
+                    for (byte it = 0; it < c; ++it)
+                        player.SendItemRemove(i, inv[i].items[it]);
+                }
+                for (int i = 2; i < m; ++i)
+                {
+                    Items page = player.Player.inventory.items[i];
+                    page.clear();
+                }
+                if (clothes)
+                {
+                    id = player.Player.clothing.GetNetId();
+                    if (player.Player.clothing.shirt != 0)
+                        Data.SendWearShirt.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    if (player.Player.clothing.pants != 0)
+                        Data.SendWearPants.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    if (player.Player.clothing.hat != 0)
+                        Data.SendWearHat.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    if (player.Player.clothing.backpack != 0)
+                        Data.SendWearBackpack.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    if (player.Player.clothing.vest != 0)
+                        Data.SendWearVest.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    if (player.Player.clothing.mask != 0)
+                        Data.SendWearMask.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    if (player.Player.clothing.glasses != 0)
+                        Data.SendWearGlasses.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                }
+            }
+            else
+            {
+                for (byte page = 0; page < PlayerInventory.PAGES - 2; page++)
+                {
+                    byte count = player.Player.inventory.getItemCount(page);
+
+                    for (byte index = 0; index < count; index++)
+                    {
+                        player.Player.inventory.removeItem(page, 0);
+                    }
+                }
+
+                if (clothes)
+                {
+                    player.Player.clothing.askWearBackpack(0, 0, blank, true);
+                    player.Player.inventory.removeItem(2, 0);
+
+                    player.Player.clothing.askWearGlasses(0, 0, blank, true);
+                    player.Player.inventory.removeItem(2, 0);
+
+                    player.Player.clothing.askWearHat(0, 0, blank, true);
+                    player.Player.inventory.removeItem(2, 0);
+
+                    player.Player.clothing.askWearPants(0, 0, blank, true);
+                    player.Player.inventory.removeItem(2, 0);
+
+                    player.Player.clothing.askWearMask(0, 0, blank, true);
+                    player.Player.inventory.removeItem(2, 0);
+
+                    player.Player.clothing.askWearShirt(0, 0, blank, true);
+                    player.Player.inventory.removeItem(2, 0);
+
+                    player.Player.clothing.askWearVest(0, 0, blank, true);
+                    player.Player.inventory.removeItem(2, 0);
+
+                    byte handcount = player.Player.inventory.getItemCount(2);
+                    for (byte i = 0; i < handcount; i++)
+                    {
+                        player.Player.inventory.removeItem(2, 0);
+                    }
+                }
+            }
+        }
+        public static void LoadClothes(UCPlayer player, List<KitClothing> clothes)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            player.player.equipment.dequip();
+            player.Player.equipment.dequip();
 
-            for (byte page = 0; page < PlayerInventory.PAGES - 1; page++)
+            byte[] blank = Array.Empty<byte>();
+            NetId id = player.Player.clothing.GetNetId();
+            byte flag = 0;
+            for (int i = 0; i < clothes.Count; ++i)
             {
-                if (page == PlayerInventory.AREA)
-                    continue;
-
-                byte count = player.player.inventory.getItemCount(page);
-
-                for (byte index = 0; index < count; index++)
+                KitClothing clothing = clothes[i];
+                flag |= (byte)(1 << (int)clothing.type);
+                (clothing.type switch
                 {
-                    player.player.inventory.removeItem(page, 0);
+                    EClothingType.SHIRT => Data.SendWearShirt,
+                    EClothingType.PANTS => Data.SendWearPants,
+                    EClothingType.HAT => Data.SendWearHat,
+                    EClothingType.BACKPACK => Data.SendWearBackpack,
+                    EClothingType.VEST => Data.SendWearVest,
+                    EClothingType.MASK => Data.SendWearMask,
+                    EClothingType.GLASSES => Data.SendWearGlasses,
+                    _ => null
+                })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), clothing.id, 100, blank);
+            }
+            for (int i = 0; i < 7; ++i)
+            {
+                if (((flag >> i) & 1) != 1)
+                {
+                    ((EClothingType)i switch
+                    {
+                        EClothingType.SHIRT => Data.SendWearShirt,
+                        EClothingType.PANTS => Data.SendWearPants,
+                        EClothingType.HAT => Data.SendWearHat,
+                        EClothingType.BACKPACK => Data.SendWearBackpack,
+                        EClothingType.VEST => Data.SendWearVest,
+                        EClothingType.MASK => Data.SendWearMask,
+                        EClothingType.GLASSES => Data.SendWearGlasses,
+                        _ => null
+                    })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
                 }
             }
-
-
-            byte[] blank = new byte[0];
-            player.player.clothing.askWearBackpack(0, 0, blank, true);
-            player.player.inventory.removeItem(2, 0);
-
-            player.player.clothing.askWearGlasses(0, 0, blank, true);
-            player.player.inventory.removeItem(2, 0);
-
-            player.player.clothing.askWearHat(0, 0, blank, true);
-            player.player.inventory.removeItem(2, 0);
-
-            player.player.clothing.askWearPants(0, 0, blank, true);
-            player.player.inventory.removeItem(2, 0);
-
-            player.player.clothing.askWearMask(0, 0, blank, true);
-            player.player.inventory.removeItem(2, 0);
-
-            player.player.clothing.askWearShirt(0, 0, blank, true);
-            player.player.inventory.removeItem(2, 0);
-
-            player.player.clothing.askWearVest(0, 0, blank, true);
-            player.player.inventory.removeItem(2, 0);
-
-            byte handcount = player.player.inventory.getItemCount(2);
-            for (byte i = 0; i < handcount; i++)
-            {
-                player.player.inventory.removeItem(2, 0);
-            }
         }
-
+        public static void SendPages(UCPlayer player)
+        {
+            Items[] il = player.Player.inventory.items;
+            Data.SendInventory.Invoke(player.Player.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
+                writer =>
+                {
+                    for (int i = 0; i < PlayerInventory.PAGES - 2; ++i)
+                    {
+                        Items i2 = il[i];
+                        int ct = i2.getItemCount();
+                        writer.WriteUInt8(i2.width);
+                        writer.WriteUInt8(i2.height);
+                        writer.WriteUInt8((byte)ct);
+                        for (int j = 0; j < ct; ++j)
+                        {
+                            ItemJar jar = i2.items[j];
+                            writer.WriteUInt8(jar.x);
+                            writer.WriteUInt8(jar.y);
+                            writer.WriteUInt8(jar.rot);
+                            writer.WriteUInt16(jar.item.id);
+                            writer.WriteUInt8(jar.item.amount);
+                            writer.WriteUInt8(jar.item.quality);
+                            writer.WriteUInt8((byte)jar.item.state.Length);
+                            writer.WriteBytes(jar.item.state);
+                        }
+                    }
+                });
+        }
         public static void RemoveNumberOfItemsFromStorage(InteractableStorage storage, ushort itemID, int amount)
         {
 #if DEBUG

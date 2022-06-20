@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -115,12 +116,98 @@ public static class L
             UnturnedLog.error(ex);
         }
     }
+
+    private static readonly char[] trimChars = new char[] { '\n', '\r' };
+    private static readonly List<string> stack = new List<string>(64);
+    private static string CleanStackTrace(string stackTrace)
+    {
+        string[] stacks = stackTrace.Split('\n');
+        StringBuilder newTrace = new StringBuilder(stackTrace.Length);
+        bool isAsync = false;
+        lock (stack)
+        {
+            for (int i = stacks.Length - 1; i >= 0; --i)
+            {
+                string stack = stacks[i].Trim(trimChars);
+                if (stack.StartsWith("  at System.Runtime.CompilerServices", StringComparison.Ordinal) ||
+                    stack.StartsWith("  at System.Threading.Tasks.Task", StringComparison.Ordinal) ||
+                    stack.StartsWith("  at System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw ()", StringComparison.Ordinal))
+                {
+                    isAsync = true;
+                }
+                else
+                {
+                    if (stack.Equals("--- End of stack trace from previous location where exception was thrown ---"))
+                    {
+                        if (isAsync) continue;
+                        else
+                            stack = Environment.NewLine + "  \\/ Previous Stack Location \\/" + Environment.NewLine;
+                    }
+                    if (stack.StartsWith("  at "))
+                    {
+                        int endingPartSt;
+                        int endingPartEnd;
+                        int nestedClassSt = stack.IndexOf('+');
+                        if (nestedClassSt != -1 && stack.Length > nestedClassSt + 3)
+                        {
+                            string owner = stack.Substring(5, nestedClassSt - 5);
+                            if (stack[nestedClassSt + 1] == '<')
+                            {
+                                int close = stack.IndexOf('>', nestedClassSt + 2);
+                                string methodName = stack.Substring(nestedClassSt + 2, close - nestedClassSt - 2);
+                                endingPartSt = stack.IndexOf('(', close);
+                                if (endingPartSt != -1)
+                                {
+                                    endingPartEnd = stack.IndexOf('[', endingPartSt);
+                                    if (endingPartEnd == -1)
+                                        endingPartEnd = stack.Length - 1;
+                                    stack = "  at async " + owner + "." + methodName + " " + stack.Substring(endingPartSt, endingPartEnd - endingPartSt - 1);
+                                }
+                                else
+                                    stack = "  at async " + owner + "." + methodName;
+                                goto repl;
+                            }
+                        }
+                        endingPartEnd = stack.IndexOf('[');
+                        if (endingPartEnd != -1)
+                        {
+                            if (endingPartEnd == -1)
+                                endingPartEnd = stack.Length - 1;
+                            stack = stack.Substring(0, endingPartEnd - 1);
+                        }
+                    }
+                repl:
+                    stack = stack
+                        .Replace("System.Boolean", "bool")
+                        .Replace("System.UInt32", "uint")
+                        .Replace("System.Int32", "int")
+                        .Replace("System.UInt16", "ushort")
+                        .Replace("System.Int16", "short")
+                        .Replace("System.UInt64", "ulong")
+                        .Replace("System.Int64", "long")
+                        .Replace("System.String", "string")
+                        .Replace("System.Object", "object");
+
+                    L.stack.Add(stack);
+                }
+            }
+
+            for (int i = stack.Count - 1; i >= 0; --i)
+                newTrace.AppendLine(stack[i]);
+            stack.Clear();
+
+        }
+        if (isAsync)
+                newTrace.AppendLine("== SOME LINES WERE HIDDEN FOR READABILITY ==");
+
+        return newTrace.ToString();
+    }
     public static void LogError(Exception ex, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "", [CallerFilePath] string filepath = "", [CallerLineNumber] int ln = 0)
     {
         int i = 0;
         do
         {
-            string message = $"EXCEPTION - {ex.GetType().Name}\nSource: {filepath}::{method}( ... ) LN# {ln}\n\n{ex.Message}\n{ex.StackTrace}\n\nFINISHED";
+            string message = $"EXCEPTION - {ex.GetType().Name}\nSource: {filepath}::{method}( ... ) LN# {ln}\n\n{ex.Message}\n{CleanStackTrace(ex.StackTrace)}\n\nFINISHED";
             try
             {
                 if (!UCWarfare.Config.UseColoredConsoleModule || color == ConsoleColor.Red ||
@@ -150,6 +237,17 @@ public static class L
             {
                 foreach (Exception ex2 in t2.LoaderExceptions)
                     L.LogError(ex2, color, method, filepath, ln);
+            }
+            else if (ex is AggregateException t3)
+            {
+                L.LogError("INNER EXCEPTIONS: ");
+                int j = 0;
+                foreach (Exception ex2 in t3.InnerExceptions)
+                {
+                    LogError(" - INNER EXCEPTION #" + ++j);
+                    LogError(ex2, color, method, filepath, ln);
+                }
+                break;
             }
             ++i;
             ex = ex.InnerException;

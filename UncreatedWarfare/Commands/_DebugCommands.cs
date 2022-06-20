@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
@@ -770,7 +771,7 @@ internal class _DebugCommand : Command
         }
     }
 #if DEBUG
-    private void saveall(CommandContext ctx)
+    private void saveall(UCCommandContext ctx)
     {
         F.SaveProfilingData();
     }
@@ -793,5 +794,35 @@ internal class _DebugCommand : Command
                 L.LogError(ex);
             }
         }
+    }
+
+    private void kitspeedtest(UCCommandContext ctx)
+    {
+        if (ctx.IsConsole || ctx.Caller is null)
+        {
+            ctx.SendPlayerOnlyError();
+            return;
+        }
+
+        KitManager.KitExists("prem_sasql1", out Kit kit);
+
+        Stopwatch watch = new Stopwatch();
+        bool ufa = Data.UseFastKits;
+        if (ufa)
+        {
+            watch.Start();
+            KitManager.GiveKit(ctx.Caller, kit);
+            watch.Stop();
+            Data.UseFastKits = false;
+            L.Log("Mode 1 (fast, x1): " + watch.ElapsedTicks.ToString());
+        }
+
+        Thread.Sleep(2000);
+        watch.Restart();
+        KitManager.GiveKit(ctx.Caller, kit);
+        watch.Stop();
+        L.Log("Mode 2 (slow): " + watch.ElapsedTicks.ToString());
+
+        Data.UseFastKits = ufa;
     }
 }

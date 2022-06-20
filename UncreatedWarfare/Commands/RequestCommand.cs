@@ -270,13 +270,11 @@ public class RequestCommand : Command
 
         ucplayer.Message("request_kit_given", kit.DisplayName.ToUpper());
 
-        if (kit.IsPremium)
-        {
+        if (kit.IsPremium && kit.Cooldown > 0)
             CooldownManager.StartCooldown(ucplayer, ECooldownType.PREMIUM_KIT, kit.Cooldown, kit.Name);
-        }
         CooldownManager.StartCooldown(ucplayer, ECooldownType.REQUEST_KIT, CooldownManager.Config.RequestKitCooldown);
 
-        PlayerManager.ApplyTo(ucplayer);
+        //PlayerManager.ApplyTo(ucplayer);
     }
     private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle) => RequestVehicle(ucplayer, vehicle, ucplayer.GetTeam());
     private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, ulong team)
