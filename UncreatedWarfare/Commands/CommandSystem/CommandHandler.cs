@@ -999,14 +999,13 @@ public class CommandInteraction : BaseCommandInteraction
     /// <returns><see langword="true"/> If a <typeparamref name="TAsset"/> is found or multiple are found and <paramref name="allowMultipleResults"/> is <see langword="true"/>.</returns>
     public bool TryGet<TAsset>(int parameter, out TAsset asset, out bool multipleResultsFound, bool remainder = false, int len = 1, bool allowMultipleResults = false, Func<TAsset, bool>? selector = null) where TAsset : Asset
     {
-        parameter += offset;
         if (!TryGetRange(parameter, out string p, remainder ? -1 : len))
         {
             multipleResultsFound = false;
             asset = null!;
             return false;
         }
-        if ((remainder || parameter == _ctx.ArgumentCount - 1) && p.EndsWith("\\"))
+        if ((remainder || parameter == ArgumentCount - 1) && p.EndsWith("\\"))
             p = p.Substring(0, p.Length - 1);
         if (Guid.TryParse(p, out Guid guid))
         {
