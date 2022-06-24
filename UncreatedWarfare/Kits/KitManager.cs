@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
@@ -239,7 +240,7 @@ public class KitManager : BaseReloadSingleton
             }
         }
     }
-    public static async Task<Kit?> AddKit(Kit? kit)
+    public static async Task<Kit> AddKit(Kit kit)
     {
         KitManager singleton = GetSingleton();
         if (kit != null)
@@ -299,7 +300,7 @@ public class KitManager : BaseReloadSingleton
                     {
                         pk = R.GetInt32(0);
                     });
-                if (pk == -1) return null;
+                if (pk == -1) return null!;
                 kit.PrimaryKey = pk;
                 if (kit.Items.Count > 0)
                 {
@@ -451,7 +452,7 @@ public class KitManager : BaseReloadSingleton
             }
         }
 
-        return kit;
+        return kit!;
     }
     public static async Task<bool> GiveAccess(Kit kit, ulong player, EKitAccessType type)
     {
@@ -938,8 +939,8 @@ public class KitManager : BaseReloadSingleton
 
         OnKitChanged?.Invoke(player, kit, oldkit);
         if (oldkit != null && oldkit != string.Empty)
-            RequestSigns.UpdateSignsOfKit(oldkit);
-        RequestSigns.UpdateSignsOfKit(kit.Name);
+            UpdateSigns(oldkit);
+        UpdateSigns(kit);
     }
     public static void ResupplyKit(UCPlayer player, Kit kit, bool ignoreAmmoBags = false)
     {
@@ -1130,7 +1131,120 @@ public class KitManager : BaseReloadSingleton
 #endif
         kit.SignTexts.Remove(language);
         kit.SignTexts.Add(language, text);
-        RequestSigns.UpdateSignsOfKit(kit.Name);
+        UpdateSigns(kit);
+    }
+    public static void UpdateSigns()
+    {
+        if (UCWarfare.IsMainThread)
+            UpdateSignsIntl(null);
+        else
+            UCWarfare.RunOnMainThread(() => UpdateSignsIntl(null));
+    }
+    public static void UpdateSigns(UCPlayer player)
+    {
+        if (UCWarfare.IsMainThread)
+            UpdateSignsIntl(player);
+        else
+            UCWarfare.RunOnMainThread(() => UpdateSignsIntl(player));
+    }
+    public static void UpdateSigns(Kit kit)
+    {
+        if (UCWarfare.IsMainThread)
+            UpdateSignsIntl(kit, null);
+        else
+            UCWarfare.RunOnMainThread(() => UpdateSignsIntl(kit, null));
+    }
+    public static void UpdateSigns(Kit kit, UCPlayer player)
+    {
+        if (UCWarfare.IsMainThread)
+            UpdateSignsIntl(kit, player);
+        else
+            UCWarfare.RunOnMainThread(() => UpdateSignsIntl(kit, player));
+    }
+    public static void UpdateSigns(string kitId)
+    {
+        if (UCWarfare.IsMainThread)
+            UpdateSignsIntl(kitId, null);
+        else
+            UCWarfare.RunOnMainThread(() => UpdateSignsIntl(kitId, null));
+    }
+    public static void UpdateSigns(string kitId, UCPlayer player)
+    {
+        if (UCWarfare.IsMainThread)
+            UpdateSignsIntl(kitId, player);
+        else
+            UCWarfare.RunOnMainThread(() => UpdateSignsIntl(kitId, player));
+    }
+    private static void UpdateSignsIntl(UCPlayer? player)
+    {
+        if (RequestSigns.Loaded)
+        {
+            if (player is null)
+            {
+                for (int i = 0; i < RequestSigns.Singleton.Count; i++)
+                {
+                    RequestSigns.Singleton[i].InvokeUpdate();
+                }
+            }
+            else
+            {
+                for (int i = 0; i < RequestSigns.Singleton.Count; i++)
+                {
+                    RequestSigns.Singleton[i].InvokeUpdate(player.SteamPlayer);
+                }
+            }
+        }
+    }
+    private static void UpdateSignsIntl(Kit kit, UCPlayer? player)
+    {
+        if (RequestSigns.Loaded)
+        {
+            if (kit.IsLoadout)
+            {
+                if (player is null)
+                {
+                    for (int i = 0; i < RequestSigns.Singleton.Count; i++)
+                    {
+                        if (RequestSigns.Singleton[i].kit_name.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
+                            RequestSigns.Singleton[i].InvokeUpdate();
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < RequestSigns.Singleton.Count; i++)
+                    {
+                        if (RequestSigns.Singleton[i].kit_name.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
+                            RequestSigns.Singleton[i].InvokeUpdate(player.SteamPlayer);
+                    }
+                }
+            }
+            else
+            {
+                UpdateSignsIntl(kit.Name, player);
+            }
+        }
+    }
+    private static void UpdateSignsIntl(string kitId, UCPlayer? player)
+    {
+        if (RequestSigns.Loaded)
+        {
+            if (player is null)
+            {
+                for (int i = 0; i < RequestSigns.Singleton.Count; i++)
+                {
+                    if (RequestSigns.Singleton[i].kit_name.Equals(kitId, StringComparison.Ordinal))
+                        RequestSigns.Singleton[i].InvokeUpdate();
+                }
+            }
+            else
+            {
+                for (int i = 0; i < RequestSigns.Singleton.Count; i++)
+                {
+                    if (RequestSigns.Singleton[i].kit_name.StartsWith(kitId, StringComparison.Ordinal))
+                        RequestSigns.Singleton[i].InvokeUpdate(player.SteamPlayer);
+                }
+            }
+        }
     }
     public static IEnumerable<Kit> GetAccessibleKits(ulong playerID)
     {
@@ -1140,6 +1254,72 @@ public class KitManager : BaseReloadSingleton
             return pl.AccessibleKits;
         }
         else return Array.Empty<Kit>();
+    }
+    public static async Task<char> GetLoadoutCharacter(ulong playerId)
+    {
+        char let = 'a';
+        await Data.DatabaseManager.QueryAsync("SELECT `InternalName` FROM `kit_data` WHERE `InternalName` LIKE @0 ORDER BY `InternalName`;", new object[1]
+        {
+            playerId.ToString() + "_%"
+        }, R =>
+        {
+            string name = R.GetString(0);
+            if (name.Length < 19)
+                return;
+            char let2 = name[18];
+            if (let2 == let)
+                let++;
+        });
+        return let;
+    }
+    internal async Task<(Kit?, int)> CreateLoadout(ulong fromPlayer, ulong player, ulong team, EClass @class, string displayName)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        char let = await GetLoadoutCharacter(player);
+        string loadoutName = player.ToString() + "_" + let;
+
+        if (KitExists(loadoutName, out _))
+            return (null, 555);
+        else
+        {
+            List<KitItem> items;
+            List<KitClothing> clothes;
+            if (team is 1 or 2 && KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmedKit))
+            {
+                items = unarmedKit.Items.ToList();
+                clothes = unarmedKit.Clothes.ToList();
+            }
+            else
+            {
+                items = new List<KitItem>(0);
+                clothes = new List<KitClothing>(0);
+            }
+
+            Kit loadout = new Kit(loadoutName, items, clothes);
+
+            loadout.IsLoadout = true;
+            loadout.Team = team;
+            loadout.Class = @class;
+            if (@class == EClass.PILOT)
+                loadout.Branch = EBranch.AIRFORCE;
+            else if (@class == EClass.CREWMAN)
+                loadout.Branch = EBranch.ARMOR;
+            else
+                loadout.Branch = EBranch.INFANTRY;
+
+            if (@class == EClass.HAT)
+                loadout.TeamLimit = 0.1F;
+            await UCWarfare.ToUpdate();
+            UpdateText(loadout, displayName);
+
+            await AddKit(loadout);
+
+            ActionLog.Add(EActionLogType.CREATE_KIT, loadoutName, fromPlayer);
+
+            return (loadout, 0);
+        }
     }
 }
 public static class KitEx
@@ -1243,35 +1423,98 @@ public static class KitEx
     }
     public static class NetCalls
     {
-        public static readonly NetCall<ulong, string, EKitAccessType> GiveKitAccess = new NetCall<ulong, string, EKitAccessType>(ReceiveGiveKitAccess);
-        public static readonly NetCall<ulong, string> RemoveKitAccess = new NetCall<ulong, string>(ReceiveRemoveKitAccess);
+        public static readonly NetCall<ulong, ulong, string, EKitAccessType, bool> RequestSetKitAccess = new NetCall<ulong, ulong, string, EKitAccessType, bool>(ReceiveSetKitAccess);
+        public static readonly NetCall<ulong, ulong, string[], EKitAccessType, bool> RequestSetKitsAccess = new NetCall<ulong, ulong, string[], EKitAccessType, bool>(ReceiveSetKitsAccess);
         public static readonly NetCallRaw<Kit?> CreateKit = new NetCallRaw<Kit?>(ReceiveCreateKit, Kit.Read, Kit.Write);
         public static readonly NetCall<string> RequestKitClass = new NetCall<string>(ReceiveRequestKitClass);
         public static readonly NetCall<string> RequestKit = new NetCall<string>(ReceiveKitRequest);
         public static readonly NetCallRaw<string[]> RequestKits = new NetCallRaw<string[]>(ReceiveKitsRequest, null, null);
+        public static readonly NetCall<ulong, ulong, byte, EClass, string> RequestCreateLoadout = new NetCall<ulong, ulong, byte, EClass, string>(ReceiveCreateLoadoutRequest);
+        public static readonly NetCall<string, ulong> RequestKitAccess = new NetCall<string, ulong>(ReceiveKitAccessRequest);
+        public static readonly NetCall<string[], ulong> RequestKitsAccess = new NetCall<string[], ulong>(ReceiveKitsAccessRequest);
+
 
         public static readonly NetCall<string, EClass, string> SendKitClass = new NetCall<string, EClass, string>(1114);
         public static readonly NetCallRaw<Kit?> SendKit = new NetCallRaw<Kit?>(1117, Kit.Read, Kit.Write);
         public static readonly NetCallRaw<Kit?[]> SendKits = new NetCallRaw<Kit?[]>(1118, Kit.ReadMany, Kit.WriteMany);
+        public static readonly NetCall<string, int> SendAckCreateLoadout = new NetCall<string, int>(1111);
+        public static readonly NetCall<bool> SendAckSetKitAccess = new NetCall<bool>(1101);
+        public static readonly NetCall<bool[]> SendAckSetKitsAccess = new NetCall<bool[]>(1133);
+        public static readonly NetCall<byte, bool> SendKitAccess = new NetCall<byte, bool>(1135);
+        public static readonly NetCall<byte, byte[]> SendKitsAccess = new NetCall<byte, byte[]>(1137);
 
         [NetCall(ENetCall.FROM_SERVER, 1100)]
-        internal static Task ReceiveGiveKitAccess(MessageContext context, ulong player, string kit, EKitAccessType type)
+        internal static Task ReceiveSetKitAccess(MessageContext context, ulong admin, ulong player, string kit, EKitAccessType type, bool state)
         {
             if (KitManager.KitExists(kit, out Kit k))
-                return KitManager.GiveAccess(k, player, type);
+            {
+                Task<bool> t = state ? KitManager.GiveAccess(k, player, type) : KitManager.RemoveAccess(k, player);
+                if (state)
+                    ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " GIVEN ACCESS TO " + kit + ", REASON: " + type.ToString(), admin);
+                else
+                    ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " DENIED ACCESS TO " + kit, admin);
+                context.Reply(SendAckSetKitAccess, true);
+                KitManager.UpdateSigns(k);
+                return t;
+            }
+            context.Reply(SendAckSetKitAccess, false);
             return Task.CompletedTask;
         }
-
-        [NetCall(ENetCall.FROM_SERVER, 1101)]
-        internal static Task ReceiveRemoveKitAccess(MessageContext context, ulong player, string kit)
+        [NetCall(ENetCall.FROM_SERVER, 1132)]
+        internal static async Task ReceiveSetKitsAccess(MessageContext context, ulong admin, ulong player, string[] kits, EKitAccessType type, bool state)
         {
-            if (KitManager.KitExists(kit, out Kit k))
-                return KitManager.RemoveAccess(k, player);
-            return Task.CompletedTask;
+            bool[] successes = new bool[kits.Length];
+            for (int i = 0; i < kits.Length; ++i)
+            {
+                string kit = kits[i];
+                if (KitManager.KitExists(kit, out Kit k))
+                {
+                    Task<bool> t = state ? KitManager.GiveAccess(k, player, type) : KitManager.RemoveAccess(k, player);
+                    await t;
+                    if (state)
+                        ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " GIVEN ACCESS TO " + kit + ", REASON: " + type.ToString(), admin);
+                    else
+                        ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " DENIED ACCESS TO " + kit, admin);
+                    successes[i] = true;
+                }
+            }
+            context.Reply(SendAckSetKitsAccess, successes);
+        }
+        [NetCall(ENetCall.FROM_SERVER, 1134)]
+        private static async Task ReceiveKitAccessRequest(MessageContext context, string kit, ulong player)
+        {
+            if (!KitManager.Loaded)
+                context.Reply(SendKitAccess, (byte)1, false);
+            else if (KitManager.KitExists(kit, out Kit k))
+                context.Reply(SendKitAccess, (byte)0, await KitManager.HasAccess(kit, player));
+            else
+                context.Reply(SendKitAccess, (byte)2, false);
+        }
+        
+        [NetCall(ENetCall.FROM_SERVER, 1136)]
+        private static async Task ReceiveKitsAccessRequest(MessageContext context, string[] kits, ulong player)
+        {
+            byte[] outp = new byte[kits.Length];
+            if (!KitManager.Loaded)
+                context.Reply(SendKitsAccess, (byte)1, outp);
+            else
+            {
+                for (int i = 0; i < kits.Length; ++i)
+                {
+                    if (KitManager.KitExists(kits[i], out Kit k))
+                        outp[i] = await KitManager.HasAccess(k, player) ? (byte)2 : (byte)1;
+                    else outp[i] = 3;
+                }
+            }
+            context.Reply(SendKitsAccess, (byte)0, outp);
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1109)]
-        internal static Task ReceiveCreateKit(MessageContext context, Kit? kit) => KitManager.AddKit(kit);
+        internal static Task ReceiveCreateKit(MessageContext context, Kit? kit)
+        {
+            if (kit != null) return KitManager.AddKit(kit);
+            return Task.CompletedTask;
+        }
 
         [NetCall(ENetCall.FROM_SERVER, 1113)]
         internal static void ReceiveRequestKitClass(MessageContext context, string kitID)
@@ -1317,6 +1560,20 @@ public static class KitEx
                 }
             }
             context.Reply(SendKits, kits);
+        }
+        [NetCall(ENetCall.FROM_SERVER, 1110)]
+        private static async Task ReceiveCreateLoadoutRequest(MessageContext context, ulong fromPlayer, ulong player, byte team, EClass @class, string displayName)
+        {
+            if (KitManager.Loaded)
+            {
+                (Kit? kit, int code) = await KitManager.GetSingleton().CreateLoadout(fromPlayer, player, team, @class, displayName);
+
+                context.Reply(SendAckCreateLoadout, kit is null ? string.Empty : kit.Name, code);
+            }
+            else
+            {
+                context.Reply(SendAckCreateLoadout, string.Empty, 554);
+            }
         }
     }
 }

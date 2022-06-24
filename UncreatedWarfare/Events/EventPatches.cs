@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.FOBs;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -26,15 +27,20 @@ internal static class EventPatches
                 null),
             postfix: GetMethodInfo(DestroyBarricadePostFix));
 
-        PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic), postfix: GetMethodInfo(OnVehicleSpawned));
+        PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic),
+            postfix: GetMethodInfo(OnVehicleSpawned));
 
-        PatchMethod(typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic), prefix: GetMethodInfo(TrapOnTriggerEnter));
+        PatchMethod(typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
+            prefix: GetMethodInfo(TrapOnTriggerEnter));
 
         PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public),
             prefix: GetMethodInfo(PreDetonate), postfix: GetMethodInfo(PostDetonate));
 
         PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic),
             prefix: GetMethodInfo(ExplodeVehicle));
+
+        PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
+            prefix: GetMethodInfo(RocketOnTriggerEnter));
     }
     private static MethodInfo GetMethodInfo(Delegate method)
     {
@@ -434,5 +440,38 @@ internal static class EventPatches
         if (data != null)
             data.ExplodingVehicle = null;
         return false;
+    }
+    // SDG.Unturned.Rocket.OnTriggerEnter
+    /// <summary>
+    /// Checking for friendlies standing on mortars.
+    /// </summary>
+    private static bool RocketOnTriggerEnter(Collider other, Rocket __instance, bool ___isExploded)
+    {
+        if (___isExploded || other.isTrigger || (__instance.ignoreTransform != null && (__instance.ignoreTransform == other.transform || other.transform.IsChildOf(other.transform))))
+            return false;
+        if (other.transform.CompareTag("Player"))
+        {
+            Player? pl = PlayerTool.getPlayer(__instance.killer);
+            if (pl is null) return true;
+            else if (F.TryGetPlayerData(pl, out UCPlayerData data))
+            {
+                Guid rocket = data.LastRocketShot;
+                if (rocket != default && Assets.find(rocket) is ItemAsset asset)
+                {
+                    if (FOBManager.Config.Buildables.Any(x =>
+                        x.Emplacement is not null && x.Emplacement.ShouldWarnFriendliesIncoming &&
+                        x.Emplacement.EmplacementVehicle.Exists &&
+                        x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(x => x.itemID == asset.id)))
+                    {
+                        Player? target = DamageTool.getPlayer(other.transform);
+                        if (target != null && target.GetTeam() == pl.GetTeam())
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+        return true;
     }
 }

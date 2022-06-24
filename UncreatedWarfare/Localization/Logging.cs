@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Warfare.Commands.CommandSystem;
 
 namespace Uncreated.Warfare;
 
@@ -34,14 +35,18 @@ public static class L
             File.Move(Data.Paths.CurrentLog, n);
         }
         _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
-        Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(SDG.Unturned.Logs.printLine)),
+        Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(Logs.printLine)),
             prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(PrintLinePatch),
                 BindingFlags.Static | BindingFlags.NonPublic)));
     }
     private static void PrintLinePatch(string message)
     {
-        if (!inL && Data.OutputToConsoleMethod is not null)
-            AddLog(message);
+        if (!inL)
+        {
+            if (Data.OutputToConsoleMethod is not null)
+                AddLog(message);
+            CommandHandler.OnLog(message);
+        }
     }
 
     /// <summary>Indents the log by <paramref name="amount"/> spaces until the returned <see cref="IDisposable"/> is disposed of. Doesn't apply to <see cref="LogError(Exception, ConsoleColor, string, string, int)"/></summary>

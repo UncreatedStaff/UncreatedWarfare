@@ -22,13 +22,12 @@ public sealed class VanillaCommand : IExecutableCommand, IComparable<VanillaComm
     bool IExecutableCommand.CheckPermission(CommandInteraction ctx)
     {
         if (ctx.IsConsole || ctx.Caller!.Player.channel.owner.isAdmin) return true;
-        EAdminType perm = F.GetPermissions(ctx.Caller!);
 
-        return (perm == EAdminType.MEMBER && allowedUsers == EAdminType.MEMBER) || (perm != EAdminType.MEMBER && (perm & allowedUsers) >= perm);
+        return ctx.Caller.PermissionCheck(allowedUsers, PermissionComparison.AtLeast);
     }
     void IExecutableCommand.Execute(CommandInteraction interaction)
     {
-        _cmd.check(interaction.CallerCSteamID, _cmd.command, interaction.OriginalMessage);
+        _cmd.check(interaction.CallerCSteamID, _cmd.command, string.Join("/", interaction.Parameters));
     }
     CommandInteraction IExecutableCommand.SetupCommand(UCPlayer? caller, string[] args, string message, bool keepSlash)
     {

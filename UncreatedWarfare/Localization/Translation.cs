@@ -31,6 +31,7 @@ public static class Translation
         public const string UNKNOWN_ERROR = "command_e_unknown_error";
         public const string GAMEMODE_ERROR = "command_e_gamemode";
         public const string NO_PERMISSIONS = "no_permissions";
+        public const string NO_PERMISSIONS_ON_DUTY = "no_permissions_on_duty";
     }
 
     public static string ObjectTranslate(string key, string language, params object[] formatting)
@@ -725,7 +726,38 @@ public static class Translation
             return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
         }
     }
+    public static string GetTimeFromSeconds(this int seconds, ulong player)
+    {
+        if (seconds < 1) seconds = 1;
+        if (seconds < 60) // < 1 minute
+            return seconds.ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), player);
+        else if (seconds < 3600) // < 1 hour
+        {
+            int minutes = F.DivideRemainder(seconds, 60, out int secondOverflow);
+            return $"{minutes} {Translate("time_minute" + minutes.S(), player)}{(secondOverflow == 0 ? "" : $" {Translate("time_and", player)} {secondOverflow} {Translate("time_second" + secondOverflow.S(), player)}")}";
+        }
+        else if (seconds < 86400) // < 1 day 
+        {
+            int hours = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out int minutesOverflow);
+            return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
+        }
+        else if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
+        {
+            int days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out int hoursOverflow);
+            return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
+        }
+        else if (seconds < 31536000) // < 1 year
+        {
+            int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out int daysOverflow);
+            return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
+        }
+        else // > 1 year
+        {
+            int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
+            return $"{years} {Translate("time_year" + years.S(), player)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
+        }
 
+    }
     public static string GetTimeFromSeconds(this uint seconds, ulong player)
     {
 #if DEBUG
@@ -888,9 +920,8 @@ public static class Translation
         if (ucplayer != null && key.Length > 8 && ushort.TryParse(key.Substring(8), System.Globalization.NumberStyles.Any, Data.Locale, out ushort loadoutid))
         {
             ulong team = ucplayer.GetTeam();
-            List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, ucplayer)).ToList();
+            List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, ucplayer));
             loadouts.Sort((k1, k2) => k1.Name.CompareTo(k2.Name));
-
             if (loadouts.Count > 0)
             {
                 if (loadoutid > 0 && loadoutid <= loadouts.Count)
@@ -943,7 +974,6 @@ public static class Translation
                         playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
                             .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
                     }
-
                     return Translate("sign_kit_request", language,
                         name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
                         cost,

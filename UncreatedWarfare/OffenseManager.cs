@@ -2,12 +2,10 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
-using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
@@ -165,15 +163,6 @@ public static class OffenseManager
                 bytes.Add(buffer);
             });
         return bytes;
-    }
-
-    public enum EBanResponse : byte
-    {
-        ALL_GOOD,
-        BANNED_ON_CONNECTING_ACCOUNT,
-        BANNED_ON_SAME_IP,
-        BANNED_ON_SAME_HWID,
-        UNABLE_TO_GET_IP
     }
     public static async Task ApplyMuteSettings(UCPlayer joining)
     {
@@ -437,7 +426,7 @@ public static class OffenseManager
             FPlayerName names = await F.GetPlayerOriginalNamesAsync(target);
             FPlayerName names2 = await F.GetPlayerOriginalNamesAsync(admin);
             await UCWarfare.ToUpdate();
-            DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : now + TimeSpan.FromMinutes(duration);
+            DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : now + TimeSpan.FromSeconds(duration);
             if (muted is not null && muted.TimeUnmuted < unmutedTime)
             {
                 muted.TimeUnmuted = unmutedTime;
@@ -445,7 +434,7 @@ public static class OffenseManager
                 muted.MuteType = type;
             }
             NetCalls.SendPlayerMuted.NetInvoke(target, admin, type, duration, reason, now);
-            string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromMinutes(0);
+            string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
             ActionLog.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur);
 
             if (muter == null)

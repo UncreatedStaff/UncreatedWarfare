@@ -77,7 +77,6 @@ public static partial class Patches
                             {
                                 if (!VehicleBay.TryGetFirstNonCrewSeat(__instance, vehicleData, out seat))
                                 {
-
                                     enterer.Message("vehicle_no_passenger_seats");
                                     __result = false;
                                 }

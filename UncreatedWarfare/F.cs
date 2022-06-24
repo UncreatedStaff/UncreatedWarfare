@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿using SDG.Framework.Translations;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -29,6 +30,7 @@ namespace Uncreated.Warfare;
 public static class F
 {
     private static readonly Regex RemoveRichTextRegex = new Regex("<(?:(?:(?=.*<\\/color>)color=#{0,1}[0123456789ABCDEF]{6})|(?:(?<=<color=#{0,1}[0123456789ABCDEF]{6}>.*)\\/color)|(?:(?=.*<\\/b>)b)|(?:(?<=<b>.*)\\/b)|(?:(?=.*<\\/i>)i)|(?:(?<=<i>.*)\\/i)|(?:(?=.*<\\/size>)size=\\d+)|(?:(?<=<size=\\d+>.*)\\/size)|(?:(?=.*<\\/material>)material=\\d+)|(?:(?<=<material=\\d+>.*)\\/material))>", RegexOptions.IgnoreCase);
+    private static readonly Regex TimeRegex = new Regex(@"(\d+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     public static readonly char[] vowels = new char[] { 'a', 'e', 'i', 'o', 'u' };
     /// <summary>Convert an HTMLColor string to a actual color.</summary>
     /// <param name="htmlColorCode">A hexadecimal/HTML color key.</param>
@@ -109,24 +111,104 @@ public static class F
     }
     /// <summary>
     /// Check if <paramref name="permission"/> meets permission requirement <paramref name="check"/>.
-    /// If <paramref name="or"/> is <see langword="true"/>, it will use <paramref name="check"/> as a mask, otherwise, it'll be used as a minimum value.
-    /// </summary>
-    /// <returns><see langword="true"/> if <paramref name="permission"/> meets the requirements of <paramref name="check"/>.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsOfPermission(this EAdminType permission, EAdminType check, bool or = false) => or ? (permission & check) == permission : (permission & check) >= check;
-    public static bool PermissionCheck(this UCPlayer player, EAdminType type, bool or = false)
+    /// Set <paramref name="comparison"/> to specify how to compare the two permission values.<br/>Defaults to checking if <paramref name="permission"/> is at least <paramref name="check"/>. Each <see cref="PermissionComparison"/> has a description of how it works.</summary>
+    /// <returns><see langword="true"/> if <paramref name="permission"/> meets the requirements of <paramref name="check"/> based on <paramref name="comparison"/>.</returns>
+    public static bool IsOfPermission(this EAdminType permission, EAdminType check, PermissionComparison comparison = PermissionComparison.AtLeast)
     {
-        EAdminType perms = player.PermissionLevel;
-        return perms.IsOfPermission(type, or);
+        switch (comparison)
+        {
+            case PermissionComparison.Exact:
+                return permission == check;
+
+            case PermissionComparison.MaskOverlaps:
+                return check == EAdminType.MEMBER || (permission & check) > 0;
+
+            default:
+            case PermissionComparison.AtLeast:
+                if (check is <= EAdminType.MEMBER || check == permission)
+                    return true;
+
+                if (check is EAdminType.CONSOLE)
+                    return permission is >= EAdminType.CONSOLE;
+
+                if (check is EAdminType.MODERATOR)
+                    return (permission & EAdminType.MODERATOR) > 0;
+
+                if (check is EAdminType.STAFF)
+                    return permission > 0;
+
+                if (check is EAdminType.VANILLA_ADMIN)
+                    return permission is >= EAdminType.VANILLA_ADMIN;
+
+                if (check is EAdminType.HELPER)
+                    return permission is >= EAdminType.HELPER;
+
+                if (check is EAdminType.ADMIN)
+                    return (permission & EAdminType.ADMIN_ON_DUTY | EAdminType.ADMIN_OFF_DUTY) >= EAdminType.ADMIN_OFF_DUTY
+                           || permission >= EAdminType.VANILLA_ADMIN;
+
+                if (check is EAdminType.TRIAL_ADMIN)
+                    return (permission & EAdminType.TRIAL_ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_OFF_DUTY | EAdminType.ADMIN_ON_DUTY | EAdminType.ADMIN_OFF_DUTY) >= EAdminType.TRIAL_ADMIN_OFF_DUTY
+                           || permission >= EAdminType.VANILLA_ADMIN;
+
+                if (check is EAdminType.TRIAL_ADMIN_OFF_DUTY or EAdminType.ADMIN_OFF_DUTY)
+                    return permission is EAdminType.ADMIN_OFF_DUTY or EAdminType.TRIAL_ADMIN_OFF_DUTY;
+
+                if (check is EAdminType.TRIAL_ADMIN_ON_DUTY or EAdminType.ADMIN_ON_DUTY)
+                    return permission is EAdminType.ADMIN_ON_DUTY or EAdminType.TRIAL_ADMIN_ON_DUTY;
+
+                goto case PermissionComparison.MaskOverlaps;
+
+            case PermissionComparison.AtMost:
+                if (permission is <= EAdminType.MEMBER || check == permission || check is >= EAdminType.CONSOLE || check is EAdminType.MODERATOR || check is EAdminType.STAFF)
+                    return true;
+                
+                if (check is EAdminType.VANILLA_ADMIN)
+                    return permission is <= EAdminType.VANILLA_ADMIN;
+
+                if (check is EAdminType.ADMIN)
+                    return permission is <= EAdminType.ADMIN_ON_DUTY;
+
+                if (check is EAdminType.TRIAL_ADMIN)
+                    return permission is <= EAdminType.TRIAL_ADMIN_ON_DUTY;
+
+                if (check is EAdminType.HELPER or EAdminType.TRIAL_ADMIN_OFF_DUTY or EAdminType.TRIAL_ADMIN_ON_DUTY or EAdminType.ADMIN_OFF_DUTY or EAdminType.ADMIN_ON_DUTY)
+                    return permission <= check;
+
+                goto case PermissionComparison.MaskOverlaps;
+        }
     }
-    public static bool PermissionCheck(ulong player, EAdminType type, bool or = false)
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static bool PermissionCheck(this UCPlayer? player, EAdminType type, PermissionComparison comparsion = PermissionComparison.AtLeast)
+    {
+        if (player is null) return EAdminType.CONSOLE.IsOfPermission(type, comparsion);
+        EAdminType perms = player.PermissionLevel;
+        if (player.Player.channel.owner.isAdmin)
+            perms |= EAdminType.VANILLA_ADMIN;
+        return perms.IsOfPermission(type, comparsion);
+    }
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static bool PermissionCheck(ulong player, EAdminType type, PermissionComparison comparsion = PermissionComparison.AtLeast)
     {
         EAdminType perms = PermissionSaver.Instance.GetPlayerPermissionLevel(player);
-        return perms.IsOfPermission(type, or);
+        if (SteamAdminlist.checkAdmin(new CSteamID(player)))
+            perms |= EAdminType.VANILLA_ADMIN;
+        return perms.IsOfPermission(type, comparsion);
     }
     public static EAdminType GetPermissions(ulong player)
     {
+        if (player == default) return EAdminType.CONSOLE;
+        if (SteamAdminlist.checkAdmin(new CSteamID(player)))
+            return EAdminType.VANILLA_ADMIN | PermissionSaver.Instance.GetPlayerPermissionLevel(player);
         return PermissionSaver.Instance.GetPlayerPermissionLevel(player);
+    }
+    public static EAdminType GetPermissions(this UCPlayer? player)
+    {
+        if (player is null) return EAdminType.CONSOLE;
+        EAdminType perms = player.PermissionLevel;
+        if (player.Player.channel.owner.isAdmin)
+            perms |= EAdminType.VANILLA_ADMIN;
+        return perms | PermissionSaver.Instance.GetPlayerPermissionLevel(player);
     }
     public static unsafe string ToProperCase(this string input)
     {
@@ -147,18 +229,46 @@ public static class F
         }
         return new string(output);
     }
-    public static bool OnDutyOrAdmin(this UCPlayer player) => player.Player.channel.owner.isAdmin || player.PermissionCheck(EAdminType.ADMIN_ON_DUTY, true);
-    public static bool OnDutyOrAdmin(this ulong player) => SteamAdminlist.checkAdmin(new CSteamID(player)) || F.PermissionCheck(player, EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, true);
-    public static bool OnDuty(this UCPlayer player) => player.PermissionCheck(EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, true);
-    public static bool OnDuty(this ulong player) => PermissionCheck(player, EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, true);
-    public static bool OffDuty(this ulong player) => !OnDuty(player);
-    public static bool OffDuty(this UCPlayer player) => !OnDuty(player);
-    public static bool IsIntern(this ulong player) => PermissionCheck(player, EAdminType.TRIAL_ADMIN, true);
-    public static bool IsIntern(this UCPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN, true);
-    public static bool IsAdmin(this ulong player) => PermissionCheck(player, EAdminType.ADMIN, true);
-    public static bool IsAdmin(this UCPlayer player) => player.PermissionCheck(EAdminType.ADMIN, true);
-    public static bool IsHelper(this ulong player) => PermissionCheck(player, EAdminType.HELPER, true);
-    public static bool IsHelper(this UCPlayer player) => player.PermissionCheck(EAdminType.HELPER, true);
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool OnDutyOrAdmin(this UCPlayer player)
+        => player.Player.channel.owner.isAdmin || player.PermissionCheck(EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY | EAdminType.VANILLA_ADMIN, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool OnDutyOrAdmin(this ulong player)
+        => PermissionCheck(player, EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY | EAdminType.VANILLA_ADMIN, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool OnDuty(this UCPlayer player)
+        => player.PermissionCheck(EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool OnDuty(this ulong player)
+        => PermissionCheck(player, EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool OffDuty(this ulong player)       => !OnDuty(player);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool OffDuty(this UCPlayer player)    => !OnDuty(player);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsIntern(this ulong player)      => PermissionCheck(player, EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsIntern(this UCPlayer player)   => player.PermissionCheck(EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsAdmin(this ulong player)       => PermissionCheck(player, EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsAdmin(this UCPlayer player)    => player.PermissionCheck(EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsHelper(this ulong player)      => PermissionCheck(player, EAdminType.HELPER, PermissionComparison.MaskOverlaps);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsHelper(this UCPlayer player)   => player.PermissionCheck(EAdminType.HELPER, PermissionComparison.MaskOverlaps);
+
     /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
     /// <param name="duration">Duration of ban IN SECONDS</param>
     public static void OfflineBan(ulong offender, uint ipAddress, CSteamID banner, string reason, uint duration, byte[][] hwids)
@@ -197,9 +307,27 @@ public static class F
                 return "n";
         return string.Empty;
     }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string S(this int number)   => number == 1 ? string.Empty : "s";
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string S(this float number) => number == 1 ? string.Empty : "s";
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string S(this uint number)  => number == 1 ? string.Empty : "s";
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void S(this int number, ref string str, int index = 0)
+    {
+        if (number is 1) str = str.Insert(index, "s");
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void S(this float number, ref string str, int index = 0)
+    {
+        if (number is 1) str = str.Insert(index, "s");
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void S(this uint number, ref string str, int index = 0)
+    {
+        if (number is 1) str = str.Insert(index, "s");
+    }
     public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
     {
         if (!Data.Is<ITeams>(out _))
@@ -311,13 +439,13 @@ public static class F
         Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
     }
     /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
-    public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text)
+    public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text, bool translate = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (text == null) return;
-        if (text.StartsWith("sign_"))
+        if (!translate || text.StartsWith("sign_"))
         {
             for (int i = 0; i < Provider.clients.Count; i++)
             {
@@ -326,7 +454,7 @@ public static class F
                 {
                     UCPlayer? pl2 = UCPlayer.FromSteamPlayer(pl);
                     if (pl2 != null)
-                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, Translation.TranslateSign(text, pl2, false));
+                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, translate ? Translation.TranslateSign(text, pl2, false) : text);
                 }
             }
         }
@@ -1283,8 +1411,91 @@ public static class F
         il.Emit(OpCodes.Ret);
         return (StaticGetter<TValue>)method.CreateDelegate(typeof(StaticGetter<TValue>));
     }
+    /// <returns>Total amount of time in seconds. <see langword="-1"/> is returned if <paramref name="input"/> is permanent.</returns>
+    public static int ParseTime(string input)
+    {
+        if (input.StartsWith("perm", StringComparison.OrdinalIgnoreCase))
+            return -1;
+        if (int.TryParse(input, NumberStyles.Number, Data.Locale, out int time) && time > -1)
+            return time * 60;
+        foreach (Match match in TimeRegex.Matches(input))
+        {
+            if (match.Groups.Count != 3) continue;
+            if (!int.TryParse(match.Groups[1].Value, NumberStyles.Number, Data.Locale, out int t)) continue;
+            string key = match.Groups[2].Value;
+
+            if (key.StartsWith("ms", StringComparison.OrdinalIgnoreCase))
+                time += Mathf.RoundToInt(t / 1000f);
+            else if (key.StartsWith("s", StringComparison.OrdinalIgnoreCase))
+                time += t;
+            else if (key.StartsWith("mo", StringComparison.OrdinalIgnoreCase))
+                time += checked(t * 2565000); // 29.6875 days (356.25 / 12)
+            else if (key.StartsWith("m", StringComparison.OrdinalIgnoreCase))
+                time += checked(t * 60);
+            else if (key.StartsWith("h", StringComparison.OrdinalIgnoreCase))
+                time += checked(t * 3600);
+            else if (key.StartsWith("d", StringComparison.OrdinalIgnoreCase))
+                time += checked(t * 86400);
+            else if (key.StartsWith("w", StringComparison.OrdinalIgnoreCase))
+                time += checked(t * 604800);
+            else if (key.StartsWith("y", StringComparison.OrdinalIgnoreCase))
+                time += checked(t * 30780000);
+            else continue;
+        }
+        return time;
+    }
+    /// <remarks>More precise than <see cref="ParseTime(string)"/>, can go down to milliseconds.</remarks>
+    /// <returns>Total amount of time. <see cref="TimeSpan.MaxValue"/> is returned if <paramref name="input"/> is permanent.</returns>
+    public static TimeSpan ParseTimespan(string input)
+    {
+        if (input.StartsWith("perm", StringComparison.OrdinalIgnoreCase))
+            return TimeSpan.MaxValue;
+
+        if (int.TryParse(input, NumberStyles.Number, Data.Locale, out int mins) && mins > -1)
+            return TimeSpan.FromMinutes(mins);
+
+        TimeSpan time = TimeSpan.Zero;
+        foreach (Match match in TimeRegex.Matches(input))
+        {
+            if (match.Groups.Count != 3) continue;
+            if (!int.TryParse(match.Groups[1].Value, NumberStyles.Number, Data.Locale, out int t)) continue;
+            string key = match.Groups[2].Value;
+
+            if (key.StartsWith("ms", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromMilliseconds(t);
+            else if (key.StartsWith("s", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromSeconds(t);
+            else if (key.StartsWith("mo", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromSeconds(checked(t * 2565000)); // 29.6875 days (356.25 / 12)
+            else if (key.StartsWith("m", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromMinutes(t);
+            else if (key.StartsWith("h", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromHours(t);
+            else if (key.StartsWith("d", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromDays(t);
+            else if (key.StartsWith("w", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromDays(checked(t * 7));
+            else if (key.StartsWith("y", StringComparison.OrdinalIgnoreCase))
+                time += TimeSpan.FromDays(checked(t * 365.25));
+            else continue;
+        }
+        return time;
+    }
 }
 public delegate void InstanceSetter<T1, T2>(T1 owner, T2 value);
 public delegate T2 InstanceGetter<T1, T2>(T1 owner);
 public delegate void StaticSetter<T>(T value);
 public delegate T StaticGetter<T>();
+
+public enum PermissionComparison : byte
+{
+    /// <summary>Will match any permission level exactly the same as the provided value.</summary>
+    Exact,
+    /// <summary>Will match any permission level at or above the provided value.
+    /// <br/>Admin types specifying a duty mode will only match those on duty, use <see cref="EAdminType.ADMIN"/> or <see cref="EAdminType.TRIAL_ADMIN"/> to match any at or above admin or trial admin (respectively)</summary>
+    AtLeast,
+    /// <summary>Will match any permission level up to the provided value.</summary>
+    AtMost,
+    /// <summary>Will match <code>EAdminType.VANILLA_ADMIN | EAdminType.TRIAL_ADMIN_OFF_DUTY to EAdminType.TRIAL_ADMIN_OFF_DUTY | TRIAL_ADMIN_ON_DUTY</code></summary>
+    MaskOverlaps
+}

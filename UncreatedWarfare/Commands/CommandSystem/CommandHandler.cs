@@ -22,6 +22,7 @@ public static class CommandHandler
     private static readonly char[] CONTINUE_ARG_CHARS = new char[] { '\'', '"' };
     private const int MAX_ARG_COUNT = 16;
     private static readonly ArgumentInfo[] _argList = new ArgumentInfo[MAX_ARG_COUNT];
+    private static CommandInteraction? _activeVanillaCmd = null;
     static CommandHandler()
     {
         ChatManager.onCheckPermissions += OnChatProcessing;
@@ -53,6 +54,7 @@ public static class CommandHandler
             }
         }
     }
+
     internal static void RegisterVanillaCommands()
     {
         for (int i = 0; i < Commander.commands.Count; ++i)
@@ -97,6 +99,9 @@ public static class CommandHandler
             CommandSave => EAdminType.TRIAL_ADMIN_ON_DUTY,
             CommandSpy => EAdminType.ADMIN_ON_DUTY,
             CommandShutdown => EAdminType.ADMIN_ON_DUTY,
+            CommandDay => EAdminType.ADMIN_ON_DUTY,
+            CommandNight => EAdminType.ADMIN_ON_DUTY,
+            CommandWeather => EAdminType.ADMIN_ON_DUTY,
             _ => EAdminType.VANILLA_ADMIN,
         };
     }
@@ -386,21 +391,37 @@ public static class CommandHandler
     notCommand:
         return false;
     }
+    internal static void OnLog(string message)
+    {
+        if (_activeVanillaCmd is not null)
+            _activeVanillaCmd.Reply(message);
+    }
+
     private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
     {
         IExecutableCommand cmd = _commands[index];
-        L.LogDebug("Running command " + cmd.CommandName + " (" + message + ")");
         CommandInteraction interaction = cmd.SetupCommand(player, args, message, keepSlash);
         if (cmd.CheckPermission(interaction))
         {
             try
             {
+                if (player is not null && cmd is VanillaCommand)
+                    _activeVanillaCmd = interaction;
+#if DEBUG
+                IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + cmd.CommandName);
+#endif
                 cmd.Execute(interaction);
+#if DEBUG
+                profiler.Dispose();
+#endif
                 if (!interaction.Responded)
                 {
                     interaction.Reply(Translation.Common.UNKNOWN_ERROR);
                     interaction.MarkComplete();
                 }
+
+                if (player is not null)
+                    CommandWaitTask.OnCommandExecuted(player, cmd);
             }
             catch (BaseCommandInteraction i)
             {
@@ -414,6 +435,10 @@ public static class CommandHandler
                 interaction.Reply(Translation.Common.UNKNOWN_ERROR);
                 interaction.MarkComplete();
                 L.LogError(ex);
+            }
+            finally
+            {
+                _activeVanillaCmd = null;
             }
         }
         else
@@ -499,25 +524,25 @@ public class CommandInteraction : BaseCommandInteraction
     public bool HasArg(int position)
     {
         position += offset;
-        return position > -1 && position < ArgumentCount;
+        return position > -1 && position < _ctx.ArgumentCount;
     }
     /// <summary>One based. Checks if there are at least <paramref name="count"/> arguments.</summary>
     public bool HasArgs(int count)
     {
         count += offset;
-        return count > -1 && count <= ArgumentCount;
+        return count > -1 && count <= _ctx.ArgumentCount;
     }
     /// <summary>One based. Checks if there are exactly <paramref name="count"/> argument(s).</summary>
     public bool HasArgsExact(int count)
     {
         count += offset;
-        return count == ArgumentCount;
+        return count == _ctx.ArgumentCount;
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with <paramref name="value"/>. Case insensitive.</summary>
     public bool MatchParameter(int parameter, string value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         return Parameters[parameter].Equals(value, StringComparison.OrdinalIgnoreCase);
     }
@@ -526,7 +551,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool MatchParameter(int parameter, string value, string alternate)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
         return v.Equals(value, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate, StringComparison.OrdinalIgnoreCase);
@@ -536,7 +561,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool MatchParameter(int parameter, string value, string alternate1, string alternate2)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
         return v.Equals(value, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate1, StringComparison.OrdinalIgnoreCase) || v.Equals(alternate2, StringComparison.OrdinalIgnoreCase);
@@ -546,7 +571,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool MatchParameter(int parameter, params string[] alternates)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
         for (int i = 0; i < alternates.Length; ++i)
@@ -561,7 +586,7 @@ public class CommandInteraction : BaseCommandInteraction
     public string? Get(int parameter)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return null;
         return Parameters[parameter];
     }
@@ -569,27 +594,26 @@ public class CommandInteraction : BaseCommandInteraction
     {
         start += offset;
         if (length == 1) return Get(start);
-        if (start < 0 || start >= ArgumentCount)
+        if (start < 0 || start >= _ctx.ArgumentCount)
             return null;
-        if (start == ArgumentCount - 1)
+        if (start == _ctx.ArgumentCount - 1)
             return Parameters[start];
         if (length == -1)
-            return string.Join(" ", Parameters, start, ArgumentCount - start);
+            return string.Join(" ", Parameters, start, _ctx.ArgumentCount - start);
         if (length < 1) return null;
-        if (start + length >= ArgumentCount)
-            length = ArgumentCount - start;
+        if (start + length >= _ctx.ArgumentCount)
+            length = _ctx.ArgumentCount - start;
         return string.Join(" ", Parameters, start, length);
     }
     public bool TryGetRange(int start, out string value, int length = -1)
     {
-        start += offset;
         value = GetRange(start, length)!;
         return value is not null;
     }
     public bool TryGet(int parameter, out string value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = null!;
             return false;
@@ -600,7 +624,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = default;
             return false;
@@ -610,7 +634,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out int value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -620,7 +644,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out byte value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -630,7 +654,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out sbyte value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -640,7 +664,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out Guid value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = default;
             return false;
@@ -650,7 +674,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out uint value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -660,7 +684,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out ushort value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -670,7 +694,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out ulong value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -680,7 +704,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetTeam(int parameter, out ulong value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -718,7 +742,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out float value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -728,7 +752,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out double value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -738,7 +762,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out decimal value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -749,7 +773,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = default;
             return false;
@@ -764,7 +788,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref int value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -779,7 +803,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref byte value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -794,7 +818,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref sbyte value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -809,7 +833,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref Guid value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = default;
             return false;
@@ -824,7 +848,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref uint value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -839,7 +863,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref ushort value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -854,7 +878,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref ulong value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -869,7 +893,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref float value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -884,7 +908,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref double value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -899,7 +923,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGetRef(int parameter, ref decimal value)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
             return false;
@@ -914,7 +938,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             steam64 = 0;
             onlinePlayer = null;
@@ -939,7 +963,7 @@ public class CommandInteraction : BaseCommandInteraction
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection)
     {
         parameter += offset;
-        if (parameter < 0 || parameter >= ArgumentCount)
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             steam64 = 0;
             onlinePlayer = null!;
@@ -982,7 +1006,7 @@ public class CommandInteraction : BaseCommandInteraction
             asset = null!;
             return false;
         }
-        if ((remainder || parameter == ArgumentCount - 1) && p.EndsWith("\\"))
+        if ((remainder || parameter == _ctx.ArgumentCount - 1) && p.EndsWith("\\"))
             p = p.Substring(0, p.Length - 1);
         if (Guid.TryParse(p, out Guid guid))
         {
@@ -1205,13 +1229,13 @@ public class CommandInteraction : BaseCommandInteraction
     {
         ActionLog.Add(type, data, CallerID);
     }
-    public bool HasPermission(EAdminType level)
+    public bool HasPermission(EAdminType level, PermissionComparison comparison = PermissionComparison.AtLeast)
     {
-        return IsConsole || (F.GetPermissions(Caller) & level) >= level;
+        return Caller.PermissionCheck(level, comparison);
     }
-    public void AssertPermissions(EAdminType level)
+    public void AssertPermissions(EAdminType level, PermissionComparison comparison = PermissionComparison.AtLeast)
     {
-        if (!HasPermission(level))
+        if (!HasPermission(level, comparison))
             throw SendNoPermission();
     }
     /// <exception cref="CommandInteraction"/>
@@ -1266,7 +1290,7 @@ public class CommandInteraction : BaseCommandInteraction
     public void AssertOnDuty()
     {
         if (!IsConsole && !Caller.OnDuty())
-            throw SendNoPermission();
+            throw Reply(Translation.Common.NO_PERMISSIONS_ON_DUTY);
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertOnDuty(string key, params string[] formatting)

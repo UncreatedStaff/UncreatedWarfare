@@ -29,13 +29,10 @@ public class MuteCommand : Command
                     ? EMuteType.BOTH 
                     : throw ctx.Reply("mute_syntax")));
 
-        if (!ctx.TryGet(2, out int duration) || duration < -1 || duration == 0)
-        {
-            if (ctx.MatchParameter(2, "perm", "permanent"))
-                duration = -1;
-            else
-                throw ctx.Reply("mute_cant_read_duration");
-        }
+        int duration = F.ParseTime(ctx.Get(2)!);
+
+        if (duration < -1 || duration == 0)
+            throw ctx.Reply("mute_cant_read_duration");
 
         if (!ctx.TryGet(1, out ulong targetId, out _))
             throw ctx.Reply("mute_no_player_found");

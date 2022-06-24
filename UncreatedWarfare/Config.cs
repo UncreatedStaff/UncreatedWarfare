@@ -101,7 +101,7 @@ public class SystemConfigData : ConfigData
         this.ClearItemsOnAmmoBoxUse = true;
         this.RelayMicsDuringEndScreen = true;
         this.EnableSquads = true;
-        this.LoadoutCost = 8;
+        this.LoadoutCost = 10;
         this.MaxVehicleAbandonmentDistance = 300f;
         this.MaxVehicleHeightToLeave = 50f;
         this.GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0";

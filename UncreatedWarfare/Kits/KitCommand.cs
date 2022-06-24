@@ -60,7 +60,7 @@ public class KitCommand : Command
                         {
                             ctx.LogAction(EActionLogType.CREATE_KIT, kitName);
                             await UCWarfare.ToUpdate();
-                            RequestSigns.UpdateSignsOfKit(kitName);
+                            KitManager.UpdateSigns(kit);
                             ctx.Reply("kit_created", kitName);
                         }
                         else
@@ -81,7 +81,7 @@ public class KitCommand : Command
                         {
                             ctx.LogAction(EActionLogType.EDIT_KIT, kitName);
                             await UCWarfare.ToUpdate();
-                            RequestSigns.UpdateSignsOfKit(kitName);
+                            KitManager.UpdateSigns(kit);
                             ctx.Reply("kit_overwritten", kitName);
                         }
                         else
@@ -91,6 +91,8 @@ public class KitCommand : Command
                         }
                     }).ConfigureAwait(false);
                 }
+
+                ctx.Defer();
             }
             else
                 ctx.SendCorrectUsage("/kit <create|c|override> <kit name>");
@@ -110,7 +112,6 @@ public class KitCommand : Command
                             ctx.LogAction(EActionLogType.DELETE_KIT, kitName);
 
                             await UCWarfare.ToUpdate();
-                            RequestSigns.UpdateSignsOfKit(kitName);
                             RequestSigns.RemoveRequestSigns(kitName);
                             ctx.Reply("kit_deleted", kitName);
                         }
@@ -120,6 +121,7 @@ public class KitCommand : Command
                             ctx.SendUnknownError();
                         }
                     }).ConfigureAwait(false);
+                    ctx.Defer();
                 }
                 else
                     ctx.Reply("kit_e_noexist", kitName);
@@ -175,12 +177,15 @@ public class KitCommand : Command
                                 kit.RemoveLevelUnlock();
                             else
                                 kit.AddSimpleLevelUnlock(level);
-                            Task.Run(async () => await KitManager.AddKit(kit)).ConfigureAwait(false);
-                            ctx.Reply("kit_setprop", property, kitName, newValue);
-                            ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
-                            RequestSigns.UpdateSignsOfKit(kitName);
-                            if (kit.IsLoadout && RequestSigns.Loaded)
-                                RequestSigns.UpdateLoadoutSigns();
+                            Task.Run(async () =>
+                            {
+                                Kit _kit = await KitManager.AddKit(kit);
+                                await UCWarfare.ToUpdate();
+                                ctx.Reply("kit_setprop", property, kitName, newValue);
+                                ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                                KitManager.UpdateSigns(_kit);
+                            }).ConfigureAwait(false);
+                            ctx.Defer();
                         }
                         else
                             ctx.SendCorrectUsage("/kit <set|s> <level|lvl> <kitname> <value: integer>");
@@ -194,13 +199,16 @@ public class KitCommand : Command
                         {
                             newValue = newValue.Replace("\\n", "\n");
                             KitManager.UpdateText(kit, newValue, language);
-                            Task.Run(async () => await KitManager.AddKit(kit)).ConfigureAwait(false);
-                            newValue = newValue.Replace('\n', '\\');
-                            ctx.Reply("kit_setprop", "sign text", kitName, language + " : " + newValue);
-                            ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
-                            RequestSigns.UpdateSignsOfKit(kitName);
-                            if (kit.IsLoadout && RequestSigns.Loaded)
-                                RequestSigns.UpdateLoadoutSigns();
+                            Task.Run(async () =>
+                            {
+                                Kit _kit = await KitManager.AddKit(kit);
+                                newValue = newValue.Replace('\n', '\\');
+                                await UCWarfare.ToUpdate();
+                                ctx.Reply("kit_setprop", "sign text", kitName, language + " : " + newValue);
+                                ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": SIGN TEXT >> \"" + newValue + "\"");
+                                KitManager.UpdateSigns(_kit);
+                            }).ConfigureAwait(false);
+                            ctx.Defer();
                         }
                         else
                             ctx.SendCorrectUsage("/kit set sign <kitname> <language> <sign text>");
@@ -235,12 +243,13 @@ public class KitCommand : Command
                                 ctx.Reply("kit_e_noexist", kitName);
                                 return;
                             case ESetFieldResult.SUCCESS:
-                                ctx.Reply("kit_setprop", property, kitName, newValue);
-                                ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
-                                Task.Run(async () => await KitManager.AddKit(kit)).ConfigureAwait(false);
-                                RequestSigns.UpdateSignsOfKit(kitName);
-                                if ((wasLoadout != kit.IsLoadout) && RequestSigns.Loaded)
-                                    RequestSigns.UpdateLoadoutSigns();
+                                Task.Run(async () =>
+                                {
+                                    KitManager.UpdateSigns(await KitManager.AddKit(kit));
+                                    ctx.Reply("kit_setprop", property, kitName, newValue);
+                                    ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
+                                }).ConfigureAwait(false);
+                                ctx.Defer();
                                 return;
                         }
                     }
@@ -297,8 +306,7 @@ public class KitCommand : Command
                         if (onlinePlayer is not null)
                         {
                             onlinePlayer.SendChat("kit_accessgiven_dm", kit.GetDisplayName());
-                            if (RequestSigns.Loaded)
-                                RequestSigns.UpdateSignsOfKit(kitName, onlinePlayer.Player.channel.owner);
+                            KitManager.UpdateSigns(kit, onlinePlayer);
                         }
                     });
                 }
@@ -352,8 +360,7 @@ public class KitCommand : Command
                         if (onlinePlayer is not null)
                         {
                             onlinePlayer.SendChat("kit_accessremoved_dm", kit.GetDisplayName());
-                            if (RequestSigns.Loaded)
-                                RequestSigns.UpdateSignsOfKit(kitName, onlinePlayer.Player.channel.owner);
+                            KitManager.UpdateSigns(kit, onlinePlayer);
                         }
                     });
                 }
@@ -398,6 +405,7 @@ public class KitCommand : Command
                             await KitManager.AddKit(newKit);
                             ctx.LogAction(EActionLogType.CREATE_KIT, kitName + " COPIED FROM " + existingName);
                             await UCWarfare.ToUpdate();
+                            KitManager.UpdateSigns(newKit);
                             ctx.Reply("kit_copied", existing.Name, newKit.Name);
                         });
                     }
@@ -427,50 +435,36 @@ public class KitCommand : Command
                 Task.Run(async () =>
                 {
                     string username = onlinePlayer is not null ? onlinePlayer.CharacterName : (await Data.DatabaseManager.GetUsernamesAsync(playerId)).CharacterName;
-                    char let = 'a';
-                    await Data.DatabaseManager.QueryAsync("SELECT `InternalName` FROM `kit_data` WHERE `InternalName` LIKE @0 ORDER BY `InternalName`;", new object[1]
-                    {
-                        playerId.ToString() + "_%"
-                    }, R =>
-                    {
-                        string name = R.GetString(0);
-                        if (name.Length < 19)
-                            return;
-                        char let2 = name[18];
-                        if (let2 == let)
-                            let++;
-                    });
+                    char let = await KitManager.GetLoadoutCharacter(playerId);
                     string loadoutName = playerId.ToString() + "_" + let;
                     if (!ctx.TryGetRange(4, out string signText) || string.IsNullOrEmpty(signText))
                         signText = loadoutName;
                     await UCWarfare.ToUpdate();
                     if (!KitManager.KitExists(loadoutName, out _))
                     {
-                        Kit? loadout = new Kit(loadoutName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!));
+                        Kit loadout = new Kit(loadoutName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!));
 
-                        if (loadout != null)
-                        {
-                            loadout.IsLoadout = true;
-                            loadout.Team = team;
-                            loadout.Class = @class;
-                            if (@class == EClass.PILOT)
-                                loadout.Branch = EBranch.AIRFORCE;
-                            else if (@class == EClass.CREWMAN)
-                                loadout.Branch = EBranch.ARMOR;
-                            else
-                                loadout.Branch = EBranch.INFANTRY;
+                        loadout.IsLoadout = true;
+                        loadout.Team = team;
+                        loadout.Class = @class;
+                        if (@class == EClass.PILOT)
+                            loadout.Branch = EBranch.AIRFORCE;
+                        else if (@class == EClass.CREWMAN)
+                            loadout.Branch = EBranch.ARMOR;
+                        else
+                            loadout.Branch = EBranch.INFANTRY;
 
-                            if (@class == EClass.HAT)
-                                loadout.TeamLimit = 0.1F;
+                        if (@class == EClass.HAT)
+                            loadout.TeamLimit = 0.1F;
 
-                            await KitManager.AddKit(loadout);
-                            await KitManager.GiveAccess(loadout, playerId, EKitAccessType.PURCHASE);
-                            ctx.LogAction(EActionLogType.CREATE_KIT, loadoutName);
-                            await UCWarfare.ToUpdate();
-                            KitManager.UpdateText(loadout, signText);
-                            ctx.Reply("kit_l_created", Translation.TranslateEnum(@class, ctx.Caller!), username, playerId.ToString(), loadoutName);
-                        }
-                        else ctx.SendUnknownError();
+                        KitManager.UpdateText(loadout, signText);
+
+                        loadout = await KitManager.AddKit(loadout);
+                        await KitManager.GiveAccess(loadout, playerId, EKitAccessType.PURCHASE);
+                        ctx.LogAction(EActionLogType.CREATE_KIT, loadoutName);
+                        await UCWarfare.ToUpdate();
+                        KitManager.UpdateSigns(loadout);
+                        ctx.Reply("kit_l_created", Translation.TranslateEnum(@class, ctx.Caller!), username, playerId.ToString(), loadoutName);
                     }
                     else
                     {

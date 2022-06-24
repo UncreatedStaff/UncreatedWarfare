@@ -17,7 +17,7 @@ namespace Uncreated.Warfare.Kits;
 [SingletonDependency(typeof(KitManager))]
 public class RequestSigns : ListSingleton<RequestSign>
 {
-    private static RequestSigns Singleton;
+    public static RequestSigns Singleton;
     public static bool Loaded => Singleton.IsLoaded<RequestSigns, RequestSign>();
     public RequestSigns() : base("kitsigns", Path.Combine(Data.Paths.StructureStorage, "request_signs.json"), RequestSign.WriteRequestSign, RequestSign.ReadRequestSign) { }
     protected override string LoadDefaults() => EMPTY_LIST;
@@ -78,6 +78,18 @@ public class RequestSigns : ListSingleton<RequestSign>
     public static void RemoveRequestSigns(string kitname)
     {
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
+        for (int i = Singleton.Count - 1; i >= 0; ++i)
+        {
+            Singleton.RemoveAt(i);
+            if (Singleton[i].barricadetransform != default)
+            {
+                BarricadeDrop bd = BarricadeManager.FindBarricadeByRootTransform(Singleton[i].barricadetransform);
+                if (bd.interactable is InteractableSign s &&
+                    Regions.tryGetCoordinate(bd.model.position, out byte x, out byte y))
+                    F.InvokeSignUpdateForAll(s, x, y, s.text);
+            }
+
+        }
         Singleton.RemoveWhere(x => x.kit_name == kitname);
     }
     public static bool SignExists(InteractableSign sign, out RequestSign found)
@@ -122,35 +134,6 @@ public class RequestSigns : ListSingleton<RequestSign>
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
         return Singleton.ObjectExists(x => x.kit_name == kitName, out sign);
     }
-    public static void UpdateSignsOfKit(string kitName, SteamPlayer? player = null)
-    {
-        Singleton.AssertLoaded<RequestSigns, RequestSign>();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (KitManager.KitExists(kitName, out Kit kitobj))
-        {
-            if (kitobj.IsLoadout)
-            {
-                for (int i = 0; i < Singleton.Count; i++)
-                {
-                    if (Singleton[i].kit_name.StartsWith("loadout_"))
-                        Singleton[i].InvokeUpdate();
-                }
-                return;
-            }
-        }
-        if (player is null)
-        {
-            foreach (RequestSign sign in Singleton.GetObjectsWhere(x => x.kit_name == kitName))
-                sign.InvokeUpdate();
-        }
-        else
-        {
-            foreach (RequestSign sign in Singleton.GetObjectsWhere(x => x.kit_name == kitName))
-                sign.InvokeUpdate(player);
-        }
-    }
     public static void UpdateAllSigns(SteamPlayer? player = null)
     {
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
@@ -169,29 +152,6 @@ public class RequestSigns : ListSingleton<RequestSign>
             for (int i = 0; i < Singleton.Count; i++)
             {
                 Singleton[i].InvokeUpdate();
-            }
-        }
-    }
-    public static void UpdateLoadoutSigns(SteamPlayer? player = null)
-    {
-        Singleton.AssertLoaded<RequestSigns, RequestSign>();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (player is not null)
-        {
-            for (int i = 0; i < Singleton.Count; i++)
-            {
-                if (Singleton[i].kit_name.StartsWith("loadout_"))
-                    Singleton[i].InvokeUpdate(player);
-            }
-        }
-        else
-        {
-            for (int i = 0; i < Singleton.Count; i++)
-            {
-                if (Singleton[i].kit_name.StartsWith("loadout_"))
-                    Singleton[i].InvokeUpdate();
             }
         }
     }

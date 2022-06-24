@@ -437,7 +437,6 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         if (Data.Singletons is not null)
             Data.Singletons.UnloadAll();
         L.Log("Warfare unload complete", ConsoleColor.Blue);
-        I = null!;
 #if DEBUG
         profiler.Dispose();
         F.SaveProfilingData();
@@ -544,6 +543,7 @@ public class UCWarfareNexus : IModuleNexus
         {
             UCWarfare.I.Unload();
             UnityEngine.Object.Destroy(UCWarfare.I.gameObject);
+            UCWarfare.I = null!;
         }
         catch (Exception ex)
         {

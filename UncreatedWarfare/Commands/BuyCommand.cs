@@ -55,7 +55,7 @@ public class BuyCommand : Command
 
                 await UCWarfare.ToUpdate();
 
-                RequestSigns.UpdateSignsOfKit(kit.Name, ctx.Caller.SteamPlayer);
+                KitManager.UpdateSigns(kit, ctx.Caller);
                 EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
                 ctx.Reply("request_kit_boughtcredits", kit.CreditCost.ToString());
                 Points.AwardCredits(ctx.Caller, -kit.CreditCost, isPurchase: true);

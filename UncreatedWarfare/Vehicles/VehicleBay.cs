@@ -385,17 +385,13 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        for (seat = 0; seat < vehicle.passengers.Length; seat++)
-        {
-            Passenger passenger = vehicle.passengers[seat];
-
-            if (seat != 0 && passenger.player == null)
-            {
-                return true;
-            }
-        }
         seat = 0;
-        return false;
+        do
+        {
+            if (seat++ >= vehicle.passengers.Length)
+                return false;
+        } while (vehicle.passengers[seat].player != null);
+        return true;
     }
     public static bool IsOwnerInVehicle(InteractableVehicle vehicle, UCPlayer owner)
     {

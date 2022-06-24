@@ -1,6 +1,7 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,6 +50,10 @@ internal class _DebugCommand : Command
                     ctx.Offset = 1;
                     info.Invoke(this, new object[1] { ctx });
                     ctx.Offset = 0;
+                }
+                catch (BaseCommandInteraction)
+                {
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -811,6 +816,118 @@ internal class _DebugCommand : Command
             {
                 L.LogError(ex);
             }
+        }
+    }
+
+    private void gettime(CommandInteraction ctx)
+    {
+        ctx.AssertArgs(1, "/test gettime <timestr>");
+
+        string t = ctx.GetRange(0)!;
+        ctx.Reply("Time: " + F.ParseTimespan(t).ToString("g"));
+    }
+    private static InstanceSetter<InteractableVehicle, bool> SetEngineOn = F.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+    private void drivetest(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+        VehicleAsset asset =
+            (Assets.find(EAssetType.VEHICLE, ctx.TryGet(0, out ushort id) ? id : (ushort)38302) as VehicleAsset)!;
+        ctx.Reply("Spawning " + asset.vehicleName);
+        /*
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 100)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 90)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 80)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 70)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 60)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 50)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 40)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 30)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 20)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position - new Vector3(0, 0, 10)));*/
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + ctx.Caller.Player.look.aim.forward with { y = 0 } * 5));/*
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 100)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 90)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 80)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 70)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 60)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 50)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 40)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 30)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 20)));
+        UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 10)));*/
+    }
+
+    private void getperms(CommandInteraction ctx)
+    {
+        ctx.Reply("Permission: " + ctx.Caller.GetPermissions());
+    }
+    private IEnumerator _coroutine(CommandInteraction ctx, VehicleAsset asset, Vector3 pos)
+    {
+        Vector3 forward = ctx.Caller.Player.look.aim.forward;
+        pos += (forward * 4);
+        Quaternion angle = ctx.Caller.Player.transform.rotation;
+        InteractableVehicle veh = VehicleManager.spawnLockedVehicleForPlayerV2(asset.id, pos, angle, ctx.Caller.Player);
+        //uint sim = 1;
+        SetEngineOn.Invoke(veh, true);
+        RaycastHit[] results = new RaycastHit[16];
+        yield return new WaitForSeconds(5f);
+        //Array.ForEach(veh.transform.gameObject.GetComponentsInChildren<Collider>(), x => UnityEngine.Object.Destroy(x));
+        while (veh != null)
+        {
+            const float TIME = 0.1f;
+            yield return new WaitForSeconds(TIME);
+            if (veh == null) yield break;
+            //L.Log("\nSimulation #" + ++sim);
+            Vector3 origin = veh.transform.position;
+            Vector3 angle2 = veh.transform.forward;
+            RaycastHit hit;
+            int ct;
+            if ((ct = Physics.RaycastNonAlloc(origin + new Vector3(0, 1, 0), angle2, results, 4f, RayMasks.BLOCK_COLLISION)) > 0)
+            {
+                hit = default;
+                for (int j = ct - 1; j >= 0; --j)
+                {
+                    hit = results[j];
+                    if (hit.transform == null || hit.transform == veh.transform || hit.transform.name == asset.id.ToString()) continue;
+                    break;
+                }
+
+                //L.Log("Hits: " + ct + ", selected: " + (hit.transform == null ? "null" : hit.transform.name));
+                if (hit.transform != null && hit.transform != veh.transform && hit.transform.name != asset.id.ToString())
+                {
+                    //L.Log("Normal: " + hit.normal.ToString("F3"));
+                    if (hit.normal.y < 0.1)
+                    {
+                        // hit a wall
+                        //L.Log("Hitwal: " + (hit.transform == null ? "null" : hit.transform.name));
+                        yield return new WaitForSeconds(3f);
+                        continue;
+                    }
+                    angle2.y += 1 - hit.normal.y;
+                }
+            }
+            Rigidbody body = veh.GetComponent<Rigidbody>();
+            //L.Log("Origin: " + origin.ToString("F3"));
+            //L.Log("Angle : " + angle2.ToString("F3"));
+            Vector3 vel = angle2 * 30f;
+            if (veh.asset.engine is EEngine.PLANE or EEngine.HELICOPTER)
+            {
+                vel += new Vector3(0,
+                    Physics.Raycast(body.position,
+                        (Vector3.down + (body.transform.forward with { y = 0 })).normalized, out hit, 1024f,
+                        RayMasks.BLOCK_COLLISION & ~RayMasks.VEHICLE) &&
+                    hit.distance < 200
+                        ? 10f
+                        : -5f, 0f);
+                body.useGravity = true;
+            }
+            body.velocity = vel;
+            //veh.simulate(sim, 100, false, origin += angle2, veh.transform.rotation, 10000f, 10000f, 0, TIME); 
+            //veh.simulate(sim, -1, 0, 1, 0, Mathf.Clamp(Level.HEIGHT / origin.y, -1, 1), false, false, TIME);
+            veh.updatePhysics();
+            veh.updateVehicle();
+            //for (int j = 0; j < veh.tires.Length; ++j)
+            //    veh.tires[j].simulate(0, 1, false, TIME);*/
         }
     }
 }
