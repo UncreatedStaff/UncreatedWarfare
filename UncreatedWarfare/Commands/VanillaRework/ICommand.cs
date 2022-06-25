@@ -4,15 +4,16 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands;
+namespace Uncreated.Warfare.Commands.VanillaRework;
 public class ICommand : Command
 {
     private const string SYNTAX = "/i <item ...> [count = 1]";
     private const string HELP = "Gives the player [count] amount of an item.";
     private const int MAX_ITEMS = 100;
 
-    public ICommand() : base("i", EAdminType.MODERATOR)
+    public ICommand() : base("give", EAdminType.MODERATOR)
     {
+        AddAlias("i");
         AddAlias("item");
     }
 
@@ -38,7 +39,7 @@ public class ICommand : Command
         if (ctx.HasArgsExact(1)) // if there is only one argument, we only have to check a single word
         {
             // first check if single-word argument is a short ID
-            if (ctx.TryGet(0, out shortID) && (Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2))
+            if (ctx.TryGet(0, out shortID) && Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2)
             {
                 // success
                 asset = asset2;
@@ -60,7 +61,7 @@ public class ICommand : Command
         else // there are at least 2 arguments
         {
             // first try treat 1st argument as a short ID, and 2nd argument as an amount
-            if (ctx.HasArgsExact(2) && ctx.TryGet(0, out shortID) && (Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2))
+            if (ctx.HasArgsExact(2) && ctx.TryGet(0, out shortID) && Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2)
             {
                 if (!ctx.TryGet(1, out amount) || amount > MAX_ITEMS || amount < 0)
                 {
@@ -75,7 +76,7 @@ public class ICommand : Command
             else
             {
                 // now try find an asset using all arguments except the last, which could be treated as a number.
-                
+
                 if (ctx.TryGet(ctx.ArgumentCount - 1, out amount) && amount <= MAX_ITEMS && amount > 0) // if this runs, then the last ID is treated as an amount
                 {
                     itemName = ctx.GetRange(0, ctx.ArgumentCount - 1)!;

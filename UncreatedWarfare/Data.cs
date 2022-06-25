@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
 using Uncreated.Players;
-using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Gamemodes;
@@ -446,7 +446,7 @@ public static class Data
         PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
         ActionLog.OnConnected();
         if (Gamemode.shutdownAfterGame)
-            ShutdownOverrideCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
+            ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
     }
     private static void DuplicateKeyError(Exception ex)
     {

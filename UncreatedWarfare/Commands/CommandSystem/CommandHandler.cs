@@ -42,6 +42,7 @@ public static class CommandHandler
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        _commands.Clear();
         RegisterVanillaCommands();
         Type t = typeof(IExecutableCommand);
         Type v = typeof(VanillaCommand);
@@ -54,7 +55,6 @@ public static class CommandHandler
             }
         }
     }
-
     internal static void RegisterVanillaCommands()
     {
         for (int i = 0; i < Commander.commands.Count; ++i)
@@ -102,6 +102,8 @@ public static class CommandHandler
             CommandDay => EAdminType.ADMIN_ON_DUTY,
             CommandNight => EAdminType.ADMIN_ON_DUTY,
             CommandWeather => EAdminType.ADMIN_ON_DUTY,
+            CommandAdmin => EAdminType.CONSOLE,
+            CommandUnadmin => EAdminType.CONSOLE,
             _ => EAdminType.VANILLA_ADMIN,
         };
     }

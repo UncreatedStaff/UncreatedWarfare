@@ -151,11 +151,17 @@ public static class F
                     return (permission & EAdminType.TRIAL_ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_OFF_DUTY | EAdminType.ADMIN_ON_DUTY | EAdminType.ADMIN_OFF_DUTY) >= EAdminType.TRIAL_ADMIN_OFF_DUTY
                            || permission >= EAdminType.VANILLA_ADMIN;
 
-                if (check is EAdminType.TRIAL_ADMIN_OFF_DUTY or EAdminType.ADMIN_OFF_DUTY)
+                if (check is EAdminType.TRIAL_ADMIN_OFF_DUTY)
                     return permission is EAdminType.ADMIN_OFF_DUTY or EAdminType.TRIAL_ADMIN_OFF_DUTY;
 
-                if (check is EAdminType.TRIAL_ADMIN_ON_DUTY or EAdminType.ADMIN_ON_DUTY)
+                if (check is EAdminType.TRIAL_ADMIN_ON_DUTY)
                     return permission is EAdminType.ADMIN_ON_DUTY or EAdminType.TRIAL_ADMIN_ON_DUTY;
+
+                if (check is EAdminType.ADMIN_OFF_DUTY)
+                    return permission is EAdminType.ADMIN_OFF_DUTY;
+
+                if (check is EAdminType.ADMIN_ON_DUTY)
+                    return permission is EAdminType.ADMIN_ON_DUTY;
 
                 goto case PermissionComparison.MaskOverlaps;
 

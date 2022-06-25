@@ -9,12 +9,12 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using SteamGameServerNetworkingUtils = SDG.Unturned.SteamGameServerNetworkingUtils;
 
-namespace Uncreated.Warfare.Commands;
+namespace Uncreated.Warfare.Commands.VanillaRework;
 
-public class BanOverrideCommand : Command
+public class BanCommand : Command
 {
     private const string SYNTAX = "/ban <player> <duration minutes> <reason ...>";
-    public BanOverrideCommand() : base("ban", EAdminType.MODERATOR, 1) { }
+    public BanCommand() : base("ban", EAdminType.MODERATOR, 1) { }
     public override void Execute(CommandInteraction ctx)
     {
         ctx.AssertArgs(3, SYNTAX);
@@ -79,7 +79,7 @@ public class BanOverrideCommand : Command
             }
             else
             {
-                string time = Translation.GetTimeFromSeconds(duration, JSONMethods.DEFAULT_LANGUAGE);
+                string time = duration.GetTimeFromSeconds(JSONMethods.DEFAULT_LANGUAGE);
                 if (ctx.IsConsole)
                 {
                     L.Log(Translation.Translate("ban_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);

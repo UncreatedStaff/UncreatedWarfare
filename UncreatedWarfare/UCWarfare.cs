@@ -10,6 +10,7 @@ using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
@@ -139,7 +140,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     private IEnumerator<WaitForSeconds> RestartIn(float seconds)
     {
         yield return new WaitForSeconds(seconds);
-        ShutdownOverrideCommand.ShutdownAfterGameDaily();
+        ShutdownCommand.ShutdownAfterGameDaily();
     }
     private void OnLevelLoaded(int level)
     {
@@ -468,7 +469,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             Provider.kick(Provider.clients[i].playerID.steamID, "Intentional Shutdown: " + reason);
         if (CanUseNetCall)
         {
-            ShutdownOverrideCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
+            ShutdownCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
             I.StartCoroutine(I.ShutdownIn(reason, 4));
         }
         else
@@ -486,7 +487,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     private IEnumerator<WaitForSeconds> ShutdownIn2(string reason, ulong instigator, float seconds)
     {
         yield return new WaitForSeconds(seconds);
-        ShutdownOverrideCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
+        ShutdownCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
         yield return new WaitForSeconds(1f);
         Nexus.Unload();
         Provider.shutdown(2, reason);
@@ -516,7 +517,7 @@ public class UCWarfareNexus : IModuleNexus
             L.LogError(ex);
             Loaded = false;
             Type t = ex.GetType();
-            ShutdownOverrideCommand.ShutdownIn(10, "Uncreated Warfare failed to load: " + t.Name);
+            ShutdownCommand.ShutdownIn(10, "Uncreated Warfare failed to load: " + t.Name);
             if (typeof(SingletonLoadException).IsAssignableFrom(t))
                 throw;
             else
@@ -535,7 +536,7 @@ public class UCWarfareNexus : IModuleNexus
     public void UnloadNow()
     {
         Unload();
-        ShutdownOverrideCommand.ShutdownIn(10, "Uncreated Warfare unloading.");
+        ShutdownCommand.ShutdownIn(10, "Uncreated Warfare unloading.");
     }
     public void Unload()
     {

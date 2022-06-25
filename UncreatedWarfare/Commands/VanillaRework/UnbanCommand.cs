@@ -5,15 +5,17 @@ using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands;
+namespace Uncreated.Warfare.Commands.VanillaRework;
 
-public class UnbanOverrideCommand : Command
+public class UnbanCommand : Command
 {
     private const string SYNTAX = "/unban <player>";
     private const string HELP = "Unban players who have served their time.";
-    public UnbanOverrideCommand() : base("unban", Framework.EAdminType.MODERATOR, 1) { }
+    public UnbanCommand() : base("unban", Framework.EAdminType.MODERATOR, 1) { }
     public override void Execute(CommandInteraction ctx)
     {
+        ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
+
         if (!ctx.HasArgs(1))
         {
             ctx.Reply("unban_syntax");

@@ -6,7 +6,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands;
+namespace Uncreated.Warfare.Commands.VanillaRework;
 public class VCommand : Command
 {
     private const string SYNTAX = "/v <vehicle>";
@@ -29,11 +29,11 @@ public class VCommand : Command
             throw ctx.Reply("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + ctx.GetRange(0) + "</color>.</color>");
 
         Vector3 ppos = ctx.Caller.Position;
-        Vector3 v = ctx.Caller.Player.look.aim.forward with { y = 0 };
+        Vector3 v = (ctx.Caller.Player.look.aim.forward with { y = 0 }).normalized;
         Vector3 targetPos = ppos + v * 6.5f;
         RaycastHit hit;
         targetPos.y += 500f;
-        while (!Physics.Raycast(targetPos, Vector3.down, out hit, 500f,  RayMasks.GROUND
+        while (!Physics.Raycast(targetPos, Vector3.down, out hit, 500f, RayMasks.GROUND
                                                                        | RayMasks.BARRICADE
                                                                        | RayMasks.STRUCTURE
                                                                        | RayMasks.LARGE
@@ -71,7 +71,7 @@ public class VCommand : Command
             false,
             asset.fuel,
             asset.health,
-            (ushort)10000,
+            10000,
             ctx.CallerCSteamID,
             ctx.Caller.Player.quests.groupID,
             true,

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Players;
-using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -371,12 +371,12 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             L.LogError("Failed to load gamemode, shutting down in 10 seconds.");
             if (ex is not null)
             {
-                ShutdownOverrideCommand.ShutdownIn(10, "There was a fatal error in the server: " + (ex.InnerException?.GetType()?.Name ?? nameof(SingletonLoadException)) + ". It will restart in 10 seconds.");
+                ShutdownCommand.ShutdownIn(10, "There was a fatal error in the server: " + (ex.InnerException?.GetType()?.Name ?? nameof(SingletonLoadException)) + ". It will restart in 10 seconds.");
                 L.NetCalls.SendFatalException.NetInvoke((ex.InnerException ?? ex).ToString());
             }
             else
             {
-                ShutdownOverrideCommand.ShutdownIn(10, "There was a fatal error in the server. It will restart in 10 seconds.");
+                ShutdownCommand.ShutdownIn(10, "There was a fatal error in the server. It will restart in 10 seconds.");
             }
             EffectManager.askEffectClearAll();
             Data.Singletons.UnloadAll();

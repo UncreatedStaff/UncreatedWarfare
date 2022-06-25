@@ -6,7 +6,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands;
+namespace Uncreated.Warfare.Commands.VanillaRework;
 public class KickCommand : Command
 {
     private const string SYNTAX = "/kick <player> <reason>";

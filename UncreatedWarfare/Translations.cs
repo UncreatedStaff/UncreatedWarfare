@@ -1054,6 +1054,32 @@ partial class JSONMethods
             { "JET", "Jet" },
             { "EMPLACEMENT", "Emplacement" },
             #endregion
+
+            #region TeleportCommand
+            { "tp_target_dead", "<color=#8f9494><color=#{1}>{0}</color> is not alive.</color>" },
+            { "tp_entered_vehicle", "<color=#bfb9ac>You were put in <color=#{2}>{1}</color>'s <color=#dddddd>{0}</color>.</color>" },
+            { "tp_teleported_player", "<color=#bfb9ac>You were teleported to <color=#{1}>{0}</color>.</color>" },
+            { "tp_obstructed_player", "<color=#8f9494>Failed to teleport you to <color=#{1}>{0}</color>, their position is obstructed.</color>" },
+            { "tp_location_not_found", "<color=#8f9494>Failed to find a location similar to <color=#dddddd>{0}</color>.</color>" },
+            { "tp_teleported_location", "<color=#bfb9ac>You were teleported to <color=#dddddd>{0}</color>.</color>" },
+            { "tp_obstructed_location", "<color=#8f9494>Failed to teleport you to <color=#dddddd>{0}</color>, it's position is obstructed.</color>" },
+            { "tp_entered_vehicle_other", "<color=#bfb9ac><color=#{4}>{3}</color> was put in <color=#{2}>{1}</color>'s <color=#dddddd>{0}</color>.</color>" },
+            { "tp_teleported_player_other", "<color=#bfb9ac><color=#{3}>{2}</color> was teleported to <color=#{1}>{0}</color>.</color>" },
+            { "tp_obstructed_player_other", "<color=#8f9494>Failed to teleport <color=#{3}>{2}</color> to <color=#{1}>{0}</color>, their position is obstructed.</color>" },
+            { "tp_teleported_location_other", "<color=#bfb9ac><color=#{2}>{1}</color> was teleported to <color=#dddddd>{0}</color>.</color>" },
+            { "tp_obstructed_location_other", "<color=#8f9494>Failed to teleport <color=#{2}>{1}</color> to <color=#dddddd>{0}</color>, it's position is obstructed.</color>" },
+            { "tp_target_not_found", "<color=#8f9494>Failed to find a player from <color=#dddddd>{0}</color></color>" },
+            { "tp_invalid_coordinates", "<color=#8f9494>Use of coordinates should look like: <color=#eeeeee>/tp [player] <x y z></color>.</color>" },
+            { "tp_teleported_player_location", "<color=#bfb9ac>You were teleported to <color=#eeeeee>{0}</color>.</color>" },
+            { "tp_obstructed_player_location", "<color=#8f9494>Failed to teleport you to <color=#eeeeee>{0}</color>, that point is obstructed.</color>" },
+            { "tp_teleported_player_location_other", "<color=#bfb9ac><color=#{2}>{1}</color> was teleported to <color=#eeeeee>{0}</color>.</color>" },
+            { "tp_obstructed_player_location_other", "<color=#8f9494>Failed to teleport <color=#{2}>{1}</color> to <color=#eeeeee>{0}</color>, that point is obstructed.</color>" },
+            #endregion
+
+            #region HealCommand
+            { "heal_player", "<color=#ff9966>You healed <color=#{1}>{0}</color>.</color>" },
+            { "heal_self", "<color=#ff9966>You we're healed.</color>" },
+            #endregion
         };
     }
 

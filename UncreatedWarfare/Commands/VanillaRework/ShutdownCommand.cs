@@ -7,17 +7,17 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
-namespace Uncreated.Warfare.Commands;
-public class ShutdownOverrideCommand : Command
+namespace Uncreated.Warfare.Commands.VanillaRework;
+public class ShutdownCommand : Command
 {
     private const string SYNTAX = "/shutdown [instant|after|cancel|*time*] [reason]";
     private const string HELP = "Does nothing.";
     public static Coroutine? Messager = null;
-    public ShutdownOverrideCommand() : base("shutdown", EAdminType.VANILLA_ADMIN, 1) { }
+    public ShutdownCommand() : base("shutdown", EAdminType.VANILLA_ADMIN, 1) { }
     public override void Execute(CommandInteraction ctx)
     {
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
-        
+
         if (ctx.ArgumentCount == 0)
         {
             ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
@@ -81,7 +81,7 @@ public class ShutdownOverrideCommand : Command
         bool a = false;
         foreach (LanguageSet set in Translation.EnumerateLanguageSetsExclude(instigator))
         {
-            time = Translation.GetTimeFromSeconds(seconds, set.Language);
+            time = seconds.GetTimeFromSeconds(set.Language);
             if (set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE))
             {
                 a = true;
@@ -92,7 +92,7 @@ public class ShutdownOverrideCommand : Command
         }
         if (!a)
         {
-            time = Translation.GetTimeFromSeconds(seconds, JSONMethods.DEFAULT_LANGUAGE);
+            time = seconds.GetTimeFromSeconds(JSONMethods.DEFAULT_LANGUAGE);
             L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
             ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
         }
