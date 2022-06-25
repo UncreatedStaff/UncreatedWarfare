@@ -638,8 +638,8 @@ public class Reporter : MonoBehaviour
             };
         public Report.Teamkill[] ConvertRecentTeamkills()
         {
-            Report.Teamkill[] teamkills = new Report.Teamkill[vehicleTeamkills.Count];
-            for (int i = 0; i < vehicleTeamkills.Count; i++)
+            Report.Teamkill[] teamkills = new Report.Teamkill[this.teamkills.Count];
+            for (int i = 0; i < this.teamkills.Count; i++)
             {
                 Teamkill data = this.teamkills[i];
                 teamkills[i] = new Report.Teamkill()
@@ -666,7 +666,7 @@ public class Reporter : MonoBehaviour
         public GreifingFOBsReport.StructureDamage[] ConvertRecentFOBDamage()
         {
             GreifingFOBsReport.StructureDamage[] damages = new GreifingFOBsReport.StructureDamage[vehicleTeamkills.Count];
-            for (int i = 0; i < vehicleTeamkills.Count; i++)
+            for (int i = 0; i < recentFriendlyDamages.Count; i++)
             {
                 StructureDamageData data = recentFriendlyDamages[i];
                 damages[i] = new GreifingFOBsReport.StructureDamage()

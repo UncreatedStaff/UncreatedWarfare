@@ -12,8 +12,9 @@ public class VCommand : Command
     private const string SYNTAX = "/v <vehicle>";
     private const string HELP = "Spawns a vehicle in front of you.";
 
-    public VCommand() : base("v", EAdminType.ADMIN)
+    public VCommand() : base("vehicle", EAdminType.ADMIN, 1)
     {
+        AddAlias("v");
         AddAlias("veh");
     }
 
