@@ -1181,6 +1181,8 @@ public static class Translation
             return TranslateVBS(spawn, data, lang);
         }
     }
+
+    private static readonly Guid F15 = new Guid("423d31c55cf84396914be9175ea70d0c");
     public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, string language)
     {
 #if DEBUG
@@ -1209,7 +1211,7 @@ public static class Translation
         }
 
         string finalformat =
-            $"{(Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N"))}\n" +
+            $"{(spawn.VehicleID == F15 ? "F15-E" : (Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N")))}\n" +
             $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{TranslateEnum(data.Branch, language)}</color>\n" +
             (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>\n" : "\n") +
             (unlock) +

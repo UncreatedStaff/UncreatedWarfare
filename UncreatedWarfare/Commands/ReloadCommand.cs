@@ -5,7 +5,9 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -124,9 +126,40 @@ public class ReloadCommand : Command
     {
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
     }
-    private void ReloadPermissions()
+    public static void ReloadPermissions()
     {
-        Permissions.PermissionSaver.Instance.Read();
+        PermissionSaver.Instance.Read();
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            EAdminType old = pl.PermissionLevel;
+            pl.ResetPermissionLevel();
+            EAdminType @new = pl.PermissionLevel;
+            if (old == @new) continue;
+            if (@new is EAdminType.MEMBER or EAdminType.ADMIN_OFF_DUTY or EAdminType.TRIAL_ADMIN_OFF_DUTY)
+            {
+                FPlayerName names = F.GetPlayerOriginalNames(pl);
+                switch (old)
+                {
+                    case EAdminType.ADMIN_ON_DUTY:
+                        DutyCommand.AdminOnToOff(pl, names);
+                        break;
+                    case EAdminType.TRIAL_ADMIN_ON_DUTY:
+                        DutyCommand.InternOnToOff(pl, names);
+                        break;
+                }
+            }
+            else if (@new is EAdminType.TRIAL_ADMIN_ON_DUTY)
+            {
+                FPlayerName names = F.GetPlayerOriginalNames(pl);
+                DutyCommand.InternOffToOn(pl, names);
+            }
+            else if (@new is EAdminType.ADMIN_ON_DUTY)
+            {
+                FPlayerName names = F.GetPlayerOriginalNames(pl);
+                DutyCommand.AdminOffToOn(pl, names);
+            }
+        }
     }
     internal static void ReloadTranslations()
     {

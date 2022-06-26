@@ -7,7 +7,7 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 namespace Uncreated.Warfare.Commands.Permissions;
 public class PermissionCommand : Command
 {
-    private const string SYNTAX = "/p [grant|revoke] [player] [level]";
+    private const string SYNTAX = "/p [grant|revoke|reload] [player] [level]";
     private const string HELP = "See your permission level or manage other's permission levels.";
     public PermissionCommand() : base("permissions", EAdminType.MEMBER)
     {
@@ -52,6 +52,12 @@ public class PermissionCommand : Command
 
             PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, EAdminType.MEMBER);
             ctx.Reply("permissions_revoke_success");
+        }
+        else if (ctx.MatchParameter(0, "reload", "refresh"))
+        {
+            ReloadCommand.ReloadPermissions();
+            ctx.Reply("reload_reloaded_permissions");
+            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "ROCKET");
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }
