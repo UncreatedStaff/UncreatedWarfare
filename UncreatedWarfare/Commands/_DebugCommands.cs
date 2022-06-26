@@ -826,6 +826,11 @@ internal class _DebugCommand : Command
         string t = ctx.GetRange(0)!;
         ctx.Reply("Time: " + F.ParseTimespan(t).ToString("g"));
     }
+    private void getperms(CommandInteraction ctx)
+    {
+        ctx.Reply("Permission: " + ctx.Caller.GetPermissions());
+    }
+#if DEBUG
     private static InstanceSetter<InteractableVehicle, bool> SetEngineOn = F.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
     private void drivetest(CommandInteraction ctx)
     {
@@ -857,10 +862,6 @@ internal class _DebugCommand : Command
         UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 10)));*/
     }
 
-    private void getperms(CommandInteraction ctx)
-    {
-        ctx.Reply("Permission: " + ctx.Caller.GetPermissions());
-    }
     private IEnumerator _coroutine(CommandInteraction ctx, VehicleAsset asset, Vector3 pos)
     {
         Vector3 forward = ctx.Caller.Player.look.aim.forward;
@@ -929,5 +930,16 @@ internal class _DebugCommand : Command
             //for (int j = 0; j < veh.tires.Length; ++j)
             //    veh.tires[j].simulate(0, 1, false, TIME);*/
         }
+    }
+#endif
+    private void resetdebug(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        if (UCWarfare.I.Debugger != null)
+        {
+            UCWarfare.I.Debugger.Reset();
+            ctx.Reply("Reset debugger");
+        }
+        else throw ctx.Reply("Debugger is not active.");
     }
 }

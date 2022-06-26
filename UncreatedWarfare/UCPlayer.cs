@@ -115,6 +115,8 @@ public class UCPlayer
     }
     public bool GodMode { get => _godMode; set => _godMode = value; }
     private bool _godMode = false;
+    public bool VanishMode { get => _vanishMode; set => _vanishMode = value; }
+    private bool _vanishMode = false;
     public Vector3 Position
     {
         get

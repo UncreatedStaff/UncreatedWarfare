@@ -388,7 +388,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
         seat = 0;
         do
         {
-            if (seat++ >= vehicle.passengers.Length)
+            if (++seat >= vehicle.passengers.Length)
                 return false;
         } while (vehicle.passengers[seat].player != null);
         return true;

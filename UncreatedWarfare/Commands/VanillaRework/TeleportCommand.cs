@@ -24,7 +24,7 @@ public class TeleportCommand : Command
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         ctx.AssertArgs(1, SYNTAX);
-
+        Vector3 pos;
         switch (ctx.ArgumentCount)
         {
             case 1: // tp <player|location>
@@ -34,7 +34,7 @@ public class TeleportCommand : Command
                     if (onlinePlayer.Player.life.isDead)
                         throw ctx.Reply("tp_target_dead", onlinePlayer.CharacterName, TeamManager.GetTeamHexColor(onlinePlayer.GetTeam()));
                     InteractableVehicle? veh = onlinePlayer.Player.movement.getVehicle();
-                    Vector3 pos = onlinePlayer.Position;
+                    pos = onlinePlayer.Position;
                     if (veh != null && !veh.isExploded && !veh.isDead)
                     {
                         if (VehicleManager.ServerForcePassengerIntoVehicle(ctx.Caller, veh))
@@ -78,7 +78,7 @@ public class TeleportCommand : Command
                         if (onlinePlayer.Player.life.isDead)
                             throw ctx.Reply("tp_target_dead", onlinePlayer.CharacterName, TeamManager.GetTeamHexColor(onlinePlayer.GetTeam()));
                         InteractableVehicle? veh = onlinePlayer.Player.movement.getVehicle();
-                        Vector3 pos = onlinePlayer.Position;
+                        pos = onlinePlayer.Position;
                         if (veh != null && !veh.isExploded && !veh.isDead)
                         {
                             if (VehicleManager.ServerForcePassengerIntoVehicle(target, veh))
@@ -127,31 +127,67 @@ public class TeleportCommand : Command
                     throw ctx.Reply("tp_target_not_found", ctx.Get(0)!);
             case 3:
                 ctx.AssertRanByPlayer();
-                if (!ctx.TryGet(2, out float z) || !ctx.TryGet(1, out float y) || !ctx.TryGet(0, out float x))
-                    throw ctx.Reply("tp_invalid_coordinates");
-                else
+                pos = ctx.Caller.Position;
+                if (!ctx.TryGet(2, out float z))
                 {
-                    Vector3 pos = new Vector3(x, y, z);
-                    throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Player.look.aim.transform.rotation.y) ? "tp_teleported_player_location" : "tp_obstructed_player_location",
-                                    $"({x.ToString("F2", Data.Locale)}, {y.ToString("F2", Data.Locale)}, {z.ToString("F2", Data.Locale)})");
+                    if (ctx.MatchParameter(2, "~"))
+                        z = pos.z;
+                    else
+                        throw ctx.Reply("tp_invalid_coordinates");
                 }
+                if (!ctx.TryGet(1, out float y))
+                {
+                    if (ctx.MatchParameter(1, "~"))
+                        y = pos.y;
+                    else
+                        throw ctx.Reply("tp_invalid_coordinates");
+                }
+                if (!ctx.TryGet(0, out float x))
+                {
+                    if (ctx.MatchParameter(0, "~"))
+                        x = pos.x;
+                    else
+                        throw ctx.Reply("tp_invalid_coordinates");
+                }
+
+                pos = new Vector3(x, y, z);
+                throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Player.look.aim.transform.rotation.y) ? "tp_teleported_player_location" : "tp_obstructed_player_location",
+                                $"({x.ToString("F2", Data.Locale)}, {y.ToString("F2", Data.Locale)}, {z.ToString("F2", Data.Locale)})");
             case 4:
                 if (ctx.TryGet(0, out _, out target) && target is not null)
                 {
                     if (target.Player.life.isDead)
                         throw ctx.Reply("tp_target_dead", target.CharacterName, TeamManager.GetTeamHexColor(target.GetTeam()));
 
-                    if (!ctx.TryGet(2, out z) || !ctx.TryGet(1, out y) || !ctx.TryGet(0, out x))
-                        throw ctx.Reply("tp_invalid_coordinates");
-                    else
+                    pos = ctx.Caller.Position;
+                    if (!ctx.TryGet(3, out z))
                     {
-                        Vector3 pos = new Vector3(x, y, z);
-                        throw ctx.Reply(
-                            target.Player.teleportToLocation(pos, target.Player.look.aim.transform.rotation.y)
-                                ? "tp_teleported_player_location_other"
-                                : "tp_obstructed_player_location_other",
-                            $"({x.ToString("F2", Data.Locale)}, {y.ToString("F2", Data.Locale)}, {z.ToString("F2", Data.Locale)})", target.CharacterName, TeamManager.GetTeamHexColor(target.GetTeam()));
+                        if (ctx.MatchParameter(3, "~"))
+                            z = pos.z;
+                        else
+                            throw ctx.Reply("tp_invalid_coordinates");
                     }
+                    if (!ctx.TryGet(2, out y))
+                    {
+                        if (ctx.MatchParameter(2, "~"))
+                            y = pos.y;
+                        else
+                            throw ctx.Reply("tp_invalid_coordinates");
+                    }
+                    if (!ctx.TryGet(1, out x))
+                    {
+                        if (ctx.MatchParameter(1, "~"))
+                            x = pos.x;
+                        else
+                            throw ctx.Reply("tp_invalid_coordinates");
+                    }
+
+                    pos = new Vector3(x, y, z);
+                    throw ctx.Reply(
+                        target.Player.teleportToLocation(pos, target.Player.look.aim.transform.rotation.y)
+                            ? "tp_teleported_player_location_other"
+                            : "tp_obstructed_player_location_other",
+                        $"({x.ToString("F2", Data.Locale)}, {y.ToString("F2", Data.Locale)}, {z.ToString("F2", Data.Locale)})", target.CharacterName, TeamManager.GetTeamHexColor(target.GetTeam()));
                 }
                 else
                     throw ctx.Reply("tp_target_not_found", ctx.Get(0)!);

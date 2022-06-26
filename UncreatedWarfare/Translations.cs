@@ -45,8 +45,8 @@ partial class JSONMethods
             { "team_1_short", "USA" },
             { "team_2_short", "MEC" },
             { "team_3_short", "Admins" },
-            { "teams_join_success", "You've joined {0}." },
-            { "teams_join_announce", "{0} joined {1}!" },
+            { "teams_join_success", "<color=#a0ad8e>You've joined {0}.</color>" },
+            { "teams_join_announce", "<color=#a0ad8e>{0} joined <color=#{2}>{1}</color>!</color>" },
             { "join_player_joined_console", "{0} ({1}) changed group: {3} >> {2}" },
             { "neutral", "Neutral" },
             { "undiscovered_flag", "unknown" },
@@ -1079,6 +1079,24 @@ partial class JSONMethods
             #region HealCommand
             { "heal_player", "<color=#ff9966>You healed <color=#{1}>{0}</color>.</color>" },
             { "heal_self", "<color=#ff9966>You we're healed.</color>" },
+            #endregion
+
+            #region GodCommand
+            { "god_mode_enabled", "<color=#bfb9ac>God mode enabled.</color>" },
+            { "god_mode_disabled", "<color=#bfb9ac>God mode disabled.</color>" },
+            #endregion
+
+            #region VanishCommand
+            { "vanish_mode_enabled", "<color=#bfb9ac>Vanish mode enabled.</color>" },
+            { "vanish_mode_disabled", "<color=#bfb9ac>Vanish mode disabled.</color>" },
+            #endregion
+
+            #region PermissionCommand
+            { "permissions_current", "<color=#bfb9ac>Current permisions: <color=#ffdf91>{0}</color>.</color>" },
+            { "permissions_grant_success", "<color=#bfb9ac>Gave <color=#7f8182>{1}</color> <color=#dddddd>({2})</color>: <color=#ffdf91>{0}</color>.</color>" },
+            { "permissions_grant_already", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is already at the <color=#ffdf91>{0}</color> level.</color>" },
+            { "permissions_revoke_already", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is already a <color=#ffdf91>member</color>.</color>" },
+            { "permissions_revoke_success", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is now a <color=#ffdf91>{0}</color>.</color>" },
             #endregion
         };
     }

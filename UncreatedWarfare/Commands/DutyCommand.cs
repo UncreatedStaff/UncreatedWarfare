@@ -103,7 +103,7 @@ public class DutyCommand : Command
     }
     public static void SetVanishMode(Player player, bool vanished)
     {
-        if (player.movement.canAddSimulationResultsToUpdates != vanished)
+        if (player.movement.canAddSimulationResultsToUpdates == vanished)
         {
             player.movement.canAddSimulationResultsToUpdates = !vanished;
             player.movement.updates.Add(vanished

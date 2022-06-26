@@ -127,6 +127,7 @@ public static class Data
 
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
+    internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
 
     public static void LoadColoredConsole()
     {
@@ -365,6 +366,7 @@ public static class Data
         {
             SetOwnerHasInventory = F.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
             GetOwnerHasInventory = F.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
+            GetItemsSlots = F.GenerateInstanceGetter<Items, bool[,]>("slots", BindingFlags.NonPublic);
         }
         catch (Exception ex)
         {

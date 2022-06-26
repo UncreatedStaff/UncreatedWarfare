@@ -743,7 +743,7 @@ public struct DeathMessageArgs
         format[0] = DeadPlayerName.Colorize(TeamManager.GetTeamHexColor(DeadPlayerTeam));
         format[1] = KillerName is null ? string.Empty : KillerName.Colorize(TeamManager.GetTeamHexColor(KillerTeam));
         format[2] = Translation.TranslateEnum(Limb, language);
-        format[3] = ItemName is null ? string.Empty : ItemName;
+        format[3] = ItemName is null ? string.Empty : (ItemName.EndsWith(" Built", StringComparison.Ordinal) ? ItemName.Substring(0, ItemName.Length - 6) : ItemName);
         format[4] = KillDistance.ToString("F0", Data.Locale);
         format[5] = Player3Name is null ? string.Empty : Player3Name.Colorize(TeamManager.GetTeamHexColor(Player3Team));
         format[6] = Item2Name is null ? string.Empty : Item2Name;

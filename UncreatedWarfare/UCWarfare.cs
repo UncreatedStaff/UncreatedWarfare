@@ -4,6 +4,7 @@ using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Uncreated.Networking;
@@ -33,12 +34,13 @@ public delegate void VoidDelegate();
 public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
-    public static readonly Version Version      = new Version(3, 0, 0, 0);
+    public static readonly Version Version      = new Version(2, 6, 0, 1);
     private readonly SystemConfig _config       = new SystemConfig();
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
     public UCAnnouncer Announcer;
+    internal DebugComponent Debugger;
     public event EventHandler UCWarfareLoaded;
     public event EventHandler UCWarfareUnloading;
     public bool CoroutineTiming = false;
@@ -92,6 +94,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         }
 
         gameObject.AddComponent<ActionLog>();
+        Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
         ActionLog.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
@@ -137,9 +140,9 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         UCWarfareLoaded?.Invoke(this, EventArgs.Empty);
     }
-    private IEnumerator<WaitForSeconds> RestartIn(float seconds)
+    private IEnumerator<WaitForSecondsRealtime> RestartIn(float seconds)
     {
-        yield return new WaitForSeconds(seconds);
+        yield return new WaitForSecondsRealtime(seconds);
         ShutdownCommand.ShutdownAfterGameDaily();
     }
     private void OnLevelLoaded(int level)
@@ -159,7 +162,6 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Announcer = Data.Singletons.LoadSingleton<UCAnnouncer>();
         Data.ExtraPoints = JSONMethods.LoadExtraPoints();
         //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
-
         if (Data.Gamemode is not null) Data.Gamemode.OnLevelReady();
 
         if (Config.Debug && File.Exists(@"C:\orb.wav"))
@@ -168,6 +170,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             player.Load();
             player.Play();
         }
+
+        Debugger.Reset();
     }
     private void SubscribeToEvents()
     {
@@ -388,6 +392,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
                 if (Announcer != null)
                     Data.Singletons.UnloadSingleton(ref Announcer);
             }
+            if (Debugger != null)
+                Destroy(Debugger);
             OffenseManager.Deinit();
             //if (Queue != null)
             //Destroy(Queue);

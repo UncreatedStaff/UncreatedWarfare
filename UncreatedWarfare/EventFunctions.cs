@@ -547,7 +547,7 @@ public static class EventFunctions
                 L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerJoined:");
                 L.LogError(ex);
             }
-            ActionLog.Add(EActionLogType.CONNECT, null, ucplayer);
+            ActionLog.Add(EActionLogType.CONNECT, $"Players online: {Provider.clients.Count}", ucplayer);
             Chat.Broadcast("player_connected", names.CharacterName);
             Data.Reporter?.OnPlayerJoin(ucplayer.SteamPlayer);
             if (ucplayer != null)
@@ -1004,7 +1004,7 @@ public static class EventFunctions
             return;
         }
         Vector3 pos = parameters.player.transform.position;
-        if (Data.Gamemode is ITeams)
+        if (TeamManager.IsInAnyMainOrLobby(parameters.player))
         {
             if (TeamManager.LobbyZone != null && TeamManager.LobbyZone.IsInside(pos))
             {
@@ -1022,7 +1022,7 @@ public static class EventFunctions
                 return;
             }
         }
-        if (Data.Gamemode is TeamGamemode gm && gm.EnableAMC && parameters.killer != CSteamID.Nil && parameters.killer != Provider.server && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
+        if (parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64ID(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
         {
             Player killer = PlayerTool.getPlayer(parameters.killer);
             if (killer != null)
@@ -1353,7 +1353,7 @@ public static class EventFunctions
                 Data.PlaytimeComponents.Remove(ucplayer.Steam64);
             }
             else
-                ActionLog.Add(EActionLogType.DISCONNECT, null, ucplayer.Steam64);
+                ActionLog.Add(EActionLogType.DISCONNECT, $"Players online: {Provider.clients.Count - 1}", ucplayer.Steam64);
             PlayerManager.NetCalls.SendPlayerLeft.NetInvoke(ucplayer.Steam64);
         }
         catch (Exception ex)

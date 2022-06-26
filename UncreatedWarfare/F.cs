@@ -144,11 +144,11 @@ public static class F
                     return permission is >= EAdminType.HELPER;
 
                 if (check is EAdminType.ADMIN)
-                    return (permission & EAdminType.ADMIN_ON_DUTY | EAdminType.ADMIN_OFF_DUTY) >= EAdminType.ADMIN_OFF_DUTY
+                    return (permission & (EAdminType.ADMIN_ON_DUTY | EAdminType.ADMIN_OFF_DUTY)) >= EAdminType.ADMIN_OFF_DUTY
                            || permission >= EAdminType.VANILLA_ADMIN;
 
                 if (check is EAdminType.TRIAL_ADMIN)
-                    return (permission & EAdminType.TRIAL_ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_OFF_DUTY | EAdminType.ADMIN_ON_DUTY | EAdminType.ADMIN_OFF_DUTY) >= EAdminType.TRIAL_ADMIN_OFF_DUTY
+                    return (permission & (EAdminType.TRIAL_ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_OFF_DUTY | EAdminType.ADMIN_ON_DUTY | EAdminType.ADMIN_OFF_DUTY)) >= EAdminType.TRIAL_ADMIN_OFF_DUTY
                            || permission >= EAdminType.VANILLA_ADMIN;
 
                 if (check is EAdminType.TRIAL_ADMIN_OFF_DUTY)

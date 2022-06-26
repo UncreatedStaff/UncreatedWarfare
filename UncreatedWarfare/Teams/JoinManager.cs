@@ -383,10 +383,6 @@ public class JoinManager : BaseSingletonComponent
             JoinUI.Team1Select.SetText(lobbyPlayer.Player.Connection, "JOINED");
         }
     }
-    private void OnCloseButtonClicked(UnturnedButton button, Player player)
-    {
-        return;
-    }
     private void JoinTeam(UCPlayer player, ulong newTeam)
     {
         AssertLoadedIntl();
@@ -425,7 +421,7 @@ public class JoinManager : BaseSingletonComponent
 
         player.SendChat("teams_join_success", TeamManager.TranslateName(newTeam, player.CSteamID, true));
 
-        Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "teams_join_announce", names.CharacterName, teamName);
+        Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "teams_join_announce", names.CharacterName, teamName, TeamManager.GetTeamHexColor(newTeam));
         ActionLog.Add(EActionLogType.CHANGE_GROUP_WITH_UI, "GROUP: " + TeamManager.TranslateName(newTeam, 0).ToUpper(), player);
 
         if (player.Squad != null)

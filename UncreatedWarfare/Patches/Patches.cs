@@ -181,8 +181,9 @@ public static partial class Patches
             if (fromUnityEvent)
                 L.Log($"UnityEventMsg {callingPlayer.playerID.steamID}: \"{text}\"", ConsoleColor.DarkCyan);
             ulong team = callingPlayer.GetTeam();
-            Color chatted = Teams.TeamManager.GetTeamColor(team);
-            if (callingPlayer.isAdmin && !Provider.hideAdmins)
+            Color chatted = Palette.AMBIENT;
+            bool duty = caller is not null && caller.OnDuty();
+            if (callingPlayer.isAdmin || duty)
                 chatted = Palette.ADMIN;
             bool isRich = true;
             bool isVisible = true;
@@ -197,19 +198,14 @@ public static partial class Patches
                     caller.SendChat("text_chat_feedback_muted", caller.TimeUnmuted.ToString("g") + " EST", caller.MuteReason ?? string.Empty);
                 return false;
             }
-            if (ChatManager.onServerFormattingMessage != null)
-            {
-                ChatManager.onServerFormattingMessage(callingPlayer, mode, ref text);
-            }
+
+            if (callingPlayer.isAdmin || duty)
+                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
             else
-            {
-                if (caller is not null && caller.OnDutyOrAdmin())
-                    text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
-                else
-                    text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", "");
-                if (mode == EChatMode.GROUP)
-                    text = "[T] " + text;
-            }
+                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", "");
+            if (mode == EChatMode.GROUP)
+                text = "[T] " + text;
+
             if (mode == EChatMode.GLOBAL)
                 ChatManager.serverSendMessage(text, chatted, callingPlayer, mode: EChatMode.GLOBAL, useRichTextFormatting: isRich);
             else if (mode == EChatMode.LOCAL)

@@ -1,4 +1,6 @@
-﻿using Uncreated.Framework;
+﻿using System.Threading.Tasks;
+using Uncreated.Framework;
+using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -34,17 +36,22 @@ public class PermissionCommand : Command
                     throw ctx.Reply("permissions_grant_already", Translation.TranslateEnum(type, ctx.CallerID));
 
                 PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, type);
-                ctx.Reply("permissions_grant_success", Translation.TranslateEnum(type, ctx.CallerID));
+                Task.Run(async () =>
+                {
+                    FPlayerName name = await F.GetPlayerOriginalNamesAsync(steam64);
+                    ctx.Reply("permissions_grant_success", Translation.TranslateEnum(type, ctx.CallerID), name.PlayerName, steam64.ToString(Data.Locale));
+                });
+                ctx.Defer();
             }
             else throw ctx.SendCorrectUsage("/permisions grant <player> <admin|intern|helper|member>");
         }
         else if (ctx.MatchParameter(0, "revoke", "remove", "leave"))
         {
             if (PermissionSaver.Instance.GetPlayerPermissionLevel(steam64) == EAdminType.MEMBER)
-                throw ctx.Reply("permissions_grant_already", Translation.TranslateEnum(EAdminType.MEMBER, ctx.CallerID));
+                throw ctx.Reply("permissions_revoke_already");
 
             PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, EAdminType.MEMBER);
-            ctx.Reply("permissions_grant_success", Translation.TranslateEnum(EAdminType.MEMBER, ctx.CallerID));
+            ctx.Reply("permissions_revoke_success");
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }

@@ -962,23 +962,23 @@ public class ConventionalLeaderboardUI : UnturnedUI
                         int i3 = i - 1;
                         if (t2Stats[i].Steam64 == pl.Steam64)
                         {
-                            Team1PlayerNames[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerKills[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerDeaths[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerXP[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerCredits[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerCaptures[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerDamage[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerNames[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerKills[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerDeaths[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerXP[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerCredits[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerCaptures[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerDamage[i3].SetText(c, values[++index].Colorize("dbffdc"));
                         }
                         else
                         {
-                            Team1PlayerNames[i3].SetText(c, values[++index]);
-                            Team1PlayerKills[i3].SetText(c, values[++index]);
-                            Team1PlayerDeaths[i3].SetText(c, values[++index]);
-                            Team1PlayerXP[i3].SetText(c, values[++index]);
-                            Team1PlayerCredits[i3].SetText(c, values[++index]);
-                            Team1PlayerCaptures[i3].SetText(c, values[++index]);
-                            Team1PlayerDamage[i3].SetText(c, values[++index]);
+                            Team2PlayerNames[i3].SetText(c, values[++index]);
+                            Team2PlayerKills[i3].SetText(c, values[++index]);
+                            Team2PlayerDeaths[i3].SetText(c, values[++index]);
+                            Team2PlayerXP[i3].SetText(c, values[++index]);
+                            Team2PlayerCredits[i3].SetText(c, values[++index]);
+                            Team2PlayerCaptures[i3].SetText(c, values[++index]);
+                            Team2PlayerDamage[i3].SetText(c, values[++index]);
                         }
                         if (i != 0)
                             Team2PlayerVCs[i3].SetVisibility(c, false);
@@ -1288,23 +1288,23 @@ public class ConventionalLeaderboardUI : UnturnedUI
                         int i3 = i - 1;
                         if (t2Stats[i].Steam64 == pl.Steam64)
                         {
-                            Team1PlayerNames[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerKills[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerDeaths[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerXP[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerCredits[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerCaptures[i3].SetText(c, values[++index].Colorize("dbffdc"));
-                            Team1PlayerDamage[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerNames[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerKills[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerDeaths[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerXP[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerCredits[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerCaptures[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerDamage[i3].SetText(c, values[++index].Colorize("dbffdc"));
                         }
                         else
                         {
-                            Team1PlayerNames[i3].SetText(c, values[++index]);
-                            Team1PlayerKills[i3].SetText(c, values[++index]);
-                            Team1PlayerDeaths[i3].SetText(c, values[++index]);
-                            Team1PlayerXP[i3].SetText(c, values[++index]);
-                            Team1PlayerCredits[i3].SetText(c, values[++index]);
-                            Team1PlayerCaptures[i3].SetText(c, values[++index]);
-                            Team1PlayerDamage[i3].SetText(c, values[++index]);
+                            Team2PlayerNames[i3].SetText(c, values[++index]);
+                            Team2PlayerKills[i3].SetText(c, values[++index]);
+                            Team2PlayerDeaths[i3].SetText(c, values[++index]);
+                            Team2PlayerXP[i3].SetText(c, values[++index]);
+                            Team2PlayerCredits[i3].SetText(c, values[++index]);
+                            Team2PlayerCaptures[i3].SetText(c, values[++index]);
+                            Team2PlayerDamage[i3].SetText(c, values[++index]);
                         }
                         if (i != 0)
                             Team2PlayerVCs[i3].SetVisibility(c, false);

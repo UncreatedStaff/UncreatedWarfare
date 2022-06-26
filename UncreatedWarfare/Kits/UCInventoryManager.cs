@@ -62,7 +62,9 @@ namespace Uncreated.Warfare.Kits
                 Items[] inv = player.Player.inventory.items;
                 inv[0].removeItem(0);
                 inv[1].removeItem(0);
-                //player.Player.inventory.items[PlayerInventory.SLOTS].onItemsResized(PlayerInventory.SLOTS, 5, 3);
+
+                //inv[PlayerInventory.SLOTS].onItemsResized(PlayerInventory.SLOTS, 0, 0);
+                //inv[PlayerInventory.SLOTS].onItemsResized(PlayerInventory.SLOTS, 5, 3);
 
                 byte m = (byte)(PlayerInventory.PAGES - 2);
                 for (byte i = PlayerInventory.SLOTS; i < m; ++i)
@@ -71,10 +73,15 @@ namespace Uncreated.Warfare.Kits
                     for (byte it = 0; it < c; ++it)
                         player.SendItemRemove(i, inv[i].items[it]);
                 }
-                for (int i = 2; i < m; ++i)
+                Items pg = inv[PlayerInventory.SLOTS];
+                pg.clear();
+                bool[,] b = Data.GetItemsSlots(pg);
+                for (int x = 0; x < pg.width; ++x)
+                    for (int y = 0; y < pg.height; ++y)
+                        b[x, y] = false;
+                for (int i = PlayerInventory.SLOTS + 1; i < m; ++i)
                 {
-                    Items page = player.Player.inventory.items[i];
-                    page.clear();
+                    inv[i].clear();
                 }
                 if (clothes)
                 {

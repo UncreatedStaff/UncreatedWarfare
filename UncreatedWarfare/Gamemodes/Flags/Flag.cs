@@ -515,7 +515,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (winner == 1 || winner == 2)
                             {
-                                Cap(winner, 1);
+                                Cap(winner, GetCaptureAmount(Gamemode.Config.TeamCTF.CaptureScale));
                             }
                         }
                     }
@@ -527,6 +527,11 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     }
                 }
             }
+        }
+
+        internal float GetCaptureAmount(float captureScale)
+        {
+            return captureScale * Mathf.Log10(Math.Max(Team1TotalCappers, Team2TotalCappers) + 1);
         }
     }
 }

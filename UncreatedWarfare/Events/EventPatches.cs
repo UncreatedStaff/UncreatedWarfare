@@ -41,6 +41,9 @@ internal static class EventPatches
 
         PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
             prefix: GetMethodInfo(RocketOnTriggerEnter));
+
+        PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance),
+            prefix: GetMethodInfo(PlayerDamageRequested));
     }
     private static MethodInfo GetMethodInfo(Delegate method)
     {
@@ -447,31 +450,32 @@ internal static class EventPatches
     /// </summary>
     private static bool RocketOnTriggerEnter(Collider other, Rocket __instance, bool ___isExploded)
     {
-        if (___isExploded || other.isTrigger || (__instance.ignoreTransform != null && (__instance.ignoreTransform == other.transform || other.transform.IsChildOf(other.transform))))
+        if (___isExploded || other.isTrigger || (__instance.ignoreTransform != null && (__instance.ignoreTransform == other.transform || other.transform.IsChildOf(__instance.ignoreTransform))))
             return false;
         if (other.transform.CompareTag("Player"))
         {
-            Player? pl = PlayerTool.getPlayer(__instance.killer);
-            if (pl is null) return true;
-            else if (F.TryGetPlayerData(pl, out UCPlayerData data))
+            Player? target = DamageTool.getPlayer(other.transform);
+            if (target != null)
             {
-                Guid rocket = data.LastRocketShot;
-                if (rocket != default && Assets.find(rocket) is ItemAsset asset)
-                {
-                    if (FOBManager.Config.Buildables.Any(x =>
-                        x.Emplacement is not null && x.Emplacement.ShouldWarnFriendliesIncoming &&
-                        x.Emplacement.EmplacementVehicle.Exists &&
-                        x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(x => x.itemID == asset.id)))
-                    {
-                        Player? target = DamageTool.getPlayer(other.transform);
-                        if (target != null && target.GetTeam() == pl.GetTeam())
-                        {
-                            return false;
-                        }
-                    }
-                }
+                Player? pl = PlayerTool.getPlayer(__instance.killer);
+                return pl == null || target.GetTeam() != pl.GetTeam();
             }
         }
+        return true;
+    }
+    // SDG.Unturned.PlayerLife.doDamage
+    /// <summary>
+    /// Actual onDamageRequested event.
+    /// </summary>
+    private static bool PlayerDamageRequested(PlayerLife __instance, byte amount, Vector3 newRagdoll, EDeathCause newCause, ELimb newLimb, CSteamID newKiller, ref EPlayerKill kill, bool trackKill, ERagdollEffect newRagdollEffect, bool canCauseBleeding)
+    {
+        UCPlayer? pl = UCPlayer.FromPlayer(__instance.player);
+        if (pl is not null && pl.GodMode)
+        {
+            if (pl.GodMode || Teams.TeamManager.IsInAnyMainOrLobby(pl))
+                return false;
+        }
+
         return true;
     }
 }

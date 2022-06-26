@@ -43,6 +43,7 @@ public struct LandmineData
 }
 public class UCPlayerData : MonoBehaviour
 {
+    public const int PING_BUFFER_SIZE = 256;
     public float CurrentTimeSeconds;
     public float JoinTime = 0f;
     public Gamemodes.Interfaces.IStats stats;
@@ -68,6 +69,10 @@ public class UCPlayerData : MonoBehaviour
     public Guid LastGunShot; // used for amc
     internal VehicleComponent? ExplodingVehicle;
     public object PendingFOB;
+    public float[] PingBuffer = new float[PING_BUFFER_SIZE];
+    public int PingBufferIndex = -1;
+    public float LastAvgPingDifference;
+    #region TOASTS
     private struct ToastMessageInfo
     {
         public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);
@@ -157,9 +162,7 @@ public class UCPlayerData : MonoBehaviour
             return false;
         }
     }
-
     private ToastChannel[] channels;
-
     public void QueueMessage(ToastMessage message, bool priority = false)
     {
 #if DEBUG
@@ -209,6 +212,7 @@ public class UCPlayerData : MonoBehaviour
             }
         }
     }
+    #endregion
     public void StartTracking(Player player)
     {
         this.player = player;
@@ -228,6 +232,11 @@ public class UCPlayerData : MonoBehaviour
         channels = new ToastChannel[max];
         for (byte i = 0; i < channels.Length; i++)
             channels[i] = new ToastChannel(i);
+    }
+    public void AddPing(float value)
+    {
+        ++PingBufferIndex;
+        PingBuffer[PingBufferIndex % PING_BUFFER_SIZE] = value;
     }
     public void TryUpdateAttackers(ulong newLastAttacker)
     {

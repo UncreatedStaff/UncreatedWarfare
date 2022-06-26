@@ -538,6 +538,7 @@ public class TEAM_CTF_CONFIG
     public int FlagTickInterval;
     public int TicketsFlagCaptured;
     public int TicketsFlagLost;
+    public float CaptureScale;
     public void SetDefaults()
     {
         StagingTime = 90;
@@ -547,10 +548,11 @@ public class TEAM_CTF_CONFIG
         OverrideContestDifference = 2;
         AllowVehicleCapture = false;
         DiscoveryForesight = 2;
-        FlagTickInterval = 4;
+        FlagTickInterval = 12;
         TicketsFlagCaptured = 40;
         TicketsFlagLost = -10;
         RequiredPlayerDifferenceToCapture = 2;
+        CaptureScale = 3.222f;
     }
 }
 [JsonSerializable(typeof(INVASION))]
@@ -562,14 +564,16 @@ public class INVASION
     public int TicketsFlagCaptured;
     public int AttackStartingTickets;
     public int TicketXPInterval;
+    public float CaptureScale;
     public void SetDefaults()
     {
-        StagingTime = 150;
+        StagingTime = 120;
         DiscoveryForesight = 2;
         SpecialFOBName = "VCP";
         TicketsFlagCaptured = 100;
         AttackStartingTickets = 250;
         TicketXPInterval = 10;
+        CaptureScale = 3.222f;
     }
 }
 [JsonSerializable(typeof(INSURGENCY))]

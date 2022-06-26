@@ -11,7 +11,7 @@ public class ICommand : Command
     private const string HELP = "Gives the player [count] amount of an item.";
     private const int MAX_ITEMS = 100;
 
-    public ICommand() : base("give", EAdminType.MODERATOR)
+    public ICommand() : base("give", EAdminType.MODERATOR, 1)
     {
         AddAlias("i");
         AddAlias("item");
