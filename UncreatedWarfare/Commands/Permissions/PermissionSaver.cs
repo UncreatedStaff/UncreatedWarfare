@@ -105,7 +105,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
         if (old.Length == 1) return true;
         if (index != 0)
             Buffer.BlockCopy(old, 0, psave.Members, 0, sizeof(ulong) * index);
-        Buffer.BlockCopy(old, index + 1, psave.Members, index, sizeof(ulong) * (old.Length - index - 1));
+        Buffer.BlockCopy(old, (index + 1) * sizeof(ulong), psave.Members, index * sizeof(ulong), sizeof(ulong) * (old.Length - index - 1));
         return true;
     }
 }

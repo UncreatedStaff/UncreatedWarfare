@@ -37,6 +37,7 @@ internal class _DebugCommand : Command
     {
         if (ctx.TryGet(0, out string operation))
         {
+            BaseCommandInteraction? ex2 = null;
             try
             {
                 MethodInfo info = type.GetMethod(operation, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
@@ -51,12 +52,11 @@ internal class _DebugCommand : Command
                     info.Invoke(this, new object[1] { ctx });
                     ctx.Offset = 0;
                 }
-                catch (BaseCommandInteraction)
-                {
-                    throw;
-                }
                 catch (Exception ex)
                 {
+                    ex2 = ex as BaseCommandInteraction;
+                    if (ex2 is not null)
+                        throw ex2;
                     L.LogError(ex.InnerException ?? ex);
                     throw ctx.Reply("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
                 }

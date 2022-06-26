@@ -138,7 +138,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_counter2 > 1 / Config.TeamCTF.EvaluateTime)
+        if (_counter2 > Config.TeamCTF.EvaluateTime * 2)
         {
             _counter2 = 0;
             return true;

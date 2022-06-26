@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
 namespace Uncreated.Warfare.Gamemodes;
@@ -25,6 +26,8 @@ public sealed class GamemodeConfig : Config<GamemodeConfigData>
         UCPlayer.MutedUI.LoadFromConfig(ui.MutedUI);
         UCPlayerData.ReloadToastIDs();
         Gamemode.ReadGamemodes();
+        if (Warfare.Data.Is<TeamCTF>() || Warfare.Data.Is<Invasion>())
+            Warfare.Data.Gamemode.SetTiming(Data.TeamCTF.EvaluateTime);
     }
 }
 [JsonSerializable(typeof(GamemodeConfigData))]

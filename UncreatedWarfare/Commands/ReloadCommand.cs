@@ -67,7 +67,7 @@ public class ReloadCommand : Command
         {
             ReloadPermissions();
             ctx.Reply("reload_reloaded_permissions");
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "ROCKET");
+            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "PERMISSIONS");
         }
         else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
         {

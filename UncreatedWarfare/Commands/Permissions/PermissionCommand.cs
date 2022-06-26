@@ -32,14 +32,20 @@ public class PermissionCommand : Command
 
             if (TryGetType(ctx, out EAdminType type))
             {
-                if (PermissionSaver.Instance.GetPlayerPermissionLevel(steam64) == type)
-                    throw ctx.Reply("permissions_grant_already", Translation.TranslateEnum(type, ctx.CallerID));
-
-                PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, type);
                 Task.Run(async () =>
                 {
                     FPlayerName name = await F.GetPlayerOriginalNamesAsync(steam64);
-                    ctx.Reply("permissions_grant_success", Translation.TranslateEnum(type, ctx.CallerID), name.PlayerName, steam64.ToString(Data.Locale));
+                    await UCWarfare.ToUpdate();
+                    EAdminType t = PermissionSaver.Instance.GetPlayerPermissionLevel(steam64);
+                    if (t == type)
+                        ctx.Reply("permissions_grant_already", Translation.TranslateEnum(type, ctx.CallerID), name.PlayerName, steam64.ToString(Data.Locale));
+                    else
+                    {
+                        PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, type);
+                        string f = Translation.TranslateEnum(type, ctx.CallerID);
+                        ctx.Reply("permissions_grant_success", f, name.PlayerName, steam64.ToString(Data.Locale));
+                        ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Translation.TranslateEnum(t, JSONMethods.DEFAULT_LANGUAGE)} >> {f}");
+                    }
                 });
                 ctx.Defer();
             }
@@ -47,17 +53,27 @@ public class PermissionCommand : Command
         }
         else if (ctx.MatchParameter(0, "revoke", "remove", "leave"))
         {
-            if (PermissionSaver.Instance.GetPlayerPermissionLevel(steam64) == EAdminType.MEMBER)
-                throw ctx.Reply("permissions_revoke_already");
-
-            PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, EAdminType.MEMBER);
-            ctx.Reply("permissions_revoke_success");
+            Task.Run(async () =>
+            {
+                FPlayerName name = await F.GetPlayerOriginalNamesAsync(steam64);
+                await UCWarfare.ToUpdate();
+                EAdminType t = PermissionSaver.Instance.GetPlayerPermissionLevel(steam64);
+                if (t == EAdminType.MEMBER)
+                    ctx.Reply("permissions_revoke_already", name.CharacterName, steam64.ToString(Data.Locale));
+                else
+                {
+                    PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, EAdminType.MEMBER);
+                    ctx.Reply("permissions_revoke_success", name.CharacterName, steam64.ToString(Data.Locale));
+                    ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Translation.TranslateEnum(t, JSONMethods.DEFAULT_LANGUAGE)} >> {Translation.TranslateEnum(EAdminType.MEMBER, JSONMethods.DEFAULT_LANGUAGE)}");
+                }
+            });
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "reload", "refresh"))
         {
             ReloadCommand.ReloadPermissions();
             ctx.Reply("reload_reloaded_permissions");
-            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "ROCKET");
+            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "PERMISSIONS");
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }

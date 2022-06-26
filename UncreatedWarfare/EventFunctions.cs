@@ -1326,13 +1326,13 @@ public static class EventFunctions
             if (Data.Is(out ITeams gm) && gm.UseJoinUI)
                 gm.JoinManager.OnPlayerDisconnected(ucplayer);
             kit = ucplayer.KitName;
-            if (ucplayer.OnDuty())
-            {
-                if (ucplayer.IsAdmin())
-                    Commands.DutyCommand.AdminOnToOff(ucplayer, names);
-                else if (ucplayer.IsIntern())
-                    Commands.DutyCommand.InternOnToOff(ucplayer, names);
-            }
+
+            EAdminType type = ucplayer.PermissionLevel;
+            if ((type & EAdminType.ADMIN_ON_DUTY) == EAdminType.ADMIN_ON_DUTY)
+                Commands.DutyCommand.AdminOnToOff(ucplayer, names);
+            else if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY)
+                Commands.DutyCommand.InternOnToOff(ucplayer, names);
+
             try
             {
                 Data.Gamemode.PlayerLeave(ucplayer);

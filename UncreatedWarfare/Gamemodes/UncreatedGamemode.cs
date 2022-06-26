@@ -86,7 +86,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         this.useEventLoop = EventLoopSpeed > 0;
         this._state = EState.LOADING;
     }
-    protected void SetTiming(float NewSpeed)
+    public void SetTiming(float NewSpeed)
     {
         this._eventLoopSpeed = NewSpeed;
         this.useEventLoop = NewSpeed > 0;

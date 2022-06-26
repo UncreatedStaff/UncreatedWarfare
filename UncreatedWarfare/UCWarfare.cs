@@ -20,6 +20,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
@@ -34,7 +35,7 @@ public delegate void VoidDelegate();
 public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(21, 00, 0); // 9:00 PM
-    public static readonly Version Version      = new Version(2, 6, 0, 1);
+    public static readonly Version Version      = new Version(2, 6, 0, 2);
     private readonly SystemConfig _config       = new SystemConfig();
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
@@ -92,6 +93,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             L.LogError("Patching Error, perhaps Nelson changed something:");
             L.LogError(ex);
         }
+
+        UCInventoryManager.OnLoad();
 
         gameObject.AddComponent<ActionLog>();
         Debugger = gameObject.AddComponent<DebugComponent>();

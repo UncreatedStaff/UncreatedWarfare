@@ -113,7 +113,10 @@ public static partial class Patches
             "whitelist",
             "wl",
             "struct",
-            "structure"
+            "structure",
+            "permissions",
+            "perms",
+            "p"
         };
         private static bool ShouldLog(string message)
         {

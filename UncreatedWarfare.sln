@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UncreatedWarfare", "Uncreat
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8062F4B6-CF10-4BFC-AAE1-F633B0AD45CE}"
 EndProject
-Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\SteamCMD\unturned\Unturned.exe", "{2E799678-C219-45F2-940A-04662559D6DB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UncreatedStats", "UncreatedStats\UncreatedStats.csproj", "{466E668C-EAB3-473C-86C5-073823E51879}"
+EndProject
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Unturned.exe", "{813D0877-FE1A-4236-BD85-D91459296A54}"
 	ProjectSection(DebuggerProjectSystem) = preProject
 		PortSupplier = 00000000-0000-0000-0000-000000000000
 		Executable = C:\SteamCMD\steamapps\common\U3DS\Unturned.exe
@@ -21,8 +23,6 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Unturned", "..\..\..\..\..\
 		AttachLaunchAction = No
 		IORedirection = Auto
 	EndProjectSection
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UncreatedStats", "UncreatedStats\UncreatedStats.csproj", "{466E668C-EAB3-473C-86C5-073823E51879}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -58,16 +58,6 @@ Global
 		{D152471B-6551-476C-9C44-063D6D803FCC}.Release|x64.Build.0 = Release|Any CPU
 		{D152471B-6551-476C-9C44-063D6D803FCC}.Release|x86.ActiveCfg = Release|Any CPU
 		{D152471B-6551-476C-9C44-063D6D803FCC}.Release|x86.Build.0 = Release|Any CPU
-		{2E799678-C219-45F2-940A-04662559D6DB}.Debug|Any CPU.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Debug|ARM.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Debug|ARM64.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Debug|x64.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Debug|x86.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Release|Any CPU.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Release|ARM.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Release|ARM64.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Release|x64.ActiveCfg = Release|x64
-		{2E799678-C219-45F2-940A-04662559D6DB}.Release|x86.ActiveCfg = Release|x64
 		{466E668C-EAB3-473C-86C5-073823E51879}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{466E668C-EAB3-473C-86C5-073823E51879}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{466E668C-EAB3-473C-86C5-073823E51879}.Debug|ARM.ActiveCfg = Debug|Any CPU
@@ -88,6 +78,16 @@ Global
 		{466E668C-EAB3-473C-86C5-073823E51879}.Release|x64.Build.0 = Release|Any CPU
 		{466E668C-EAB3-473C-86C5-073823E51879}.Release|x86.ActiveCfg = Release|Any CPU
 		{466E668C-EAB3-473C-86C5-073823E51879}.Release|x86.Build.0 = Release|Any CPU
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Debug|Any CPU.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Debug|ARM.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Debug|ARM64.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Debug|x64.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Debug|x86.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Release|Any CPU.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Release|ARM.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Release|ARM64.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Release|x64.ActiveCfg = Release|x64
+		{813D0877-FE1A-4236-BD85-D91459296A54}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

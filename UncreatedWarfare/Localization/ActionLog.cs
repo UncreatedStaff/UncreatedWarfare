@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -14,12 +15,19 @@ public class ActionLog : MonoBehaviour
     private readonly Queue<ActionLogItem> items = new Queue<ActionLogItem>(16);
     public const string DATE_HEADER_FORMAT = "yyyy-MM-dd_HH-mm-ss";
     private static ActionLog Instance;
-    private static DateTime CurrentLogSt = DateTime.MinValue;
+    private static DateTime CurrentLogSt;
+    private static string CurrentFileName;
     private void Awake()
     {
+        SetTimeToNow();
         if (Instance != null)
             Destroy(Instance);
         Instance = this;
+    }
+    private static void SetTimeToNow()
+    {
+        CurrentLogSt = DateTime.Now;
+        CurrentFileName = CurrentLogSt.ToString(DATE_HEADER_FORMAT, Data.Locale) + ".txt";
     }
     public static void Add(EActionLogType type, string? data = null, ulong player = 0)
     {
@@ -37,70 +45,65 @@ public class ActionLog : MonoBehaviour
             F.CheckDir(Data.Paths.ActionLog, out bool success);
             if (success)
             {
-                string path2 = Path.Combine(Data.Paths.ActionLog, "current.txt");
-                FileInfo info = new FileInfo(path2);
-                bool replaced = false;
-                if (info.Exists)
+                lock (Instance)
                 {
-                    //string name = info.Name;
-                    DateTime creation = CurrentLogSt;/*name.Length < 4
-                        ? DateTime.MinValue
-                        : (DateTime.TryParseExact(name.Substring(0, name.Length - 4), DATE_HEADER_FORMAT, Data.Locale,
-                            System.Globalization.DateTimeStyles.AssumeLocal, out DateTime dt)
-                            ? dt
-                            : DateTime.MinValue);*/
-                    if (creation != DateTime.MinValue && (DateTime.Now - creation).TotalHours > 1d)
+                    string outputFile = Path.Combine(Data.Paths.ActionLog, CurrentFileName);
+                    if ((DateTime.Now - CurrentLogSt).TotalHours > 1d)
                     {
-                        string path = Path.Combine(Data.Paths.ActionLog, creation.ToString(DATE_HEADER_FORMAT) + ".txt");
-                        try
+                        if (UCWarfare.CanUseNetCall && File.Exists(outputFile))
                         {
-                            info.CopyTo(path);
-                            File.SetCreationTime(path, creation);
-                            File.SetLastAccessTime(path, creation);
-                            File.SetLastWriteTime(path, creation);
-
-                            if (UCWarfare.CanUseNetCall)
+                            try
                             {
-                                using (FileStream str = new FileStream(info.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                using (FileStream str = new FileStream(outputFile, FileMode.Open, FileAccess.Read, FileShare.Read))
                                 {
                                     if (str.Length <= int.MaxValue)
                                     {
                                         int len = (int)str.Length;
                                         byte[] bytes = new byte[len];
                                         str.Read(bytes, 0, len);
-                                        NetCalls.SendLog.NetInvoke(bytes, creation);
+                                        NetCalls.SendLog.NetInvoke(bytes, CurrentLogSt);
                                     }
                                 }
                             }
+                            catch (Exception ex)
+                            {
+                                L.LogError("Error sending log to homebase:");
+                                L.LogError(ex);
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            L.LogError(ex);
-                        }
-                        info.Delete();
-                        replaced = true;
-                    }
-                }
-                using (FileStream stream = new FileStream(info.FullName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
-                {
-                    stream.Seek(0, SeekOrigin.End);
-                    while (items.Count > 0)
-                    {
-                        ActionLogItem item = items.Dequeue();
-                        WriteItem(ref item, stream);
-                    }
-                }
 
-                if (replaced)
-                {
-                    CurrentLogSt = DateTime.Now;
-                    File.SetCreationTime(path2, CurrentLogSt);
+                        SetTimeToNow();
+                        outputFile = Path.Combine(Data.Paths.ActionLog, CurrentFileName);
+                    }
+                    using (FileStream stream = new FileStream(outputFile, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                    {
+                        stream.Seek(0, SeekOrigin.End);
+                        while (items.Count > 0)
+                        {
+                            ActionLogItem item = items.Dequeue();
+                            WriteItem(ref item, stream);
+                        }
+                    }
                 }
             }
         }
     }
-    private void OnDestroy() => Update();
-    private void OnApplicationQuit() => Update();
+    private void OnDestroy()
+    {
+        if (Instance != null)
+        {
+            Update();
+            Instance = null!;
+        }
+    }
+    private void OnApplicationQuit()
+    {
+        if (Instance != null)
+        {
+            Update();
+            Instance = null!;
+        }
+    }
     private void WriteItem(ref ActionLogItem item, FileStream stream)
     {
         byte[] data = System.Text.Encoding.UTF8.GetBytes(item.ToString() + "\n");
@@ -116,6 +119,58 @@ public class ActionLog : MonoBehaviour
             else return v;
         }
     }
+    private void SendCurrentLog(ref MessageContext ctx)
+    {
+        lock (Instance)
+        {
+            string outputFile = Path.Combine(Data.Paths.ActionLog, CurrentFileName);
+            if (File.Exists(outputFile))
+            {
+                using (FileStream str = new FileStream(outputFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    int len = (int)Math.Min(str.Length, int.MaxValue);
+                    byte[] bytes = new byte[len];
+                    str.Read(bytes, 0, len);
+                    ctx.Reply(NetCalls.SendCurrentLog, bytes, CurrentLogSt);
+                }
+            }
+        }
+    }
+    internal static void OnConnected()
+    {
+        if (Instance != null)
+        {
+            F.CheckDir(Data.Paths.ActionLog, out bool success);
+            if (success)
+            {
+                lock (Instance)
+                {
+                    foreach (string file in Directory.EnumerateFiles(Data.Paths.ActionLog, "*.txt"))
+                    {
+                        try
+                        {
+                            string name = Path.GetFileNameWithoutExtension(file);
+                            if (DateTime.TryParseExact(name, DATE_HEADER_FORMAT, Data.Locale, DateTimeStyles.AssumeLocal, out DateTime dt) && dt != CurrentLogSt)
+                            {
+                                using (FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                {
+                                    int len = (int)Math.Min(str.Length, int.MaxValue);
+                                    byte[] bytes = new byte[len];
+                                    str.Read(bytes, 0, len);
+                                    NetCalls.SendLog.NetInvoke(bytes, dt);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError("Error sending ActionLog: ");
+                            L.LogError(ex);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     public static class NetCalls
     {
@@ -125,63 +180,33 @@ public class ActionLog : MonoBehaviour
         public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
 
         [NetCall(ENetCall.FROM_SERVER, 1128)]
-        internal static async Task ReceiveAckLog(MessageContext context, DateTime fileReceived)
+        internal static void ReceiveAckLog(MessageContext context, DateTime fileReceived)
         {
-            string path = Path.Combine(Data.Paths.ActionLog, fileReceived.ToString(DATE_HEADER_FORMAT) + ".txt");
-            await UCWarfare.ToUpdate();
-            if (File.Exists(path))
-                File.Delete(path);
+            string path = Path.Combine(Data.Paths.ActionLog, fileReceived.ToString(DATE_HEADER_FORMAT, Data.Locale) + ".txt");
+            if (Instance == null)
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            else
+            {
+                lock (Instance)
+                {
+                    if (File.Exists(path))
+                        File.Delete(path);
+                }
+            }
         }
         [NetCall(ENetCall.FROM_SERVER, 1129)]
-        internal static async Task ReceiveCurrentLogRequest(MessageContext context)
+        internal static void ReceiveCurrentLogRequest(MessageContext context)
         {
-            string path2 = Path.Combine(Data.Paths.ActionLog, "current.txt");
-            FileInfo info = new FileInfo(path2);
-            if (!info.Exists)
+            if (Instance != null)
+            {
+                Instance.SendCurrentLog(ref context);
+            }
+            else
             {
                 context.Reply(SendCurrentLog, Array.Empty<byte>(), default);
-                return;
-            }
-
-            await UCWarfare.ToUpdate();
-            using (FileStream str = info.OpenRead())
-            {
-                if (str.Length <= int.MaxValue)
-                {
-                    int len = (int)str.Length;
-                    byte[] bytes = new byte[len];
-                    str.Read(bytes, 0, len);
-                    context.Reply(SendCurrentLog, bytes, info.CreationTime);
-                }
-                else
-                {
-                    byte[] bytes = new byte[int.MaxValue];
-                    str.Read(bytes, 0, int.MaxValue);
-                    context.Reply(SendCurrentLog, bytes, info.CreationTime);
-                    return;
-                }
-            }
-        }
-    }
-    internal static void OnConnected()
-    {
-        F.CheckDir(Data.Paths.ActionLog, out bool success);
-        if (success)
-        {
-            foreach (string file in Directory.EnumerateFiles(Data.Paths.ActionLog))
-            {
-                try
-                {
-                    FileInfo info = new FileInfo(file);
-                    if (info.Name != "current.txt")
-                    {
-                        NetCalls.SendLog.NetInvoke(File.ReadAllBytes(file), info.CreationTime);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    L.LogError(ex);
-                }
             }
         }
     }
@@ -280,5 +305,6 @@ public enum EActionLogType : byte
     LINKED_VEHICLE_BAY_SIGN,
     UNLINKED_VEHICLE_BAY_SIGN,
     SET_VEHICLE_DATA_PROPERTY,
-    VEHICLE_BAY_FORCE_SPAWN
+    VEHICLE_BAY_FORCE_SPAWN,
+    PERMISSION_LEVEL_CHANGED
 }

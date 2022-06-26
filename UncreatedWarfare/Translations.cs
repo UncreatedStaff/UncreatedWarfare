@@ -1093,10 +1093,10 @@ partial class JSONMethods
 
             #region PermissionCommand
             { "permissions_current", "<color=#bfb9ac>Current permisions: <color=#ffdf91>{0}</color>.</color>" },
-            { "permissions_grant_success", "<color=#bfb9ac>Gave <color=#7f8182>{1}</color> <color=#dddddd>({2})</color>: <color=#ffdf91>{0}</color>.</color>" },
+            { "permissions_grant_success", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is now a <color=#ffdf91>{0}</color>.</color>" },
             { "permissions_grant_already", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is already at the <color=#ffdf91>{0}</color> level.</color>" },
-            { "permissions_revoke_already", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is already a <color=#ffdf91>member</color>.</color>" },
-            { "permissions_revoke_success", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is now a <color=#ffdf91>{0}</color>.</color>" },
+            { "permissions_revoke_already", "<color=#bfb9ac><color=#7f8182>{0}</color> <color=#dddddd>({1})</color> is already a <color=#ffdf91>member</color>.</color>" },
+            { "permissions_revoke_success", "<color=#bfb9ac><color=#7f8182>{0}</color> <color=#dddddd>({1})</color> is now a <color=#ffdf91>member</color>.</color>" },
             #endregion
         };
     }
