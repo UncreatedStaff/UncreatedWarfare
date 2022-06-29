@@ -33,8 +33,7 @@ public class UnbanCommand : Command
                 return;
             }
 
-            Data.DatabaseManager.AddUnban(targetId, ctx.CallerID);
-            OffenseManager.NetCalls.SendPlayerUnbanned.NetInvoke(targetId, ctx.CallerID, DateTime.Now);
+            OffenseManager.LogUnbanPlayer(targetId, ctx.CallerID, DateTime.Now);
 
             string tid = targetId.ToString(Data.Locale);
             ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", ctx.CallerID);

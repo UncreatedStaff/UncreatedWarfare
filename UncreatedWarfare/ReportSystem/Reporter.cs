@@ -260,7 +260,7 @@ public class Reporter : MonoBehaviour
                 });
                 break;
             }
-        }    
+        }
     }
     internal void OnVehicleDied(ulong owner, uint bayInstId, ulong killer, Guid vehicle, Guid weapon, EDamageOrigin origin, bool tk)
     {

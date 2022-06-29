@@ -55,13 +55,13 @@ public class BanCommand : Command
             else
                 callerName = FPlayerName.Console;
             ActionLog.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
-                (duration == -1 ? "PERMANENT" : duration.ToString(Data.Locale) + " sec"), ctx.CallerID);
+                (duration == -1 ? "PERMANENT" : duration.ToString(Data.Locale) + " SECONDS"), ctx.CallerID);
 
             // TODO Convert database to seconds!!!
 
-            await Data.DatabaseManager.AddBan(targetId, ctx.CallerID, duration, reason!);
+            OffenseManager.LogBanPlayer(targetId, ctx.CallerID, reason!, duration, DateTime.Now);
             await UCWarfare.ToUpdate();
-            OffenseManager.NetCalls.SendPlayerBanned.NetInvoke(targetId, ctx.CallerID, reason!, duration, DateTime.Now);
+
             if (duration == -1)
             {
                 if (ctx.IsConsole)

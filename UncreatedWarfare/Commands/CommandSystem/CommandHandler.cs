@@ -36,7 +36,6 @@ public static class CommandHandler
         if (CheckRunCommand(pl, text, true))
             shouldList = false;
     }
-
     public static void LoadCommands()
     {
 #if DEBUG
@@ -398,7 +397,6 @@ public static class CommandHandler
         if (_activeVanillaCmd is not null)
             _activeVanillaCmd.Reply("<color=#bfb9ac>" + message + "</color>");
     }
-
     private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
     {
         IExecutableCommand cmd = _commands[index];
@@ -430,7 +428,6 @@ public static class CommandHandler
                 i.MarkComplete();
                 if (player is not null)
                     CommandWaitTask.OnCommandExecuted(player, cmd);
-                return;
             }
             catch (Exception ex)
             {

@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
@@ -37,33 +38,32 @@ internal class _DebugCommand : Command
     {
         if (ctx.TryGet(0, out string operation))
         {
-            BaseCommandInteraction? ex2 = null;
+            MethodInfo info;
             try
             {
-                MethodInfo info = type.GetMethod(operation, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
-                if (info == null)
-                    throw ctx.Reply("test_no_method", operation);
-                try
-                {
-#if DEBUG
-                    using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
-#endif
-                    ctx.Offset = 1;
-                    info.Invoke(this, new object[1] { ctx });
-                    ctx.Offset = 0;
-                }
-                catch (Exception ex)
-                {
-                    ex2 = ex as BaseCommandInteraction;
-                    if (ex2 is not null)
-                        throw ex2;
-                    L.LogError(ex.InnerException ?? ex);
-                    throw ctx.Reply("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
-                }
+                info = type.GetMethod(operation, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
             }
             catch (AmbiguousMatchException)
             {
                 throw ctx.Reply("test_multiple_matches", operation);
+            }
+            if (info == null)
+                throw ctx.Reply("test_no_method", operation);
+            try
+            {
+#if DEBUG
+                using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
+#endif
+                ctx.Offset = 1;
+                info.Invoke(this, new object[1] { ctx });
+                ctx.Offset = 0;
+            }
+            catch (Exception ex)
+            {
+                if (ex is BaseCommandInteraction b)
+                    throw b;
+                L.LogError(ex.InnerException ?? ex);
+                throw ctx.Reply("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
             }
         }
         else throw ctx.SendCorrectUsage("/test <operation> [parameters...]");
@@ -721,8 +721,13 @@ internal class _DebugCommand : Command
                 "[2x] %SPEAKER%: chat 4",
             }
         };
-        Reporter.NetCalls.SendReportInvocation.NetInvoke(report, false);
-        L.Log("Sent chat abuse report.");
+        Task.Run(async () =>
+        {
+            L.Log("Sending chat abuse report.");
+            RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient!, report, false);
+            L.Log(res.Responded && res.Parameters.Length > 1 && res.Parameters[1] is string url ? ("URL: " + url) : "No response.", ConsoleColor.DarkYellow);
+        });
+        ctx.Defer();
     }
     private void questdump(CommandInteraction ctx)
     {

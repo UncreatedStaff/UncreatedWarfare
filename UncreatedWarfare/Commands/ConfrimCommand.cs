@@ -6,5 +6,9 @@ namespace Uncreated.Warfare.Commands;
 public class ConfirmCommand : Command
 {
     public ConfirmCommand() : base("confirm", EAdminType.MEMBER) { }
-    public override void Execute(CommandInteraction cts) { }
+
+    public override void Execute(CommandInteraction ctx)
+    {
+        ctx.Defer();
+    }
 }

@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Uncreated.Homebase.Unturned.Warfare;
 using Uncreated.Networking;
 using Uncreated.Players;
@@ -57,6 +58,7 @@ public static class Data
         public static readonly string LangStorage      = Path.Combine(BaseDirectory, "Lang")      + Path.DirectorySeparatorChar;
         public static readonly string Logs             = Path.Combine(BaseDirectory, "Logs")      + Path.DirectorySeparatorChar;
         public static readonly string ActionLog        = Path.Combine(Logs,          "ActionLog") + Path.DirectorySeparatorChar;
+        public static readonly string PendingOffenses  = Path.Combine(BaseDirectory, "Offenses")  + Path.DirectorySeparatorChar;
 
         public static readonly string CurrentLog       = Path.Combine(Logs,          "current.txt");
         public static string FlagStorage        => _flagCache is null       ? (_flagCache       = Path.Combine(MapStorage, "Flags")      + Path.DirectorySeparatorChar) : _flagCache;
@@ -449,6 +451,7 @@ public static class Data
         ActionLog.OnConnected();
         if (Gamemode.shutdownAfterGame)
             ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
+        Task.Run(OffenseManager.OnConnected).ConfigureAwait(false);
     }
     private static void DuplicateKeyError(Exception ex)
     {

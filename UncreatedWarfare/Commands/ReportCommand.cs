@@ -243,6 +243,7 @@ public class ReportCommand : Command
         new KeyValuePair<string, EReportType>("vc racism",               EReportType.VOICE_CHAT_ABUSE),
         new KeyValuePair<string, EReportType>("vc",                      EReportType.VOICE_CHAT_ABUSE),
         new KeyValuePair<string, EReportType>("soloing",                 EReportType.SOLOING_VEHICLE),
+        new KeyValuePair<string, EReportType>("solo",                    EReportType.SOLOING_VEHICLE),
         new KeyValuePair<string, EReportType>("soloing vehicles",        EReportType.SOLOING_VEHICLE),
         new KeyValuePair<string, EReportType>("asset waste",             EReportType.WASTING_ASSETS),
         new KeyValuePair<string, EReportType>("asset wasteing",          EReportType.WASTING_ASSETS),

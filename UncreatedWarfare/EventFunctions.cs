@@ -696,8 +696,7 @@ public static class EventFunctions
             !UCWarfare.Config.ModerationSettings.BattleyeExclusions.Contains(reason))
         {
             ulong id = client.playerID.steamID.m_SteamID;
-            Data.DatabaseManager.AddBattleyeKick(id, reason);
-            OffenseManager.NetCalls.SendPlayerBattleyeKicked.NetInvoke(id, reason, DateTime.Now);
+            OffenseManager.LogBattlEyeKicksPlayer(id, reason, DateTime.Now);
         }
     }
     internal static void OnConsume(Player instigatingPlayer, ItemConsumeableAsset consumeableAsset)

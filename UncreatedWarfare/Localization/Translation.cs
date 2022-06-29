@@ -840,22 +840,22 @@ public static class Translation
         else if (minutes < 1440) // < 1 day 
         {
             int hours = F.DivideRemainder(minutes, 60, out int minutesOverflow);
-            return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
+            return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? string.Empty : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
         }
         else if (minutes < 43800) // < 1 month (30.416 days)
         {
             int days = F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out int hoursOverflow);
-            return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
+            return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? string.Empty : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
         }
         else if (minutes < 525600) // < 1 year
         {
             int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out int daysOverflow);
-            return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
+            return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? string.Empty : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
         }
         else // > 1 year
         {
             int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
-            return $"{years} {Translate("time_year" + years.S(), player)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
+            return $"{years} {Translate("time_year" + years.S(), player)}{(monthOverflow == 0 ? string.Empty : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
         }
     }
     public static string GetTimeFromMinutes(this int minutes, string language)
@@ -1748,7 +1748,7 @@ public static class Translation
         else return TranslateEnumName<TEnum>(JSONMethods.DEFAULT_LANGUAGE);
     }
     private static readonly Dictionary<Type, Dictionary<string, Dictionary<string, string>>> enumTranslations = new Dictionary<Type, Dictionary<string, Dictionary<string, string>>>();
-    private const string ENUM_TRANSLATION_FILE_NAME = "Enums\\";
+    private static readonly string ENUM_TRANSLATION_FILE_NAME = "Enums" + Path.DirectorySeparatorChar;
     public static void ReadEnumTranslations(List<KeyValuePair<Type, string?>> extEnumTypes)
     {
         enumTranslations.Clear();

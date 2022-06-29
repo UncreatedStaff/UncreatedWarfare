@@ -17,7 +17,8 @@ public class WarfareSQL : MySqlDatabase
 {
     const string DEFAULT_GATEWAY_BEGINNING = "192.168.1.";
     const string LOCAL_IP = "127.0.0.1";
-    const string TIME_FORMAT_SQL = "{0:yyyy-MM-dd HH:mm:ss}";
+    public const string TIME_FORMAT_SQL = "{0:" + TIME_FORMAT_SQL_I + "}";
+    public const string TIME_FORMAT_SQL_I = "yyyy-MM-dd HH:mm:ss";
     public WarfareSQL(MySqlData data) : base(data)
     {
         DebugLogging |= UCWarfare.Config.Debug;

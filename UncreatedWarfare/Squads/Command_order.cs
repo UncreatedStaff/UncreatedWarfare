@@ -22,6 +22,9 @@ public class OrderCommand : Command
 
     public override void Execute(CommandInteraction ctx)
     {
+#if RELEASE
+        throw ctx.SendNotImplemented();
+#else
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -268,5 +271,6 @@ public class OrderCommand : Command
             else
                 ctx.Reply("order_e_squadnoexist", ctx.Get(0)!);
         }
+#endif
     }
 }

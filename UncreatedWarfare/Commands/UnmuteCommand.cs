@@ -30,49 +30,8 @@ public class UnmuteCommand : Command
                     return;
                 }
 			}
-            Task.Run(async () =>
-            {
-                FPlayerName names = onlinePlayer is null ? await Data.DatabaseManager.GetUsernamesAsync(playerId) : F.GetPlayerOriginalNames(onlinePlayer);
-                if (names.WasFound)
-				{
-					int rows = await Data.DatabaseManager.NonQueryAsync("UPDATE `muted` SET `Deactivated` = 1 WHERE `Steam64` = @0 AND " +
-						"`Deactivated` = 0 AND (`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 < `Duration`)", new object[] { playerId });
-                    await UCWarfare.ToUpdate();
-					if (rows == 0)
-					{
-						ctx.Reply("unmute_not_muted", names.CharacterName);
-					}
-                    else
-					{
-						if (onlinePlayer is null)
-							onlinePlayer = UCPlayer.FromID(playerId);
-						if (onlinePlayer is not null)
-						{
-							onlinePlayer.MuteReason = null;
-							onlinePlayer.MuteType = EMuteType.NONE;
-							onlinePlayer.TimeUnmuted = DateTime.MinValue;
-						}
-						if (ctx.IsConsole)
-                        {
-                            Chat.BroadcastToAllExcept(playerId, "unmute_unmuted_broadcast_operator", names.CharacterName);
-                            onlinePlayer?.SendChat("unmute_unmuted_dm_operator");
-                        }
-                        else
-						{
-                            FPlayerName n2 = F.GetPlayerOriginalNames(ctx.Caller!);
-							Chat.BroadcastToAllExcept(playerId, "unmute_unmuted_broadcast", names.CharacterName, n2.CharacterName);
-							onlinePlayer?.SendChat("unmute_unmuted_dm", n2.CharacterName);
-						}
-                        ctx.LogAction(EActionLogType.UNMUTE_PLAYER, playerId.ToString() + " unmuted.");
-                        ctx.Reply("unmute_unmuted", names.CharacterName);
-                    }
-				}
-                else
-				{
-					await UCWarfare.ToUpdate();
-		            ctx.Reply("unmute_not_found");
-				}
-            });
+
+            OffenseManager.UnmutePlayer(playerId, ctx.CallerID);
             ctx.Defer();
         }
         else ctx.Reply("unmute_not_found");

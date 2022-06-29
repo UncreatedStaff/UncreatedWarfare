@@ -31,8 +31,7 @@ public class KickCommand : Command
         FPlayerName names = F.GetPlayerOriginalNames(target);
         Provider.kick(target.Player.channel.owner.playerID.steamID, reason!);
 
-        OffenseManager.NetCalls.SendPlayerKicked.NetInvoke(targetId, ctx.CallerID, reason!, DateTime.Now);
-        Data.DatabaseManager.AddKick(targetId, ctx.CallerID, reason!);
+        OffenseManager.LogKickPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
 
         ctx.LogAction(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.Locale)} FOR \"{reason}\"");
         if (ctx.IsConsole)

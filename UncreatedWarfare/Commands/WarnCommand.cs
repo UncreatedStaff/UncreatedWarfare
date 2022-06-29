@@ -27,8 +27,7 @@ public class WarnCommand : Command
 
         FPlayerName targetNames = F.GetPlayerOriginalNames(target);
 
-        Data.DatabaseManager.AddWarning(targetId, ctx.CallerID, reason!);
-        OffenseManager.NetCalls.SendPlayerWarned.NetInvoke(targetId, ctx.CallerID, reason!, DateTime.Now);
+        OffenseManager.LogWarnPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
 
         string tid = targetId.ToString(Data.Locale);
         ActionLog.Add(EActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", ctx.CallerID);

@@ -49,7 +49,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     private DateTime NextRestartTime;
     public static int Season => Version.Major;
     bool IUncreatedSingleton.IsLoaded => IsLoaded;
-    public static bool IsLoaded => I != null && I.isActiveAndEnabled;
+    public static bool IsLoaded => I is not null;
     public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
     public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && Data.NetClient is not null && Data.NetClient.IsActive;
     private void Awake()

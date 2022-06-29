@@ -309,6 +309,7 @@ public class KitCommand : Command
                             KitManager.UpdateSigns(kit, onlinePlayer);
                         }
                     });
+                    ctx.Defer();
                 }
                 else
                     ctx.Reply("kit_e_noexist", kitName);
@@ -363,6 +364,7 @@ public class KitCommand : Command
                             KitManager.UpdateSigns(kit, onlinePlayer);
                         }
                     });
+                    ctx.Defer();
                 }
                 else
                     ctx.Reply("kit_e_noexist", kitName);
@@ -408,6 +410,7 @@ public class KitCommand : Command
                             KitManager.UpdateSigns(newKit);
                             ctx.Reply("kit_copied", existing.Name, newKit.Name);
                         });
+                        ctx.Defer();
                     }
                     else
                         ctx.Reply("kit_e_exist", kitName);
@@ -471,6 +474,7 @@ public class KitCommand : Command
                         ctx.Reply("kit_l_e_kitexists", loadoutName);
                     }
                 }).ConfigureAwait(false);
+                ctx.Defer();    
             }
             else
                 ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <team (1 = " + TeamManager.Team1Code + ", 2 = " + TeamManager.Team2Code + "> <class> <sign text>");
