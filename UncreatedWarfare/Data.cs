@@ -73,7 +73,7 @@ public static class Data
             _vehicleCache = null;
         }
     }
-    public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/\|][il][gq](?!h)\W{0,1}[gqb]{0,1}\W{0,1}[gqb]{0,1}\W{0,1}[ae]{0,1}\W{0,1}[r]{0,1}(?:ia){0,1}){0,1}(?:f\W{0,1}a\W{0,1}g{0,2}\W{0,1}o{0,1}\W{0,1}t{0,1}){0,1}");
+    public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/][il][gqb](?!h)\W{0,1}[gqb]{0,1}\W{0,1}[gqb]{0,1}\W{0,1}[ae]{0,1}\W{0,1}[r]{0,1}(?:ia){0,1})|(?:f\W{0,1}a\W{0,1}g{1,2}\W{0,1}o{0,1}\W{0,1}t{0,1})");
     public static readonly CultureInfo Locale = new CultureInfo("en-US");
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;
