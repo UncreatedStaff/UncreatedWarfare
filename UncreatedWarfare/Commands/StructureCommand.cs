@@ -99,6 +99,8 @@ public class StructureCommand : Command
         }
         else if (ctx.MatchParameter(0, "pop", "destroy"))
         {
+            ctx.AssertPermissions(EAdminType.HELPER);
+
             if (ctx.TryGetTarget(out InteractableVehicle vehicle))
             {
                 VehicleBay.DeleteVehicle(vehicle);

@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Text.RegularExpressions;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -193,13 +194,27 @@ public static partial class Patches
             ChatManager.onChatted?.Invoke(callingPlayer, mode, ref chatted, ref isRich, text, ref isVisible);
             if (!(ChatManager.process(callingPlayer, text, fromUnityEvent) && isVisible))
                 return false;
-            if (caller != null && (caller.MuteType & Commands.EMuteType.TEXT_CHAT) == Commands.EMuteType.TEXT_CHAT && caller.TimeUnmuted > DateTime.Now)
+            if (caller != null)
             {
-                if (caller.TimeUnmuted == DateTime.MaxValue)
-                    caller.SendChat("text_chat_feedback_muted_permanent", caller.MuteReason ?? "unknown");
-                else
-                    caller.SendChat("text_chat_feedback_muted", caller.TimeUnmuted.ToString("g") + " EST", caller.MuteReason ?? string.Empty);
-                return false;
+                if ((caller.MuteType & Commands.EMuteType.TEXT_CHAT) == Commands.EMuteType.TEXT_CHAT &&
+                    caller.TimeUnmuted > DateTime.Now)
+                {
+                    if (caller.TimeUnmuted == DateTime.MaxValue)
+                        caller.SendChat("text_chat_feedback_muted_permanent", caller.MuteReason ?? "unknown");
+                    else
+                        caller.SendChat("text_chat_feedback_muted", caller.TimeUnmuted.ToString("g") + " EST", caller.MuteReason ?? string.Empty);
+                    return false;
+                }
+                if (!duty)
+                {
+                    Match match = Data.ChatFilter.Match(text);
+                    if (match.Success && match.Length > 0)
+                    {
+                        caller.SendChat("text_chat_feedback_chat_filter", match.Value);
+                        ActionLog.Add(EActionLogType.CHAT_FILTER_VIOLATION, mode switch { EChatMode.LOCAL => "AREA/SQUAD: ", EChatMode.GLOBAL => "GLOBAL: ", _ => "TEAM: " } + text, caller);
+                        return false;
+                    }
+                }
             }
 
             if (callingPlayer.isAdmin || duty)

@@ -11,7 +11,7 @@ public class MuteCommand : Command
     private const string SYNTAX = "/mute <voice|text|both> <name or steam64> <permanent | duration in minutes> <reason...>";
     private const string HELP = "Mute players in either voice chat or text chat.";
 
-    public MuteCommand() : base("mute", EAdminType.MEMBER) { }
+    public MuteCommand() : base("mute", EAdminType.MODERATOR) { }
 
     public override void Execute(CommandInteraction ctx)
     {

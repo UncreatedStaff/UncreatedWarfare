@@ -420,7 +420,7 @@ internal class _DebugCommand : Command
     }
     private void rotation(CommandInteraction ctx)
     {
-        ctx.AssertPermissions(EAdminType.STAFF);
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out FlagGamemode fg);
         fg.PrintFlagRotation();
@@ -451,7 +451,7 @@ internal class _DebugCommand : Command
     {
         ctx.AssertRanByPlayer();
 
-        L.Log(F.GetLayer(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward, RayMasks.BLOCK_COLLISION), ConsoleColor.DarkCyan); // so as to not hit player
+        ctx.Reply("<color=#fdfdf>Layer: <b>" + F.GetLayer(ctx.Caller.Player.look.aim.position, ctx.Caller.Player.look.aim.forward, RayMasks.BLOCK_COLLISION) + "</b></color>"); // so as to not hit player
     }
     private void clearui(CommandInteraction ctx)
     {

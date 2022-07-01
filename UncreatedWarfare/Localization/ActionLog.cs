@@ -150,7 +150,8 @@ public class ActionLog : MonoBehaviour
                         try
                         {
                             string name = Path.GetFileNameWithoutExtension(file);
-                            if (DateTime.TryParseExact(name, DATE_HEADER_FORMAT, Data.Locale, DateTimeStyles.AssumeLocal, out DateTime dt) && dt != CurrentLogSt)
+                            if (name.Equals(CurrentFileName, StringComparison.Ordinal)) continue;
+                            if (DateTime.TryParseExact(name, DATE_HEADER_FORMAT, Data.Locale, DateTimeStyles.AssumeLocal, out DateTime dt))
                             {
                                 using (FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
                                 {
@@ -306,5 +307,6 @@ public enum EActionLogType : byte
     UNLINKED_VEHICLE_BAY_SIGN,
     SET_VEHICLE_DATA_PROPERTY,
     VEHICLE_BAY_FORCE_SPAWN,
-    PERMISSION_LEVEL_CHANGED
+    PERMISSION_LEVEL_CHANGED,
+    CHAT_FILTER_VIOLATION
 }

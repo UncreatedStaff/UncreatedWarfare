@@ -24,6 +24,8 @@ public class VCommand : Command
 
         ctx.AssertArgs(1, SYNTAX);
 
+        ctx.AssertOnDuty();
+
         ctx.AssertRanByPlayer();
 
         if (!ctx.TryGet(0, out VehicleAsset asset, out bool mutiple, true, allowMultipleResults: true))

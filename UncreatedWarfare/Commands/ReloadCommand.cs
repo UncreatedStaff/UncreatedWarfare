@@ -29,7 +29,7 @@ public class ReloadCommand : Command
 
     public static Dictionary<string, IConfiguration> ReloadableConfigs = new Dictionary<string, IConfiguration>();
 
-    public ReloadCommand() : base("reload", EAdminType.ADMIN | EAdminType.VANILLA_ADMIN, 1)
+    public ReloadCommand() : base("reload", EAdminType.ADMIN, 1)
     {
 
     }

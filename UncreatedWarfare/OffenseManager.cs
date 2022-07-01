@@ -883,7 +883,7 @@ public static class OffenseManager
 
             LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
 
-            string dur = duration == -1 ? "PERMANENT" : (duration.GetTimeFromSeconds(0) + " SECONDS");
+            string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
             ActionLog.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur);
 
             if (muter == null)

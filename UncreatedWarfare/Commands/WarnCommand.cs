@@ -8,9 +8,9 @@ namespace Uncreated.Warfare.Commands;
 public class WarnCommand : Command
 {
     private const string SYNTAX = "/warn";
-    private const string HELP = "Does nothing.";
+    private const string HELP = "Warn misbehaving players.";
 
-    public WarnCommand() : base("warn", EAdminType.MEMBER) { }
+    public WarnCommand() : base("warn", EAdminType.MODERATOR) { }
 
     public override void Execute(CommandInteraction ctx)
     {

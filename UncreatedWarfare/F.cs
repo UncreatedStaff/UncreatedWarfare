@@ -1417,6 +1417,7 @@ public static class F
         il.Emit(OpCodes.Ret);
         return (StaticGetter<TValue>)method.CreateDelegate(typeof(StaticGetter<TValue>));
     }
+
     /// <returns>Total amount of time in seconds. <see langword="-1"/> is returned if <paramref name="input"/> is permanent.</returns>
     public static int ParseTime(string input)
     {

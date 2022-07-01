@@ -65,6 +65,7 @@ partial class JSONMethods
             { "player_disconnected", "<color=#e6e3d5><color=#ffff1a>{0}</color> left the server.</color>" },
             { "flag_header", "Flags" },
             { "null_transform_kick_message", "Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0})." },
+            { "text_chat_feedback_chat_filter", "<color=#ff8c69>Our chat filter flagged <color=#fdfdfd>{0}</color>, so the message wasn't sent." },
 
             #region Leaderboard
             // universal
