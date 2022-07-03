@@ -197,7 +197,7 @@ public static class OffenseManager
         EMuteType type = EMuteType.NONE;
         await Data.DatabaseManager.QueryAsync(
             "SELECT `Reason`, `Duration`, `Timestamp`, `Type` FROM `muted` WHERE `Steam64` = @0 AND `Deactivated` = 0 AND " +
-            "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60 < `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) / -60) - `Duration` LIMIT 1;",
+            "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1 < `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1) - `Duration` LIMIT 1;",
             new object[1] { joining.Steam64 },
             R =>
             {
@@ -216,7 +216,7 @@ public static class OffenseManager
         );
         if (type == EMuteType.NONE) return;
         DateTime now = DateTime.Now;
-        DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : timestamp + TimeSpan.FromMinutes(duration);
+        DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : timestamp + TimeSpan.FromSeconds(duration);
         joining.TimeUnmuted = unmutedTime;
         joining.MuteReason = reason;
         joining.MuteType = type;

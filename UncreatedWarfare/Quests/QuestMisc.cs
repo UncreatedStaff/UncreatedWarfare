@@ -1878,7 +1878,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         choice.Read(ref reader);
         return choice;
     }
-    private static EAssetType GetAssetType() => JsonAssetReference<TAsset>.AssetTypeHelper.Type;
+    private static EAssetType GetAssetType() => AssetTypeHelper<TAsset>.Type;
     IDynamicValue<Guid>.IChoice IDynamicValue<Guid>.GetValue() => GetValue();
 
     public override string ToString()

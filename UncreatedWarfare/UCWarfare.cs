@@ -38,6 +38,9 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version      = new Version(2, 6, 0, 2);
     private readonly SystemConfig _config       = new SystemConfig();
+#if DEBUG
+    private readonly TestConfig _testConfig     = new TestConfig();
+#endif
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
@@ -396,6 +399,13 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
                 if (Announcer != null)
                     Data.Singletons.UnloadSingleton(ref Announcer);
             }
+
+            if (Maps.MapScheduler.Instance != null)
+            {
+                Destroy(Maps.MapScheduler.Instance);
+                Maps.MapScheduler.Instance = null!;
+            }
+
             if (Debugger != null)
                 Destroy(Debugger);
             OffenseManager.Deinit();
@@ -506,12 +516,19 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
 public class UCWarfareNexus : IModuleNexus
 {
+    private static Stopwatch sw = new Stopwatch();
+    static UCWarfareNexus()
+    {
+        sw.Start();
+    }
     public bool Loaded { get; private set; } = false;
     void IModuleNexus.initialize()
     {
+        sw.Stop();
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;
         GameObject go = new GameObject("UCWarfare " + UCWarfare.Version.ToString());
+        go.AddComponent<Maps.MapScheduler>();
         UnityEngine.Object.DontDestroyOnLoad(go);
         UCWarfare warfare = go.AddComponent<UCWarfare>();
     }

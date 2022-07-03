@@ -1012,7 +1012,7 @@ public class CommandInteraction : BaseCommandInteraction
             multipleResultsFound = false;
             return asset is not null && (selector is null || selector(asset));
         }
-        EAssetType type = JsonAssetReference<TAsset>.AssetTypeHelper.Type;
+        EAssetType type = AssetTypeHelper<TAsset>.Type;
         if (type != EAssetType.NONE)
         {
             if (ushort.TryParse(p, out ushort value))

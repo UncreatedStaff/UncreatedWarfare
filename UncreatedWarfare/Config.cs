@@ -1,8 +1,10 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Xml.Serialization;
 using Uncreated.SQL;
+using Uncreated.Warfare.Maps;
 
 namespace Uncreated.Warfare;
 
@@ -159,3 +161,34 @@ public class SystemConfigData : ConfigData
         }
     }
 }
+
+#if DEBUG
+public class TestConfig : Config<TestConfigData>
+{
+    public TestConfig() : base(Warfare.Data.Paths.BaseDirectory, "test_config.json", "testconfig")
+    {
+    }
+    protected override void OnReload()
+    {
+        L.Log("Reloaded test config");
+        L.Log(Data.IntegerTest.ToString());
+        L.Log(Data.StringTest.ToString());
+        L.Log(Data.AssetTest.ToString());
+        base.OnReload();
+    }
+}
+public class TestConfigData : ConfigData
+{
+    public RotatableConfig<int> IntegerTest;
+    public RotatableConfig<string> StringTest;
+    public RotatableConfig<JsonAssetReference<ItemAsset>> AssetTest;
+    public override void SetDefaults()
+    {
+        IntegerTest = 4;
+        StringTest = "TeamCTF";
+        AssetTest = (JsonAssetReference<ItemAsset>)31902;
+    }
+}
+
+
+#endif
