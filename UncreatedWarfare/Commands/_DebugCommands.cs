@@ -15,6 +15,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
@@ -281,13 +282,14 @@ internal class _DebugCommand : Command
         string directory = Path.Combine(Data.Paths.FlagStorage, "GraphExport", Path.DirectorySeparatorChar.ToString());
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
+        List<Flag> rot = new List<Flag>();
         for (int i = 0; i < times; i++)
         {
+            ObjectivePathing.TryPath(rot);
             zones.Clear();
-            ReloadCommand.ReloadFlags();
-            fg.Rotation.ForEach(x => zones.Add(x.ZoneData));
-            ZoneDrawing.DrawZoneMap(fg, Path.Combine(directory, "zonegraph_" + i.ToString(Data.Locale)));
+            ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.Locale)));
             L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
+            rot.Clear();
         }
     }
     private void zone(CommandInteraction ctx)
@@ -341,24 +343,24 @@ internal class _DebugCommand : Command
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertGamemode(out IFlagRotation fg);
-        bool all = false;
-        bool extra = false;
+        bool all = true;
+        bool extra = true;
         bool path = true;
         bool range = false;
-        bool drawIn = false;
+        bool drawIn = true;
         bool drawAngles = false;
         if (ctx.HasArgs(6))
         {
-            if (ctx.MatchParameter(0, "all")) all = true;
+            if (ctx.MatchParameter(0, "active")) all = false;
             else if (!ctx.MatchParameter(0, "active")) ctx.Reply("test_zonearea_syntax");
-            if (ctx.MatchParameter(1, "true")) extra = true;
+            if (ctx.MatchParameter(1, "false")) extra = false;
             else if (!ctx.MatchParameter(1, "false")) ctx.Reply("test_zonearea_syntax");
             if (ctx.MatchParameter(2, "false")) path = false;
             else if (!ctx.MatchParameter(2, "true")) ctx.Reply("test_zonearea_syntax");
             if (ctx.MatchParameter(3, "true")) range = true;
             else if (!ctx.MatchParameter(3, "false")) ctx.Reply("test_zonearea_syntax");
-            if (ctx.MatchParameter(4, "true")) drawIn = true;
-            else if (!ctx.MatchParameter(4, "false")) ctx.Reply("test_zonearea_syntax");
+            if (ctx.MatchParameter(4, "false")) drawIn = false;
+            else if (!ctx.MatchParameter(4, "true")) ctx.Reply("test_zonearea_syntax");
             if (ctx.MatchParameter(5, "true")) drawAngles = true;
             else if (!ctx.MatchParameter(5, "false")) ctx.Reply("test_zonearea_syntax");
         }
@@ -416,7 +418,7 @@ internal class _DebugCommand : Command
         ctx.AssertGamemode(out IFlagRotation fg);
 
         ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWGRAPH");
-        ZoneDrawing.DrawZoneMap(fg, null);
+        ZoneDrawing.DrawZoneMap(fg.LoadedFlags, fg.Rotation, null);
     }
     private void rotation(CommandInteraction ctx)
     {

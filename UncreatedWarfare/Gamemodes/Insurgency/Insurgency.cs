@@ -295,15 +295,6 @@ public class Insurgency :
                     KitManager.TryGiveUnarmedKit(player);
             }
         }
-        ulong team = player.GetTeam();
-        FPlayerName names = F.GetPlayerOriginalNames(player);
-        if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
-        {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
-                KitManager.GiveKit(player, unarmed);
-            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
-            else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
-        }
         if (!AllowCosmetics)
         {
             player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
@@ -317,6 +308,25 @@ public class Insurgency :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 1);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
+        }
+        ulong team = player.GetTeam();
+        if (!_joinManager.IsInLobby(player) && PlayerSave.TryReadSaveFile(player, out PlayerSave save) && (save.LastGame != _gameID || save.ShouldRespawnOnJoin))
+            _joinManager.OnPlayerConnected(player, !wasAlreadyOnline);
+        else if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
+            OnPlayerJoinedTeam(player);
+        StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
+        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
+    }
+    private void OnPlayerJoinedTeam(UCPlayer player)
+    {
+        ulong team = player.GetTeam();
+        FPlayerName names = F.GetPlayerOriginalNames(player);
+        if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
+        {
+            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+                KitManager.GiveKit(player, unarmed);
+            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
+            else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
         }
         _gameStats.OnPlayerJoin(player);
         if (isScreenUp && _endScreen != null)
@@ -332,8 +342,6 @@ public class Insurgency :
             TicketManager.GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
             TicketManager.UpdateUI(player.Connection, UIID, tickets, message);
         }
-        StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
-        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
     }
     public override void OnGroupChanged(GroupChanged e)
     {

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Maps;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Teams;
@@ -13,8 +14,7 @@ namespace Uncreated.Warfare.Teams;
 public delegate void PlayerTeamDelegate(SteamPlayer player, ulong team);
 public static class TeamManager
 {
-    //private static TeamConfig _data;
-    private static readonly Config<TeamConfig> _data = new Config<TeamConfig>(Data.Paths.TeamStorage, "teams.json");
+    private static readonly TeamConfig _data = UCWarfare.IsLoaded ? new TeamConfig() : null!;
     public const ulong ZOMBIE_TEAM_ID = ulong.MaxValue;
 
     public static ushort Team1Tickets;
@@ -28,7 +28,7 @@ public static class TeamManager
     internal static readonly Dictionary<ulong, byte> PlayerBaseStatus = new Dictionary<ulong, byte>();
     public static event PlayerTeamDelegate OnPlayerEnteredMainBase;
     public static event PlayerTeamDelegate OnPlayerLeftMainBase;
-    public static TeamConfig Config => _data.Data;
+    public static TeamConfigData Config => _data.Data;
     public static ulong Team1ID => 1;
     public static ulong Team2ID => 2;
     public static ulong AdminID => 3;
@@ -38,13 +38,43 @@ public static class TeamManager
     public static string Team1Code => _data.Data.Team1Abbreviation;
     public static string Team2Code => _data.Data.Team2Abbreviation;
     public static string AdminCode => _data.Data.AdminTeamAbbreviation;
-    public static Color Team1Color => _data.Data.Team1Color;
-    public static Color Team2Color => _data.Data.Team2Color;
-    public static Color AdminColor => _data.Data.AdminColor;
-    public static Color NeutralColor => _data.Data.NeutralColor;
-    public static string Team1ColorHex => _data.Data.Team1ColorHex;
-    public static string Team2ColorHex => _data.Data.Team2ColorHex;
-    public static string AdminColorHex => _data.Data.AdminColorHex;
+    public static Color Team1Color
+    {
+        get
+        {
+            if (_t1Clr.HasValue)
+                return _t1Clr.Value;
+            _t1Clr = Team1ColorHex.Hex();
+            return _t1Clr.Value;
+        }
+    }
+    public static Color Team2Color
+    {
+        get
+        {
+            if (_t2Clr.HasValue)
+                return _t2Clr.Value;
+            _t2Clr = Team2ColorHex.Hex();
+            return _t2Clr.Value;
+        }
+    }
+    public static Color AdminColor
+    {
+        get
+        {
+            if (_t3Clr.HasValue)
+                return _t3Clr.Value;
+            _t3Clr = AdminColorHex.Hex();
+            return _t3Clr.Value;
+        }
+    }
+    public static Color NeutralColor => UCWarfare.GetColor("neutral");
+    private static Color? _t1Clr;
+    private static Color? _t2Clr;
+    private static Color? _t3Clr;
+    public static string Team1ColorHex => _data.Data.Team1Color;
+    public static string Team2ColorHex => _data.Data.Team2Color;
+    public static string AdminColorHex => _data.Data.AdminTeamColor;
     public static string NeutralColorHex => _data.Data.NeutralColorHex;
     public static string Team1UnarmedKit => _data.Data.Team1UnarmedKit;
     public static string Team2UnarmedKit => _data.Data.Team2UnarmedKit;
@@ -237,10 +267,12 @@ public static class TeamManager
         object? val = typeof(GroupManager).GetField("knownGroups", BindingFlags.Static | BindingFlags.NonPublic)?.GetValue(null);
         if (val is Dictionary<CSteamID, GroupInfo> val2)
         {
+            bool ft1 = false, ft2 = false, ft3 = false;
             foreach (KeyValuePair<CSteamID, GroupInfo> kv in val2.ToList())
             {
                 if (kv.Key.m_SteamID == _data.Data.Team1ID)
                 {
+                    ft1 = true;
                     if (kv.Value.name != Team1Name)
                     {
                         L.Log("Renamed T1 group " + kv.Value.name + " to " + Team1Name, ConsoleColor.Magenta);
@@ -249,6 +281,7 @@ public static class TeamManager
                 }
                 else if (kv.Key.m_SteamID == _data.Data.Team2ID)
                 {
+                    ft2 = true;
                     if (kv.Value.name != Team2Name)
                     {
                         L.Log("Renamed T2 group " + kv.Value.name + " to " + Team2Name, ConsoleColor.Magenta);
@@ -257,6 +290,7 @@ public static class TeamManager
                 }
                 else if (kv.Key.m_SteamID == _data.Data.AdminID)
                 {
+                    ft3 = true;
                     if (kv.Value.name != AdminName)
                     {
                         L.Log("Renamed Admin group " + kv.Value.name + " to " + AdminName, ConsoleColor.Magenta);
@@ -265,6 +299,25 @@ public static class TeamManager
                 }
                 else if (kv.Key.m_SteamID > _data.Data.AdminID || kv.Key.m_SteamID < _data.Data.Team1ID)
                     val2.Remove(kv.Key);
+            }
+
+            if (!ft1)
+            {
+                CSteamID gid = new CSteamID(_data.Data.Team1ID);
+                val2.Add(gid, new GroupInfo(gid, _data.Data.Team1Name, 0));
+                L.Log("Created group " + _data.Data.Team1ID + ": " + _data.Data.Team1Name + ".", ConsoleColor.Magenta);
+            }
+            if (!ft2)
+            {
+                CSteamID gid = new CSteamID(_data.Data.Team2ID);
+                val2.Add(gid, new GroupInfo(gid, _data.Data.Team2Name, 0));
+                L.Log("Created group " + _data.Data.Team2ID + ": " + _data.Data.Team2Name + ".", ConsoleColor.Magenta);
+            }
+            if (!ft3)
+            {
+                CSteamID gid = new CSteamID(_data.Data.AdminID);
+                val2.Add(gid, new GroupInfo(gid, _data.Data.AdminTeamName, 0));
+                L.Log("Created group " + _data.Data.AdminID + ": " + _data.Data.AdminTeamName + ".", ConsoleColor.Magenta);
             }
             GroupManager.save();
         }
@@ -498,9 +551,97 @@ public static class TeamManager
             }
         }
     }
+    internal static void OnConfigReload()
+    {
+        _t1Clr = null;
+        _t2Clr = null;
+        _t3Clr = null;
+    }
+}
+public class FactionInfo
+{
+    public static readonly FactionInfo Admins   = new FactionInfo(0, "Admins", "ADMIN", "0099ff", "default");
+    public static readonly FactionInfo USA      = new FactionInfo(1, "United States", "USA", "78b2ff", "usunarmed");
+    public static readonly FactionInfo Russia   = new FactionInfo(2, "Russia", "RU", "f53b3b", "ruunarmed");
+    public static readonly FactionInfo MEC      = new FactionInfo(3, "Middle Eastern Coalition", "MEC", "ffcd8c", "meunarmed");
+    public static readonly FactionInfo Germany  = new FactionInfo(4, "Germany", "DE", "ffcc00", "deunarmed");
+    public static readonly FactionInfo China    = new FactionInfo(5, "China", "CN", "ef1620", "cnunarmed");
+
+    private static readonly FactionInfo[] Factions = new FactionInfo[]
+    {
+        Admins,
+        USA,
+        Russia,
+        MEC,
+        Germany,
+        China
+    };
+
+    public readonly byte FactionID;
+    public readonly string Name;
+    public readonly string Abbreviation;
+    public readonly string HexColor;
+    public readonly string UnarmedKit;
+    private FactionInfo(byte factionId, string name, string abbreviation, string hexColor, string unarmedKit)
+    {
+        FactionID = factionId;
+        Name = name;
+        Abbreviation = abbreviation;
+        HexColor = hexColor;
+        UnarmedKit = unarmedKit;
+    }
+
+    public static FactionInfo? GetFaction(byte factionId)
+    {
+        for (int i = 0; i < Factions.Length; ++i)
+        {
+            if (Factions[i].FactionID == factionId)
+                return Factions[i];
+        }
+        return null;
+    }
+    public static FactionInfo? GetFactionByName(string name)
+    {
+        for (int i = 0; i < Factions.Length; ++i)
+        {
+            if (Factions[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                return Factions[i];
+        }
+        for (int i = 0; i < Factions.Length; ++i)
+        {
+            if (Factions[i].Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                return Factions[i];
+        }
+        return null;
+    }
+    public static FactionInfo? GetFactionByAbbreviation(string abbreviation)
+    {
+        for (int i = 0; i < Factions.Length; ++i)
+        {
+            if (Factions[i].Name.Equals(abbreviation, StringComparison.OrdinalIgnoreCase))
+                return Factions[i];
+        }
+        for (int i = 0; i < Factions.Length; ++i)
+        {
+            if (Factions[i].Name.IndexOf(abbreviation, StringComparison.OrdinalIgnoreCase) != -1)
+                return Factions[i];
+        }
+        return null;
+    }
 }
 
-public class TeamConfig : ConfigData
+public class TeamConfig : Config<TeamConfigData>
+{
+    public TeamConfig() : base(Warfare.Data.Paths.BaseDirectory, "teams.json", "teams")
+    {
+    }
+    protected override void OnReload()
+    {
+        TeamManager.OnConfigReload();
+    }
+}
+
+public class TeamConfigData : ConfigData
 {
     [JsonPropertyName("team1id")]
     public ulong Team1ID;
@@ -509,101 +650,37 @@ public class TeamConfig : ConfigData
     [JsonPropertyName("adminid")]
     public ulong AdminID;
     [JsonPropertyName("team1name")]
-    public string Team1Name;
+    public RotatableConfig<string> Team1Name;
     [JsonPropertyName("team2name")]
-    public string Team2Name;
+    public RotatableConfig<string> Team2Name;
     [JsonPropertyName("adminname")]
     public string AdminTeamName;
     [JsonPropertyName("team1code")]
-    public string Team1Abbreviation;
+    public RotatableConfig<string> Team1Abbreviation;
     [JsonPropertyName("team2code")]
-    public string Team2Abbreviation;
+    public RotatableConfig<string> Team2Abbreviation;
     [JsonPropertyName("admincode")]
     public string AdminTeamAbbreviation;
+    [JsonPropertyName("team1color")]
+    public RotatableConfig<string> Team1Color;
+    [JsonPropertyName("team2color")]
+    public RotatableConfig<string> Team2Color;
+    [JsonPropertyName("admincolor")]
+    public string AdminTeamColor;
     [JsonPropertyName("team1unarmedkit")]
-    public string Team1UnarmedKit;
+    public RotatableConfig<string> Team1UnarmedKit;
     [JsonPropertyName("team2unarmedkit")]
-    public string Team2UnarmedKit;
+    public RotatableConfig<string> Team2UnarmedKit;
     [JsonPropertyName("defaultkit")]
-    public string DefaultKit;
+    public RotatableConfig<string> DefaultKit;
     [JsonPropertyName("team1spawnangle")]
-    public float Team1SpawnYaw;
+    public RotatableConfig<float> Team1SpawnYaw;
     [JsonPropertyName("team2spawnangle")]
-    public float Team2SpawnYaw;
+    public RotatableConfig<float> Team2SpawnYaw;
     [JsonPropertyName("lobbyspawnangle")]
-    public float LobbySpawnpointYaw;
+    public RotatableConfig<float> LobbySpawnpointYaw;
     [JsonPropertyName("team_switch_cooldown")]
     public float TeamSwitchCooldown;
-    [JsonIgnore]
-    public Color Team1Color
-    {
-        get
-        {
-            if (Data.Colors != default)
-                return UCWarfare.GetColor("team_1_color");
-            else return Color.white;
-        }
-    }
-    [JsonIgnore]
-    public Color Team2Color
-    {
-        get
-        {
-            if (Data.Colors != default)
-                return UCWarfare.GetColor("team_2_color");
-            else return Color.white;
-        }
-    }
-    [JsonIgnore]
-    public Color AdminColor
-    {
-        get
-        {
-            if (Data.Colors != default)
-                return UCWarfare.GetColor("team_3_color");
-            else return Color.cyan;
-        }
-    }
-    [JsonIgnore]
-    public Color NeutralColor
-    {
-        get
-        {
-            if (Data.Colors != default)
-                return UCWarfare.GetColor("neutral_color");
-            else return Color.white;
-        }
-    }
-    [JsonIgnore]
-    public string Team1ColorHex
-    {
-        get
-        {
-            if (Data.Colors != default)
-                return UCWarfare.GetColorHex("team_1_color");
-            else return "ffffff";
-        }
-    }
-    [JsonIgnore]
-    public string Team2ColorHex
-    {
-        get
-        {
-            if (Data.Colors != default)
-                return UCWarfare.GetColorHex("team_2_color");
-            else return "ffffff";
-        }
-    }
-    [JsonIgnore]
-    public string AdminColorHex
-    {
-        get
-        {
-            if (Data.Colors != default)
-                return UCWarfare.GetColorHex("team_3_color");
-            else return "00ffff";
-        }
-    }
     [JsonIgnore]
     public string NeutralColorHex
     {
@@ -618,59 +695,106 @@ public class TeamConfig : ConfigData
     public float AllowedDifferencePercent;
     [JsonPropertyName("balanceTeams")]
     public bool BalanceTeams;
-    public TeamConfig() => SetDefaults();
-    [JsonConstructor]
-    public TeamConfig(ulong team1id,
-        ulong team2id,
-        ulong adminid,
-        string team1name,
-        string team2name,
-        string adminteamname,
-        string team1Abbreviation,
-        string team2Abbreviation,
-        string adminTeamAbbreviation,
-        string team1unarmedkit,
-        string team2unarmedkit,
-        string defaultkit,
-        float team1spawnyaw,
-        float team2spawnyaw,
-        float lobbySpawnpointYaw,
-        float teamSwitchCooldown)
-    {
-        this.Team1ID = team1id;
-        this.Team2ID = team2id;
-        this.AdminID = adminid;
-        this.Team1Name = team1name ?? "United States";
-        this.Team2Name = team2name ?? "Middle Eastern Coalition";
-        this.AdminTeamName = adminteamname ?? "Admins";
-        this.Team1Abbreviation = team1Abbreviation ?? "USA";
-        this.Team2Abbreviation = team2Abbreviation ?? "MEC";
-        this.AdminTeamAbbreviation = adminTeamAbbreviation ?? "ADMIN";
-        this.Team1UnarmedKit = team1unarmedkit ?? "usunarmed";
-        this.Team2UnarmedKit = team2unarmedkit ?? "meunarmed";
-        this.DefaultKit = defaultkit ?? "default";
-        this.Team1SpawnYaw = team1spawnyaw;
-        this.Team2SpawnYaw = team2spawnyaw;
-        this.LobbySpawnpointYaw = lobbySpawnpointYaw;
-        this.TeamSwitchCooldown = teamSwitchCooldown;
-    }
+
+    public TeamConfigData() => SetDefaults();
     public override void SetDefaults()
     {
         Team1ID = 1;
         Team2ID = 2;
         AdminID = 3;
-        Team1Name = "United States";
-        Team2Name = "Middle Eastern Coalition";
-        AdminTeamName = "Admins";
-        Team1Abbreviation = "USA";
-        Team2Abbreviation = "MEC";
-        AdminTeamAbbreviation = "ADMIN";
-        Team1UnarmedKit = "usunarmed";
-        Team2UnarmedKit = "meunarmed";
+        Team1Name = new RotatableConfig<string>("Team 1", new RotatableDefaults<string>
+        {
+            { MapScheduler.FoolsRoad,   FactionInfo.USA.Name },
+            { MapScheduler.Nuijamaa,    FactionInfo.USA.Name },
+            { MapScheduler.GooseBay,    FactionInfo.USA.Name },
+            { MapScheduler.GulfOfAqaba, FactionInfo.USA.Name },
+            { MapScheduler.S3Map,       FactionInfo.Germany.Name },
+        });
+        Team2Name = new RotatableConfig<string>("Team 2", new RotatableDefaults<string>
+        {
+            { MapScheduler.FoolsRoad,   FactionInfo.Russia.Name },
+            { MapScheduler.Nuijamaa,    FactionInfo.Russia.Name },
+            { MapScheduler.GooseBay,    FactionInfo.Russia.Name },
+            { MapScheduler.GulfOfAqaba, FactionInfo.MEC.Name },
+            { MapScheduler.S3Map,       FactionInfo.China.Name },
+        });
+        AdminTeamName = FactionInfo.Admins.Name;
+        Team1Abbreviation = new RotatableConfig<string>("T1", new RotatableDefaults<string>
+        {
+            { MapScheduler.FoolsRoad,   FactionInfo.USA.Abbreviation },
+            { MapScheduler.Nuijamaa,    FactionInfo.USA.Abbreviation },
+            { MapScheduler.GooseBay,    FactionInfo.USA.Abbreviation },
+            { MapScheduler.GulfOfAqaba, FactionInfo.USA.Abbreviation },
+            { MapScheduler.S3Map,       FactionInfo.Germany.Abbreviation },
+        });
+        Team2Abbreviation = new RotatableConfig<string>("T2", new RotatableDefaults<string>
+        {
+            { MapScheduler.FoolsRoad,   FactionInfo.Russia.Abbreviation },
+            { MapScheduler.Nuijamaa,    FactionInfo.Russia.Abbreviation },
+            { MapScheduler.GooseBay,    FactionInfo.Russia.Abbreviation },
+            { MapScheduler.GulfOfAqaba, FactionInfo.MEC.Abbreviation },
+            { MapScheduler.S3Map,       FactionInfo.China.Abbreviation },
+        });
+        AdminTeamAbbreviation = FactionInfo.Admins.Abbreviation;
         DefaultKit = "default";
-        Team1SpawnYaw = 0;
-        Team2SpawnYaw = 0;
-        LobbySpawnpointYaw = 90;
+        Team1UnarmedKit = new RotatableConfig<string>(DefaultKit, new RotatableDefaults<string>
+        {
+            { MapScheduler.FoolsRoad,   FactionInfo.USA.UnarmedKit },
+            { MapScheduler.Nuijamaa,    FactionInfo.USA.UnarmedKit },
+            { MapScheduler.GooseBay,    FactionInfo.USA.UnarmedKit },
+            { MapScheduler.GulfOfAqaba, FactionInfo.USA.UnarmedKit },
+            { MapScheduler.S3Map,       FactionInfo.Germany.UnarmedKit },
+        });
+        Team2UnarmedKit = new RotatableConfig<string>(DefaultKit, new RotatableDefaults<string>
+        {
+            { MapScheduler.FoolsRoad,   FactionInfo.Russia.UnarmedKit },
+            { MapScheduler.Nuijamaa,    FactionInfo.Russia.UnarmedKit },
+            { MapScheduler.GooseBay,    FactionInfo.Russia.UnarmedKit },
+            { MapScheduler.GulfOfAqaba, FactionInfo.MEC.UnarmedKit },
+            { MapScheduler.S3Map,       FactionInfo.China.UnarmedKit },
+        });
+        Team1SpawnYaw = new RotatableConfig<float>(0f, new RotatableDefaults<float>
+        {
+            { MapScheduler.FoolsRoad,   180f },
+            { MapScheduler.Nuijamaa,    0f },
+            { MapScheduler.GooseBay,    0f },
+            { MapScheduler.GulfOfAqaba, 90f },
+            { MapScheduler.S3Map,       0f },
+        });
+        Team2SpawnYaw = new RotatableConfig<float>(0f, new RotatableDefaults<float>
+        {
+            { MapScheduler.FoolsRoad,   0f },
+            { MapScheduler.Nuijamaa,    0f },
+            { MapScheduler.GooseBay,    0f },
+            { MapScheduler.GulfOfAqaba, 90f },
+            { MapScheduler.S3Map,       0f },
+        });
+        LobbySpawnpointYaw = new RotatableConfig<float>(0f, new RotatableDefaults<float>
+        {
+            { MapScheduler.FoolsRoad,   90f },
+            { MapScheduler.Nuijamaa,    0f },
+            { MapScheduler.GooseBay,    0f },
+            { MapScheduler.GulfOfAqaba, 90f },
+            { MapScheduler.S3Map,       0f },
+        });
+        Team1Color = new RotatableConfig<string>("ffffff", new RotatableDefaults<string>
+        {
+            { MapScheduler.FoolsRoad,   FactionInfo.USA.HexColor },
+            { MapScheduler.Nuijamaa,    FactionInfo.USA.HexColor },
+            { MapScheduler.GooseBay,    FactionInfo.USA.HexColor },
+            { MapScheduler.GulfOfAqaba, FactionInfo.USA.HexColor },
+            { MapScheduler.S3Map,       FactionInfo.Germany.HexColor },
+        });
+        Team2Color = new RotatableConfig<string>("ffffff", new RotatableDefaults<string>
+        {
+            { MapScheduler.FoolsRoad,   FactionInfo.Russia.HexColor },
+            { MapScheduler.Nuijamaa,    FactionInfo.Russia.HexColor },
+            { MapScheduler.GooseBay,    FactionInfo.Russia.HexColor },
+            { MapScheduler.GulfOfAqaba, FactionInfo.MEC.HexColor },
+            { MapScheduler.S3Map,       FactionInfo.China.HexColor },
+        });
+        AdminTeamColor = FactionInfo.Admins.HexColor;
         TeamSwitchCooldown = 1200;
+        BalanceTeams = true;
     }
 }

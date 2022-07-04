@@ -297,7 +297,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 }
                 // TODO: Fix
                 if (Data.Is(out ITeams t) && t.UseJoinUI && Teams.TeamManager.LobbyZone.IsInside(sp.player.transform.position) && sp.player.movement.getVehicle() == null &&
-                    UCPlayer.FromSteamPlayer(sp) is UCPlayer pl && !t.JoinManager.IsInLobby(pl))
+                    UCPlayer.FromSteamPlayer(sp) is UCPlayer pl && pl.GetTeam() != 3 && !t.JoinManager.IsInLobby(pl))
                 {
                     L.Log($"{pl.Steam64} was stuck in lobby and was auto-rejoined.");
                     t.JoinManager.OnPlayerDisconnected(pl);

@@ -423,19 +423,10 @@ public class Invasion :
         InvasionUI.SendFlagList(e.Player);
         base.OnGroupChanged(e);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    protected override void InitUI(UCPlayer player)
     {
-        base.PlayerInit(player, wasAlreadyOnline);
-        if (isScreenUp && _endScreen != null)
-        {
-            _endScreen.OnPlayerJoined(player);
-        }
-        else
-        {
-            InvasionUI.SendFlagList(player);
-            if (State == EState.STAGING)
-                this.ShowStagingUI(player);
-        }
+        InvasionUI.SendFlagList(player);
+        base.InitUI(player);
     }
     public override void ShowStagingUI(UCPlayer player)
     {

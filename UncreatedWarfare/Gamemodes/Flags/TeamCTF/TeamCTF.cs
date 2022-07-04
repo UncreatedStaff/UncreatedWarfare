@@ -69,19 +69,10 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
         CTFUI.SendFlagList(e.Player);
         base.OnGroupChanged(e);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    protected override void InitUI(UCPlayer player)
     {
-        base.PlayerInit(player, wasAlreadyOnline);
-        if (isScreenUp && _endScreen != null)
-        {
-            _endScreen.OnPlayerJoined(player);
-        }
-        else
-        {
-            CTFUI.SendFlagList(player);
-            if (State == EState.STAGING)
-                this.ShowStagingUI(player);
-        }
+        CTFUI.SendFlagList(player);
+        base.InitUI(player);
     }
     public override bool IsAttackSite(ulong team, Flag flag) => flag.IsObj(team);
     public override bool IsDefenseSite(ulong team, Flag flag) => flag.T1Obj && team == 2 && flag.Owner == 2 || flag.T2Obj && team == 1 && flag.Owner == 1;

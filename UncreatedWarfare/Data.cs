@@ -47,7 +47,6 @@ public static class Data
         private static string? _flagCache;
         private static string? _structureCache;
         private static string? _vehicleCache;
-        public static readonly string TeamStorage      = Path.Combine(BaseDirectory, "Teams")     + Path.DirectorySeparatorChar;
         public static readonly string TicketStorage    = Path.Combine(BaseDirectory, "Tickets")   + Path.DirectorySeparatorChar;
         public static readonly string PointsStorage    = Path.Combine(BaseDirectory, "Points")    + Path.DirectorySeparatorChar;
         public static readonly string OfficerStorage   = Path.Combine(BaseDirectory, "Officers")  + Path.DirectorySeparatorChar;
@@ -208,7 +207,6 @@ public static class Data
         F.CheckDir(Paths.KitsStorage, out _, true);
         F.CheckDir(Paths.PointsStorage, out _, true);
         F.CheckDir(Paths.FOBStorage, out _, true);
-        F.CheckDir(Paths.TeamStorage, out _, true);
         F.CheckDir(Paths.OfficerStorage, out _, true);
 
         ZoneProvider = new JsonZoneProvider(new FileInfo(Path.Combine(Paths.FlagStorage, "zones.json")));

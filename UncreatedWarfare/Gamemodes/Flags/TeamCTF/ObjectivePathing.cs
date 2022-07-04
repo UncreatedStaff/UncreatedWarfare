@@ -1,188 +1,175 @@
 ﻿//#define NONADJACENCIES
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF
+namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+
+public static class ObjectivePathing
 {
-    public static class ObjectivePathing
+    public static bool TryPath(List<Flag> output)
     {
-        public static List<Flag> PathWithAdjacents(List<Flag> Selection, AdjacentFlagData[] T1Adjacents, AdjacentFlagData[] T2Adjacents)
+        if (Data.Gamemode is not IFlagRotation rotation) throw new InvalidOperationException("Expected IFlagRotation gamemode.");
+
+        List<Flag> selection = rotation.LoadedFlags;
+        AdjacentFlagData[] t1adjacencies = TeamManager.Team1Main.Data.Adjacencies;
+        AdjacentFlagData[] t2adjacencies = TeamManager.Team2Main.Data.Adjacencies;
+        if (selection is null || selection.Count < 1)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            List<Flag> path = new List<Flag>();
-            StartAdjacentsLoop(path, Selection, T1Adjacents, T2Adjacents);
-            return path;
+            L.LogWarning("Flag selection is not loaded.", method: "FLAG PATHING");
+            return false;
         }
-        private static void StartAdjacentsLoop(List<Flag> flags, List<Flag> selection, AdjacentFlagData[] t1adjacents, AdjacentFlagData[] t2adjacents)
+        if (t1adjacencies is null || t1adjacencies.Length < 1)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            Flag? first = PickRandomFlagWithSpecifiedBias(InstantiateFlags(t1adjacents, selection, flags, null));
-            if (first == null)
-            {
-                L.LogError("Unable to pick the first flag.");
-                return;
-            }
-            flags.Add(first);
-            flags[0].index = 0;
-            AdjacentsFlagLoop(flags, selection, t2adjacents);
+            L.LogWarning("Team 1 Adjacencies are not defined.", method: "FLAG PATHING");
+            return false;
         }
-        private static void AdjacentsFlagLoop(List<Flag> flags, List<Flag> selection, AdjacentFlagData[] t2adjacents)
+        if (t2adjacencies is null || t2adjacencies.Length < 1)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            Flag lastFlag = flags.Last();
-            if (lastFlag == null)
-            {
-                L.LogError("Last flag was null, breaking loop.");
-                return;
-            }
-            Dictionary<Flag, float> initBiases = InstantiateFlags(lastFlag.Adjacencies, selection, flags, lastFlag);
-            float mainBias = float.NaN;
-            for (int i = 0; i < t2adjacents.Length; i++)
-            {
-                if (t2adjacents[i].flag_id == lastFlag.ID)
-                {
-                    mainBias = t2adjacents[i].weight;
-                }
-            }
-            if (float.IsNaN(mainBias))
-            {
-                Flag? pick = PickRandomFlagWithSpecifiedBias(initBiases);
-                if (pick != null)
-                {
-                    pick.index = flags.Count;
-                    flags.Add(pick);
-                    AdjacentsFlagLoop(flags, selection, t2adjacents);
-                }
-                else
-                {
-                    L.LogError("Pick was null after " + lastFlag.Name);
-                    return;
-                }
-            }
-            else if (!PickRandomFlagOrMainWithSpecifiedBias(initBiases, mainBias, out Flag? newFlag))
-            {
-                if (newFlag != null)
-                {
-                    newFlag.index = flags.Count;
-                    flags.Add(newFlag);
-                    AdjacentsFlagLoop(flags, selection, t2adjacents);
-                }
-            }
-        }
-        public static Dictionary<Flag, float> InstantiateFlags(AdjacentFlagData[] flags, List<Flag> selection, List<Flag>? toNotRemove, Flag? current)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            Dictionary<Flag, float> rtn = new Dictionary<Flag, float>();
-            for (int i = 0; i < flags.Length; i++)
-            {
-                AdjacentFlagData afd = flags[i];
-                Flag f = selection.FirstOrDefault(x => x.ID == afd.flag_id);
-                if (f != default)
-                {
-                    if (!rtn.ContainsKey(f) && (toNotRemove == null || !toNotRemove.Exists(x => x.ID == afd.flag_id)))
-                        rtn.Add(f, afd.weight);
-                }
-                else if (current != null)
-                {
-                    L.LogWarning("Invalid flag id in adjacents dictionary for flag " + current.Name);
-                    throw new SingletonLoadException(ESingletonLoadType.LOAD, Data.Gamemode, new Exception("Invalid flag id " + afd.flag_id + " in adjacents for flag " + current.Name));
-                }
-                else
-                {
-                    L.LogWarning("Invalid flag id in adjacents dictionary for team 1 main base.");
-                    throw new SingletonLoadException(ESingletonLoadType.LOAD, Data.Gamemode, new Exception("Invalid flag id " + afd.flag_id + " in adjacents for team 1 main base."));
-                }
-            }
-            return rtn;
+            L.LogWarning("Team 2 Adjacencies are not defined.", method: "FLAG PATHING");
+            return false;
         }
 
-        private static Flag? PickRandomFlagWithSpecifiedBias(Dictionary<Flag, float> biases)
+        float ttl = 0f;
+        for (int i = 0; i < t1adjacencies.Length; ++i)
+            ttl += t1adjacencies[i].weight;
+        float pick = UnityEngine.Random.Range(0, ttl);
+        ttl = 0f;
+        int id = -1;
+        for (int i = 0; i < t1adjacencies.Length; ++i)
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (biases.Count < 1)
+            ref AdjacentFlagData d = ref t1adjacencies[i];
+            ttl += d.weight;
+            if (pick <= ttl)
             {
-                L.LogError("Biases was empty.");
-                return default;
+                id = d.flag_id;
+                break;
             }
-            float total = 0;
-            foreach (KeyValuePair<Flag, float> flag in biases)
-            {
-                total += flag.Value;
-            }
-            float pick = UnityEngine.Random.Range(0, total);
-            float counter = 0;
-            foreach (KeyValuePair<Flag, float> flag in biases)
-            {
-                counter += flag.Value;
-                if (pick <= counter) return flag.Key;
-            }
-            return biases.ElementAt(0).Key;
         }
-        private static bool PickRandomFlagOrMainWithSpecifiedBias(Dictionary<Flag, float> biases, float mainBias, out Flag? output)
+
+        if (id == -1)
+            id = t1adjacencies[t1adjacencies.Length - 1].flag_id;
+
+        int c = -1;
+        Flag last;
+        while (!TryGetFlag(id, selection, out last))
         {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            if (biases.Count < 1)
+            if (++c < t1adjacencies.Length)
+                id = t1adjacencies[c].flag_id;
+            else break;
+        }
+        if (last is null)
+        {
+            L.LogWarning("First flag could not be detected, check the flag_id values on the t1main adjacencies.");
+            return false;
+        }
+
+        output.Add(last);
+        last.index = 0;
+
+        while (true)
+        {
+            AdjacentFlagData[] adjs = last.ZoneData.Data.Adjacencies;
+            int lid = last.ID;
+            float t2MainWeight = 0f;
+            for (int i = 0; i < t2adjacencies.Length; ++i)
             {
-                output = default;
+                ref AdjacentFlagData d = ref t2adjacencies[i];
+                if (d.flag_id == lid)
+                {
+                    t2MainWeight = d.weight;
+                    break;
+                }
+            }
+            if (adjs is null || adjs.Length < 1)
+            {
+                if (t2MainWeight > 0f)
+                    goto closeLoop;
+            }
+            else
+            {
+                bool[] filter = new bool[adjs.Length];
+                ttl = t2MainWeight;
+                for (int i = 0; i < adjs.Length; ++i)
+                {
+                    ref AdjacentFlagData d = ref adjs[i];
+                    for (int j = 0; j < output.Count; ++j)
+                    {
+                        if (output[j].ID == d.flag_id)
+                        {
+                            filter[i] = true;
+                            break;
+                        }
+                    }
+
+                    if (!filter[i])
+                        ttl += d.weight;
+                }
+
+                if (ttl == t2MainWeight)
+                {
+                    if (ttl <= 0)
+                        L.LogWarning("Got stuck at flag ID " + lid + " trying to find the next flag.");
+                    goto closeLoop;
+                }
+                pick = UnityEngine.Random.Range(0, ttl);
+                if (t2MainWeight > 0f && pick <= t2MainWeight)
+                    goto closeLoop;
+                ttl = t2MainWeight;
+                id = -1;
+                for (int i = 0; i < adjs.Length; ++i)
+                {
+                    if (filter[i]) continue;
+                    ref AdjacentFlagData d = ref adjs[i];
+                    ttl += d.weight;
+                    if (pick <= ttl)
+                    {
+                        id = d.flag_id;
+                        break;
+                    }
+                }
+                if (id == -1)
+                {
+                    int ind = adjs.Length - 1;
+                    if (filter[ind])
+                    {
+                        if (t2MainWeight <= 0)
+                            L.LogWarning("Got stuck at flag ID " + lid + " trying to find the next flag.");
+                        goto closeLoop;
+                    }
+                    id = adjs[ind].flag_id;
+                }
+                if (!TryGetFlag(id, selection, out last))
+                {
+                    if (ttl <= 0)
+                        L.LogWarning("Got stuck at flag ID " + lid + " trying to find the next flag.");
+                    goto closeLoop;
+                }
+
+                last.index = output.Count;
+                output.Add(last);
+            }
+        }
+
+    closeLoop:
+        return true;
+    }
+    public static bool TryGetFlag(int id, List<Flag> selection, out Flag flag)
+    {
+        for (int i = 0; i < selection.Count; ++i)
+        {
+            if (selection[i].ID == id)
+            {
+                flag = selection[i];
                 return true;
             }
-            List<FlagMainTuple> tuples = new List<FlagMainTuple>
-            {
-                new FlagMainTuple(null, true, mainBias)
-            };
-            float total = mainBias;
-            foreach (KeyValuePair<Flag, float> flag in biases)
-            {
-                total += flag.Value;
-                tuples.Add(new FlagMainTuple(flag.Key, false, flag.Value));
-            }
-            float pick = UnityEngine.Random.Range(0, total);
-            float counter = 0;
-            foreach (FlagMainTuple tuple in tuples)
-            {
-                counter += tuple.bias;
-                if (pick <= counter)
-                {
-                    output = tuple.flag;
-                    return tuple.isMain;
-                }
-            }
-            output = null;
-            return true;
         }
-        private struct FlagMainTuple
-        {
-            public Flag? flag;
-            public bool isMain;
-            public float bias;
-            public FlagMainTuple(Flag? flag, bool isMain, float bias)
-            {
-                this.flag = flag;
-                this.isMain = isMain;
-                this.bias = bias;
-            }
-        }
-
-        public enum EPathingMode : byte
-        {
-            LEVELS,
-            AUTODISTANCE,
-            ADJACENCIES
-        }
+        flag = null!;
+        return false;
     }
 }

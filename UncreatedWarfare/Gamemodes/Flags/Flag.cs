@@ -3,6 +3,7 @@ using Steamworks;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags
@@ -129,18 +130,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         }
         public string ColorHex { get => _color; set => _color = value; }
         public Color Color => _color.Hex();
-        public string TeamSpecificHexColor => UCWarfare.GetColorHex(_owner switch
-        {
-            1 => "team_1_color",
-            2 => "team_2_color",
-            _ => "neutral_color"
-        });
-        public Color TeamSpecificColor => UCWarfare.GetColor(_owner switch
-        {
-            1 => "team_1_color",
-            2 => "team_2_color",
-            _ => "neutral_color"
-        });
+        public string TeamSpecificHexColor => TeamManager.GetTeamHexColor(_owner);
+        public Color TeamSpecificColor => TeamManager.GetTeamColor(_owner);
         public ulong Owner => _owner;
         public float LastDeltaPoints { get; protected set; }
         public float Points => _points;

@@ -104,7 +104,7 @@ public struct ZoneModel
         if (ZoneType == EZoneType.RECTANGLE)
         {
             if (IsBadFloat(ZoneData.SizeX) || IsBadFloat(ZoneData.SizeZ) || ZoneData.SizeX <= 0 || ZoneData.SizeZ <= 0)
-                throw new ZoneReadException("Rectangle zones are required to define: size-x (float, > 0), size-z (float, > 0), and optionally angle (float, degrees).") { Data = this };
+                throw new ZoneReadException("Rectangle zones are required to define: size-x (float, > 0), size-z (float, > 0).") { Data = this };
         }
         else if (ZoneType == EZoneType.CIRCLE)
         {

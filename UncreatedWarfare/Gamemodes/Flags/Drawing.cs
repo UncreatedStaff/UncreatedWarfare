@@ -195,7 +195,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 img.Apply();
             }
         }
-        public static void DrawZoneMap(IFlagRotation gamemode, string? filename)
+        public static void DrawZoneMap(List<Flag> selection, List<Flag> rotation, string? filename)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -216,67 +216,95 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 byte[] fileData = File.ReadAllBytes(mapPath);
                 img.LoadImage(fileData, false);
             }
-            Dictionary<Flag, float> flags = new Dictionary<Flag, float>();
 
-            flags = ObjectivePathing.InstantiateFlags(Gamemode.Config.MapConfig.Team1Adjacencies, gamemode.LoadedFlags, null, null);
+            AdjacentFlagData[] t1adjacencies = TeamManager.Team1Main.Data.Adjacencies;
+            AdjacentFlagData[] t2adjacencies = TeamManager.Team2Main.Data.Adjacencies;
 
-            foreach (KeyValuePair<Flag, float> t1mainarrow in flags)
-                DrawLineGradient(new Line(TeamManager.Team1Main.DrawingData.Center, t1mainarrow.Key.ZoneData.DrawingData.Center), thickness, img, TeamManager.Team1Color,
-                    gamemode.Rotation.Count > 0 && gamemode.Rotation[0].ID == t1mainarrow.Key.ID ? color1path : color2, false);
-
-            flags = ObjectivePathing.InstantiateFlags(Gamemode.Config.MapConfig.Team2Adjacencies, gamemode.LoadedFlags, null, null);
-            foreach (KeyValuePair<Flag, float> t2mainarrow in flags)
-                DrawLineGradient(new Line(t2mainarrow.Key.ZoneData.DrawingData.Center, TeamManager.Team2Main.DrawingData.Center), thickness, img,
-                    gamemode.Rotation.Count > 0 && gamemode.Rotation.Last().ID == t2mainarrow.Key.ID ? color1path : color1, TeamManager.Team2Color, false);
+            for (int i = 0; i < t1adjacencies.Length; ++i)
+            {
+                ref AdjacentFlagData d = ref t1adjacencies[i];
+                if (ObjectivePathing.TryGetFlag(d.flag_id, selection, out Flag flag))
+                {
+                    DrawLineGradient(
+                        new Line(TeamManager.Team1Main.DrawingData.Center, flag.ZoneData.DrawingData.Center), thickness,
+                        img, TeamManager.Team1Color,
+                        rotation.Count > 0 && rotation[0].ID == flag.ID ? color1path : color2);
+                }
+            }
+            for (int i = 0; i < t2adjacencies.Length; ++i)
+            {
+                ref AdjacentFlagData d = ref t2adjacencies[i];
+                if (ObjectivePathing.TryGetFlag(d.flag_id, selection, out Flag flag))
+                {
+                    DrawLineGradient(
+                        new Line(flag.ZoneData.DrawingData.Center, TeamManager.Team2Main.DrawingData.Center), thickness,
+                        img, rotation.Count > 0 && rotation[rotation.Count - 1].ID == flag.ID ? color1path : color2,
+                        TeamManager.Team2Color);
+                }
+            }
 
             List<int> drewPaths = new List<int>();
             List<KeyValuePair<int, int>> drawnLines = new List<KeyValuePair<int, int>>();
-            foreach (Flag flag in gamemode.LoadedFlags)
+            foreach (Flag flag in selection)
             {
-                flags = ObjectivePathing.InstantiateFlags(flag.Adjacencies, gamemode.LoadedFlags, null, null);
-                int i = gamemode.Rotation.FindIndex(x => x.ID == flag.ID);
-                foreach (KeyValuePair<Flag, float> flagarrow in flags)
+                AdjacentFlagData[] adj = flag.ZoneData.Data.Adjacencies;
+                int i = rotation.FindIndex(x => x.ID == flag.ID);
+                for (int j = 0; j < adj.Length; ++j)
                 {
-                    if (drawnLines.Exists(x => (x.Value == flagarrow.Key.ID && x.Key == flag.ID) || (x.Value == flag.ID && x.Key == flagarrow.Key.ID))) // multi-directional
+                    ref AdjacentFlagData d = ref adj[j];
+                    int id = d.flag_id;
+                    if (drawnLines.Exists(x => (x.Value == id && x.Key == flag.ID) || (x.Value == flag.ID && x.Key == id))) // multi-directional
                     {
                         Color c1 = multidimensionalcolor;
-                        if (i != -1 && ((gamemode.Rotation.Count > i + 1 && gamemode.Rotation[i + 1].ID == flagarrow.Key.ID) || (i != 0 && gamemode.Rotation[i - 1].ID == flagarrow.Key.ID)))
+                        if (i != -1 && ((rotation.Count > i + 1 && rotation[i + 1].ID == id) || (i != 0 && rotation[i - 1].ID == id)))
                         {
                             c1 = multidimensionalcolorpath;
                             drewPaths.Add(flag.ID);
                         }
-                        DrawLineGradient(new Line(flag.ZoneData.DrawingData.Center, flagarrow.Key.ZoneData.DrawingData.Center), thickness, img, c1, c1, false);
+
+                        if (ObjectivePathing.TryGetFlag(d.flag_id, selection, out Flag flag2))
+                        {
+                            DrawLineGradient(
+                                new Line(flag.ZoneData.DrawingData.Center, flag2.ZoneData.DrawingData.Center),
+                                thickness, img, c1, c1, false);
+                        }
                     }
                     else
                     {
                         Color c1 = color1;
                         Color c2 = color2;
-                        if (i != -1 && gamemode.Rotation.Count > i + 1 && gamemode.Rotation[i + 1].ID == flagarrow.Key.ID)
+                        if (i != -1 && rotation.Count > i + 1 && rotation[i + 1].ID == id)
                         {
                             c1 = color1path;
                             c2 = color2path;
                             drewPaths.Add(flag.ID);
                         }
-                        drawnLines.Add(new KeyValuePair<int, int>(flag.ID, flagarrow.Key.ID));
-                        DrawLineGradient(new Line(flag.ZoneData.DrawingData.Center, flagarrow.Key.ZoneData.DrawingData.Center), thickness, img, c1, c2, false);
+                        drawnLines.Add(new KeyValuePair<int, int>(flag.ID, id));
+                        if (ObjectivePathing.TryGetFlag(d.flag_id, selection, out Flag flag2))
+                        {
+                            DrawLineGradient(
+                                new Line(flag.ZoneData.DrawingData.Center, flag2.ZoneData.DrawingData.Center),
+                                thickness, img, c1, c2, false);
+                        }
+
                     }
                 }
             }
-            for (int i = 0; i <= gamemode.Rotation.Count; i++)
+            for (int i = 0; i <= rotation.Count; i++)
             {
-                if (i == 0 || i == gamemode.Rotation.Count || drewPaths.Contains(gamemode.Rotation[i - 1].ID)) continue; // line already drawn
+                if (i == 0 || i == rotation.Count || drewPaths.Contains(rotation[i - 1].ID)) continue; // line already drawn
                 Line line;
-                if (i == gamemode.Rotation.Count)
+                if (i == rotation.Count)
                 {
-                    line = new Line(gamemode.Rotation[i - 1].ZoneData.DrawingData.Center, TeamManager.Team2Main.DrawingData.Center);
+                    line = new Line(rotation[i - 1].ZoneData.DrawingData.Center, TeamManager.Team2Main.DrawingData.Center);
                 }
                 else if (i == 0)
                 {
-                    line = new Line(TeamManager.Team1Main.DrawingData.Center, gamemode.Rotation[i].ZoneData.DrawingData.Center);
+                    line = new Line(TeamManager.Team1Main.DrawingData.Center, rotation[i].ZoneData.DrawingData.Center);
                 }
                 else
                 {
-                    line = new Line(gamemode.Rotation[i - 1].ZoneData.DrawingData.Center, gamemode.Rotation[i].ZoneData.DrawingData.Center);
+                    line = new Line(rotation[i - 1].ZoneData.DrawingData.Center, rotation[i].ZoneData.DrawingData.Center);
                 }
                 DrawLineGradient(line, thickness / 2, img, color1missingpath, color2missingpath, false);
             }

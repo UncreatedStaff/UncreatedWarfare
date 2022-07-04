@@ -228,15 +228,15 @@ public static class CTFUI
                         string objective = string.Empty;
                         if (flag.T1Obj)
                         {
-                            objective = $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            objective = $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>";
                             if (flag.Owner == 2)
-                                objective += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                                objective += $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>";
                         }
                         if (flag.T2Obj)
                         {
-                            objective = $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            objective = $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>";
                             if (flag.Owner == 1)
-                                objective += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                                objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>";
                         }
                         ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
                             $"{(flag.Discovered(1) ? string.Empty : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +
@@ -290,15 +290,15 @@ public static class CTFUI
                 {
                     if (flag.T1Obj)
                     {
-                        objective = $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                        objective = $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>";
                         if (flag.Owner == 2)
-                            objective += $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                            objective += $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>";
                     }
                     if (flag.T2Obj)
                     {
-                        objective = $"<color=#{UCWarfare.GetColorHex("team_2_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                        objective = $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>";
                         if (flag.Owner == 1)
-                            objective += $"<color=#{UCWarfare.GetColorHex("team_1_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                            objective += $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>";
                     }
                     ListUI.Names[i3].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" +
                                                 $"{(flag.Discovered(1) ? string.Empty : $" <color=#{TeamManager.Team1ColorHex}>?</color>")}" +

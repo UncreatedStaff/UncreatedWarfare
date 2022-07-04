@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -320,22 +321,30 @@ public static partial class JSONMethods
             if (!File.Exists(chatColors))
             {
                 Dictionary<string, Color> defaultColors2 = new Dictionary<string, Color>(DefaultColors.Count);
+                HexValues = new Dictionary<string, string>(DefaultColors.Count);
                 using (FileStream stream = new FileStream(chatColors, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
                 {
                     Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
                     writer.WriteStartObject();
                     foreach (KeyValuePair<string, string> color in DefaultColors)
                     {
+                        string y = color.Value;
+                        if (y.Equals(T1_COLOR_PH, StringComparison.Ordinal))
+                            y = TeamManager.Team1ColorHex;
+                        else if (y.Equals(T2_COLOR_PH, StringComparison.Ordinal))
+                            y = TeamManager.Team2ColorHex;
+                        else if (y.Equals(T3_COLOR_PH, StringComparison.Ordinal))
+                            y = TeamManager.AdminColorHex;
                         writer.WritePropertyName(color.Key);
                         writer.WriteStringValue(color.Value);
-                        defaultColors2.Add(color.Key, color.Value.Hex());
+                        defaultColors2.Add(color.Key, y.Hex());
+                        HexValues.Add(color.Key, y);
                     }
                     writer.WriteEndObject();
                     writer.Dispose();
                     stream.Close();
                     stream.Dispose();
                 }
-                HexValues = DefaultColors;
                 return defaultColors2;
             }
             using (FileStream stream = new FileStream(chatColors, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -349,7 +358,7 @@ public static partial class JSONMethods
                 else
                 {
                     Dictionary<string, Color> converted = new Dictionary<string, Color>(DefaultColors.Count);
-                    Dictionary<string, string> read = new Dictionary<string, string>(DefaultColors.Count);
+                    HexValues = new Dictionary<string, string>(DefaultColors.Count);
                     byte[] bytes = new byte[len];
                     stream.Read(bytes, 0, (int)len);
                     try
@@ -365,18 +374,22 @@ public static partial class JSONMethods
                                 if (reader.Read() && reader.TokenType == JsonTokenType.String)
                                 {
                                     string color = reader.GetString()!;
-                                    string value = reader.GetString()!;
-                                    if (read.ContainsKey(key))
+                                    if (HexValues.ContainsKey(key))
                                         L.LogWarning("Duplicate color key \"" + key + "\" in chat_colors.json");
                                     else
                                     {
-                                        read.Add(key, color);
+                                        if (color.Equals(T1_COLOR_PH, StringComparison.Ordinal))
+                                            color = TeamManager.Team1ColorHex;
+                                        else if (color.Equals(T2_COLOR_PH, StringComparison.Ordinal))
+                                            color = TeamManager.Team2ColorHex;
+                                        else if (color.Equals(T3_COLOR_PH, StringComparison.Ordinal))
+                                            color = TeamManager.AdminColorHex;
+                                        HexValues.Add(key, color);
                                         converted.Add(key, color.Hex());
                                     }
                                 }
                             }
                         }
-                        HexValues = read;
                         return converted;
                     }
                     catch (Exception e)

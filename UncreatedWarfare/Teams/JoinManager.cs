@@ -577,16 +577,16 @@ public class JoinManager : BaseSingletonComponent
         }
         public void CheckKits()
         {
-            IsDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && KitManager.HasAccessFast(k, Player) && k.Team == 1).Count() > 0;
-            IsDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && KitManager.HasAccessFast(k, Player) && k.Team == 2).Count() > 0;
+            IsDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && KitManager.HasAccessFast(k, Player) && k.Team == 1).Count > 0;
+            IsDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && KitManager.HasAccessFast(k, Player) && k.Team == 2).Count > 0;
         }
         public static LobbyPlayer CreateNew(UCPlayer player, ulong team = 0)
         {
             return new LobbyPlayer(player, team)
             {
                 IsInLobby = true,
-                IsDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && KitManager.HasAccessFast(k, player) && k.Team == 1).Count() > 0,
-                IsDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && KitManager.HasAccessFast(k, player) && k.Team == 2).Count() > 0
+                IsDonatorT1 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && KitManager.HasAccessFast(k, player) && k.Team == 1).Count > 0,
+                IsDonatorT2 = KitManager.GetKitsWhere(k => (k.IsPremium || k.IsLoadout) && KitManager.HasAccessFast(k, player) && k.Team == 2).Count > 0
             };
         }
     }

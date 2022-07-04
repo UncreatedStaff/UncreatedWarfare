@@ -21,10 +21,6 @@ public abstract class TicketGamemode : FlagGamemode, ITickets
     {
         base.PostDispose();
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
-    {
-        base.PlayerInit(player, wasAlreadyOnline);
-    }
     protected override void EventLoopAction()
     {
         if (TimeToTicket())

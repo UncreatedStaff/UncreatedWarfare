@@ -10,6 +10,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
@@ -52,7 +53,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     protected ReviveManager _reviveManager;
     protected SquadManager _squadManager;
     protected StructureSaver _structureSaver;
-    protected Leaderboard _endScreen;
+    protected Leaderboard? _endScreen;
     private StatTracker _gameStats;
     protected Transform? _blockerBarricadeT1 = null;
     protected Transform? _blockerBarricadeT2 = null;
@@ -77,7 +78,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
-    Leaderboard<Stats, StatTracker> IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
+    Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
     public bool isScreenUp => _isScreenUp;
     public StatTracker WarstatsTracker => _gameStats;
     object IGameStats.GameStats => _gameStats;
@@ -119,9 +120,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     }
     protected override bool TimeToCheck()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_counter > Config.TeamCTF.FlagTickInterval)
         {
             _counter = 0;
@@ -135,9 +133,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     }
     protected override bool TimeToTicket()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (_counter2 > Config.TeamCTF.EvaluateTime * 2)
         {
             _counter2 = 0;
@@ -269,6 +264,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         {
             _endScreen.OnLeaderboardExpired = null;
             Destroy(_endScreen);
+            _endScreen = null!;
         }
         _isScreenUp = false;
         EndGame();
@@ -290,9 +286,15 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
 
         do
         {
-            _rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
+            _rotation.Clear();
+            if (!ObjectivePathing.TryPath(_rotation))
+            {
+                L.LogError("Failed to path...");
+                throw new InvalidOperationException("Invalid pathing data entered.");
+            }
+            //_rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
         }
-        while (_rotation.Count < 4 || _rotation.Count > Config.UI.FlagUICount);
+        while (_rotation.Count > Config.UI.FlagUICount);
     }
     public override void LoadRotation()
     {
@@ -603,21 +605,13 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
 #endif
         if (KitManager.KitExists(player.KitName, out Kit kit))
         {
-            if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
+            if ((!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
             {
                 if (!KitManager.TryGiveRiflemanKit(player))
                     KitManager.TryGiveUnarmedKit(player);
             }
         }
         ulong team = player.GetTeam();
-        FPlayerName names = F.GetPlayerOriginalNames(player);
-        if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
-        {
-            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
-                KitManager.GiveKit(player, unarmed);
-            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
-            else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
-        }
         if (!AllowCosmetics)
         {
             player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
@@ -632,6 +626,29 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
         }
+        if (!_joinManager.IsInLobby(player) && PlayerSave.TryReadSaveFile(player, out PlayerSave save) && (save.LastGame != _gameID || save.ShouldRespawnOnJoin))
+            _joinManager.OnPlayerConnected(player, !wasAlreadyOnline);
+        else if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
+            OnPlayerJoinedTeam(player);
+        StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
+        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
+        base.PlayerInit(player, wasAlreadyOnline);
+    }
+    private void OnPlayerJoinedTeam(UCPlayer player)
+    {
+        ulong team = player.GetTeam();
+        if (team is > 0 and < 3)
+        {
+            if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+                KitManager.GiveKit(player, unarmed);
+            else if (KitManager.KitExists(TeamManager.DefaultKit, out unarmed)) KitManager.GiveKit(player, unarmed);
+            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
+        }
+        else
+        {
+            if (KitManager.KitExists(TeamManager.DefaultKit, out Kit @default)) KitManager.GiveKit(player, @default);
+            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
+        }
         _gameStats.OnPlayerJoin(player);
         if (isScreenUp && _endScreen != null)
         {
@@ -639,13 +656,13 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         }
         else
         {
-            CTFUI.SendFlagList(player);
-            if (State == EState.STAGING)
-                this.ShowStagingUI(player);
+            InitUI(player);
         }
-        StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
-        StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-        base.PlayerInit(player, wasAlreadyOnline);
+    }
+    protected virtual void InitUI(UCPlayer player)
+    {
+        if (State == EState.STAGING)
+            this.ShowStagingUI(player);
     }
     public override void PlayerLeave(UCPlayer player)
     {

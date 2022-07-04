@@ -26,6 +26,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -67,7 +68,6 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Data.LoadColoredConsole();
         L.Log("Started loading - Uncreated Warfare version " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
               "Please stop using this plugin now.", ConsoleColor.Green);
 
@@ -516,15 +516,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
 public class UCWarfareNexus : IModuleNexus
 {
-    private static Stopwatch sw = new Stopwatch();
-    static UCWarfareNexus()
-    {
-        sw.Start();
-    }
     public bool Loaded { get; private set; } = false;
     void IModuleNexus.initialize()
     {
-        sw.Stop();
+        Data.LoadColoredConsole();
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;
         GameObject go = new GameObject("UCWarfare " + UCWarfare.Version.ToString());

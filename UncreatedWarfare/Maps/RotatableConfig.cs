@@ -43,6 +43,91 @@ public class RotatableConfig<T>
         _vals = new MapValue[1] { new MapValue(value, value == null) };
         _isDefaulted = true;
         _current = 0;
+        _val = value;
+        _isNull = value == null;
+    }
+
+    public RotatableConfig(T @default, RotatableDefaults<T> overrides)
+    {
+        if (overrides is null || overrides.Count == 0)
+        {
+            _vals = new MapValue[1] { new MapValue(@default, @default == null) };
+            _isDefaulted = true;
+            _val = @default;
+            _isNull = @default == null;
+            _current = 0;
+            return;
+        }
+        lock (_mapValueCache)
+        {
+            _mapValueCache.Add(new MapValue(@default, @default == null));
+            for (int j = 0; j < overrides.Count; j++)
+            {
+                KeyValuePair<string, T> value = overrides[j];
+                string map = value.Key;
+                if (map.Equals(DEFAULT_VALUE_MAP_NAME, StringComparison.Ordinal)) continue;
+                int index = RotatableConfigConverterFactory._maps.Count;
+                for (int i = 0; i < RotatableConfigConverterFactory._maps.Count; ++i)
+                {
+                    if (RotatableConfigConverterFactory._maps[i].Equals(map, StringComparison.OrdinalIgnoreCase))
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+                if (index == RotatableConfigConverterFactory._maps.Count)
+                    RotatableConfigConverterFactory._maps.Add(map);
+                _mapValueCache.Add(new MapValue(index, value.Value, value.Value == null));
+            }
+            _vals = _mapValueCache.ToArray();
+            _mapValueCache.Clear();
+        }
+
+        _current = RotatableConfigConverterFactory.CurrentMap;
+        if (_current == -1)
+        {
+            _isDefaulted = true;
+
+            for (int i = 0; i < _vals.Length; ++i)
+            {
+                ref MapValue v = ref _vals[i];
+                if (v._isDefault)
+                {
+                    _current = i;
+                    _isDefaulted = true;
+                    _val = v._val;
+                    _isNull = _val == null;
+                    return;
+                }
+            }
+        }
+        int def = -1;
+        for (int i = 0; i < _vals.Length; ++i)
+        {
+            ref MapValue v = ref _vals[i];
+            if (v._isDefault)
+                def = i;
+            else if (v._mapInd == _current)
+            {
+                _isNull = v._val == null;
+                _val = v._val;
+                return;
+            }
+        }
+        _current = def;
+        if (def != -1)
+        {
+            ref MapValue v = ref _vals[def];
+            _val = v._val;
+            _isDefaulted = true;
+            _isNull = _val == null;
+        }
+        else
+        {
+            _val = default!;
+            _isNull = true;
+            _isDefaulted = true;
+        }
     }
     private RotatableConfig(int current, RotatableConfig<T>.MapValue[] vals)
     {
@@ -288,6 +373,13 @@ public class RotatableConfig<T>
     }
 }
 
+public class RotatableDefaults<T> : List<KeyValuePair<string, T>>
+{
+    public void Add(string map, T value)
+    {
+        this.Add(new KeyValuePair<string, T>(map, value));
+    }
+}
 internal class RotatableConfigConverterFactory : JsonConverterFactory
 {
     internal static readonly List<string> _maps = new List<string>(8);

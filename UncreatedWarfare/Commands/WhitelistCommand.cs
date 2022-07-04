@@ -22,7 +22,7 @@ public class WhitelistCommand : Command
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!Data.Gamemode.UseWhitelist || Whitelister.Loaded) throw ctx.SendGamemodeError();
+        if (!Data.Gamemode.UseWhitelist || !Whitelister.Loaded) throw ctx.SendGamemodeError();
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
@@ -33,7 +33,7 @@ public class WhitelistCommand : Command
             ctx.AssertHelpCheck(1, "/whitelist add <item> [amount]");
             if (!ctx.TryGet(ctx.ArgumentCount - 1, out byte amount))
                 amount = 255;
-            if (ctx.TryGet(1, out ItemAsset asset, out bool multiple, amount == 255, ctx.ArgumentCount - 2, false))
+            if (ctx.TryGet(1, out ItemAsset asset, out bool multiple, amount == 255, ctx.ArgumentCount - (amount == 255 ? 1 : 2), false))
             {
                 if (!Whitelister.IsWhitelisted(asset.GUID, out _))
                 {
