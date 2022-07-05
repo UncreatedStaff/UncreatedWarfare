@@ -26,6 +26,7 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     {
         bool UseJoinUI { get; }
         Teams.JoinManager JoinManager { get; }
+        void OnJoinTeam(UCPlayer player, ulong newTeam);
     }
     public interface ITickets : IGamemode
     {

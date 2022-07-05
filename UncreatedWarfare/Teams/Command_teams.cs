@@ -1,6 +1,7 @@
 ﻿using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -20,6 +21,8 @@ public class TeamsCommand : Command
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         ctx.AssertGamemode(out ITeams teamgm);
+        if (Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> il) && il.isScreenUp)
+            throw ctx.SendGamemodeError();
 
         ctx.AssertRanByPlayer();
 

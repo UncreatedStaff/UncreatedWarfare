@@ -86,6 +86,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         new PermissionSaver();
 
+        TeamManager.SetupConfig();
+
         /* PATCHES */
         L.Log("Patching methods...", ConsoleColor.Magenta);
         try
@@ -136,6 +138,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         OnLevelLoaded(Level.BUILD_INDEX_GAME);
         InitialLoadEventSubscription = true;
+
+        UCPlayerData.ReloadToastIDs();
 
         /* BASIC CONFIGS */
         Provider.modeConfigData.Players.Lose_Items_PvP = 0;

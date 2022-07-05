@@ -42,9 +42,6 @@ partial class JSONMethods
             { "team_1", "USA" },
             { "team_2", "Middle Eastern Coalition" },
             { "team_3", "Admins" },
-            { "team_1_short", "USA" },
-            { "team_2_short", "MEC" },
-            { "team_3_short", "Admins" },
             { "teams_join_success", "<color=#a0ad8e>You've joined {0}.</color>" },
             { "teams_join_announce", "<color=#a0ad8e>{0} joined <color=#{2}>{1}</color>!</color>" },
             { "join_player_joined_console", "{0} ({1}) changed group: {3} >> {2}" },
@@ -871,7 +868,7 @@ partial class JSONMethods
             { "xp_flag_captured", "FLAG CAPTURED" },
             { "xp_flag_neutralized", "FLAG NEUTRALIZED" },
             { "xp_flag_attack", "ATTACK" },
-            { "xp_flag_defend", "DEFENCE" },
+            { "xp_flag_defend", "DEFENSE" },
             { "xp_cache_killed", "CACHE DESTROYED" },
             { "xp_cache_teamkilled", "FRIENDLY CACHE DESTROYED" },
 
@@ -1098,6 +1095,12 @@ partial class JSONMethods
             { "permissions_grant_already", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is already at the <color=#ffdf91>{0}</color> level.</color>" },
             { "permissions_revoke_already", "<color=#bfb9ac><color=#7f8182>{0}</color> <color=#dddddd>({1})</color> is already a <color=#ffdf91>member</color>.</color>" },
             { "permissions_revoke_success", "<color=#bfb9ac><color=#7f8182>{0}</color> <color=#dddddd>({1})</color> is now a <color=#ffdf91>member</color>.</color>" },
+            #endregion
+
+            #region Win UI
+            { "win_ui_value_tickets", "{0} Tickets" },
+            { "win_ui_value_caches", "{0} Caches Left" },
+            { "win_ui_header_winner", "{0}\r\nhas won the battle!" },
             #endregion
         };
     }
@@ -1386,8 +1389,8 @@ partial class JSONMethods
             Id = 993,
             Name = "Russian Main Base",
             ShortName = "RU Main",
-            X = 183,
-            Z = 133,
+            X = 196,
+            Z = 113,
             ZoneType = EZoneType.POLYGON,
             UseMapCoordinates = true,
             UseCase = EZoneUseCase.T2_MAIN

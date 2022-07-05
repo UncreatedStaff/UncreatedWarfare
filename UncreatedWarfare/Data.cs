@@ -47,6 +47,7 @@ public static class Data
         private static string? _flagCache;
         private static string? _structureCache;
         private static string? _vehicleCache;
+        public static readonly string FactionsStorage  = Path.Combine(BaseDirectory, "Factions")  + Path.DirectorySeparatorChar;
         public static readonly string TicketStorage    = Path.Combine(BaseDirectory, "Tickets")   + Path.DirectorySeparatorChar;
         public static readonly string PointsStorage    = Path.Combine(BaseDirectory, "Points")    + Path.DirectorySeparatorChar;
         public static readonly string OfficerStorage   = Path.Combine(BaseDirectory, "Officers")  + Path.DirectorySeparatorChar;

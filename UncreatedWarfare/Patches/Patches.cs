@@ -69,8 +69,12 @@ public static partial class Patches
         [HarmonyPostfix]
         static void GetBypassIntegrityChecksPrefix(SteamPlayerID __instance, ref bool __result)
         {
+#if DEBUG
+            __result = true;
+#else
             if (!__result && __instance.steamID.m_SteamID == 76561198267927009UL || __instance.steamID.m_SteamID == 76561198857595123UL)
                 __result = true;
+#endif
         }
 
 
@@ -400,7 +404,7 @@ public static partial class Patches
 
                     if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
                     {
-                        if (__instance.equippedMeleeAsset.GUID == Gamemode.Config.Items.EntrenchingTool)
+                        if (Gamemode.Config.Items.EntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
                         {
                             if (drop.model.TryGetComponent(out RepairableComponent repairable))
                                 repairable.Repair(builder);

@@ -213,8 +213,12 @@ public class JoinManager : BaseSingletonComponent
 
         JoinUI.CloseButton.SetVisibility(c, false);
 
-        JoinUI.Team1Name.SetText(c, Translation.Translate("team_1_short", player.Player));
-        JoinUI.Team2Name.SetText(c, Translation.Translate("team_2_short", player.Player));
+        JoinUI.Team1Name.SetText(c, TeamManager.TranslateShortName(1, player.Player, true));
+        JoinUI.Team2Name.SetText(c, TeamManager.TranslateShortName(2, player.Player, true));
+
+        JoinUI.Team1Image.SetImage(c, TeamManager.Team1Faction.FlagImageURL);
+        JoinUI.Team2Image.SetImage(c, TeamManager.Team2Faction.FlagImageURL);
+
         int t1 = 0, t2 = 0;
         for (int i = 0; i < LobbyPlayers.Count; ++i)
         {
@@ -408,7 +412,8 @@ public class JoinManager : BaseSingletonComponent
         GroupManager.save();
 
         EventDispatcher.InvokeOnGroupChanged(player, oldgroup, newTeam);
-
+        if (Data.Is(out TeamGamemode tg))
+            tg.OnJoinTeam(player, newTeam);
         FPlayerName names = F.GetPlayerOriginalNames(player.Player);
         L.Log(Translation.Translate("join_player_joined_console", 0, out _,
             names.PlayerName, player.Steam64.ToString(), newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)),

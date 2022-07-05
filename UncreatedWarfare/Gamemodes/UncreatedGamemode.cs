@@ -12,6 +12,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
@@ -27,6 +28,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     protected const float MATCH_PRESENT_THRESHOLD = 0.65f;
     public const string GAMEMODE_RELOAD_KEY = "gamemode";
     internal static readonly GamemodeConfig ConfigObj = new GamemodeConfig();
+    public static readonly WinToastUI WinToastUI = new WinToastUI();
     public static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
     public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
     public static readonly Dictionary<string, Type> GAMEMODES = new Dictionary<string, Type>
@@ -695,7 +697,6 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         }
         return null;
     }
-
 }
 public enum EState : byte
 {

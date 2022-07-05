@@ -101,32 +101,32 @@ public class UCPlayerData : MonoBehaviour
     internal static void ReloadToastIDs()
     {
         ref ToastMessageInfo i = ref TOASTS[0];
-        i.guid = Gamemode.Config.UI.InfoToast;
+        Gamemode.Config.UI.InfoToast.ValidReference(out i.guid);
         i = ref TOASTS[1];
-        i.guid = Gamemode.Config.UI.WarningToast;
+        Gamemode.Config.UI.WarningToast.ValidReference(out i.guid);
         i = ref TOASTS[2];
-        i.guid = Gamemode.Config.UI.SevereToast;
+        Gamemode.Config.UI.SevereToast.ValidReference(out i.guid);
         i = ref TOASTS[3];
-        i.guid = Gamemode.Config.UI.XPToast;
+        Gamemode.Config.UI.XPToast.ValidReference(out i.guid);
         i = ref TOASTS[4];
-        i.guid = Gamemode.Config.UI.CreditsToast;
+        Gamemode.Config.UI.MediumToast.ValidReference(out i.guid);
         i = ref TOASTS[5];
-        i.guid = Gamemode.Config.UI.BigToast;
+        Gamemode.Config.UI.BigToast.ValidReference(out i.guid);
         i = ref TOASTS[6];
-        i.guid = Gamemode.Config.UI.ProgressToast;
+        Gamemode.Config.UI.ProgressToast.ValidReference(out i.guid);
         i = ref TOASTS[7];
-        i.guid = Gamemode.Config.UI.TipToast;
+        Gamemode.Config.UI.TipToast.ValidReference(out i.guid);
     }
     private static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
     {
-        new ToastMessageInfo(EToastMessageSeverity.INFO,        Gamemode.Config.UI.InfoToast, 0, 12f),      // info
-        new ToastMessageInfo(EToastMessageSeverity.WARNING,     Gamemode.Config.UI.WarningToast, 0, 12f),   // warning
-        new ToastMessageInfo(EToastMessageSeverity.SEVERE,      Gamemode.Config.UI.SevereToast, 0, 12f),    // error
-        new ToastMessageInfo(EToastMessageSeverity.MINI,        Gamemode.Config.UI.XPToast, 1, 1.58f),      // xp
-        new ToastMessageInfo(EToastMessageSeverity.MEDIUM,      Gamemode.Config.UI.CreditsToast, 2, 4f),    // xp
-        new ToastMessageInfo(EToastMessageSeverity.BIG,         Gamemode.Config.UI.BigToast, 3, 5.5f),      // big
-        new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    Gamemode.Config.UI.ProgressToast, 4, 1.6f), // progress
-        new ToastMessageInfo(EToastMessageSeverity.TIP,         Gamemode.Config.UI.TipToast, 1, 4f),        // tip
+        new ToastMessageInfo(EToastMessageSeverity.INFO,        Gamemode.Config.UI.InfoToast.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f), // info
+        new ToastMessageInfo(EToastMessageSeverity.WARNING,     Gamemode.Config.UI.WarningToast.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),   // warning
+        new ToastMessageInfo(EToastMessageSeverity.SEVERE,      Gamemode.Config.UI.SevereToast.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),    // error
+        new ToastMessageInfo(EToastMessageSeverity.MINI,        Gamemode.Config.UI.XPToast.ValidReference(out guid) ? guid : Guid.Empty, 1, 1.58f),      // xp
+        new ToastMessageInfo(EToastMessageSeverity.MEDIUM,      Gamemode.Config.UI.MediumToast.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),   // medium
+        new ToastMessageInfo(EToastMessageSeverity.BIG,         Gamemode.Config.UI.BigToast.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),      // big
+        new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    Gamemode.Config.UI.ProgressToast.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f), // progress
+        new ToastMessageInfo(EToastMessageSeverity.TIP,         Gamemode.Config.UI.TipToast.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f),        // tip
     };
     private struct ToastChannel
     {

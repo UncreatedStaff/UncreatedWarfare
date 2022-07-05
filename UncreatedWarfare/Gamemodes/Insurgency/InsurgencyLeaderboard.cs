@@ -62,38 +62,35 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
         });
         InsurgencyPlayerStats totalT1 = new InsurgencyPlayerStats(0UL);
         InsurgencyPlayerStats totalT2 = new InsurgencyPlayerStats(0UL);
-        IEnumerator<InsurgencyPlayerStats> enumerator = stats.GetEnumerator();
-        while (enumerator.MoveNext())
+        statsT1 = new List<InsurgencyPlayerStats>(stats.Count) { totalT1 };
+        statsT2 = new List<InsurgencyPlayerStats>(stats.Count) { totalT2 };
+        stats.Sort((InsurgencyPlayerStats a, InsurgencyPlayerStats b) => b.XPGained.CompareTo(a.XPGained));
+        for (int i = 0; i < stats.Count; ++i)
         {
-            InsurgencyPlayerStats stat = enumerator.Current;
+            InsurgencyPlayerStats stat = stats[i];
 
-            if (stat.Steam64.GetTeamFromPlayerSteam64ID() == 1)
+            ulong team = stat.Player.GetTeam();
+            if (team == 1)
             {
                 totalT1.kills += stat.kills;
                 totalT1.deaths += stat.deaths;
                 totalT1.AddXP(stat.XPGained);
                 totalT1.AddCredits(stat.Credits);
                 totalT1.AddDamage(stat.DamageDone);
+                if (statsT1.Count <= count)
+                    statsT1.Add(stat);
             }
-            else if (stat.Steam64.GetTeamFromPlayerSteam64ID() == 2)
+            else if (team == 2)
             {
                 totalT2.kills += stat.kills;
                 totalT2.deaths += stat.deaths;
                 totalT2.AddXP(stat.XPGained);
                 totalT2.AddCredits(stat.Credits);
                 totalT2.AddDamage(stat.DamageDone);
+                if (statsT2.Count <= count)
+                    statsT2.Add(stat);
             }
         }
-        enumerator.Dispose();
-
-        stats.Sort((InsurgencyPlayerStats a, InsurgencyPlayerStats b) => b.XPGained.CompareTo(a.XPGained));
-
-        statsT1 = stats.Where(p => p.Player.GetTeam() == 1).ToList();
-        statsT2 = stats.Where(p => p.Player.GetTeam() == 2).ToList();
-        statsT1.Take(count);
-        statsT2.Take(count);
-        statsT1.Insert(0, totalT1);
-        statsT2.Insert(0, totalT2);
     }
     protected override void OnPlayerDied(PlayerDied e)
     {

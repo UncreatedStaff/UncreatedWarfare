@@ -92,9 +92,9 @@ namespace Uncreated.Warfare.Components
         }
         public void SpawnAttackIcon()
         {
-            if (Data.Is(out Insurgency ins))
+            if (Data.Is(out Insurgency ins) && Gamemode.Config.UI.MarkerCacheAttack.ValidReference(out Guid effect))
             {
-                IconManager.AttachIcon(Gamemode.Config.UI.MarkerCacheAttack, Structure.model, ins.AttackingTeam, 2.25F);
+                IconManager.AttachIcon(effect, Structure.model, ins.AttackingTeam, 2.25F);
             }
         }
 

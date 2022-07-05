@@ -360,7 +360,9 @@ public class BuildableComponent : MonoBehaviour
         }
         else
         {
-            BarricadeDrop? closeEnemyFOB = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.FOBGUID, 5, point, false).FirstOrDefault();
+            BarricadeDrop? closeEnemyFOB = Gamemode.Config.Barricades.FOBGUID.ValidReference(out Guid guid)
+                ? UCBarricadeManager.GetNearbyBarricades(guid, 5, point, false).FirstOrDefault()
+                : null;
             if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
             {
                 // buildable too close to enemy bunker
@@ -392,7 +394,7 @@ public class BuildableComponent : MonoBehaviour
             {
                 if (buildable.Type == EBuildableType.REPAIR_STATION)
                 {
-                    int existing = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID, fob.Radius, fob.Position, team, false).Count();
+                    int existing = Gamemode.Config.Barricades.RepairStationGUID.ValidReference(out guid) ? UCBarricadeManager.CountNearbyBarricades(guid, fob.Radius, fob.Position, team) : 0;
                     if (existing >= 1)
                     {
                         // repair station already exists

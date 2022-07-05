@@ -19,6 +19,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -1487,6 +1488,97 @@ public static class F
             else continue;
         }
         return time;
+    }
+    public static bool ValidReference<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, out Guid guid) where TAsset : Asset
+    {
+        if (reference is not null && reference.HasValue && reference.Value.Exists)
+        {
+            guid = reference.Value.Guid;
+            return true;
+        }
+
+        guid = Guid.Empty;
+        return false;
+    }
+    public static bool ValidReference<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, out TAsset asset) where TAsset : Asset
+    {
+        if (reference is not null && reference.HasValue && reference.Value.Exists)
+        {
+            asset = reference.Value.Asset!;
+            return true;
+        }
+
+        asset = null!;
+        return false;
+    }
+    public static bool ValidReference<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, out ushort id) where TAsset : Asset
+    {
+        if (reference is not null && reference.HasValue && reference.Value.Exists)
+        {
+            id = reference.Value.Id;
+            return true;
+        }
+
+        id = default;
+        return false;
+    }
+    public static bool ValidReference<TAsset>(this JsonAssetReference<TAsset>? reference, out Guid guid) where TAsset : Asset
+    {
+        if (reference is not null && reference.Exists)
+        {
+            guid = reference.Guid;
+            return true;
+        }
+
+        guid = Guid.Empty;
+        return false;
+    }
+    public static bool ValidReference<TAsset>(this JsonAssetReference<TAsset>? reference, out TAsset asset) where TAsset : Asset
+    {
+        if (reference is not null && reference.Exists)
+        {
+            asset = reference.Asset!;
+            return true;
+        }
+
+        asset = null!;
+        return false;
+    }
+    public static bool ValidReference<TAsset>(this JsonAssetReference<TAsset>? reference, out ushort id) where TAsset : Asset
+    {
+        if (reference is not null && reference.Exists)
+        {
+            id = reference.Id;
+            return true;
+        }
+
+        id = default;
+        return false;
+    }
+
+    public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, Guid match) where TAsset : Asset
+    {
+        return reference.ValidReference(out Guid guid) && guid == match;
+    }
+    public static bool MatchGuid<TAsset>(this JsonAssetReference<TAsset>? reference, Guid match) where TAsset : Asset
+    {
+        return reference.ValidReference(out Guid guid) && guid == match;
+    }
+    public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, RotatableConfig<JsonAssetReference<TAsset>>? match) where TAsset : Asset
+    {
+        return reference.ValidReference(out Guid guid) && match.ValidReference(out Guid guid2) && guid == guid2;
+    }
+    public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, JsonAssetReference<TAsset>? match) where TAsset : Asset
+    {
+        return reference.ValidReference(out Guid guid) && match.ValidReference(out Guid guid2) && guid == guid2;
+    }
+    public static bool MatchGuid<TAsset>(this JsonAssetReference<TAsset>? reference, RotatableConfig<JsonAssetReference<TAsset>>? match) where TAsset : Asset
+    {
+        return reference.ValidReference(out Guid guid) && match.ValidReference(out Guid guid2) && guid == guid2;
+    }
+    public static bool MatchGuid<TAsset>(this JsonAssetReference<TAsset>? reference, JsonAssetReference<TAsset>? match) where TAsset : Asset
+    {
+        return reference.ValidReference(out Guid guid) && match.ValidReference(out Guid guid2) && guid == guid2;
     }
 }
 public delegate void InstanceSetter<T1, T2>(T1 owner, T2 value);

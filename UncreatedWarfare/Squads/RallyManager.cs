@@ -22,7 +22,7 @@ namespace Uncreated.Warfare.Squads
 #endif
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
-            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || data.barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
+            if (TeamManager.Team1Faction.RallyPoint.MatchGuid(data.barricade.asset.GUID) || TeamManager.Team2Faction.RallyPoint.MatchGuid(data.barricade.asset.GUID))
             {
                 UCPlayer? player = UCPlayer.FromID(data.owner);
                 if (player?.Squad != null)
@@ -48,7 +48,7 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
+            if (TeamManager.Team1Faction.RallyPoint.MatchGuid(barricade.asset.GUID) || TeamManager.Team2Faction.RallyPoint.MatchGuid(barricade.asset.GUID))
             {
                 UCPlayer? player = UCPlayer.FromID(owner);
                 if (player == null) return;
@@ -93,7 +93,7 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID || data.barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID)
+            if (TeamManager.Team1Faction.RallyPoint.MatchGuid(data.barricade.asset.GUID) || TeamManager.Team2Faction.RallyPoint.MatchGuid(data.barricade.asset.GUID))
             {
                 TryDeleteRallyPoint(instanceID);
             }
@@ -197,8 +197,8 @@ namespace Uncreated.Warfare.Squads
             IEnumerable<BarricadeDrop> barricadeDrops = BarricadeManager.regions.Cast<BarricadeRegion>().SelectMany(brd => brd.drops);
 
             return barricadeDrops.Where(b =>
-                b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.T1RallyPointGUID ||
-                b.GetServersideData().barricade.asset.GUID == Gamemode.Config.Barricades.T2RallyPointGUID);
+                TeamManager.Team1Faction.RallyPoint.MatchGuid(b.asset.GUID) ||
+                TeamManager.Team2Faction.RallyPoint.MatchGuid(b.asset.GUID));
         }
     }
 

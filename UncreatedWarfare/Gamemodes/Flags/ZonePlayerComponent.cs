@@ -213,6 +213,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 return;
             }
         });
+        ctx.Defer();
     }
 
     private void OnDeleted()

@@ -87,6 +87,12 @@ public class ReloadCommand : Command
             ctx.Reply("reload_reloaded_sql");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "MYSQL CONNECTION");
         }
+        else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase))
+        {
+            TeamManager.SetupConfig();
+            ctx.Reply("reload_reloaded_generic", "teams and factions");
+            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TEAMS & FACTIONS");
+        }
         else if (module.Equals("all", StringComparison.OrdinalIgnoreCase))
         {
             ReloadTranslations();

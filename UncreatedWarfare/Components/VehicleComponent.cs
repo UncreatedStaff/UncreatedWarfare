@@ -7,6 +7,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -336,32 +337,12 @@ public class VehicleComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Guid buildGUID = Guid.Empty;
-        Guid ammoGUID = Guid.Empty;
-
         ItemAsset? supplyAsset;
 
-        if (Team == 1)
-        {
-            buildGUID = Gamemode.Config.Items.T1Build;
-            ammoGUID = Gamemode.Config.Items.T1Ammo;
-        }
-        else if (Team == 2)
-        {
-            buildGUID = Gamemode.Config.Items.T2Build;
-            ammoGUID = Gamemode.Config.Items.T2Ammo;
-        }
-
-        if (type == ESupplyType.BUILD)
-        {
-            supplyAsset = Assets.find(buildGUID) as ItemAsset;
-            //caller.Message("load_st_build", amount.ToString());
-        }
-        else if (type == ESupplyType.AMMO)
-        {
-            supplyAsset = Assets.find(ammoGUID) as ItemAsset;
-            //caller.Message("load_st_ammo", amount.ToString());
-        }
+        if (type is ESupplyType.BUILD)
+            TeamManager.GetFaction(Team).Build.ValidReference(out supplyAsset);
+        else if (type is ESupplyType.AMMO)
+            TeamManager.GetFaction(Team).Ammo.ValidReference(out supplyAsset);
         else
         {
             caller.Message("load_e_itemassetnotfound");
@@ -401,7 +382,7 @@ public class VehicleComponent : MonoBehaviour
                     if (loaderBreak >= 3)
                     {
                         loaderBreak = 0;
-                        if (supplyAsset.GUID == buildGUID)
+                        if (type is ESupplyType.BUILD)
                             EffectManager.sendEffect(25997, EffectManager.MEDIUM, Vehicle.transform.position);
                         else
                             EffectManager.sendEffect(25998, EffectManager.MEDIUM, Vehicle.transform.position);
@@ -430,7 +411,7 @@ public class VehicleComponent : MonoBehaviour
                     if (loaderBreak >= 3)
                     {
                         loaderBreak = 0;
-                        if (supplyAsset.GUID == buildGUID)
+                        if (type is ESupplyType.BUILD)
                             EffectManager.sendEffect(25997, EffectManager.MEDIUM, Vehicle.transform.position);
                         else
                             EffectManager.sendEffect(25998, EffectManager.MEDIUM, Vehicle.transform.position);
@@ -450,31 +431,14 @@ public class VehicleComponent : MonoBehaviour
             }
         }
 
-        if (type == ESupplyType.BUILD)
-            caller.Message("load_s_build", (addedBackCount + addedNewCount).ToString());
-        else if (type == ESupplyType.AMMO)
-            caller.Message("load_s_ammo", (addedBackCount + addedNewCount).ToString());
+        caller.Message(type is ESupplyType.BUILD ? "load_s_build" : "load_s_ammo", (addedBackCount + addedNewCount).ToString());
 
         forceSupplyLoop = null;
     }
     private IEnumerator<WaitForSeconds> AutoSupplyLoop()
     {
-        Guid buildGUID = Guid.Empty;
-        Guid ammoGUID = Guid.Empty;
-
-        if (Team == 1)
-        {
-            buildGUID = Gamemode.Config.Items.T1Build;
-            ammoGUID = Gamemode.Config.Items.T1Ammo;
-        }
-        else if (Team == 2)
-        {
-            buildGUID = Gamemode.Config.Items.T2Build;
-            ammoGUID = Gamemode.Config.Items.T2Ammo;
-        }
-
-        ItemAsset? build = Assets.find(buildGUID) as ItemAsset;
-        ItemAsset? ammo = Assets.find(ammoGUID) as ItemAsset;
+        TeamManager.GetFaction(Team).Build.ValidReference(out ItemAsset? build);
+        TeamManager.GetFaction(Team).Ammo.ValidReference(out ItemAsset? ammo);
 
         UCPlayer? driver = UCPlayer.FromID(LastDriver);
 
@@ -488,11 +452,11 @@ public class VehicleComponent : MonoBehaviour
             for (int i = 0; i < trunk.Count; i++)
             {
                 ItemAsset? asset;
-                if (trunk[i].id == buildGUID) asset = build;
-                else if (trunk[i].id == ammoGUID) asset = ammo;
+                if (build is not null && trunk[i].id == build.GUID) asset = build;
+                else if (ammo is not null && trunk[i].id == ammo.GUID) asset = ammo;
                 else asset = Assets.find(trunk[i].id) as ItemAsset;
 
-                if (asset != null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x,
+                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x,
                         asset.size_y, trunk[i].rotation))
                 {
                     Item item = new Item(asset.id, trunk[i].amount, 100, F.CloneBytes(trunk[i].metadata));
@@ -502,7 +466,7 @@ public class VehicleComponent : MonoBehaviour
                     if (loaderCount >= 3)
                     {
                         loaderCount = 0;
-                        if (asset.GUID == buildGUID)
+                        if (asset == build)
                             EffectManager.sendEffect(25997, EffectManager.MEDIUM, Vehicle.transform.position);
                         else
                             EffectManager.sendEffect(25998, EffectManager.MEDIUM, Vehicle.transform.position);

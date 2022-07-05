@@ -311,8 +311,8 @@ public class RotatableConfig<T>
         return new RotatableConfig<T>(def);
     }
 
-    public static bool operator ==(RotatableConfig<T> left, RotatableConfig<T> right) => left.Equals(right);
-    public static bool operator !=(RotatableConfig<T> left, RotatableConfig<T> right) => !left.Equals(right);
+    public static bool operator ==(RotatableConfig<T>? left, RotatableConfig<T>? right) => left is null ? right is null : left.Equals(right);
+    public static bool operator !=(RotatableConfig<T>? left, RotatableConfig<T>? right) => !(left == right);
 
     public override bool Equals(object obj)
     {
@@ -320,7 +320,7 @@ public class RotatableConfig<T>
         return base.Equals(obj);
     }
 
-    public bool Equals(RotatableConfig<T> other)
+    public bool Equals(RotatableConfig<T>? other)
     {
         if (other is null || other._isNull)
             return this is null || this._isNull;

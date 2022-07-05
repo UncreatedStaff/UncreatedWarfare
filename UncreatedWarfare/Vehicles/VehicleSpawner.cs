@@ -60,7 +60,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (data.barricade.asset.GUID == Gamemode.Config.Barricades.VehicleBayGUID)
+        if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(data.barricade.asset.GUID))
         {
             if (IsRegistered(data.instanceID, out _, EStructType.BARRICADE))
             {
@@ -74,7 +74,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (data.structure.asset.GUID == Gamemode.Config.Barricades.VehicleBayGUID)
+        if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(data.structure.asset.GUID))
         {
             if (IsRegistered(data.instanceID, out _, EStructType.STRUCTURE))
             {

@@ -66,7 +66,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
     public override bool TransmitMicWhileNotActive => true;
-    public override bool UseJoinUI => true;
+    public override bool UseJoinUI => false; // todo change back
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
@@ -159,12 +159,12 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
                 if (Team1Bleed < 0)
                 {
                     TicketManager.Team1Tickets += Team1Bleed;
-                    TicketManager.UpdateUITeam1(Team1Bleed);
+                    TicketManager.UpdateUI(1, Team1Bleed);
                 }
                 if (Team2Bleed < 0)
                 {
                     TicketManager.Team2Tickets += Team2Bleed;
-                    TicketManager.UpdateUITeam2(Team2Bleed);
+                    TicketManager.UpdateUI(2, Team2Bleed);
                 }
             }
         }
@@ -183,36 +183,22 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         this._state = EState.FINISHED;
         L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
 
-        string Team1Tickets = TicketManager.Team1Tickets.ToString() + " Tickets";
-        if (TicketManager.Team1Tickets <= 0)
-            Team1Tickets = Team1Tickets.Colorize("969696");
-
-        string Team2Tickets = TicketManager.Team2Tickets.ToString() + " Tickets";
-        if (TicketManager.Team2Tickets <= 0)
-            Team2Tickets = Team2Tickets.Colorize("969696");
-
-        ushort winToastUI = 0;
-        if (Assets.find(Config.UI.WinToastGUID) is EffectAsset e)
-        {
-            winToastUI = e.id;
-        }
-        else
-            L.LogWarning("WinToast UI not found. GUID: " + Gamemode.Config.UI.WinToastGUID);
+        SendWinUI(winner);
 
         QuestManager.OnGameOver(winner);
         ActionLog.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
+        string c = TeamManager.GetTeamHexColor(winner);
+        foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+        {
+            string t = TeamManager.TranslateName(winner, set.Language);
+            Chat.Broadcast(set, "team_win", t, c);
+        }
 
         foreach (SteamPlayer client in Provider.clients)
         {
-            client.SendChat("team_win", TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner));
             client.player.movement.forceRemoveFromVehicle();
-            EffectManager.askEffectClearByID(Config.UI.InjuredUI, client.transportConnection);
-            //ToastMessage.QueueMessage(client.player, new ToastMessage("", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), TeamManager.GetTeamHexColor(winner)), EToastMessageSeverity.BIG));
-
-            EffectManager.sendUIEffect(winToastUI, 12345, client.transportConnection, true);
-            EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Header", Translation.Translate("team_win", client, TeamManager.TranslateName(winner, client.playerID.steamID.m_SteamID), "ffffff"));
-            EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Team1Tickets", Team1Tickets);
-            EffectManager.sendUIEffectText(12345, client.transportConnection, true, "Team2Tickets", Team2Tickets);
+            if (Config.UI.InjuredUI.ValidReference(out ushort id))
+                EffectManager.askEffectClearByID(id, client.transportConnection);
         }
         StatsManager.ModifyTeam(winner, t => t.Wins++, false);
         StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
@@ -294,7 +280,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             }
             //_rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
         }
-        while (_rotation.Count > Config.UI.FlagUICount);
+        while (_rotation.Count > CTFUI.ListUI.Parents.Length);
     }
     public override void LoadRotation()
     {
@@ -626,13 +612,18 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
         }
-        if (!_joinManager.IsInLobby(player) && PlayerSave.TryReadSaveFile(player, out PlayerSave save) && (save.LastGame != _gameID || save.ShouldRespawnOnJoin))
+        if (UseJoinUI && !_joinManager.IsInLobby(player) && PlayerSave.TryReadSaveFile(player, out PlayerSave save) && (save.LastGame != _gameID || save.ShouldRespawnOnJoin))
             _joinManager.OnPlayerConnected(player, !wasAlreadyOnline);
         else if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
             OnPlayerJoinedTeam(player);
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
         base.PlayerInit(player, wasAlreadyOnline);
+    }
+    public override void OnJoinTeam(UCPlayer player, ulong newTeam)
+    {
+        OnPlayerJoinedTeam(player);
+        base.OnJoinTeam(player, newTeam);
     }
     private void OnPlayerJoinedTeam(UCPlayer player)
     {

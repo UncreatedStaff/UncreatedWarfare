@@ -114,7 +114,7 @@ public static class EventFunctions
         if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
 
         // ammo bag
-        if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
+        if (Gamemode.Config.Barricades.AmmoBagGUID.ValidReference(out Guid guid) && guid == data.barricade.asset.GUID)
             drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
 
     }
@@ -289,7 +289,7 @@ public static class EventFunctions
             RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
             if (!shouldAllow) return;
 
-            if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
+            if (Gamemode.Config.Barricades.AmmoBagGUID.ValidReference(out Guid guid) && guid == barricade.asset.GUID)
             {
                 if (!perms && player.KitClass != EClass.RIFLEMAN)
                 {
@@ -309,7 +309,7 @@ public static class EventFunctions
                 return;
             }
 
-            if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == barricade.asset.GUID))
+            if (Gamemode.Config.Barricades.FOBRadioGUIDs.Value.Any(g => g == barricade.asset.GUID))
             {
                 shouldAllow = BuildableComponent.TryPlaceRadio(barricade, player, point);
                 return;
@@ -756,11 +756,11 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (storage == null || !shouldAllow || Gamemode.Config.Barricades.TimeLimitedStorages == null || Gamemode.Config.Barricades.TimeLimitedStorages.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
+        if (storage == null || !shouldAllow || Gamemode.Config.Barricades.TimeLimitedStorages == null || Gamemode.Config.Barricades.TimeLimitedStorages.Value.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
         SteamPlayer player = PlayerTool.getSteamPlayer(instigator);
         BarricadeDrop storagedrop = BarricadeManager.FindBarricadeByRootTransform(storage.transform);
         if (player == null || storagedrop == null ||
-            !Gamemode.Config.Barricades.TimeLimitedStorages.Contains(storagedrop.asset.GUID)) return;
+            !Gamemode.Config.Barricades.TimeLimitedStorages.Value.Any(x => x.Guid == storagedrop.asset.GUID)) return;
         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
         if (ucplayer == null) return;
         if (ucplayer.StorageCoroutine != null)
@@ -792,7 +792,7 @@ public static class EventFunctions
             }
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
             if (drop == null) return;
-            if (drop.asset.GUID == Gamemode.Config.Barricades.FOBRadioDamagedGUID && instigatorSteamID != CSteamID.Nil)
+            if (Gamemode.Config.Barricades.FOBRadioDamagedGUID.ValidReference(out Guid guid) && guid == drop.asset.GUID && instigatorSteamID != CSteamID.Nil)
             {
                 shouldAllow = false;
             }

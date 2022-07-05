@@ -55,7 +55,7 @@ public class DeployCommand : Command
             if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.COMBAT, out Cooldown combatlog))
                 throw ctx.Reply("deploy_e_incombat", combatlog.ToString());
 
-            if (!(ctx.Caller.IsOnFOB(out _) || UCBarricadeManager.CountNearbyBarricades(Gamemode.Config.Barricades.InsurgencyCacheGUID, 10, ctx.Caller.Position, team) != 0))
+            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.ValidReference(out Guid guid) || !(ctx.Caller.IsOnFOB(out _) || UCBarricadeManager.CountNearbyBarricades(guid, 10, ctx.Caller.Position, team) != 0))
                 throw ctx.Reply(Data.Is<Insurgency>() ? "deploy_e_notnearfob_ins" : "deploy_e_notnearfob");
         }
 

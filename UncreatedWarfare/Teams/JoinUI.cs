@@ -8,11 +8,13 @@ public class JoinUI : UnturnedUI
     public readonly UnturnedUIElement Team1Highlight = new UnturnedUIElement("Team1Highlight");
     public readonly UnturnedLabel Team1PlayerCount = new UnturnedLabel("Team1PlayerCount");
     public readonly UnturnedLabel Team1Select = new UnturnedLabel("Team1Select");
+    public readonly UnturnedImage Team1Image = new UnturnedImage("Team1Image");
 
     public readonly UnturnedLabel Team2Name = new UnturnedLabel("Team2Name");
     public readonly UnturnedUIElement Team2Highlight = new UnturnedUIElement("Team2Highlight");
     public readonly UnturnedLabel Team2PlayerCount = new UnturnedLabel("Team2PlayerCount");
     public readonly UnturnedLabel Team2Select = new UnturnedLabel("Team2Select");
+    public readonly UnturnedImage Team2Image = new UnturnedImage("Team2Image");
 
     public readonly UnturnedLabel ConfirmText = new UnturnedLabel("ConfirmText");
 
@@ -24,6 +26,7 @@ public class JoinUI : UnturnedUI
     public readonly UnturnedButton Team2Button = new UnturnedButton("Team2Button");
     public readonly UnturnedButton ConfirmButton = new UnturnedButton("Confirm");
     public readonly UnturnedUIElement CloseButton = new UnturnedUIElement("X");
+
 
     public readonly UnturnedLabel Team1Player0 = new UnturnedLabel("T1P1");
     public readonly UnturnedLabel Team1Player1 = new UnturnedLabel("T1P2");

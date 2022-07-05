@@ -33,42 +33,41 @@ public static class IconManager
         if (drop.model.TryGetComponent(out IconRenderer _))
             return;
 
-        SDG.Unturned.BarricadeData data = drop.GetServersideData();
-
+        BarricadeData data = drop.GetServersideData();
         // FOB radio
-        if (isFOBRadio)
-            AttachIcon(Gamemode.Config.UI.MarkerRadio, drop.model, data.group, 3.5F);
+        if (isFOBRadio && Gamemode.Config.UI.MarkerRadio.ValidReference(out Guid guid))
+            AttachIcon(guid, drop.model, data.group, 3.5F);
 
         // FOB radio damaged
-        if (Gamemode.Config.Barricades.FOBRadioDamagedGUID == data.barricade.asset.GUID)
-            AttachIcon(Gamemode.Config.UI.MarkerRadioDamaged, drop.model, data.group, 3.5F);
+        else if (Gamemode.Config.Barricades.FOBRadioDamagedGUID.MatchGuid(drop.asset.GUID) && Gamemode.Config.UI.MarkerRadioDamaged.ValidReference(out guid))
+            AttachIcon(guid, drop.model, data.group, 3.5F);
 
         // FOB bunker
-        if (Gamemode.Config.Barricades.FOBGUID == data.barricade.asset.GUID)
-            AttachIcon(Gamemode.Config.UI.MarkerBunker, drop.model, data.group, 5.5F);
+        else if (Gamemode.Config.Barricades.FOBGUID.MatchGuid(drop.asset.GUID) && Gamemode.Config.UI.MarkerBunker.ValidReference(out guid))
+            AttachIcon(guid, drop.model, data.group, 5.5F);
 
         // ammo bag
-        if (Gamemode.Config.Barricades.AmmoBagGUID == data.barricade.asset.GUID)
-            AttachIcon(Gamemode.Config.UI.MarkerAmmo, drop.model, data.group, 1);
+        else if (Gamemode.Config.Barricades.AmmoBagGUID.MatchGuid(drop.asset.GUID) && Gamemode.Config.UI.MarkerAmmo.ValidReference(out guid))
+            AttachIcon(guid, drop.model, data.group, 1);
 
         // ammo crate
-        if (Gamemode.Config.Barricades.AmmoCrateGUID == data.barricade.asset.GUID)
-            AttachIcon(Gamemode.Config.UI.MarkerAmmo, drop.model, data.group, 1.75F);
+        else if (Gamemode.Config.Barricades.AmmoCrateGUID.MatchGuid(drop.asset.GUID) && Gamemode.Config.UI.MarkerAmmo.ValidReference(out guid))
+            AttachIcon(guid, drop.model, data.group, 1.75F);
 
         // repair station
-        if (Gamemode.Config.Barricades.RepairStationGUID == data.barricade.asset.GUID)
-            AttachIcon(Gamemode.Config.UI.MarkerRepair, drop.model, data.group, 4.5F);
+        else if (Gamemode.Config.Barricades.RepairStationGUID.MatchGuid(drop.asset.GUID) && Gamemode.Config.UI.MarkerRepair.ValidReference(out guid))
+            AttachIcon(guid, drop.model, data.group, 4.5F);
 
-        if (Data.Is(out Insurgency _))
+        else if (Data.Is(out Insurgency _))
         {
             // cache
-            if (Gamemode.Config.Barricades.InsurgencyCacheGUID == data.barricade.asset.GUID)
-                AttachIcon(Gamemode.Config.UI.MarkerCacheDefend, drop.model, data.group, 2.25F);
+            if (Gamemode.Config.Barricades.InsurgencyCacheGUID.MatchGuid(drop.asset.GUID) && Gamemode.Config.UI.MarkerCacheDefend.ValidReference(out guid))
+                AttachIcon(guid, drop.model, data.group, 2.25F);
         }
 
         // buildable
-        if (FOBManager.Config.Buildables.Exists(b => b.Foundation == drop.asset.GUID && b.Type != EBuildableType.FORTIFICATION))
-            AttachIcon(Gamemode.Config.UI.MarkerBuildable, drop.model, data.group, 2F);
+        else if (Gamemode.Config.UI.MarkerBuildable.ValidReference(out guid) && FOBManager.Config.Buildables.Exists(b => b.Foundation == drop.asset.GUID && b.Type != EBuildableType.FORTIFICATION))
+            AttachIcon(guid, drop.model, data.group, 2F);
     }
     private static void OnGroupChanged(GroupChanged e)
     {

@@ -58,6 +58,7 @@ internal class _DebugCommand : Command
                 ctx.Offset = 1;
                 info.Invoke(this, new object[1] { ctx });
                 ctx.Offset = 0;
+                ctx.Defer();
             }
             catch (Exception ex)
             {

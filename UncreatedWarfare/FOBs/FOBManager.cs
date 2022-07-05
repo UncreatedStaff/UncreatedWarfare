@@ -113,7 +113,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     private void OnBarricadePlaced(BarricadePlaced e)
     {
         Guid guid = e.ServersideData.barricade.asset.GUID;
-        bool isRadio = Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == guid);
+        bool isRadio = Gamemode.Config.Barricades.FOBRadioGUIDs.HasValue && Gamemode.Config.Barricades.FOBRadioGUIDs.Value.Any(g => g == guid);
         BarricadeDrop drop = e.Barricade;
         BuildableData? buildable = Config.Buildables.Find(b => b.Foundation == drop.asset.GUID);
         if (buildable != null)
@@ -159,7 +159,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (e.Transform.TryGetComponent(out BuiltBuildableComponent comp))
             UnityEngine.Object.Destroy(comp);
         if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
-        if (e.ServersideData.barricade.asset.GUID == Gamemode.Config.Barricades.FOBGUID)
+        if (Gamemode.Config.Barricades.FOBGUID.ValidReference(out Guid guid) && guid == e.ServersideData.barricade.asset.GUID)
         {
             FOB? fob = FOB.GetNearestFOB(e.ServersideData.point, EFOBRadius.SHORT, e.ServersideData.group);
 
@@ -172,14 +172,14 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         }
         if (e.Transform.TryGetComponent(out FOBComponent f))
         {
-            if (Gamemode.Config.Barricades.FOBRadioGUIDs.Any(g => g == e.ServersideData.barricade.asset.GUID))
+            if (Gamemode.Config.Barricades.FOBRadioGUIDs.Value.Any(g => g == e.ServersideData.barricade.asset.GUID))
             {
                 if (f.parent.IsWipedByAuthority)
                     f.parent.Destroy();
                 else
                     f.parent.StartBleed();
             }
-            else if (e.ServersideData.barricade.asset.GUID == Gamemode.Config.Barricades.FOBRadioDamagedGUID)
+            else if (Gamemode.Config.Barricades.FOBRadioDamagedGUID.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID)
             {
                 if (f.parent.IsBleeding)
                     f.parent.Destroy();
@@ -187,7 +187,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
             SendFOBListToTeam(f.parent.Team);
         }
-        else if (e.ServersideData.barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID)
+        else if (Gamemode.Config.Barricades.InsurgencyCacheGUID.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID)
         {
             DeleteCache(e.Barricade);
         }
@@ -266,9 +266,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         UCPlayer? placer = UCPlayer.FromID(drop.GetServersideData().owner);
         if (placer != null)
         {
-            if (Assets.find(Gamemode.Config.Barricades.FOBBaseGUID) is ItemAsset fobBase)
+            if (Gamemode.Config.Barricades.FOBBaseGUID.ValidReference(out ItemBarricadeAsset fobBase))
                 ItemManager.dropItem(new Item(fobBase.id, true), placer.Position, true, true, true);
-            if (Assets.find(Gamemode.Config.Barricades.AmmoCrateBaseGUID) is ItemAsset ammoBase)
+            if (Gamemode.Config.Barricades.AmmoCrateBaseGUID.ValidReference(out ItemBarricadeAsset ammoBase))
                 ItemManager.dropItem(new Item(ammoBase.id, true), placer.Position, true, true, true);
             QuestManager.OnFOBBuilt(placer, fob);
             Tips.TryGiveTip(placer, ETip.PLACE_BUNKER);

@@ -2,6 +2,7 @@
 using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Teams;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands.VanillaRework;
@@ -28,7 +29,7 @@ public class ICommand : Command
         ctx.AssertHelpCheck(1, SYNTAX + " - " + HELP);
 
         int amount = 1;
-        string itemName = "";
+        string itemName = string.Empty;
         ushort shortID;
         ItemAsset? asset = null;
 
@@ -38,6 +39,13 @@ public class ICommand : Command
 
         if (ctx.HasArgsExact(1)) // if there is only one argument, we only have to check a single word
         {
+            if (Guid.TryParse(ctx.Get(0)!, out Guid guid))
+            {
+                guid = TeamManager.CheckAssetRedirect(guid, ctx.Caller.GetTeam());
+                asset = Assets.find<ItemAsset>(guid);
+                if (asset is not null)
+                    goto foundItem;
+            }
             // first check if single-word argument is a short ID
             if (ctx.TryGet(0, out shortID) && Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2)
             {
@@ -61,17 +69,33 @@ public class ICommand : Command
         else // there are at least 2 arguments
         {
             // first try treat 1st argument as a short ID, and 2nd argument as an amount
-            if (ctx.HasArgsExact(2) && ctx.TryGet(0, out shortID) && Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2)
+            if (ctx.HasArgsExact(2))
             {
-                if (!ctx.TryGet(1, out amount) || amount > MAX_ITEMS || amount < 0)
+                if (ctx.TryGet(0, out shortID) && Assets.find(EAssetType.ITEM, shortID) is ItemAsset asset2)
                 {
-                    amount = 1;
-                    amountWasValid = false;
-                }
+                    if (!ctx.TryGet(1, out amount) || amount > MAX_ITEMS || amount < 0)
+                    {
+                        amount = 1;
+                        amountWasValid = false;
+                    }
 
-                // success
-                asset = asset2;
-                goto foundItem;
+                    // success
+                    asset = asset2;
+                    goto foundItem;
+                }
+                else if (Guid.TryParse(ctx.Get(0)!, out Guid guid))
+                {
+                    if (!ctx.TryGet(1, out amount) || amount > MAX_ITEMS || amount < 0)
+                    {
+                        amount = 1;
+                        amountWasValid = false;
+                    }
+
+                    guid = TeamManager.CheckAssetRedirect(guid, ctx.Caller.GetTeam());
+                    asset = Assets.find<ItemAsset>(guid);
+                    if (asset is not null)
+                        goto foundItem;
+                }
             }
             else
             {

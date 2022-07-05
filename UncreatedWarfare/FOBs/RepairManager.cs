@@ -19,7 +19,7 @@ namespace Uncreated.Warfare.FOBs
 #endif
             SDG.Unturned.BarricadeData data = drop.GetServersideData();
 
-            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
+            if (Gamemode.Config.Barricades.RepairStationGUID.MatchGuid(data.barricade.asset.GUID))
             {
                 RegisterNewRepairStation(data, drop);
             }
@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.FOBs
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (data.barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID)
+            if (Gamemode.Config.Barricades.RepairStationGUID.MatchGuid(data.barricade.asset.GUID))
             {
                 TryDeleteRepairStation(instanceID);
             }
@@ -43,7 +43,7 @@ namespace Uncreated.Warfare.FOBs
             stations.Clear();
             foreach (var barricade in UCBarricadeManager.AllBarricades)
             {
-                if (barricade.asset.GUID == Gamemode.Config.Barricades.RepairStationGUID && !barricade.model.TryGetComponent(out RepairStationComponent _))
+                if (Gamemode.Config.Barricades.RepairStationGUID.MatchGuid(barricade.asset.GUID) && !barricade.model.TryGetComponent(out RepairStationComponent _))
                 {
                     RepairStation station = new RepairStation(barricade.GetServersideData(), barricade);
                     stations.Add(station);

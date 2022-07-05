@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using Uncreated.Warfare.Events.Players;
 using System.Reflection;
 using HarmonyLib;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
@@ -169,7 +170,7 @@ public static class UCInventoryManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         player.Player.equipment.dequip();
-
+        ulong team = player.GetTeam();
         byte[] blank = Array.Empty<byte>();
         NetId id = player.Player.clothing.GetNetId();
         byte flag = 0;
@@ -187,7 +188,7 @@ public static class UCInventoryManager
                 EClothingType.MASK => Data.SendWearMask,
                 EClothingType.GLASSES => Data.SendWearGlasses,
                 _ => null
-            })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), clothing.id, 100, blank);
+            })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckAssetRedirect(clothing.id, team), 100, blank);
         }
         for (int i = 0; i < 7; ++i)
         {

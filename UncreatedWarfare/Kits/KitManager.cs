@@ -701,7 +701,7 @@ public class KitManager : BaseReloadSingleton
                 if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
                 {
                     items.Add(new KitItem(
-                        asset.GUID,
+                        TeamManager.GetRedirectGuid(asset.GUID),
                         jar.x,
                         jar.y,
                         jar.rot,
@@ -724,19 +724,19 @@ public class KitManager : BaseReloadSingleton
         List<KitClothing> clothes = new List<KitClothing>(7);
 
         if (playerClothes.shirtAsset != null)
-            clothes.Add(new KitClothing(playerClothes.shirtAsset.GUID, EClothingType.SHIRT));
+            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.shirtAsset.GUID), EClothingType.SHIRT));
         if (playerClothes.pantsAsset != null)
-            clothes.Add(new KitClothing(playerClothes.pantsAsset.GUID, EClothingType.PANTS));
+            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.pantsAsset.GUID), EClothingType.PANTS));
         if (playerClothes.vestAsset != null)
-            clothes.Add(new KitClothing(playerClothes.vestAsset.GUID, EClothingType.VEST));
+            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.vestAsset.GUID), EClothingType.VEST));
         if (playerClothes.hatAsset != null)
-            clothes.Add(new KitClothing(playerClothes.hatAsset.GUID, EClothingType.HAT));
+            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.hatAsset.GUID), EClothingType.HAT));
         if (playerClothes.maskAsset != null)
-            clothes.Add(new KitClothing(playerClothes.maskAsset.GUID, EClothingType.MASK));
+            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.maskAsset.GUID), EClothingType.MASK));
         if (playerClothes.backpackAsset != null)
-            clothes.Add(new KitClothing(playerClothes.backpackAsset.GUID, EClothingType.BACKPACK));
+            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.backpackAsset.GUID), EClothingType.BACKPACK));
         if (playerClothes.glassesAsset != null)
-            clothes.Add(new KitClothing(playerClothes.glassesAsset.GUID, EClothingType.GLASSES));
+            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.glassesAsset.GUID), EClothingType.GLASSES));
         
         return clothes;
     }
@@ -822,6 +822,7 @@ public class KitManager : BaseReloadSingleton
     {
         if (kit == null)
             return;
+        ulong team = player.GetTeam();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -872,18 +873,20 @@ public class KitManager : BaseReloadSingleton
             for (int i = 0; i < kit.Items.Count; ++i)
             {
                 KitItem item = kit.Items[i];
-                if (item.page < PlayerInventory.PAGES - 2 && Assets.find(item.id) is ItemAsset asset)
+                if (item.page < PlayerInventory.PAGES - 2 && Assets.find(TeamManager.CheckAssetRedirect(item.id, team)) is ItemAsset asset)
                     p[item.page].addItem(item.x, item.y, item.rotation, new Item(asset.id, item.amount, 100, F.CloneBytes(item.metadata)));
+                else
+                    L.LogWarning("Invalid item {" + item.id.ToString("N") + "} in kit " + kit.Name + " for team " + team);
             }
             if (ohi)
-                Data.SetOwnerHasInventory(player.Player.inventory, ohi);
+                Data.SetOwnerHasInventory(player.Player.inventory, true);
             UCInventoryManager.SendPages(player);
         }
         else
         {
             foreach (KitClothing clothing in kit.Clothes)
             {
-                if (Assets.find(clothing.id) is ItemAsset asset)
+                if (Assets.find(TeamManager.CheckAssetRedirect(clothing.id, team)) is ItemAsset asset)
                 {
                     if (clothing.type == EClothingType.SHIRT)
                         player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);
@@ -904,13 +907,15 @@ public class KitManager : BaseReloadSingleton
 
             foreach (KitItem k in kit.Items)
             {
-                if (Assets.find(k.id) is ItemAsset asset)
+                if (Assets.find(TeamManager.CheckAssetRedirect(k.id, team)) is ItemAsset asset)
                 {
                     Item item = new Item(asset.id, k.amount, 100, F.CloneBytes(k.metadata));
                     if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
                         if (player.Player.inventory.tryAddItem(item, true))
                             ItemManager.dropItem(item, player.Position, true, true, true);
                 }
+                else
+                    L.LogWarning("Invalid item {" + k.id.ToString("N") + "} in kit " + kit.Name + " for team " + team);
             }
         }
         string oldkit = player.KitName;
@@ -1032,7 +1037,7 @@ public class KitManager : BaseReloadSingleton
         }
         foreach (KitItem i in kit.Items)
         {
-            if (ignoreAmmoBags && Gamemode.Config.Barricades.AmmoBagGUID == i.id)
+            if (ignoreAmmoBags && Gamemode.Config.Barricades.AmmoBagGUID.MatchGuid(i.id))
                 continue;
             if (Assets.find(i.id) is ItemAsset itemasset)
             {

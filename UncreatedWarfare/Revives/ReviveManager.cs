@@ -210,7 +210,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 else
                     Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s => s.Revives++, false);
             }
-            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI, target.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI.Value, target.channel.owner.transportConnection);
             EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, target.channel.owner.transportConnection);
             ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, tteam);
         }
@@ -220,6 +220,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (Gamemode.Config.UI.InjuredUI.ValidReference(out ushort id))
+            EffectManager.askEffectClearByID(id, target.channel.owner.transportConnection);
         if (DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
         {
             if (target.TryGetComponent(out Reviver r))
@@ -277,10 +279,10 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         ulong team = parameters.player.GetTeam();
         parameters.player.movement.sendPluginSpeedMultiplier(0.35f);
         parameters.player.movement.sendPluginJumpMultiplier(0);
-        short key = unchecked((short)Gamemode.Config.UI.InjuredUI.Id);
+        short key = unchecked((short)Gamemode.Config.UI.InjuredUI.Value.Id);
         if (key != 0)
         {
-            EffectManager.sendUIEffect(Gamemode.Config.UI.InjuredUI, key, parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player), string.Empty);
+            EffectManager.sendUIEffect(Gamemode.Config.UI.InjuredUI.Value, key, parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player), string.Empty);
             EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", Translation.Translate("injured_ui_give_up", parameters.player));
         }
         parameters.player.SendChat("injured_chat");
@@ -369,7 +371,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 e.Player.Player.life.serverSetBleeding(false);
             }
 
-            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI, e.Player.Player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI.Value, e.Player.Player.channel.owner.transportConnection);
             EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, e.Player.Player.channel.owner.transportConnection);
         }
         ClearInjuredMarker(e.Steam64, e.Player.GetTeam());

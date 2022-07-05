@@ -99,11 +99,12 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
 
         T totalT1 = BasePlayerStats.New<T>(0UL);
         T totalT2 = BasePlayerStats.New<T>(0UL);
-        IEnumerator<T> enumerator = stats.GetEnumerator();
-        while (enumerator.MoveNext())
+        stats.Sort((T a, T b) => b.XPGained.CompareTo(a.XPGained));
+        statsT1 = new List<T>(stats.Count) { totalT1 };
+        statsT2 = new List<T>(stats.Count) { totalT2 };
+        for (int i = 0; i < stats.Count; ++i)
         {
-            T stat = enumerator.Current;
-
+            T stat = stats[i];
             ulong team = stat.Player.GetTeam();
             if (team == 1)
             {
@@ -113,6 +114,8 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
                 totalT1.AddCredits(stat.Credits);
                 totalT1.AddCaptures(stat.Captures);
                 totalT1.AddDamage(stat.DamageDone);
+                if (statsT1.Count <= count)
+                    statsT1.Add(stat);
             }
             else if (team == 2)
             {
@@ -122,16 +125,10 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
                 totalT2.AddCredits(stat.Credits);
                 totalT2.AddCaptures(stat.Captures);
                 totalT2.AddDamage(stat.DamageDone);
+                if (statsT2.Count <= count)
+                    statsT2.Add(stat);
             }
         }
-        enumerator.Dispose();
-
-        stats.Sort((T a, T b) => b.XPGained.CompareTo(a.XPGained));
-
-        statsT1 = stats.Where(p => p.Player.GetTeam() == 1).ToList();
-        statsT2 = stats.Where(p => p.Player.GetTeam() == 2).ToList();
-        statsT1.Insert(0, totalT1);
-        statsT2.Insert(0, totalT2);
     }
 }
 

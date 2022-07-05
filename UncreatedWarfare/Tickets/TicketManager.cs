@@ -24,6 +24,7 @@ namespace Uncreated.Warfare.Tickets;
 public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener
 {
     private static TicketManager Singleton;
+    public static readonly TicketUI TicketUI = new TicketUI();
     public static bool Loaded => Singleton.IsLoaded();
     public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
 
@@ -53,10 +54,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = player.GetTeam();
-        int bleed = GetTeamBleed(player.GetTeam());
-        GetUIDisplayerInfo(player.GetTeam(), bleed, out ushort UIID, out string tickets, out string message);
-        UpdateUI(player.Connection, UIID, tickets, message);
+        SendUI(player);
     }
     private void OnPlayerDeath(PlayerDied e)
     {
@@ -373,8 +371,8 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         }
         
 
-        UpdateUITeam1(team1bleed);
-        UpdateUITeam2(team2bleed);
+        UpdateUI(1, team1bleed);
+        UpdateUI(2, team2bleed);
 
         Dictionary<Squad, int> alreadyUpdated = new Dictionary<Squad, int>();
 
@@ -418,8 +416,8 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             Points.AwardXP(player, player.NearbyMemberBonus(xp, 60) - xp, Translation.Translate("xp_squad_bonus", player.Steam64));
         }
 
-        UpdateUITeam1(GetTeamBleed(1));
-        UpdateUITeam2(GetTeamBleed(2));
+        UpdateUI(1);
+        UpdateUI(2);
     }
     public static void OnFlag20Seconds()
     {
@@ -483,14 +481,12 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     }
     private void OnGroupChanged(GroupChanged e)
     {
-        ClearUI(e.Player.Connection, config.Data.Team1TicketUIID);
-        ClearUI(e.Player.Connection, config.Data.Team2TicketUIID);
         if (e.NewTeam is > 0 and < 3)
         {
-            int bleed = GetTeamBleed(e.NewTeam);
-            GetUIDisplayerInfo(e.NewTeam, bleed, out ushort UIID, out string tickets, out string message);
-            UpdateUI(e.Player.Connection, UIID, tickets, message);
+            SendUI(e.Player);
         }
+        else
+            ClearUI(e.Player);
     }
     void IGameStartListener.OnGameStarting(bool isOnLoad)
     {
@@ -535,8 +531,8 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
         }
 
-        UpdateUITeam1(GetTeamBleed(1));
-        UpdateUITeam2(GetTeamBleed(2));
+        UpdateUI(1);
+        UpdateUI(2);
     }
 
     public static void AddTeam1Tickets(int number)
@@ -553,7 +549,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             Team1Tickets = 0;
             Data.Gamemode.DeclareWin(2);
         }
-        UpdateUITeam1(GetTeamBleed(1));
+        UpdateUI(1);
     }
     public static void AddTeam2Tickets(int number)
     {
@@ -569,29 +565,14 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             Team2Tickets = 0;
             Data.Gamemode.DeclareWin(1);
         }
-        UpdateUITeam2(GetTeamBleed(2));
+
+        UpdateUI(2);
     }
-    public static void GetUIDisplayerInfo(ulong team, int bleed, out ushort UIID, out string tickets, out string message)
+    public static void GetUIDisplayerInfo(ulong team, int bleed, out string tickets, out string message)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UIID = 0;
-        tickets = "";
-        message = "";
-
-        if (TeamManager.IsTeam1(team))
-        {
-            tickets = Team1Tickets.ToString();
-            UIID = config.Data.Team1TicketUIID;
-        }
-
-        else if (TeamManager.IsTeam2(team))
-        {
-            tickets = Team2Tickets.ToString();
-            UIID = config.Data.Team2TicketUIID;
-        }
-
         if (Data.Is(out Insurgency insurgency))
         {
             if (insurgency.DefendingTeam == team)
@@ -601,69 +582,78 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             }
             else if (insurgency.AttackingTeam == team)
             {
+                tickets = string.Empty;
                 if (insurgency.DiscoveredCaches.Count == 0)
                     message = "FIND THE WEAPONS CACHES\n(kill enemies for intel)";
                 else
                     message = "DESTROY THE WEAPONS CACHES";
             }
             else
-                message = "";
+            {
+                tickets = string.Empty;
+                message = string.Empty;
+            }
         }
-        else if (bleed < 0)
+        else
         {
-            message = $"{bleed} per minute".Colorize("eb9898");
+            tickets = (team switch { 1 => Team1Tickets, 2 => Team2Tickets, _ => 0 }).ToString();
+            if (bleed < 0)
+                message = $"{bleed} per minute".Colorize("eb9898");
+            else
+                message = string.Empty;
         }
     }
-    public static void UpdateUI(ITransportConnection connection, ushort UIID, string tickets, string message)
+
+    public static void SendUI(ITransportConnection connection, ulong team, string message, string status)
     {
-        EffectManager.sendUIEffect(UIID, (short)UIID, connection, true,
-            tickets.ToString(Data.Locale),
-            string.Empty,
-            message
-            );
+        if (team is < 1 or > 2) return;
+        TicketUI.SendToPlayer(connection, message,
+            string.Empty, status);
+        TicketUI.Flag.SetImage(connection, TeamManager.GetFaction(team).FlagImageURL);
     }
-    public static void ClearUI(ITransportConnection connection, ushort UIID)
+    public static void UpdateUI(ulong team)
     {
-        EffectManager.askEffectClearByID(UIID, connection);
+        GetUIDisplayerInfo(team, GetTeamBleed(team), out string tickets, out string message);
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.GetTeam() == team && !pl.HasUIHidden)
+            {
+                //TicketUI.Bleed.SetText(pl.Connection, bleed);
+                TicketUI.Tickets.SetText(pl.Connection, tickets);
+                TicketUI.Status.SetText(pl.Connection, message);
+            }
+        }
     }
-    public static void UpdateUI(UCPlayer player)
+    public static void UpdateUI(ulong team, int bleed)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
+        GetUIDisplayerInfo(team, bleed, out string tickets, out string message);
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.GetTeam() == team && !pl.HasUIHidden)
+            {
+                //TicketUI.Bleed.SetText(pl.Connection, bleed);
+                TicketUI.Tickets.SetText(pl.Connection, tickets);
+                TicketUI.Status.SetText(pl.Connection, message);
+            }
+        }
+    }
+    public static void SendUI(UCPlayer player)
+    {
+        if (player.HasUIHidden) return;
         ulong team = player.GetTeam();
-        GetUIDisplayerInfo(team, GetTeamBleed(team), out ushort id, out string tickets, out string message);
-        UpdateUI(player.Connection, id, tickets, message);
+        if (team is < 1 or > 2) return;
+        GetUIDisplayerInfo(team, GetTeamBleed(team), out string tickets, out string message);
+        SendUI(player.Connection, team, tickets, message);
     }
-    public static void UpdateUITeam1(int bleed = 0)
+    public static void ClearUI(UCPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        GetUIDisplayerInfo(1, bleed, out ushort UIID, out string tickets, out string message);
-
-        List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam1()).ToList();
-
-        for (int i = 0; i < players.Count; i++)
-        {
-            if (!players[i].HasUIHidden)
-                UpdateUI(players[i].Connection, UIID, tickets, message);
-        }
+        TicketUI.ClearFromPlayer(player.Connection);
     }
-    public static void UpdateUITeam2(int bleed = 0)
+    public static void ClearUI(ITransportConnection connection)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        GetUIDisplayerInfo(2, bleed, out ushort UIID, out string tickets, out string message);
-
-        List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.IsTeam2()).ToList();
-
-        for (int i = 0; i < players.Count; i++)
-        {
-            if (!players[i].HasUIHidden)
-                UpdateUI(players[i].Connection, UIID, tickets, message);
-        }
+        TicketUI.ClearFromPlayer(connection);
     }
     public static int GetTeamBleed(ulong team)
     {

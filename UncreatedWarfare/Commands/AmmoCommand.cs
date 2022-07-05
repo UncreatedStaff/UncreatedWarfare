@@ -10,6 +10,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -38,7 +39,7 @@ public class AmmoCommand : Command
             bool isInMain = F.IsInMain(vehicle.transform.position);
             if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
             {
-                BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID,
+                BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID.Value.Guid,
                 10,
                 vehicle.transform.position,
                 ctx.Caller!.GetTeam(),
@@ -94,9 +95,10 @@ public class AmmoCommand : Command
                 _ => 1
             };
 
-            if (barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID || (Data.Is<Insurgency>(out _) && barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID))
+            if (barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID.Value.Guid || 
+                (Data.Is<Insurgency>() && barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid))
             {
-                if (Assets.find(Gamemode.Config.Items.T1Ammo) is not ItemAsset t1ammo || Assets.find(Gamemode.Config.Items.T2Ammo) is not ItemAsset t2ammo)
+                if (TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists || TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists)
                 {
                     L.LogError("Either t1ammo or t2ammo guid isn't a valid item");
                     return;
@@ -138,7 +140,7 @@ public class AmmoCommand : Command
                 }
 
             }
-            else if (Gamemode.Config.Barricades.AmmoBagGUID == barricade.asset.GUID)
+            else if (Gamemode.Config.Barricades.AmmoBagGUID.Value.Guid == barricade.asset.GUID)
             {
                 if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
                 {
@@ -164,10 +166,10 @@ public class AmmoCommand : Command
     {
         if (!EventFunctions.droppeditems.TryGetValue(player, out List<uint> instances))
             return;
-        ushort build1 = Assets.find(Gamemode.Config.Items.T1Build)?.id ?? 0;
-        ushort build2 = Assets.find(Gamemode.Config.Items.T2Build)?.id ?? 0;
-        ushort ammo1 = Assets.find(Gamemode.Config.Items.T1Ammo)?.id ?? 0;
-        ushort ammo2 = Assets.find(Gamemode.Config.Items.T2Ammo)?.id ?? 0;
+        ushort build1 = TeamManager.Team1Faction.Build is null || !TeamManager.Team1Faction.Build.Exists ? (ushort)0 : TeamManager.Team1Faction.Build.Id;
+        ushort build2 = TeamManager.Team2Faction.Build is null || !TeamManager.Team2Faction.Build.Exists ? (ushort)0 : TeamManager.Team2Faction.Build.Id;
+        ushort ammo1 = TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists ? (ushort)0 : TeamManager.Team1Faction.Ammo.Id;
+        ushort ammo2 = TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists ? (ushort)0 : TeamManager.Team2Faction.Ammo.Id;
         for (byte x = 0; x < Regions.WORLD_SIZE; x++)
         {
             for (byte y = 0; y < Regions.WORLD_SIZE; y++)

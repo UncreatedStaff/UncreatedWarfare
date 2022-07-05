@@ -1070,7 +1070,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 values[i] = LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER;
         }
 
-        int index = 40;
+        int index = 46;
         if (t1Stats is not null && t1Stats.Count > 0)
         {
             int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);

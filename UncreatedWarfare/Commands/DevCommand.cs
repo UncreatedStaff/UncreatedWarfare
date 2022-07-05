@@ -32,16 +32,21 @@ public class DevCommand : Command
 
         if (ctx.MatchParameter(0, "addcache"))
         {
-            ctx.AssertGamemode<Insurgency>();
+            ctx.AssertGamemode(out Insurgency ins);
 
             ctx.AssertRanByPlayer();
 
             ctx.AssertHelpCheck(1, "/dev addcache (at current location)");
 
-            if (ctx.TryGetTarget(out BarricadeDrop cache) && cache != null && cache.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID)
+            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.HasValue ||
+                !Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Exists)
+                throw ctx.Reply("Cache GUID is not set correctly.");
+
+            if (ctx.TryGetTarget(out BarricadeDrop cache) && cache != null && cache.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid)
             {
                 SerializableTransform transform = new SerializableTransform(cache.model);
-                Gamemode.Config.MapConfig.AddCacheSpawn(transform);
+
+                ins.AddCacheSpawn(transform);
                 ctx.Reply("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
                 ctx.LogAction(EActionLogType.ADD_CACHE, "ADDED CACHE SPAWN AT " + transform.ToString());
             }
@@ -53,8 +58,11 @@ public class DevCommand : Command
 
             ctx.AssertHelpCheck(1, "/dev gencaches (generates a json file for all placed caches)");
 
-            IEnumerable<BarricadeDrop> caches = UCBarricadeManager.AllBarricades.Where(b =>
-                b.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID);
+            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.HasValue ||
+                !Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Exists)
+                throw ctx.Reply("Cache GUID is not set correctly.");
+            Guid g = Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid;
+            IEnumerable<BarricadeDrop> caches = UCBarricadeManager.AllBarricades.Where(b => b.asset.GUID == g);
 
             FileStream writer = File.Create("C" + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar + Path.Combine("Users", "USER", "Desktop", "cachespanws.json"));
 

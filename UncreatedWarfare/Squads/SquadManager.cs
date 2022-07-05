@@ -199,7 +199,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                     ListUI.SquadMemberCounts[s2].SetText(c, Translation.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : string.Empty, sq.Members.Count.ToString(Data.Locale)));
                     s2++;
                 }
-                for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
+                for (; s2 < ListUI.Squads.Length; s2++)
                 {
                     ListUI.Squads[s2].SetVisibility(c, false);
                 }
@@ -263,7 +263,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                 s2++;
             }
         }
-        for (; s2 < Gamemode.Config.UI.MaxSquads; s2++)
+        for (; s2 < ListUI.Squads.Length; s2++)
         {
             if (s2 == 0)
                 ListUI.Header.SetVisibility(c, false);
@@ -366,7 +366,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                 MenuUI.MemberNames[i].SetText(c, Translation.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(member).NickName));
                 MenuUI.MemberIcons[i].SetText(c, new string(member.Icon, 1));
             }
-            for (; i < Gamemode.Config.UI.MaxSquadMembers; i++)
+            for (; i < MenuUI.MemberParents.Length; i++)
             {
                 MenuUI.MemberParents[i].SetVisibility(c, false);
             }

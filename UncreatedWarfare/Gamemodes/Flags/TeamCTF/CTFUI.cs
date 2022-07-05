@@ -180,7 +180,7 @@ public static class CTFUI
             ListUI.Header.SetText(c, Translation.Translate("flag_header", player));
             if (team == 1 || team == 2)
             {
-                for (int i = 0; i < Gamemode.Config.UI.FlagUICount; i++)
+                for (int i = 0; i < ListUI.Parents.Length; i++)
                 {
                     if (rotation.Count <= i)
                     {
@@ -215,7 +215,7 @@ public static class CTFUI
             }
             else if (team == 3)
             {
-                for (int i = 0; i < Gamemode.Config.UI.FlagUICount; i++)
+                for (int i = 0; i < ListUI.Parents.Length; i++)
                 {
                     if (rotation.Count <= i)
                     {

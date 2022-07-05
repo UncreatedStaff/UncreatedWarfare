@@ -96,12 +96,22 @@ public abstract class TeamGamemode : Gamemode, ITeams
             player.player.life.askDamage(byte.MaxValue, Vector3.zero, DeathTracker.MAIN_DEATH, ELimb.SKULL, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
         }
     }
-
+    public void SpawnBlockers()
+    {
+        SpawnBlockerOnT1();
+        SpawnBlockerOnT2();
+    }
     public void SpawnBlockerOnT1()
     {
-        if (Assets.find(Config.MapConfig.T1ZoneBlocker) is ItemBarricadeAsset t1)
-            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t1),
+        if (Config.Barricades.Team1ZoneBlocker is not null && Config.Barricades.Team1ZoneBlocker.HasValue && Config.Barricades.Team1ZoneBlocker.Value.Exists)
+            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.Barricades.Team1ZoneBlocker.Value.Asset),
                 TeamManager.Team1Main.Center3D + Vector3.up, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
+    }
+    public void SpawnBlockerOnT2()
+    {
+        if (Config.Barricades.Team2ZoneBlocker is not null && Config.Barricades.Team2ZoneBlocker.HasValue && Config.Barricades.Team2ZoneBlocker.Value.Exists)
+            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.Barricades.Team2ZoneBlocker.Value.Asset),
+                TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
     }
     public void DestoryBlockerOnT1()
     {
@@ -115,17 +125,23 @@ public abstract class TeamGamemode : Gamemode, ITeams
             }
             _blockerBarricadeT1 = null;
         }
-        for (x = 0; x < Regions.WORLD_SIZE; x++)
+
+        if (Config.Barricades.Team1ZoneBlocker is not null && Config.Barricades.Team1ZoneBlocker.HasValue &&
+            Config.Barricades.Team1ZoneBlocker.Value.Exists)
         {
-            for (y = 0; y < Regions.WORLD_SIZE; y++)
+            Guid g = Config.Barricades.Team1ZoneBlocker.Value.Guid;
+            for (x = 0; x < Regions.WORLD_SIZE; x++)
             {
-                for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
+                for (y = 0; y < Regions.WORLD_SIZE; y++)
                 {
-                    BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
-                    if (d.asset.GUID == Config.MapConfig.T1ZoneBlocker)
+                    for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
                     {
-                        BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
-                        return;
+                        BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
+                        if (d.asset.GUID == g)
+                        {
+                            BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
+                            return;
+                        }
                     }
                 }
             }
@@ -143,17 +159,23 @@ public abstract class TeamGamemode : Gamemode, ITeams
             }
             _blockerBarricadeT2 = null;
         }
-        for (x = 0; x < Regions.WORLD_SIZE; x++)
+
+        if (Config.Barricades.Team2ZoneBlocker is not null && Config.Barricades.Team2ZoneBlocker.HasValue &&
+            Config.Barricades.Team2ZoneBlocker.Value.Exists)
         {
-            for (y = 0; y < Regions.WORLD_SIZE; y++)
+            Guid g = Config.Barricades.Team2ZoneBlocker.Value.Guid;
+            for (x = 0; x < Regions.WORLD_SIZE; x++)
             {
-                for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
+                for (y = 0; y < Regions.WORLD_SIZE; y++)
                 {
-                    BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
-                    if (d.asset.GUID == Config.MapConfig.T2ZoneBlocker)
+                    for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
                     {
-                        BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
-                        return;
+                        BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
+                        if (d.asset.GUID == g)
+                        {
+                            BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
+                            return;
+                        }
                     }
                 }
             }
@@ -194,6 +216,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
             else backup = true;
             if (backup)
             {
+                if (!Config.Barricades.Team1ZoneBlocker.ValidReference(out Guid g1) || !Config.Barricades.Team1ZoneBlocker.ValidReference(out Guid g2)) return;
                 bool l = false;
                 for (x = 0; x < Regions.WORLD_SIZE; x++)
                 {
@@ -202,7 +225,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
                         for (int i = 0; i < BarricadeManager.regions[x, y].drops.Count; i++)
                         {
                             BarricadeDrop d = BarricadeManager.regions[x, y].drops[i];
-                            if (d.asset.GUID == Config.MapConfig.T1ZoneBlocker || d.asset.GUID == Config.MapConfig.T2ZoneBlocker)
+                            if (d.asset.GUID == g1 || d.asset.GUID == g2)
                             {
                                 BarricadeManager.destroyBarricade(d, x, y, ushort.MaxValue);
                                 if (l) return;
@@ -219,25 +242,12 @@ public abstract class TeamGamemode : Gamemode, ITeams
             L.LogError(ex);
         }
     }
-    public void SpawnBlockers()
-    {
-        if (Assets.find(Config.MapConfig.T1ZoneBlocker) is ItemBarricadeAsset t1)
-            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t1),
-                TeamManager.Team1Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
-        if (Assets.find(Config.MapConfig.T2ZoneBlocker) is ItemBarricadeAsset t2)
-            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t2),
-                TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
-    }
-    public void SpawnBlockerOnT2()
-    {
-        if (Assets.find(Config.MapConfig.T2ZoneBlocker) is ItemBarricadeAsset t2)
-            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(t2),
-                TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
-    }
     public override void OnPlayerDeath(PlayerDied e)
     {
         base.OnPlayerDeath(e);
         InAMC.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
+
+    public virtual void OnJoinTeam(UCPlayer player, ulong newTeam) {  }
 }

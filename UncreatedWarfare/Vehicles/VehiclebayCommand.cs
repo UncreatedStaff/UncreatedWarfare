@@ -420,7 +420,7 @@ public class VehicleBayCommand : Command
             {
                 if (ctx.TryGetTarget(out BarricadeDrop barricade))
                 {
-                    if (barricade.asset.GUID == Gamemode.Config.Barricades.VehicleBayGUID)
+                    if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(barricade.asset.GUID))
                     {
                         if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                         {
@@ -439,7 +439,7 @@ public class VehicleBayCommand : Command
                 }
                 else if (ctx.TryGetTarget(out StructureDrop structure))
                 {
-                    if (structure.asset.GUID == Gamemode.Config.Barricades.VehicleBayGUID)
+                    if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(structure.asset.GUID))
                     {
                         if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
                         {
