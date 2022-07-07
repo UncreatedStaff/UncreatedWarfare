@@ -12,6 +12,7 @@ using System.Threading;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.VanillaRework;
 
 namespace Uncreated.Warfare;
 
@@ -46,6 +47,11 @@ public static class L
             if (Data.OutputToConsoleMethod is not null)
                 AddLog(message);
             CommandHandler.OnLog(message);
+            if (message.StartsWith("Detected newer game version: ", StringComparison.Ordinal))
+            {
+                ShutdownCommand.ShutdownAfterGame("Unturned update v" + message.Substring(29), false);
+                throw new Exception("Why Nelson (auto-update stopper)");
+            }
         }
     }
 

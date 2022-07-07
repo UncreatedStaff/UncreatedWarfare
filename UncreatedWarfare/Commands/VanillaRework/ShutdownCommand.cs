@@ -99,11 +99,11 @@ public class ShutdownCommand : Command
         NetCalls.SendShuttingDownInSeconds.NetInvoke(instigator, reason, (uint)seconds);
         Provider.shutdown(seconds, reason);
     }
-    public static void ShutdownAfterGameDaily()
+    public static void ShutdownAfterGameDaily() => ShutdownAfterGame("Daily Restart", true);
+    public static void ShutdownAfterGame(string reason, bool isDaily)
     {
-        string reason = "Daily Restart";
         ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
-        Chat.Broadcast("shutdown_broadcast_after_game_daily", reason);
+        Chat.Broadcast(isDaily ? "shutdown_broadcast_after_game_daily" : "shutdown_broadcast_after_game", reason);
         L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
         Data.Gamemode?.ShutdownAfterGame(reason, 0);
         if (Messager != null)

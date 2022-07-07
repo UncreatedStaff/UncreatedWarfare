@@ -882,12 +882,8 @@ public static class F
         }
         else return "nullNoHit";
     }
-    public static bool CanStandAtLocation(Vector3 source)
-    {
-        return Physics.OverlapCapsuleNonAlloc(source + new Vector3(0.0f, PlayerStance.RADIUS + 0.01f, 0.0f), source +
-            new Vector3(0.0f, PlayerMovement.HEIGHT_STAND + 0.5f - PlayerStance.RADIUS, 0.0f), PlayerStance.RADIUS, PlayerStance.checkColliders,
-            RayMasks.BLOCK_STANCE, QueryTriggerInteraction.Ignore) == 0;
-    }
+
+    public static bool CanStandAtLocation(Vector3 source) => PlayerStance.hasStandingHeightClearanceAtPosition(source);
     public static string GetClosestLocation(Vector3 point)
     {
 #if DEBUG
