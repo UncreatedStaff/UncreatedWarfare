@@ -454,6 +454,26 @@ public static class OffenseManager
                 L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
         }
 
+        for (int i = _pendingUnmutes.Count - 1; i >= 0; --i)
+        {
+            Unmute unmute = _pendingUnmutes[i];
+            await UCWarfare.ToUpdate();
+            if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.Request(NetCalls.AckPlayerUnmuted, Data.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
+                _pendingUnmutes.RemoveAt(i);
+            else
+                L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
+            c = true;
+            ++num;
+            if (num % ct == 0)
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+        }
+
+        if (c)
+        {
+            Save<Unmute>(8);
+            c = false;
+        }
+
         if (c)
         {
             Save<Teamkill>(6);
@@ -477,26 +497,6 @@ public static class OffenseManager
         if (c)
         {
             Save<VehicleTeamkill>(7);
-            c = false;
-        }
-
-        for (int i = _pendingUnmutes.Count - 1; i >= 0; --i)
-        {
-            Unmute unmute = _pendingUnmutes[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.Request(NetCalls.AckPlayerUnmuted, Data.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
-                _pendingUnmutes.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<Unmute>(8);
             c = false;
         }
     }
@@ -789,7 +789,10 @@ public static class OffenseManager
 #endif
         FPlayerName targetNames = F.GetPlayerOriginalNames(targetId);
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
+        {
+            L.Log(callerId + " not banned.", ConsoleColor.Cyan);
             return;
+        }
 
         LogUnbanPlayer(targetId, callerId, DateTime.Now);
 

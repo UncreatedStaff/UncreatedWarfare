@@ -153,7 +153,7 @@ public class Invasion :
                 {
                     if (winner == AttackingTeam || AttackingTeam != flag.Owner)
                     {
-                        flag.Cap(winner, flag.GetCaptureAmount(Config.Invasion.CaptureScale));
+                        flag.Cap(winner, flag.GetCaptureAmount(Config.Invasion.CaptureScale, winner));
                     }
                     else
                     {

@@ -506,7 +506,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                         {
                             if (winner == 1 || winner == 2)
                             {
-                                Cap(winner, GetCaptureAmount(Gamemode.Config.TeamCTF.CaptureScale));
+                                Cap(winner, GetCaptureAmount(Gamemode.Config.TeamCTF.CaptureScale, winner));
                             }
                         }
                     }
@@ -520,9 +520,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             }
         }
 
-        internal float GetCaptureAmount(float captureScale)
+        internal float GetCaptureAmount(float captureScale, ulong team)
         {
-            return captureScale * Mathf.Log10(Math.Max(Team1TotalCappers, Team2TotalCappers) + 1);
+            return captureScale * Mathf.Log10((team == 0 ? Math.Max(Team1TotalCappers, Team2TotalCappers) : (team == 1 ? Team1TotalCappers : Team2TotalCappers)) + 1);
         }
     }
 }
