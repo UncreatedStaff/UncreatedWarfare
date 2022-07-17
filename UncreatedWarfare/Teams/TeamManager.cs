@@ -44,6 +44,7 @@ public static class TeamManager
             FOBRadio = "c7754ac78083421da73006b12a56811a",
             RallyPoint = "c03352d9e6bb4e2993917924b604ee76"
         },
+        // don't even think about leaking these
         new FactionInfo("germany", "Germany", "DE", "Germany", "ffcc00", "deunarmed"),
         new FactionInfo("china", "China", "CN", "China", "ef1620", "cnunarmed")
     };
@@ -876,6 +877,7 @@ public class TeamConfigData : ConfigData
     public TeamConfigData() { }
     public override void SetDefaults()
     {
+        // don't even think about leaking these
         Team1FactionId = new RotatableConfig<string>(FactionInfo.USA, new RotatableDefaults<string>
         {
             { MapScheduler.FoolsRoad,   FactionInfo.USA },
