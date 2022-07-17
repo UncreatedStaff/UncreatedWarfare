@@ -415,7 +415,7 @@ public class JoinManager : BaseSingletonComponent
         if (Data.Is(out TeamGamemode tg))
             tg.OnJoinTeam(player, newTeam);
         FPlayerName names = F.GetPlayerOriginalNames(player.Player);
-        L.Log(Translation.Translate("join_player_joined_console", 0, out _,
+        L.Log(Localization.Translate("join_player_joined_console", 0, out _,
             names.PlayerName, player.Steam64.ToString(), newTeam.ToString(Data.Locale), oldgroup.ToString(Data.Locale)),
             ConsoleColor.Cyan);
 

@@ -252,7 +252,7 @@ public struct SerializableTransform : IJsonReadWrite
         }
     }
 }
-public struct LanguageAliasSet : IJsonReadWrite
+public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 {
     public string key;
     public string display_name;
@@ -292,6 +292,16 @@ public struct LanguageAliasSet : IJsonReadWrite
             }
         }
     }
+
+    public const string DISPLAY_NAME_FORMAT = "d";
+    public const string KEY_FORMAT = "k";
+    public string Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    {
+        if (format is not null && format.Equals(KEY_FORMAT, StringComparison.Ordinal))
+            return key;
+        return display_name;
+    }
+
     public readonly void WriteJson(Utf8JsonWriter writer)
     {
         writer.WriteProperty(nameof(key), key);

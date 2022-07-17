@@ -316,7 +316,7 @@ public class FOB
                             tw *= 2;
                         }
 
-                        Points.AwardXP(creator, groupsUnloaded * xp, Translation.Translate("xp_supplies_unloaded", creator));
+                        Points.AwardXP(creator, groupsUnloaded * xp, Localization.Translate("xp_supplies_unloaded", creator));
                     }
                 }
 
@@ -410,7 +410,7 @@ public class FOB
                                 component.Quota += 0.33F;
                             }
 
-                            Points.AwardXP(player, xp, Translation.Translate("xp_supplies_unloaded", player));
+                            Points.AwardXP(player, xp, Localization.Translate("xp_supplies_unloaded", player));
 
                             player.SuppliesUnloaded = 0;
                         }

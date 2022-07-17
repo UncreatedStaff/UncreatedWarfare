@@ -30,23 +30,27 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
-    private static readonly Regex RemoveRichTextRegex = new Regex("<(?:(?:(?=.*<\\/color>)color=#{0,1}[0123456789ABCDEF]{6})|(?:(?<=<color=#{0,1}[0123456789ABCDEF]{6}>.*)\\/color)|(?:(?=.*<\\/b>)b)|(?:(?<=<b>.*)\\/b)|(?:(?=.*<\\/i>)i)|(?:(?<=<i>.*)\\/i)|(?:(?=.*<\\/size>)size=\\d+)|(?:(?<=<size=\\d+>.*)\\/size)|(?:(?=.*<\\/material>)material=\\d+)|(?:(?<=<material=\\d+>.*)\\/material))>", RegexOptions.IgnoreCase);
+    private static readonly Regex RemoveRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:color=\\\"{0,1}[#a-z]{0,9}\\\"{0,1})|(?:color)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:#.{3,8})|(?:[isub])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex TimeRegex = new Regex(@"(\d+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     public static readonly char[] vowels = new char[] { 'a', 'e', 'i', 'o', 'u' };
     /// <summary>Convert an HTMLColor string to a actual color.</summary>
     /// <param name="htmlColorCode">A hexadecimal/HTML color key.</param>
     public static Color Hex(this string htmlColorCode)
     {
-        string code = "#";
-        if (htmlColorCode.Length > 0 && htmlColorCode[0] != '#')
-            code += htmlColorCode;
-        else
-            code = htmlColorCode;
-        if (ColorUtility.TryParseHtmlString(code, out Color color))
-            return color;
-        else if (ColorUtility.TryParseHtmlString(htmlColorCode, out color))
+        if (htmlColorCode.Length == 0) return Color.white;
+        if (htmlColorCode[0] != '#')
+            htmlColorCode = "#" + htmlColorCode;
+
+        if (ColorUtility.TryParseHtmlString(htmlColorCode, out Color color))
             return color;
         else return Color.white;
+    }
+    public static string Hex(this Color color)
+    {
+        string hex = ((byte)Mathf.Clamp(color.r * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale) + ((byte)Mathf.Clamp(color.g * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale) + ((byte)Mathf.Clamp(color.b * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale);
+        if (color.a < 1f)
+            hex += ((byte)Mathf.Clamp(color.a * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale);
+        return hex;
     }
     public static ConsoleColor GetClosestConsoleColor(Color color)
     {
@@ -441,7 +445,7 @@ public static class F
         {
             UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
             if (pl != null)
-                newtext = Translation.TranslateSign(text, pl, false);
+                newtext = Localization.TranslateSign(text, pl, false);
         }
         Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
     }
@@ -461,7 +465,7 @@ public static class F
                 {
                     UCPlayer? pl2 = UCPlayer.FromSteamPlayer(pl);
                     if (pl2 != null)
-                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, translate ? Translation.TranslateSign(text, pl2, false) : text);
+                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, translate ? Localization.TranslateSign(text, pl2, false) : text);
                 }
             }
         }
@@ -489,7 +493,7 @@ public static class F
         {
             UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
             if (pl != null)
-                newtext = Translation.TranslateSign(newtext, pl, false);
+                newtext = Localization.TranslateSign(newtext, pl, false);
         }
         Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
     }

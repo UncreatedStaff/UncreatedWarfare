@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
@@ -23,13 +24,10 @@ using UnityEngine;
 
 namespace Uncreated.Warfare;
 
-public class UCPlayer
+public class UCPlayer : IPlayer
 {
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UI.MutedUI, false, false);
     public readonly ulong Steam64;
-    public string Id => Steam64.ToString();
-    public string DisplayName => Player.channel.owner.playerID.playerName;
-    public bool IsAdmin => Player.channel.owner.isAdmin;
     public EClass KitClass;
     public EBranch Branch;
     public string KitName;
@@ -41,6 +39,8 @@ public class UCPlayer
     public string CharacterName;
     public string NickName;
     public bool HasUIHidden = false;
+    ulong IPlayer.Steam64 => Steam64;
+    public bool IsAdmin => Player.channel.owner.isAdmin;
     public ITransportConnection Connection => Player.channel.owner.transportConnection;
     public Coroutine? StorageCoroutine;
     public Ranks.RankStatus[]? RankData;
@@ -127,7 +127,7 @@ public class UCPlayer
                 {
                     L.LogWarning("ERROR: Player transform was null");
                     L.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
-                    Provider.kick(Player.channel.owner.playerID.steamID, Translation.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
+                    Provider.kick(Player.channel.owner.playerID.steamID, Localization.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
                     return Vector3.zero;
                 }
                 return Player.transform.position;
@@ -136,7 +136,7 @@ public class UCPlayer
             {
                 L.LogWarning("ERROR: Player transform was null");
                 L.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
-                Provider.kick(Player.channel.owner.playerID.steamID, Translation.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
+                Provider.kick(Player.channel.owner.playerID.steamID, Localization.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
                 return Vector3.zero;
             }
         }
@@ -532,8 +532,89 @@ public class UCPlayer
         isTalking = true;
     }
     public int CompareTo(object obj) => obj is UCPlayer player ? Steam64.CompareTo(player.Steam64) : -1;
+    public const string CHARACTER_NAME_FORMAT = "cn";
+    public const string NICK_NAME_FORMAT = "nn";
+    public const string PLAYER_NAME_FORMAT = "pn";
+    public const string STEAM_64_FORMAT = "64";
+    public const string COLORIZED_CHARACTER_NAME_FORMAT = "ccn";
+    public const string COLORIZED_NICK_NAME_FORMAT = "cnn";
+    public const string COLORIZED_PLAYER_NAME_FORMAT = "cpn";
+    public const string COLORIZED_STEAM_64_FORMAT = "c64";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    {
+        if (format is null) goto end;
+        if (format.Equals(CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+            return Name.CharacterName;
+        else if (format.Equals(NICK_NAME_FORMAT, StringComparison.Ordinal))
+            return Name.NickName;
+        else if (format.Equals(PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+            return Name.PlayerName;
+        else if (format.Equals(STEAM_64_FORMAT, StringComparison.Ordinal))
+            return Steam64.ToString(Data.Locale);
+        else
+        {
+            string hex = TeamManager.GetTeamHexColor(this.GetTeam());
+            if (format.Equals(COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(hex, Name.CharacterName, flags);
+            else if (format.Equals(COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(hex, Name.NickName, flags);
+            else if (format.Equals(COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(hex, Name.PlayerName, flags);
+            else if (format.Equals(COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(hex, Steam64.ToString(Data.Locale), flags);
+        }
+    end:
+        return Name.CharacterName;
+    }
 }
 
+public interface IPlayer : ITranslationArgument
+{
+    public ulong Steam64 { get; }
+}
+
+public struct OfflinePlayer : IPlayer
+{
+    private readonly ulong _s64;
+    private FPlayerName? _names;
+    public ulong Steam64 => _s64;
+    public OfflinePlayer(ulong steam64, bool cacheUsernames = false)
+    {
+        if (cacheUsernames)
+            _names = F.GetPlayerOriginalNames(steam64);
+    }
+    public async Task CacheUsernames()
+    {
+        _names = await F.GetPlayerOriginalNamesAsync(_s64);
+    }
+    public string Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    {
+        if (format is null) goto end;
+        
+        if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+            return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName;
+        else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
+            return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).NickName;
+        else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+            return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).PlayerName;
+        else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
+            return _s64.ToString(Data.Locale);
+        else
+        {
+            string hex = TeamManager.GetTeamHexColor(PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0);
+            if (format.Equals(UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(hex, (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName, flags);
+            else if (format.Equals(UCPlayer.COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(hex, (_names ??= Data.DatabaseManager.GetUsernames(_s64)).NickName, flags);
+            else if (format.Equals(UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(hex, (_names ??= Data.DatabaseManager.GetUsernames(_s64)).PlayerName, flags);
+            else if (format.Equals(UCPlayer.COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(hex, _s64.ToString(Data.Locale), flags);
+        }
+    end:
+        return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName;
+    }
+}
 public class PlayerSave
 {
     public const uint CURRENT_DATA_VERSION = 1;

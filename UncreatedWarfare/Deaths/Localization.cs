@@ -478,7 +478,7 @@ internal static class Localization
         bool sentInConsole = false;
         // red if its a teamkill, otherwise white
         Color color = UCWarfare.GetColor((args.Flags & EDeathFlags.SUICIDE) != EDeathFlags.SUICIDE && args.isTeamkill ? "death_background_teamkill" : "death_background");
-        foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
         {
             string msg = TranslateMessage(set.Language, args);
             if (!sentInConsole && set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
@@ -742,7 +742,7 @@ public struct DeathMessageArgs
         object[] format = new object[7];
         format[0] = DeadPlayerName.Colorize(TeamManager.GetTeamHexColor(DeadPlayerTeam));
         format[1] = KillerName is null ? string.Empty : KillerName.Colorize(TeamManager.GetTeamHexColor(KillerTeam));
-        format[2] = Translation.TranslateEnum(Limb, language);
+        format[2] = Localization.TranslateEnum(Limb, language);
         format[3] = ItemName is null ? string.Empty : (ItemName.EndsWith(" Built", StringComparison.Ordinal) ? ItemName.Substring(0, ItemName.Length - 6) : ItemName);
         format[4] = KillDistance.ToString("F0", Data.Locale);
         format[5] = Player3Name is null ? string.Empty : Player3Name.Colorize(TeamManager.GetTeamHexColor(Player3Team));

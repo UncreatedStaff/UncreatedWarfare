@@ -188,7 +188,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         QuestManager.OnGameOver(winner);
         ActionLog.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
         string c = TeamManager.GetTeamHexColor(winner);
-        foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
         {
             string t = TeamManager.TranslateName(winner, set.Language);
             Chat.Broadcast(set, "team_win", t, c);
@@ -556,7 +556,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             {
                 ulong team = player.GetTeam();
                 player.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(NewOwner, player.Player),
-                    TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : Translation.Translate("undiscovered_flag", player),
+                    TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : Localization.Translate("undiscovered_flag", player),
                     flag.TeamSpecificHexColor);
             }
         }

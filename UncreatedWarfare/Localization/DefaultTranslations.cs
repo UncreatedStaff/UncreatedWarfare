@@ -1,204 +1,247 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
-
-partial class JSONMethods
+internal class DefaultTranslations
 {
-    public static void CreateDefaultTranslations()
+    private const int NON_TRANSLATION_FIELD_COUNT = 4;
+    private const string ERROR_COLOR = "<#ff8c69>";
+    private const string SUCCESS_COLOR = "<#e6e3d5>";
+    /*
+     * c$value$ will be replaced by the color "value" on startup
+     */
+    public static readonly Translation[] Translations;
+    static DefaultTranslations()
     {
-        DefaultTranslations = new Dictionary<string, string>
+        FieldInfo[] fields = typeof(DefaultTranslations).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        Translations = new Translation[fields.Length - NON_TRANSLATION_FIELD_COUNT];
+        int i2 = -1;
+        for (int i = 0; i < fields.Length; ++i)
         {
-            { Localization.Common.NOT_IMPLEMENTED,        "<color=#ff8c69>This command hasn't been implemented yet.</color>" },
-            { Localization.Common.CORRECT_USAGE,          "<color=#ff8c69>Correct usage: {0}</color>" },
-            { Localization.Common.CONSOLE_ONLY,           "<color=#ff8c69>This command can not be called from console.</color>" },
-            { Localization.Common.PLAYERS_ONLY,           "<color=#ff8c69>This command can only called from console.</color>" },
-            { Localization.Common.PLAYER_NOT_FOUND,       "<color=#ff8c69>Player not found.</color>" },
-            { Localization.Common.UNKNOWN_ERROR,          "<color=#ff8c69>We ran into an unknown error executing that command.</color>" },
-            { Localization.Common.GAMEMODE_ERROR,         "<color=#ffa238>This command is not enabled in this gamemode.</color>" },
-            { Localization.Common.NO_PERMISSIONS,         "<color=#ff8c69>You do not have permission to use this command.</color>" },
-            { Localization.Common.NOT_ENABLED,            "<color=#ff8c69>This feature is not currently enabled.</color>" },
-            { Localization.Common.NO_PERMISSIONS_ON_DUTY, "<color=#ff8c69>You must be on duty to execute that command.</color>" },
-            { "gamemode_not_flag_gamemode", "<color=#ff8c69>Current gamemode <color=#ff758f>{0}</color> is not a <color=#ff758f>FLAG GAMEMODE</color>.</color>" },
-            { "gamemode_flag_not_on_cap_team", "<color=#ff8c69>You're not on a team that can capture flags.</color>" },
-            { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." },
-            { "entered_main", "<color=#e6e3d5>You have entered the safety of {0} headquarters!</color>" },
-            { "left_main", "<color=#e6e3d5>You have left the safety of {0} headquarters.</color>" },
-            { "entered_cap_radius", "You have entered the capture radius of <color=#{1}>{0}</color>." },
-            { "left_cap_radius", "You have left the cap radius of <color=#{1}>{0}</color>." },
-            { "capturing", "Your team is capturing this point!" },
-            { "losing", "Your team is losing this point!" },
-            { "contested", "<color=#{1}>{0}</color> is contested! Eliminate all enemies to secure it." },
-            { "clearing", "Your team is busy clearing this point." },
-            { "secured", "This point is secure for now. Keep up the defense." },
-            { "nocap", "This point is not your objective, check the right of your screen to see which points to attack and defend." },
-            { "notowned", "This point is owned by the enemies. Get more players to capture it." },
-            { "locked", "This point has already been captured, try to protect the objective to win." },
-            { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
-            { "team_1", "USA" },
-            { "team_2", "Middle Eastern Coalition" },
-            { "team_3", "Admins" },
-            { "teams_join_success", "<color=#a0ad8e>You've joined {0}.</color>" },
-            { "teams_join_announce", "<color=#a0ad8e>{0} joined <color=#{2}>{1}</color>!</color>" },
-            { "join_player_joined_console", "{0} ({1}) changed group: {3} >> {2}" },
-            { "neutral", "Neutral" },
-            { "undiscovered_flag", "unknown" },
-            { "ui_capturing", "CAPTURING" },
-            { "ui_losing", "LOSING" },
-            { "ui_clearing", "CLEARING" },
-            { "ui_contested", "CONTESTED" },
-            { "ui_secured", "SECURED" },
-            { "ui_nocap", "NOT OBJECTIVE" },
-            { "ui_notowned", "TAKEN" },
-            { "ui_locked", "LOCKED" },
-            { "ui_in_vehicle", "IN VEHICLE" },
-            { "team_win", "<color=#{1}>{0}</color> has won the battle!" },
-            { "team_capture", "<color=#{1}>{0}</color> captured <color=#{3}>{2}</color>!" },
-            { "player_connected", "<color=#e6e3d5><color=#ffff1a>{0}</color> joined the server!</color>" },
-            { "player_disconnected", "<color=#e6e3d5><color=#ffff1a>{0}</color> left the server.</color>" },
-            { "flag_header", "Flags" },
-            { "null_transform_kick_message", "Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0})." },
-            { "text_chat_feedback_chat_filter", "<color=#ff8c69>Our chat filter flagged <color=#fdfdfd>{0}</color>, so the message wasn't sent." },
+            FieldInfo field = fields[i];
+            if (typeof(Translation).IsAssignableFrom(field.FieldType))
+            {
+                if (field.GetValue(null) is not Translation tr)
+                    L.LogError("Failed to convert " + field.Name + " to a translation!");
+                else if (i2 + 1 < Translations.Length)
+                    Translations[++i2] = tr;
+                else
+                    L.LogError("Ran out of space in translation array for " + field.Name + " at " + (i2 + 1));
+            }
+        }
 
-            #region Leaderboard
-            // universal
-            { "lb_next_game", "Starting soon..." },
-            { "lb_next_game_shut_down", "<color=#94cbff>Shutting Down Because: \"{0}\"</color>" },
-            { "lb_next_game_time_format", "{0:mm\\:ss}" },
-            { "lb_warstats_header", "<color=#{1}>{0}</color> vs <color=#{3}>{2}</color>" },
-            { "lb_playerstats_header", "<color=#{1}>{0}</color> - {2:n0}% presence" },
-            { "lb_playerstats_header_backup", "<color=#{1}>{0}</color>" },
-            { "lb_winner_title", "<color=#{1}>{0}</color> Wins!" },
-            { "lb_longest_shot", "{0}m - {1}\n{2}" },
+        if (Translations.Length != i2 + 1)
+        {
+            Array.Resize(ref Translations, i2 + 1);
+            L.LogWarning("Translations had to resize for some reason. Check to make sure there's only one field that isn't a translation.");
+        }
+    }
 
-            // ctf
-            { "ctf_lb_playerstats_0", "Kills: " },
-            { "ctf_lb_playerstats_1", "Deaths: " },
-            { "ctf_lb_playerstats_2", "K/D Ratio: " },
-            { "ctf_lb_playerstats_3", "Kills on Point: " },
-            { "ctf_lb_playerstats_4", "Time Deployed: " },
-            { "ctf_lb_playerstats_5", "XP Gained: " },
-            { "ctf_lb_playerstats_6", "Time on Point: " },
-            { "ctf_lb_playerstats_7", "Captures: " },
-            { "ctf_lb_playerstats_8", "Time in Vehicle: " },
-            { "ctf_lb_playerstats_9", "Teamkills: " },
-            { "ctf_lb_playerstats_10", "FOBs Destroyed: " },
-            { "ctf_lb_playerstats_11", "Credits Gained: " },
+    #region Common Errors
+    public static readonly Translation<string> CorrectUsage = new Translation<string>(ERROR_COLOR + "Correct usage: {0}.");
+    public static readonly Translation NotImplemented   = new Translation(ERROR_COLOR + "This command hasn't been implemented yet.");
+    public static readonly Translation ConsoleOnly      = new Translation(ERROR_COLOR + "This command can only be called from console.");
+    public static readonly Translation PlayersOnly      = new Translation(ERROR_COLOR + "This command can not be called from console.");
+    public static readonly Translation PlayerNotFound   = new Translation(ERROR_COLOR + "Player not found.");
+    public static readonly Translation UnknownError     = new Translation(ERROR_COLOR + "We ran into an unknown error executing that command.");
+    public static readonly Translation GamemodeError    = new Translation(ERROR_COLOR + "This command is not enabled in this gamemode.");
+    public static readonly Translation NoPermissions    = new Translation(ERROR_COLOR + "You do not have permission to use this command.");
+    public static readonly Translation NotEnabled       = new Translation(ERROR_COLOR + "This feature is not currently enabled.");
+    public static readonly Translation NotOnDuty        = new Translation(ERROR_COLOR + "You must be on duty to execute that command.");
+    #endregion
 
-            { "ctf_lb_warstats_0", "Duration: " },
-            { "ctf_lb_warstats_1", "US Casualties: " },
-            { "ctf_lb_warstats_2", "MEC Casualties: " },
-            { "ctf_lb_warstats_3", "Flag Captures: " },
-            { "ctf_lb_warstats_4", "US Average Army: " },
-            { "ctf_lb_warstats_5", "MEC Average Army: " },
-            { "ctf_lb_warstats_6", "US FOBs Placed: " },
-            { "ctf_lb_warstats_7", "MEC FOBs Placed: " },
-            { "ctf_lb_warstats_8", "US FOBs Destroyed: " },
-            { "ctf_lb_warstats_9", "MEC FOBs Destroyed: " },
-            { "ctf_lb_warstats_10", "Teamkill Casualties: " },
-            { "ctf_lb_warstats_11", "Longest Shot: " },
+    #region Flags
+    public static readonly Translation<Gamemode> GamemodeNotFlagGamemode = new Translation<Gamemode>(ERROR_COLOR + "Current gamemode <#ff758f>{0}</color> is not a <#ff758f>FLAG GAMEMODE</color>.");
+    public static readonly Translation NotOnCaptureTeam             = new Translation(ERROR_COLOR + "You're not on a team that can capture flags.");
+    public static readonly Translation<Flag> EnteredCaptureRadius   = new Translation<Flag>(SUCCESS_COLOR + "You have entered the capture radius of {0}.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> LeftCaptureRadius      = new Translation<Flag>(SUCCESS_COLOR + "You have left the capture radius of {0}.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagCapturing          = new Translation<Flag>(SUCCESS_COLOR + "Your team is capturing {0}!", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagLosing             = new Translation<Flag>(ERROR_COLOR + "Your team is losing {0}!", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagContested          = new Translation<Flag>("<#c$contested$>{0} is contested, eliminate some enemies to secure it!", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagClearing           = new Translation<Flag>(SUCCESS_COLOR + "Your team is clearing {0}!", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagSecured            = new Translation<Flag>("<#c$secured$>{0} is secure for now, keep up the defense.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagNoCap              = new Translation<Flag>("<#c$nocap$>{0} is not your objective, check the right of your screen to see which points to attack and defend.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagNotOwned           = new Translation<Flag>("<#c$nocap$>{0} is owned by the enemies. Get more players to capture it.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagLocked             = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagNeutralized        = new Translation<Flag>(SUCCESS_COLOR + "{0} has been neutralized!", Flag.NAME_FORMAT_COLORED_DISCOVER);
 
-            { "ctf_lb_header_0", "Kills" },
-            { "ctf_lb_header_1", "Deaths" },
-            { "ctf_lb_header_2", "XP" },
-            { "ctf_lb_header_3", "Credits" },
-            { "ctf_lb_header_4", "Caps" },
-            { "ctf_lb_header_5", "Damage" },
+    public static readonly Translation Neutral          = new Translation("Neutral",       TranslationFlags.NoColor);
+    public static readonly Translation UndiscoveredFlag = new Translation("unknown",       TranslationFlags.NoColor);
+    public static readonly Translation UICapturing      = new Translation("CAPTURING",     TranslationFlags.NoColor);
+    public static readonly Translation UILosing         = new Translation("LOSING",        TranslationFlags.NoColor);
+    public static readonly Translation UIClearing       = new Translation("CLEARING",      TranslationFlags.NoColor);
+    public static readonly Translation UIContested      = new Translation("CONTESTED",     TranslationFlags.NoColor);
+    public static readonly Translation UISecured        = new Translation("SECURED",       TranslationFlags.NoColor);
+    public static readonly Translation UINoCap          = new Translation("NOT OBJECTIVE", TranslationFlags.NoColor);
+    public static readonly Translation UINotOwned       = new Translation("TAKEN",         TranslationFlags.NoColor);
+    public static readonly Translation UILocked         = new Translation("LOCKED",        TranslationFlags.NoColor);
+    public static readonly Translation UIInVehicle      = new Translation("IN VEHICLE",    TranslationFlags.NoColor);
+    public static readonly Translation FlagsHeader      = new Translation("Flags",         TranslationFlags.NoColor);
+    #endregion
 
-            // insurgency
-            { "ins_lb_playerstats_0", "Kills: " },
-            { "ins_lb_playerstats_1", "Deaths: " },
-            { "ins_lb_playerstats_2", "Damage Done: " },
-            { "ins_lb_playerstats_3", "Objective Kills: " },
-            { "ins_lb_playerstats_4", "Time Deployed: " },
-            { "ins_lb_playerstats_5", "XP Gained: " },
-            { "ins_lb_playerstats_6", "Intelligence Gathered: " },
-            { "ins_lb_playerstats_7", "Caches Discovered: " },
-            { "ins_lb_playerstats_8", "Caches Destroyed: " },
-            { "ins_lb_playerstats_9", "Teamkills: " },
-            { "ins_lb_playerstats_10", "FOBs Destroyed: " },
-            { "ins_lb_playerstats_11", "Credits Gained: " },
+    #region Teams
+    public static readonly Translation<FactionInfo> EnteredMain                 = new Translation<FactionInfo>(SUCCESS_COLOR + "You have entered the safety of {0} headquarters!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo> LeftMain                    = new Translation<FactionInfo>(SUCCESS_COLOR + "You have left the safety of {0} headquarters!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo> TeamJoinDM                  = new Translation<FactionInfo>("<#a0ad8e>You've joined {0}.", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo, IPlayer> TeamJoinAnnounce   = new Translation<FactionInfo, IPlayer>("<#a0ad8e>{1} joined {0}!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> TeamWin                     = new Translation<FactionInfo>("<#a0ad8e>{0} has won the battle!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo, Flag> TeamCaptured          = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT, Flag.NAME_FORMAT_COLORED_DISCOVER);
+    #endregion
 
-            { "ins_lb_warstats_0", "Duration: " },
-            { "ins_lb_warstats_1", "US Casualties: " },
-            { "ins_lb_warstats_2", "MEC Casualties: " },
-            { "ins_lb_warstats_3", "Intelligence Gathered: " },
-            { "ins_lb_warstats_4", "US Average Army: " },
-            { "ins_lb_warstats_5", "MEC Average Army: " },
-            { "ins_lb_warstats_6", "US FOBs Placed: " },
-            { "ins_lb_warstats_7", "MEC FOBs Placed: " },
-            { "ins_lb_warstats_8", "US FOBs Destroyed: " },
-            { "ins_lb_warstats_9", "MEC FOBs Destroyed: " },
-            { "ins_lb_warstats_10", "Teamkill Casualties: " },
-            { "ins_lb_warstats_11", "Longest Shot: " },
+    #region Players
+    public static readonly Translation<IPlayer> PlayerConnected                 = new Translation<IPlayer>(SUCCESS_COLOR + "{0} joined the server.");
+    public static readonly Translation<IPlayer> PlayerDisconnected              = new Translation<IPlayer>(SUCCESS_COLOR + "{0} left the server.");
+    public static readonly Translation<string>   NullTransformKickMessage       = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationFlags.NoColor);
+    public static readonly Translation<string>   ChatFilterFeedback             = new Translation<string>(ERROR_COLOR + "Our chat filter flagged <#fdfdfd>{0}</color>, so the message wasn't sent.");
+    #endregion
 
-            { "ins_lb_header_0", "Kills" },
-            { "ins_lb_header_1", "Deaths" },
-            { "ins_lb_header_2", "XP" },
-            { "ins_lb_header_3", "Credits" },
-            { "ins_lb_header_4", "KDR" },
-            { "ins_lb_header_5", "Damage" },
-            #endregion
+    #region Leaderboards
 
-            #region GroupCommand
-            { "group_usage", "<color=#ff8c69>Syntax: <i>/group [ join [id] | create [name] ].</i></color>" },
-            { "current_group", "<color=#e6e3d5>Group <color=#4785ff>{0}</color>: <color=#4785ff>{1}</color>.</color>" },
-            { "cant_create_group", "<color=#ff8c69>You can't create a group right now.</color>" },
-            { "created_group", "<color=#e6e3d5>Created group <color=#4785ff>{0}</color>: <color=#4785ff>{1}</color>.</color>" },
-            { "created_group_console", "{0} ({1}) created group \"{2}\": \"{3}\"" },
-            { "not_in_group", "<color=#ff8c69>You aren't in a group.</color>" },
-            { "joined_group", "<color=#e6e3d5>You have joined group {0}: <color=#4785ff>{1}</color>.</color>" },
-            { "joined_already_in_group", "<color=#ff8c69>You are already in that group.</color>" },
-            { "joined_group_not_found", "<color=#ff8c69>Could not find group <color=#4785ff>{0}</color>.</color>" },
-            { "joined_group_console", "{0} ({1}) joined group \"{2}\": \"{3}\"." },
-            #endregion
+    #region Shared
+    public static readonly Translation StartingSoon                   = new Translation("Starting soon...", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, "mm:ss");
 
-            #region LangCommand
-            { "language_list", "<color=#f53b3b>Languages: <color=#e6e3d5>{0}</color>.</color>" },
-            { "language_current", "<color=#f53b3b>Current language: <color=#e6e3d5>{0}</color>.</color>" },
-            { "changed_language", "<color=#f53b3b>Changed your language to <color=#e6e3d5>{0}</color>.</color>" },
-            { "change_language_not_needed", "<color=#f53b3b>You are already set to <color=#e6e3d5>{0}</color>.</color>" },
-            { "reset_language", "<color=#f53b3b>Reset your language to <color=#e6e3d5>{0}</color>.</color>" },
-            { "reset_language_how", "<color=#f53b3b>Do <color=#e6e3d5>/lang reset</color> to reset back to default language.</color>" },
-            { "dont_have_language", "<color=#dd1111>We don't have translations for <color=#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.</color>" },
-            { "reset_language_not_needed", "<color=#dd1111>You are already on the default language: <color=#e6e3d5>{0}</color>.</color>" },
-            #endregion
+    public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_COLORIZED_FORMAT, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1}% presence", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, "N0");
+    public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
 
-            #region Toasts
-            { "welcome_message", "Thanks for playing <color=#{0}>Uncreated Warfare</color>!\nWelcome back <color=#{2}>{1}</color>." },
-            { "welcome_message_first_time", "Welcome to <color=#{0}>Uncreated Warfare</color>!\nTalk to the NPCs to get started." },
-            #endregion
-            
-            #region KitCommand
-            { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_search_results", "<color=#a0ad8e>Matches: <i>{0}</i>.</color>" },
-            { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_copied", "<color=#a0ad8e>Copied data from <color=#c7b197>{0}</color></color> into new kit: <color=#ffffff>{1}</color></color>" },
-            { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_setprop", "<color=#a0ad8e>Set <color=#8ce4ff>{0}</color> for kit <color=#ffb89c>{1}</color> to: <color=#ffffff>{2}</color></color>" },
-            { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
-            { "kit_accessgiven_dm", "<color=#a0ad8e>You were just given access to the kit: <color=#ffffff>{0}</color>.</color>" },
-            { "kit_accessremoved_dm", "<color=#a0ad8e>You were just denied access to the kit: <color=#ffffff>{0}</color>.</color>" },
-            { "kit_accessremoved", "<color=#a0ad8e>Disallowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
-            { "kit_e_exist", "<color=#ff8c69>A kit called {0} already exists.</color>" },
-            { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
-            { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'Class', 'Cost', 'IsPremium', etc.</color>" },
-            { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
-            { "kit_e_invalidarg_not_allowed", "<color=#ff8c69>{0} is not a valid property, or it cannot be changed.</color>" },
-            { "kit_e_noplayer", "<color=#ff8c69>No player found by the name of '{0}'.</color>" },
-            { "kit_e_alreadyaccess", "<color=#dbc48f>Player {0} already has access to the kit: {1}.</color>" },
-            { "kit_e_noaccess", "<color=#dbc48f>Player {0} already does not have access to that: {1}.</color>" },
-            { "kit_e_cooldown", "<color=#c2b39b>You can request this kit again in: <color=#bafeff>{0}</color></color>" },
-            { "kit_e_cooldownglobal", "<color=#c2b39b>You can request another kit in: <color=#bafeff>{0}</color></color>" },
-            { "kit_l_e_playernotfound", "<color=#ff8c69>Could not find player with the Steam64 ID: {0}</color>" },
-            { "kit_l_e_kitexists", "<color=#ff8c69>Something went wrong and this loadout could not be created (loadout already exists)</color>" },
-            { "kit_l_created", "<color=#a0ad8e>Created <color=#c4c9bb>{0}</color> loadout for <color=#deb692>{1}</color> (<color=#968474>{2}</color>). Kit name: <color=#ffffff>{3}</color></color>" },
-            #endregion
-            
+    public static readonly Translation<float, string, IPlayer> LongestShot     = new Translation<float, string, IPlayer>("{0} Wins!", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, "F1", arg3Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    #endregion
+
+    #region CTFBase
+    public static readonly Translation CTFPlayerStats0  = new Translation("Kills: ",            TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats1  = new Translation("Deaths: ",           TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats2  = new Translation("K/D Ratio: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats3  = new Translation("Kills on Point: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats4  = new Translation("Time Deployed: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats5  = new Translation("XP Gained: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats6  = new Translation("Time on Point: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats7  = new Translation("Captures: ",         TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats8  = new Translation("Time in Vehicle: ",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats9  = new Translation("Teamkills: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats10 = new Translation("FOBs Destroyed: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats11 = new Translation("Credits Gained: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+
+    public static readonly Translation CTFWarStats0 = new Translation("Duration: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation<FactionInfo> CTFWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation CTFWarStats3 = new Translation("Flag Captures: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation<FactionInfo> CTFWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation CTFWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+
+    public static readonly Translation CTFHeader0 = new Translation("Kills",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFHeader1 = new Translation("Deaths",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFHeader2 = new Translation("XP",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFHeader3 = new Translation("Credits", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFHeader4 = new Translation("Caps",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFHeader5 = new Translation("Damage",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    #endregion
+
+    #region CTFBase
+    public static readonly Translation InsurgencyPlayerStats0  = new Translation("Kills: ",                 TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats1  = new Translation("Deaths: ",                TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats2  = new Translation("Damage Done: ",           TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats3  = new Translation("Objective Kills: ",       TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats4  = new Translation("Time Deployed: ",         TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats5  = new Translation("XP Gained: ",             TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats6  = new Translation("Intelligence Gathered: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats7  = new Translation("Caches Discovered: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats8  = new Translation("Caches Destroyed: ",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats9  = new Translation("Teamkills: ",             TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats11 = new Translation("Credits Gained: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+
+    public static readonly Translation InsurgencyWarStats0 = new Translation("Duration: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation InsurgencyWarStats3 = new Translation("Intelligence Gathered: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation InsurgencyWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+
+    public static readonly Translation InsurgencyHeader0 = new Translation("Kills",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyHeader1 = new Translation("Deaths",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyHeader2 = new Translation("XP",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyHeader3 = new Translation("Credits", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyHeader4 = new Translation("KDR",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyHeader5 = new Translation("Damage",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    #endregion
+
+    #endregion
+
+    #region GroupCommand
+    public static readonly Translation<ulong, string, Color> CurrentGroup = new Translation<ulong, string, Color>(SUCCESS_COLOR + "Group <#{2}>{0}</color>: <#{2}>{1}</color>");
+    public static readonly Translation<ulong, string, Color> CreatedGroup = new Translation<ulong, string, Color>(SUCCESS_COLOR + "Created group <#{2}>{0}</color>: <#{2}>{1}</color>");
+    public static readonly Translation<ulong, string, Color> JoinedGroup  = new Translation<ulong, string, Color>(SUCCESS_COLOR + "You have joined group <#{2}>{0}</color>: <#{2}>{1}</color>.");
+    public static readonly Translation CantCreateGroup      = new Translation(ERROR_COLOR + "You can't create a group right now.");
+    public static readonly Translation NotInGroup           = new Translation(ERROR_COLOR + "You aren't in a group.");
+    public static readonly Translation AlreadyInGroup       = new Translation(ERROR_COLOR + "You are already in that group.");
+    public static readonly Translation<ulong> GroupNotFound = new Translation<ulong>(ERROR_COLOR + "Could not find group <#4785ff>{0}</color>.");
+    #endregion
+
+    #region LangCommand
+    public static readonly Translation<string> LanguageList              = new Translation<string>("<#f53b3b>Languages: <#e6e3d5>{0}</color>.");
+    public static readonly Translation ResetLanguageHow                  = new Translation("<#f53b3b>Do <#e6e3d5>/lang reset</color> to reset back to default language.");
+    public static readonly Translation<LanguageAliasSet> LanguageCurrent = new Translation<LanguageAliasSet>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<LanguageAliasSet> ChangedLanguage = new Translation<LanguageAliasSet>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<LanguageAliasSet> LangAlreadySet  = new Translation<LanguageAliasSet>(ERROR_COLOR + "You are already set to <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<LanguageAliasSet> ResetLanguage   = new Translation<LanguageAliasSet>("<#f53b3b>Reset your language to <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<LanguageAliasSet> ResetCurrent    = new Translation<LanguageAliasSet>(ERROR_COLOR + "You are already on the default language: <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<string> LanguageNotFound          = new Translation<string>("<#dd1111>We don't have translations for <#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    #endregion
+
+    #region Toasts
+    public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nTalk to the NPCs to get started.", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    #endregion
+
+    #region KitCommand
+    public static readonly Translation<Kit> KitCreated          = new Translation<Kit>("<#a0ad8e>Created kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<Kit> KitOverwrote        = new Translation<Kit>("<#a0ad8e>Overwritten items for kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<Kit, Kit> KitCopied      = new Translation<Kit, Kit>("<#a0ad8e>Copied data from <#c7b197>{0}</color> into a new kit: <#fff>{0}</color>.", Kit.ID_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<Kit> KitDeleted          = new Translation<Kit>("<#a0ad8e>Deleted kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<string> KitSearchResults = new Translation<string>("<#a0ad8e>Matches: <i>{0}</i>.");
+    public static readonly Translation<Kit> KitAccessGivenDm    = new Translation<Kit>("<#a0ad8e>You were given access to the kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<Kit> KitAccessRevokedDm  = new Translation<Kit>("<#a0ad8e>Your access to <#fff>{0}</color> was revoked.", Kit.ID_FORMAT);
+    public static readonly Translation<string, Kit, string> KitPropertySet    = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg2Fmt: Kit.ID_FORMAT);
+    public static readonly Translation<string> KitNameTaken                   = new Translation<string>(ERROR_COLOR + "A kit named <#fff>{0}</color> already exists.");
+    public static readonly Translation<string> KitNotFound                    = new Translation<string>(ERROR_COLOR + "A kit named <#fff>{0}</color> doesn't exists.");
+    public static readonly Translation<string> KitPropertyNotFound            = new Translation<string>(ERROR_COLOR + "Kits don't have a <#eee>{0}</color> property.");
+    public static readonly Translation<string> KitPropertyProtected           = new Translation<string>(ERROR_COLOR + "<#eee>{0}</color> can not be changed on kits.");
+    public static readonly Translation<IPlayer, Kit> KitAlreadyHasAccess      = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} already has access to <#fff>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess  = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<Cooldown> KitOnCooldown                = new Translation<Cooldown>(ERROR_COLOR + "You can request this kit again in: <#bafeff>{0}</color>.", Cooldown.TIMESTAMP_LEFT_FORMAT);
+    public static readonly Translation<Cooldown> KitOnGlobalCooldown          = new Translation<Cooldown>(ERROR_COLOR + "You can request another kit again in: <#bafeff>{0}</color>.", Cooldown.TIMESTAMP_LEFT_FORMAT);
+    public static readonly Translation<IPlayer, UCPlayer, Kit> KitAccessGiven        = new Translation<IPlayer, UCPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, UCPlayer, Kit> KitAccessRevoked      = new Translation<IPlayer, UCPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<string, Type, string> KitInvalidPropertyValue = new Translation<string, Type, string>(ERROR_COLOR + "<#fff>{2}</color> isn't a valid value for <#eee>{0}</color> (<#aaa>{1}</color>).");
+    public static readonly Translation<EClass, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<EClass, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg2Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, arg3Fmt: UCPlayer.STEAM_64_FORMAT, arg4Fmt: Kit.ID_FORMAT);
+    #endregion
+
+    Dictionary<string, string> _translations = new Dictionary<string, string>()
+    {
             #region RangeCommand
             { "range", "<color=#9e9c99>The range to your squad's marker is: <color=#8aff9f>{0}m</color></color>" },
             { "range_nomarker", "<color=#9e9c99>You squad has no marker.</color>" },
@@ -366,7 +409,7 @@ partial class JSONMethods
             { "ammo_success_main", "<color=#d1bda7>Resupplied kit. Consumed: <color=#d97568>{0} AMMO</color></color>" },
             { "ammo_success_vehicle_main", "<color=#d1bda7>Resupplied vehicle. Consumed: <color=#d97568>{0} AMMO</color></color>" },
             { "ammo_vehicle_cant_rearm", "<color=#b3a6a2>This vehicle can't be resupplied.</color>" },
-            { "ammo_auto_resupply", "<color=#b3a6a2>This vehicle will AUTO RESUPPLY when in main. You can also use '<color=#c9bfad>/load <color=#d4c49d>build</color>|<color=#d97568>ammo</color> <amount></color>'.</color>" }, 
+            { "ammo_auto_resupply", "<color=#b3a6a2>This vehicle will AUTO RESUPPLY when in main. You can also use '<color=#c9bfad>/load <color=#d4c49d>build</color>|<color=#d97568>ammo</color> <amount></color>'.</color>" },
             { "ammo_vehicle_full_already", "<color=#b3a6a2>This vehicle does not need to be resupplied.</color>" },
             { "ammo_not_near_fob", "<color=#b3a6a2>This ammo crate is not built on a friendly FOB.</color>" },
             { "ammo_not_near_repair_station", "<color=#b3a6a2>Your vehicle must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.</color>" },
@@ -1102,428 +1145,5 @@ partial class JSONMethods
             { "win_ui_value_caches", "{0} Caches Left" },
             { "win_ui_header_winner", "{0}\r\nhas won the battle!" },
             #endregion
-        };
-    }
-
-    public static Dictionary<string, string> DefaultTranslations;
-    public static readonly List<ZoneModel> DefaultZones;
-    static JSONMethods()
-    {
-        DefaultZones = new List<ZoneModel>(8);
-        ZoneModel mdl = new ZoneModel()
-        {
-            Id = 1,
-            Name = "Ammo Hill",
-            X = -82.4759521f,
-            Z = 278.999451f,
-            ZoneType = EZoneType.RECTANGLE,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.SizeX = 97.5f;
-        mdl.ZoneData.SizeZ = 70.3125f;
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(8, 1f),
-            new AdjacentFlagData(2, 1f),
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 2,
-            Name = "Hilltop Encampment",
-            ShortName = "Hilltop",
-            X = 241.875f,
-            Z = 466.171875f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(272.301117f, 498.742401f),
-            new Vector2(212.263733f, 499.852478f),
-            new Vector2(211.238708f, 433.756653f),
-            new Vector2(271.106445f, 432.835083f)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(4, 0.5f),
-            new AdjacentFlagData(3, 1f),
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 3,
-            Name = "FOB Papanov",
-            ShortName = "Papanov",
-            X = 706.875f,
-            Z = 711.328125f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(669.994995f, 817.746216f),
-            new Vector2(818.528564f, 731.983521f),
-            new Vector2(745.399902f, 605.465942f),
-            new Vector2(596.919312f, 691.226624f)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(2, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 4,
-            Name = "Verto",
-            X = 1649,
-            Z = 559,
-            ZoneType = EZoneType.POLYGON,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(1539.5f, 494),
-            new Vector2(1722.5f, 529),
-            new Vector2(1769.5f, 558),
-            new Vector2(1741, 599),
-            new Vector2(1695.5f, 574),
-            new Vector2(1665, 568),
-            new Vector2(1658, 608.5f),
-            new Vector2(1608.5f, 598.5f),
-            new Vector2(1602.5f, 624),
-            new Vector2(1562.5f, 614.5f),
-            new Vector2(1577.5f, 554),
-            new Vector2(1528.5f, 545)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(2, 0.5f),
-            new AdjacentFlagData(3, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 5,
-            Name = "Hill 123",
-            X = 1657.5f,
-            Z = 885.5f,
-            ZoneType = EZoneType.CIRCLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Radius = 43.5f;
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(4, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 6,
-            Name = "Hill 13",
-            X = 1354,
-            Z = 1034.5f,
-            ZoneType = EZoneType.CIRCLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Radius = 47;
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(2, 1f),
-            new AdjacentFlagData(5, 1f),
-            new AdjacentFlagData(1, 2f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 7,
-            Name = "Mining Headquarters",
-            ShortName = "Mining HQ",
-            X = 49.21875f,
-            Z = -202.734375f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(-5.02727556f, -138.554886f),
-            new Vector2(72.9535751f, -138.59877f),
-            new Vector2(103.024361f, -138.548294f),
-            new Vector2(103.59375f, -151.40625f),
-            new Vector2(103.048889f, -246.603363f),
-            new Vector2(72.9691391f, -246.541885f),
-            new Vector2(53.1518631f, -257.577393f),
-            new Vector2(53.9740639f, -258.832581f),
-            new Vector2(43.0496025f, -264.54364f),
-            new Vector2(-4.99750614f, -264.539978f),
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(6, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 8,
-            Name = "OP Fortress",
-            ShortName = "Fortress",
-            X = 375.5f,
-            Z = 913f,
-            ZoneType = EZoneType.CIRCLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Radius = 47;
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 9,
-            Name = "Dylym",
-            X = 1849f,
-            Z = 1182.5f,
-            ZoneType = EZoneType.POLYGON,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(1818.5f, 1132.5f),
-            new Vector2(1907.5f, 1121.5f),
-            new Vector2(1907.5f, 1243.5f),
-            new Vector2(1829.5f, 1243.5f),
-            new Vector2(1829.5f, 1229.5f),
-            new Vector2(1790.5f, 1229.5f),
-            new Vector2(1790.5f, 1192.5f),
-            new Vector2(1818.5f, 1190.5f)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(5, 1f),
-            new AdjacentFlagData(6, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 990,
-            Name = "Lobby",
-            X = 713.1f,
-            Z = -991,
-            ZoneType = EZoneType.RECTANGLE,
-            UseMapCoordinates = false,
-            UseCase = EZoneUseCase.LOBBY
-        };
-        mdl.ZoneData.SizeX = 12.2f;
-        mdl.ZoneData.SizeZ = 12;
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 991,
-            Name = "USA Main Base",
-            ShortName = "US Main",
-            X = 1853,
-            Z = 1874,
-            ZoneType = EZoneType.POLYGON,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T1_MAIN
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(1788.5f, 1811.5f),
-            new Vector2(1906f, 1811.5f),
-            new Vector2(1906f, 1998f),
-            new Vector2(1788.5f, 1998f),
-            new Vector2(1788.5f, 1904.5f),
-            new Vector2(1774.5f, 1904.5f),
-            new Vector2(1774.5f, 1880.5f),
-            new Vector2(1788.5f, 1880.5f),
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(7, 0.8f),
-            new AdjacentFlagData(9, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 992,
-            Name = "USA AMC",
-            ShortName = "US AMC",
-            X = 1692f,
-            Z = 1825.3884f,
-            ZoneType = EZoneType.RECTANGLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T1_AMC
-        };
-        mdl.ZoneData.SizeX = 712;
-        mdl.ZoneData.SizeZ = 443.2332f;
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 993,
-            Name = "Russian Main Base",
-            ShortName = "RU Main",
-            X = 196,
-            Z = 113,
-            ZoneType = EZoneType.POLYGON,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T2_MAIN
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(142.5f, 54f),
-            new Vector2(259.5f, 54f),
-            new Vector2(259.5f, 120f),
-            new Vector2(275f, 120f),
-            new Vector2(275f, 144f),
-            new Vector2(259.5f, 144f),
-            new Vector2(259.5f, 240f),
-            new Vector2(142.5f, 240f)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(8, 0.5f),
-            new AdjacentFlagData(2, 0.5f),
-            new AdjacentFlagData(3, 0.5f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 994,
-            Name = "Russian AMC Zone",
-            ShortName = "RU AMC",
-            X = 275,
-            Z = 234.6833f,
-            ZoneType = EZoneType.RECTANGLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T2_AMC
-        };
-        mdl.ZoneData.SizeX = 550;
-        mdl.ZoneData.SizeZ = 469.3665f;
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-    }
-    public static List<Point3D> DefaultExtraPoints = new List<Point3D>
-    {
-        new Point3D("lobby_spawn", 713.1f, 39f, -991)
-    };
-
-    private const string T1_COLOR_PH = "%t1%";
-    private const string T2_COLOR_PH = "%t2%";
-    private const string T3_COLOR_PH = "%t3%";
-    public static readonly Dictionary<string, string> DefaultColors = new Dictionary<string, string>()
-    {
-        { "default", "ffffff" },
-        { "uncreated", "9cb6a4" },
-        { "attack_icon_color", "ffca61" },
-        { "defend_icon_color", "ba70cc" },
-        { "locked_icon_color", "c2c2c2" },
-        { "undiscovered_flag", "696969" },
-        { "team_count_ui_color_team_1", "ffffff" },
-        { "team_count_ui_color_team_2", "ffffff" },
-        { "team_count_ui_color_team_1_icon", T1_COLOR_PH },
-        { "team_count_ui_color_team_2_icon", T2_COLOR_PH },
-        { "default_fob_color", "54e3ff" },
-        { "no_bunker_fob_color", "696969" },
-        { "enemy_nearby_fob_color", "ff8754" },
-        { "bleeding_fob_color", "d45555" },
-        { "invasion_special_fob", "5482ff" },
-        { "insurgency_cache_undiscovered_color", "b780d9" },
-        { "insurgency_cache_discovered_color", "555bcf" },
-        { "neutral_color", "c2c2c2" },
-
-        // capture ui
-        { "contested", "ffdc8a" },
-        { "secured", "80ff80" },
-        { "nocap", "855a5a" },
-        { "locked", "855a5a" },
-        { "invehicle", "855a5a" },
-
-        // Other Flag Chats
-        { "flag_neutralized", "e6e3d5" },
-        { "team_win", "e6e3d5" },
-        { "team_capture", "e6e3d5" },
-
-        // Deaths
-        { "death_background", "ffffff" },
-        { "death_background_teamkill", "ff9999" },
-
-        // Request
-        { "kit_public_header", "ffffff" },
-        { "kit_level_available", "ff974d" },
-        { "kit_level_unavailable", "917663" },
-        { "kit_level_dollars", "7878ff" },
-        { "kit_level_dollars_owned", "769fb5" },
-        { "kit_level_dollars_exclusive", "96ffb2" },
-        { "kit_weapon_list", "343434" },
-        { "kit_unlimited_players", "111111" },
-        { "kit_player_counts_available", "96ffb2" },
-        { "kit_player_counts_unavailable", "c2603e" },
-
-        // Vehicle Sign
-        { "vbs_branch", "9babab" },
-        { "vbs_ticket_number", "ffffff" },
-        { "vbs_ticket_label", "f0f0f0" },
-        { "vbs_dead", "ff0000" },
-        { "vbs_idle", "ffcc00" },
-        { "vbs_delay", "94cfff" },
-        { "vbs_active", "ff9933" },
-        { "vbs_ready", "33cc33" },
-    };
-    public static List<Kit> DefaultKits = new List<Kit> { };
-    public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
-    {
-        new LanguageAliasSet("en-us", "English", new string[] { "english", "enus", "en", "us", "inglés", "inglesa", "ingles",
-            "en-au", "en-bz", "en-ca", "en-cb", "en-ie", "en-jm", "en-nz", "en-ph", "en-tt", "en-za", "en-zw",
-            "enau", "enbz", "enca", "encb", "enie", "enjm", "ennz", "enph", "entt", "enza", "enzw" } ),
-        new LanguageAliasSet("ru-ru", "Russian", new string[] { "russian", "ruru", "ru", "russia", "cyrillic", "русский", "russkiy", "российский" } ),
-        new LanguageAliasSet("es-es", "Spanish", new string[] { "spanish", "español", "española", "espanol", "espanola", "es", "eses",
-            "es-ar", "es-bo", "es-cl", "es-co", "es-cr", "es-do", "es-ec", "es-gt", "es-hn", "es-mx", "es-ni", "es-pa", "es-pe", "es-pr", "es-py", "es-sv", "es-uy", "es-ve",
-            "esar", "esbo", "escl", "esco", "escr", "esdo", "esec", "esgt", "eshn", "esmx", "esni", "espa", "espe", "espr", "espy", "essv", "esuy", "esve" } ),
-        new LanguageAliasSet("de-de", "German", new string[] { "german", "deutsche", "de", "de-at", "de-ch", "de-li", "de-lu", "deat", "dech", "deli", "delu", "dede" } ),
-        new LanguageAliasSet("ar-sa", "Arabic", new string[] { "arabic", "ar", "arab", "عربى", "eurbaa",
-            "ar-ae", "ar-bh", "ar-dz", "ar-eg", "ar-iq", "ar-jo", "ar-kw", "ar-lb", "ar-ly", "ar-ma", "ar-om", "ar-qa", "ar-sy", "ar-tn", "ar-ye",
-            "arae", "arbh", "ardz", "areg", "ariq", "arjo", "arkw", "arlb", "arly", "arma", "arom", "arqa", "arsy", "artn", "arye"}),
-        new LanguageAliasSet("fr-fr", "French", new string[] { "french", "fr", "française", "français", "francaise", "francais",
-            "fr-be", "fr-ca", "fr-ch", "fr-lu", "fr-mc",
-            "frbe", "frca", "frch", "frlu", "frmc" }),
-        new LanguageAliasSet("pl-pl", "Polish", new string[] { "polish", "plpl", "polskie", "pol", "pl" }),
-        new LanguageAliasSet("zh-cn", "Chinese (Simplified)", new string[] { "chinese", "simplified chinese", "chinese simplified", "simple chinese", "chinese simple",
-            "zh", "zh-s", "s-zh", "zh-hk", "zh-mo", "zh-sg", "中国人", "zhōngguó rén", "zhongguo ren", "简体中文", "jiǎntǐ zhōngwén", "jianti zhongwen", "中国人", "zhōngguó rén", "zhongguo ren",
-            "zhs", "szh", "zhhk", "zhmo", "zhsg", }),
-        new LanguageAliasSet("zh-tw", "Chinese (Traditional)", new string[] { "traditional chinese", "chinese traditional",
-            "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" }),
-        new LanguageAliasSet("pt-pt", "Portuguese", new string[] { "portuguese", "pt", "pt-pt", "pt-br", "ptbr", "ptpt", "português", "a língua portuguesa", "o português" }),
-        new LanguageAliasSet("fil", "Filipino", new string[] { "pilipino", "fil", "pil", "tagalog", "filipino", "tl", "tl-ph", "fil-ph", "pil-ph" }),
-        new LanguageAliasSet("nb-no", "Norwegian", new string[] { "norwegian", "norway", "bokmål", "bokmal", "norsk", "nb-no", "nb", "no", "nbno" }),
-        new LanguageAliasSet("ro-ro", "Romanian", new string[] { "română", "romanian", "ro", "roro", "ro-ro", "romania" })
     };
 }

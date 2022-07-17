@@ -41,12 +41,12 @@ public class UnbanCommand : Command
             {
                 if (tid.Equals(targetNames.PlayerName, StringComparison.Ordinal))
                 {
-                    L.Log(Translation.Translate("unban_unbanned_console_id_operator", 0, out _, tid), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("unban_unbanned_console_id_operator", 0, out _, tid), ConsoleColor.Cyan);
                     Chat.Broadcast("unban_unbanned_broadcast_id_operator", tid);
                 }
                 else
                 {
-                    L.Log(Translation.Translate("unban_unbanned_console_name_operator", 0, out _, targetNames.PlayerName, tid.ToString(Data.Locale)), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("unban_unbanned_console_name_operator", 0, out _, targetNames.PlayerName, tid.ToString(Data.Locale)), ConsoleColor.Cyan);
                     Chat.Broadcast("unban_unbanned_broadcast_name_operator", targetNames.CharacterName);
                 }
             }
@@ -55,13 +55,13 @@ public class UnbanCommand : Command
                 FPlayerName callerNames = F.GetPlayerOriginalNames(ctx.CallerID);
                 if (tid.Equals(targetNames.PlayerName, StringComparison.Ordinal))
                 {
-                    L.Log(Translation.Translate("unban_unbanned_console_id", 0, out _, tid, callerNames.PlayerName, ctx.CallerID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("unban_unbanned_console_id", 0, out _, tid, callerNames.PlayerName, ctx.CallerID.ToString(Data.Locale)), ConsoleColor.Cyan);
                     ctx.Reply("unban_unbanned_feedback_id", tid);
                     Chat.BroadcastToAllExcept(ctx.CallerID, "unban_unbanned_broadcast_id", tid, callerNames.CharacterName);
                 }
                 else
                 {
-                    L.Log(Translation.Translate("unban_unbanned_console_name", 0, out _, targetNames.PlayerName, tid, callerNames.PlayerName, ctx.CallerID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("unban_unbanned_console_name", 0, out _, targetNames.PlayerName, tid, callerNames.PlayerName, ctx.CallerID.ToString(Data.Locale)), ConsoleColor.Cyan);
                     ctx.Reply("unban_unbanned_feedback_name", targetNames.CharacterName);
                     Chat.BroadcastToAllExcept(ctx.CallerID, "unban_unbanned_broadcast_name", targetNames.CharacterName, callerNames.CharacterName);
                 }

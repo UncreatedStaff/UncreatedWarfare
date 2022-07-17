@@ -681,9 +681,9 @@ public class VehicleSpawn
         {
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets(players))
             {
-                string val = Translation.TranslateVBS(spawn, data, set.Language);
+                string val = Localization.TranslateVBS(spawn, data, set.Language);
                 NetId id = spawn.LinkedSign.SignInteractable.GetNetId();
                 while (set.MoveNext())
                 {
@@ -713,7 +713,7 @@ public class VehicleSpawn
                 return;
             if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
                 lang = JSONMethods.DEFAULT_LANGUAGE;
-            string val = Translation.TranslateVBS(spawn, data, lang);
+            string val = Localization.TranslateVBS(spawn, data, lang);
             try
             {
                 UCPlayer? pl = UCPlayer.FromSteamPlayer(player);

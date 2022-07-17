@@ -14,7 +14,7 @@ using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Kits;
 
-public class Kit
+public class Kit : ITranslationArgument
 {
     internal int PrimaryKey = -1;
     public string DisplayName => Class switch
@@ -565,6 +565,24 @@ public class Kit
         Array.Copy(old, index + 1, Skillsets, index, old.Length - index - 1);
         return true;
     }
+
+    public const string ID_FORMAT = "i";
+    public const string DISPLAY_NAME_FORMAT = "d";
+    public const string CLASS_FORMAT = "c";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    {
+        if (format is not null)
+        {
+            if (format.Equals(ID_FORMAT, StringComparison.Ordinal))
+                return Name;
+            else if (format.Equals(CLASS_FORMAT, StringComparison.Ordinal))
+                return Localization.TranslateEnum(Class, language);
+        }
+        if (SignTexts.TryGetValue(language, out string dspTxt))
+            return dspTxt;
+
+        return SignTexts.Values.FirstOrDefault() ?? Name;
+    }
 }
 public readonly struct Skillset : IEquatable<Skillset>
 {
@@ -833,7 +851,7 @@ public class LevelUnlockRequirement : BaseUnlockRequirement
             return string.Empty;
 
         int lvl = Points.GetLevel(player.CachedXP);
-        return Translation.Translate("kit_required_level", player.Steam64, RankData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
+        return Localization.Translate("kit_required_level", player.Steam64, RankData.GetRankAbbreviation(UnlockLevel), lvl >= UnlockLevel ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
@@ -860,7 +878,7 @@ public class RankUnlockRequirement : BaseUnlockRequirement
     {
         ref Ranks.RankData data = ref Ranks.RankManager.GetRank(player, out bool success);
         ref Ranks.RankData reqData = ref Ranks.RankManager.GetRank(UnlockRank, out _);
-        return Translation.Translate("kit_required_rank", player.Steam64, reqData.ColorizedName(player.Steam64), success && data.Order >= reqData.Order ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
+        return Localization.Translate("kit_required_rank", player.Steam64, reqData.ColorizedName(player.Steam64), success && data.Order >= reqData.Order ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)
     {
@@ -894,10 +912,10 @@ public class QuestUnlockRequirement : BaseUnlockRequirement
         bool access = CanAccess(player);
         if (Assets.find(QuestID) is QuestAsset quest)
         {
-            return Translation.Translate(access ? "kit_required_quest_done" : "kit_required_quest", player, quest.questName,
+            return Localization.Translate(access ? "kit_required_quest_done" : "kit_required_quest", player, quest.questName,
                 access ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"));
         }
-        return Translation.Translate(access ? "kit_required_quest_done" : "kit_required_quest_unknown", player, UnlockPresets.Length.ToString(Data.Locale), 
+        return Localization.Translate(access ? "kit_required_quest_done" : "kit_required_quest_unknown", player, UnlockPresets.Length.ToString(Data.Locale), 
             access ? UCWarfare.GetColorHex("kit_level_available") : UCWarfare.GetColorHex("kit_level_unavailable"), UnlockPresets.Length.S());
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)

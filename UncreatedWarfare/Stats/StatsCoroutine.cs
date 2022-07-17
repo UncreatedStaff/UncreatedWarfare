@@ -55,7 +55,7 @@ namespace Uncreated.Warfare.Stats
                         bool isOnDuty = ucplayer.OnDuty();
                         if (Points.XPConfig.OnDutyXP > 0 && isOnDuty)
                         {
-                            Points.AwardXP(ucplayer.Player, Points.XPConfig.OnDutyXP, Translation.Translate("xp_on_duty", ucplayer.Steam64));
+                            Points.AwardXP(ucplayer.Player, Points.XPConfig.OnDutyXP, Localization.Translate("xp_on_duty", ucplayer.Steam64));
                         }
 
 
@@ -67,7 +67,7 @@ namespace Uncreated.Warfare.Stats
                                 if (afk.time == n)
                                 {
                                     FPlayerName names = F.GetPlayerOriginalNames(ucplayer);
-                                    L.Log(Translation.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
+                                    L.Log(Localization.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
                                         ucplayer.Steam64.ToString(Data.Locale), "AFK Auto-Kick"), ConsoleColor.Cyan);
                                     Provider.kick(ucplayer.CSteamID, "Auto-kick for being AFK.");
                                     previousPositions.Remove(ucplayer.Steam64);

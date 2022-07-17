@@ -62,7 +62,7 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            string localizedString = Translation.Translate(text, player.playerID.steamID.m_SteamID, formatting);
+            string localizedString = Localization.Translate(text, player.playerID.steamID.m_SteamID, formatting);
             if (System.Text.Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
                 SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player);
             else
@@ -100,7 +100,7 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            string localizedString = Translation.Translate(text, player.playerID.steamID.m_SteamID, out Color textColor, formatting);
+            string localizedString = Localization.Translate(text, player.playerID.steamID.m_SteamID, out Color textColor, formatting);
             if (System.Text.Encoding.UTF8.GetByteCount(localizedString) <= MAX_CHAT_MESSAGE_SIZE)
                 SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, localizedString.Contains("</"), player);
             else
@@ -175,9 +175,9 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
             {
-                string localizedString = Translation.Translate(text, set.Language, formatting);
+                string localizedString = Localization.Translate(text, set.Language, formatting);
                 bool isRich = localizedString.Contains("</");
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
@@ -223,9 +223,9 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets(players))
             {
-                string localizedString = Translation.Translate(text, set.Language, formatting);
+                string localizedString = Localization.Translate(text, set.Language, formatting);
                 bool isRich = localizedString.Contains("</");
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
@@ -270,9 +270,9 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
             {
-                string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
+                string localizedString = Localization.Translate(text, set.Language, out Color textColor, formatting);
                 bool isRich = localizedString.Contains("</");
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
@@ -317,9 +317,9 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets(players))
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets(players))
             {
-                string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
+                string localizedString = Localization.Translate(text, set.Language, out Color textColor, formatting);
                 bool isRich = localizedString.Contains("</");
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
@@ -364,7 +364,7 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
+            string localizedString = Localization.Translate(text, set.Language, out Color textColor, formatting);
             bool isRich = localizedString.Contains("</");
             if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
             {
@@ -404,7 +404,7 @@ namespace Uncreated.Warfare
 #endif
             foreach (LanguageSet set in players)
             {
-                string localizedString = Translation.Translate(text, set.Language, out Color textColor, formatting);
+                string localizedString = Localization.Translate(text, set.Language, out Color textColor, formatting);
                 bool isRich = localizedString.Contains("</");
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
@@ -445,7 +445,7 @@ namespace Uncreated.Warfare
 #endif
             foreach (LanguageSet set in players)
             {
-                string localizedString = Translation.Translate(text, set.Language, formatting);
+                string localizedString = Localization.Translate(text, set.Language, formatting);
                 bool isRich = localizedString.Contains("</");
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
@@ -487,7 +487,7 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void BroadcastToAllExcept(ulong[] excluded, string text, Color textColor, params string[] formatting)
         {
-            BroadcastToPlayers(Translation.EnumerateLanguageSets(x =>
+            BroadcastToPlayers(Localization.EnumerateLanguageSets(x =>
             {
                 for (int i = 0; i < excluded.Length; i++)
                 {
@@ -504,7 +504,7 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void BroadcastToAllExcept(ulong[] excluded, string text, params string[] formatting)
         {
-            BroadcastToPlayers(Translation.EnumerateLanguageSets(x =>
+            BroadcastToPlayers(Localization.EnumerateLanguageSets(x =>
             {
                 for (int i = 0; i < excluded.Length; i++)
                 {
@@ -521,7 +521,7 @@ namespace Uncreated.Warfare
         /// <param name="formatting">list of strings to replace the {#}s in the translations.</param>
         public static void BroadcastToAllExcept(ulong excluded, string text, params string[] formatting)
         {
-            BroadcastToPlayers(Translation.EnumerateLanguageSets(x => excluded != x.Steam64), text, formatting);
+            BroadcastToPlayers(Localization.EnumerateLanguageSets(x => excluded != x.Steam64), text, formatting);
         }
         public static void SendSingleMessage(string text, Color color, EChatMode mode, string? iconURL, bool richText, SteamPlayer? recipient)
         {
@@ -573,12 +573,12 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            message = Translation.TranslateDeath(JSONMethods.DEFAULT_LANGUAGE, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, true, translateKillerName, false);
+            message = Localization.TranslateDeath(JSONMethods.DEFAULT_LANGUAGE, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, true, translateKillerName, false);
             if (!broadcast) return;
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
             {
-                string killer = translateKillerName ? Translation.Translate(killerName.CharacterName, set.Language) : killerName.CharacterName;
-                string localizedString = Translation.TranslateDeath(set.Language, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, false, translateKillerName);
+                string killer = translateKillerName ? Localization.Translate(killerName.CharacterName, set.Language) : killerName.CharacterName;
+                string localizedString = Localization.TranslateDeath(set.Language, key, backupcause, dead, deadTeam, killerName, killerTeam, limb, itemName, distance, false, translateKillerName);
                 Color color = UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background");
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
@@ -587,7 +587,7 @@ namespace Uncreated.Warfare
                     try
                     {
                         localizedString = string.Format(localizedString, F.ColorizeName(dead.CharacterName, deadTeam), F.ColorizeName(killer, killerTeam),
-                            Translation.TranslateEnum(limb, set.Language), itemName, Math.Round(distance).ToString(Data.Locale));
+                            Localization.TranslateEnum(limb, set.Language), itemName, Math.Round(distance).ToString(Data.Locale));
                     }
                     catch (FormatException)
                     {
@@ -612,11 +612,11 @@ namespace Uncreated.Warfare
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            message = Translation.TranslateLandmineDeath(JSONMethods.DEFAULT_LANGUAGE, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
+            message = Localization.TranslateLandmineDeath(JSONMethods.DEFAULT_LANGUAGE, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, true, false);
             if (!broadcast) return;
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
             {
-                string localizedString = Translation.TranslateLandmineDeath(set.Language, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);
+                string localizedString = Localization.TranslateLandmineDeath(set.Language, key, dead, deadTeam, killerName, killerTeam, triggererName, triggererTeam, limb, landmineName, false);
                 Color color = UCWarfare.GetColor(deadTeam == killerTeam && deadTeam != 0 && dead.Steam64 != killerName.Steam64 ? "death_background_teamkill" : "death_background");
                 if (System.Text.Encoding.UTF8.GetByteCount(localizedString) > MAX_CHAT_MESSAGE_SIZE)
                 {
@@ -626,7 +626,7 @@ namespace Uncreated.Warfare
                     try
                     {
                         localizedString = string.Format(localizedString, F.ColorizeName(dead.CharacterName, deadTeam), F.ColorizeName(killerName.CharacterName, killerTeam),
-                        Translation.TranslateEnum(limb, set.Language), landmineName, "0", F.ColorizeName(triggererName.CharacterName, triggererTeam));
+                        Localization.TranslateEnum(limb, set.Language), landmineName, "0", F.ColorizeName(triggererName.CharacterName, triggererTeam));
                     }
                     catch (FormatException)
                     {

@@ -179,7 +179,7 @@ public class ReloadCommand : Command
             Data.Localization = JSONMethods.LoadTranslations();
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
             Deaths.Localization.Reload();
-            Translation.ReadEnumTranslations(Data.TranslatableEnumTypes);
+            Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
             if (OnTranslationsReloaded != null)
                 OnTranslationsReloaded.Invoke();
         }

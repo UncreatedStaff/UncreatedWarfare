@@ -371,7 +371,7 @@ public class Invasion :
             {
                 ulong team = client.GetTeam();
                 client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
-                    flag.Discovered(team) ? flag.Name : Translation.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                    flag.Discovered(team) ? flag.Name : Localization.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                     flag.TeamSpecificHexColor);
             }
         }
@@ -381,7 +381,7 @@ public class Invasion :
             {
                 ulong team = client.GetTeam();
                 client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), Teams.TeamManager.TranslateName(NewOwner, client.playerID.steamID.m_SteamID),
-                    TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : Translation.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
+                    TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : Localization.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
                     flag.TeamSpecificHexColor);
             }
         }
@@ -437,9 +437,9 @@ public class Invasion :
         ITransportConnection c = player.Connection;
         CTFUI.StagingUI.SendToPlayer(c);
         if (player.GetTeam() == AttackingTeam)
-            CTFUI.StagingUI.Top.SetText(c, Translation.Translate("phases_invasion_attack", player));
+            CTFUI.StagingUI.Top.SetText(c, Localization.Translate("phases_invasion_attack", player));
         else if (player.GetTeam() == DefendingTeam)
-            CTFUI.StagingUI.Top.SetText(c, Translation.Translate("phases_invasion_defense", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
+            CTFUI.StagingUI.Top.SetText(c, Localization.Translate("phases_invasion_defense", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
     }
     protected override void EndStagingPhase()
     {

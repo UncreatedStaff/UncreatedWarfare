@@ -618,7 +618,7 @@ public class Reporter : MonoBehaviour
                 vehicles[i] = new Report.VehicleTeamkill()
                 {
                     VehicleName = Assets.find<VehicleAsset>(data.vehicle)?.vehicleName ?? data.vehicle.ToString("N"),
-                    Origin = Translation.TranslateEnum(data.origin, 0),
+                    Origin = Localization.TranslateEnum(data.origin, 0),
                     Timestamp = data.time.FromUnityTime(),
                     VehicleOwner = data.owner,
                     Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N"),
@@ -645,7 +645,7 @@ public class Reporter : MonoBehaviour
                 teamkills[i] = new Report.Teamkill()
                 {
                     Dead = data.dead,
-                    DeathType = Translation.TranslateEnum(data.cause, 0),
+                    DeathType = Localization.TranslateEnum(data.cause, 0),
                     Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N"),
                     IsVehicle = false,
                     Timestamp = data.time.FromUnityTime()
@@ -672,7 +672,7 @@ public class Reporter : MonoBehaviour
                 damages[i] = new GreifingFOBsReport.StructureDamage()
                 {
                     Damage = data.damage,
-                    DamageOrigin = Translation.TranslateEnum(data.origin, 0),
+                    DamageOrigin = Localization.TranslateEnum(data.origin, 0),
                     Structure = Assets.find<ItemAsset>(data.structure)?.itemName ?? data.structure.ToString("N"),
                     Timestamp = data.time.FromUnityTime(),
                     Weapon = Assets.find<ItemAsset>(data.weapon)?.itemName ?? data.weapon.ToString("N")

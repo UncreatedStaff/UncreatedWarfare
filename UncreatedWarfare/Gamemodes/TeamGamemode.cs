@@ -67,7 +67,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
                             InAMC.Add(players.Current.playerID.steamID.m_SteamID);
                             int a = Mathf.RoundToInt(AMC_TIME);
                             ToastMessage.QueueMessage(players.Current,
-                                new ToastMessage(Translation.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
+                                new ToastMessage(Localization.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
                                 EToastMessageSeverity.WARNING));
                             UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
                         }

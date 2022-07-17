@@ -68,14 +68,14 @@ public class BuildableComponent : MonoBehaviour
             case EBuildableType.FOB_BUNKER:
                 if (fob!.Bunker != null)
                 {
-                    builder.SendChat("build_error_tick_structureexists", Translation.TranslateEnum(EBuildableType.FOB_BUNKER, builder));
+                    builder.SendChat("build_error_tick_structureexists", Localization.TranslateEnum(EBuildableType.FOB_BUNKER, builder));
                     return;
                 }
                 break;
             case EBuildableType.REPAIR_STATION:
                 if (fob!.RepairStation != null)
                 {
-                    builder.SendChat("build_error_tick_structureexists", Translation.TranslateEnum(EBuildableType.REPAIR_STATION, builder));
+                    builder.SendChat("build_error_tick_structureexists", Localization.TranslateEnum(EBuildableType.REPAIR_STATION, builder));
                     return;
                 }
                 break;
@@ -84,8 +84,8 @@ public class BuildableComponent : MonoBehaviour
                     UCVehicleManager.CountNearbyVehicles(Buildable.Emplacement.EmplacementVehicle.Guid, fob!.Radius, fob!.Position) >= Buildable.Emplacement.MaxFobCapacity)
                 {
                     builder.SendChat("build_error_tick_structureexists", 
-                        Buildable.Emplacement == null ? Translation.TranslateEnum(EBuildableType.EMPLACEMENT, builder) :
-                            (Buildable.Emplacement!.EmplacementVehicle.Asset?.vehicleName ?? Translation.TranslateEnum(EBuildableType.EMPLACEMENT, builder)));
+                        Buildable.Emplacement == null ? Localization.TranslateEnum(EBuildableType.EMPLACEMENT, builder) :
+                            (Buildable.Emplacement!.EmplacementVehicle.Asset?.vehicleName ?? Localization.TranslateEnum(EBuildableType.EMPLACEMENT, builder)));
                     return;
                 }
                 break;

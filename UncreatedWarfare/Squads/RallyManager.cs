@@ -234,14 +234,14 @@ namespace Uncreated.Warfare.Squads
             {
                 if (AwaitingPlayers.Contains(member))
                 {
-                    string line = Translation.Translate("rally_ui", member.Steam64, timer >= 0 ? Translation.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty) + " " + nearestLocation;
+                    string line = Localization.Translate("rally_ui", member.Steam64, timer >= 0 ? Localization.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty) + " " + nearestLocation;
                     SquadManager.RallyUI.SendToPlayer(member.Connection, line);
                 }
             }
         }
         public void ShowUIForPlayer(UCPlayer player)
         {
-            SquadManager.RallyUI.SendToPlayer(player.Connection, Translation.Translate("rally_ui", player.Steam64, $"({nearestLocation})"));
+            SquadManager.RallyUI.SendToPlayer(player.Connection, Localization.Translate("rally_ui", player.Steam64, $"({nearestLocation})"));
         }
         public void ShowUIForSquad()
         {

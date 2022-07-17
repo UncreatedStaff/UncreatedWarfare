@@ -191,7 +191,7 @@ public class VehicleComponent : MonoBehaviour
                 {
                     int amount = (int)(Math.Floor(distance / 100) * 2) + 5;
 
-                    Points.AwardXP(e.Vehicle.passengers[0].player.player, amount, Translation.Translate("xp_transporting_players", e.Vehicle.passengers[0].player.player));
+                    Points.AwardXP(e.Vehicle.passengers[0].player.player, amount, Localization.Translate("xp_transporting_players", e.Vehicle.passengers[0].player.player));
 
                     _quota += 0.5F;
 

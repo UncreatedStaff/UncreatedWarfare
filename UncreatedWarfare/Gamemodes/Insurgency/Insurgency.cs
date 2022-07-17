@@ -241,7 +241,7 @@ public class Insurgency :
         ActionLog.Add(EActionLogType.TEAM_WON, t);
 
         string c = TeamManager.GetTeamHexColor(winner);
-        foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
         {
             t = TeamManager.TranslateName(winner, set.Language);
             Chat.Broadcast(set, "team_win", t, c);
@@ -478,9 +478,9 @@ public class Insurgency :
         foreach (UCPlayer player in PlayerManager.OnlinePlayers)
         {
             if (player.GetTeam() == AttackingTeam)
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("cache_discovered_attack", player, cache.ClosestLocation.ToUpper()), "", EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("cache_discovered_attack", player, cache.ClosestLocation.ToUpper()), "", EToastMessageSeverity.BIG));
             else if (player.GetTeam() == DefendingTeam)
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("cache_discovered_defense", player), "", EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("cache_discovered_defense", player), "", EToastMessageSeverity.BIG));
         }
         for (int i = 0; i < Caches.Count; i++)
         {
@@ -542,7 +542,7 @@ public class Insurgency :
         {
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
                 if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("cache_spawned_defense", player), "", EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("cache_spawned_defense", player), "", EToastMessageSeverity.BIG));
         }
 
         InsurgencyUI.ReplicateCacheUpdate(d);
@@ -613,9 +613,9 @@ public class Insurgency :
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (player.GetTeam() == AttackingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("cache_destroyed_attack", player), "", EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("cache_destroyed_attack", player), "", EToastMessageSeverity.BIG));
                 else if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("cache_destroyed_defense", player), "", EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("cache_destroyed_defense", player), "", EToastMessageSeverity.BIG));
             }
 
             if (ActiveCachesCount == 0)
@@ -628,7 +628,7 @@ public class Insurgency :
         {
             if (destroyer.GetTeam() == AttackingTeam)
             {
-                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, Translation.Translate("xp_cache_killed", destroyer));
+                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, Localization.Translate("xp_cache_killed", destroyer));
                 StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
                 StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 if (_gameStats != null)
@@ -645,7 +645,7 @@ public class Insurgency :
             }
             else
             {
-                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheTeamkilled, Translation.Translate("xp_cache_teamkilled", destroyer));
+                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheTeamkilled, Localization.Translate("xp_cache_teamkilled", destroyer));
             }
         }
         for (int i = 0; i < Caches.Count; i++)
@@ -667,9 +667,9 @@ public class Insurgency :
 #endif
         CTFUI.StagingUI.SendToPlayer(player.Connection);
         if (player.GetTeam() == AttackingTeam)
-            CTFUI.StagingUI.Top.SetText(player.Connection, Translation.Translate("phases_briefing", player));
+            CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate("phases_briefing", player));
         else if (player.GetTeam() == DefendingTeam)
-            CTFUI.StagingUI.Top.SetText(player.Connection, Translation.Translate("phases_preparation", player));
+            CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate("phases_preparation", player));
     }
     protected override void EndStagingPhase()
     {
@@ -716,29 +716,29 @@ public class Insurgency :
             tick1 = CachesLeft.ToString(Data.Locale);
             tick2 = TicketManager.Team2Tickets.ToString(Data.Locale);
         }
-        foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
         {
             string t1tickets;
             string t2tickets;
             if (AttackingTeam == 1)
             {
-                t1tickets = Translation.Translate("win_ui_value_tickets", set.Language, tick1);
+                t1tickets = Localization.Translate("win_ui_value_tickets", set.Language, tick1);
                 if (TicketManager.Team1Tickets <= 0)
                     t1tickets = t1tickets.Colorize("969696");
-                t2tickets = Translation.Translate("win_ui_value_caches", set.Language, tick2);
+                t2tickets = Localization.Translate("win_ui_value_caches", set.Language, tick2);
                 if (CachesLeft <= 0)
                     t2tickets = t2tickets.Colorize("969696");
             }
             else
             {
-                t1tickets = Translation.Translate("win_ui_value_caches", set.Language, tick1);
+                t1tickets = Localization.Translate("win_ui_value_caches", set.Language, tick1);
                 if (CachesLeft <= 0)
                     t1tickets = t1tickets.Colorize("969696");
-                t2tickets = Translation.Translate("win_ui_value_tickets", set.Language, tick2);
+                t2tickets = Localization.Translate("win_ui_value_tickets", set.Language, tick2);
                 if (TicketManager.Team2Tickets <= 0)
                     t2tickets = t2tickets.Colorize("969696");
             }
-            string header = Translation.Translate("win_ui_header_winner", set.Language, TeamManager.TranslateName(winner, set.Language, true));
+            string header = Localization.Translate("win_ui_header_winner", set.Language, TeamManager.TranslateName(winner, set.Language, true));
             while (set.MoveNext())
             {
                 if (!set.Next.IsOnline || set.Next.HasUIHidden) continue;

@@ -237,7 +237,7 @@ public static class Data
         Languages = JSONMethods.LoadLanguagePreferences();
         LanguageAliases = JSONMethods.LoadLangAliases();
 
-        Translation.ReadEnumTranslations(TranslatableEnumTypes);
+        Localization.ReadEnumTranslations(TranslatableEnumTypes);
 
         /* CONSTRUCT FRAMEWORK */
         L.Log("Instantiating Framework...", ConsoleColor.Magenta);

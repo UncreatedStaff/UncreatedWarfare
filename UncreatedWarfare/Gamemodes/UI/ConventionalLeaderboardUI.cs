@@ -680,49 +680,49 @@ public class ConventionalLeaderboardUI : UnturnedUI
         string[] values = new string[len];
         int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
 
-        values[0] = Translation.Translate("lb_winner_title", lang, TeamManager.TranslateName(winner, lang), color);
+        values[0] = Localization.Translate("lb_winner_title", lang, TeamManager.TranslateName(winner, lang), color);
         values[1] = shutdownReason is null ?
-            Translation.Translate("lb_next_game", lang) :
-            Translation.Translate("lb_next_game_shut_down", lang, shutdownReason);
+            Localization.Translate("lb_next_game", lang) :
+            Localization.Translate("lb_next_game_shut_down", lang, shutdownReason);
 
-        values[2] = Translation.ObjectTranslate("lb_next_game_time_format", lang, TimeSpan.FromSeconds(secondsLeft));
+        values[2] = Localization.ObjectTranslate("lb_next_game_time_format", lang, TimeSpan.FromSeconds(secondsLeft));
         values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
-        values[4] = Translation.Translate("lb_warstats_header", lang,
+        values[4] = Localization.Translate("lb_warstats_header", lang,
             TeamManager.TranslateName(1, lang), TeamManager.Team1ColorHex,
             TeamManager.TranslateName(2, lang), TeamManager.Team2ColorHex);
 
-        values[5] = Translation.Translate("ctf_lb_warstats_0", lang);
-        values[6] = Translation.Translate("ctf_lb_warstats_1", lang);
-        values[7] = Translation.Translate("ctf_lb_warstats_2", lang);
-        values[8] = Translation.Translate("ctf_lb_warstats_3", lang);
-        values[9] = Translation.Translate("ctf_lb_warstats_4", lang);
-        values[10] = Translation.Translate("ctf_lb_warstats_5", lang);
-        values[11] = Translation.Translate("ctf_lb_warstats_6", lang);
-        values[12] = Translation.Translate("ctf_lb_warstats_7", lang);
-        values[13] = Translation.Translate("ctf_lb_warstats_8", lang);
-        values[14] = Translation.Translate("ctf_lb_warstats_9", lang);
-        values[15] = Translation.Translate("ctf_lb_warstats_10", lang);
-        values[16] = Translation.Translate("ctf_lb_warstats_11", lang);
+        values[5] = Localization.Translate("ctf_lb_warstats_0", lang);
+        values[6] = Localization.Translate("ctf_lb_warstats_1", lang);
+        values[7] = Localization.Translate("ctf_lb_warstats_2", lang);
+        values[8] = Localization.Translate("ctf_lb_warstats_3", lang);
+        values[9] = Localization.Translate("ctf_lb_warstats_4", lang);
+        values[10] = Localization.Translate("ctf_lb_warstats_5", lang);
+        values[11] = Localization.Translate("ctf_lb_warstats_6", lang);
+        values[12] = Localization.Translate("ctf_lb_warstats_7", lang);
+        values[13] = Localization.Translate("ctf_lb_warstats_8", lang);
+        values[14] = Localization.Translate("ctf_lb_warstats_9", lang);
+        values[15] = Localization.Translate("ctf_lb_warstats_10", lang);
+        values[16] = Localization.Translate("ctf_lb_warstats_11", lang);
 
-        values[17] = Translation.Translate("ctf_lb_playerstats_0", lang);
-        values[18] = Translation.Translate("ctf_lb_playerstats_1", lang);
-        values[19] = Translation.Translate("ctf_lb_playerstats_2", lang);
-        values[20] = Translation.Translate("ctf_lb_playerstats_3", lang);
-        values[21] = Translation.Translate("ctf_lb_playerstats_4", lang);
-        values[22] = Translation.Translate("ctf_lb_playerstats_5", lang);
-        values[23] = Translation.Translate("ctf_lb_playerstats_6", lang);
-        values[24] = Translation.Translate("ctf_lb_playerstats_7", lang);
-        values[25] = Translation.Translate("ctf_lb_playerstats_8", lang);
-        values[26] = Translation.Translate("ctf_lb_playerstats_9", lang);
-        values[27] = Translation.Translate("ctf_lb_playerstats_10", lang);
-        values[28] = Translation.Translate("ctf_lb_playerstats_11", lang);
+        values[17] = Localization.Translate("ctf_lb_playerstats_0", lang);
+        values[18] = Localization.Translate("ctf_lb_playerstats_1", lang);
+        values[19] = Localization.Translate("ctf_lb_playerstats_2", lang);
+        values[20] = Localization.Translate("ctf_lb_playerstats_3", lang);
+        values[21] = Localization.Translate("ctf_lb_playerstats_4", lang);
+        values[22] = Localization.Translate("ctf_lb_playerstats_5", lang);
+        values[23] = Localization.Translate("ctf_lb_playerstats_6", lang);
+        values[24] = Localization.Translate("ctf_lb_playerstats_7", lang);
+        values[25] = Localization.Translate("ctf_lb_playerstats_8", lang);
+        values[26] = Localization.Translate("ctf_lb_playerstats_9", lang);
+        values[27] = Localization.Translate("ctf_lb_playerstats_10", lang);
+        values[28] = Localization.Translate("ctf_lb_playerstats_11", lang);
 
-        values[41] = Translation.Translate("ctf_lb_header_0", lang);
-        values[42] = Translation.Translate("ctf_lb_header_1", lang);
-        values[43] = Translation.Translate("ctf_lb_header_2", lang);
-        values[44] = Translation.Translate("ctf_lb_header_3", lang);
-        values[45] = Translation.Translate("ctf_lb_header_4", lang);
-        values[46] = Translation.Translate("ctf_lb_header_5", lang);
+        values[41] = Localization.Translate("ctf_lb_header_0", lang);
+        values[42] = Localization.Translate("ctf_lb_header_1", lang);
+        values[43] = Localization.Translate("ctf_lb_header_2", lang);
+        values[44] = Localization.Translate("ctf_lb_header_3", lang);
+        values[45] = Localization.Translate("ctf_lb_header_4", lang);
+        values[46] = Localization.Translate("ctf_lb_header_5", lang);
 
         if (tracker is not null)
         {
@@ -738,7 +738,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
-                Translation.Translate("lb_longest_shot", lang, info.Distance.ToString(STAT_FLOAT_FORMAT, Data.Locale),
+                Localization.Translate("lb_longest_shot", lang, info.Distance.ToString(STAT_FLOAT_FORMAT, Data.Locale),
                     Assets.find<ItemAsset>(info.Gun)?.itemName ?? info.Gun.ToString("N"),
                     F.ColorizeName(F.GetPlayerOriginalNames(info.Player).CharacterName, info.Team));
         }
@@ -838,10 +838,10 @@ public class ConventionalLeaderboardUI : UnturnedUI
             if (stats is not null)
             {
                 if (tracker is not null)
-                    PlayerStatsHeader.SetText(c, Translation.ObjectTranslate("lb_playerstats_header", lang,
+                    PlayerStatsHeader.SetText(c, Localization.ObjectTranslate("lb_playerstats_header", lang,
                         names.CharacterName, TeamManager.GetTeamHexColor(team), (float)(stats.onlineCount1 + stats.onlineCount2) / tracker.coroutinect * 100f));
                 else
-                    PlayerStatsHeader.SetText(c, Translation.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
+                    PlayerStatsHeader.SetText(c, Localization.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
                 PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));
                 PersonalStats1.SetText(c, stats.Deaths.ToString(Data.Locale));
                 PersonalStats2.SetText(c, stats.KDR.ToString(STAT_PRECISION_FLOAT_FORMAT, Data.Locale));
@@ -857,7 +857,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
             else
             {
-                PlayerStatsHeader.SetText(c, Translation.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
+                PlayerStatsHeader.SetText(c, Localization.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
                 PersonalStats0.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
                 PersonalStats1.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
                 PersonalStats2.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
@@ -1002,49 +1002,49 @@ public class ConventionalLeaderboardUI : UnturnedUI
         string[] values = new string[len];
         int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
 
-        values[0] = Translation.Translate("lb_winner_title", lang, TeamManager.TranslateName(winner, lang), color);
+        values[0] = Localization.Translate("lb_winner_title", lang, TeamManager.TranslateName(winner, lang), color);
         values[1] = shutdownReason is null ?
-            Translation.Translate("lb_next_game", lang) :
-            Translation.Translate("lb_next_game_shut_down", lang, shutdownReason);
+            Localization.Translate("lb_next_game", lang) :
+            Localization.Translate("lb_next_game_shut_down", lang, shutdownReason);
 
-        values[2] = Translation.ObjectTranslate("lb_next_game_time_format", lang, TimeSpan.FromSeconds(secondsLeft));
+        values[2] = Localization.ObjectTranslate("lb_next_game_time_format", lang, TimeSpan.FromSeconds(secondsLeft));
         values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
-        values[4] = Translation.Translate("lb_warstats_header", lang,
+        values[4] = Localization.Translate("lb_warstats_header", lang,
             TeamManager.TranslateName(1, lang), TeamManager.Team1ColorHex,
             TeamManager.TranslateName(2, lang), TeamManager.Team2ColorHex);
 
-        values[5] = Translation.Translate("ins_lb_warstats_0", lang);
-        values[6] = Translation.Translate("ins_lb_warstats_1", lang);
-        values[7] = Translation.Translate("ins_lb_warstats_2", lang);
-        values[8] = Translation.Translate("ins_lb_warstats_3", lang);
-        values[9] = Translation.Translate("ins_lb_warstats_4", lang);
-        values[10] = Translation.Translate("ins_lb_warstats_5", lang);
-        values[11] = Translation.Translate("ins_lb_warstats_6", lang);
-        values[12] = Translation.Translate("ins_lb_warstats_7", lang);
-        values[13] = Translation.Translate("ins_lb_warstats_8", lang);
-        values[14] = Translation.Translate("ins_lb_warstats_9", lang);
-        values[15] = Translation.Translate("ins_lb_warstats_10", lang);
-        values[16] = Translation.Translate("ins_lb_warstats_11", lang);
+        values[5] = Localization.Translate("ins_lb_warstats_0", lang);
+        values[6] = Localization.Translate("ins_lb_warstats_1", lang);
+        values[7] = Localization.Translate("ins_lb_warstats_2", lang);
+        values[8] = Localization.Translate("ins_lb_warstats_3", lang);
+        values[9] = Localization.Translate("ins_lb_warstats_4", lang);
+        values[10] = Localization.Translate("ins_lb_warstats_5", lang);
+        values[11] = Localization.Translate("ins_lb_warstats_6", lang);
+        values[12] = Localization.Translate("ins_lb_warstats_7", lang);
+        values[13] = Localization.Translate("ins_lb_warstats_8", lang);
+        values[14] = Localization.Translate("ins_lb_warstats_9", lang);
+        values[15] = Localization.Translate("ins_lb_warstats_10", lang);
+        values[16] = Localization.Translate("ins_lb_warstats_11", lang);
 
-        values[17] = Translation.Translate("ins_lb_playerstats_0", lang);
-        values[18] = Translation.Translate("ins_lb_playerstats_1", lang);
-        values[19] = Translation.Translate("ins_lb_playerstats_2", lang);
-        values[20] = Translation.Translate("ins_lb_playerstats_3", lang);
-        values[21] = Translation.Translate("ins_lb_playerstats_4", lang);
-        values[22] = Translation.Translate("ins_lb_playerstats_5", lang);
-        values[23] = Translation.Translate("ins_lb_playerstats_6", lang);
-        values[24] = Translation.Translate("ins_lb_playerstats_7", lang);
-        values[25] = Translation.Translate("ins_lb_playerstats_8", lang);
-        values[26] = Translation.Translate("ins_lb_playerstats_9", lang);
-        values[27] = Translation.Translate("ins_lb_playerstats_10", lang);
-        values[28] = Translation.Translate("ins_lb_playerstats_11", lang);
+        values[17] = Localization.Translate("ins_lb_playerstats_0", lang);
+        values[18] = Localization.Translate("ins_lb_playerstats_1", lang);
+        values[19] = Localization.Translate("ins_lb_playerstats_2", lang);
+        values[20] = Localization.Translate("ins_lb_playerstats_3", lang);
+        values[21] = Localization.Translate("ins_lb_playerstats_4", lang);
+        values[22] = Localization.Translate("ins_lb_playerstats_5", lang);
+        values[23] = Localization.Translate("ins_lb_playerstats_6", lang);
+        values[24] = Localization.Translate("ins_lb_playerstats_7", lang);
+        values[25] = Localization.Translate("ins_lb_playerstats_8", lang);
+        values[26] = Localization.Translate("ins_lb_playerstats_9", lang);
+        values[27] = Localization.Translate("ins_lb_playerstats_10", lang);
+        values[28] = Localization.Translate("ins_lb_playerstats_11", lang);
 
-        values[41] = Translation.Translate("ins_lb_header_0", lang);
-        values[42] = Translation.Translate("ins_lb_header_1", lang);
-        values[43] = Translation.Translate("ins_lb_header_2", lang);
-        values[44] = Translation.Translate("ins_lb_header_3", lang);
-        values[45] = Translation.Translate("ins_lb_header_4", lang);
-        values[46] = Translation.Translate("ins_lb_header_5", lang);
+        values[41] = Localization.Translate("ins_lb_header_0", lang);
+        values[42] = Localization.Translate("ins_lb_header_1", lang);
+        values[43] = Localization.Translate("ins_lb_header_2", lang);
+        values[44] = Localization.Translate("ins_lb_header_3", lang);
+        values[45] = Localization.Translate("ins_lb_header_4", lang);
+        values[46] = Localization.Translate("ins_lb_header_5", lang);
 
         if (tracker is not null)
         {
@@ -1060,7 +1060,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
-                Translation.Translate("lb_longest_shot", lang, info.Distance.ToString(STAT_FLOAT_FORMAT, Data.Locale),
+                Localization.Translate("lb_longest_shot", lang, info.Distance.ToString(STAT_FLOAT_FORMAT, Data.Locale),
                     Assets.find<ItemAsset>(info.Gun)?.itemName ?? info.Gun.ToString("N"),
                     F.ColorizeName(F.GetPlayerOriginalNames(info.Player).CharacterName, info.Team));
         }
@@ -1160,10 +1160,10 @@ public class ConventionalLeaderboardUI : UnturnedUI
             if (stats is not null)
             {
                 if (tracker is not null)
-                    PlayerStatsHeader.SetText(c, Translation.ObjectTranslate("lb_playerstats_header", lang,
+                    PlayerStatsHeader.SetText(c, Localization.ObjectTranslate("lb_playerstats_header", lang,
                         names.CharacterName, TeamManager.GetTeamHexColor(team), (float)(stats.onlineCount1 + stats.onlineCount2) / tracker.coroutinect * 100f));
                 else
-                    PlayerStatsHeader.SetText(c, Translation.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
+                    PlayerStatsHeader.SetText(c, Localization.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
                 PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));
                 PersonalStats1.SetText(c, stats.Deaths.ToString(Data.Locale));
                 PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_PRECISION_FLOAT_FORMAT, Data.Locale));
@@ -1182,7 +1182,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
             else
             {
-                PlayerStatsHeader.SetText(c, Translation.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
+                PlayerStatsHeader.SetText(c, Localization.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
                 PersonalStats0.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
                 PersonalStats1.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
                 PersonalStats2.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
@@ -1316,7 +1316,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public void UpdateTime(LanguageSet set, int secondsLeft)
     {
         int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
-        string l1 = Translation.ObjectTranslate("lb_next_game_time_format", set.Language, TimeSpan.FromSeconds(secondsLeft));
+        string l1 = Localization.ObjectTranslate("lb_next_game_time_format", set.Language, TimeSpan.FromSeconds(secondsLeft));
         string l2 = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
         while (set.MoveNext())
         {

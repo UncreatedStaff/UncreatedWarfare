@@ -62,7 +62,7 @@ public class GroupCommand : Command
                 {
                     ctx.Reply("joined_group", TeamManager.TranslateName(team, ctx.Caller, true),
                         groupInfo.groupID.m_SteamID.ToString(Data.Locale));
-                    L.Log(Translation.Translate("joined_group_console", 0, out _, ctx.Caller.Player.channel.owner.playerID.playerName,
+                    L.Log(Localization.Translate("joined_group_console", 0, out _, ctx.Caller.Player.channel.owner.playerID.playerName,
                         ctx.Caller.Player.channel.owner.playerID.steamID.m_SteamID.ToString(Data.Locale), TeamManager.TranslateName(team, 0),
                         groupInfo.groupID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                     ctx.LogAction(EActionLogType.CHANGE_GROUP_WITH_COMMAND, "GROUP: " + TeamManager.TranslateName(team, 0).ToUpper());

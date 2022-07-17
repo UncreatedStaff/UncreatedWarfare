@@ -149,7 +149,7 @@ public class ReportCommand : Command
                 NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, type, typename);
                 ctx.Reply("report_success_p1", targetNames.CharacterName, string.IsNullOrEmpty(message) ? "---" : message, typename);
                 ctx.Reply("report_success_p2");
-                L.Log(Translation.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
+                L.Log(Localization.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
                     ctx.Caller.Name.PlayerName, ctx.CallerID.ToString(Data.Locale),
                     targetNames.PlayerName, target.ToString(Data.Locale), report.Message!, typename), ConsoleColor.Cyan);
                 byte[] jpgData =
@@ -165,7 +165,7 @@ public class ReportCommand : Command
                 await UCWarfare.ToUpdate();
                 if (targetPl != null)
                 {
-                    ToastMessage.QueueMessage(targetPl, new ToastMessage(Translation.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE));
+                    ToastMessage.QueueMessage(targetPl, new ToastMessage(Localization.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE));
                     targetPl.SendChat("report_notify_violator_chat_p1", typename, message);
                     targetPl.SendChat("report_notify_violator_chat_p2");
                 }
@@ -175,14 +175,14 @@ public class ReportCommand : Command
                         success2 && res.Parameters[1] is string messageUrl2)
                     {
                         L.Log(
-                            Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
+                            Localization.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
                                 string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
                         ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl2, ctx.Caller);
                     }
                     else
                     {
                         L.Log(
-                            Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
+                            Localization.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
                                 string.Empty, "0"), ConsoleColor.Cyan);
                         ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
                     }
@@ -195,7 +195,7 @@ public class ReportCommand : Command
                     //await UCWarfare.ToUpdate();
                     //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
                     L.Log(
-                        Translation.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
+                        Localization.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
                             targetPl.playerID.playerName,
                             targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl),
                         ConsoleColor.Cyan);
@@ -204,7 +204,7 @@ public class ReportCommand : Command
                 else
                 {
                     L.Log(
-                        Translation.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
+                        Localization.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
                             targetPl.playerID.playerName,
                             targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                     ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
@@ -306,9 +306,9 @@ public class ReportCommand : Command
     public bool CheckLinked(UCPlayer player) => Data.DatabaseManager.GetDiscordID(player.Steam64, out ulong discordID) && discordID != 0;
     public void NotifyAdminsOfReport(FPlayerName violator, FPlayerName reporter, Report report, EReportType type, string typename)
     {
-        foreach (LanguageSet set in Translation.EnumeratePermissions(EAdminType.MODERATOR))
+        foreach (LanguageSet set in Localization.EnumeratePermissions(EAdminType.MODERATOR))
         {
-            string translation = Translation.Translate("report_notify_admin", set.Language, reporter.CharacterName, violator.CharacterName, report.Message!, typename);
+            string translation = Localization.Translate("report_notify_admin", set.Language, reporter.CharacterName, violator.CharacterName, report.Message!, typename);
             while (set.MoveNext())
             {
                 ToastMessage.QueueMessage(set.Next, new ToastMessage(translation, EToastMessageSeverity.INFO));

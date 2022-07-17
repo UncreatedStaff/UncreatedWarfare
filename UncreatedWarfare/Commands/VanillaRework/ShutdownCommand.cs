@@ -43,7 +43,7 @@ public class ShutdownCommand : Command
             ctx.LogAction(EActionLogType.SHUTDOWN_SERVER, $"CANCELLED");
             Data.Gamemode.CancelShutdownAfterGame();
             Chat.Broadcast("shutdown_broadcast_after_game_canceled");
-            L.Log(Translation.Translate("shutdown_broadcast_after_game_canceled_console", 0, out _), ConsoleColor.Cyan);
+            L.Log(Localization.Translate("shutdown_broadcast_after_game_canceled_console", 0, out _), ConsoleColor.Cyan);
             if (Messager != null)
                 UCWarfare.I.StopCoroutine(Messager);
             NetCalls.SendCancelledShuttingDownAfter.NetInvoke(ctx.CallerID);
@@ -57,9 +57,9 @@ public class ShutdownCommand : Command
                 Data.Gamemode?.ShutdownAfterGame(reason, ctx.CallerID);
                 Chat.Broadcast("shutdown_broadcast_after_game", reason);
                 if (ctx.IsConsole)
-                    L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
                 else
-                    L.Log(Translation.Translate("shutdown_broadcast_after_game_console_player", 0, out _, F.GetPlayerOriginalNames(ctx.Caller).PlayerName, reason), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("shutdown_broadcast_after_game_console_player", 0, out _, F.GetPlayerOriginalNames(ctx.Caller).PlayerName, reason), ConsoleColor.Cyan);
                 if (Messager != null)
                     UCWarfare.I.StopCoroutine(Messager);
                 Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
@@ -79,13 +79,13 @@ public class ShutdownCommand : Command
     {
         string time;
         bool a = false;
-        foreach (LanguageSet set in Translation.EnumerateLanguageSetsExclude(instigator))
+        foreach (LanguageSet set in Localization.EnumerateLanguageSetsExclude(instigator))
         {
             time = seconds.GetTimeFromSeconds(set.Language);
             if (set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE))
             {
                 a = true;
-                L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
+                L.Log(Localization.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
                 ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
             }
             Chat.Broadcast(set, "shutdown_broadcast_after_time", time, reason);
@@ -93,7 +93,7 @@ public class ShutdownCommand : Command
         if (!a)
         {
             time = seconds.GetTimeFromSeconds(JSONMethods.DEFAULT_LANGUAGE);
-            L.Log(Translation.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
+            L.Log(Localization.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
             ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
         }
         NetCalls.SendShuttingDownInSeconds.NetInvoke(instigator, reason, (uint)seconds);
@@ -104,7 +104,7 @@ public class ShutdownCommand : Command
     {
         ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
         Chat.Broadcast(isDaily ? "shutdown_broadcast_after_game_daily" : "shutdown_broadcast_after_game", reason);
-        L.Log(Translation.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
+        L.Log(Localization.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
         Data.Gamemode?.ShutdownAfterGame(reason, 0);
         if (Messager != null)
             UCWarfare.I.StopCoroutine(Messager);

@@ -485,8 +485,8 @@ public static class TeamManager
         if (team == 1) uncolorized = Team1Faction.Name;
         else if (team == 2) uncolorized = Team2Faction.Name;
         else if (team == 3) uncolorized = AdminFaction.Name;
-        else if (team == ZOMBIE_TEAM_ID) uncolorized = Translation.Translate("zombie", player);
-        else if (team == 0) uncolorized = Translation.Translate("neutral", player);
+        else if (team == ZOMBIE_TEAM_ID) uncolorized = Localization.Translate("zombie", player);
+        else if (team == 0) uncolorized = Localization.Translate("neutral", player);
         else uncolorized = team.ToString(Data.Locale);
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
@@ -497,8 +497,8 @@ public static class TeamManager
         if (team == 1) uncolorized = Team1Faction.Name;
         else if (team == 2) uncolorized = Team2Faction.Name;
         else if (team == 3) uncolorized = AdminFaction.Name;
-        else if (team == ZOMBIE_TEAM_ID) uncolorized = Translation.Translate("zombie", language);
-        else if (team == 0) uncolorized = Translation.Translate("neutral", language);
+        else if (team == ZOMBIE_TEAM_ID) uncolorized = Localization.Translate("zombie", language);
+        else if (team == 0) uncolorized = Localization.Translate("neutral", language);
         else uncolorized = team.ToString(Data.Locale);
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
@@ -509,8 +509,8 @@ public static class TeamManager
         if (team == 1) uncolorized = Team1Faction.ShortName;
         else if (team == 2) uncolorized = Team2Faction.ShortName;
         else if (team == 3) uncolorized = AdminFaction.ShortName;
-        else if (team == ZOMBIE_TEAM_ID) uncolorized = Translation.Translate("zombie", player);
-        else if (team == 0) uncolorized = Translation.Translate("neutral", player);
+        else if (team == ZOMBIE_TEAM_ID) uncolorized = Localization.Translate("zombie", player);
+        else if (team == 0) uncolorized = Localization.Translate("neutral", player);
         else uncolorized = team.ToString(Data.Locale);
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
@@ -521,8 +521,8 @@ public static class TeamManager
         if (team == 1) uncolorized = Team1Faction.ShortName;
         else if (team == 2) uncolorized = Team2Faction.ShortName;
         else if (team == 3) uncolorized = AdminFaction.ShortName;
-        else if (team == ZOMBIE_TEAM_ID) uncolorized = Translation.Translate("zombie", language);
-        else if (team == 0) uncolorized = Translation.Translate("neutral", language);
+        else if (team == ZOMBIE_TEAM_ID) uncolorized = Localization.Translate("zombie", language);
+        else if (team == 0) uncolorized = Localization.Translate("neutral", language);
         else uncolorized = team.ToString(Data.Locale);
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
@@ -774,7 +774,7 @@ public static class TeamManager
     private static readonly Guid AMMO_SUPPLIES_REDIRECT         = new Guid("c4cee82e290b4b26b7a6e2be9cd70df7");
     private static readonly Guid ZONE_BLOCKER_REDIRECT          = new Guid("7959dc824a154035934049289e011a70");
 }
-public class FactionInfo
+public class FactionInfo : ITranslationArgument
 {
     public const string UNKNOWN_TEAM_IMG_URL = @"https://i.imgur.com/cs0cImN.png";
 
@@ -817,6 +817,23 @@ public class FactionInfo
         HexColor = hexColor;
         UnarmedKit = unarmedKit;
         FlagImageURL = flagImage;
+    }
+
+    public const string SHORT_NAME_FORMAT = "s";
+    public const string DISPLAY_NAME_FORMAT = "d";
+    public const string SHORT_NAME_COLORIZED_FORMAT = "sc";
+    public const string DISPLAY_NAME_COLORIZED_FORMAT = "dc";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    {
+        if (format is null) goto end;
+        if (format.Equals(DISPLAY_NAME_COLORIZED_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(HexColor, Name, flags);
+        else if (format.Equals(SHORT_NAME_FORMAT, StringComparison.Ordinal))
+            return ShortName;
+        else if (format.Equals(SHORT_NAME_COLORIZED_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(HexColor, ShortName, flags);
+    end:
+        return Name;
     }
 }
 

@@ -117,8 +117,8 @@ internal class _DebugCommand : Command
                 {
                     if (team < 1 || team > 2)
                         team = onlinePlayer.GetTeam();
-                    Points.AwardXP(onlinePlayer, amount, ctx.IsConsole ? Translation.Translate("xp_from_operator", player) :
-                        Translation.Translate("xp_from_player", player, F.GetPlayerOriginalNames(ctx.CallerID).CharacterName.ToUpper()));
+                    Points.AwardXP(onlinePlayer, amount, ctx.IsConsole ? Localization.Translate("xp_from_operator", player) :
+                        Localization.Translate("xp_from_player", player, F.GetPlayerOriginalNames(ctx.CallerID).CharacterName.ToUpper()));
                     FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
                     ctx.Reply("test_givexp_success", amount.ToString(Data.Locale), ctx.IsConsole ? names.PlayerName : names.CharacterName);
                 }
@@ -177,8 +177,8 @@ internal class _DebugCommand : Command
                 {
                     if (team < 1 || team > 2)
                         team = onlinePlayer.GetTeam();
-                    Points.AwardCredits(onlinePlayer, amount, ctx.IsConsole ? Translation.Translate("credits_from_operator", player) :
-                        Translation.Translate("credits_from_player", player, F.GetPlayerOriginalNames(ctx.CallerID).CharacterName.ToUpper()));
+                    Points.AwardCredits(onlinePlayer, amount, ctx.IsConsole ? Localization.Translate("credits_from_operator", player) :
+                        Localization.Translate("credits_from_player", player, F.GetPlayerOriginalNames(ctx.CallerID).CharacterName.ToUpper()));
                     FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
                     ctx.Reply("test_givecredits_success", amount.ToString(Data.Locale), ctx.IsConsole ? names.PlayerName : names.CharacterName);
                 }
@@ -328,7 +328,7 @@ internal class _DebugCommand : Command
         else
         {
             ctx.Reply("test_sign_success", sign.text);
-            L.Log(Translation.Translate("test_sign_success", 0, out _, sign.text), ConsoleColor.Green);
+            L.Log(Localization.Translate("test_sign_success", 0, out _, sign.text), ConsoleColor.Green);
         }
     }
     private void time(CommandInteraction ctx)

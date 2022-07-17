@@ -24,10 +24,10 @@ namespace Uncreated.Warfare.Squads
             order.Initialize(squad, commander, type, marker, message, formatting: formatting);
             orders.Add(order);
 
-            commander.Message("order_s_sent", squad.Name, Translation.Translate(message, commander, formatting));
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets(squad))
+            commander.Message("order_s_sent", squad.Name, Localization.Translate(message, commander, formatting));
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets(squad))
             {
-                string msg = Translation.Translate("order_s_received", set.Next, commander.CharacterName, Translation.Translate(message, set.Language, formatting));
+                string msg = Localization.Translate("order_s_received", set.Next, commander.CharacterName, Localization.Translate(message, set.Language, formatting));
                 while (set.MoveNext())
                 {
                     order.SendUI(set.Next);
