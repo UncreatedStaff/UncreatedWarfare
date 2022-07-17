@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -75,18 +76,18 @@ internal class DefaultTranslations
     public static readonly Translation<Flag> FlagLocked             = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", Flag.NAME_FORMAT_COLORED);
     public static readonly Translation<Flag> FlagNeutralized        = new Translation<Flag>(SUCCESS_COLOR + "{0} has been neutralized!", Flag.NAME_FORMAT_COLORED_DISCOVER);
 
-    public static readonly Translation Neutral          = new Translation("Neutral",       TranslationFlags.NoColor);
-    public static readonly Translation UndiscoveredFlag = new Translation("unknown",       TranslationFlags.NoColor);
-    public static readonly Translation UICapturing      = new Translation("CAPTURING",     TranslationFlags.NoColor);
-    public static readonly Translation UILosing         = new Translation("LOSING",        TranslationFlags.NoColor);
-    public static readonly Translation UIClearing       = new Translation("CLEARING",      TranslationFlags.NoColor);
-    public static readonly Translation UIContested      = new Translation("CONTESTED",     TranslationFlags.NoColor);
-    public static readonly Translation UISecured        = new Translation("SECURED",       TranslationFlags.NoColor);
-    public static readonly Translation UINoCap          = new Translation("NOT OBJECTIVE", TranslationFlags.NoColor);
-    public static readonly Translation UINotOwned       = new Translation("TAKEN",         TranslationFlags.NoColor);
-    public static readonly Translation UILocked         = new Translation("LOCKED",        TranslationFlags.NoColor);
-    public static readonly Translation UIInVehicle      = new Translation("IN VEHICLE",    TranslationFlags.NoColor);
-    public static readonly Translation FlagsHeader      = new Translation("Flags",         TranslationFlags.NoColor);
+    public static readonly Translation Neutral          = new Translation("Neutral",       TranslationFlags.UnityUI);
+    public static readonly Translation UndiscoveredFlag = new Translation("unknown",       TranslationFlags.UnityUI);
+    public static readonly Translation UICapturing      = new Translation("CAPTURING",     TranslationFlags.UnityUI);
+    public static readonly Translation UILosing         = new Translation("LOSING",        TranslationFlags.UnityUI);
+    public static readonly Translation UIClearing       = new Translation("CLEARING",      TranslationFlags.UnityUI);
+    public static readonly Translation UIContested      = new Translation("CONTESTED",     TranslationFlags.UnityUI);
+    public static readonly Translation UISecured        = new Translation("SECURED",       TranslationFlags.UnityUI);
+    public static readonly Translation UINoCap          = new Translation("NOT OBJECTIVE", TranslationFlags.UnityUI);
+    public static readonly Translation UINotOwned       = new Translation("TAKEN",         TranslationFlags.UnityUI);
+    public static readonly Translation UILocked         = new Translation("LOCKED",        TranslationFlags.UnityUI);
+    public static readonly Translation UIInVehicle      = new Translation("IN VEHICLE",    TranslationFlags.UnityUI);
+    public static readonly Translation FlagsHeader      = new Translation("Flags",         TranslationFlags.UnityUI);
     #endregion
 
     #region Teams
@@ -108,85 +109,85 @@ internal class DefaultTranslations
     #region Leaderboards
 
     #region Shared
-    public static readonly Translation StartingSoon                   = new Translation("Starting soon...", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, "mm:ss");
+    public static readonly Translation StartingSoon                   = new Translation("Starting soon...", TranslationFlags.UnityUI);
+    public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationFlags.UnityUI, "mm:ss");
 
-    public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_COLORIZED_FORMAT, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
-    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1}% presence", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, "N0");
-    public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_COLORIZED_FORMAT, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1}% presence", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, "P0");
+    public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
 
-    public static readonly Translation<float, string, IPlayer> LongestShot     = new Translation<float, string, IPlayer>("{0} Wins!", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, "F1", arg3Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<float, string, IPlayer> LongestShot     = new Translation<float, string, IPlayer>("{0} Wins!", TranslationFlags.UnityUI, "F1", arg3Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
     #endregion
 
     #region CTFBase
-    public static readonly Translation CTFPlayerStats0  = new Translation("Kills: ",            TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats1  = new Translation("Deaths: ",           TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats2  = new Translation("K/D Ratio: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats3  = new Translation("Kills on Point: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats4  = new Translation("Time Deployed: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats5  = new Translation("XP Gained: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats6  = new Translation("Time on Point: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats7  = new Translation("Captures: ",         TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats8  = new Translation("Time in Vehicle: ",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats9  = new Translation("Teamkills: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats10 = new Translation("FOBs Destroyed: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFPlayerStats11 = new Translation("Credits Gained: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFPlayerStats0  = new Translation("Kills: ",            TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats1  = new Translation("Deaths: ",           TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats2  = new Translation("K/D Ratio: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats3  = new Translation("Kills on Point: ",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats4  = new Translation("Time Deployed: ",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats5  = new Translation("XP Gained: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats6  = new Translation("Time on Point: ",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats7  = new Translation("Captures: ",         TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats8  = new Translation("Time in Vehicle: ",  TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats9  = new Translation("Teamkills: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats10 = new Translation("FOBs Destroyed: ",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats11 = new Translation("Credits Gained: ",   TranslationFlags.UnityUI);
 
-    public static readonly Translation CTFWarStats0 = new Translation("Duration: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation<FactionInfo> CTFWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> CTFWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation CTFWarStats3 = new Translation("Flag Captures: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation<FactionInfo> CTFWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> CTFWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> CTFWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> CTFWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> CTFWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> CTFWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation CTFWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFWarStats0 = new Translation("Duration: ", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> CTFWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation CTFWarStats3 = new Translation("Flag Captures: ", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> CTFWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation CTFWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    public static readonly Translation CTFWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
 
-    public static readonly Translation CTFHeader0 = new Translation("Kills",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFHeader1 = new Translation("Deaths",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFHeader2 = new Translation("XP",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFHeader3 = new Translation("Credits", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFHeader4 = new Translation("Caps",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation CTFHeader5 = new Translation("Damage",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation CTFHeader0 = new Translation("Kills",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader1 = new Translation("Deaths",  TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader3 = new Translation("Credits", TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader4 = new Translation("Caps",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
     #endregion
 
     #region CTFBase
-    public static readonly Translation InsurgencyPlayerStats0  = new Translation("Kills: ",                 TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats1  = new Translation("Deaths: ",                TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats2  = new Translation("Damage Done: ",           TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats3  = new Translation("Objective Kills: ",       TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats4  = new Translation("Time Deployed: ",         TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats5  = new Translation("XP Gained: ",             TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats6  = new Translation("Intelligence Gathered: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats7  = new Translation("Caches Discovered: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats8  = new Translation("Caches Destroyed: ",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats9  = new Translation("Teamkills: ",             TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyPlayerStats11 = new Translation("Credits Gained: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyPlayerStats0  = new Translation("Kills: ",                 TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats1  = new Translation("Deaths: ",                TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats2  = new Translation("Damage Done: ",           TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats3  = new Translation("Objective Kills: ",       TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats4  = new Translation("Time Deployed: ",         TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats5  = new Translation("XP Gained: ",             TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats6  = new Translation("Intelligence Gathered: ", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats7  = new Translation("Caches Discovered: ",     TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats8  = new Translation("Caches Destroyed: ",      TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats9  = new Translation("Teamkills: ",             TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats11 = new Translation("Credits Gained: ",        TranslationFlags.UnityUI);
 
-    public static readonly Translation InsurgencyWarStats0 = new Translation("Duration: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation<FactionInfo> InsurgencyWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> InsurgencyWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation InsurgencyWarStats3 = new Translation("Intelligence Gathered: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation<FactionInfo> InsurgencyWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> InsurgencyWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> InsurgencyWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> InsurgencyWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> InsurgencyWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation<FactionInfo> InsurgencyWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, FactionInfo.SHORT_NAME_FORMAT);
-    public static readonly Translation InsurgencyWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyWarStats0 = new Translation("Duration: ", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation InsurgencyWarStats3 = new Translation("Intelligence Gathered: ", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation InsurgencyWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
 
-    public static readonly Translation InsurgencyHeader0 = new Translation("Kills",   TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyHeader1 = new Translation("Deaths",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyHeader2 = new Translation("XP",      TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyHeader3 = new Translation("Credits", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyHeader4 = new Translation("KDR",     TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
-    public static readonly Translation InsurgencyHeader5 = new Translation("Damage",  TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText);
+    public static readonly Translation InsurgencyHeader0 = new Translation("Kills",   TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader1 = new Translation("Deaths",  TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader3 = new Translation("Credits", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader4 = new Translation("KDR",     TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
     #endregion
 
     #endregion
@@ -213,8 +214,8 @@ internal class DefaultTranslations
     #endregion
 
     #region Toasts
-    public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
-    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nTalk to the NPCs to get started.", TranslationFlags.NoColor | TranslationFlags.TranslateWithUnityRichText, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nTalk to the NPCs to get started.", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
     #endregion
 
     #region KitCommand
@@ -240,65 +241,63 @@ internal class DefaultTranslations
     public static readonly Translation<EClass, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<EClass, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg2Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, arg3Fmt: UCPlayer.STEAM_64_FORMAT, arg4Fmt: Kit.ID_FORMAT);
     #endregion
 
+    #region RangeCommand
+    public static readonly Translation<float> RangeOutput  = new Translation<float>("<#9e9c99>The range to your squad's marker is: <#8aff9f>{0}m</color>.", "N0");
+    public static readonly Translation RangeNoMarker       = new Translation("<#9e9c99>You squad has no marker.");
+    public static readonly Translation RangeNotSquadleader = new Translation("<#9e9c99>Only <color=#cedcde>SQUAD LEADERS</color> can place markers.");
+    public static readonly Translation RangeNotInSquad     = new Translation("<#9e9c99>You must JOIN A SQUAD in order to do /range.");
+    #endregion
+
+    #region Squads
+    public static readonly Translation SquadNotOnTeam               = new Translation("<#a89791>You can't join a squad unless you're on a team.");
+    public static readonly Translation<Squad> SquadCreated          = new Translation<Squad>("<#a0ad8e>You created {0} squad.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadJoined           = new Translation<Squad>("<#a0ad8e>You joined {0} squad.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadLeft             = new Translation<Squad>("<#a7a8a5>You left {0} squad.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadDisbanded        = new Translation<Squad>("<#a7a8a5>{0} squad was disbanded.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation SquadLockedSquad             = new Translation("<#a7a8a5>You <#6be888>locked</color> your squad.");
+    public static readonly Translation SquadUnlockedSquad           = new Translation("<#999e90>You <#6be888>unlocked</color> your squad.");
+    public static readonly Translation<Squad> SquadPromoted         = new Translation<Squad>("<#999e90>You're now the <#cedcde>sqauad leader</color> of {0}.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadKicked           = new Translation<Squad>("<#ae8f8f>You were kicked from {0} squad.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<string> SquadNotFound        = new Translation<string>("<#ae8f8f>Failed to find a squad called <#c$neutral$>\"{0}\"</color>. You can also use the first letter of the squad name.");
+    public static readonly Translation SquadAlreadyInSquad          = new Translation("<#ae8f8f>You're already in a squad.");
+    public static readonly Translation SquadNotInSquad              = new Translation("<#ae8f8f>You're not in a squad yet. Use <#ae8f8f>/squad join <squad></color> to join a squad.");
+    public static readonly Translation SquadNotSquadLeader          = new Translation("<#ae8f8f>You're not the leader of your squad.");
+    public static readonly Translation<Squad> SquadLocked           = new Translation<Squad>("<#a89791>{0} is locked.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadFull             = new Translation<Squad>("<#a89791>{0} is full.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation SquadTargetNotInSquad        = new Translation("<#a89791>That player isn't in a squad.");
+    public static readonly Translation<IPlayer> SquadPlayerJoined   = new Translation<IPlayer>("<#b9bdb3>{0} joined your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerLeft     = new Translation<IPlayer>("<#b9bdb3>{0} left your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerPromoted = new Translation<IPlayer>("<#b9bdb3>{0} was promoted to <#cedcde>sqauad leader</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerKicked   = new Translation<IPlayer>("<#b9bdb3>{0} was kicked from your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation SquadsDisabled               = new Translation("<#a89791>Squads are disabled in this gamemode.");
+    public static readonly Translation<int> SquadsTooMany           = new Translation<int>("<#a89791>There can not be more than {0} squads on a team at once.");
+
+    public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount = new Translation<Squad, int, int>("<#bd6b5b>{0}</color {1}/{2}", TranslationFlags.UnityUI, Squad.NAME_FORMAT);
+    public static readonly Translation<int, int> SquadsUIPlayerCountSmall         = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int> SquadsUIPlayerCountSmallLocked   = new Translation<int, int>("<#969696>{0}/{1}</color>", TranslationFlags.UnityUI);
+    public static readonly Translation squad_ui_expanded                          = new Translation("...", TranslationFlags.UnityUI);
+    #endregion
+
+    #region Orders
+    public static readonly Translation OrderUsageAll              = new Translation("<#9fa1a6>To give orders: <#9dbccf>/order <squad> <type></color>. Type <#d1bd90>/order actions</color> to see a list of actions.");
+    public static readonly Translation<Squad> OrderUsageNoAction  = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <action></color>.", Squad.NAME_FORMAT);
+    public static readonly Translation<Squad> OrderUsageBadAction = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <b><action></b></color>. Type <#d1bd90>/order actions</color> to see a list of actions.", Squad.NAME_FORMAT);
+    public static readonly Translation<string> OrderActions       = new Translation<string>("<#9fa1a6>Order actions: <#9dbccf>{0}</color>.");
+    public static readonly Translation<string> OrderSquadNoExist  = new Translation<string>(ERROR_COLOR + "There is no friendly <lowercase><#c$neutral$>{0}</color></lowercase> squad.");
+    public static readonly Translation OrderNotSquadleader        = new Translation(ERROR_COLOR + "You must be a <#cedcde>sqauad leader</color> to give orders.");
+    public static readonly Translation<string, string> OrderActionInvalid = new Translation<string, string>(ERROR_COLOR + "<#fff>{0}</color> is not a valid action. Try one of these: <#9dbccf>{1}</color>.");
+    public static readonly Translation<Squad> OrderAttackMarkerCTF  = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to attack.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderAttackMarkerIns  = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to attack.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderDefenseMarkerCTF = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to defend.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderDefenseMarkerIns = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to defend.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderBuildFOBError    = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> you want {0} to build a <color=#d1bd90>FOB</color>.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderMoveError        = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> you want {0} to move to.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation OrderBuildFOBExists          = new Translation(ERROR_COLOR + "There is already a friendly FOB near that marker.", Squad.COLORED_NAME_FORMAT);
+    #endregion
+
     Dictionary<string, string> _translations = new Dictionary<string, string>()
     {
-            #region RangeCommand
-            { "range", "<color=#9e9c99>The range to your squad's marker is: <color=#8aff9f>{0}m</color></color>" },
-            { "range_nomarker", "<color=#9e9c99>You squad has no marker.</color>" },
-            { "range_notsquadleader", "<color=#9e9c99>Only <color=#cedcde>SQUAD LEADERS</color> can place markers.</color>" },
-            { "range_notinsquad", "<color=#9e9c99>You must JOIN A SQUAD in order to do /range.</color>" },
-            #endregion
-            
-            #region SquadCommand
-            { "squad_not_in_team", "<color=#a89791>You can't join a squad unless you're on a team.</color>" },
-            { "squad_created", "<color=#a0ad8e>You created the squad <color=#ffffff>{0}</color></color>" },
-            { "squad_ui_reloaded", "<color=#a0ad8e>Squad UI has been reloaded.</color>" },
-            { "squad_joined", "<color=#a0ad8e>You joined <color=#ffffff>{0}</color>.</color>" },
-            { "squad_left", "<color=#a7a8a5>You left your squad.</color>" },
-            { "squad_disbanded", "<color=#a7a8a5>Your squad was disbanded.</color>" },
-            { "squad_locked", "<color=#a7a8a5>You <color=#6be888>locked</color> your squad.</color>" },
-            { "squad_unlocked", "<color=#999e90>You <color=#ffffff>unlocked</color> your squad.</color>" },
-            { "squad_promoted", "<color=#b9bdb3><color=#ffc94a>{0}</color> was promoted to squad leader.</color>" },
-            { "squad_kicked", "<color=#b9bdb3>You were kicked from Squad <color=#6be888>{0}</color>.</color>" },
-            { "squad_e_noexist", "<color=#a89791>Could not find a squad called '{0}'.</color>" },
-            { "squad_e_insquad", "<color=#ff8c69>You are already in a squad!</color>" },
-            { "squad_e_notinsquad", "<color=#a89791>You are not in a squad!</color>" },
-            { "squad_e_notsquadleader", "<color=#ff8c69>You are not a squad leader!</color>" },
-            { "squad_e_locked", "<color=#a89791>That squad is locked.</color>" },
-            { "squad_e_full", "<color=#a89791>That squad is full.</color>" },
-            { "squad_e_playernotinsquad", "<color=#a89791>That player is not in your squad.</color>" },
-            { "squad_e_playernotfound", "<color=#a89791>Could not find player: '{0}'.</color>" },
-            { "squad_player_joined", "<color=#b9bdb3><color=#8df0c5>{0}</color> joined your squad.</color>" },
-            { "squad_player_left", "<color=#b9bdb3><color=#f0c08d>{0}</color> left your squad.</color>" },
-            { "squad_player_promoted", "<color=#b9bdb3><color=#ffc94a>{0}</color> was promoted to squad leader.</color>" },
-            { "squad_player_kicked", "<color=#b9bdb3><color=#d68f81>{0}</color> was kicked from your squad.</color>" },
-            { "squad_squadleader", "<color=#b9bdb3>You are now the <color=#ffc94a>squad leader</color>.</color>" },
-            { "squads_disabled", "<color=#ff8c69>Squads are disabled.</color>" },
-            { "squad_too_many", "<color=#ff8c69>There can not be more than 8 squads on a team at once.</color>" },
-
-            { "squad_ui_player_name", "{0}" },
-            { "squad_ui_player_count", "<color=#bd6b5b>{0}</color> {1}/6" },
-            { "squad_ui_player_count_small", "{0}/6" },
-            { "squad_ui_player_count_small_locked", "<color=#969696>{0}/6</color>" },
-            { "squad_ui_header_name", "<color=#bd6b5b>{0}</color> {1}/6" },
-            { "squad_ui_leader_name", "{0}" },
-            { "squad_ui_expanded", "..." },
-            #endregion
-            
             #region OrderCommand
-            { "order_usage_1", "<color=#9fa1a6>To give orders: <color=#9dbccf>/order <squad> <type></color>. Type <color=#d1bd90>/order actions</color> to see a list of actions.</color>" },
-            { "order_actions", "<color=#9fa1a6>Order actions: <color=#9dbccf>{0}</color></color>" },
-            { "order_usage_2", "<color=#9fa1a6>Try typing: <color=#9dbccf>/order <b>{0}</b> <i>action</i></color>" },
-            { "order_usage_3", "<color=#9fa1a6>Try typing: <color=#9dbccf>/order {0} <b><action></b></color>. Type <color=#d1bd90>/order actions</color> to see a list of actions.</color>" },
-            { "order_e_squadnoexist", "<color=#9fa1a6>There is no friendly squad called '{0}'.</color>" },
-            { "order_e_not_squadleader", "<color=#9fa1a6>You must be the leader of a squad to give orders.</color>" },
-            { "order_e_actioninvalid", "<color=#9fa1a6>'{0}' is not a valid action. Try one of these: {1}</color>" },
-            { "order_e_attack_marker", "<color=#9fa1a6>Place a map marker on a <color=#d1bd90>position</color> or <color=#d1bd90>flag</color> where you want {0} to attack.</color>" },
-            { "order_e_attack_marker_ins", "<color=#9fa1a6>Place a map marker on a <color=#d1bd90>position</color> or <color=#d1bd90>cache</color> where you want {0} to attack.</color>" },
-            { "order_e_defend_marker", "<color=#9fa1a6>Place a map marker on the <color=#d1bd90>position</color> or <color=#d1bd90>flag</color> where you want {0} to attack.</color>" },
-            { "order_e_defend_marker_ins", "<color=#9fa1a6>Place a map marker on the <color=#d1bd90>position</color> or <color=#d1bd90>cache</color> where you want {0} to attack.</color>" },
-            { "order_e_buildfob_marker", "<color=#9fa1a6>Place a map marker where you want {0} to build a <color=#d1bd90>FOB</color>.</color>" },
-            { "order_e_move_marker", "<color=#9fa1a6>Place a map marker where you want {0} to move to.</color>" },
             { "order_e_buildfob_fobexists", "<color=#9fa1a6>There is already a friendly FOB near that marker.</color>" },
             { "order_e_buildfob_foblimit", "<color=#9fa1a6>The max FOB limit has been reached.</color>" },
             { "order_e_squadtooclose", "<color=#9fa1a6>{0} is already near that marker. Try placing it further away.</color>" },

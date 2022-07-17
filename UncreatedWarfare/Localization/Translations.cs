@@ -1,17 +1,8 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Uncreated.Warfare.Gamemodes.Flags;
-using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -46,12 +37,12 @@ public class Translation
     {
         if ((_flags & TranslationFlags.SuppressWarnings) == TranslationFlags.SuppressWarnings) return;
         int ct = this.GetType().GenericTypeArguments.Length;
-        int index = 0;
+        int index = -1;
         int flag = 0;
         int max = 0;
         while (true)
         {
-            index = def.IndexOf('{', index);
+            index = def.IndexOf('{', index + 1);
             if (index == -1 || index >= def.Length - 2) break;
             char next = def[index + 1];
             if (next is >= '0' and <= '9')
@@ -217,8 +208,10 @@ public class Translation
         }
         private static string PlayerToString(Player player, TranslationFlags flags, string? format)
         {
-            if (player == null)
-                return player is null ? NULL : player.channel.owner.playerID.steamID.m_SteamID.ToString(Warfare.Data.Locale);
+            if (player is null)
+                return NULL;
+            else if (!player.isActiveAndEnabled)
+                return player.channel.owner.playerID.steamID.m_SteamID.ToString(Warfare.Data.Locale);
             Players.FPlayerName names = F.GetPlayerOriginalNames(player);
             if (format is not null)
             {
@@ -356,12 +349,14 @@ public class Translation
         public readonly string ProcessedInner;
         public readonly string Processed;
         public readonly Color  Color;
+        public readonly bool rt;
         private string? _console;
-        public string Console => _console ??= F.RemoveRichText(ProcessedInner);
+        public string Console => rt ? (_console ??= F.RemoveRichText(ProcessedInner)) : Original;
         public ConsoleColor ConsoleColor => F.GetClosestConsoleColor(Color);
         public bool IsNil => Original is null;
         public TranslationValue(string language, string original, TranslationFlags flags)
         {
+            rt = (flags & TranslationFlags.NoRichText) == 0;
             Original = original;
             Processed = original;
             Color = ProcessValue(ref Processed, out ProcessedInner, flags);
@@ -379,12 +374,47 @@ public class Translation
         }
         public TranslationValue(in TranslationValue value, TranslationFlags flags) : this (value.Language, value.Original, flags) { }
     }
-    public static unsafe Color ProcessValue(ref string message, out string innerText, TranslationFlags flags)
+
+    public static unsafe void ReplaceTMProRichText(ref string value, TranslationFlags flags)
     {
-        int index = 0;
+        if (value.Length < 6)
+            return;
+        string inp = value;
+        int index = -8;
+        int depth = 0;
+        do
+        {
+            index = inp.IndexOf("</color>", index + 8, StringComparison.OrdinalIgnoreCase);
+            if (index == -1) break;
+            --depth;
+        } while (index < inp.Length - 8);
+        index = -2;
         while (true)
         {
-            index = message.IndexOf("c$", index, StringComparison.OrdinalIgnoreCase);
+            index = inp.IndexOf("<#", index + 2, StringComparison.OrdinalIgnoreCase);
+            if (index == -1 || index >= inp.Length - 2) break;
+            int nindex = inp.IndexOf('>', index + 2);
+            if (nindex == -1) break;
+            if (nindex - index is > 10)
+                continue;
+            fixed (char* ptr = inp)
+                inp = new string(ptr, 0, index) + "<color=#" + inp.Substring(index + 2, nindex - index - 2) + ">" + new string(ptr, nindex + 1, inp.Length - nindex - 1);
+            ++depth;
+            index += 5;
+        }
+        while (depth > 0)
+        {
+            --depth;
+            inp += "</color>";
+        }
+        value = F.RemoveTMProRichText(inp);
+    }
+    public static unsafe void ReplaceColors(ref string message)
+    {
+        int index = -2;
+        while (true)
+        {
+            index = message.IndexOf("c$", index + 2, StringComparison.OrdinalIgnoreCase);
             if (index == -1 || index >= message.Length - 2) break;
             char next = message[index + 1];
             if (next is '$') continue;
@@ -397,26 +427,22 @@ public class Translation
                     str = "#" + str;
                 message = new string(ptr, 0, index) + str + new string(ptr, nindex + 1, message.Length - nindex);
             }
+            index = nindex;
         }
+    }
+    public static unsafe Color ProcessValue(ref string message, out string innerText, TranslationFlags flags)
+    {
+        ReplaceColors(ref message);
+        Color color;
 
-        if ((flags & TranslationFlags.NoColor) == TranslationFlags.NoColor) goto noColor;
-        // <color=#ffffff>
-        if (message.Length > 8 && message.StartsWith("<color=#", StringComparison.OrdinalIgnoreCase) && message[8] != '{')
-        {
-            int endtag = message.IndexOf('>', 8);
-            if (endtag == -1 || endtag is not 11 and not 12 and not 14 and not 16)
-                goto noColor;
-            string clr = message.Substring(8, endtag - 8);
-            if (endtag == message.Length - 1)
-                innerText = string.Empty;
-            else if (message.EndsWith("</color>", StringComparison.OrdinalIgnoreCase))
-                innerText = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
-            else
-                innerText = message.Substring(endtag + 1, message.Length - endtag - 1);
-            return F.Hex(clr);
-        }
+        if ((flags & TranslationFlags.NoRichText) == 0 && (flags & TranslationFlags.ReplaceTMProRichText) == TranslationFlags.ReplaceTMProRichText)
+            ReplaceTMProRichText(ref message, flags);
+
+        if ((flags & TranslationFlags.NoColor) == TranslationFlags.NoColor)
+            goto noColor;
+
         // <#ffffff>
-        else if (message.Length > 2 && message.StartsWith("<#", StringComparison.OrdinalIgnoreCase) && message[2] != '{')
+        if (message.Length > 2 && message.StartsWith("<#", StringComparison.OrdinalIgnoreCase) && message[2] != '{')
         {
             int endtag = message.IndexOf('>', 2);
             if (endtag == -1 || endtag is not 5 and not 6 and not 8 and not 10)
@@ -428,12 +454,30 @@ public class Translation
                 innerText = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
             else
                 innerText = message.Substring(endtag + 1, message.Length - endtag - 1);
-            return F.Hex(clr);
+            color = F.Hex(clr);
+            goto next;
+        }
+        // <color=#ffffff>
+        else if (message.Length > 8 && message.StartsWith("<color=#", StringComparison.OrdinalIgnoreCase) && message[8] != '{')
+        {
+            int endtag = message.IndexOf('>', 8);
+            if (endtag == -1 || endtag is not 11 and not 12 and not 14 and not 16)
+                goto noColor;
+            string clr = message.Substring(8, endtag - 8);
+            if (endtag == message.Length - 1)
+                innerText = string.Empty;
+            else if (message.EndsWith("</color>", StringComparison.OrdinalIgnoreCase))
+                innerText = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
+            else
+                innerText = message.Substring(endtag + 1, message.Length - endtag - 1);
+            color = F.Hex(clr);
+            goto next;
         }
         
     noColor:
+        color = UCWarfare.GetColor("default");
         innerText = message;
-        return UCWarfare.GetColor("default");
+    next: return color; // todo
     }
 
     protected TranslationFlags GetFlags(ulong targetTeam) => targetTeam switch
@@ -474,7 +518,15 @@ public enum TranslationFlags
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 2.</summary>
     Team2 = 512,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 3.</summary>
-    Team3 = 1024
+    Team3 = 1024,
+    /// <summary>Tells <see cref="ChatManager"/> to send chat messages with RichText set to false.</summary>
+    NoRichText = 2048,
+    /// <summary>Use for translations to be used on TMPro UI. Skips color scanning.</summary>
+    TMProUI = NoColor,
+    /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format.</summary>
+    UnityUI = NoColor | UseUnityRichText,
+    /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format, doesn't replace already existing TMPro tags.</summary>
+    UnityUINoReplace = NoColor | TranslateWithUnityRichText
 }
 
 public interface ITranslationArgument

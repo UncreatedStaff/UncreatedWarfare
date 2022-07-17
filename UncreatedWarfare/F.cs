@@ -1,5 +1,4 @@
-﻿using SDG.Framework.Translations;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -31,6 +30,7 @@ namespace Uncreated.Warfare;
 public static class F
 {
     private static readonly Regex RemoveRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:color=\\\"{0,1}[#a-z]{0,9}\\\"{0,1})|(?:color)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:#.{3,8})|(?:[isub])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
+    private static readonly Regex RemoveTMProRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:noparse)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:[su])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex TimeRegex = new Regex(@"(\d+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     public static readonly char[] vowels = new char[] { 'a', 'e', 'i', 'o', 'u' };
     /// <summary>Convert an HTMLColor string to a actual color.</summary>
@@ -52,6 +52,36 @@ public static class F
             hex += ((byte)Mathf.Clamp(color.a * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale);
         return hex;
     }
+    public static bool HasPlayer(this List<UCPlayer> list, UCPlayer player)
+    {
+        IEqualityComparer<UCPlayer> c = UCPlayer.Comparer;
+        for (int i = 0; i < list.Count; ++i)
+        {
+            if (c.Equals(list[i], player))
+                return true;
+        }
+        return false;
+    }
+    public static bool HasPlayer(this IEnumerable<UCPlayer> list, UCPlayer player)
+    {
+        IEqualityComparer<UCPlayer> c = UCPlayer.Comparer;
+        foreach (UCPlayer pl in list)
+        {
+            if (c.Equals(pl, player))
+                return true;
+        }
+        return false;
+    }
+    public static bool HasPlayer(this UCPlayer[] array, UCPlayer player)
+    {
+        IEqualityComparer<UCPlayer> c = UCPlayer.Comparer;
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (c.Equals(array[i], player))
+                return true;
+        }
+        return false;
+    }
     public static ConsoleColor GetClosestConsoleColor(Color color)
     {
         int i = color.r > 0.5f || color.g > 0.5f || color.b > 0.5f ? 8 : 0;
@@ -63,6 +93,11 @@ public static class F
     public static string RemoveRichText(string text)
     {
         return RemoveRichTextRegex.Replace(text, string.Empty);
+    }
+    /// <remarks>Does not include &lt;#ffffff&gt; colors.</remarks>
+    public static string RemoveTMProRichText(string text)
+    {
+        return RemoveTMProRichTextRegex.Replace(text, string.Empty);
     }
     public static byte[] CloneBytes(byte[] src)
     {
@@ -1040,20 +1075,8 @@ public static class F
     /// </summary>
     public static float SqrDistance2D(Vector3 a, Vector3 b) => Mathf.Pow(b.x - a.x, 2) + Mathf.Pow(b.z - a.z, 2);
 
-    private static readonly char[] ABET = new char[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L' };
-    private static bool _setGridConstants = false;
-    private static float _toMapCoordsMultiplier;
-    private static float _gridSize;
-    private const int _sqrsTotal = 36;
-    private static float _sqrSize;
-    private static void SetGridPositionConstants()
-    {
-        _toMapCoordsMultiplier = Level.size / (Level.size - Level.border * 2f);
-        _gridSize = Level.size - Level.border * 2;
-        _sqrSize = Mathf.Floor(_gridSize / 36f);
-        _setGridConstants = true;
-    }
-    public static string ToGridPosition(Vector3 pos)
+    public static readonly char[] ALPHABET = new char[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
+    public static GridLocation ToGridPosition(Vector3 pos)
     {
         if (!_setGridConstants) SetGridPositionConstants();
 #if DEBUG
@@ -1093,9 +1116,9 @@ public static class F
         int smlSqrDstX = xSqr % 3;
         int bigsqry = Mathf.FloorToInt(ySqr / 3f);
         int smlSqrDstY = ySqr % 3;
-        string rtn = ABET[bigsqrx] + (bigsqry + 1).ToString();
+        string rtn = ALPHABET[bigsqrx] + (bigsqry + 1).ToString();
         if (!isOut) rtn += "-" + (smlSqrDstX + (2 - smlSqrDstY) * 3 + 1).ToString();
-        return rtn;
+        return new GridLocation((byte)bigsqrx, (byte)bigsqry, (byte)(smlSqrDstX + (2 - smlSqrDstY) * 3 + 1));
     }
     public static bool TryParseAny(string input, Type type, out object value)
     {

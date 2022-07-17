@@ -762,7 +762,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             {
                 ListUI.FOBNames[ii].SetText(player.Connection, Localization.Translate("fob_ui", player.Steam64,
                     Singleton.Caches[i].Name.Colorize(Singleton.Caches[i].UIColor),
-                    Singleton.Caches[i].GridCoordinates,
+                    Singleton.Caches[i].GridLocation.ToString(),
                     Singleton.Caches[i].ClosestLocation));
             }
         }
@@ -824,7 +824,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
 }
 
-public class SpecialFOB
+public class SpecialFOB : IFOB
 {
     public string Name;
     public Vector3 Point;

@@ -26,6 +26,13 @@ namespace Uncreated.Warfare;
 
 public class UCPlayer : IPlayer
 {
+    private class EqualityComparer : IEqualityComparer<UCPlayer>
+    {
+        bool IEqualityComparer<UCPlayer>.Equals(UCPlayer x, UCPlayer y) => x == y || x.Steam64 == y.Steam64;
+        int IEqualityComparer<UCPlayer>.GetHashCode(UCPlayer obj) => obj.Steam64.GetHashCode();
+    }
+
+    public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UI.MutedUI, false, false);
     public readonly ulong Steam64;
     public EClass KitClass;
@@ -580,6 +587,7 @@ public struct OfflinePlayer : IPlayer
     public ulong Steam64 => _s64;
     public OfflinePlayer(ulong steam64, bool cacheUsernames = false)
     {
+        _s64 = steam64;
         if (cacheUsernames)
             _names = F.GetPlayerOriginalNames(steam64);
     }

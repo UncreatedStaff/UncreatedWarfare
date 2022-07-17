@@ -2,10 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Encoding;
+using Uncreated.Framework;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
@@ -123,20 +126,22 @@ public class FOBComponent : MonoBehaviour
         Destroy(this);
     }
 }
-public class FOB
+public class FOB : IFOB
 {
     public BarricadeDrop Radio;
     private FOBComponent component;
     public int Number;
-    public string Name;
-    public string GridCoordinates { get; private set; }
-    public string ClosestLocation { get; private set; }
-    public ulong Team { get => Radio.GetServersideData().group; }
-    public ulong Owner { get => Radio.GetServersideData().owner; }
+    private string _name;
+    private string _cl;
+    private GridLocation _gc;
+    public string Name { get => _name; set => _name = value; }
+    public GridLocation GridLocation => _gc;
+    public string ClosestLocation => _cl;
+    public ulong Team => Radio.GetServersideData().group.GetTeam();
+    public ulong Owner => Radio.GetServersideData().owner;
     public BarricadeDrop? Bunker { get; private set; }
-    public Vector3 Position { get => Radio.model.position; }
+    public Vector3 Position => Radio.model.position;
     public float Radius { get; private set; }
-
     public float SqrRadius
     {
         get
@@ -149,7 +154,6 @@ public class FOB
     public int Ammo { get; private set; }
     public bool IsBleeding { get; private set; }
     public bool IsSpawnable { get => !IsBleeding && Radio != null && Bunker != null && !Radio.GetServersideData().barricade.isDead && !Bunker.GetServersideData().barricade.isDead; }
-
     public string UIColor
     {
         get
@@ -209,7 +213,6 @@ public class FOB
         }
     }
     public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.Config.Buildables.Where(bl => bl.Type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
-
     public List<UCPlayer> FriendliesOnFOB { get; private set; }
     public List<UCPlayer> NearbyEnemies { get; private set; }
     public ulong Killer { get; private set; }
@@ -241,8 +244,8 @@ public class FOB
         Ammo = 0;
         Build = 0;
 
-        GridCoordinates = F.ToGridPosition(Position);
-        ClosestLocation = F.GetClosestLocation(Position);
+        _gc = F.ToGridPosition(Position);
+        _cl = F.GetClosestLocation(Position);
 
         if (Data.Is(out IFlagRotation fg))
         {
@@ -712,8 +715,26 @@ public class FOB
         EFOBRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
         _ => 0
     };
+
+    public const string COLORED_NAME_FORMAT = "cn";
+    public const string NAME_FORMAT = "cn";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    {
+        if (format is not null && format.Equals(COLORED_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), Name, flags);
+        return Name;
+    }
 }
-public enum EFOBRadius
+
+public interface IFOB : ITranslationArgument
+{
+    Vector3 Position { get; }
+    string Name { get; }
+    string ClosestLocation { get; }
+    GridLocation GridLocation { get; }
+}
+
+public enum EFOBRadius : byte
 {
     SHORT,
     FULL,
