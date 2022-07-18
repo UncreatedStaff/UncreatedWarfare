@@ -312,7 +312,6 @@ public class Translation
                 type = 14;
                 return;
             }
-
             if (typeof(BarricadeData).IsAssignableFrom(t))
             {
                 type = 16;
