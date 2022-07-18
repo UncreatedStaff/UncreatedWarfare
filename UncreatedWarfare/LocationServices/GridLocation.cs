@@ -47,7 +47,7 @@ public readonly struct GridLocation : ITranslationArgument
     }
     /// <returns>A cached string representation of the grid, formatted like A1-1.</returns>
     public override readonly string ToString() => _toStringCache ?? "A1";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags) => _toStringCache;
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => _toStringCache;
     public static bool TryParse(string value, out GridLocation location)
     {
         if (value.Length is not > 1 and < 8)

@@ -824,7 +824,7 @@ public class FactionInfo : ITranslationArgument
     public const string DISPLAY_NAME_FORMAT = "d";
     public const string SHORT_NAME_COLORIZED_FORMAT = "sc";
     public const string DISPLAY_NAME_COLORIZED_FORMAT = "dc";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is null) goto end;
         if (format.Equals(DISPLAY_NAME_COLORIZED_FORMAT, StringComparison.Ordinal))

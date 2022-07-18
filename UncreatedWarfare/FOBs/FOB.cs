@@ -2,8 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Encoding;
-using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -126,7 +125,7 @@ public class FOBComponent : MonoBehaviour
         Destroy(this);
     }
 }
-public class FOB : IFOB
+public class FOB : IFOB, IDeployable
 {
     public BarricadeDrop Radio;
     private FOBComponent component;
@@ -141,6 +140,7 @@ public class FOB : IFOB
     public ulong Owner => Radio.GetServersideData().owner;
     public BarricadeDrop? Bunker { get; private set; }
     public Vector3 Position => Radio.model.position;
+    public float Yaw => Bunker == null || Bunker.model == null ? 0 : (Bunker.model.rotation.eulerAngles.y + 90f);
     public float Radius { get; private set; }
     public float SqrRadius
     {
@@ -718,11 +718,75 @@ public class FOB : IFOB
 
     public const string COLORED_NAME_FORMAT = "cn";
     public const string NAME_FORMAT = "cn";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is not null && format.Equals(COLORED_NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), Name, flags);
+            return Localization.Colorize(UIColor, Name, flags);
         return Name;
+    }
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    {
+        if (NearbyEnemies.Count != 0)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_c_enemiesNearby");
+            return false;
+        }
+        if (IsBleeding)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_c_bleeding");
+            return false;
+        }
+        if (Bunker == null)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_e_nobunker");
+            return false;
+        }
+        if (!IsSpawnable)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_c_notspawnable");
+            return false;
+        }
+
+        return true;
+    }
+    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
+    {
+        if (NearbyEnemies.Count != 0)
+        {
+            if (chat)
+                player.SendChat("deploy_c_enemiesNearby");
+            return false;
+        }
+        if (IsBleeding)
+        {
+            if (chat)
+                player.SendChat("deploy_c_bleeding");
+            return false;
+        }
+        if (Bunker == null)
+        {
+            if (chat)
+                player.SendChat("deploy_e_nobunker");
+            return false;
+        }
+        if (!IsSpawnable)
+        {
+            if (chat)
+                player.SendChat("deploy_c_notspawnable");
+            return false;
+        }
+
+        return true;
+    }
+    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    {
+        ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        if (chat)
+            player.Message("deploy_s", UIColor, Name);
     }
 }
 

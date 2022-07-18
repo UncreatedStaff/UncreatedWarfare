@@ -329,7 +329,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 L.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
         }
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags) => DisplayName;
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)
     {
         shutdownAfterGame = true;

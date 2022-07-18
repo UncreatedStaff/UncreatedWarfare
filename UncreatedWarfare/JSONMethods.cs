@@ -295,7 +295,7 @@ public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 
     public const string DISPLAY_NAME_FORMAT = "d";
     public const string KEY_FORMAT = "k";
-    public string Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is not null && format.Equals(KEY_FORMAT, StringComparison.Ordinal))
             return key;

@@ -534,7 +534,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         public const string NAME_FORMAT_DISCOVER = "nd";
         public const string SHORT_NAME_FORMAT_COLORED_DISCOVER = "sncd";
         public const string SHORT_NAME_FORMAT_DISCOVER = "snd";
-        string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+        string ITranslationArgument.Translate(string language, string? format, UCPlayer? target,
+            ref TranslationFlags flags)
         {
             if (format is null) goto end;
             if (format.Equals(NAME_FORMAT_COLORED, StringComparison.Ordinal))

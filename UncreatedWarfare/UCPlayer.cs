@@ -547,7 +547,7 @@ public class UCPlayer : IPlayer
     public const string COLORIZED_NICK_NAME_FORMAT = "cnn";
     public const string COLORIZED_PLAYER_NAME_FORMAT = "cpn";
     public const string COLORIZED_STEAM_64_FORMAT = "c64";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is null) goto end;
         if (format.Equals(CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
@@ -595,7 +595,7 @@ public struct OfflinePlayer : IPlayer
     {
         _names = await F.GetPlayerOriginalNamesAsync(_s64);
     }
-    public string Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is null) goto end;
         

@@ -718,7 +718,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     public const string COLORED_NAME_FORMAT = "c";
     public const string NAME_FORMAT = "n";
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags) =>
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) =>
         COLORED_NAME_FORMAT.Equals(format, StringComparison.Ordinal)
             ? Localization.Colorize(Teams.TeamManager.GetTeamHexColor(Team), Name, flags)
             : Name;

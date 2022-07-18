@@ -20,6 +20,7 @@ using Uncreated.Warfare.Events.Barricades;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Commands.CommandSystem;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
@@ -825,7 +826,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
 }
 
-public class SpecialFOB : IFOB
+public class SpecialFOB : IFOB, IDeployable
 {
     private readonly string _name;
     private readonly string _cl;
@@ -837,10 +838,9 @@ public class SpecialFOB : IFOB
     public bool DisappearAroundEnemies;
     public string Name => _name;
     public Vector3 Position => _pos;
+    float IDeployable.Yaw => 0f;
     public string ClosestLocation => _cl;
-    public GridLocation GridCoordinates => _gc;
-
-    public GridLocation GridLocation => throw new NotImplementedException();
+    public GridLocation GridLocation => _gc;
 
     public SpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
@@ -862,11 +862,33 @@ public class SpecialFOB : IFOB
         DisappearAroundEnemies = disappearAroundEnemies;
     }
 
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is not null && format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
             return Localization.Colorize(UIColor ?? TeamManager.GetTeamHexColor(Team), Name, flags);
         return Name;
+    }
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    {
+        if (IsActive)
+            return true;
+        if (ctx is not null)
+            throw ctx.Reply("deploy_c_notactive");
+        return false;
+    }
+    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
+    {
+        if (IsActive)
+            return true;
+        if (chat)
+            player.SendChat("deploy_c_notactive");
+        return false;
+    }
+    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    {
+        ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        if (chat)
+            player.Message("deploy_s", UIColor, Name);
     }
 }
 [JsonSerializable(typeof(FOBConfigData))]
@@ -1193,7 +1215,7 @@ public class FOBConfigData : ConfigData
 }
 
 [JsonSerializable(typeof(BuildableData))]
-public class BuildableData
+public class BuildableData : ITranslationArgument
 {
     [JsonPropertyName("foundationID")]
     public JsonAssetReference<ItemBarricadeAsset> Foundation;
@@ -1209,6 +1231,25 @@ public class BuildableData
     public int Team;
     [JsonPropertyName("emplacementData")]
     public EmplacementData? Emplacement;
+
+    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        ItemBarricadeAsset asset;
+        if (Emplacement is not null)
+        {
+            if (Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
+                return vasset.vehicleName;
+            if (Emplacement.BaseBarricade.ValidReference(out asset))
+                return asset.itemName;
+            if (Emplacement.Ammo.ValidReference(out ItemAsset iasset))
+                return iasset.itemName;
+        }
+
+        if (BuildableBarricade.ValidReference(out asset) || Foundation.ValidReference(out asset))
+            return asset.itemName;
+
+        return Type.ToString();
+    }
 }
 
 [JsonSerializable(typeof(EmplacementData))]

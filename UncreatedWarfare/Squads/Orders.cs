@@ -323,7 +323,7 @@ namespace Uncreated.Warfare.Squads
 
         public const string MESSAGE_FORMAT = "m";
         public const string TYPE_FORMAT = "t";
-        public string Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+        public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
         {
             if (format is null || format.Equals(MESSAGE_FORMAT, StringComparison.Ordinal))
             {

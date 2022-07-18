@@ -58,7 +58,7 @@ public class UCPlayerData : MonoBehaviour
     internal ThrowableComponent? TriggeringThrowable;
     public Guid lastExplodedVehicle;
     public Guid LastVehicleHitBy;
-    private Coroutine? _currentTeleportRequest;
+    public Coroutine? CurrentTeleportRequest;
     public Vehicles.VehicleSpawn? currentlylinking;
     public DeathMessageArgs LastBleedingArgs;
     public PlayerDied? LastBleedingEvent;
@@ -278,10 +278,10 @@ public class UCPlayerData : MonoBehaviour
     }
     public void CancelTeleport()
     {
-        if (_currentTeleportRequest != default)
+        if (CurrentTeleportRequest != default)
         {
-            StopCoroutine(_currentTeleportRequest);
-            _currentTeleportRequest = default;
+            StopCoroutine(CurrentTeleportRequest);
+            CurrentTeleportRequest = default;
         }
     }
     public bool TeleportTo(object location, float delay, bool shouldCancelOnMove, bool startCoolDown = true, float yawOverride = -1)
@@ -290,9 +290,9 @@ public class UCPlayerData : MonoBehaviour
 
         if (player != null)
         {
-            if (_currentTeleportRequest == default)
+            if (CurrentTeleportRequest == default)
             {
-                _currentTeleportRequest = StartCoroutine(TeleportCoroutine(player, location, delay, shouldCancelOnMove, startCoolDown, yawOverride));
+                CurrentTeleportRequest = StartCoroutine(TeleportCoroutine(player, location, delay, shouldCancelOnMove, startCoolDown, yawOverride));
                 return true;
             }
             else
@@ -454,7 +454,7 @@ public class UCPlayerData : MonoBehaviour
 
         player.Player.teleportToLocationUnsafe(position, rotation);
 
-        _currentTeleportRequest = default;
+        CurrentTeleportRequest = default;
 
         if (isFOB)
         {

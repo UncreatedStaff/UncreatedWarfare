@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -6,20 +7,27 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
 
 namespace Uncreated.Warfare;
 internal class DefaultTranslations
 {
-    private const int NON_TRANSLATION_FIELD_COUNT = 4;
+    private const int NON_TRANSLATION_FIELD_COUNT = 7;
     private const string ERROR_COLOR = "<#ff8c69>";
     private const string SUCCESS_COLOR = "<#e6e3d5>";
+    internal const string PLURAL = ":FORMAT_PLURAL";
+    internal const string UPPERCASE = "upper";
+    internal const string LOWERCASE = "lower";
+    internal const string PROPERCASE = "proper";
     /*
      * c$value$ will be replaced by the color "value" on startup
      */
@@ -297,23 +305,23 @@ internal class DefaultTranslations
     public static readonly Translation OrderBuildFOBExists          = new Translation(ERROR_COLOR + "There is already a friendly FOB near that marker.");
     public static readonly Translation OrderBuildFOBTooMany         = new Translation(ERROR_COLOR + "There are already too many FOBs on your team.");
     public static readonly Translation OrderSquadTooClose           = new Translation(ERROR_COLOR + "{0} is already near that marker. Try placing it further away.");
-    public static readonly Translation<Order> OrderSent                 = new Translation<Order>("<#9fa1a6>Order sent to {0}: <#9dbccf>{1}</color>.");
-    public static readonly Translation<IPlayer, Order> OrderReceived    = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
-    public static readonly Translation<IPlayer> OrderUICommander        = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
-    public static readonly Translation<Order> OrderUIMessage            = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
-    public static readonly Translation<TimeSpan> OrderUITimeLeft        = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
-    public static readonly Translation<int> OrderUIReward               = new Translation<int>("- Reward: {0} XP", TranslationFlags.UnityUI);
-    public static readonly Translation<Flag> OrderUIAttackObjective     = new Translation<Flag>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<Flag> OrderUIAttackFlag          = new Translation<Flag>("Attack: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<Flag> OrderUIDefendObjective     = new Translation<Flag>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<Flag> OrderUIDefendFlag          = new Translation<Flag>("Defend: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<Cache> OrderUIAttackCache        = new Translation<Cache>("Attack: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<Cache> OrderUIDefendCache        = new Translation<Cache>("Defend: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<string> OrderUIAttackNearArea    = new Translation<string>("Attack near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<string> OrderUIDefendNearArea    = new Translation<string>("Defend near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<Flag> OrderUIBuildFobFlag        = new Translation<Flag>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<string> OrderUIBuildFobNearArea  = new Translation<string>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<Cache> OrderUIBuildFobNearCache  = new Translation<Cache>("Build a FOB near {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<Order> OrderSent                = new Translation<Order>("<#9fa1a6>Order sent to {0}: <#9dbccf>{1}</color>.");
+    public static readonly Translation<IPlayer, Order> OrderReceived   = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
+    public static readonly Translation<IPlayer> OrderUICommander       = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<Order> OrderUIMessage           = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
+    public static readonly Translation<TimeSpan> OrderUITimeLeft       = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
+    public static readonly Translation<int> OrderUIReward              = new Translation<int>("- Reward: {0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<Flag> OrderUIAttackObjective    = new Translation<Flag>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIAttackFlag         = new Translation<Flag>("Attack: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIDefendObjective    = new Translation<Flag>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIDefendFlag         = new Translation<Flag>("Defend: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Cache> OrderUIAttackCache       = new Translation<Cache>("Attack: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<Cache> OrderUIDefendCache       = new Translation<Cache>("Defend: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<string> OrderUIAttackNearArea   = new Translation<string>("Attack near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> OrderUIDefendNearArea   = new Translation<string>("Defend near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<Flag> OrderUIBuildFobFlag       = new Translation<Flag>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<string> OrderUIBuildFobNearArea = new Translation<string>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Cache> OrderUIBuildFobNearCache = new Translation<Cache>("Build a FOB near {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
     #endregion
 
     #region Rallies
@@ -350,56 +358,59 @@ internal class DefaultTranslations
     #endregion
 
     #region FOBs and Buildables
+    public static readonly Translation BuildNotInRadius        = new Translation("<#ffab87>This can only be placed inside <#cedcde>FOB RADIUS</color>.");
+    public static readonly Translation BuildTickNotInRadius    = new Translation("<#ffab87>There's no longer a friendly FOB nearby.");
+    public static readonly Translation<float> BuildSmallRadius = new Translation<float>("<#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a <#cedcde>FOB BUNKER</color>.", "N0");
+    public static readonly Translation<float> BuildNoRadio     = new Translation<float>("<#ffab87>This can only be placed within {0}m of a friendly <#cedcde>FOB RADIO</color>.", "N0");
+    public static readonly Translation<BuildableData> BuildStructureExists     = new Translation<BuildableData>("<#ffab87>This FOB can't have any more {0}.", PLURAL);
+    public static readonly Translation<BuildableData> BuildTickStructureExists = new Translation<BuildableData>("<#ffab87>Too many {0} have already been built on this FOB.", PLURAL);
+    public static readonly Translation BuildEnemy              = new Translation("<#ffab87>You may not build on an enemy FOB.");
+    public static readonly Translation<int, int> BuildMissingSupplies = new Translation<int, int>("<#ffab87>You're missing nearby build! <#d1c597>Building Supplies: <#e0d8b8>{0}/{1}</color></color>.", PLURAL);
+    public static readonly Translation BuildMaxFOBsHit         = new Translation("<#ffab87>The max number of FOBs on your team has been reached.");
+    public static readonly Translation BuildFOBUnderwater      = new Translation("<#ffab87>You can't build a FOB underwater.");
+    public static readonly Translation<float> BuildFOBTooHigh  = new Translation<float>("<#ffab87>You can't build a FOB more than {0}m above the ground.", "F0");
+    public static readonly Translation BuildFOBTooCloseToMain  = new Translation("<#ffab87>You can't build a FOB this close to main base.");
+    public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
+    public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.COLORED_NAME_FORMAT, "F0", "F0");
+
+    public static readonly Translation<FOB, GridLocation, string> FOBUI    = new Translation<FOB, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.NAME_FORMAT);
+
+    public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
+    public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <#e3c59a>{0}</color>", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation CacheDiscoveredDefense  = new Translation("<#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT", TranslationFlags.UnityUI);
+    public static readonly Translation CacheSpawnedDefense     = new Translation("<#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE", TranslationFlags.UnityUI);
+    #endregion
+
+    #region Deploy
+    public static readonly Translation<IDeployable> DeploySuccess           = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployNotSpawnableTick  = new Translation<IDeployable>("<#ffa238>{0} is no longer active.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployNotSpawnable      = new Translation<IDeployable>("<#ffa238>{0} is not active.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployDestroyed         = new Translation<IDeployable>("<#ffa238>{0} was destroyed.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployNoBunker          = new Translation<IDeployable>("<#ffaa42>{0} doesn't have a <#cedcde>FOB BUNKER</color>. Your team must build one to use the <#cedcde>FOB</color> as a spawnpoint.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployRadioDamaged      = new Translation<IDeployable>("<#ffaa42>The <#cedcde>FOB RADIO</color> at {0} is damaged. Repair it with an <#cedcde>ENTRENCHING TOOL</color>.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation DeployMoved                          = new Translation("<#ffa238>You moved and can no longer deploy.");
+    public static readonly Translation<IDeployable> DeployEnemiesNearbyTick = new Translation<IDeployable>("<#ffa238>You no longer deploy to {0} - there are enemies nearby.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployEnemiesNearby     = new Translation<IDeployable>("<#ffaa42>You cannot deploy to {0} - there are enemies nearby.");
+    public static readonly Translation DeployCancelled                      = new Translation("<#fae69c>Active deployment cancelled.");
+    public static readonly Translation<string> DeployableNotFound           = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", UPPERCASE);
+    public static readonly Translation DeployNotNearFOB                     = new Translation<string>("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or in <#cedcde>MAIN BASE</color> in order to deploy.", UPPERCASE);
+    public static readonly Translation DeployNotNearFOBInsurgency           = new Translation<string>("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or <#e8d1a7>CACHE</color>, or in <#cedcde>MAIN BASE</color> in order to deploy.", UPPERCASE);
+    public static readonly Translation<Cooldown> DeployCooldown             = new Translation<Cooldown>("<#ffa238>You can deploy again in: <#e3c27f>{0}</color>", Cooldown.TIME_LEFT_FORMAT);
+    public static readonly Translation DeployAlreadyActive                  = new Translation("<#b5a591>You're already deploying somewhere.");
+    public static readonly Translation<Cooldown> DeployInCombat             = new Translation<Cooldown>("<#ffaa42>You are in combat, soldier! You can deploy in another: <#e3987f>{0}</color>.", Cooldown.TIME_LEFT_FORMAT);
+    public static readonly Translation DeployInjured                        = new Translation("<#ffaa42>You can not deploy while injured, get a medic to revive you or give up.");
+    public static readonly Translation DeployLobbyRemoved                   = new Translation("<#fae69c>The lobby has been removed, use  <#e3c27f>/teams</color> to switch teams instead.");
+    #endregion
+
+    #region
+    public static readonly Translation AmmoNoTarget                = new Translation("<#ffab87>Look at an AMMO CRATE, AMMO BAG or VEHICLE in order to resupply.");
+    public static readonly Translation<int, int> AmmoResuppliedKit = new Translation<int, int>("<#d1bda7>Resupplied kit. Consumed: <#d97568>{0} AMMO</color> <#948f8a>({1} left)</color>.");
+    public static readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#d97568>{1} AMMO</color> <#948f8a>({2} left)</color>.", VehicleData.COLORED_NAME);
     #endregion
 
     Dictionary<string, string> _translations = new Dictionary<string, string>()
     {
-            #region FOB System
-            { "build_error_notinradius", "<color=#ffab87>This can only be placed inside FOB RADIUS.</color>" },
-            { "build_error_tick_notinradius", "<color=#ffab87>There's no longer a friendly FOB nearby.</color>" },
-            { "build_error_radiustoosmall", "<color=#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a FOB BUNKER.</color>" },
-            { "build_error_noradio", "<color=#ffab87>This can only be placed within {0}m of a friendly FOB RADIO.</color>" },
-            { "build_error_structureexists", "<color=#ffab87>This FOB already has {0} {1}.</color>" },
-            { "build_error_tick_structureexists", "<color=#ffab87>Too many {0}s have already been built on this FOB.</color>" },
-            { "build_error_tooclosetoenemybunker", "<color=#ffab87>You may not build on top of an enemy FOB bunker.</color>" },
-            { "build_error_notenoughbuild", "<color=#fae69c>You are missing nearby build! <color=#d1c597>Building Supplies: </color><color=#d1c597>{0}/{1}</color></color>" },
-            { "build_error_too_many_fobs", "<color=#ffab87>The max number of FOBs has been reached.</color>" },
-            { "build_error_invalid_collision", "<color=#ffab87>A {0} can't be built here.</color>" },
-            { "no_placement_fobs_underwater", "<color=#ffab87>You can't build a FOB underwater.</color>" },
-            { "no_placement_fobs_too_high", "<color=#ffab87>You can't build a FOB more than {0}m above the ground.</color>" },
-            { "no_placement_fobs_too_near_base", "<color=#ffab87>You can't build a FOB this close to main base.</color>" },
-            { "fob_error_nologi", "<color=#ffab87>You must be near a friendly LOGISTICS TRUCK to place that FOB radio.</color>" },
-            { "fob_error_fobtooclose", "<color=#ffa238>You are too close to an existing FOB Radio ({0}m away). You must be at least {1}m away to place a new radio.</color>" },
-            { "fob_ui", "{0}  <color=#d6d2c7>{1}</color>  {2}" },
-            { "cache_destroyed_attack", "<color=#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED</color>" },
-            { "cache_destroyed_defense", "<color=#deadad>WEAPONS CACHE HAS BEEN DESTROYED</color>" },
-            { "cache_discovered_attack", "<color=#dbdbdb>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>" },
-            { "cache_discovered_defense", "<color=#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT</color>" },
-            { "cache_spawned_defense", "<color=#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE</color>" },
-            #endregion
-            
-            #region DeployCommand
-            { "deploy_s", "<color=#fae69c>You have arrived at <color=#{0}>{1}</color>.</color>" },
-            { "deploy_c_notspawnable", "<color=#ffa238>The FOB you were deploying is no longer active.</color>" },
-            { "deploy_c_cachedead", "<color=#ffa238>The Cache you were deploying to was destroyed!</color>" },
-            { "deploy_c_moved", "<color=#ffa238>You moved and can no longer deploy!</color>" },
-            { "deploy_c_enemiesNearby", "<color=#ffa238>You no longer deploy to that location - there are enemies nearby.</color>" },
-            { "deploy_c_notactive", "<color=#ffa238>The point you were deploying to is no longer active.</color>" },
-            { "deploy_c_dead", "<color=#ffa238>You died and can no longer deploy!</color>" },
-            { "deploy_e_fobnotfound", "<color=#b5a591>There is no location or FOB by the name of '{0}'.</color>" },
-            { "deploy_e_notnearfob", "<color=#b5a591>You must be on an active friendly FOB or at main in order to deploy again.</color>" },
-            { "deploy_e_notnearfob_ins", "<color=#b5a591>You must be on an active friendly FOB, Cache, or at main in order to deploy again.</color>" },
-            { "deploy_e_cooldown", "<color=#b5a591>You can deploy again in: <color=#e3c27f>{0}</color>.</color>" },
-            { "deploy_e_alreadydeploying", "<color=#b5a591>You are already deploying somewhere.</color>" },
-            { "deploy_e_incombat", "<color=#ffaa42>You are in combat, soldier! You can deploy in another: <color=#e3987f>{0}</color>.</color>" },
-            { "deploy_e_injured", "<color=#ffaa42>You can not deploy while injured, get a medic to revive you or give up.</color>" },
-            { "deploy_e_enemiesnearby", "<color=#ffa238>You cannot deploy to that FOB - there are enemies nearby.</color>" },
-            { "deploy_e_nobunker", "<color=#ffa238>That FOB has no bunker. Your team must build a FOB BUNKER before you can deploy to it.</color>" },
-            { "deploy_e_damaged", "<color=#ffa238>That FOB radio is damaged. Repair it with your ENTRENCHING TOOL.</color>" },
-            { "deploy_fob_standby", "<color=#fae69c>Now deploying to <color=#{0}>{1}</color>. You will arrive in <color=#eeeeee>{2} seconds</color>.</color>" },
-            { "deploy_lobby_removed", "<color=#fae69c>The lobby has been removed, use  <i>/teams</i> to switch teams instead.</color>" },
-            #endregion
-            
             #region AmmoCommand
             { "ammo_error_nocrate", "<color=#ffab87>Look at an AMMO CRATE, AMMO BAG or VEHICLE in order to resupply.</color>" },
             { "ammo_success", "<color=#d1bda7>Resupplied kit. Consumed: <color=#d97568>{0} AMMO</color> <color=#948f8a>({1} left)</color></color>" },

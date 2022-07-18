@@ -569,7 +569,7 @@ public class Kit : ITranslationArgument
     public const string ID_FORMAT = "i";
     public const string DISPLAY_NAME_FORMAT = "d";
     public const string CLASS_FORMAT = "c";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is not null)
         {

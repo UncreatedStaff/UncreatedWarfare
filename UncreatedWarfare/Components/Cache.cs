@@ -3,6 +3,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -15,7 +17,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Components;
 
-public class Cache : MonoBehaviour, IFOB, IObjective
+public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
 {
     public int Number;
     private string _name;
@@ -28,7 +30,7 @@ public class Cache : MonoBehaviour, IFOB, IObjective
     public Vector3 Position => Structure.model.position;
     public bool IsDestroyed => !isActiveAndEnabled || Structure == null || Structure.GetServersideData().barricade.isDead;
     public string Name { get => _name; set => _name = value; }
-
+    float IDeployable.Yaw => Structure == null || Structure.model == null ? 0 : Structure.model.rotation.eulerAngles.y;
     public float Radius
     {
         get => _radius;
@@ -143,7 +145,7 @@ public class Cache : MonoBehaviour, IFOB, IObjective
                             OnDefenderEntered(pl);
                         }
                     }
-                    else if (NearbyDefenders.Remove(pl))
+                    else if (NearbyDefenders.RemoveFast(pl))
                         OnDefenderLeft(pl);
                 }
                 else if (team is > 0 and < 3)
@@ -156,7 +158,7 @@ public class Cache : MonoBehaviour, IFOB, IObjective
                             OnDefenderEntered(pl);
                         }
                     }
-                    else if (NearbyAttackers.Remove(pl))
+                    else if (NearbyAttackers.RemoveFast(pl))
                         OnDefenderLeft(pl);
                 }
             }
@@ -250,10 +252,49 @@ public class Cache : MonoBehaviour, IFOB, IObjective
 
         Destroy(gameObject, 2);
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is not null && format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
             return Localization.Colorize(TeamManager.GetTeamHexColor(Team), Name, flags);
         return Name;
+    }
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    {
+        if (NearbyAttackers.Count != 0)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_c_enemiesNearby");
+            return false;
+        }
+        if (Structure == null || Structure.GetServersideData().barricade.isDead)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_c_cachedead");
+            return false;
+        }
+
+        return true;
+    }
+    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
+    {
+        if (NearbyAttackers.Count != 0)
+        {
+            if (chat)
+                player.Message("deploy_c_enemiesNearby");
+            return false;
+        }
+        if (Structure == null || Structure.GetServersideData().barricade.isDead)
+        {
+            if (chat)
+                player.Message("deploy_c_cachedead");
+            return false;
+        }
+
+        return true;
+    }
+    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    {
+        if (chat)
+            player.Message("deploy_s", UIColor, Name);
     }
 }

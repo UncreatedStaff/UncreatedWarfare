@@ -138,7 +138,7 @@ public class Cooldown : ITranslationArgument
     public const string NAME_FORMAT = "n";
     public const string TIME_LEFT_FORMAT = "tl1";
     public const string TIMESTAMP_LEFT_FORMAT = "tl2";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is null) goto end;
         if (format.Equals(NAME_FORMAT, StringComparison.Ordinal))

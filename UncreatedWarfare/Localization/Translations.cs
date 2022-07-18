@@ -147,7 +147,7 @@ public class Translation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string ToStringHelper<T>(T value, string language, string? format, UCPlayer? target, TranslationFlags flags) => ToStringHelperClass<T>.ToString(value, language, format, target, Warfare.Data.Locale, flags);
+    public static string ToString<T>(T value, string language, string? format, UCPlayer? target, TranslationFlags flags) => ToStringHelperClass<T>.ToString(value, language, format, target, Warfare.Data.Locale, flags);
 
     private static readonly Type[] tarr1 = new Type[] { typeof(string), typeof(IFormatProvider) };
     private static readonly Type[] tarr2 = new Type[] { typeof(string) };
@@ -167,29 +167,49 @@ public class Translation
                 return Null(flags);
 
             if (value is string str)
-                return str;
-            return type switch
+                return CheckCase(str, format);
+
+            if ((flags & TranslationFlags.Plural) == TranslationFlags.Plural && format is not null && format.EndsWith(DefaultTranslations.PLURAL, StringComparison.Ordinal))
+                format = format.Length == DefaultTranslations.PLURAL.Length ? null : format.Substring(0, format.Length - DefaultTranslations.PLURAL.Length);
+            str = type switch
             {
                 1 => toStringFunc1!(value, format!, locale),
                 2 => toStringFunc2!(value, format!),
                 3 => toStringFunc3!(value, locale),
-                4 => (value as ITranslationArgument)!.Translate(language, format, target, flags),
-                5 => (value as UnityEngine.Object)!.name,
+                4 => (value as ITranslationArgument)!.Translate(language, format, target, ref flags),
+                5 => CheckCase((value as UnityEngine.Object)!.name, format),
                 6 => value is Color clr ? clr.Hex() : value.ToString(),
                 7 => value is CSteamID id ? id.m_SteamID.ToString(format, locale) : value.ToString(),
                 8 => PlayerToString((value as PlayerCaller)!.player, flags, format),
                 9 => PlayerToString((value as Player)!, flags, format),
                 10 => PlayerToString((value as SteamPlayer)!.player, flags, format),
                 11 => PlayerToString((value as SteamPlayerID)!, flags, format),
-                12 => value is Type t ? (t.IsEnum ? Localization.TranslateEnumName(t, language) : (t.IsArray ? (t.GetElementType().Name + " Array") : TypeToString(t))) : value.ToString(),
-                13 => Localization.TranslateEnum(value, language),
-                14 => (value as Asset)?.FriendlyName ?? value.ToString(),
+                12 => CheckCase(value is Type t ? (t.IsEnum ? Localization.TranslateEnumName(t, language) : (t.IsArray ? (t.GetElementType().Name + " Array") : TypeToString(t))) : value.ToString(), format),
+                13 => CheckCase(Localization.TranslateEnum(value, language), format),
+                14 => CheckCase((value as Asset)?.FriendlyName ?? value.ToString(), format),
                 15 => toStringFunc4!(value),
-                16 => (value as BarricadeData)?.barricade?.asset?.itemName ?? value.ToString(),
-                17 => (value as StructureData)?.structure?.asset?.itemName ?? value.ToString(),
+                16 => CheckCase((value as BarricadeData)?.barricade?.asset?.itemName ?? value.ToString(), format),
+                17 => CheckCase((value as StructureData)?.structure?.asset?.itemName ?? value.ToString(), format),
                 18 => value is Guid guid ? guid.ToString(format ?? "N", locale) : value.ToString(),
                 _ => value.ToString(),
             };
+            if ((flags & TranslationFlags.Plural) == TranslationFlags.Plural)
+                str = Pluralize(str, language, flags);
+
+            return str;
+        }
+        private static string CheckCase(string str, string? format)
+        {
+            if (format is not null)
+            {
+                if (format.Equals(DefaultTranslations.UPPERCASE, StringComparison.Ordinal))
+                    return str.ToUpperInvariant();
+                else if (format.Equals(DefaultTranslations.LOWERCASE, StringComparison.Ordinal))
+                    return str.ToLowerInvariant();
+                else if (format.Equals(DefaultTranslations.PROPERCASE, StringComparison.Ordinal))
+                    return str.ToProperCase();
+            }
+            return str;
         }
         private static string TypeToString(Type t)
         {
@@ -502,6 +522,104 @@ public class Translation
         public TranslationValue(in TranslationValue value, TranslationFlags flags) : this (value.Language, value.Original, flags) { }
     }
 
+    protected static TranslationFlags CheckPlurality(string? format, TranslationFlags flags)
+    {
+        if (format is not null && format.EndsWith(DefaultTranslations.PLURAL, StringComparison.Ordinal))
+            return flags | TranslationFlags.Plural;
+        return flags;
+    }
+    private static bool IsVowel(char c) => c is 'a' or 'e' or 'i' or 'o' or 'u';
+    public static string Pluralize(string word, string language, TranslationFlags flags)
+    {
+        if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3)
+            return word;
+        bool isAllCaps = true;
+        bool isPCaps = char.IsUpper(word[0]);
+        for (int i = word.Length - 1; i >= 0; --i)
+        {
+            if (char.IsLower(word[i]))
+            {
+                isAllCaps = false;
+                break;
+            }
+        }
+        string str = word.ToLowerInvariant();
+        char last = str[str.Length - 1];
+        char slast = str[str.Length - 2];
+        if (last is 's' or 'x' or 'z' || (last is 'h' && slast is 's' or 'c'))
+            return word + (isAllCaps ? "ES" : "es");
+
+        if (str.Equals("roof", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("belief", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("chef", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("chief", StringComparison.OrdinalIgnoreCase)
+            )
+        goto s;
+        if (last is 'f')
+            return word.Substring(0, str.Length - 1) + (isAllCaps ? "VES" : "ves");
+
+        if (last is 'e' && slast is 'f')
+            return word.Substring(0, str.Length - 2) + (isAllCaps ? "VES" : "ves");
+
+        if (last is 'y')
+            if (!IsVowel(slast))
+                return word.Substring(0, str.Length - 1) + (isAllCaps ? "IES" : "ies");
+            else
+                return word + (isAllCaps ? "S" : "s");
+
+        if (str.Equals("photo", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("piano", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("halo", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("volcano", StringComparison.OrdinalIgnoreCase)
+           )
+            goto s;
+
+        if (last is 'o')
+            return word + (isAllCaps ? "ES" : "es");
+
+        if (last is 's' && slast is 'u')
+            return word.Substring(0, word.Length - 2) + (isAllCaps ? "I" : "i");
+
+        if (last is 's' && slast is 'i')
+            return word.Substring(0, word.Length - 2) + (isAllCaps ? "ES" : "es");
+
+        if (str.Equals("sheep", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("series", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("species", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("moose", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("fish", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("swine", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("buffalo", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("shrimp", StringComparison.OrdinalIgnoreCase) ||
+            str.Equals("trout", StringComparison.OrdinalIgnoreCase) ||
+            (str.EndsWith("craft", StringComparison.OrdinalIgnoreCase) && str.Length > 5) ||
+            str.Equals("deer", StringComparison.OrdinalIgnoreCase))
+            return word;
+
+        if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
+            return word + (isAllCaps ? "REN" : "ren");
+        if (str.Equals("goose", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "GEESE" : isPCaps ? "Geese" : "geese";
+        if (str.Equals("man", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "MEN" : isPCaps ? "Men" : "men";
+        if (str.Equals("woman", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "WOMEN" : isPCaps ? "Women" : "women";
+        if (str.Equals("tooth", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "TEETH" : isPCaps ? "Teeth" : "teeth";
+        if (str.Equals("foot", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "FEET" : isPCaps ? "Feet" : "feet";
+        if (str.Equals("mouse", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "MICE" : isPCaps ? "Mice" : "mice";
+        if (str.Equals("die", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "DICE" : isPCaps ? "Dice" : "dice";
+        if (str.Equals("person", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "PEOPLE" : isPCaps ? "People" : "people";
+        if (str.Equals("axis", StringComparison.OrdinalIgnoreCase))
+            return isAllCaps ? "AXES" : isPCaps ? "Axes" : "axes";
+
+    s:
+        return word + (isAllCaps ? "S" : "s");
+    }
     public static unsafe void ReplaceTMProRichText(ref string value, TranslationFlags flags)
     {
         if (value.Length < 6)
@@ -659,12 +777,16 @@ public enum TranslationFlags
     /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format.</summary>
     UnityUI = NoColor | UseUnityRichText,
     /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format, doesn't replace already existing TMPro tags.</summary>
-    UnityUINoReplace = NoColor | TranslateWithUnityRichText
+    UnityUINoReplace = NoColor | TranslateWithUnityRichText,
+    /// <summary>Tells the translator to format the term plurally, this will be automatically applied to individual arguments if the format is <see cref="DefaultTranslations.PLURAL"/>.</summary>
+    Plural,
+    /// <summary>Tells the translator to not try to turn arguments plural.</summary>
+    NoPlural
 }
 
 public interface ITranslationArgument
 {
-    string Translate(string language, string? format, UCPlayer? target, TranslationFlags flags);
+    string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags);
 }
 public sealed class Translation<T> : Translation
 {
@@ -679,12 +801,12 @@ public sealed class Translation<T> : Translation
     {
         _arg0Fmt = arg1Fmt;
     }
-    public string Translate(string value, string language, T arg, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T arg, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg, language, _arg0Fmt, target, flags));
+            return string.Format(value, ToString(arg, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -715,13 +837,13 @@ public sealed class Translation<T1, T2> : Translation
         _arg0Fmt = arg1Fmt;
         _arg1Fmt = arg2Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -755,14 +877,14 @@ public sealed class Translation<T1, T2, T3> : Translation
         _arg1Fmt = arg2Fmt;
         _arg2Fmt = arg3Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags),
-                ToStringHelper(arg3, language, _arg2Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -799,15 +921,15 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
         _arg2Fmt = arg3Fmt;
         _arg3Fmt = arg4Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags),
-                ToStringHelper(arg3, language, _arg2Fmt, target, flags),
-                ToStringHelper(arg4, language, _arg3Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -847,16 +969,16 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
         _arg3Fmt = arg4Fmt;
         _arg4Fmt = arg5Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags),
-                ToStringHelper(arg3, language, _arg2Fmt, target, flags),
-                ToStringHelper(arg4, language, _arg3Fmt, target, flags),
-                ToStringHelper(arg5, language, _arg4Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -899,17 +1021,17 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
         _arg4Fmt = arg5Fmt;
         _arg5Fmt = arg6Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags),
-                ToStringHelper(arg3, language, _arg2Fmt, target, flags),
-                ToStringHelper(arg4, language, _arg3Fmt, target, flags),
-                ToStringHelper(arg5, language, _arg4Fmt, target, flags),
-                ToStringHelper(arg6, language, _arg5Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -955,18 +1077,18 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
         _arg5Fmt = arg6Fmt;
         _arg6Fmt = arg7Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags),
-                ToStringHelper(arg3, language, _arg2Fmt, target, flags),
-                ToStringHelper(arg4, language, _arg3Fmt, target, flags),
-                ToStringHelper(arg5, language, _arg4Fmt, target, flags),
-                ToStringHelper(arg6, language, _arg5Fmt, target, flags),
-                ToStringHelper(arg7, language, _arg6Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)),
+                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -1015,19 +1137,19 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
         _arg6Fmt = arg7Fmt;
         _arg7Fmt = arg8Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags),
-                ToStringHelper(arg3, language, _arg2Fmt, target, flags),
-                ToStringHelper(arg4, language, _arg3Fmt, target, flags),
-                ToStringHelper(arg5, language, _arg4Fmt, target, flags),
-                ToStringHelper(arg6, language, _arg5Fmt, target, flags),
-                ToStringHelper(arg7, language, _arg6Fmt, target, flags),
-                ToStringHelper(arg8, language, _arg7Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)),
+                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6Fmt, flags)),
+                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -1079,20 +1201,20 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
         _arg7Fmt = arg8Fmt;
         _arg8Fmt = arg9Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags),
-                ToStringHelper(arg3, language, _arg2Fmt, target, flags),
-                ToStringHelper(arg4, language, _arg3Fmt, target, flags),
-                ToStringHelper(arg5, language, _arg4Fmt, target, flags),
-                ToStringHelper(arg6, language, _arg5Fmt, target, flags),
-                ToStringHelper(arg7, language, _arg6Fmt, target, flags),
-                ToStringHelper(arg8, language, _arg7Fmt, target, flags),
-                ToStringHelper(arg9, language, _arg8Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)),
+                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6Fmt, flags)),
+                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7Fmt, flags)),
+                ToString(arg9, language, _arg8Fmt, target, CheckPlurality(_arg8Fmt, flags)));
         }
         catch (FormatException ex)
         {
@@ -1146,21 +1268,21 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
         _arg8Fmt = arg9Fmt;
         _arg9Fmt = arg10Fmt;
     }
-    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target, ulong targetTeam)
+    public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
-        TranslationFlags flags = GetFlags(targetTeam);
+        flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToStringHelper(arg1, language, _arg0Fmt, target, flags),
-                ToStringHelper(arg2, language, _arg1Fmt, target, flags),
-                ToStringHelper(arg3, language, _arg2Fmt, target, flags),
-                ToStringHelper(arg4, language, _arg3Fmt, target, flags),
-                ToStringHelper(arg5, language, _arg4Fmt, target, flags),
-                ToStringHelper(arg6, language, _arg5Fmt, target, flags),
-                ToStringHelper(arg7, language, _arg6Fmt, target, flags),
-                ToStringHelper(arg8, language, _arg7Fmt, target, flags),
-                ToStringHelper(arg9, language, _arg8Fmt, target, flags),
-                ToStringHelper(arg10, language, _arg9Fmt, target, flags));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)),
+                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6Fmt, flags)),
+                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7Fmt, flags)),
+                ToString(arg9, language, _arg8Fmt, target, CheckPlurality(_arg8Fmt, flags)),
+                ToString(arg10, language, _arg9Fmt, target, CheckPlurality(_arg9Fmt, flags)));
         }
         catch (FormatException ex)
         {
