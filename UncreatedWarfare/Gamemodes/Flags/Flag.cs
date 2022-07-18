@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags
 {
     public delegate void DiscoveryDelegate(ulong team);
-    public class Flag : IDisposable, ITranslationArgument
+    public class Flag : IDisposable, ITranslationArgument, IObjective
     {
         public delegate void EvaluatePointsDelegate(Flag flag, bool overrideInactiveCheck = false);
         public delegate bool IsContestedDelegate(Flag flag, out ulong winner);

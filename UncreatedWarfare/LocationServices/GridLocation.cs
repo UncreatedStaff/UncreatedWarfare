@@ -11,7 +11,7 @@ public readonly struct GridLocation : ITranslationArgument
     public readonly byte Index;
     private readonly string _toStringCache;
     /// <exception cref="ArgumentOutOfRangeException"/>
-    internal unsafe GridLocation(byte x, byte y, byte index)
+    private unsafe GridLocation(byte x, byte y, byte index)
     {
         if (index is > 9)
             throw new ArgumentOutOfRangeException(nameof(index), "Index must either be 0 or 1-9 inclusive.");
@@ -22,13 +22,13 @@ public readonly struct GridLocation : ITranslationArgument
         X = x;
         Y = y;
         Index = index;
+        ++y;
         int len = y > 9 ? 5 : 4;
         if (index == 0)
             len -= 2;
         char* ptr = stackalloc char[len];
 
         ptr[0] = (char)(x + 65);
-        ++y;
         if (y > 9)
         {
             ptr[1] = '1';
@@ -39,8 +39,8 @@ public readonly struct GridLocation : ITranslationArgument
         if (index != 0)
         {
             int a = len == 5 ? 3 : 2;
-            ptr[++a] = '-';
-            ptr[a] = (char)(index + 48);
+            ptr[a] = '-';
+            ptr[a + 1] = (char)(index + 48);
         }
 
         _toStringCache = new string(ptr, 0, len);
@@ -59,10 +59,18 @@ public readonly struct GridLocation : ITranslationArgument
         if (xc > 96) xc -= (char)32;
         byte x = (byte)(xc - 65);
         byte y;
-        if (value.Length > 2 && (int)value[2] is > 47 and < 58)
-            y = (byte)((value[1] - 48) * 10 + (byte)(value[2] - 48));
+        if ((int)value[1] is > 47 and < 58)
+        {
+            if (value.Length > 2 && (int)value[2] is > 47 and < 58)
+                y = (byte)((value[1] - 48) * 10 + (value[2] - 49));
+            else
+                y = (byte)(value[1] - 49);
+        }
         else
-            y = (byte)(value[2] - 48);
+        {
+            location = default;
+            return false;
+        }
         byte index = 0;
         if (value.Length < 5)
             goto rtnTrue;

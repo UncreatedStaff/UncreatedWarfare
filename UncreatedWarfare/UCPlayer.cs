@@ -600,22 +600,22 @@ public struct OfflinePlayer : IPlayer
         if (format is null) goto end;
         
         if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName;
+            return (_names ??= F.GetPlayerOriginalNames(_s64)).CharacterName;
         else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).NickName;
+            return (_names ??= F.GetPlayerOriginalNames(_s64)).NickName;
         else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).PlayerName;
+            return (_names ??= F.GetPlayerOriginalNames(_s64)).PlayerName;
         else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
             return _s64.ToString(Data.Locale);
         else
         {
             string hex = TeamManager.GetTeamHexColor(PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0);
             if (format.Equals(UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName, flags);
+                return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).CharacterName, flags);
             else if (format.Equals(UCPlayer.COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, (_names ??= Data.DatabaseManager.GetUsernames(_s64)).NickName, flags);
+                return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).NickName, flags);
             else if (format.Equals(UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, (_names ??= Data.DatabaseManager.GetUsernames(_s64)).PlayerName, flags);
+                return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).PlayerName, flags);
             else if (format.Equals(UCPlayer.COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, _s64.ToString(Data.Locale), flags);
         }

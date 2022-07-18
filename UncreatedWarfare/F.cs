@@ -790,13 +790,26 @@ public static class F
         {
             SteamPlayer? pl = PlayerTool.getSteamPlayer(player);
             if (pl == default)
-                return Data.DatabaseManager.GetUsernames(player);
+            {
+                try
+                {
+                    return Data.DatabaseManager.GetUsernames(player);
+                }
+                catch (Exception ex)
+                {
+                    if (!ex.Message.Equals("Not connected", StringComparison.Ordinal))
+                        throw ex;
+                    string tname = player.ToString(Data.Locale);
+                    return new FPlayerName() { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
+                }
+            }
             else return new FPlayerName()
             {
                 CharacterName = pl.playerID.characterName,
                 NickName = pl.playerID.nickName,
                 PlayerName = pl.playerID.playerName,
-                Steam64 = player
+                Steam64 = player,
+                WasFound = true
             };
         }
     }
@@ -1074,52 +1087,6 @@ public static class F
     /// Finds the 2D distance between two Vector3's x and z components.
     /// </summary>
     public static float SqrDistance2D(Vector3 a, Vector3 b) => Mathf.Pow(b.x - a.x, 2) + Mathf.Pow(b.z - a.z, 2);
-
-    public static readonly char[] ALPHABET = new char[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z' };
-    public static GridLocation ToGridPosition(Vector3 pos)
-    {
-        if (!_setGridConstants) SetGridPositionConstants();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        float x = Level.size / 2 + _toMapCoordsMultiplier * pos.x;
-        float y = Level.size / 2 - _toMapCoordsMultiplier * pos.z;
-
-        int xSqr;
-        bool isOut = false;
-        if (x < Level.border)
-        {
-            isOut = true;
-            xSqr = 0;
-        }
-        else if (x > Level.border + _gridSize)
-        {
-            isOut = true;
-            xSqr = _sqrsTotal - 1;
-        }
-        else
-            xSqr = Mathf.FloorToInt((x - Level.border) / _sqrSize);
-        int ySqr;
-        if (y < Level.border)
-        {
-            isOut = true;
-            ySqr = 0;
-        }
-        else if (y > Level.border + _gridSize)
-        {
-            isOut = true;
-            ySqr = _sqrsTotal - 1;
-        }
-        else
-            ySqr = Mathf.FloorToInt((y - Level.border) / _sqrSize);
-        int bigsqrx = Mathf.FloorToInt(xSqr / 3f);
-        int smlSqrDstX = xSqr % 3;
-        int bigsqry = Mathf.FloorToInt(ySqr / 3f);
-        int smlSqrDstY = ySqr % 3;
-        string rtn = ALPHABET[bigsqrx] + (bigsqry + 1).ToString();
-        if (!isOut) rtn += "-" + (smlSqrDstX + (2 - smlSqrDstY) * 3 + 1).ToString();
-        return new GridLocation((byte)bigsqrx, (byte)bigsqry, (byte)(smlSqrDstX + (2 - smlSqrDstY) * 3 + 1));
-    }
     public static bool TryParseAny(string input, Type type, out object value)
     {
         value = null!;

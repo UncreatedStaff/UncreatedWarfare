@@ -1,5 +1,6 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
+using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -21,6 +22,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -949,5 +951,36 @@ internal class _DebugCommand : Command
             ctx.Reply("Reset debugger");
         }
         else throw ctx.Reply("Debugger is not active.");
+    }
+
+    private void translationtest(CommandInteraction ctx)
+    {
+        InteractableItem itemtest = new InteractableItem();
+        itemtest.asset = Assets.find<ItemBarricadeAsset>(Guid.ParseExact("1f8856edf5964774aa2457b37e45603b", "N"));
+        L.Log("mwsui: " + Translation.ToStringHelper(itemtest, JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("barricade asset: " + Translation.ToStringHelper(Assets.find<ItemBarricadeAsset>(Guid.ParseExact("1f8856edf5964774aa2457b37e45603b", "N")), JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("barricade: " + Translation.ToStringHelper(UCBarricadeManager.AllBarricades.FirstOrDefault(), JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("vehicle: " + Translation.ToStringHelper(VehicleManager.vehicles.FirstOrDefault(), JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("null: " + Translation.ToStringHelper<VehicleManager>(null!, JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("GUID: " + Translation.ToStringHelper(Guid.NewGuid(), JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("v3: " + Translation.ToStringHelper(new Vector3(1.3f, 2.55f, 24.4f), JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("decimal: " + Translation.ToStringHelper(43.4m, JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("double: " + Translation.ToStringHelper(43.4d, JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("float: " + Translation.ToStringHelper(43.4f, JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("integer: " + Translation.ToStringHelper(43, JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("string: " + Translation.ToStringHelper("test string", JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("steam id: " + Translation.ToStringHelper(new CSteamID(76561199107830689ul), JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("pl1: " + Translation.ToStringHelper(Provider.clients.FirstOrDefault(), JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("pl2: " + Translation.ToStringHelper(new OfflinePlayer(76561199107830689ul), JSONMethods.DEFAULT_LANGUAGE, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, ctx.Caller, TranslationFlags.None));
+        Squad squad = new Squad("ALPHA", null!, 1, EBranch.INFANTRY);
+        L.Log("squad: " + Translation.ToStringHelper(squad, JSONMethods.DEFAULT_LANGUAGE, Squad.COLORED_NAME_FORMAT, ctx.Caller, TranslationFlags.None));
+        L.Log("color: " + Translation.ToStringHelper("ff33a4".Hex(), JSONMethods.DEFAULT_LANGUAGE, null, ctx.Caller, TranslationFlags.None));
+        L.Log("flag: " + Translation.ToStringHelper(Data.Is(out IFlagRotation rot) ? rot.Rotation.FirstOrDefault() : null, JSONMethods.DEFAULT_LANGUAGE, Flag.NAME_FORMAT_COLORED, ctx.Caller, TranslationFlags.None));
+        L.Log("eclass: " + Translation.ToStringHelper(EClass.SQUADLEADER, JSONMethods.DEFAULT_LANGUAGE, Flag.NAME_FORMAT_COLORED, ctx.Caller, TranslationFlags.None));
+        L.Log("eclass type: " + Translation.ToStringHelper(typeof(EClass), JSONMethods.DEFAULT_LANGUAGE, Flag.NAME_FORMAT_COLORED, ctx.Caller, TranslationFlags.None));
+        L.Log("int type: " + Translation.ToStringHelper(typeof(int), JSONMethods.DEFAULT_LANGUAGE, Flag.NAME_FORMAT_COLORED, ctx.Caller, TranslationFlags.None));
+        L.Log("guid type: " + Translation.ToStringHelper(typeof(Guid), JSONMethods.DEFAULT_LANGUAGE, Flag.NAME_FORMAT_COLORED, ctx.Caller, TranslationFlags.None));
+        L.Log("barr asset type: " + Translation.ToStringHelper(typeof(ItemBarricadeAsset), JSONMethods.DEFAULT_LANGUAGE, Flag.NAME_FORMAT_COLORED, ctx.Caller, TranslationFlags.None));
+        L.Log("timespan: " + Translation.ToStringHelper(TimeSpan.FromMinutes(14.8d), JSONMethods.DEFAULT_LANGUAGE, "hh\\:mm\\:ss", ctx.Caller, TranslationFlags.None));
     }
 }

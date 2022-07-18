@@ -78,7 +78,7 @@ namespace Uncreated.Warfare.Squads
         }
     }
 
-    public class Order : MonoBehaviour
+    public class Order : MonoBehaviour, ITranslationArgument
     {
         public UCPlayer Commander { get; private set; }
         public Squad Squad { get; private set; }
@@ -289,11 +289,6 @@ namespace Uncreated.Warfare.Squads
                         yield break;
                     }
                 }
-
-                if (counter % (30 / tickFrequency) == 0) // every 30 seconds
-                {
-
-                }
                 if (counter % (60 / tickFrequency) == 0) // every 60 seconds
                 {
                     foreach (UCPlayer player in Squad.Members)
@@ -324,6 +319,42 @@ namespace Uncreated.Warfare.Squads
             // TODO: Clear UI
             StopCoroutine(loop);
             Destroy(this);
+        }
+
+        public const string MESSAGE_FORMAT = "m";
+        public const string TYPE_FORMAT = "t";
+        public string Translate(string language, string? format, UCPlayer? target, TranslationFlags flags)
+        {
+            if (format is null || format.Equals(MESSAGE_FORMAT, StringComparison.Ordinal))
+            {
+                goto end;
+            }
+            else if (format.Equals(TYPE_FORMAT, StringComparison.Ordinal))
+            {
+                return Localization.TranslateEnum(Type, language);
+            }
+        end:
+            if (Formatting is null || Formatting.Length == 0)
+                return Message;
+            else
+            {
+                try
+                {
+                    return string.Format(Message, Formatting);
+                }
+                catch (Exception ex)
+                {
+                    string txt = "Error formatting order: " + Message + ": " + string.Join(", ", Formatting);
+                    if ((flags & TranslationFlags.ThrowMissingException) == TranslationFlags.ThrowMissingException)
+                        throw new ArgumentException("Format: " + txt, ex);
+                    else
+                    {
+                        L.LogError(txt);
+                        L.LogError(ex);
+                    }
+                    return Message;
+                }
+            }
         }
     }
 

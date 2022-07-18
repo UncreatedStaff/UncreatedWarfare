@@ -8,13 +8,14 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Components;
 
-public class Cache : MonoBehaviour, IFOB
+public class Cache : MonoBehaviour, IFOB, IObjective
 {
     public int Number;
     private string _name;
@@ -69,13 +70,9 @@ public class Cache : MonoBehaviour, IFOB
         Radius = 40;
 
         IsDiscovered = false;
-
-        _gc = new GridLocation(Position);
-        _cl = (LevelNodes.nodes
-            .Where(n => n.type == ENodeType.LOCATION)
-            .Aggregate((n1, n2) =>
-                (n1.point - Position).sqrMagnitude <= (n2.point - Position).sqrMagnitude ? n1 : n2) as LocationNode)?
-            .name ?? string.Empty;
+        Vector3 pos = Position;
+        _gc = new GridLocation(in pos);
+        _cl = F.GetClosestLocation(pos);
 
         if (Data.Is(out IFlagRotation fg))
         {

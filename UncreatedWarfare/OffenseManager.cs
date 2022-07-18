@@ -671,7 +671,7 @@ public static class OffenseManager
         FPlayerName name;
         FPlayerName callerName;
         uint ipv4;
-        Task.Run((Func<Task>)(async () =>
+        Task.Run(async () =>
         {
             List<byte[]> hwids = await GetAllHWIDs(targetId);
             await UCWarfare.ToUpdate();
@@ -702,12 +702,12 @@ public static class OffenseManager
             {
                 if (callerId == 0)
                 {
-                    L.Log((string)Warfare.Localization.Translate("ban_permanent_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("ban_permanent_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
                     Chat.Broadcast("ban_permanent_broadcast_operator", name.CharacterName);
                 }
                 else
                 {
-                    L.Log((string)Warfare.Localization.Translate("ban_permanent_console", (ulong)0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
+                    L.Log(Localization.Translate("ban_permanent_console", (ulong)0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
                         callerId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
                     Chat.BroadcastToAllExcept(callerId, "ban_permanent_broadcast", name.CharacterName, callerName.CharacterName);
                     caller?.SendChat("ban_permanent_feedback", name.CharacterName);
@@ -715,16 +715,16 @@ public static class OffenseManager
             }
             else
             {
-                string time = Warfare.Localization.GetTimeFromSeconds(duration, JSONMethods.DEFAULT_LANGUAGE);
+                string time = Localization.GetTimeFromSeconds(duration, JSONMethods.DEFAULT_LANGUAGE);
                 if (callerId == 0)
                 {
-                    L.Log((string)Warfare.Localization.Translate("ban_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("ban_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
                     bool f = false;
-                    foreach (LanguageSet set in Warfare.Localization.EnumerateLanguageSets())
+                    foreach (LanguageSet set in Localization.EnumerateLanguageSets())
                     {
                         if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
                         {
-                            time = Warfare.Translation.GetTimeFromSeconds(duration, set.Language);
+                            time = Localization.GetTimeFromSeconds(duration, set.Language);
                             f = true;
                         }
                         Chat.Broadcast(set, "ban_broadcast_operator", name.PlayerName, time);
@@ -732,26 +732,26 @@ public static class OffenseManager
                 }
                 else
                 {
-                    L.Log((string)Warfare.Localization.Translate("ban_console", (ulong)0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
+                    L.Log(Localization.Translate("ban_console", (ulong)0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
                         callerId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
                     bool f = false;
-                    foreach (LanguageSet set in Warfare.Localization.EnumerateLanguageSetsExclude(callerId))
+                    foreach (LanguageSet set in Localization.EnumerateLanguageSetsExclude(callerId))
                     {
                         if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
                         {
-                            time = Warfare.Translation.GetTimeFromSeconds(duration, set.Language);
+                            time = Localization.GetTimeFromSeconds(duration, set.Language);
                             f = true;
                         }
                         Chat.Broadcast(set, "ban_broadcast", name.CharacterName, callerName.CharacterName, time);
                     }
                     if (f)
-                        time = Warfare.Translation.GetTimeFromSeconds(duration, callerId);
+                        time = Localization.GetTimeFromSeconds(duration, callerId);
                     else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
-                        time = Warfare.Translation.GetTimeFromSeconds(duration, lang);
+                        time = Localization.GetTimeFromSeconds(duration, lang);
                     caller?.SendChat("ban_feedback", name.CharacterName, time);
                 }
             }
-        }));
+        });
     }
     public static void KickPlayer(ulong target, ulong caller, string reason)
     {

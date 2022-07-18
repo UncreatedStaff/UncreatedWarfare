@@ -1,7 +1,9 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
@@ -9,7 +11,9 @@ namespace Uncreated.Warfare;
 
 public class Translation
 {
-    private const string NULL = "<#569cd6><b>null</b></color>";
+    private const string NULL_CLR_1 = "<#569cd6><b>null</b></color>";
+    private const string NULL_CLR_2 = "<color=#569cd6><b>null</b></color>";
+    private const string NULL_NO_CLR = "null";
     private readonly TranslationFlags _flags;
     private TranslationValue DefaultData;
     private TranslationValue[] Data;
@@ -143,7 +147,7 @@ public class Translation
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected static string ToStringHelper<T>(T value, string language, string? format, UCPlayer? target, TranslationFlags flags) => ToStringHelperClass<T>.ToString(value, language, format, target, Warfare.Data.Locale, flags);
+    public static string ToStringHelper<T>(T value, string language, string? format, UCPlayer? target, TranslationFlags flags) => ToStringHelperClass<T>.ToString(value, language, format, target, Warfare.Data.Locale, flags);
 
     private static readonly Type[] tarr1 = new Type[] { typeof(string), typeof(IFormatProvider) };
     private static readonly Type[] tarr2 = new Type[] { typeof(string) };
@@ -151,19 +155,24 @@ public class Translation
 
     private static class ToStringHelperClass<T>
     {
-        private static readonly Func<string, IFormatProvider, string>? toStringFunc1;
-        private static readonly Func<string, string>? toStringFunc2;
-        private static readonly Func<IFormatProvider, string>? toStringFunc3;
+        private static readonly Func<T, string, IFormatProvider, string>? toStringFunc1;
+        private static readonly Func<T, string, string>? toStringFunc2;
+        private static readonly Func<T, IFormatProvider, string>? toStringFunc3;
+        private static readonly Func<T, string>? toStringFunc4;
         private static readonly int type;
 
         public static string ToString(T value, string language, string? format, UCPlayer? target, IFormatProvider locale, TranslationFlags flags)
         {
-            if (value is null) return NULL;
+            if (value is null)
+                return Null(flags);
+
+            if (value is string str)
+                return str;
             return type switch
             {
-                1 => toStringFunc1!(format!, locale),
-                2 => toStringFunc2!(format!),
-                3 => toStringFunc3!(locale),
+                1 => toStringFunc1!(value, format!, locale),
+                2 => toStringFunc2!(value, format!),
+                3 => toStringFunc3!(value, locale),
                 4 => (value as ITranslationArgument)!.Translate(language, format, target, flags),
                 5 => (value as UnityEngine.Object)!.name,
                 6 => value is Color clr ? clr.Hex() : value.ToString(),
@@ -174,6 +183,11 @@ public class Translation
                 11 => PlayerToString((value as SteamPlayerID)!, flags, format),
                 12 => value is Type t ? (t.IsEnum ? Localization.TranslateEnumName(t, language) : (t.IsArray ? (t.GetElementType().Name + " Array") : TypeToString(t))) : value.ToString(),
                 13 => Localization.TranslateEnum(value, language),
+                14 => (value as Asset)?.FriendlyName ?? value.ToString(),
+                15 => toStringFunc4!(value),
+                16 => (value as BarricadeData)?.barricade?.asset?.itemName ?? value.ToString(),
+                17 => (value as StructureData)?.structure?.asset?.itemName ?? value.ToString(),
+                18 => value is Guid guid ? guid.ToString(format ?? "N", locale) : value.ToString(),
                 _ => value.ToString(),
             };
         }
@@ -209,7 +223,7 @@ public class Translation
         private static string PlayerToString(Player player, TranslationFlags flags, string? format)
         {
             if (player is null)
-                return NULL;
+                return Null(flags);
             else if (!player.isActiveAndEnabled)
                 return player.channel.owner.playerID.steamID.m_SteamID.ToString(Warfare.Data.Locale);
             Players.FPlayerName names = F.GetPlayerOriginalNames(player);
@@ -236,7 +250,7 @@ public class Translation
         }
         private static string PlayerToString(SteamPlayerID player, TranslationFlags flags, string? format)
         {
-            if (player is null) return NULL;
+            if (player is null) return Null(flags);
             SteamPlayer? pl = PlayerTool.getSteamPlayer(player.steamID.m_SteamID);
             if (pl is not null) return PlayerToString(pl.player, flags, format);
 
@@ -255,7 +269,14 @@ public class Translation
         }
         static ToStringHelperClass()
         {
+            DynamicMethod dm;
+            ILGenerator il;
             Type t = typeof(T);
+            if (typeof(string).IsAssignableFrom(t))
+            {
+                type = 0;
+                return;
+            }
             if (t.IsEnum)
             {
                 type = 13;
@@ -284,6 +305,75 @@ public class Translation
             if (typeof(SteamPlayerID).IsAssignableFrom(t))
             {
                 type = 11;
+                return;
+            }
+            if (typeof(Asset).IsAssignableFrom(t))
+            {
+                type = 14;
+                return;
+            }
+
+            if (typeof(BarricadeData).IsAssignableFrom(t))
+            {
+                type = 16;
+                return;
+            }
+            if (typeof(StructureData).IsAssignableFrom(t))
+            {
+                type = 17;
+                return;
+            }
+            if (typeof(Guid).IsAssignableFrom(t))
+            {
+                type = 18;
+                return;
+            }
+            PropertyInfo info1 = t
+                .GetProperties(BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                .FirstOrDefault(x => x.Name.IndexOf("asset", StringComparison.OrdinalIgnoreCase) != -1
+                                     && typeof(Asset).IsAssignableFrom(x.PropertyType)
+                                     && x.GetGetMethod(true) != null
+                                     && Attribute.GetCustomAttribute(x, typeof(ObsoleteAttribute)) is null);
+
+            if (info1 == null)
+            {
+                FieldInfo info2 = t
+                    .GetFields(BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                    .FirstOrDefault(x => x.Name.IndexOf("asset", StringComparison.OrdinalIgnoreCase) != -1
+                                         && typeof(Asset).IsAssignableFrom(x.FieldType)
+                                         && Attribute.GetCustomAttribute(x, typeof(ObsoleteAttribute)) is null);
+
+                if (info2 != null)
+                {
+                    dm = new DynamicMethod("GetAssetName",
+                        MethodAttributes.Static | MethodAttributes.Public | MethodAttributes.Final,
+                        CallingConventions.Standard, typeof(string), new Type[] { t }, t,
+                        true);
+                    dm.DefineParameter(1, ParameterAttributes.None, "value");
+                    il = dm.GetILGenerator();
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldfld, info2);
+                    il.EmitCall(OpCodes.Callvirt, typeof(Asset).GetProperty(nameof(Asset.FriendlyName), BindingFlags.Instance | BindingFlags.Public).GetGetMethod(false), null);
+                    il.Emit(OpCodes.Ret);
+                    toStringFunc4 = (Func<T, string>)dm.CreateDelegate(typeof(Func<T, string>));
+                    type = 15;
+                    return;
+                }
+            }
+            else
+            {
+                dm = new DynamicMethod("GetAssetName",
+                    MethodAttributes.Static | MethodAttributes.Public | MethodAttributes.Final,
+                    CallingConventions.Standard, typeof(string), new Type[] { t }, t,
+                    true);
+                dm.DefineParameter(1, ParameterAttributes.None, "value");
+                il = dm.GetILGenerator();
+                il.Emit(OpCodes.Ldarg_0);
+                il.EmitCall(OpCodes.Callvirt, info1.GetGetMethod(true), null);
+                il.EmitCall(OpCodes.Callvirt, typeof(Asset).GetProperty(nameof(Asset.FriendlyName), BindingFlags.Instance | BindingFlags.Public).GetGetMethod(), null);
+                il.Emit(OpCodes.Ret);
+                toStringFunc4 = (Func<T, string>)dm.CreateDelegate(typeof(Func<T, string>));
+                type = 15;
                 return;
             }
             if (typeof(UnityEngine.Object).IsAssignableFrom(t))
@@ -321,23 +411,61 @@ public class Translation
                     else
                     {
                         type = 3;
-                        toStringFunc3 =
-                            (Func<IFormatProvider, string>)info.CreateDelegate(typeof(Func<IFormatProvider, string>));
+                        dm = new DynamicMethod("ToStringHelper",
+                            MethodAttributes.Public | MethodAttributes.Static, CallingConventions.Standard,
+                            typeof(string), new Type[] { t, typeof(IFormatProvider) }, typeof(ToStringHelperClass<T>),
+                            true);
+                        dm.DefineParameter(1, ParameterAttributes.None, "value");
+                        dm.DefineParameter(2, ParameterAttributes.None, "provider");
+                        il = dm.GetILGenerator();
+                        if (typeof(T).IsValueType)
+                            il.Emit(OpCodes.Ldarga_S, 0);
+                        else
+                            il.Emit(OpCodes.Ldarg_0, 0);
+                        il.Emit(OpCodes.Ldarg_1);
+                        il.Emit(OpCodes.Callvirt, info);
+                        il.Emit(OpCodes.Ret);
+                        toStringFunc3 = (Func<T, IFormatProvider, string>)dm.CreateDelegate(typeof(Func<T, IFormatProvider, string>));
                     }
                 }
                 else
                 {
-
                     type = 2;
-                    toStringFunc2 = (Func<string, string>)info.CreateDelegate(typeof(Func<string, string>));
+                    dm = new DynamicMethod("ToStringHelper",
+                        MethodAttributes.Public | MethodAttributes.Static, CallingConventions.Standard, typeof(string), new Type[] { t, typeof(string) }, typeof(ToStringHelperClass<T>),
+                        true);
+                    dm.DefineParameter(1, ParameterAttributes.None, "value");
+                    dm.DefineParameter(2, ParameterAttributes.None, "format");
+                    il = dm.GetILGenerator();
+                    if (typeof(T).IsValueType)
+                        il.Emit(OpCodes.Ldarga_S, 0);
+                    else
+                        il.Emit(OpCodes.Ldarg_0, 0);
+                    il.Emit(OpCodes.Ldarg_1);
+                    il.Emit(OpCodes.Callvirt, info);
+                    il.Emit(OpCodes.Ret);
+                    toStringFunc2 = (Func<T, string, string>)dm.CreateDelegate(typeof(Func<T, string, string>));
                 }
             }
             else
             {
                 type = 1;
-                toStringFunc1 =
-                    (Func<string, IFormatProvider, string>)info.CreateDelegate(
-                        typeof(Func<string, IFormatProvider, string>));
+                dm = new DynamicMethod("ToStringHelper",
+                    MethodAttributes.Public | MethodAttributes.Static, CallingConventions.Standard, typeof(string), new Type[] { t, typeof(string), typeof(IFormatProvider) }, typeof(ToStringHelperClass<T>),
+                    true);
+                dm.DefineParameter(1, ParameterAttributes.None, "value");
+                dm.DefineParameter(2, ParameterAttributes.None, "format");
+                dm.DefineParameter(3, ParameterAttributes.None, "provider");
+                il = dm.GetILGenerator();
+                if (typeof(T).IsValueType)
+                    il.Emit(OpCodes.Ldarga_S, 0);
+                else
+                    il.Emit(OpCodes.Ldarg_0, 0);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Ldarg_2);
+                il.Emit(OpCodes.Callvirt, info);
+                il.Emit(OpCodes.Ret);
+                toStringFunc1 = (Func<T, string, IFormatProvider, string>)dm.CreateDelegate(typeof(Func<T, string, IFormatProvider, string>));
             }
         }
     }
@@ -487,6 +615,12 @@ public class Translation
         1 => Flags | TranslationFlags.Team1,
         _ => Flags
     };
+    private static string Null(TranslationFlags flags) => 
+        ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
+            ? NULL_NO_CLR
+            : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
+                ? NULL_CLR_2
+                : NULL_CLR_1);
 }
 
 [Flags]

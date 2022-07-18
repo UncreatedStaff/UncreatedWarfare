@@ -5,12 +5,14 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Cache = Uncreated.Warfare.Components.Cache;
 
 namespace Uncreated.Warfare;
 internal class DefaultTranslations
@@ -235,8 +237,8 @@ internal class DefaultTranslations
     public static readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess  = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
     public static readonly Translation<Cooldown> KitOnCooldown                = new Translation<Cooldown>(ERROR_COLOR + "You can request this kit again in: <#bafeff>{0}</color>.", Cooldown.TIMESTAMP_LEFT_FORMAT);
     public static readonly Translation<Cooldown> KitOnGlobalCooldown          = new Translation<Cooldown>(ERROR_COLOR + "You can request another kit again in: <#bafeff>{0}</color>.", Cooldown.TIMESTAMP_LEFT_FORMAT);
-    public static readonly Translation<IPlayer, UCPlayer, Kit> KitAccessGiven        = new Translation<IPlayer, UCPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
-    public static readonly Translation<IPlayer, UCPlayer, Kit> KitAccessRevoked      = new Translation<IPlayer, UCPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven         = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked       = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
     public static readonly Translation<string, Type, string> KitInvalidPropertyValue = new Translation<string, Type, string>(ERROR_COLOR + "<#fff>{2}</color> isn't a valid value for <#eee>{0}</color> (<#aaa>{1}</color>).");
     public static readonly Translation<EClass, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<EClass, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg2Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, arg3Fmt: UCPlayer.STEAM_64_FORMAT, arg4Fmt: Kit.ID_FORMAT);
     #endregion
@@ -292,69 +294,66 @@ internal class DefaultTranslations
     public static readonly Translation<Squad> OrderDefenseMarkerIns = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to defend.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation<Squad> OrderBuildFOBError    = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> you want {0} to build a <color=#d1bd90>FOB</color>.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation<Squad> OrderMoveError        = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> you want {0} to move to.", Squad.COLORED_NAME_FORMAT);
-    public static readonly Translation OrderBuildFOBExists          = new Translation(ERROR_COLOR + "There is already a friendly FOB near that marker.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation OrderBuildFOBExists          = new Translation(ERROR_COLOR + "There is already a friendly FOB near that marker.");
+    public static readonly Translation OrderBuildFOBTooMany         = new Translation(ERROR_COLOR + "There are already too many FOBs on your team.");
+    public static readonly Translation OrderSquadTooClose           = new Translation(ERROR_COLOR + "{0} is already near that marker. Try placing it further away.");
+    public static readonly Translation<Order> OrderSent                 = new Translation<Order>("<#9fa1a6>Order sent to {0}: <#9dbccf>{1}</color>.");
+    public static readonly Translation<IPlayer, Order> OrderReceived    = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
+    public static readonly Translation<IPlayer> OrderUICommander        = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<Order> OrderUIMessage            = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
+    public static readonly Translation<TimeSpan> OrderUITimeLeft        = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
+    public static readonly Translation<int> OrderUIReward               = new Translation<int>("- Reward: {0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<Flag> OrderUIAttackObjective     = new Translation<Flag>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIAttackFlag          = new Translation<Flag>("Attack: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIDefendObjective     = new Translation<Flag>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIDefendFlag          = new Translation<Flag>("Defend: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Cache> OrderUIAttackCache        = new Translation<Cache>("Attack: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<Cache> OrderUIDefendCache        = new Translation<Cache>("Defend: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<string> OrderUIAttackNearArea    = new Translation<string>("Attack near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> OrderUIDefendNearArea    = new Translation<string>("Defend near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<Flag> OrderUIBuildFobFlag        = new Translation<Flag>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<string> OrderUIBuildFobNearArea  = new Translation<string>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Cache> OrderUIBuildFobNearCache  = new Translation<Cache>("Build a FOB near {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    #endregion
+
+    #region Rallies
+    public static readonly Translation RallySuccess         = new Translation("<#959c8c>You have <#5eff87>rallied</color> with your squad.");
+    public static readonly Translation RallyActive          = new Translation("<#959c8c>Your squad has an active <#5eff87>RALLY POINT</color>. Do <#bfbfbf>/rally</color> to rally with your squad.");
+    public static readonly Translation<int> RallyWait       = new Translation<int>("<#959c8c>Standby for <#5eff87>RALLY</color> in: <#ffe4b5>{0}s</color>. Do <#a3b4c7>/rally cancel</color> to abort.");
+    public static readonly Translation RallyAbort           = new Translation("<#a1a1a1>Cancelled rally deployment.");
+    public static readonly Translation RallyObstructed      = new Translation("<#959c8c><#bfbfbf>RALLY</color> is no longer available - there are enemies nearby.");
+    public static readonly Translation RallyNoSquadmates    = new Translation("<#99918d>You need more squad members to use a <#bfbfbf>rally point</color>.");
+    public static readonly Translation RallyNotSquadleader  = new Translation("<#99918d>You must be a <color=#cedcde>SQUAD LEADER</color> in order to place this.");
+    public static readonly Translation RallyAlreadyQueued   = new Translation("<#99918d>You are already waiting on <#5eff87>rally</color> deployment. Do <#a3b4c7>/rally cancel</color> to abort.");
+    public static readonly Translation RallyNotQueued       = new Translation("<#959c8c>You aren't waiting on a <#5eff87>rally</color> deployment.");
+    public static readonly Translation RallyNotInSquad      = new Translation("<#959c8c>You must be in a squad to use <#5eff87>rallies</color>.");
+    public static readonly Translation RallyObstructedPlace = new Translation("<#959c8c>This rally point is obstructed, find a more open place to put it.");
+    public static readonly Translation<TimeSpan> RallyUI    = new Translation<TimeSpan>("<#5eff87>RALLY</color> {0}", TranslationFlags.UnityUI, "mm:ss");
+    #endregion
+
+    #region Time
+    public static readonly Translation TimeSecondSingle = new Translation("second", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeSecondPlural = new Translation("seconds", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMinuteSingle = new Translation("minute", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMinutePlural = new Translation("minutes", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeHourSingle   = new Translation("hour", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeHourPlural   = new Translation("hours", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeDaySingle    = new Translation("day", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeDayPlural    = new Translation("days", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeWeekSingle   = new Translation("week", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeWeekPlural   = new Translation("weeks", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMonthSingle  = new Translation("month", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMonthsPlural = new Translation("months", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeYearSingle   = new Translation("year", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeYearsPlural  = new Translation("years", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeAnd          = new Translation("and", TranslationFlags.UnityUINoReplace);
+    #endregion
+
+    #region FOBs and Buildables
     #endregion
 
     Dictionary<string, string> _translations = new Dictionary<string, string>()
     {
-            #region OrderCommand
-            { "order_e_buildfob_fobexists", "<color=#9fa1a6>There is already a friendly FOB near that marker.</color>" },
-            { "order_e_buildfob_foblimit", "<color=#9fa1a6>The max FOB limit has been reached.</color>" },
-            { "order_e_squadtooclose", "<color=#9fa1a6>{0} is already near that marker. Try placing it further away.</color>" },
-            { "order_e_raycast", "<color=#b58b86>.</color>" },
-            { "order_s_sent", "<color=#9fa1a6>Order sent to {0}: <color=#9dbccf>{1}</color></color>" },
-            { "order_s_received", "<color=#9fa1a6><color=#9dbccf>{0}</color> has given your squad new orders:\n<color=#d4d4d4>{1}</color></color>" },
-            { "order_ui_commander", "Orders from <color=#a7becf>{0}</color>:" },
-            { "order_ui_text", "{0}" },
-            { "order_ui_time", "- {0}m left" },
-            { "order_ui_reward", "- Reward: {0}" },
-            { "order_attack_objective", "Attack your objective: {0}." },
-            { "order_attack_flag", "Attack {0}." },
-            { "order_defend_objective", "Defend your objective: {0}." },
-            { "order_defend_flag", "Defend {0}." },
-            { "order_attack_cache", "Attack {0}." },
-            { "order_defend_cache", "Defend {0}." },
-            { "order_attack_area", "Attack near {0}." },
-            { "order_defend_area", "Defend near {0}." },
-            { "order_buildfob_flag", "Build a FOB on {0}." },
-            { "order_buildfob_cache", "Build a FOB near {0}." },
-            { "order_buildfob_area", "Build a FOB in {0}." },
-            #endregion
-            
-            #region RallyCommand
-            { "rally_success", "<color=#959c8c>You have <color=#5eff87>rallied</color> with your squad.</color>" },
-            { "rally_active", "<color=#959c8c>Squad <color=#5eff87>RALLY POINT</color> is now active. Do '<color=#bfbfbf>/rally</color>' to rally with your squad.</color>" },
-            { "rally_wait", "<color=#959c8c>Standby for <color=#5eff87>RALLY</color> in: <color=#ffe4b5>{0}s</color>. Do '<color=#a3b4c7>/rally cancel</color>' to abort.</color>" },
-            { "rally_aborted", "<color=#a1a1a1>Cancelled rally deployment.</color>" },
-            { "rally_cancelled", "<color=#959c8c><color=#bfbfbf>RALLY</color> is no longer available - there are enemies nearby.</color>" },
-            { "rally_e_unavailable", "<color=#ad9990>Rally is unavailable right now.</color>" },
-            { "rally_e_enemies", "<color=#ad9990>There are enemies nearby.</color>" },
-            { "rally_e_nosquadmember", "<color=#99918d>You need at least <color=#cedcde>1 SQUAD MEMBER</color> near you in order to place this.</color>" },
-            { "rally_e_notsquadleader", "<color=#99918d>You must be a <color=#cedcde>SQUAD LEADER</color> in order to place this.</color>" },
-            { "rally_e_alreadywaiting", "<color=#959c8c>You are already waiting on rally deployment. Do '<color=#a3b4c7>/rally cancel</color>' to abort.</color>" },
-            { "rally_e_notwaiting", "<color=#959c8c>You are not awaiting rally deployment.</color>" },
-            { "rally_e_notinsquad", "<color=#959c8c>You are not in a squad.</color>" },
-            { "rally_e_obstructed", "<color=#959c8c>This rally point is obstructed, find a more open place to put it.</color>" },
-            { "rally_ui", "<color=#5eff87>RALLY</color> {0}" },
-            { "rally_time_value", " {0:mm\\:ss}" },
-            #endregion
-            
-            #region Time Formatting
-            { "time_second", "second" },
-            { "time_seconds", "seconds" },
-            { "time_minute", "minute" },
-            { "time_minutes", "minutes" },
-            { "time_hour", "hour" },
-            { "time_hours", "hours" },
-            { "time_day", "day" },
-            { "time_days", "days" },
-            { "time_month", "month" },
-            { "time_months", "months" },
-            { "time_year", "year" },
-            { "time_years", "years" },
-            { "time_and", "and" },
-            #endregion
-            
             #region FOB System
             { "build_error_notinradius", "<color=#ffab87>This can only be placed inside FOB RADIUS.</color>" },
             { "build_error_tick_notinradius", "<color=#ffab87>There's no longer a friendly FOB nearby.</color>" },

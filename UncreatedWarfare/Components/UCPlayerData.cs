@@ -440,7 +440,7 @@ public class UCPlayerData : MonoBehaviour
         }
         else if (isSpecialFOB)
         {
-            position = special!.Point;
+            position = special!.Position;
             ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + special.Name + " TEAM " + Teams.TeamManager.TranslateName(special.Team, 0), player);
         }
         else if (structure is Vector3 vector)

@@ -88,7 +88,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         public override string ToString() =>
             $"Preset {_key}. Team: {_team}, Flag: {_flag}, State: {_state}";
     }
-    public override IQuestState GetState() => GetNewState();
+    public override sealed IQuestState GetState() => GetNewState();
     public TState GetNewState()
     {
 #if DEBUG
@@ -113,8 +113,8 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
     public override string ToString() =>
         $"{QuestType} quest data: {_presets?.Length ?? -1} presets, daily quest: {CanBeDailyQuest}, translations: {Translations?.FirstOrDefault().Value ?? "null"}.\n" +
         $"    Presets: {(_presets == null ? "null array" : string.Join(", ", _presets.Select(x => x.ToString())))}";
-    public override BaseQuestTracker? CreateTracker(UCPlayer player) => CreateQuestTracker(player);
-    public override BaseQuestTracker? GetTracker(UCPlayer? player, ref IQuestState state)
+    public override sealed BaseQuestTracker? CreateTracker(UCPlayer player) => CreateQuestTracker(player);
+    public override sealed BaseQuestTracker? GetTracker(UCPlayer? player, ref IQuestState state)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -127,7 +127,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         }
         return null;
     }
-    public override BaseQuestTracker? GetTracker(UCPlayer? player, IQuestPreset preset)
+    public override sealed BaseQuestTracker? GetTracker(UCPlayer? player, IQuestPreset preset)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -143,7 +143,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         }
         return null;
     }
-    public override IQuestPreset ReadPreset(ref Utf8JsonReader reader) => ReadPresetIntl(ref reader);
+    public override sealed IQuestPreset ReadPreset(ref Utf8JsonReader reader) => ReadPresetIntl(ref reader);
     public Preset ReadPresetIntl(ref Utf8JsonReader reader)
     {
         Guid key = default;
@@ -221,7 +221,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         }
         return new Preset(key, state!, varTeam, flag);
     }
-    public override void ReadPresets(ref Utf8JsonReader reader)
+    public override sealed void ReadPresets(ref Utf8JsonReader reader)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -246,7 +246,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         _presets = presets.ToArray();
         presets.Clear();
     }
-    public override IQuestPreset CreateRandomPreset(ushort flag = 0)
+    public override sealed IQuestPreset CreateRandomPreset(ushort flag = 0)
     {
         return new Preset(Guid.NewGuid(), GetNewState(), 0, flag);
     }

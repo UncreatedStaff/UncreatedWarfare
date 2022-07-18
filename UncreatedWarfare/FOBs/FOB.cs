@@ -132,8 +132,8 @@ public class FOB : IFOB
     private FOBComponent component;
     public int Number;
     private string _name;
-    private string _cl;
-    private GridLocation _gc;
+    private readonly string _cl;
+    private readonly GridLocation _gc;
     public string Name { get => _name; set => _name = value; }
     public GridLocation GridLocation => _gc;
     public string ClosestLocation => _cl;
@@ -244,7 +244,7 @@ public class FOB : IFOB
         Ammo = 0;
         Build = 0;
 
-        _gc = F.ToGridPosition(Position);
+        _gc = new GridLocation(Position);
         _cl = F.GetClosestLocation(Position);
 
         if (Data.Is(out IFlagRotation fg))
@@ -253,7 +253,7 @@ public class FOB : IFOB
             if (flag != null)
             {
                 if (!string.IsNullOrEmpty(flag.ShortName))
-                    ClosestLocation = flag.ShortName;
+                    _cl = flag.ShortName;
             }
         }
 
