@@ -8,7 +8,7 @@ namespace Uncreated.Warfare.Commands;
 public class RangeCommand : Command
 {
     private const string SYNTAX = "/range";
-    private const string HELP = "Shows you your ditance from your squad leader's marker.";
+    private const string HELP = "Shows you your distance from your squad leader's marker.";
 
     public RangeCommand() : base("range", EAdminType.MEMBER) { }
 
