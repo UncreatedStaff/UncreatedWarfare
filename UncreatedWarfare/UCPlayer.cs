@@ -307,7 +307,7 @@ public class UCPlayer : IPlayer
     public ushort LastPingID { get; internal set; }
     public int SuppliesUnloaded;
     public SteamPlayer SteamPlayer => Player.channel.owner;
-    public void Message(string text, params string[] formatting) => Player.Message(text, formatting);
+    public void Message(string text, params string[] formatting) => Player.SendChat(text, formatting);
     public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
     public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
 

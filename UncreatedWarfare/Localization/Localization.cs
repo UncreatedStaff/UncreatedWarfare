@@ -1771,7 +1771,7 @@ public static class Localization
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    languages.Add(new LanguageSet(lang, pl) { Team = team });
             }
             for (int i = 0; i < languages.Count; i++)
             {
@@ -1803,7 +1803,7 @@ public static class Localization
                     }
                 }
                 if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
+                    languages.Add(new LanguageSet(lang, pl) { Team = squad.Team });
             }
             for (int i = 0; i < languages.Count; i++)
             {
@@ -2009,6 +2009,7 @@ public static class Localization
 public struct LanguageSet : IEnumerator<UCPlayer>
 {
     public string Language;
+    public ulong Team = 0;
     public List<UCPlayer> Players;
     private int nextIndex;
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>

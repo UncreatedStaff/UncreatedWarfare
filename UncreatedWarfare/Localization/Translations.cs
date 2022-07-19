@@ -1034,8 +1034,6 @@ public enum TranslationFlags
     NoColor = 32,
     /// <summary>Tells the translator to translate the messsage for each player when broadcasted.</summary>
     PerPlayerTranslation = 64,
-    /// <summary>Tells the translator to translate the message for each team when broadcasted.</summary>
-    PerTeamTranslation = 128,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 1.</summary>
     Team1 = 256,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 2.</summary>

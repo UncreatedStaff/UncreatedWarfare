@@ -957,6 +957,6 @@ internal class _DebugCommand : Command
     {
         ctx.AssertRanByPlayer();
 
-        ctx.Caller.SendChat(T.KitAccessGivenDm!, ctx.Caller.Kit);
+        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
     }
 }
