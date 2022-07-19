@@ -646,5 +646,52 @@ namespace Uncreated.Warfare
                 }
             }
         }
+
+        public static void SendChat(this UCPlayer player, Translation translation)
+        {
+            if (player is null || player.Player == null) throw new ArgumentNullException(nameof(player));
+            if (translation is null) throw new ArgumentNullException(nameof(translation));
+
+            if (Data.Languages is null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
+                lang = JSONMethods.DEFAULT_LANGUAGE;
+
+            string value = translation.Translate(lang, out Color textColor);
+
+            if (System.Text.Encoding.UTF8.GetByteCount(value) > MAX_CHAT_MESSAGE_SIZE)
+            {
+                value = translation.Translate(null, out textColor);
+                if (System.Text.Encoding.UTF8.GetByteCount(value) > MAX_CHAT_MESSAGE_SIZE)
+                {
+                    value = translation.Key;
+                    L.LogWarning("Supplied and default translation for {" + value + "} is too large for chat.");
+                }
+                else
+                    L.LogWarning("Default translation for {" + translation.Key + "} is too large for chat, falling back to default.");
+            }
+            SendSingleMessage(value, textColor, EChatMode.SAY, null, (translation.Flags & TranslationFlags.NoRichText) == 0, player.SteamPlayer);
+        }
+        public static void SendChat<T>(this UCPlayer player, Translation<T> translation, T arg)
+        {
+            if (player is null || player.Player == null) throw new ArgumentNullException(nameof(player));
+            if (translation is null) throw new ArgumentNullException(nameof(translation));
+
+            if (Data.Languages is null || !Data.Languages.TryGetValue(player.Steam64, out string lang))
+                lang = JSONMethods.DEFAULT_LANGUAGE;
+            string value = translation.Translate(lang, out Color textColor);
+            value = translation.Translate(value, lang, arg, player, player.GetTeam(), translation.Flags | TranslationFlags.ForChat);
+
+            if (System.Text.Encoding.UTF8.GetByteCount(value) > MAX_CHAT_MESSAGE_SIZE)
+            {
+                value = translation.Translate(null, out textColor);
+                if (System.Text.Encoding.UTF8.GetByteCount(value) > MAX_CHAT_MESSAGE_SIZE)
+                {
+                    value = translation.Key;
+                    L.LogWarning("Supplied and default translation for {" + value + "} is too large for chat.");
+                }
+                else
+                    L.LogWarning("Default translation for {" + translation.Key + "} is too large for chat, falling back to default.");
+            }
+            SendSingleMessage(value, textColor, EChatMode.SAY, null, (translation.Flags & TranslationFlags.NoRichText) == 0, player.SteamPlayer);
+        }
     }
 }

@@ -88,6 +88,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         TeamManager.SetupConfig();
 
+        Data.LanguageAliases = JSONMethods.LoadLangAliases();
+
+        Translation.ReadTranslations();
+
         /* PATCHES */
         L.Log("Patching methods...", ConsoleColor.Magenta);
         try

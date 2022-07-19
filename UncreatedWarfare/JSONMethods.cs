@@ -805,35 +805,32 @@ public static partial class JSONMethods
                     L.LogError("Language alias sets at aliases.json is too long to read.");
                     goto def;
                 }
-                else
+                Dictionary<string, LanguageAliasSet> languageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
+                byte[] bytes = new byte[len];
+                stream.Read(bytes, 0, (int)len);
+                try
                 {
-                    Dictionary<string, LanguageAliasSet> languageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
-                    byte[] bytes = new byte[len];
-                    stream.Read(bytes, 0, (int)len);
-                    try
+                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
+                    while (reader.Read())
                     {
-                        Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                        while (reader.Read())
+                        if (reader.TokenType == JsonTokenType.StartArray) continue;
+                        else if (reader.TokenType == JsonTokenType.EndArray) break;
+                        else if (reader.TokenType == JsonTokenType.StartObject)
                         {
-                            if (reader.TokenType == JsonTokenType.StartArray) continue;
-                            else if (reader.TokenType == JsonTokenType.EndArray) break;
-                            else if (reader.TokenType == JsonTokenType.StartObject)
-                            {
-                                LanguageAliasSet set = new LanguageAliasSet();
-                                set.ReadJson(ref reader);
-                                if (set.key != null)
-                                    languageAliasSets.Add(set.key, set);
-                            }
+                            LanguageAliasSet set = new LanguageAliasSet();
+                            set.ReadJson(ref reader);
+                            if (set.key != null)
+                                languageAliasSets.Add(set.key, set);
                         }
+                    }
 
-                        return languageAliasSets;
-                    }
-                    catch (Exception e)
-                    {
-                        L.LogError("Failed to read language aliases at aliases.json.");
-                        L.LogError(e);
-                        goto def;
-                    }
+                    return languageAliasSets;
+                }
+                catch (Exception e)
+                {
+                    L.LogError("Failed to read language aliases at aliases.json.");
+                    L.LogError(e);
+                    goto def;
                 }
             }
         }

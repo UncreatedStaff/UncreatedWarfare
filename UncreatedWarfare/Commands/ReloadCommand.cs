@@ -131,6 +131,7 @@ public class ReloadCommand : Command
     private void ReloadColors()
     {
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+        Translation.OnColorsReloaded();
     }
     public static void ReloadPermissions()
     {
@@ -176,8 +177,9 @@ public class ReloadCommand : Command
         {
             Data.LanguageAliases = JSONMethods.LoadLangAliases();
             Data.Languages = JSONMethods.LoadLanguagePreferences();
-            Data.Localization = JSONMethods.LoadTranslations();
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+            Data.Localization = JSONMethods.LoadTranslations();
+            Translation.ReadTranslations();
             Deaths.Localization.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
             if (OnTranslationsReloaded != null)

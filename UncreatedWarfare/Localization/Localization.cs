@@ -51,6 +51,22 @@ public static class Localization
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        Translation? newTranslation = Translation.FromLegacyId(key);
+
+        if (newTranslation is not null)
+        {
+            string s = newTranslation.Translate(language);
+            try
+            {
+                return string.Format(s, formatting);
+            }
+            catch (FormatException ex)
+            {
+                L.LogError(ex);
+                return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            }
+        }
+
         if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
         {
             if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
@@ -123,12 +139,29 @@ public static class Localization
             L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
             return args;
         }
+
         if (key.Length == 0)
         {
             return formatting.Length > 0 ? string.Join(", ", formatting) : "";
         }
+
+        Translation? newTranslation = Translation.FromLegacyId(key);
         if (player == 0)
         {
+            if (newTranslation is not null)
+            {
+                string s = newTranslation.Translate(JSONMethods.DEFAULT_LANGUAGE);
+                try
+                {
+                    return string.Format(s, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+
             if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -183,6 +216,21 @@ public static class Localization
                     lang = JSONMethods.DEFAULT_LANGUAGE;
             }
             else lang = JSONMethods.DEFAULT_LANGUAGE;
+
+            if (newTranslation is not null)
+            {
+                string s = newTranslation.Translate(lang);
+                try
+                {
+                    return string.Format(s, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+
             if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -349,8 +397,23 @@ public static class Localization
         {
             return formatting.Length > 0 ? string.Join(", ", formatting) : "";
         }
+        Translation? newTranslation = Translation.FromLegacyId(key);
         if (player == 0)
         {
+            if (newTranslation is not null)
+            {
+                string s = newTranslation.Translate(JSONMethods.DEFAULT_LANGUAGE);
+                try
+                {
+                    return string.Format(s, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
+
             if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -405,6 +468,19 @@ public static class Localization
                     lang = JSONMethods.DEFAULT_LANGUAGE;
             }
             else lang = JSONMethods.DEFAULT_LANGUAGE;
+            if (newTranslation is not null)
+            {
+                string s = newTranslation.Translate(lang);
+                try
+                {
+                    return string.Format(s, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
             if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -474,8 +550,22 @@ public static class Localization
             color = UCWarfare.GetColor("default");
             return formatting.Length > 0 ? string.Join(", ", formatting) : "";
         }
+        Translation? newTranslation = Translation.FromLegacyId(key);
         if (player == 0)
         {
+            if (newTranslation is not null)
+            {
+                string s = newTranslation.Translate(JSONMethods.DEFAULT_LANGUAGE, out color);
+                try
+                {
+                    return string.Format(s, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
             if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -535,6 +625,19 @@ public static class Localization
                     lang = JSONMethods.DEFAULT_LANGUAGE;
             }
             else lang = JSONMethods.DEFAULT_LANGUAGE;
+            if (newTranslation is not null)
+            {
+                string s = newTranslation.Translate(lang, out color);
+                try
+                {
+                    return string.Format(s, formatting);
+                }
+                catch (FormatException ex)
+                {
+                    L.LogError(ex);
+                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                }
+            }
             if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -598,6 +701,22 @@ public static class Localization
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        Translation? newTranslation = Translation.FromLegacyId(key);
+
+        if (newTranslation is not null)
+        {
+            string s = newTranslation.Translate(language, out color);
+            try
+            {
+                return string.Format(s, formatting);
+            }
+            catch (FormatException ex)
+            {
+                L.LogError(ex);
+                return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            }
+        }
+
         if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
         {
             if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
@@ -677,6 +796,21 @@ public static class Localization
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        Translation? newTranslation = Translation.FromLegacyId(key);
+
+        if (newTranslation is not null)
+        {
+            string s = newTranslation.Translate(language);
+            try
+            {
+                return string.Format(s, formatting);
+            }
+            catch (FormatException ex)
+            {
+                L.LogError(ex);
+                return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            }
+        }
         if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
         {
             if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))

@@ -1,10 +1,13 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Windows.Input;
+using Uncreated.Warfare.Gamemodes.Flags;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -14,13 +17,16 @@ public class Translation
     private const string NULL_CLR_1 = "<#569cd6><b>null</b></color>";
     private const string NULL_CLR_2 = "<color=#569cd6><b>null</b></color>";
     private const string NULL_NO_CLR = "null";
+    private const string LOCAL_FILE_NAME = "translations.properties";
     private readonly TranslationFlags _flags;
     private TranslationValue DefaultData;
-    private TranslationValue[] Data;
+    private TranslationValue[]? Data;
+    private TranslationDataAttribute? attr;
     public string Key;
     public int Id;
     public TranslationFlags Flags => _flags;
     protected string InvalidValue => "Translation Error - " + Key;
+    internal TranslationDataAttribute? AttributeData { get => attr; set => attr = value; }
     public Translation(string @default, TranslationFlags flags) : this(@default)
     {
         _flags = flags;
@@ -34,8 +40,11 @@ public class Translation
     public void RefreshColors()
     {
         DefaultData = new TranslationValue(in DefaultData, Flags);
-        for (int i = 0; i < Data.Length; ++i)
-            Data[i] = new TranslationValue(in Data[i], Flags);
+        if (Data is not null)
+        {
+            for (int i = 0; i < Data.Length; ++i)
+                Data[i] = new TranslationValue(in Data[i], Flags);
+        }
     }
     private void VerifyDefault(string def)
     {
@@ -134,15 +143,18 @@ public class Translation
     {
         get
         {
-            for (int i = 0; i < Data.Length; ++i)
+            if (Data is not null)
             {
-                ref TranslationValue v = ref Data[i];
-                if (v.Language.Equals(language, StringComparison.OrdinalIgnoreCase))
+                for (int i = 0; i < Data.Length; ++i)
                 {
-                    return ref v;
+                    ref TranslationValue v = ref Data[i];
+                    if (v.Language.Equals(language, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return ref v;
+                    }
                 }
             }
-            return ref TranslationValue.Nil;
+            return ref DefaultData;
         }
     }
 
@@ -152,7 +164,6 @@ public class Translation
     private static readonly Type[] tarr1 = new Type[] { typeof(string), typeof(IFormatProvider) };
     private static readonly Type[] tarr2 = new Type[] { typeof(string) };
     private static readonly Type[] tarr3 = new Type[] { typeof(IFormatProvider) };
-
     private static class ToStringHelperClass<T>
     {
         private static readonly Func<T, string, IFormatProvider, string>? toStringFunc1;
@@ -160,7 +171,6 @@ public class Translation
         private static readonly Func<T, IFormatProvider, string>? toStringFunc3;
         private static readonly Func<T, string>? toStringFunc4;
         private static readonly int type;
-
         public static string ToString(T value, string language, string? format, UCPlayer? target, IFormatProvider locale, TranslationFlags flags)
         {
             if (value is null)
@@ -169,8 +179,8 @@ public class Translation
             if (value is string str)
                 return CheckCase(str, format);
 
-            if ((flags & TranslationFlags.Plural) == TranslationFlags.Plural && format is not null && format.EndsWith(DefaultTranslations.PLURAL, StringComparison.Ordinal))
-                format = format.Length == DefaultTranslations.PLURAL.Length ? null : format.Substring(0, format.Length - DefaultTranslations.PLURAL.Length);
+            if ((flags & TranslationFlags.Plural) == TranslationFlags.Plural && format is not null && format.EndsWith(Warfare.T.PLURAL, StringComparison.Ordinal))
+                format = format.Length == Warfare.T.PLURAL.Length ? null : format.Substring(0, format.Length - Warfare.T.PLURAL.Length);
             str = type switch
             {
                 1 => toStringFunc1!(value, format!, locale),
@@ -202,11 +212,11 @@ public class Translation
         {
             if (format is not null)
             {
-                if (format.Equals(DefaultTranslations.UPPERCASE, StringComparison.Ordinal))
+                if (format.Equals(Warfare.T.UPPERCASE, StringComparison.Ordinal))
                     return str.ToUpperInvariant();
-                else if (format.Equals(DefaultTranslations.LOWERCASE, StringComparison.Ordinal))
+                else if (format.Equals(Warfare.T.LOWERCASE, StringComparison.Ordinal))
                     return str.ToLowerInvariant();
-                else if (format.Equals(DefaultTranslations.PROPERCASE, StringComparison.Ordinal))
+                else if (format.Equals(Warfare.T.PROPERCASE, StringComparison.Ordinal))
                     return str.ToProperCase();
             }
             return str;
@@ -521,14 +531,12 @@ public class Translation
         }
         public TranslationValue(in TranslationValue value, TranslationFlags flags) : this (value.Language, value.Original, flags) { }
     }
-
     protected static TranslationFlags CheckPlurality(string? format, TranslationFlags flags)
     {
-        if (format is not null && format.EndsWith(DefaultTranslations.PLURAL, StringComparison.Ordinal))
+        if (format is not null && format.EndsWith(T.PLURAL, StringComparison.Ordinal))
             return flags | TranslationFlags.Plural;
         return flags;
     }
-    private static bool IsVowel(char c) => c is 'a' or 'e' or 'i' or 'o' or 'u';
     public static string Pluralize(string word, string language, TranslationFlags flags)
     {
         if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3)
@@ -562,7 +570,7 @@ public class Translation
             return word.Substring(0, str.Length - 2) + (isAllCaps ? "VES" : "ves");
 
         if (last is 'y')
-            if (!IsVowel(slast))
+            if (!(slast is 'a' or 'e' or 'i' or 'o' or 'u'))
                 return word.Substring(0, str.Length - 1) + (isAllCaps ? "IES" : "ies");
             else
                 return word + (isAllCaps ? "S" : "s");
@@ -724,7 +732,6 @@ public class Translation
         innerText = message;
     next: return color; // todo
     }
-
     protected TranslationFlags GetFlags(ulong targetTeam) => targetTeam switch
     {
         3 => Flags | TranslationFlags.Team3,
@@ -738,6 +745,271 @@ public class Translation
             : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
                 ? NULL_CLR_2
                 : NULL_CLR_1);
+    public virtual string Translate(string? language)
+    {
+        if (language is null)
+            return DefaultData.Processed;
+        if (language.Length == 0 || language.Equals("0", StringComparison.Ordinal))
+            language = JSONMethods.DEFAULT_LANGUAGE;
+
+        ref TranslationValue data = ref this[language];
+        return data.Processed;
+    }
+    public virtual string Translate(string? language, out Color color)
+    {
+        if (language is null)
+        {
+            color = DefaultData.Color;
+            return DefaultData.Processed;
+        }
+        if (language.Length == 0 || language.Equals("0", StringComparison.Ordinal))
+            language = JSONMethods.DEFAULT_LANGUAGE;
+
+        ref TranslationValue data = ref this[language];
+        color = data.Color;
+        return data.ProcessedInner;
+    }
+    internal static void OnColorsReloaded()
+    {
+        for (int i = 0; i < T.Translations.Length; ++i)
+            T.Translations[i].RefreshColors();
+    }
+    private static bool _first = true;
+    internal static void ReadTranslations()
+    {
+        L.Log("Detected " + T.Translations.Length + " translations.", ConsoleColor.Magenta);
+        DateTime start = DateTime.Now;
+        if (!_first)
+        {
+            for (int i = 0; i < T.Translations.Length; ++i)
+                T.Translations[i].ClearTranslations();
+        }
+        else _first = false;
+        DirectoryInfo[] dirs = new DirectoryInfo(Warfare.Data.Paths.LangStorage).GetDirectories();
+        bool defRead = false;
+        int amt = 0;
+        for (int i = 0; i < dirs.Length; ++i)
+        {
+            DirectoryInfo langFolder = dirs[i];
+
+            FileInfo info = new FileInfo(Path.Combine(langFolder.FullName, LOCAL_FILE_NAME));
+            if (!info.Exists) continue;
+            L.Log("Reading translations from " + info.FullName, ConsoleColor.Magenta);
+            string lang = langFolder.Name;
+            if (lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.OrdinalIgnoreCase))
+            {
+                lang = JSONMethods.DEFAULT_LANGUAGE;
+                defRead = true;
+            }
+            else
+            {
+                foreach (LanguageAliasSet set in Warfare.Data.LanguageAliases.Values)
+                {
+                    if (set.key.Equals(lang, StringComparison.OrdinalIgnoreCase))
+                    {
+                        lang = set.key;
+                        goto foundLanguage;
+                    }
+                }
+
+                L.LogWarning("Unknown language: " + lang + ", skipping directory.");
+                continue;
+            }
+
+        foundLanguage:
+            using (FileStream str = new FileStream(info.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (StreamReader reader = new StreamReader(str))
+            {
+                string line;
+                string? multiline = null;
+                while (true)
+                {
+                    line = reader.ReadLine();
+                    if (line is null) break;
+                    if (line.Length == 0 || line[0] is '#' or ' ' or '!')
+                        continue;
+                    if (multiline is not null)
+                    {
+                        line = multiline + line;
+                        multiline = null;
+                    }
+
+                    int j2 = line.Length - 1;
+                    for (; j2 >= 0; --j2)
+                    {
+                        if (line[j2] != '\\') break;
+                    }
+
+                    if (line.Length - j2 % 2 == 0)
+                    {
+                        multiline = line.Substring(0, line.Length - 1);
+                        continue;
+                    }
+                    int ind2 = line.IndexOf(' ');
+                    if (ind2 < 1)
+                    {
+                        ind2 = line.IndexOf('=');
+                        if (ind2 < 1)
+                        {
+                            ind2 = line.IndexOf(':');
+                            if (ind2 < 1)
+                                continue;
+                        }
+                    }
+                    int ind1 = ind2;
+                    while (line.Length - 1 > ind2 && line[ind2 + 1] is '=' or ' ' or ':')
+                        ++ind2;
+                    if (line.Length - 1 > ind2 && line[ind2 + 1] == '\\' && line[ind2 + 2] == ' ')
+                        ++ind2;
+                    string key = line.Substring(0, ind1);
+                    for (j2 = key.Length - 1; j2 >= 0; --j2)
+                    {
+                        if (key[j2] is not ' ' and not ':' and not '=')
+                            break;
+                    }
+
+                    if (j2 != key.Length - 1)
+                        key = key.Substring(0, j2 + 1);
+                    for (int j = 0; j < T.Translations.Length; ++j)
+                    {
+                        Translation t = T.Translations[j];
+                        if (t.Key.Equals(key, StringComparison.OrdinalIgnoreCase) || (t.attr is not null && t.attr.LegacyTranslationId is not null && t.attr.LegacyTranslationId.Equals(key, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            string value = line.Substring(ind2 + 1, line.Length - ind2 - 1).Replace(@"\\", @"\").Replace(@"\n", "\n").Replace(@"\r", "\r").Replace(@"\t", "\t");
+                            ++amt;
+                            t.AddTranslation(langFolder.Name, value);
+                            goto n;
+                        }
+                    }
+                    L.LogWarning("[TRANSLATIONS] Unknown translation key: " + key + " in " + lang + " translation file.");
+                    n: ;
+                }
+            }
+
+            WriteLanguage(lang);
+            L.Log("Loaded " + amt + " translations for " + lang + ".", ConsoleColor.Magenta);
+            amt = 0;
+        }
+
+        if (!defRead)
+        {
+            WriteDefaultTranslations();
+        }
+
+        amt = 0;
+        for (int j = 0; j < T.Translations.Length; ++j)
+        {
+            Translation t = T.Translations[j];
+            if (t.Data is not null && t.Data.Length > 0)
+            {
+                for (int i = 0; i < t.Data.Length; ++i)
+                {
+                    ref TranslationValue v = ref t.Data[i];
+                    if (v.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                        goto c;
+                }
+            }
+            ++amt;
+            t.AddTranslation(JSONMethods.DEFAULT_LANGUAGE, t.DefaultData.Original);
+        c:;
+        }
+        if (amt > 0 && defRead)
+            L.Log("Added " + amt + " missing default translations for " + JSONMethods.DEFAULT_LANGUAGE + ".", ConsoleColor.Yellow);
+        L.Log("Loaded translations in " + (DateTime.Now - start).TotalMilliseconds.ToString("F1", Warfare.Data.Locale) + "ms", ConsoleColor.Magenta);
+    }
+    private static void WriteDefaultTranslations()
+    {
+        DirectoryInfo dir = new DirectoryInfo(Path.Combine(Warfare.Data.Paths.LangStorage, JSONMethods.DEFAULT_LANGUAGE));
+        if (!dir.Exists)
+            dir.Create();
+        FileInfo info = new FileInfo(Path.Combine(dir.FullName, LOCAL_FILE_NAME));
+        using (FileStream str = new FileStream(info.FullName, FileMode.Create, FileAccess.Write, FileShare.Read))
+        using (StreamWriter writer = new StreamWriter(str))
+        {
+            string? lastSection = null;
+            foreach (Translation t in T.Translations.OrderBy(x => x.attr?.Section ?? "~", StringComparer.OrdinalIgnoreCase))
+            {
+                WriteTranslation(writer, t, t.DefaultData.Original, ref lastSection);
+            }
+
+            writer.Flush();
+        }
+    }
+    private static void WriteLanguage(string language)
+    {
+        DirectoryInfo dir = new DirectoryInfo(Path.Combine(Warfare.Data.Paths.LangStorage, language));
+        if (!dir.Exists)
+            dir.Create();
+        FileInfo info = new FileInfo(Path.Combine(dir.FullName, LOCAL_FILE_NAME));
+        using (FileStream str = new FileStream(info.FullName, FileMode.Create, FileAccess.Write, FileShare.Read))
+        using (StreamWriter writer = new StreamWriter(str))
+        {
+            string? lastSection = null;
+            foreach (Translation t in T.Translations.OrderBy(x => x.attr?.Section ?? "~", StringComparer.OrdinalIgnoreCase))
+            {
+                if (t.Data is null) continue;
+                string? val = null;
+                for (int i = 0; i < t.Data.Length; ++i)
+                {
+                    ref TranslationValue v = ref t.Data[i];
+                    if (v.Language.Equals(language, StringComparison.Ordinal))
+                        val = v.Original;
+                }
+                if (val is not null)
+                    WriteTranslation(writer, t, val, ref lastSection);
+            }
+
+            writer.Flush();
+        }
+    }
+    private static void WriteTranslation(StreamWriter writer, Translation t, string val, ref string? lastSection)
+    {
+        val = val.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t");
+        if (string.IsNullOrEmpty(val)) return;
+        string? sect = t.attr?.Section;
+        if (sect != lastSection)
+        {
+            lastSection = sect;
+            if (writer.BaseStream.Position > 0)
+                writer.WriteLine();
+            if (sect is not null)
+                writer.WriteLine("! " + sect + " !");
+        }
+        writer.WriteLine();
+        if (t.attr is not null)
+        {
+            if (t.attr.Description is not null)
+                writer.WriteLine("# Description: " + t.attr.Description.RemoveMany(true, '\r', '\n'));
+        }
+        Type[] gen = t.GetType().GetGenericArguments();
+        if (gen.Length > 0)
+            writer.WriteLine("# Formatting Arguments:");
+        for (int i = 0; i < gen.Length; ++i)
+        {
+            string fmt = "#  " + "{" + i + "} - [" + ToString(gen[i], JSONMethods.DEFAULT_LANGUAGE, null, null, TranslationFlags.NoColor) + "]";
+
+            if (t.attr is not null && t.attr.FormattingDescriptions is not null && i < t.attr.FormattingDescriptions.Length && !string.IsNullOrEmpty(t.attr.FormattingDescriptions[i]))
+                fmt += " " + t.attr.FormattingDescriptions[i].RemoveMany(true, '\r', '\n');
+            writer.WriteLine(fmt);
+        }
+
+        writer.Write(t.Key);
+        writer.Write(": ");
+        if (val[0] == ' ')
+            val = @"\" + val;
+        writer.Write(val);
+    }
+    public static Translation? FromLegacyId(string legacyId)
+    {
+        for (int i = 0; i < T.Translations.Length; ++i)
+        {
+            Translation t = T.Translations[i];
+            if (t.attr is not null && t.attr.LegacyTranslationId is not null && t.attr.LegacyTranslationId.Equals(legacyId, StringComparison.Ordinal))
+                return t;
+        }
+
+        return null;
+    }
 }
 
 [Flags]
@@ -778,10 +1050,12 @@ public enum TranslationFlags
     UnityUI = NoColor | UseUnityRichText,
     /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format, doesn't replace already existing TMPro tags.</summary>
     UnityUINoReplace = NoColor | TranslateWithUnityRichText,
-    /// <summary>Tells the translator to format the term plurally, this will be automatically applied to individual arguments if the format is <see cref="DefaultTranslations.PLURAL"/>.</summary>
+    /// <summary>Tells the translator to format the term plurally, this will be automatically applied to individual arguments if the format is <see cref="T.PLURAL"/>.</summary>
     Plural,
     /// <summary>Tells the translator to not try to turn arguments plural.</summary>
-    NoPlural
+    NoPlural,
+    /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent in chat.</summary>
+    ForChat
 }
 
 public interface ITranslationArgument
@@ -1296,4 +1570,21 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
             return InvalidValue;
         }
     }
+}
+
+[AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
+sealed class TranslationDataAttribute : Attribute
+{
+    private string? _legacyTranslationID;
+    private string? _description;
+    private string? _section;
+    private string[]? _formatArgs;
+    public TranslationDataAttribute()
+    {
+
+    }
+    public string? LegacyTranslationId { get => _legacyTranslationID; set => _legacyTranslationID = value; }
+    public string? Description { get => _description; set => _description = value; }
+    public string? Section { get => _section; set => _section = value; }
+    public string[]? FormattingDescriptions { get => _formatArgs; set => _formatArgs = value; }
 }

@@ -1,15 +1,9 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Squads;
@@ -17,24 +11,22 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare;
-internal class DefaultTranslations
+internal static class T
 {
-    private const int NON_TRANSLATION_FIELD_COUNT = 7;
+    private const int NON_TRANSLATION_FIELD_COUNT = 11;
     private const string ERROR_COLOR = "<#ff8c69>";
     private const string SUCCESS_COLOR = "<#e6e3d5>";
     internal const string PLURAL = ":FORMAT_PLURAL";
     internal const string UPPERCASE = "upper";
     internal const string LOWERCASE = "lower";
     internal const string PROPERCASE = "proper";
-    /*
-     * c$value$ will be replaced by the color "value" on startup
-     */
     public static readonly Translation[] Translations;
-    static DefaultTranslations()
+    static T()
     {
-        FieldInfo[] fields = typeof(DefaultTranslations).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         Translations = new Translation[fields.Length - NON_TRANSLATION_FIELD_COUNT];
         int i2 = -1;
         for (int i = 0; i < fields.Length; ++i)
@@ -45,7 +37,12 @@ internal class DefaultTranslations
                 if (field.GetValue(null) is not Translation tr)
                     L.LogError("Failed to convert " + field.Name + " to a translation!");
                 else if (i2 + 1 < Translations.Length)
+                {
+                    tr.Key = field.Name;
+                    tr.Id = i2;
+                    tr.AttributeData = Attribute.GetCustomAttribute(field, typeof(TranslationDataAttribute)) as TranslationDataAttribute;
                     Translations[++i2] = tr;
+                }
                 else
                     L.LogError("Ran out of space in translation array for " + field.Name + " at " + (i2 + 1));
             }
@@ -53,50 +50,235 @@ internal class DefaultTranslations
 
         if (Translations.Length != i2 + 1)
         {
+            L.LogWarning("Translations had to resize for some reason from " + Translations.Length + " to " + (i2 + 1) + ". Check to make sure there's only one field that isn't a translation.");
             Array.Resize(ref Translations, i2 + 1);
-            L.LogWarning("Translations had to resize for some reason. Check to make sure there's only one field that isn't a translation.");
         }
     }
 
+    /*
+     * c$value$ will be replaced by the color "value" on startup
+     */
+
     #region Common Errors
+    private const string SECTION_COMMON_ERRORS = "Common_Errors";
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "Sent when a command is not used correctly.",
+        LegacyTranslationId = "correct_usage",
+        FormattingDescriptions = new string[] { "Command usage." })]
     public static readonly Translation<string> CorrectUsage = new Translation<string>(ERROR_COLOR + "Correct usage: {0}.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command or feature hasn't been completed or implemented.",
+        LegacyTranslationId = "todo")]
     public static readonly Translation NotImplemented   = new Translation(ERROR_COLOR + "This command hasn't been implemented yet.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command or feature can only be used by the server console.",
+        LegacyTranslationId = "command_e_no_console")]
     public static readonly Translation ConsoleOnly      = new Translation(ERROR_COLOR + "This command can only be called from console.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command or feature can only be used by a player (instead of the server console).",
+        LegacyTranslationId = "command_e_no_player")]
     public static readonly Translation PlayersOnly      = new Translation(ERROR_COLOR + "This command can not be called from console.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A player name or ID search turned up no results.",
+        LegacyTranslationId = "command_e_player_not_found")]
     public static readonly Translation PlayerNotFound   = new Translation(ERROR_COLOR + "Player not found.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command didn't respond to an interaction, or a command chose to throw a vague error response to an uncommon problem.",
+        LegacyTranslationId = "command_e_unknown_error")]
     public static readonly Translation UnknownError     = new Translation(ERROR_COLOR + "We ran into an unknown error executing that command.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command is disabled in the current gamemode type (ex, /deploy in a gamemode without FOBs).",
+        LegacyTranslationId = "command_e_gamemode")]
     public static readonly Translation GamemodeError    = new Translation(ERROR_COLOR + "This command is not enabled in this gamemode.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "The caller of a command is not allowed to use the command.",
+        LegacyTranslationId = "no_permissions")]
     public static readonly Translation NoPermissions    = new Translation(ERROR_COLOR + "You do not have permission to use this command.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command or feature is turned off in the configuration.",
+        LegacyTranslationId = "not_enabled")]
     public static readonly Translation NotEnabled       = new Translation(ERROR_COLOR + "This feature is not currently enabled.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "The caller of a command has permission to use the command but isn't on duty.",
+        LegacyTranslationId = "no_permissions_on_duty")]
     public static readonly Translation NotOnDuty        = new Translation(ERROR_COLOR + "You must be on duty to execute that command.");
     #endregion
 
     #region Flags
-    public static readonly Translation<Gamemode> GamemodeNotFlagGamemode = new Translation<Gamemode>(ERROR_COLOR + "Current gamemode <#ff758f>{0}</color> is not a <#ff758f>FLAG GAMEMODE</color>.");
+    private const string SECTION_FLAGS = "Flags";
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "The caller of a command isn't on team 1 or 2.",
+        LegacyTranslationId = "gamemode_flag_not_on_cap_team")]
     public static readonly Translation NotOnCaptureTeam             = new Translation(ERROR_COLOR + "You're not on a team that can capture flags.");
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent when the player enters the capture radius of an active flag.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "entered_cap_radius")]
     public static readonly Translation<Flag> EnteredCaptureRadius   = new Translation<Flag>(SUCCESS_COLOR + "You have entered the capture radius of {0}.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent when the player leaves the capture radius of an active flag.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "left_cap_radius")]
     public static readonly Translation<Flag> LeftCaptureRadius      = new Translation<Flag>(SUCCESS_COLOR + "You have left the capture radius of {0}.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag that's being captured by their team (from neutral).",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "capturing")]
     public static readonly Translation<Flag> FlagCapturing          = new Translation<Flag>(SUCCESS_COLOR + "Your team is capturing {0}!", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag that's being captured by the other team.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "losing")]
     public static readonly Translation<Flag> FlagLosing             = new Translation<Flag>(ERROR_COLOR + "Your team is losing {0}!", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag when it begins being contested.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "contested")]
     public static readonly Translation<Flag> FlagContested          = new Translation<Flag>("<#c$contested$>{0} is contested, eliminate some enemies to secure it!", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag that's being cleared by their team (from the other team's ownership).",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "clearing")]
     public static readonly Translation<Flag> FlagClearing           = new Translation<Flag>(SUCCESS_COLOR + "Your team is clearing {0}!", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag when it gets secured by their team.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "secured")]
     public static readonly Translation<Flag> FlagSecured            = new Translation<Flag>("<#c$secured$>{0} is secure for now, keep up the defense.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to a player that walks in the radius of a flag that isn't their team's objective.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "nocap")]
     public static readonly Translation<Flag> FlagNoCap              = new Translation<Flag>("<#c$nocap$>{0} is not your objective, check the right of your screen to see which points to attack and defend.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to a player that walks in the radius of a flag that is owned by the other team and enough of the other team is on the flag so they can't contest the point.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "notowned")]
     public static readonly Translation<Flag> FlagNotOwned           = new Translation<Flag>("<#c$nocap$>{0} is owned by the enemies. Get more players to capture it.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to a player that walks in the radius of a flag that is owned by the other team and has been locked from recapture.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "locked")]
     public static readonly Translation<Flag> FlagLocked             = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players when a flag gets neutralized.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "flag_neutralized")]
     public static readonly Translation<Flag> FlagNeutralized        = new Translation<Flag>(SUCCESS_COLOR + "{0} has been neutralized!", Flag.NAME_FORMAT_COLORED_DISCOVER);
 
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Backup translation for team 0 name and short name.",
+        LegacyTranslationId = "neutral")]
     public static readonly Translation Neutral          = new Translation("Neutral",       TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows in place of the objective name for an undiscovered flag or objective.",
+        LegacyTranslationId = "undiscovered_flag")]
     public static readonly Translation UndiscoveredFlag = new Translation("unknown",       TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team is capturing a flag they're on.",
+        LegacyTranslationId = "ui_capturing")]
     public static readonly Translation UICapturing      = new Translation("CAPTURING",     TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team is losing a flag they're on because there isn't enough of them to contest it.",
+        LegacyTranslationId = "ui_losing")]
     public static readonly Translation UILosing         = new Translation("LOSING",        TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team is clearing a flag they're on.",
+        LegacyTranslationId = "ui_clearing")]
     public static readonly Translation UIClearing       = new Translation("CLEARING",      TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team is contested with the other team on the flag they're on.",
+        LegacyTranslationId = "ui_contested")]
     public static readonly Translation UIContested      = new Translation("CONTESTED",     TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team owns flag they're on.",
+        LegacyTranslationId = "ui_secured")]
     public static readonly Translation UISecured        = new Translation("SECURED",       TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's on a flag that isn't their team's objective.",
+        LegacyTranslationId = "ui_nocap")]
     public static readonly Translation UINoCap          = new Translation("NOT OBJECTIVE", TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team has too few people on a flag to contest and the other team owns the flag.",
+        LegacyTranslationId = "ui_notowned")]
     public static readonly Translation UINotOwned       = new Translation("TAKEN",         TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the objective they're on is owned by the other team and is locked from recapture.",
+        LegacyTranslationId = "ui_locked")]
     public static readonly Translation UILocked         = new Translation("LOCKED",        TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's in a vehicle on their objective.",
+        LegacyTranslationId = "ui_invehicle")]
     public static readonly Translation UIInVehicle      = new Translation("IN VEHICLE",    TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows above the flag list UI.",
+        LegacyTranslationId = "ui_capturing")]
     public static readonly Translation FlagsHeader      = new Translation("Flags",         TranslationFlags.UnityUI);
     #endregion
 
@@ -409,7 +591,7 @@ internal class DefaultTranslations
     public static readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#d97568>{1} AMMO</color> <#948f8a>({2} left)</color>.", VehicleData.COLORED_NAME);
     #endregion
 
-    Dictionary<string, string> _translations = new Dictionary<string, string>()
+    static Dictionary<string, string> _translations = new Dictionary<string, string>()
     {
             #region AmmoCommand
             { "ammo_error_nocrate", "<color=#ffab87>Look at an AMMO CRATE, AMMO BAG or VEHICLE in order to resupply.</color>" },

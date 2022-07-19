@@ -235,12 +235,14 @@ public static class Data
         Localization = JSONMethods.LoadTranslations();
         Deaths.Localization.Reload();
         Languages = JSONMethods.LoadLanguagePreferences();
-        LanguageAliases = JSONMethods.LoadLangAliases();
 
         Warfare.Localization.ReadEnumTranslations(TranslatableEnumTypes);
 
         /* CONSTRUCT FRAMEWORK */
         L.Log("Instantiating Framework...", ConsoleColor.Magenta);
+#if DEBUG
+        //L.Log("Connection string: " + UCWarfare.Config.SQL.GetConnectionString(), ConsoleColor.DarkGray);
+#endif
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
         DatabaseManager.Open();
         Points.Initialize();
