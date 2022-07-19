@@ -22,6 +22,7 @@ public class Translation
     private TranslationValue DefaultData;
     private TranslationValue[]? Data;
     private TranslationDataAttribute? attr;
+    private bool _init = false;
     public string Key;
     public int Id;
     public TranslationFlags Flags => _flags;
@@ -46,27 +47,33 @@ public class Translation
                 Data[i] = new TranslationValue(in Data[i], Flags);
         }
     }
-    private void VerifyDefault(string def)
+    internal void Init()
+    {
+        if (_init) return;
+        _init = true;
+        VerifyOriginal(null, DefaultData.Original);
+    }
+    private void VerifyOriginal(string? lang ,string def)
     {
         if ((_flags & TranslationFlags.SuppressWarnings) == TranslationFlags.SuppressWarnings) return;
         int ct = this.GetType().GenericTypeArguments.Length;
-        int index = -1;
+        int index = -2;
         int flag = 0;
         int max = 0;
         while (true)
         {
-            index = def.IndexOf('{', index + 1);
+            index = def.IndexOf('{', index + 2);
             if (index == -1 || index >= def.Length - 2) break;
             char next = def[index + 1];
             if (next is >= '0' and <= '9')
             {
                 char next2 = def[index + 2];
                 int num;
-                if (next2 is not >= '0' and <= '9')
+                if (next2 is < '0' or > '9')
                     num = next - 48;
                 else
                     num = (next - 48) * 10 + (next2 - 48);
-                flag |= num;
+                flag |= (1 << num);
                 if (max < num) max = num;
             }
         }
@@ -75,16 +82,17 @@ public class Translation
         {
             if (((flag >> i) & 1) == 0)
             {
-                L.LogWarning("[TRANSLATIONS] " + Key + " parameter at index " + i + " is unused.");
+                L.LogWarning("[" + (lang == null ? "DEFAULT" : lang.ToUpper()) + "] " + Key + " parameter at index " + i + " is unused.", method: "TRANSLATIONS");
             }
         }
         if (ct == 0) return;
         --ct;
         if (max > ct)
-            L.LogWarning("[TRANSLATIONS] " + Key + " has " + (ct - max == 1 ? ("an extra paremeter: " + max) : $"{ct - max} extra parameters: {ct + 1} to {max}"));
+            L.LogError("[" + (lang == null ? "DEFAULT" : lang.ToUpper()) + "] " + Key + " has " + (ct - max == 1 ? ("an extra paremeter: " + max) : $"{max - ct} extra parameters: Should have: {ct}, has: {max}"), method: "TRANSLATIONS");
     }
     public void AddTranslation(string language, string value)
     {
+        VerifyOriginal(language, value);
         if (Data is null || Data.Length == 0)
             Data = new TranslationValue[1] { new TranslationValue(language, value, Flags) };
         else
@@ -794,7 +802,6 @@ public class Translation
 
             FileInfo info = new FileInfo(Path.Combine(langFolder.FullName, LOCAL_FILE_NAME));
             if (!info.Exists) continue;
-            L.Log("Reading translations from " + info.FullName, ConsoleColor.Magenta);
             string lang = langFolder.Name;
             if (lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.OrdinalIgnoreCase))
             {
@@ -991,6 +998,10 @@ public class Translation
             if (t.attr is not null && t.attr.FormattingDescriptions is not null && i < t.attr.FormattingDescriptions.Length && !string.IsNullOrEmpty(t.attr.FormattingDescriptions[i]))
                 fmt += " " + t.attr.FormattingDescriptions[i].RemoveMany(true, '\r', '\n');
             writer.WriteLine(fmt);
+        }
+        if (!val.Equals(t.DefaultData.Original))
+        {
+            writer.WriteLine("# Default Value: " + t.DefaultData.Original.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t"));
         }
 
         writer.Write(t.Key);

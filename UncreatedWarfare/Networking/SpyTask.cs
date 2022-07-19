@@ -44,7 +44,6 @@ public sealed class SpyTask
         {
             _isCompleted = true;
             continuation.Invoke();
-            L.Log("received");
         }
         public void OnCompleted(System.Action continuation)
         {
@@ -52,18 +51,6 @@ public sealed class SpyTask
         }
         public byte[] GetResult()
         {
-            /*
-            L.Log("getting result");
-            int counter = 0;
-            int maxloop = DEFAULT_TIMEOUT_MS / POLL_SPEED_MS;
-            while (!_isCompleted && counter < maxloop)
-            {
-                L.Log("awaiting " + UCWarfare.IsMainThread.ToString());
-                Thread.Sleep(POLL_SPEED_MS);
-                counter++;
-            }
-            L.Log("got result " + counter);
-            return rtn ?? new byte[0];*/
             return rtn ?? new byte[0];
         }
     }

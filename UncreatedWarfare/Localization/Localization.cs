@@ -63,7 +63,6 @@ public static class Localization
             catch (FormatException ex)
             {
                 L.LogError(ex);
-                return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
             }
         }
 
@@ -158,7 +157,6 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
 
@@ -227,7 +225,6 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
 
@@ -288,94 +285,6 @@ public static class Localization
     public static string Translate(string key, Player player, out Color color, params string[] formatting) =>
         Translate(key, player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
     /// <summary>
-    /// Tramslate an unlocalized string to a localized translation structure using the translations file.
-    /// </summary>
-    /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-    /// <param name="player">The player to check language on, pass 0 to use the <see cref="JSONMethods.DEFAULT_LANGUAGE"/>.</param>
-    /// <returns>A translation structure.</returns>
-    public static TranslationData GetTranslation(string key, ulong player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (key == null)
-        {
-            L.LogError($"Message to be sent to {player} was null.");
-            return TranslationData.Nil;
-        }
-        if (key.Length == 0)
-        {
-            return TranslationData.Nil;
-        }
-        if (player == 0)
-        {
-            if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
-                    {
-                        return translation;
-                    }
-                    else
-                    {
-                        return TranslationData.Nil;
-                    }
-                }
-                else
-                {
-                    return TranslationData.Nil;
-                }
-            }
-            else
-            {
-                if (data.TryGetValue(key, out TranslationData translation))
-                {
-                    return translation;
-                }
-                else
-                {
-                    return TranslationData.Nil;
-                }
-            }
-        }
-        else
-        {
-            if (Data.Languages.TryGetValue(player, out string lang))
-            {
-                if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
-                    lang = JSONMethods.DEFAULT_LANGUAGE;
-            }
-            else lang = JSONMethods.DEFAULT_LANGUAGE;
-            if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
-                    {
-                        return translation;
-                    }
-                    else
-                    {
-                        return TranslationData.Nil;
-                    }
-                }
-                else
-                {
-                    return TranslationData.Nil;
-                }
-            }
-            else if (data.TryGetValue(key, out TranslationData translation))
-            {
-                return translation;
-            }
-            else
-            {
-                return TranslationData.Nil;
-            }
-        }
-    }
-    /// <summary>
     /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the Original message (non-color removed)
     /// </summary>
     /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
@@ -410,7 +319,6 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
 
@@ -478,9 +386,9 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
+
             if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -563,9 +471,9 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
+
             if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -635,9 +543,9 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
                 }
             }
+
             if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
             {
                 if (Data.Localization.Count > 0)
@@ -713,7 +621,6 @@ public static class Localization
             catch (FormatException ex)
             {
                 L.LogError(ex);
-                return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
             }
         }
 
@@ -808,9 +715,9 @@ public static class Localization
             catch (FormatException ex)
             {
                 L.LogError(ex);
-                return s + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
             }
         }
+
         if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
         {
             if (!Data.Localization.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data))
