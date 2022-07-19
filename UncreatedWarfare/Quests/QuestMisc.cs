@@ -2572,7 +2572,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         {
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
             {
-                return Translation.TranslateEnum(_value, player);
+                return Localization.TranslateEnum(_value, player);
             }
             else if (_type == EDynamicValueType.ANY)
             {
@@ -2593,12 +2593,12 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
                             builder.Append(" " + (_behavior == EChoiceBehavior.ALLOW_ONE ? "or" : "and") + " ");
                     }
 
-                    builder.Append(Translation.TranslateEnum(_values[i], player));
+                    builder.Append(Localization.TranslateEnum(_values[i], player));
                 }
 
                 return builder.ToString();
             }
-            else return Translation.TranslateEnum(_value!, player);
+            else return Localization.TranslateEnum(_value!, player);
         }
     }
 }

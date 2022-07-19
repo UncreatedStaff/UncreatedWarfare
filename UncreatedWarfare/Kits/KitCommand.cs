@@ -467,7 +467,7 @@ public class KitCommand : Command
                         ctx.LogAction(EActionLogType.CREATE_KIT, loadoutName);
                         await UCWarfare.ToUpdate();
                         KitManager.UpdateSigns(loadout);
-                        ctx.Reply("kit_l_created", Translation.TranslateEnum(@class, ctx.Caller!), username, playerId.ToString(), loadoutName);
+                        ctx.Reply("kit_l_created", Localization.TranslateEnum(@class, ctx.Caller!), username, playerId.ToString(), loadoutName);
                     }
                     else
                     {

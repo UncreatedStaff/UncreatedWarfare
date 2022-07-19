@@ -6,6 +6,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Squads;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -71,7 +72,7 @@ public class OrderCommand : Command
                         switch (type)
                         {
                             case EOrder.ATTACK or EOrder.DEFEND:
-                                ctx.LogAction(EActionLogType.CREATED_ORDER, Translation.TranslateEnum(type, 0) + " " + marker.ToString("N2"));
+                                ctx.LogAction(EActionLogType.CREATED_ORDER, Localization.TranslateEnum(type, 0) + " " + marker.ToString("N2"));
                                 switch (Data.Gamemode)
                                 {
                                     case null:
@@ -124,7 +125,7 @@ public class OrderCommand : Command
                                         }
                                         break;
                                     default:
-                                        formatting = new string[] { F.ToGridPosition(marker) };
+                                        formatting = new string[] { new GridLocation(marker).ToString() };
                                         if (type is EOrder.ATTACK)
                                             message = "order_attack_area";
                                         else
@@ -177,7 +178,7 @@ public class OrderCommand : Command
                                             }
                                             break;
                                         default:
-                                            formatting = new string[] { F.ToGridPosition(marker) };
+                                            formatting = new string[] { new GridLocation(marker).ToString() };
                                             message = "order_buildfob_area";
                                             break;
                                     }
@@ -231,11 +232,11 @@ public class OrderCommand : Command
                                             }
                                             break;
                                         default:
-                                            formatting = new string[] { F.ToGridPosition(marker) };
+                                            formatting = new string[] { new GridLocation(marker).ToString() };
                                             message = "order_move_area";
                                             break;
                                     }
-                                    formatting = new string[] { F.ToGridPosition(marker) };
+                                    formatting = new string[] { new GridLocation(marker).ToString() };
                                     message = "order_move_squad";
 
                                     ctx.LogAction(EActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"));
@@ -258,7 +259,7 @@ public class OrderCommand : Command
                     EOrder.DEFEND => Data.Is<Insurgency>() ? "order_e_defend_marker_ins" : "order_e_defend_marker",
                     EOrder.BUILDFOB => "order_e_buildfob_marker",
                     EOrder.MOVE => "order_e_move_marker",
-                    _ => Translation.Common.UNKNOWN_ERROR
+                    _ => "unknown_error"
                 });
             }
             else

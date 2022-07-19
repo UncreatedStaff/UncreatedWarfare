@@ -82,7 +82,7 @@ public class SpottedComponent : MonoBehaviour
             {
                 if (vehicle.transform.TryGetComponent(out VehicleComponent vc))
                 {
-                    spotted.TryAnnounce(spotter, Translation.Translate(vc.Data.Type.ToString(), JSONMethods.DEFAULT_LANGUAGE).ToUpper().Colorize("f2a172"));
+                    spotted.TryAnnounce(spotter, Localization.Translate(vc.Data.Type.ToString(), JSONMethods.DEFAULT_LANGUAGE).ToUpper().Colorize("f2a172"));
                 }
                 L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
                 spotted.Activate(spotter);
@@ -117,7 +117,7 @@ public class SpottedComponent : MonoBehaviour
     {
         if (CurrentSpotter != null)
         {
-            Points.AwardXP(CurrentSpotter, assistXP, Translation.Translate("xp_spotted_assist", CurrentSpotter));
+            Points.AwardXP(CurrentSpotter, assistXP, Localization.Translate("xp_spotted_assist", CurrentSpotter));
         }
     }
 
@@ -167,7 +167,7 @@ public class SpottedComponent : MonoBehaviour
         if (IsActive)
             return;
 
-        ToastMessage.QueueMessage(spotter, new ToastMessage(Translation.Translate("spotted", spotter), EToastMessageSeverity.MINI), true);
+        ToastMessage.QueueMessage(spotter, new ToastMessage(Localization.Translate("spotted", spotter), EToastMessageSeverity.MINI), true);
 
         foreach (var player in PlayerManager.OnlinePlayers)
         {

@@ -1,5 +1,4 @@
-﻿using SDG.Framework.Translations;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -30,23 +29,58 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
-    private static readonly Regex RemoveRichTextRegex = new Regex("<(?:(?:(?=.*<\\/color>)color=#{0,1}[0123456789ABCDEF]{6})|(?:(?<=<color=#{0,1}[0123456789ABCDEF]{6}>.*)\\/color)|(?:(?=.*<\\/b>)b)|(?:(?<=<b>.*)\\/b)|(?:(?=.*<\\/i>)i)|(?:(?<=<i>.*)\\/i)|(?:(?=.*<\\/size>)size=\\d+)|(?:(?<=<size=\\d+>.*)\\/size)|(?:(?=.*<\\/material>)material=\\d+)|(?:(?<=<material=\\d+>.*)\\/material))>", RegexOptions.IgnoreCase);
+    private static readonly Regex RemoveRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:color=\\\"{0,1}[#a-z]{0,9}\\\"{0,1})|(?:color)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:#.{3,8})|(?:[isub])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
+    private static readonly Regex RemoveTMProRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:noparse)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:[su])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex TimeRegex = new Regex(@"(\d+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     public static readonly char[] vowels = new char[] { 'a', 'e', 'i', 'o', 'u' };
     /// <summary>Convert an HTMLColor string to a actual color.</summary>
     /// <param name="htmlColorCode">A hexadecimal/HTML color key.</param>
     public static Color Hex(this string htmlColorCode)
     {
-        string code = "#";
-        if (htmlColorCode.Length > 0 && htmlColorCode[0] != '#')
-            code += htmlColorCode;
-        else
-            code = htmlColorCode;
-        if (ColorUtility.TryParseHtmlString(code, out Color color))
-            return color;
-        else if (ColorUtility.TryParseHtmlString(htmlColorCode, out color))
+        if (htmlColorCode.Length == 0) return Color.white;
+        if (htmlColorCode[0] != '#')
+            htmlColorCode = "#" + htmlColorCode;
+
+        if (ColorUtility.TryParseHtmlString(htmlColorCode, out Color color))
             return color;
         else return Color.white;
+    }
+    public static string Hex(this Color color)
+    {
+        string hex = ((byte)Mathf.Clamp(color.r * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale) + ((byte)Mathf.Clamp(color.g * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale) + ((byte)Mathf.Clamp(color.b * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale);
+        if (color.a < 1f)
+            hex += ((byte)Mathf.Clamp(color.a * byte.MaxValue, 0, byte.MaxValue)).ToString("X2", Data.Locale);
+        return hex;
+    }
+    public static bool HasPlayer(this List<UCPlayer> list, UCPlayer player)
+    {
+        IEqualityComparer<UCPlayer> c = UCPlayer.Comparer;
+        for (int i = 0; i < list.Count; ++i)
+        {
+            if (c.Equals(list[i], player))
+                return true;
+        }
+        return false;
+    }
+    public static bool HasPlayer(this IEnumerable<UCPlayer> list, UCPlayer player)
+    {
+        IEqualityComparer<UCPlayer> c = UCPlayer.Comparer;
+        foreach (UCPlayer pl in list)
+        {
+            if (c.Equals(pl, player))
+                return true;
+        }
+        return false;
+    }
+    public static bool HasPlayer(this UCPlayer[] array, UCPlayer player)
+    {
+        IEqualityComparer<UCPlayer> c = UCPlayer.Comparer;
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (c.Equals(array[i], player))
+                return true;
+        }
+        return false;
     }
     public static ConsoleColor GetClosestConsoleColor(Color color)
     {
@@ -59,6 +93,11 @@ public static class F
     public static string RemoveRichText(string text)
     {
         return RemoveRichTextRegex.Replace(text, string.Empty);
+    }
+    /// <remarks>Does not include &lt;#ffffff&gt; colors.</remarks>
+    public static string RemoveTMProRichText(string text)
+    {
+        return RemoveTMProRichTextRegex.Replace(text, string.Empty);
     }
     public static byte[] CloneBytes(byte[] src)
     {
@@ -441,7 +480,7 @@ public static class F
         {
             UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
             if (pl != null)
-                newtext = Translation.TranslateSign(text, pl, false);
+                newtext = Localization.TranslateSign(text, pl, false);
         }
         Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
     }
@@ -461,7 +500,7 @@ public static class F
                 {
                     UCPlayer? pl2 = UCPlayer.FromSteamPlayer(pl);
                     if (pl2 != null)
-                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, translate ? Translation.TranslateSign(text, pl2, false) : text);
+                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, translate ? Localization.TranslateSign(text, pl2, false) : text);
                 }
             }
         }
@@ -489,7 +528,7 @@ public static class F
         {
             UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
             if (pl != null)
-                newtext = Translation.TranslateSign(newtext, pl, false);
+                newtext = Localization.TranslateSign(newtext, pl, false);
         }
         Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
     }
@@ -751,13 +790,26 @@ public static class F
         {
             SteamPlayer? pl = PlayerTool.getSteamPlayer(player);
             if (pl == default)
-                return Data.DatabaseManager.GetUsernames(player);
+            {
+                try
+                {
+                    return Data.DatabaseManager.GetUsernames(player);
+                }
+                catch (Exception ex)
+                {
+                    if (!ex.Message.Equals("Not connected", StringComparison.Ordinal))
+                        throw ex;
+                    string tname = player.ToString(Data.Locale);
+                    return new FPlayerName() { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
+                }
+            }
             else return new FPlayerName()
             {
                 CharacterName = pl.playerID.characterName,
                 NickName = pl.playerID.nickName,
                 PlayerName = pl.playerID.playerName,
-                Steam64 = player
+                Steam64 = player,
+                WasFound = true
             };
         }
     }
@@ -1035,64 +1087,6 @@ public static class F
     /// Finds the 2D distance between two Vector3's x and z components.
     /// </summary>
     public static float SqrDistance2D(Vector3 a, Vector3 b) => Mathf.Pow(b.x - a.x, 2) + Mathf.Pow(b.z - a.z, 2);
-
-    private static readonly char[] ABET = new char[] { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L' };
-    private static bool _setGridConstants = false;
-    private static float _toMapCoordsMultiplier;
-    private static float _gridSize;
-    private const int _sqrsTotal = 36;
-    private static float _sqrSize;
-    private static void SetGridPositionConstants()
-    {
-        _toMapCoordsMultiplier = Level.size / (Level.size - Level.border * 2f);
-        _gridSize = Level.size - Level.border * 2;
-        _sqrSize = Mathf.Floor(_gridSize / 36f);
-        _setGridConstants = true;
-    }
-    public static string ToGridPosition(Vector3 pos)
-    {
-        if (!_setGridConstants) SetGridPositionConstants();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        float x = Level.size / 2 + _toMapCoordsMultiplier * pos.x;
-        float y = Level.size / 2 - _toMapCoordsMultiplier * pos.z;
-
-        int xSqr;
-        bool isOut = false;
-        if (x < Level.border)
-        {
-            isOut = true;
-            xSqr = 0;
-        }
-        else if (x > Level.border + _gridSize)
-        {
-            isOut = true;
-            xSqr = _sqrsTotal - 1;
-        }
-        else
-            xSqr = Mathf.FloorToInt((x - Level.border) / _sqrSize);
-        int ySqr;
-        if (y < Level.border)
-        {
-            isOut = true;
-            ySqr = 0;
-        }
-        else if (y > Level.border + _gridSize)
-        {
-            isOut = true;
-            ySqr = _sqrsTotal - 1;
-        }
-        else
-            ySqr = Mathf.FloorToInt((y - Level.border) / _sqrSize);
-        int bigsqrx = Mathf.FloorToInt(xSqr / 3f);
-        int smlSqrDstX = xSqr % 3;
-        int bigsqry = Mathf.FloorToInt(ySqr / 3f);
-        int smlSqrDstY = ySqr % 3;
-        string rtn = ABET[bigsqrx] + (bigsqry + 1).ToString();
-        if (!isOut) rtn += "-" + (smlSqrDstX + (2 - smlSqrDstY) * 3 + 1).ToString();
-        return rtn;
-    }
     public static bool TryParseAny(string input, Type type, out object value)
     {
         value = null!;

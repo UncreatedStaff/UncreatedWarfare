@@ -180,7 +180,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 UCPlayer? uctarget = UCPlayer.FromPlayer(target);
                 if (ucmedic != null)
                 {
-                    Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, Translation.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
+                    Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, Localization.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
                     if (uctarget != null)
                         QuestManager.OnRevive(ucmedic, uctarget);
                 }
@@ -282,8 +282,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         short key = unchecked((short)Gamemode.Config.UI.InjuredUI.Value.Id);
         if (key != 0)
         {
-            EffectManager.sendUIEffect(Gamemode.Config.UI.InjuredUI.Value, key, parameters.player.channel.owner.transportConnection, true, Translation.Translate("injured_ui_header", parameters.player), string.Empty);
-            EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", Translation.Translate("injured_ui_give_up", parameters.player));
+            EffectManager.sendUIEffect(Gamemode.Config.UI.InjuredUI.Value, key, parameters.player.channel.owner.transportConnection, true, Localization.Translate("injured_ui_header", parameters.player), string.Empty);
+            EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", Localization.Translate("injured_ui_give_up", parameters.player));
         }
         parameters.player.SendChat("injured_chat");
 
@@ -305,7 +305,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 byte kteam = killer.GetTeamByte();
                 if (kteam != team)
                 {
-                    ToastMessage.QueueMessage(killer, new ToastMessage(Translation.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
+                    ToastMessage.QueueMessage(killer, new ToastMessage(Localization.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
                     if (parameters.player.transform.TryGetComponent(out UCPlayerData p))
                     {
                         if ((DateTime.Now - p.secondLastAttacker.Value).TotalSeconds < 30 && p.secondLastAttacker.Key != parameters.killer.m_SteamID)
@@ -340,7 +340,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                         Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
                 }
                 else
-                    ToastMessage.QueueMessage(killer, new ToastMessage("", Translation.Translate("xp_friendly_downed", killer), EToastMessageSeverity.MINI));
+                    ToastMessage.QueueMessage(killer, new ToastMessage("", Localization.Translate("xp_friendly_downed", killer), EToastMessageSeverity.MINI));
             }
         }
         if (parameters.player.transform.TryGetComponent(out Reviver reviver))

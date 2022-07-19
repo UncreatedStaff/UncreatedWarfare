@@ -1,364 +1,598 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Gamemodes.Flags;
+using System.Reflection;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Cache = Uncreated.Warfare.Components.Cache;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare;
-
-partial class JSONMethods
+internal static class T
 {
-    public static void CreateDefaultTranslations()
+    private const int NON_TRANSLATION_FIELD_COUNT = 11;
+    private const string ERROR_COLOR = "<#ff8c69>";
+    private const string SUCCESS_COLOR = "<#e6e3d5>";
+    internal const string PLURAL = ":FORMAT_PLURAL";
+    internal const string UPPERCASE = "upper";
+    internal const string LOWERCASE = "lower";
+    internal const string PROPERCASE = "proper";
+    public static readonly Translation[] Translations;
+    static T()
     {
-        DefaultTranslations = new Dictionary<string, string>
+        FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        Translations = new Translation[fields.Length - NON_TRANSLATION_FIELD_COUNT];
+        int i2 = -1;
+        for (int i = 0; i < fields.Length; ++i)
         {
-            { Localization.Common.NOT_IMPLEMENTED,        "<color=#ff8c69>This command hasn't been implemented yet.</color>" },
-            { Localization.Common.CORRECT_USAGE,          "<color=#ff8c69>Correct usage: {0}</color>" },
-            { Localization.Common.CONSOLE_ONLY,           "<color=#ff8c69>This command can not be called from console.</color>" },
-            { Localization.Common.PLAYERS_ONLY,           "<color=#ff8c69>This command can only called from console.</color>" },
-            { Localization.Common.PLAYER_NOT_FOUND,       "<color=#ff8c69>Player not found.</color>" },
-            { Localization.Common.UNKNOWN_ERROR,          "<color=#ff8c69>We ran into an unknown error executing that command.</color>" },
-            { Localization.Common.GAMEMODE_ERROR,         "<color=#ffa238>This command is not enabled in this gamemode.</color>" },
-            { Localization.Common.NO_PERMISSIONS,         "<color=#ff8c69>You do not have permission to use this command.</color>" },
-            { Localization.Common.NOT_ENABLED,            "<color=#ff8c69>This feature is not currently enabled.</color>" },
-            { Localization.Common.NO_PERMISSIONS_ON_DUTY, "<color=#ff8c69>You must be on duty to execute that command.</color>" },
-            { "gamemode_not_flag_gamemode", "<color=#ff8c69>Current gamemode <color=#ff758f>{0}</color> is not a <color=#ff758f>FLAG GAMEMODE</color>.</color>" },
-            { "gamemode_flag_not_on_cap_team", "<color=#ff8c69>You're not on a team that can capture flags.</color>" },
-            { "gamemode_flag_not_on_cap_team_console", "That team can not capture flags." },
-            { "entered_main", "<color=#e6e3d5>You have entered the safety of {0} headquarters!</color>" },
-            { "left_main", "<color=#e6e3d5>You have left the safety of {0} headquarters.</color>" },
-            { "entered_cap_radius", "You have entered the capture radius of <color=#{1}>{0}</color>." },
-            { "left_cap_radius", "You have left the cap radius of <color=#{1}>{0}</color>." },
-            { "capturing", "Your team is capturing this point!" },
-            { "losing", "Your team is losing this point!" },
-            { "contested", "<color=#{1}>{0}</color> is contested! Eliminate all enemies to secure it." },
-            { "clearing", "Your team is busy clearing this point." },
-            { "secured", "This point is secure for now. Keep up the defense." },
-            { "nocap", "This point is not your objective, check the right of your screen to see which points to attack and defend." },
-            { "notowned", "This point is owned by the enemies. Get more players to capture it." },
-            { "locked", "This point has already been captured, try to protect the objective to win." },
-            { "flag_neutralized", "<color=#{1}>{0}</color> has been neutralized!" },
-            { "team_1", "USA" },
-            { "team_2", "Middle Eastern Coalition" },
-            { "team_3", "Admins" },
-            { "teams_join_success", "<color=#a0ad8e>You've joined {0}.</color>" },
-            { "teams_join_announce", "<color=#a0ad8e>{0} joined <color=#{2}>{1}</color>!</color>" },
-            { "join_player_joined_console", "{0} ({1}) changed group: {3} >> {2}" },
-            { "neutral", "Neutral" },
-            { "undiscovered_flag", "unknown" },
-            { "ui_capturing", "CAPTURING" },
-            { "ui_losing", "LOSING" },
-            { "ui_clearing", "CLEARING" },
-            { "ui_contested", "CONTESTED" },
-            { "ui_secured", "SECURED" },
-            { "ui_nocap", "NOT OBJECTIVE" },
-            { "ui_notowned", "TAKEN" },
-            { "ui_locked", "LOCKED" },
-            { "ui_in_vehicle", "IN VEHICLE" },
-            { "team_win", "<color=#{1}>{0}</color> has won the battle!" },
-            { "team_capture", "<color=#{1}>{0}</color> captured <color=#{3}>{2}</color>!" },
-            { "player_connected", "<color=#e6e3d5><color=#ffff1a>{0}</color> joined the server!</color>" },
-            { "player_disconnected", "<color=#e6e3d5><color=#ffff1a>{0}</color> left the server.</color>" },
-            { "flag_header", "Flags" },
-            { "null_transform_kick_message", "Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0})." },
-            { "text_chat_feedback_chat_filter", "<color=#ff8c69>Our chat filter flagged <color=#fdfdfd>{0}</color>, so the message wasn't sent." },
+            FieldInfo field = fields[i];
+            if (typeof(Translation).IsAssignableFrom(field.FieldType))
+            {
+                if (field.GetValue(null) is not Translation tr)
+                    L.LogError("Failed to convert " + field.Name + " to a translation!");
+                else if (i2 + 1 < Translations.Length)
+                {
+                    tr.Key = field.Name;
+                    tr.Id = i2;
+                    tr.AttributeData = Attribute.GetCustomAttribute(field, typeof(TranslationDataAttribute)) as TranslationDataAttribute;
+                    Translations[++i2] = tr;
+                }
+                else
+                    L.LogError("Ran out of space in translation array for " + field.Name + " at " + (i2 + 1));
+            }
+        }
 
-            #region Leaderboard
-            // universal
-            { "lb_next_game", "Starting soon..." },
-            { "lb_next_game_shut_down", "<color=#94cbff>Shutting Down Because: \"{0}\"</color>" },
-            { "lb_next_game_time_format", "{0:mm\\:ss}" },
-            { "lb_warstats_header", "<color=#{1}>{0}</color> vs <color=#{3}>{2}</color>" },
-            { "lb_playerstats_header", "<color=#{1}>{0}</color> - {2:n0}% presence" },
-            { "lb_playerstats_header_backup", "<color=#{1}>{0}</color>" },
-            { "lb_winner_title", "<color=#{1}>{0}</color> Wins!" },
-            { "lb_longest_shot", "{0}m - {1}\n{2}" },
+        if (Translations.Length != i2 + 1)
+        {
+            L.LogWarning("Translations had to resize for some reason from " + Translations.Length + " to " + (i2 + 1) + ". Check to make sure there's only one field that isn't a translation.");
+            Array.Resize(ref Translations, i2 + 1);
+        }
+    }
 
-            // ctf
-            { "ctf_lb_playerstats_0", "Kills: " },
-            { "ctf_lb_playerstats_1", "Deaths: " },
-            { "ctf_lb_playerstats_2", "K/D Ratio: " },
-            { "ctf_lb_playerstats_3", "Kills on Point: " },
-            { "ctf_lb_playerstats_4", "Time Deployed: " },
-            { "ctf_lb_playerstats_5", "XP Gained: " },
-            { "ctf_lb_playerstats_6", "Time on Point: " },
-            { "ctf_lb_playerstats_7", "Captures: " },
-            { "ctf_lb_playerstats_8", "Time in Vehicle: " },
-            { "ctf_lb_playerstats_9", "Teamkills: " },
-            { "ctf_lb_playerstats_10", "FOBs Destroyed: " },
-            { "ctf_lb_playerstats_11", "Credits Gained: " },
+    /*
+     * c$value$ will be replaced by the color "value" on startup
+     */
 
-            { "ctf_lb_warstats_0", "Duration: " },
-            { "ctf_lb_warstats_1", "US Casualties: " },
-            { "ctf_lb_warstats_2", "MEC Casualties: " },
-            { "ctf_lb_warstats_3", "Flag Captures: " },
-            { "ctf_lb_warstats_4", "US Average Army: " },
-            { "ctf_lb_warstats_5", "MEC Average Army: " },
-            { "ctf_lb_warstats_6", "US FOBs Placed: " },
-            { "ctf_lb_warstats_7", "MEC FOBs Placed: " },
-            { "ctf_lb_warstats_8", "US FOBs Destroyed: " },
-            { "ctf_lb_warstats_9", "MEC FOBs Destroyed: " },
-            { "ctf_lb_warstats_10", "Teamkill Casualties: " },
-            { "ctf_lb_warstats_11", "Longest Shot: " },
+    #region Common Errors
+    private const string SECTION_COMMON_ERRORS = "Common_Errors";
 
-            { "ctf_lb_header_0", "Kills" },
-            { "ctf_lb_header_1", "Deaths" },
-            { "ctf_lb_header_2", "XP" },
-            { "ctf_lb_header_3", "Credits" },
-            { "ctf_lb_header_4", "Caps" },
-            { "ctf_lb_header_5", "Damage" },
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "Sent when a command is not used correctly.",
+        LegacyTranslationId = "correct_usage",
+        FormattingDescriptions = new string[] { "Command usage." })]
+    public static readonly Translation<string> CorrectUsage = new Translation<string>(ERROR_COLOR + "Correct usage: {0}.");
 
-            // insurgency
-            { "ins_lb_playerstats_0", "Kills: " },
-            { "ins_lb_playerstats_1", "Deaths: " },
-            { "ins_lb_playerstats_2", "Damage Done: " },
-            { "ins_lb_playerstats_3", "Objective Kills: " },
-            { "ins_lb_playerstats_4", "Time Deployed: " },
-            { "ins_lb_playerstats_5", "XP Gained: " },
-            { "ins_lb_playerstats_6", "Intelligence Gathered: " },
-            { "ins_lb_playerstats_7", "Caches Discovered: " },
-            { "ins_lb_playerstats_8", "Caches Destroyed: " },
-            { "ins_lb_playerstats_9", "Teamkills: " },
-            { "ins_lb_playerstats_10", "FOBs Destroyed: " },
-            { "ins_lb_playerstats_11", "Credits Gained: " },
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command or feature hasn't been completed or implemented.",
+        LegacyTranslationId = "todo")]
+    public static readonly Translation NotImplemented   = new Translation(ERROR_COLOR + "This command hasn't been implemented yet.");
 
-            { "ins_lb_warstats_0", "Duration: " },
-            { "ins_lb_warstats_1", "US Casualties: " },
-            { "ins_lb_warstats_2", "MEC Casualties: " },
-            { "ins_lb_warstats_3", "Intelligence Gathered: " },
-            { "ins_lb_warstats_4", "US Average Army: " },
-            { "ins_lb_warstats_5", "MEC Average Army: " },
-            { "ins_lb_warstats_6", "US FOBs Placed: " },
-            { "ins_lb_warstats_7", "MEC FOBs Placed: " },
-            { "ins_lb_warstats_8", "US FOBs Destroyed: " },
-            { "ins_lb_warstats_9", "MEC FOBs Destroyed: " },
-            { "ins_lb_warstats_10", "Teamkill Casualties: " },
-            { "ins_lb_warstats_11", "Longest Shot: " },
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command or feature can only be used by the server console.",
+        LegacyTranslationId = "command_e_no_console")]
+    public static readonly Translation ConsoleOnly      = new Translation(ERROR_COLOR + "This command can only be called from console.");
 
-            { "ins_lb_header_0", "Kills" },
-            { "ins_lb_header_1", "Deaths" },
-            { "ins_lb_header_2", "XP" },
-            { "ins_lb_header_3", "Credits" },
-            { "ins_lb_header_4", "KDR" },
-            { "ins_lb_header_5", "Damage" },
-            #endregion
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command or feature can only be used by a player (instead of the server console).",
+        LegacyTranslationId = "command_e_no_player")]
+    public static readonly Translation PlayersOnly      = new Translation(ERROR_COLOR + "This command can not be called from console.");
 
-            #region GroupCommand
-            { "group_usage", "<color=#ff8c69>Syntax: <i>/group [ join [id] | create [name] ].</i></color>" },
-            { "current_group", "<color=#e6e3d5>Group <color=#4785ff>{0}</color>: <color=#4785ff>{1}</color>.</color>" },
-            { "cant_create_group", "<color=#ff8c69>You can't create a group right now.</color>" },
-            { "created_group", "<color=#e6e3d5>Created group <color=#4785ff>{0}</color>: <color=#4785ff>{1}</color>.</color>" },
-            { "created_group_console", "{0} ({1}) created group \"{2}\": \"{3}\"" },
-            { "not_in_group", "<color=#ff8c69>You aren't in a group.</color>" },
-            { "joined_group", "<color=#e6e3d5>You have joined group {0}: <color=#4785ff>{1}</color>.</color>" },
-            { "joined_already_in_group", "<color=#ff8c69>You are already in that group.</color>" },
-            { "joined_group_not_found", "<color=#ff8c69>Could not find group <color=#4785ff>{0}</color>.</color>" },
-            { "joined_group_console", "{0} ({1}) joined group \"{2}\": \"{3}\"." },
-            #endregion
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A player name or ID search turned up no results.",
+        LegacyTranslationId = "command_e_player_not_found")]
+    public static readonly Translation PlayerNotFound   = new Translation(ERROR_COLOR + "Player not found.");
 
-            #region LangCommand
-            { "language_list", "<color=#f53b3b>Languages: <color=#e6e3d5>{0}</color>.</color>" },
-            { "language_current", "<color=#f53b3b>Current language: <color=#e6e3d5>{0}</color>.</color>" },
-            { "changed_language", "<color=#f53b3b>Changed your language to <color=#e6e3d5>{0}</color>.</color>" },
-            { "change_language_not_needed", "<color=#f53b3b>You are already set to <color=#e6e3d5>{0}</color>.</color>" },
-            { "reset_language", "<color=#f53b3b>Reset your language to <color=#e6e3d5>{0}</color>.</color>" },
-            { "reset_language_how", "<color=#f53b3b>Do <color=#e6e3d5>/lang reset</color> to reset back to default language.</color>" },
-            { "dont_have_language", "<color=#dd1111>We don't have translations for <color=#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.</color>" },
-            { "reset_language_not_needed", "<color=#dd1111>You are already on the default language: <color=#e6e3d5>{0}</color>.</color>" },
-            #endregion
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command didn't respond to an interaction, or a command chose to throw a vague error response to an uncommon problem.",
+        LegacyTranslationId = "command_e_unknown_error")]
+    public static readonly Translation UnknownError     = new Translation(ERROR_COLOR + "We ran into an unknown error executing that command.");
 
-            #region Toasts
-            { "welcome_message", "Thanks for playing <color=#{0}>Uncreated Warfare</color>!\nWelcome back <color=#{2}>{1}</color>." },
-            { "welcome_message_first_time", "Welcome to <color=#{0}>Uncreated Warfare</color>!\nTalk to the NPCs to get started." },
-            #endregion
-            
-            #region KitCommand
-            { "kit_created", "<color=#a0ad8e>Created kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_search_results", "<color=#a0ad8e>Matches: <i>{0}</i>.</color>" },
-            { "kit_overwritten", "<color=#a0ad8e>Overwritten items for kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_copied", "<color=#a0ad8e>Copied data from <color=#c7b197>{0}</color></color> into new kit: <color=#ffffff>{1}</color></color>" },
-            { "kit_deleted", "<color=#a0ad8e>Deleted kit: <color=#ffffff>{0}</color></color>" },
-            { "kit_setprop", "<color=#a0ad8e>Set <color=#8ce4ff>{0}</color> for kit <color=#ffb89c>{1}</color> to: <color=#ffffff>{2}</color></color>" },
-            { "kit_accessgiven", "<color=#a0ad8e>Allowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
-            { "kit_accessgiven_dm", "<color=#a0ad8e>You were just given access to the kit: <color=#ffffff>{0}</color>.</color>" },
-            { "kit_accessremoved_dm", "<color=#a0ad8e>You were just denied access to the kit: <color=#ffffff>{0}</color>.</color>" },
-            { "kit_accessremoved", "<color=#a0ad8e>Disallowed player: <color=#e06969>{0}</color> to access the kit: <color=#ffffff>{1}</color></color>" },
-            { "kit_e_exist", "<color=#ff8c69>A kit called {0} already exists.</color>" },
-            { "kit_e_noexist", "<color=#ff8c69>A kit called {0} does not exist.</color>" },
-            { "kit_e_invalidprop", "<color=#ff8c69>{0} isn't a valid a kit property. Try putting 'Class', 'Cost', 'IsPremium', etc.</color>" },
-            { "kit_e_invalidarg", "<color=#ff8c69>{0} is not a valid value for kit property: {1}</color>" },
-            { "kit_e_invalidarg_not_allowed", "<color=#ff8c69>{0} is not a valid property, or it cannot be changed.</color>" },
-            { "kit_e_noplayer", "<color=#ff8c69>No player found by the name of '{0}'.</color>" },
-            { "kit_e_alreadyaccess", "<color=#dbc48f>Player {0} already has access to the kit: {1}.</color>" },
-            { "kit_e_noaccess", "<color=#dbc48f>Player {0} already does not have access to that: {1}.</color>" },
-            { "kit_e_cooldown", "<color=#c2b39b>You can request this kit again in: <color=#bafeff>{0}</color></color>" },
-            { "kit_e_cooldownglobal", "<color=#c2b39b>You can request another kit in: <color=#bafeff>{0}</color></color>" },
-            { "kit_l_e_playernotfound", "<color=#ff8c69>Could not find player with the Steam64 ID: {0}</color>" },
-            { "kit_l_e_kitexists", "<color=#ff8c69>Something went wrong and this loadout could not be created (loadout already exists)</color>" },
-            { "kit_l_created", "<color=#a0ad8e>Created <color=#c4c9bb>{0}</color> loadout for <color=#deb692>{1}</color> (<color=#968474>{2}</color>). Kit name: <color=#ffffff>{3}</color></color>" },
-            #endregion
-            
-            #region RangeCommand
-            { "range", "<color=#9e9c99>The range to your squad's marker is: <color=#8aff9f>{0}m</color></color>" },
-            { "range_nomarker", "<color=#9e9c99>You squad has no marker.</color>" },
-            { "range_notsquadleader", "<color=#9e9c99>Only <color=#cedcde>SQUAD LEADERS</color> can place markers.</color>" },
-            { "range_notinsquad", "<color=#9e9c99>You must JOIN A SQUAD in order to do /range.</color>" },
-            #endregion
-            
-            #region SquadCommand
-            { "squad_not_in_team", "<color=#a89791>You can't join a squad unless you're on a team.</color>" },
-            { "squad_created", "<color=#a0ad8e>You created the squad <color=#ffffff>{0}</color></color>" },
-            { "squad_ui_reloaded", "<color=#a0ad8e>Squad UI has been reloaded.</color>" },
-            { "squad_joined", "<color=#a0ad8e>You joined <color=#ffffff>{0}</color>.</color>" },
-            { "squad_left", "<color=#a7a8a5>You left your squad.</color>" },
-            { "squad_disbanded", "<color=#a7a8a5>Your squad was disbanded.</color>" },
-            { "squad_locked", "<color=#a7a8a5>You <color=#6be888>locked</color> your squad.</color>" },
-            { "squad_unlocked", "<color=#999e90>You <color=#ffffff>unlocked</color> your squad.</color>" },
-            { "squad_promoted", "<color=#b9bdb3><color=#ffc94a>{0}</color> was promoted to squad leader.</color>" },
-            { "squad_kicked", "<color=#b9bdb3>You were kicked from Squad <color=#6be888>{0}</color>.</color>" },
-            { "squad_e_noexist", "<color=#a89791>Could not find a squad called '{0}'.</color>" },
-            { "squad_e_insquad", "<color=#ff8c69>You are already in a squad!</color>" },
-            { "squad_e_notinsquad", "<color=#a89791>You are not in a squad!</color>" },
-            { "squad_e_notsquadleader", "<color=#ff8c69>You are not a squad leader!</color>" },
-            { "squad_e_locked", "<color=#a89791>That squad is locked.</color>" },
-            { "squad_e_full", "<color=#a89791>That squad is full.</color>" },
-            { "squad_e_playernotinsquad", "<color=#a89791>That player is not in your squad.</color>" },
-            { "squad_e_playernotfound", "<color=#a89791>Could not find player: '{0}'.</color>" },
-            { "squad_player_joined", "<color=#b9bdb3><color=#8df0c5>{0}</color> joined your squad.</color>" },
-            { "squad_player_left", "<color=#b9bdb3><color=#f0c08d>{0}</color> left your squad.</color>" },
-            { "squad_player_promoted", "<color=#b9bdb3><color=#ffc94a>{0}</color> was promoted to squad leader.</color>" },
-            { "squad_player_kicked", "<color=#b9bdb3><color=#d68f81>{0}</color> was kicked from your squad.</color>" },
-            { "squad_squadleader", "<color=#b9bdb3>You are now the <color=#ffc94a>squad leader</color>.</color>" },
-            { "squads_disabled", "<color=#ff8c69>Squads are disabled.</color>" },
-            { "squad_too_many", "<color=#ff8c69>There can not be more than 8 squads on a team at once.</color>" },
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command is disabled in the current gamemode type (ex, /deploy in a gamemode without FOBs).",
+        LegacyTranslationId = "command_e_gamemode")]
+    public static readonly Translation GamemodeError    = new Translation(ERROR_COLOR + "This command is not enabled in this gamemode.");
 
-            { "squad_ui_player_name", "{0}" },
-            { "squad_ui_player_count", "<color=#bd6b5b>{0}</color> {1}/6" },
-            { "squad_ui_player_count_small", "{0}/6" },
-            { "squad_ui_player_count_small_locked", "<color=#969696>{0}/6</color>" },
-            { "squad_ui_header_name", "<color=#bd6b5b>{0}</color> {1}/6" },
-            { "squad_ui_leader_name", "{0}" },
-            { "squad_ui_expanded", "..." },
-            #endregion
-            
-            #region OrderCommand
-            { "order_usage_1", "<color=#9fa1a6>To give orders: <color=#9dbccf>/order <squad> <type></color>. Type <color=#d1bd90>/order actions</color> to see a list of actions.</color>" },
-            { "order_actions", "<color=#9fa1a6>Order actions: <color=#9dbccf>{0}</color></color>" },
-            { "order_usage_2", "<color=#9fa1a6>Try typing: <color=#9dbccf>/order <b>{0}</b> <i>action</i></color>" },
-            { "order_usage_3", "<color=#9fa1a6>Try typing: <color=#9dbccf>/order {0} <b><action></b></color>. Type <color=#d1bd90>/order actions</color> to see a list of actions.</color>" },
-            { "order_e_squadnoexist", "<color=#9fa1a6>There is no friendly squad called '{0}'.</color>" },
-            { "order_e_not_squadleader", "<color=#9fa1a6>You must be the leader of a squad to give orders.</color>" },
-            { "order_e_actioninvalid", "<color=#9fa1a6>'{0}' is not a valid action. Try one of these: {1}</color>" },
-            { "order_e_attack_marker", "<color=#9fa1a6>Place a map marker on a <color=#d1bd90>position</color> or <color=#d1bd90>flag</color> where you want {0} to attack.</color>" },
-            { "order_e_attack_marker_ins", "<color=#9fa1a6>Place a map marker on a <color=#d1bd90>position</color> or <color=#d1bd90>cache</color> where you want {0} to attack.</color>" },
-            { "order_e_defend_marker", "<color=#9fa1a6>Place a map marker on the <color=#d1bd90>position</color> or <color=#d1bd90>flag</color> where you want {0} to attack.</color>" },
-            { "order_e_defend_marker_ins", "<color=#9fa1a6>Place a map marker on the <color=#d1bd90>position</color> or <color=#d1bd90>cache</color> where you want {0} to attack.</color>" },
-            { "order_e_buildfob_marker", "<color=#9fa1a6>Place a map marker where you want {0} to build a <color=#d1bd90>FOB</color>.</color>" },
-            { "order_e_move_marker", "<color=#9fa1a6>Place a map marker where you want {0} to move to.</color>" },
-            { "order_e_buildfob_fobexists", "<color=#9fa1a6>There is already a friendly FOB near that marker.</color>" },
-            { "order_e_buildfob_foblimit", "<color=#9fa1a6>The max FOB limit has been reached.</color>" },
-            { "order_e_squadtooclose", "<color=#9fa1a6>{0} is already near that marker. Try placing it further away.</color>" },
-            { "order_e_raycast", "<color=#b58b86>.</color>" },
-            { "order_s_sent", "<color=#9fa1a6>Order sent to {0}: <color=#9dbccf>{1}</color></color>" },
-            { "order_s_received", "<color=#9fa1a6><color=#9dbccf>{0}</color> has given your squad new orders:\n<color=#d4d4d4>{1}</color></color>" },
-            { "order_ui_commander", "Orders from <color=#a7becf>{0}</color>:" },
-            { "order_ui_text", "{0}" },
-            { "order_ui_time", "- {0}m left" },
-            { "order_ui_reward", "- Reward: {0}" },
-            { "order_attack_objective", "Attack your objective: {0}." },
-            { "order_attack_flag", "Attack {0}." },
-            { "order_defend_objective", "Defend your objective: {0}." },
-            { "order_defend_flag", "Defend {0}." },
-            { "order_attack_cache", "Attack {0}." },
-            { "order_defend_cache", "Defend {0}." },
-            { "order_attack_area", "Attack near {0}." },
-            { "order_defend_area", "Defend near {0}." },
-            { "order_buildfob_flag", "Build a FOB on {0}." },
-            { "order_buildfob_cache", "Build a FOB near {0}." },
-            { "order_buildfob_area", "Build a FOB in {0}." },
-            #endregion
-            
-            #region RallyCommand
-            { "rally_success", "<color=#959c8c>You have <color=#5eff87>rallied</color> with your squad.</color>" },
-            { "rally_active", "<color=#959c8c>Squad <color=#5eff87>RALLY POINT</color> is now active. Do '<color=#bfbfbf>/rally</color>' to rally with your squad.</color>" },
-            { "rally_wait", "<color=#959c8c>Standby for <color=#5eff87>RALLY</color> in: <color=#ffe4b5>{0}s</color>. Do '<color=#a3b4c7>/rally cancel</color>' to abort.</color>" },
-            { "rally_aborted", "<color=#a1a1a1>Cancelled rally deployment.</color>" },
-            { "rally_cancelled", "<color=#959c8c><color=#bfbfbf>RALLY</color> is no longer available - there are enemies nearby.</color>" },
-            { "rally_e_unavailable", "<color=#ad9990>Rally is unavailable right now.</color>" },
-            { "rally_e_enemies", "<color=#ad9990>There are enemies nearby.</color>" },
-            { "rally_e_nosquadmember", "<color=#99918d>You need at least <color=#cedcde>1 SQUAD MEMBER</color> near you in order to place this.</color>" },
-            { "rally_e_notsquadleader", "<color=#99918d>You must be a <color=#cedcde>SQUAD LEADER</color> in order to place this.</color>" },
-            { "rally_e_alreadywaiting", "<color=#959c8c>You are already waiting on rally deployment. Do '<color=#a3b4c7>/rally cancel</color>' to abort.</color>" },
-            { "rally_e_notwaiting", "<color=#959c8c>You are not awaiting rally deployment.</color>" },
-            { "rally_e_notinsquad", "<color=#959c8c>You are not in a squad.</color>" },
-            { "rally_e_obstructed", "<color=#959c8c>This rally point is obstructed, find a more open place to put it.</color>" },
-            { "rally_ui", "<color=#5eff87>RALLY</color> {0}" },
-            { "rally_time_value", " {0:mm\\:ss}" },
-            #endregion
-            
-            #region Time Formatting
-            { "time_second", "second" },
-            { "time_seconds", "seconds" },
-            { "time_minute", "minute" },
-            { "time_minutes", "minutes" },
-            { "time_hour", "hour" },
-            { "time_hours", "hours" },
-            { "time_day", "day" },
-            { "time_days", "days" },
-            { "time_month", "month" },
-            { "time_months", "months" },
-            { "time_year", "year" },
-            { "time_years", "years" },
-            { "time_and", "and" },
-            #endregion
-            
-            #region FOB System
-            { "build_error_notinradius", "<color=#ffab87>This can only be placed inside FOB RADIUS.</color>" },
-            { "build_error_tick_notinradius", "<color=#ffab87>There's no longer a friendly FOB nearby.</color>" },
-            { "build_error_radiustoosmall", "<color=#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a FOB BUNKER.</color>" },
-            { "build_error_noradio", "<color=#ffab87>This can only be placed within {0}m of a friendly FOB RADIO.</color>" },
-            { "build_error_structureexists", "<color=#ffab87>This FOB already has {0} {1}.</color>" },
-            { "build_error_tick_structureexists", "<color=#ffab87>Too many {0}s have already been built on this FOB.</color>" },
-            { "build_error_tooclosetoenemybunker", "<color=#ffab87>You may not build on top of an enemy FOB bunker.</color>" },
-            { "build_error_notenoughbuild", "<color=#fae69c>You are missing nearby build! <color=#d1c597>Building Supplies: </color><color=#d1c597>{0}/{1}</color></color>" },
-            { "build_error_too_many_fobs", "<color=#ffab87>The max number of FOBs has been reached.</color>" },
-            { "build_error_invalid_collision", "<color=#ffab87>A {0} can't be built here.</color>" },
-            { "no_placement_fobs_underwater", "<color=#ffab87>You can't build a FOB underwater.</color>" },
-            { "no_placement_fobs_too_high", "<color=#ffab87>You can't build a FOB more than {0}m above the ground.</color>" },
-            { "no_placement_fobs_too_near_base", "<color=#ffab87>You can't build a FOB this close to main base.</color>" },
-            { "fob_error_nologi", "<color=#ffab87>You must be near a friendly LOGISTICS TRUCK to place that FOB radio.</color>" },
-            { "fob_error_fobtooclose", "<color=#ffa238>You are too close to an existing FOB Radio ({0}m away). You must be at least {1}m away to place a new radio.</color>" },
-            { "fob_ui", "{0}  <color=#d6d2c7>{1}</color>  {2}" },
-            { "cache_destroyed_attack", "<color=#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED</color>" },
-            { "cache_destroyed_defense", "<color=#deadad>WEAPONS CACHE HAS BEEN DESTROYED</color>" },
-            { "cache_discovered_attack", "<color=#dbdbdb>NEW WEAPONS CACHE DISCOVERED NEAR <color=#e3c59a>{0}</color></color>" },
-            { "cache_discovered_defense", "<color=#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT</color>" },
-            { "cache_spawned_defense", "<color=#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE</color>" },
-            #endregion
-            
-            #region DeployCommand
-            { "deploy_s", "<color=#fae69c>You have arrived at <color=#{0}>{1}</color>.</color>" },
-            { "deploy_c_notspawnable", "<color=#ffa238>The FOB you were deploying is no longer active.</color>" },
-            { "deploy_c_cachedead", "<color=#ffa238>The Cache you were deploying to was destroyed!</color>" },
-            { "deploy_c_moved", "<color=#ffa238>You moved and can no longer deploy!</color>" },
-            { "deploy_c_enemiesNearby", "<color=#ffa238>You no longer deploy to that location - there are enemies nearby.</color>" },
-            { "deploy_c_notactive", "<color=#ffa238>The point you were deploying to is no longer active.</color>" },
-            { "deploy_c_dead", "<color=#ffa238>You died and can no longer deploy!</color>" },
-            { "deploy_e_fobnotfound", "<color=#b5a591>There is no location or FOB by the name of '{0}'.</color>" },
-            { "deploy_e_notnearfob", "<color=#b5a591>You must be on an active friendly FOB or at main in order to deploy again.</color>" },
-            { "deploy_e_notnearfob_ins", "<color=#b5a591>You must be on an active friendly FOB, Cache, or at main in order to deploy again.</color>" },
-            { "deploy_e_cooldown", "<color=#b5a591>You can deploy again in: <color=#e3c27f>{0}</color>.</color>" },
-            { "deploy_e_alreadydeploying", "<color=#b5a591>You are already deploying somewhere.</color>" },
-            { "deploy_e_incombat", "<color=#ffaa42>You are in combat, soldier! You can deploy in another: <color=#e3987f>{0}</color>.</color>" },
-            { "deploy_e_injured", "<color=#ffaa42>You can not deploy while injured, get a medic to revive you or give up.</color>" },
-            { "deploy_e_enemiesnearby", "<color=#ffa238>You cannot deploy to that FOB - there are enemies nearby.</color>" },
-            { "deploy_e_nobunker", "<color=#ffa238>That FOB has no bunker. Your team must build a FOB BUNKER before you can deploy to it.</color>" },
-            { "deploy_e_damaged", "<color=#ffa238>That FOB radio is damaged. Repair it with your ENTRENCHING TOOL.</color>" },
-            { "deploy_fob_standby", "<color=#fae69c>Now deploying to <color=#{0}>{1}</color>. You will arrive in <color=#eeeeee>{2} seconds</color>.</color>" },
-            { "deploy_lobby_removed", "<color=#fae69c>The lobby has been removed, use  <i>/teams</i> to switch teams instead.</color>" },
-            #endregion
-            
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "The caller of a command is not allowed to use the command.",
+        LegacyTranslationId = "no_permissions")]
+    public static readonly Translation NoPermissions    = new Translation(ERROR_COLOR + "You do not have permission to use this command.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "A command or feature is turned off in the configuration.",
+        LegacyTranslationId = "not_enabled")]
+    public static readonly Translation NotEnabled       = new Translation(ERROR_COLOR + "This feature is not currently enabled.");
+
+    [TranslationData(
+        Section = SECTION_COMMON_ERRORS,
+        Description = "The caller of a command has permission to use the command but isn't on duty.",
+        LegacyTranslationId = "no_permissions_on_duty")]
+    public static readonly Translation NotOnDuty        = new Translation(ERROR_COLOR + "You must be on duty to execute that command.");
+    #endregion
+
+    #region Flags
+    private const string SECTION_FLAGS = "Flags";
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "The caller of a command isn't on team 1 or 2.",
+        LegacyTranslationId = "gamemode_flag_not_on_cap_team")]
+    public static readonly Translation NotOnCaptureTeam             = new Translation(ERROR_COLOR + "You're not on a team that can capture flags.");
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent when the player enters the capture radius of an active flag.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "entered_cap_radius")]
+    public static readonly Translation<Flag> EnteredCaptureRadius   = new Translation<Flag>(SUCCESS_COLOR + "You have entered the capture radius of {0}.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent when the player leaves the capture radius of an active flag.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "left_cap_radius")]
+    public static readonly Translation<Flag> LeftCaptureRadius      = new Translation<Flag>(SUCCESS_COLOR + "You have left the capture radius of {0}.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag that's being captured by their team (from neutral).",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "capturing")]
+    public static readonly Translation<Flag> FlagCapturing          = new Translation<Flag>(SUCCESS_COLOR + "Your team is capturing {0}!", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag that's being captured by the other team.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "losing")]
+    public static readonly Translation<Flag> FlagLosing             = new Translation<Flag>(ERROR_COLOR + "Your team is losing {0}!", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag when it begins being contested.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "contested")]
+    public static readonly Translation<Flag> FlagContested          = new Translation<Flag>("<#c$contested$>{0} is contested, eliminate some enemies to secure it!", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag that's being cleared by their team (from the other team's ownership).",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "clearing")]
+    public static readonly Translation<Flag> FlagClearing           = new Translation<Flag>(SUCCESS_COLOR + "Your team is clearing {0}!", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players on a flag when it gets secured by their team.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "secured")]
+    public static readonly Translation<Flag> FlagSecured            = new Translation<Flag>("<#c$secured$>{0} is secure for now, keep up the defense.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to a player that walks in the radius of a flag that isn't their team's objective.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "nocap")]
+    public static readonly Translation<Flag> FlagNoCap              = new Translation<Flag>("<#c$nocap$>{0} is not your objective, check the right of your screen to see which points to attack and defend.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to a player that walks in the radius of a flag that is owned by the other team and enough of the other team is on the flag so they can't contest the point.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "notowned")]
+    public static readonly Translation<Flag> FlagNotOwned           = new Translation<Flag>("<#c$nocap$>{0} is owned by the enemies. Get more players to capture it.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to a player that walks in the radius of a flag that is owned by the other team and has been locked from recapture.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "locked")]
+    public static readonly Translation<Flag> FlagLocked             = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", Flag.NAME_FORMAT_COLORED);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Sent to all players when a flag gets neutralized.",
+        FormattingDescriptions = new string[] { "Objective in question" },
+        LegacyTranslationId = "flag_neutralized")]
+    public static readonly Translation<Flag> FlagNeutralized        = new Translation<Flag>(SUCCESS_COLOR + "{0} has been neutralized!", Flag.NAME_FORMAT_COLORED_DISCOVER);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Backup translation for team 0 name and short name.",
+        LegacyTranslationId = "neutral")]
+    public static readonly Translation Neutral          = new Translation("Neutral",       TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows in place of the objective name for an undiscovered flag or objective.",
+        LegacyTranslationId = "undiscovered_flag")]
+    public static readonly Translation UndiscoveredFlag = new Translation("unknown",       TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team is capturing a flag they're on.",
+        LegacyTranslationId = "ui_capturing")]
+    public static readonly Translation UICapturing      = new Translation("CAPTURING",     TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team is losing a flag they're on because there isn't enough of them to contest it.",
+        LegacyTranslationId = "ui_losing")]
+    public static readonly Translation UILosing         = new Translation("LOSING",        TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team is clearing a flag they're on.",
+        LegacyTranslationId = "ui_clearing")]
+    public static readonly Translation UIClearing       = new Translation("CLEARING",      TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team is contested with the other team on the flag they're on.",
+        LegacyTranslationId = "ui_contested")]
+    public static readonly Translation UIContested      = new Translation("CONTESTED",     TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team owns flag they're on.",
+        LegacyTranslationId = "ui_secured")]
+    public static readonly Translation UISecured        = new Translation("SECURED",       TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's on a flag that isn't their team's objective.",
+        LegacyTranslationId = "ui_nocap")]
+    public static readonly Translation UINoCap          = new Translation("NOT OBJECTIVE", TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's team has too few people on a flag to contest and the other team owns the flag.",
+        LegacyTranslationId = "ui_notowned")]
+    public static readonly Translation UINotOwned       = new Translation("TAKEN",         TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the objective they're on is owned by the other team and is locked from recapture.",
+        LegacyTranslationId = "ui_locked")]
+    public static readonly Translation UILocked         = new Translation("LOCKED",        TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows on the Capture UI when the player's in a vehicle on their objective.",
+        LegacyTranslationId = "ui_invehicle")]
+    public static readonly Translation UIInVehicle      = new Translation("IN VEHICLE",    TranslationFlags.UnityUI);
+
+    [TranslationData(
+        Section = SECTION_FLAGS,
+        Description = "Shows above the flag list UI.",
+        LegacyTranslationId = "ui_capturing")]
+    public static readonly Translation FlagsHeader      = new Translation("Flags",         TranslationFlags.UnityUI);
+    #endregion
+
+    #region Teams
+    public static readonly Translation<FactionInfo> EnteredMain                 = new Translation<FactionInfo>(SUCCESS_COLOR + "You have entered the safety of {0} headquarters!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo> LeftMain                    = new Translation<FactionInfo>(SUCCESS_COLOR + "You have left the safety of {0} headquarters!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo> TeamJoinDM                  = new Translation<FactionInfo>("<#a0ad8e>You've joined {0}.", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo, IPlayer> TeamJoinAnnounce   = new Translation<FactionInfo, IPlayer>("<#a0ad8e>{1} joined {0}!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> TeamWin                     = new Translation<FactionInfo>("<#a0ad8e>{0} has won the battle!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<FactionInfo, Flag> TeamCaptured          = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT, Flag.NAME_FORMAT_COLORED_DISCOVER);
+    #endregion
+
+    #region Players
+    public static readonly Translation<IPlayer> PlayerConnected                 = new Translation<IPlayer>(SUCCESS_COLOR + "{0} joined the server.");
+    public static readonly Translation<IPlayer> PlayerDisconnected              = new Translation<IPlayer>(SUCCESS_COLOR + "{0} left the server.");
+    public static readonly Translation<string>   NullTransformKickMessage       = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationFlags.NoColor);
+    public static readonly Translation<string>   ChatFilterFeedback             = new Translation<string>(ERROR_COLOR + "Our chat filter flagged <#fdfdfd>{0}</color>, so the message wasn't sent.");
+    #endregion
+
+    #region Leaderboards
+
+    #region Shared
+    public static readonly Translation StartingSoon                   = new Translation("Starting soon...", TranslationFlags.UnityUI);
+    public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationFlags.UnityUI, "mm:ss");
+
+    public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_COLORIZED_FORMAT, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1}% presence", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, "P0");
+    public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
+
+    public static readonly Translation<float, string, IPlayer> LongestShot     = new Translation<float, string, IPlayer>("{0} Wins!", TranslationFlags.UnityUI, "F1", arg3Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    #endregion
+
+    #region CTFBase
+    public static readonly Translation CTFPlayerStats0  = new Translation("Kills: ",            TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats1  = new Translation("Deaths: ",           TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats2  = new Translation("K/D Ratio: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats3  = new Translation("Kills on Point: ",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats4  = new Translation("Time Deployed: ",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats5  = new Translation("XP Gained: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats6  = new Translation("Time on Point: ",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats7  = new Translation("Captures: ",         TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats8  = new Translation("Time in Vehicle: ",  TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats9  = new Translation("Teamkills: ",        TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats10 = new Translation("FOBs Destroyed: ",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFPlayerStats11 = new Translation("Credits Gained: ",   TranslationFlags.UnityUI);
+
+    public static readonly Translation CTFWarStats0 = new Translation("Duration: ", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> CTFWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",     TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation CTFWarStats3 = new Translation("Flag Captures: ", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> CTFWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",   TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",    TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> CTFWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation CTFWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    public static readonly Translation CTFWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
+
+    public static readonly Translation CTFHeader0 = new Translation("Kills",   TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader1 = new Translation("Deaths",  TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader3 = new Translation("Credits", TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader4 = new Translation("Caps",    TranslationFlags.UnityUI);
+    public static readonly Translation CTFHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
+    #endregion
+
+    #region CTFBase
+    public static readonly Translation InsurgencyPlayerStats0  = new Translation("Kills: ",                 TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats1  = new Translation("Deaths: ",                TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats2  = new Translation("Damage Done: ",           TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats3  = new Translation("Objective Kills: ",       TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats4  = new Translation("Time Deployed: ",         TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats5  = new Translation("XP Gained: ",             TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats6  = new Translation("Intelligence Gathered: ", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats7  = new Translation("Caches Discovered: ",     TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats8  = new Translation("Caches Destroyed: ",      TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats9  = new Translation("Teamkills: ",             TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats10 = new Translation("FOBs Destroyed: ",        TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyPlayerStats11 = new Translation("Credits Gained: ",        TranslationFlags.UnityUI);
+
+    public static readonly Translation InsurgencyWarStats0 = new Translation("Duration: ", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats1 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats2 = new Translation<FactionInfo>("{0} Casualties: ",      TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation InsurgencyWarStats3 = new Translation("Intelligence Gathered: ", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats4 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats5 = new Translation<FactionInfo>("{0} Average Army: ",    TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats6 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats7 = new Translation<FactionInfo>("{0} FOBs Placed: ",     TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats8 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation<FactionInfo> InsurgencyWarStats9 = new Translation<FactionInfo>("{0} FOBs Destroyed: ",  TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_FORMAT);
+    public static readonly Translation InsurgencyWarStats10 = new Translation("Teamkill Casualties: ", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyWarStats11 = new Translation("Longest Shot: ",        TranslationFlags.UnityUI);
+
+    public static readonly Translation InsurgencyHeader0 = new Translation("Kills",   TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader1 = new Translation("Deaths",  TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader2 = new Translation("XP",      TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader3 = new Translation("Credits", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader4 = new Translation("KDR",     TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyHeader5 = new Translation("Damage",  TranslationFlags.UnityUI);
+    #endregion
+
+    #endregion
+
+    #region GroupCommand
+    public static readonly Translation<ulong, string, Color> CurrentGroup = new Translation<ulong, string, Color>(SUCCESS_COLOR + "Group <#{2}>{0}</color>: <#{2}>{1}</color>");
+    public static readonly Translation<ulong, string, Color> CreatedGroup = new Translation<ulong, string, Color>(SUCCESS_COLOR + "Created group <#{2}>{0}</color>: <#{2}>{1}</color>");
+    public static readonly Translation<ulong, string, Color> JoinedGroup  = new Translation<ulong, string, Color>(SUCCESS_COLOR + "You have joined group <#{2}>{0}</color>: <#{2}>{1}</color>.");
+    public static readonly Translation CantCreateGroup      = new Translation(ERROR_COLOR + "You can't create a group right now.");
+    public static readonly Translation NotInGroup           = new Translation(ERROR_COLOR + "You aren't in a group.");
+    public static readonly Translation AlreadyInGroup       = new Translation(ERROR_COLOR + "You are already in that group.");
+    public static readonly Translation<ulong> GroupNotFound = new Translation<ulong>(ERROR_COLOR + "Could not find group <#4785ff>{0}</color>.");
+    #endregion
+
+    #region LangCommand
+    public static readonly Translation<string> LanguageList              = new Translation<string>("<#f53b3b>Languages: <#e6e3d5>{0}</color>.");
+    public static readonly Translation ResetLanguageHow                  = new Translation("<#f53b3b>Do <#e6e3d5>/lang reset</color> to reset back to default language.");
+    public static readonly Translation<LanguageAliasSet> LanguageCurrent = new Translation<LanguageAliasSet>("<#f53b3b>Current language: <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<LanguageAliasSet> ChangedLanguage = new Translation<LanguageAliasSet>("<#f53b3b>Changed your language to <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<LanguageAliasSet> LangAlreadySet  = new Translation<LanguageAliasSet>(ERROR_COLOR + "You are already set to <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<LanguageAliasSet> ResetLanguage   = new Translation<LanguageAliasSet>("<#f53b3b>Reset your language to <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<LanguageAliasSet> ResetCurrent    = new Translation<LanguageAliasSet>(ERROR_COLOR + "You are already on the default language: <#e6e3d5>{0}</color>.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<string> LanguageNotFound          = new Translation<string>("<#dd1111>We don't have translations for <#e6e3d5>{0}</color> yet. If you are fluent and want to help, feel free to ask us about submitting translations.", LanguageAliasSet.DISPLAY_NAME_FORMAT);
+    #endregion
+
+    #region Toasts
+    public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nTalk to the NPCs to get started.", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    #endregion
+
+    #region KitCommand
+    public static readonly Translation<Kit> KitCreated          = new Translation<Kit>("<#a0ad8e>Created kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<Kit> KitOverwrote        = new Translation<Kit>("<#a0ad8e>Overwritten items for kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<Kit, Kit> KitCopied      = new Translation<Kit, Kit>("<#a0ad8e>Copied data from <#c7b197>{0}</color> into a new kit: <#fff>{0}</color>.", Kit.ID_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<Kit> KitDeleted          = new Translation<Kit>("<#a0ad8e>Deleted kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<string> KitSearchResults = new Translation<string>("<#a0ad8e>Matches: <i>{0}</i>.");
+    public static readonly Translation<Kit> KitAccessGivenDm    = new Translation<Kit>("<#a0ad8e>You were given access to the kit: <#fff>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<Kit> KitAccessRevokedDm  = new Translation<Kit>("<#a0ad8e>Your access to <#fff>{0}</color> was revoked.", Kit.ID_FORMAT);
+    public static readonly Translation<string, Kit, string> KitPropertySet    = new Translation<string, Kit, string>("<#a0ad8e>Set <#aaa>{0}</color> on kit <#fff>{1}</color> to <#aaa><uppercase>{2}</uppercase></color>.", arg2Fmt: Kit.ID_FORMAT);
+    public static readonly Translation<string> KitNameTaken                   = new Translation<string>(ERROR_COLOR + "A kit named <#fff>{0}</color> already exists.");
+    public static readonly Translation<string> KitNotFound                    = new Translation<string>(ERROR_COLOR + "A kit named <#fff>{0}</color> doesn't exists.");
+    public static readonly Translation<string> KitPropertyNotFound            = new Translation<string>(ERROR_COLOR + "Kits don't have a <#eee>{0}</color> property.");
+    public static readonly Translation<string> KitPropertyProtected           = new Translation<string>(ERROR_COLOR + "<#eee>{0}</color> can not be changed on kits.");
+    public static readonly Translation<IPlayer, Kit> KitAlreadyHasAccess      = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} already has access to <#fff>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess  = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<Cooldown> KitOnCooldown                = new Translation<Cooldown>(ERROR_COLOR + "You can request this kit again in: <#bafeff>{0}</color>.", Cooldown.TIMESTAMP_LEFT_FORMAT);
+    public static readonly Translation<Cooldown> KitOnGlobalCooldown          = new Translation<Cooldown>(ERROR_COLOR + "You can request another kit again in: <#bafeff>{0}</color>.", Cooldown.TIMESTAMP_LEFT_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven         = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked       = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<string, Type, string> KitInvalidPropertyValue = new Translation<string, Type, string>(ERROR_COLOR + "<#fff>{2}</color> isn't a valid value for <#eee>{0}</color> (<#aaa>{1}</color>).");
+    public static readonly Translation<EClass, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<EClass, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg2Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, arg3Fmt: UCPlayer.STEAM_64_FORMAT, arg4Fmt: Kit.ID_FORMAT);
+    #endregion
+
+    #region RangeCommand
+    public static readonly Translation<float> RangeOutput  = new Translation<float>("<#9e9c99>The range to your squad's marker is: <#8aff9f>{0}m</color>.", "N0");
+    public static readonly Translation RangeNoMarker       = new Translation("<#9e9c99>You squad has no marker.");
+    public static readonly Translation RangeNotSquadleader = new Translation("<#9e9c99>Only <color=#cedcde>SQUAD LEADERS</color> can place markers.");
+    public static readonly Translation RangeNotInSquad     = new Translation("<#9e9c99>You must JOIN A SQUAD in order to do /range.");
+    #endregion
+
+    #region Squads
+    public static readonly Translation SquadNotOnTeam               = new Translation("<#a89791>You can't join a squad unless you're on a team.");
+    public static readonly Translation<Squad> SquadCreated          = new Translation<Squad>("<#a0ad8e>You created {0} squad.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadJoined           = new Translation<Squad>("<#a0ad8e>You joined {0} squad.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadLeft             = new Translation<Squad>("<#a7a8a5>You left {0} squad.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadDisbanded        = new Translation<Squad>("<#a7a8a5>{0} squad was disbanded.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation SquadLockedSquad             = new Translation("<#a7a8a5>You <#6be888>locked</color> your squad.");
+    public static readonly Translation SquadUnlockedSquad           = new Translation("<#999e90>You <#6be888>unlocked</color> your squad.");
+    public static readonly Translation<Squad> SquadPromoted         = new Translation<Squad>("<#999e90>You're now the <#cedcde>sqauad leader</color> of {0}.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadKicked           = new Translation<Squad>("<#ae8f8f>You were kicked from {0} squad.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<string> SquadNotFound        = new Translation<string>("<#ae8f8f>Failed to find a squad called <#c$neutral$>\"{0}\"</color>. You can also use the first letter of the squad name.");
+    public static readonly Translation SquadAlreadyInSquad          = new Translation("<#ae8f8f>You're already in a squad.");
+    public static readonly Translation SquadNotInSquad              = new Translation("<#ae8f8f>You're not in a squad yet. Use <#ae8f8f>/squad join <squad></color> to join a squad.");
+    public static readonly Translation SquadNotSquadLeader          = new Translation("<#ae8f8f>You're not the leader of your squad.");
+    public static readonly Translation<Squad> SquadLocked           = new Translation<Squad>("<#a89791>{0} is locked.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> SquadFull             = new Translation<Squad>("<#a89791>{0} is full.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation SquadTargetNotInSquad        = new Translation("<#a89791>That player isn't in a squad.");
+    public static readonly Translation<IPlayer> SquadPlayerJoined   = new Translation<IPlayer>("<#b9bdb3>{0} joined your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerLeft     = new Translation<IPlayer>("<#b9bdb3>{0} left your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerPromoted = new Translation<IPlayer>("<#b9bdb3>{0} was promoted to <#cedcde>sqauad leader</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerKicked   = new Translation<IPlayer>("<#b9bdb3>{0} was kicked from your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation SquadsDisabled               = new Translation("<#a89791>Squads are disabled in this gamemode.");
+    public static readonly Translation<int> SquadsTooMany           = new Translation<int>("<#a89791>There can not be more than {0} squads on a team at once.");
+
+    public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount = new Translation<Squad, int, int>("<#bd6b5b>{0}</color {1}/{2}", TranslationFlags.UnityUI, Squad.NAME_FORMAT);
+    public static readonly Translation<int, int> SquadsUIPlayerCountSmall         = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int> SquadsUIPlayerCountSmallLocked   = new Translation<int, int>("<#969696>{0}/{1}</color>", TranslationFlags.UnityUI);
+    public static readonly Translation squad_ui_expanded                          = new Translation("...", TranslationFlags.UnityUI);
+    #endregion
+
+    #region Orders
+    public static readonly Translation OrderUsageAll              = new Translation("<#9fa1a6>To give orders: <#9dbccf>/order <squad> <type></color>. Type <#d1bd90>/order actions</color> to see a list of actions.");
+    public static readonly Translation<Squad> OrderUsageNoAction  = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <action></color>.", Squad.NAME_FORMAT);
+    public static readonly Translation<Squad> OrderUsageBadAction = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <b><action></b></color>. Type <#d1bd90>/order actions</color> to see a list of actions.", Squad.NAME_FORMAT);
+    public static readonly Translation<string> OrderActions       = new Translation<string>("<#9fa1a6>Order actions: <#9dbccf>{0}</color>.");
+    public static readonly Translation<string> OrderSquadNoExist  = new Translation<string>(ERROR_COLOR + "There is no friendly <lowercase><#c$neutral$>{0}</color></lowercase> squad.");
+    public static readonly Translation OrderNotSquadleader        = new Translation(ERROR_COLOR + "You must be a <#cedcde>sqauad leader</color> to give orders.");
+    public static readonly Translation<string, string> OrderActionInvalid = new Translation<string, string>(ERROR_COLOR + "<#fff>{0}</color> is not a valid action. Try one of these: <#9dbccf>{1}</color>.");
+    public static readonly Translation<Squad> OrderAttackMarkerCTF  = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to attack.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderAttackMarkerIns  = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to attack.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderDefenseMarkerCTF = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to defend.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderDefenseMarkerIns = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to defend.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderBuildFOBError    = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> you want {0} to build a <color=#d1bd90>FOB</color>.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation<Squad> OrderMoveError        = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> you want {0} to move to.", Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation OrderBuildFOBExists          = new Translation(ERROR_COLOR + "There is already a friendly FOB near that marker.");
+    public static readonly Translation OrderBuildFOBTooMany         = new Translation(ERROR_COLOR + "There are already too many FOBs on your team.");
+    public static readonly Translation OrderSquadTooClose           = new Translation(ERROR_COLOR + "{0} is already near that marker. Try placing it further away.");
+    public static readonly Translation<Order> OrderSent                = new Translation<Order>("<#9fa1a6>Order sent to {0}: <#9dbccf>{1}</color>.");
+    public static readonly Translation<IPlayer, Order> OrderReceived   = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
+    public static readonly Translation<IPlayer> OrderUICommander       = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<Order> OrderUIMessage           = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
+    public static readonly Translation<TimeSpan> OrderUITimeLeft       = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
+    public static readonly Translation<int> OrderUIReward              = new Translation<int>("- Reward: {0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<Flag> OrderUIAttackObjective    = new Translation<Flag>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIAttackFlag         = new Translation<Flag>("Attack: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIDefendObjective    = new Translation<Flag>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIDefendFlag         = new Translation<Flag>("Defend: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Cache> OrderUIAttackCache       = new Translation<Cache>("Attack: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<Cache> OrderUIDefendCache       = new Translation<Cache>("Defend: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<string> OrderUIAttackNearArea   = new Translation<string>("Attack near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<string> OrderUIDefendNearArea   = new Translation<string>("Defend near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<Flag> OrderUIBuildFobFlag       = new Translation<Flag>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<string> OrderUIBuildFobNearArea = new Translation<string>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Cache> OrderUIBuildFobNearCache = new Translation<Cache>("Build a FOB near {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    #endregion
+
+    #region Rallies
+    public static readonly Translation RallySuccess         = new Translation("<#959c8c>You have <#5eff87>rallied</color> with your squad.");
+    public static readonly Translation RallyActive          = new Translation("<#959c8c>Your squad has an active <#5eff87>RALLY POINT</color>. Do <#bfbfbf>/rally</color> to rally with your squad.");
+    public static readonly Translation<int> RallyWait       = new Translation<int>("<#959c8c>Standby for <#5eff87>RALLY</color> in: <#ffe4b5>{0}s</color>. Do <#a3b4c7>/rally cancel</color> to abort.");
+    public static readonly Translation RallyAbort           = new Translation("<#a1a1a1>Cancelled rally deployment.");
+    public static readonly Translation RallyObstructed      = new Translation("<#959c8c><#bfbfbf>RALLY</color> is no longer available - there are enemies nearby.");
+    public static readonly Translation RallyNoSquadmates    = new Translation("<#99918d>You need more squad members to use a <#bfbfbf>rally point</color>.");
+    public static readonly Translation RallyNotSquadleader  = new Translation("<#99918d>You must be a <color=#cedcde>SQUAD LEADER</color> in order to place this.");
+    public static readonly Translation RallyAlreadyQueued   = new Translation("<#99918d>You are already waiting on <#5eff87>rally</color> deployment. Do <#a3b4c7>/rally cancel</color> to abort.");
+    public static readonly Translation RallyNotQueued       = new Translation("<#959c8c>You aren't waiting on a <#5eff87>rally</color> deployment.");
+    public static readonly Translation RallyNotInSquad      = new Translation("<#959c8c>You must be in a squad to use <#5eff87>rallies</color>.");
+    public static readonly Translation RallyObstructedPlace = new Translation("<#959c8c>This rally point is obstructed, find a more open place to put it.");
+    public static readonly Translation<TimeSpan> RallyUI    = new Translation<TimeSpan>("<#5eff87>RALLY</color> {0}", TranslationFlags.UnityUI, "mm:ss");
+    #endregion
+
+    #region Time
+    public static readonly Translation TimeSecondSingle = new Translation("second", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeSecondPlural = new Translation("seconds", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMinuteSingle = new Translation("minute", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMinutePlural = new Translation("minutes", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeHourSingle   = new Translation("hour", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeHourPlural   = new Translation("hours", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeDaySingle    = new Translation("day", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeDayPlural    = new Translation("days", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeWeekSingle   = new Translation("week", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeWeekPlural   = new Translation("weeks", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMonthSingle  = new Translation("month", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMonthsPlural = new Translation("months", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeYearSingle   = new Translation("year", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeYearsPlural  = new Translation("years", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeAnd          = new Translation("and", TranslationFlags.UnityUINoReplace);
+    #endregion
+
+    #region FOBs and Buildables
+    public static readonly Translation BuildNotInRadius        = new Translation("<#ffab87>This can only be placed inside <#cedcde>FOB RADIUS</color>.");
+    public static readonly Translation BuildTickNotInRadius    = new Translation("<#ffab87>There's no longer a friendly FOB nearby.");
+    public static readonly Translation<float> BuildSmallRadius = new Translation<float>("<#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a <#cedcde>FOB BUNKER</color>.", "N0");
+    public static readonly Translation<float> BuildNoRadio     = new Translation<float>("<#ffab87>This can only be placed within {0}m of a friendly <#cedcde>FOB RADIO</color>.", "N0");
+    public static readonly Translation<BuildableData> BuildStructureExists     = new Translation<BuildableData>("<#ffab87>This FOB can't have any more {0}.", PLURAL);
+    public static readonly Translation<BuildableData> BuildTickStructureExists = new Translation<BuildableData>("<#ffab87>Too many {0} have already been built on this FOB.", PLURAL);
+    public static readonly Translation BuildEnemy              = new Translation("<#ffab87>You may not build on an enemy FOB.");
+    public static readonly Translation<int, int> BuildMissingSupplies = new Translation<int, int>("<#ffab87>You're missing nearby build! <#d1c597>Building Supplies: <#e0d8b8>{0}/{1}</color></color>.", PLURAL);
+    public static readonly Translation BuildMaxFOBsHit         = new Translation("<#ffab87>The max number of FOBs on your team has been reached.");
+    public static readonly Translation BuildFOBUnderwater      = new Translation("<#ffab87>You can't build a FOB underwater.");
+    public static readonly Translation<float> BuildFOBTooHigh  = new Translation<float>("<#ffab87>You can't build a FOB more than {0}m above the ground.", "F0");
+    public static readonly Translation BuildFOBTooCloseToMain  = new Translation("<#ffab87>You can't build a FOB this close to main base.");
+    public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
+    public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.COLORED_NAME_FORMAT, "F0", "F0");
+
+    public static readonly Translation<FOB, GridLocation, string> FOBUI    = new Translation<FOB, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.NAME_FORMAT);
+
+    public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
+    public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <#e3c59a>{0}</color>", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation CacheDiscoveredDefense  = new Translation("<#d9b9a7>WEAPONS CACHE HAS BEEN COMPROMISED, DEFEND IT", TranslationFlags.UnityUI);
+    public static readonly Translation CacheSpawnedDefense     = new Translation("<#a8e0a4>NEW WEAPONS CACHE IS NOW ACTIVE", TranslationFlags.UnityUI);
+    #endregion
+
+    #region Deploy
+    public static readonly Translation<IDeployable> DeploySuccess           = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployNotSpawnableTick  = new Translation<IDeployable>("<#ffa238>{0} is no longer active.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployNotSpawnable      = new Translation<IDeployable>("<#ffa238>{0} is not active.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployDestroyed         = new Translation<IDeployable>("<#ffa238>{0} was destroyed.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployNoBunker          = new Translation<IDeployable>("<#ffaa42>{0} doesn't have a <#cedcde>FOB BUNKER</color>. Your team must build one to use the <#cedcde>FOB</color> as a spawnpoint.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployRadioDamaged      = new Translation<IDeployable>("<#ffaa42>The <#cedcde>FOB RADIO</color> at {0} is damaged. Repair it with an <#cedcde>ENTRENCHING TOOL</color>.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation DeployMoved                          = new Translation("<#ffa238>You moved and can no longer deploy.");
+    public static readonly Translation<IDeployable> DeployEnemiesNearbyTick = new Translation<IDeployable>("<#ffa238>You no longer deploy to {0} - there are enemies nearby.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable> DeployEnemiesNearby     = new Translation<IDeployable>("<#ffaa42>You cannot deploy to {0} - there are enemies nearby.");
+    public static readonly Translation DeployCancelled                      = new Translation("<#fae69c>Active deployment cancelled.");
+    public static readonly Translation<string> DeployableNotFound           = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", UPPERCASE);
+    public static readonly Translation DeployNotNearFOB                     = new Translation<string>("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or in <#cedcde>MAIN BASE</color> in order to deploy.", UPPERCASE);
+    public static readonly Translation DeployNotNearFOBInsurgency           = new Translation<string>("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or <#e8d1a7>CACHE</color>, or in <#cedcde>MAIN BASE</color> in order to deploy.", UPPERCASE);
+    public static readonly Translation<Cooldown> DeployCooldown             = new Translation<Cooldown>("<#ffa238>You can deploy again in: <#e3c27f>{0}</color>", Cooldown.TIME_LEFT_FORMAT);
+    public static readonly Translation DeployAlreadyActive                  = new Translation("<#b5a591>You're already deploying somewhere.");
+    public static readonly Translation<Cooldown> DeployInCombat             = new Translation<Cooldown>("<#ffaa42>You are in combat, soldier! You can deploy in another: <#e3987f>{0}</color>.", Cooldown.TIME_LEFT_FORMAT);
+    public static readonly Translation DeployInjured                        = new Translation("<#ffaa42>You can not deploy while injured, get a medic to revive you or give up.");
+    public static readonly Translation DeployLobbyRemoved                   = new Translation("<#fae69c>The lobby has been removed, use  <#e3c27f>/teams</color> to switch teams instead.");
+    #endregion
+
+    #region
+    public static readonly Translation AmmoNoTarget                = new Translation("<#ffab87>Look at an AMMO CRATE, AMMO BAG or VEHICLE in order to resupply.");
+    public static readonly Translation<int, int> AmmoResuppliedKit = new Translation<int, int>("<#d1bda7>Resupplied kit. Consumed: <#d97568>{0} AMMO</color> <#948f8a>({1} left)</color>.");
+    public static readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#d97568>{1} AMMO</color> <#948f8a>({2} left)</color>.", VehicleData.COLORED_NAME);
+    #endregion
+
+    static Dictionary<string, string> _translations = new Dictionary<string, string>()
+    {
             #region AmmoCommand
             { "ammo_error_nocrate", "<color=#ffab87>Look at an AMMO CRATE, AMMO BAG or VEHICLE in order to resupply.</color>" },
             { "ammo_success", "<color=#d1bda7>Resupplied kit. Consumed: <color=#d97568>{0} AMMO</color> <color=#948f8a>({1} left)</color></color>" },
@@ -366,7 +600,7 @@ partial class JSONMethods
             { "ammo_success_main", "<color=#d1bda7>Resupplied kit. Consumed: <color=#d97568>{0} AMMO</color></color>" },
             { "ammo_success_vehicle_main", "<color=#d1bda7>Resupplied vehicle. Consumed: <color=#d97568>{0} AMMO</color></color>" },
             { "ammo_vehicle_cant_rearm", "<color=#b3a6a2>This vehicle can't be resupplied.</color>" },
-            { "ammo_auto_resupply", "<color=#b3a6a2>This vehicle will AUTO RESUPPLY when in main. You can also use '<color=#c9bfad>/load <color=#d4c49d>build</color>|<color=#d97568>ammo</color> <amount></color>'.</color>" }, 
+            { "ammo_auto_resupply", "<color=#b3a6a2>This vehicle will AUTO RESUPPLY when in main. You can also use '<color=#c9bfad>/load <color=#d4c49d>build</color>|<color=#d97568>ammo</color> <amount></color>'.</color>" },
             { "ammo_vehicle_full_already", "<color=#b3a6a2>This vehicle does not need to be resupplied.</color>" },
             { "ammo_not_near_fob", "<color=#b3a6a2>This ammo crate is not built on a friendly FOB.</color>" },
             { "ammo_not_near_repair_station", "<color=#b3a6a2>Your vehicle must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.</color>" },
@@ -1102,428 +1336,5 @@ partial class JSONMethods
             { "win_ui_value_caches", "{0} Caches Left" },
             { "win_ui_header_winner", "{0}\r\nhas won the battle!" },
             #endregion
-        };
-    }
-
-    public static Dictionary<string, string> DefaultTranslations;
-    public static readonly List<ZoneModel> DefaultZones;
-    static JSONMethods()
-    {
-        DefaultZones = new List<ZoneModel>(8);
-        ZoneModel mdl = new ZoneModel()
-        {
-            Id = 1,
-            Name = "Ammo Hill",
-            X = -82.4759521f,
-            Z = 278.999451f,
-            ZoneType = EZoneType.RECTANGLE,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.SizeX = 97.5f;
-        mdl.ZoneData.SizeZ = 70.3125f;
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(8, 1f),
-            new AdjacentFlagData(2, 1f),
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 2,
-            Name = "Hilltop Encampment",
-            ShortName = "Hilltop",
-            X = 241.875f,
-            Z = 466.171875f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(272.301117f, 498.742401f),
-            new Vector2(212.263733f, 499.852478f),
-            new Vector2(211.238708f, 433.756653f),
-            new Vector2(271.106445f, 432.835083f)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(4, 0.5f),
-            new AdjacentFlagData(3, 1f),
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 3,
-            Name = "FOB Papanov",
-            ShortName = "Papanov",
-            X = 706.875f,
-            Z = 711.328125f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(669.994995f, 817.746216f),
-            new Vector2(818.528564f, 731.983521f),
-            new Vector2(745.399902f, 605.465942f),
-            new Vector2(596.919312f, 691.226624f)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(2, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 4,
-            Name = "Verto",
-            X = 1649,
-            Z = 559,
-            ZoneType = EZoneType.POLYGON,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(1539.5f, 494),
-            new Vector2(1722.5f, 529),
-            new Vector2(1769.5f, 558),
-            new Vector2(1741, 599),
-            new Vector2(1695.5f, 574),
-            new Vector2(1665, 568),
-            new Vector2(1658, 608.5f),
-            new Vector2(1608.5f, 598.5f),
-            new Vector2(1602.5f, 624),
-            new Vector2(1562.5f, 614.5f),
-            new Vector2(1577.5f, 554),
-            new Vector2(1528.5f, 545)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(2, 0.5f),
-            new AdjacentFlagData(3, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 5,
-            Name = "Hill 123",
-            X = 1657.5f,
-            Z = 885.5f,
-            ZoneType = EZoneType.CIRCLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Radius = 43.5f;
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(4, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 6,
-            Name = "Hill 13",
-            X = 1354,
-            Z = 1034.5f,
-            ZoneType = EZoneType.CIRCLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Radius = 47;
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(2, 1f),
-            new AdjacentFlagData(5, 1f),
-            new AdjacentFlagData(1, 2f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 7,
-            Name = "Mining Headquarters",
-            ShortName = "Mining HQ",
-            X = 49.21875f,
-            Z = -202.734375f,
-            ZoneType = EZoneType.POLYGON,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(-5.02727556f, -138.554886f),
-            new Vector2(72.9535751f, -138.59877f),
-            new Vector2(103.024361f, -138.548294f),
-            new Vector2(103.59375f, -151.40625f),
-            new Vector2(103.048889f, -246.603363f),
-            new Vector2(72.9691391f, -246.541885f),
-            new Vector2(53.1518631f, -257.577393f),
-            new Vector2(53.9740639f, -258.832581f),
-            new Vector2(43.0496025f, -264.54364f),
-            new Vector2(-4.99750614f, -264.539978f),
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(6, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 8,
-            Name = "OP Fortress",
-            ShortName = "Fortress",
-            X = 375.5f,
-            Z = 913f,
-            ZoneType = EZoneType.CIRCLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Radius = 47;
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 9,
-            Name = "Dylym",
-            X = 1849f,
-            Z = 1182.5f,
-            ZoneType = EZoneType.POLYGON,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.FLAG
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(1818.5f, 1132.5f),
-            new Vector2(1907.5f, 1121.5f),
-            new Vector2(1907.5f, 1243.5f),
-            new Vector2(1829.5f, 1243.5f),
-            new Vector2(1829.5f, 1229.5f),
-            new Vector2(1790.5f, 1229.5f),
-            new Vector2(1790.5f, 1192.5f),
-            new Vector2(1818.5f, 1190.5f)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(5, 1f),
-            new AdjacentFlagData(6, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 990,
-            Name = "Lobby",
-            X = 713.1f,
-            Z = -991,
-            ZoneType = EZoneType.RECTANGLE,
-            UseMapCoordinates = false,
-            UseCase = EZoneUseCase.LOBBY
-        };
-        mdl.ZoneData.SizeX = 12.2f;
-        mdl.ZoneData.SizeZ = 12;
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 991,
-            Name = "USA Main Base",
-            ShortName = "US Main",
-            X = 1853,
-            Z = 1874,
-            ZoneType = EZoneType.POLYGON,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T1_MAIN
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(1788.5f, 1811.5f),
-            new Vector2(1906f, 1811.5f),
-            new Vector2(1906f, 1998f),
-            new Vector2(1788.5f, 1998f),
-            new Vector2(1788.5f, 1904.5f),
-            new Vector2(1774.5f, 1904.5f),
-            new Vector2(1774.5f, 1880.5f),
-            new Vector2(1788.5f, 1880.5f),
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(7, 0.8f),
-            new AdjacentFlagData(9, 1f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 992,
-            Name = "USA AMC",
-            ShortName = "US AMC",
-            X = 1692f,
-            Z = 1825.3884f,
-            ZoneType = EZoneType.RECTANGLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T1_AMC
-        };
-        mdl.ZoneData.SizeX = 712;
-        mdl.ZoneData.SizeZ = 443.2332f;
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 993,
-            Name = "Russian Main Base",
-            ShortName = "RU Main",
-            X = 196,
-            Z = 113,
-            ZoneType = EZoneType.POLYGON,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T2_MAIN
-        };
-        mdl.ZoneData.Points = new Vector2[]
-        {
-            new Vector2(142.5f, 54f),
-            new Vector2(259.5f, 54f),
-            new Vector2(259.5f, 120f),
-            new Vector2(275f, 120f),
-            new Vector2(275f, 144f),
-            new Vector2(259.5f, 144f),
-            new Vector2(259.5f, 240f),
-            new Vector2(142.5f, 240f)
-        };
-        mdl.Adjacencies = new AdjacentFlagData[]
-        {
-            new AdjacentFlagData(8, 0.5f),
-            new AdjacentFlagData(2, 0.5f),
-            new AdjacentFlagData(3, 0.5f)
-        };
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-
-        mdl = new ZoneModel()
-        {
-            Id = 994,
-            Name = "Russian AMC Zone",
-            ShortName = "RU AMC",
-            X = 275,
-            Z = 234.6833f,
-            ZoneType = EZoneType.RECTANGLE,
-            UseMapCoordinates = true,
-            UseCase = EZoneUseCase.T2_AMC
-        };
-        mdl.ZoneData.SizeX = 550;
-        mdl.ZoneData.SizeZ = 469.3665f;
-        mdl.ValidateRead();
-        DefaultZones.Add(mdl);
-    }
-    public static List<Point3D> DefaultExtraPoints = new List<Point3D>
-    {
-        new Point3D("lobby_spawn", 713.1f, 39f, -991)
-    };
-
-    private const string T1_COLOR_PH = "%t1%";
-    private const string T2_COLOR_PH = "%t2%";
-    private const string T3_COLOR_PH = "%t3%";
-    public static readonly Dictionary<string, string> DefaultColors = new Dictionary<string, string>()
-    {
-        { "default", "ffffff" },
-        { "uncreated", "9cb6a4" },
-        { "attack_icon_color", "ffca61" },
-        { "defend_icon_color", "ba70cc" },
-        { "locked_icon_color", "c2c2c2" },
-        { "undiscovered_flag", "696969" },
-        { "team_count_ui_color_team_1", "ffffff" },
-        { "team_count_ui_color_team_2", "ffffff" },
-        { "team_count_ui_color_team_1_icon", T1_COLOR_PH },
-        { "team_count_ui_color_team_2_icon", T2_COLOR_PH },
-        { "default_fob_color", "54e3ff" },
-        { "no_bunker_fob_color", "696969" },
-        { "enemy_nearby_fob_color", "ff8754" },
-        { "bleeding_fob_color", "d45555" },
-        { "invasion_special_fob", "5482ff" },
-        { "insurgency_cache_undiscovered_color", "b780d9" },
-        { "insurgency_cache_discovered_color", "555bcf" },
-        { "neutral_color", "c2c2c2" },
-
-        // capture ui
-        { "contested", "ffdc8a" },
-        { "secured", "80ff80" },
-        { "nocap", "855a5a" },
-        { "locked", "855a5a" },
-        { "invehicle", "855a5a" },
-
-        // Other Flag Chats
-        { "flag_neutralized", "e6e3d5" },
-        { "team_win", "e6e3d5" },
-        { "team_capture", "e6e3d5" },
-
-        // Deaths
-        { "death_background", "ffffff" },
-        { "death_background_teamkill", "ff9999" },
-
-        // Request
-        { "kit_public_header", "ffffff" },
-        { "kit_level_available", "ff974d" },
-        { "kit_level_unavailable", "917663" },
-        { "kit_level_dollars", "7878ff" },
-        { "kit_level_dollars_owned", "769fb5" },
-        { "kit_level_dollars_exclusive", "96ffb2" },
-        { "kit_weapon_list", "343434" },
-        { "kit_unlimited_players", "111111" },
-        { "kit_player_counts_available", "96ffb2" },
-        { "kit_player_counts_unavailable", "c2603e" },
-
-        // Vehicle Sign
-        { "vbs_branch", "9babab" },
-        { "vbs_ticket_number", "ffffff" },
-        { "vbs_ticket_label", "f0f0f0" },
-        { "vbs_dead", "ff0000" },
-        { "vbs_idle", "ffcc00" },
-        { "vbs_delay", "94cfff" },
-        { "vbs_active", "ff9933" },
-        { "vbs_ready", "33cc33" },
-    };
-    public static List<Kit> DefaultKits = new List<Kit> { };
-    public static readonly List<LanguageAliasSet> DefaultLanguageAliasSets = new List<LanguageAliasSet>
-    {
-        new LanguageAliasSet("en-us", "English", new string[] { "english", "enus", "en", "us", "inglés", "inglesa", "ingles",
-            "en-au", "en-bz", "en-ca", "en-cb", "en-ie", "en-jm", "en-nz", "en-ph", "en-tt", "en-za", "en-zw",
-            "enau", "enbz", "enca", "encb", "enie", "enjm", "ennz", "enph", "entt", "enza", "enzw" } ),
-        new LanguageAliasSet("ru-ru", "Russian", new string[] { "russian", "ruru", "ru", "russia", "cyrillic", "русский", "russkiy", "российский" } ),
-        new LanguageAliasSet("es-es", "Spanish", new string[] { "spanish", "español", "española", "espanol", "espanola", "es", "eses",
-            "es-ar", "es-bo", "es-cl", "es-co", "es-cr", "es-do", "es-ec", "es-gt", "es-hn", "es-mx", "es-ni", "es-pa", "es-pe", "es-pr", "es-py", "es-sv", "es-uy", "es-ve",
-            "esar", "esbo", "escl", "esco", "escr", "esdo", "esec", "esgt", "eshn", "esmx", "esni", "espa", "espe", "espr", "espy", "essv", "esuy", "esve" } ),
-        new LanguageAliasSet("de-de", "German", new string[] { "german", "deutsche", "de", "de-at", "de-ch", "de-li", "de-lu", "deat", "dech", "deli", "delu", "dede" } ),
-        new LanguageAliasSet("ar-sa", "Arabic", new string[] { "arabic", "ar", "arab", "عربى", "eurbaa",
-            "ar-ae", "ar-bh", "ar-dz", "ar-eg", "ar-iq", "ar-jo", "ar-kw", "ar-lb", "ar-ly", "ar-ma", "ar-om", "ar-qa", "ar-sy", "ar-tn", "ar-ye",
-            "arae", "arbh", "ardz", "areg", "ariq", "arjo", "arkw", "arlb", "arly", "arma", "arom", "arqa", "arsy", "artn", "arye"}),
-        new LanguageAliasSet("fr-fr", "French", new string[] { "french", "fr", "française", "français", "francaise", "francais",
-            "fr-be", "fr-ca", "fr-ch", "fr-lu", "fr-mc",
-            "frbe", "frca", "frch", "frlu", "frmc" }),
-        new LanguageAliasSet("pl-pl", "Polish", new string[] { "polish", "plpl", "polskie", "pol", "pl" }),
-        new LanguageAliasSet("zh-cn", "Chinese (Simplified)", new string[] { "chinese", "simplified chinese", "chinese simplified", "simple chinese", "chinese simple",
-            "zh", "zh-s", "s-zh", "zh-hk", "zh-mo", "zh-sg", "中国人", "zhōngguó rén", "zhongguo ren", "简体中文", "jiǎntǐ zhōngwén", "jianti zhongwen", "中国人", "zhōngguó rén", "zhongguo ren",
-            "zhs", "szh", "zhhk", "zhmo", "zhsg", }),
-        new LanguageAliasSet("zh-tw", "Chinese (Traditional)", new string[] { "traditional chinese", "chinese traditional",
-            "zhtw", "zh-t", "t-zh", "zht", "tzh", "中國傳統的", "zhōngguó chuántǒng de", "zhongguo chuantong de", "繁體中文", "fántǐ zhōngwén", "fanti zhongwen", "中國人" }),
-        new LanguageAliasSet("pt-pt", "Portuguese", new string[] { "portuguese", "pt", "pt-pt", "pt-br", "ptbr", "ptpt", "português", "a língua portuguesa", "o português" }),
-        new LanguageAliasSet("fil", "Filipino", new string[] { "pilipino", "fil", "pil", "tagalog", "filipino", "tl", "tl-ph", "fil-ph", "pil-ph" }),
-        new LanguageAliasSet("nb-no", "Norwegian", new string[] { "norwegian", "norway", "bokmål", "bokmal", "norsk", "nb-no", "nb", "no", "nbno" }),
-        new LanguageAliasSet("ro-ro", "Romanian", new string[] { "română", "romanian", "ro", "roro", "ro-ro", "romania" })
     };
 }

@@ -18,6 +18,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles;
@@ -618,7 +619,7 @@ public struct Delay : IJsonReadWrite
         }
     }
 }
-public class VehicleData : IJsonReadWrite
+public class VehicleData : IJsonReadWrite, ITranslationArgument
 {
     [JsonSettable]
     public string Name;
@@ -1190,6 +1191,16 @@ public class VehicleData : IJsonReadWrite
             }
         }
         return string.Empty;
+    }
+
+    public const string COLORED_NAME = "cn";
+    public const string NAME = "n";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        string name = Assets.find(VehicleID) is VehicleAsset va ? va.vehicleName : VehicleID.ToString("N");
+        if (format is not null && format.Equals(COLORED_NAME, StringComparison.Ordinal))
+            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), name, flags);
+        return name;
     }
 }
 

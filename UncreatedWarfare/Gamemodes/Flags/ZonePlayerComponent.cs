@@ -330,7 +330,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         }
         _builders.Add(this);
         ITransportConnection tc = player.Player.channel.owner.transportConnection;
-        string text = Translation.TranslateEnum(type, player.Steam64);
+        string text = Localization.TranslateEnum(type, player.Steam64);
         if (_edit != null)
         {
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.Player.channel.owner.transportConnection });
@@ -338,7 +338,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             player.HasUIHidden = true;
             EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Name", name);
             EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Type", text);
-            EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Header", Translation.Translate("edit_zone_ui_suggested_commands", player.Steam64));
+            EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Header", Localization.Translate("edit_zone_ui_suggested_commands", player.Steam64));
         }
         ctx.Reply("create_zone_success", name, text);
         CheckType(type, true, @implicit: false);
@@ -523,7 +523,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             }
             _builders.Add(this);
             ITransportConnection tc = player.Player.channel.owner.transportConnection;
-            string text = Translation.TranslateEnum(_currentBuilder.ZoneType, player.Steam64);
+            string text = Localization.TranslateEnum(_currentBuilder.ZoneType, player.Steam64);
             if (_edit != null)
             {
                 Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { player.Player.channel.owner.transportConnection });
@@ -531,7 +531,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 player.HasUIHidden = true;
                 EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Name", _currentBuilder.Name);
                 EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Type", text);
-                EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Header", Translation.Translate("edit_zone_ui_suggested_commands", player!.Steam64));
+                EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Header", Localization.Translate("edit_zone_ui_suggested_commands", player!.Steam64));
             }
             ctx.Reply("edit_zone_existing_success", _currentBuilder.Name!, text);
             CheckType(_currentBuilder.ZoneType, true, @implicit: false);
@@ -1364,7 +1364,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private void SetUseCase(EZoneUseCase uc)
     {
         _currentBuilder!.UseCase = uc;
-        player.SendChat("edit_zone_use_case_success", Translation.TranslateEnum(uc, player));
+        player.SendChat("edit_zone_use_case_success", Localization.TranslateEnum(uc, player));
     }
 
     private void SetName(string name)
@@ -1480,7 +1480,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             AddTransaction(new SetTypeTransaction(_currentBuilder.ZoneType, type, @implicit));
         _currentBuilder.ZoneType = type;
         UpdateHeights();
-        EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Type", Translation.TranslateEnum(type, player.Steam64));
+        EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Type", Localization.TranslateEnum(type, player.Steam64));
         switch (type)
         {
             case EZoneType.CIRCLE:
@@ -1549,7 +1549,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             string b = "CommandHelp (" + i + ")";
             EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, b, a);
             if (a)
-                EffectManager.sendUIEffectText(EDIT_KEY, tc, true, b, Translation.Translate(cmds[i], player.Steam64));
+                EffectManager.sendUIEffectText(EDIT_KEY, tc, true, b, Localization.Translate(cmds[i], player.Steam64));
         }
     }
     private void UpdateHeights()
@@ -1565,9 +1565,9 @@ internal class ZonePlayerComponent : MonoBehaviour
                     EZoneType.POLYGON => "Polygon_YLimit",
                     _ => string.Empty
                 },
-            Translation.Translate("edit_zone_ui_y_limits", player.Steam64,
-            float.IsNaN(_currentBuilder.MinHeight) ? Translation.Translate("edit_zone_ui_y_limits_infinity", player.Steam64) : _currentBuilder.MinHeight.ToString("F2", Data.Locale),
-            float.IsNaN(_currentBuilder.MaxHeight) ? Translation.Translate("edit_zone_ui_y_limits_infinity", player.Steam64) : _currentBuilder.MaxHeight.ToString("F2", Data.Locale)));
+            Localization.Translate("edit_zone_ui_y_limits", player.Steam64,
+            float.IsNaN(_currentBuilder.MinHeight) ? Localization.Translate("edit_zone_ui_y_limits_infinity", player.Steam64) : _currentBuilder.MinHeight.ToString("F2", Data.Locale),
+            float.IsNaN(_currentBuilder.MaxHeight) ? Localization.Translate("edit_zone_ui_y_limits_infinity", player.Steam64) : _currentBuilder.MaxHeight.ToString("F2", Data.Locale)));
         }
     }
     private void AddTransaction(Transaction t)
@@ -1664,13 +1664,13 @@ internal class ZonePlayerComponent : MonoBehaviour
         {
             component.CheckType(New, transact: false);
             if (!Implicit)
-                component.player.SendChat("edit_zone_type_success", Translation.TranslateEnum(New, component.player));
+                component.player.SendChat("edit_zone_type_success", Localization.TranslateEnum(New, component.player));
         }
         public override void Undo(ZonePlayerComponent component)
         {
             component.CheckType(Old, transact: false);
             if (!Implicit)
-                component.player.SendChat("edit_zone_type_success", Translation.TranslateEnum(Old, component.player));
+                component.player.SendChat("edit_zone_type_success", Localization.TranslateEnum(Old, component.player));
         }
     }
 

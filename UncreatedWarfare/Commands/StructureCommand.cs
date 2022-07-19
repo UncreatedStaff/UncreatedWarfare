@@ -195,7 +195,7 @@ public class StructureCommand : Command
                 string teamname = TeamManager.TranslateName(team, player);
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _,
+                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _,
                         Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName, teamname), vehicle.lockedOwner.m_SteamID);
                 }
@@ -214,7 +214,7 @@ public class StructureCommand : Command
                 ulong grp = plr == null ? vehicle.lockedGroup.m_SteamID : plr.quests.groupID.m_SteamID;
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _,
+                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _,
                         Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
                         F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName, grp.ToString()), vehicle.lockedOwner.m_SteamID);
                 }
@@ -245,7 +245,7 @@ public class StructureCommand : Command
                 string teamname = TeamManager.TranslateName(data.group, player);
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
+                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
                 }
                 else
                 {
@@ -259,7 +259,7 @@ public class StructureCommand : Command
                 ulong grp = data.group;
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
+                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
                 }
                 else
                 {
@@ -290,7 +290,7 @@ public class StructureCommand : Command
                 string teamname = TeamManager.TranslateName(data.group, player);
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
+                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
                 }
                 else
                 {
@@ -304,7 +304,7 @@ public class StructureCommand : Command
                 ulong grp = data.group;
                 if (sendurl)
                 {
-                    player.channel.owner.SendSteamURL(Translation.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
+                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
                 }
                 else
                 {

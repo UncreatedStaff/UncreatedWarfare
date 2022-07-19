@@ -63,13 +63,13 @@ public class OfficerStorage : ListSingleton<OfficerData>
             if (isNewOfficer || newOfficerTier >= officer.OfficerTier)
             {
                 ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
-                player.Message("officer_promoted", rankdata.GetName(playerID), Translation.Translate("team_" + newTeam, player));
+                player.Message("officer_promoted", rankdata.GetName(playerID), Localization.Translate("team_" + newTeam, player));
 
                 FPlayerName names = F.GetPlayerOriginalNames(player);
-                foreach (LanguageSet set in Translation.EnumerateLanguageSets(player.Steam64))
+                foreach (LanguageSet set in Localization.EnumerateLanguageSets(player.Steam64))
                 {
                     string name = rankdata.GetName(set.Language);
-                    string team = Translation.Translate("team_" + newTeam, set.Language);
+                    string team = Localization.Translate("team_" + newTeam, set.Language);
                     while (set.MoveNext())
                         set.Next.SendChat("officer_announce_promoted", names.CharacterName, name, team);
                 }
@@ -77,13 +77,13 @@ public class OfficerStorage : ListSingleton<OfficerData>
             else
             {
                 ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
-                player.Message("officer_demoted", rankdata.GetName(playerID), Translation.Translate("team_" + newTeam, player));
+                player.Message("officer_demoted", rankdata.GetName(playerID), Localization.Translate("team_" + newTeam, player));
 
                 FPlayerName names = F.GetPlayerOriginalNames(player);
-                foreach (LanguageSet set in Translation.EnumerateLanguageSets(player.Steam64))
+                foreach (LanguageSet set in Localization.EnumerateLanguageSets(player.Steam64))
                 {
                     string name = rankdata.GetName(set.Language);
-                    string team = Translation.Translate("team_" + newTeam, set.Language);
+                    string team = Localization.Translate("team_" + newTeam, set.Language);
                     while (set.MoveNext())
                         set.Next.SendChat("officer_announce_promoted", names.CharacterName, name, team);
                 }
@@ -105,7 +105,7 @@ public class OfficerStorage : ListSingleton<OfficerData>
             ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
             player.Message("officer_discharged", rankdata.GetName(playerID));
             FPlayerName names = F.GetPlayerOriginalNames(player);
-            foreach (LanguageSet set in Translation.EnumerateLanguageSets(player.Steam64))
+            foreach (LanguageSet set in Localization.EnumerateLanguageSets(player.Steam64))
             {
                 string name = rankdata.GetName(set.Language);
                 while (set.MoveNext())

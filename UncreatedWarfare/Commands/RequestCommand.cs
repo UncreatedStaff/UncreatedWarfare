@@ -108,7 +108,7 @@ public class RequestCommand : Command
                                     return;
                                 }
 
-                                ctx.LogAction(EActionLogType.REQUEST_KIT, $"Loadout #{loadoutId}: {loadout.Name}, Team {loadout.Team}, Class: {Translation.TranslateEnum(loadout.Class, 0)}");
+                                ctx.LogAction(EActionLogType.REQUEST_KIT, $"Loadout #{loadoutId}: {loadout.Name}, Team {loadout.Team}, Class: {Localization.TranslateEnum(loadout.Class, 0)}");
                                 GiveKit(caller2, loadout);
                                 ctx.Defer();
                             }
@@ -224,7 +224,7 @@ public class RequestCommand : Command
                                     return;
                                 }
                             }
-                            ctx.LogAction(EActionLogType.REQUEST_KIT, $"Kit {kit.Name}, Team {kit.Team}, Class: {Translation.TranslateEnum(kit.Class, 0)}");
+                            ctx.LogAction(EActionLogType.REQUEST_KIT, $"Kit {kit.Name}, Team {kit.Team}, Class: {Localization.TranslateEnum(kit.Class, 0)}");
                             GiveKit(caller2, kit);
                         });
                         ctx.Defer();

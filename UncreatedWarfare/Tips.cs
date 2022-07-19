@@ -50,7 +50,7 @@ public class Tips : BaseSingleton
     }
     private static void GiveTip(UCPlayer player, Tip tip)
     {
-        ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate(tip.TranslationKey, player, tip.TranslationArgs), EToastMessageSeverity.TIP));
+        ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(tip.TranslationKey, player, tip.TranslationArgs), EToastMessageSeverity.TIP));
     }
 }
 public class Tip

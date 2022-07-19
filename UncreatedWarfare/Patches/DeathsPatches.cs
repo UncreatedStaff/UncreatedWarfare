@@ -59,7 +59,7 @@ public static partial class Patches
                                             (new Vector2(players.Current.player.transform.position.x, players.Current.player.transform.position.z) - dest2d).sqrMagnitude <
                                             UCWarfare.Config.MortarWarningDistance * UCWarfare.Config.MortarWarningDistance)
                                         {
-                                            ToastMessage.QueueMessage(players.Current, new ToastMessage(Translation.Translate("friendly_mortar_incoming", players.Current), EToastMessageSeverity.WARNING));
+                                            ToastMessage.QueueMessage(players.Current, new ToastMessage(Localization.Translate("friendly_mortar_incoming", players.Current), EToastMessageSeverity.WARNING));
                                             warned.Add(players.Current.playerID.steamID.m_SteamID);
                                         }
                                     }

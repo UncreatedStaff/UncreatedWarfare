@@ -228,11 +228,11 @@ namespace Uncreated.Warfare
                                                         VehicleSpawner.SpawnExists(vbsign.bay_instance_id, vbsign.bay_type, out Vehicles.VehicleSpawn spawn))
                                                     {
                                                         if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
-                                                            newtext = string.Format(Translation.TranslateVBS(spawn, data, lang), data.GetCostLine(pl));
+                                                            newtext = string.Format(Localization.TranslateVBS(spawn, data, lang), data.GetCostLine(pl));
                                                     }
                                                 }
                                             }
-                                                newtext = Translation.TranslateSign(newtext, lang, pl, false);
+                                                newtext = Localization.TranslateSign(newtext, lang, pl, false);
                                             // size is not allowed in signs.
                                             newtext = newtext.Replace("<size=", "").Replace("</size>", "");
                                         }

@@ -160,7 +160,7 @@ public static class Points
                         key = "subtract_credits";
                 }
 
-                string number = Translation.Translate(key, player, Math.Abs(amount).ToString(Data.Locale));
+                string number = Localization.Translate(key, player, Math.Abs(amount).ToString(Data.Locale));
                 if (!string.IsNullOrEmpty(message))
                     ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message!.Colorize("adadad"), EToastMessageSeverity.MINI));
                 else
@@ -199,7 +199,7 @@ public static class Points
 
             if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
             {
-                string number = Translation.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale));
+                string number = Localization.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale));
 
                 if (amount > 0)
                     number = number.Colorize("e3e3e3");
@@ -220,7 +220,7 @@ public static class Points
 
             if (player.Rank.Level > oldRank.Level)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("promoted_xp_1", player), Translation.Translate("promoted_xp_2", player, player.Rank.Name.ToUpper()), EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("promoted_xp_1", player), Localization.Translate("promoted_xp_2", player, player.Rank.Name.ToUpper()), EToastMessageSeverity.BIG));
 
                 if (VehicleSpawner.Loaded)
                 {
@@ -233,7 +233,7 @@ public static class Points
             }
             else if (player.Rank.Level < oldRank.Level)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Translation.Translate("demoted_xp_1", player), Translation.Translate("demoted_xp_2", player, player.Rank.Name.ToUpper()), EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("demoted_xp_1", player), Localization.Translate("demoted_xp_2", player, player.Rank.Name.ToUpper()), EToastMessageSeverity.BIG));
 
                 if (VehicleSpawner.Loaded)
                 {
@@ -337,7 +337,7 @@ public static class Points
             SteamPlayer driver = vehicle.passengers[0].player;
             if (driver != null && driver.playerID.steamID != gunner.channel.owner.playerID.steamID)
             {
-                AwardXP(driver.player, amount, Translation.Translate("xp_driver_assist", gunner));
+                AwardXP(driver.player, amount, Localization.Translate("xp_driver_assist", gunner));
             }
 
             //if (vehicle.transform.TryGetComponent(out VehicleComponent component))
@@ -355,14 +355,14 @@ public static class Points
 
         if (creator != null)
         {
-            AwardXP(creator, amount, Translation.Translate(translationKey, creator));
+            AwardXP(creator, amount, Localization.Translate(translationKey, creator));
         }
 
         if (fob.Placer != fob.Creator)
         {
             UCPlayer? placer = UCPlayer.FromID(fob.Placer);
             if (placer != null)
-                AwardXP(placer, amount, Translation.Translate(translationKey, placer));
+                AwardXP(placer, amount, Localization.Translate(translationKey, placer));
         }
     }
 }

@@ -222,7 +222,7 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
             L.LogWarning($"Message to be broadcasted by announcer was empty.");
             return;
         }
-        foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
         {
             TranslationData tdata = GetMessage(key, set.Language);
             while (set.MoveNext())

@@ -14,7 +14,7 @@ public class TeleportCommand : Command
     private const string SYNTAX = "/tp <x y z|player|location> - or - /tp <player> <x y z|player|location>";
     private const string HELP = "Teleport you or another player to a location.";
 
-    public TeleportCommand() : base("teleport", EAdminType.TRIAL_ADMIN, 1)
+    public TeleportCommand() : base("teleport", EAdminType.TRIAL_ADMIN_ON_DUTY, 1)
     {
         AddAlias("tp");
     }

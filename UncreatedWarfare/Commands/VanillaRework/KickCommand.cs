@@ -36,14 +36,14 @@ public class KickCommand : Command
         ctx.LogAction(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.Locale)} FOR \"{reason}\"");
         if (ctx.IsConsole)
         {
-            L.Log(Translation.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
+            L.Log(Localization.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
             Chat.Broadcast("kick_kicked_broadcast_operator", names.CharacterName);
             ctx.Defer();
         }
         else
         {
             FPlayerName callerNames = ctx.Caller is null ? FPlayerName.Console : F.GetPlayerOriginalNames(ctx.Caller);
-            L.Log(Translation.Translate("kick_kicked_console", 0, out _, names.PlayerName, targetId.ToString(Data.Locale),
+            L.Log(Localization.Translate("kick_kicked_console", 0, out _, names.PlayerName, targetId.ToString(Data.Locale),
                 callerNames.PlayerName, ctx.CallerID.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
             Chat.BroadcastToAllExcept(ctx.CallerID, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
             ctx.Reply("kick_kicked_feedback", names.CharacterName);

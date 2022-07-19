@@ -416,7 +416,7 @@ public static class CommandHandler
 #endif
                 if (!interaction.Responded)
                 {
-                    interaction.Reply(Translation.Common.UNKNOWN_ERROR);
+                    interaction.Reply(Localization.Common.UNKNOWN_ERROR);
                     interaction.MarkComplete();
                 }
 
@@ -431,7 +431,7 @@ public static class CommandHandler
             }
             catch (Exception ex)
             {
-                interaction.Reply(Translation.Common.UNKNOWN_ERROR);
+                interaction.Reply(Localization.Common.UNKNOWN_ERROR);
                 interaction.MarkComplete();
                 L.LogError(ex);
             }
@@ -442,7 +442,7 @@ public static class CommandHandler
         }
         else
         {
-            interaction.Reply(Translation.Common.NO_PERMISSIONS);
+            interaction.Reply(Localization.Common.NO_PERMISSIONS);
             interaction.MarkComplete();
         }
     }
@@ -1209,14 +1209,14 @@ public class CommandInteraction : BaseCommandInteraction
         player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
         return player != null && player.IsOnline;
     }
-    public bool AssertOnDuty(string noPermissionMessageKey = Translation.Common.NO_PERMISSIONS)
+    public bool AssertOnDuty(string noPermissionMessageKey = Localization.Common.NO_PERMISSIONS)
     {
         bool perm = IsConsole || Caller is not null && Caller.OnDuty();
         if (!perm)
             Reply(noPermissionMessageKey);
         return perm;
     }
-    public bool OnDutyOrReply(string[] formatting, string noPermissionMessageKey = Translation.Common.NO_PERMISSIONS)
+    public bool OnDutyOrReply(string[] formatting, string noPermissionMessageKey = Localization.Common.NO_PERMISSIONS)
     {
         bool perm = IsConsole || Caller is not null && Caller.OnDuty();
         if (!perm)
@@ -1288,7 +1288,7 @@ public class CommandInteraction : BaseCommandInteraction
     public void AssertOnDuty()
     {
         if (!IsConsole && !Caller.OnDuty())
-            throw Reply(Translation.Common.NO_PERMISSIONS_ON_DUTY);
+            throw Reply(Localization.Common.NO_PERMISSIONS_ON_DUTY);
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertOnDuty(string key, params string[] formatting)
@@ -1309,16 +1309,16 @@ public class CommandInteraction : BaseCommandInteraction
             throw SendCorrectUsage(usage);
     }
     
-    public Exception SendNotImplemented()   => Reply(Translation.Common.NOT_IMPLEMENTED);
-    public Exception SendNotEnabled()       => Reply(Translation.Common.NOT_ENABLED);
-    public Exception SendGamemodeError()    => Reply(Translation.Common.GAMEMODE_ERROR);
-    public Exception SendPlayerOnlyError()  => Reply(Translation.Common.PLAYERS_ONLY);
-    public Exception SendConsoleOnlyError() => Reply(Translation.Common.CONSOLE_ONLY);
-    public Exception SendUnknownError()     => Reply(Translation.Common.UNKNOWN_ERROR);
-    public Exception SendNoPermission()     => Reply(Translation.Common.NO_PERMISSIONS);
+    public Exception SendNotImplemented()   => Reply(Localization.Common.NOT_IMPLEMENTED);
+    public Exception SendNotEnabled()       => Reply(Localization.Common.NOT_ENABLED);
+    public Exception SendGamemodeError()    => Reply(Localization.Common.GAMEMODE_ERROR);
+    public Exception SendPlayerOnlyError()  => Reply(Localization.Common.PLAYERS_ONLY);
+    public Exception SendConsoleOnlyError() => Reply(Localization.Common.CONSOLE_ONLY);
+    public Exception SendUnknownError()     => Reply(Localization.Common.UNKNOWN_ERROR);
+    public Exception SendNoPermission()     => Reply(Localization.Common.NO_PERMISSIONS);
     public Exception SendCorrectUsage(string usage)
-                                            => Reply(Translation.Common.CORRECT_USAGE, usage);
-    public Exception SendPlayerNotFound()   => Reply(Translation.Common.PLAYER_NOT_FOUND);
+                                            => Reply(Localization.Common.CORRECT_USAGE, usage);
+    public Exception SendPlayerNotFound()   => Reply(Localization.Common.PLAYER_NOT_FOUND);
 
     // this is a struct so it can be passed as a value type to asyc 
     public struct ContextData
@@ -1356,7 +1356,7 @@ public class CommandInteraction : BaseCommandInteraction
             if (formatting is null) formatting = Array.Empty<string>();
             if (IsConsole || Caller is null)
             {
-                string message = Translation.Translate(translationKey, JSONMethods.DEFAULT_LANGUAGE, out Color color, formatting);
+                string message = Localization.Translate(translationKey, JSONMethods.DEFAULT_LANGUAGE, out Color color, formatting);
                 message = F.RemoveRichText(message);
                 ConsoleColor clr = F.GetClosestConsoleColor(color);
                 L.Log(message, clr);

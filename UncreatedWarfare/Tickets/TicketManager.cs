@@ -89,7 +89,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             }
         }
 
-        Points.AwardXP(killer, Points.XPConfig.EnemyKilledXP, Translation.Translate("xp_enemy_killed", killer));
+        Points.AwardXP(killer, Points.XPConfig.EnemyKilledXP, Localization.Translate("xp_enemy_killed", killer));
 
         if (dead.Player.TryGetPlayerData(out UCPlayerData component))
         {
@@ -102,7 +102,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                     Points.AwardXP(
                         assister,
                         Points.XPConfig.KillAssistXP,
-                        Translation.Translate("xp_kill_assist", killer));
+                        Localization.Translate("xp_kill_assist", killer));
                 }
 
                 if (dead.Player.TryGetComponent(out SpottedComponent spotted))
@@ -120,7 +120,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Points.AwardXP(killer, Points.XPConfig.FriendlyKilledXP, Translation.Translate("xp_friendly_killed", killer));
+        Points.AwardXP(killer, Points.XPConfig.FriendlyKilledXP, Localization.Translate("xp_friendly_killed", killer));
     }
     private static void OnVehicleExploded(InteractableVehicle vehicle)
     {
@@ -214,7 +214,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                                     {
                                         if (attacker.CSteamID.m_SteamID == vc.LastInstigator)
                                         {
-                                            Points.AwardXP(attacker, reward, Translation.Translate(message, player, data.Type.ToString()).ToUpper());
+                                            Points.AwardXP(attacker, reward, Localization.Translate(message, player, data.Type.ToString()).ToUpper());
                                             Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
 
                                             if (spotted != null)
@@ -224,7 +224,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                                             }
                                         }
                                         else if (responsibleness > 0.1F)
-                                            Points.AwardXP(attacker, reward, Translation.Translate("xp_vehicle_assist", attacker));
+                                            Points.AwardXP(attacker, reward, Localization.Translate("xp_vehicle_assist", attacker));
                                         if (responsibleness > resMax)
                                         {
                                             resMax = responsibleness;
@@ -250,7 +250,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                                                                          $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
 
                         if (message != string.Empty) message = "xp_friendly_" + message;
-                        Points.AwardCredits(player, Mathf.Clamp(data.CreditCost, 5, 1000), Translation.Translate(message, player.Steam64), true);
+                        Points.AwardCredits(player, Mathf.Clamp(data.CreditCost, 5, 1000), Localization.Translate(message, player.Steam64), true);
                         OffenseManager.LogVehicleTeamkill(player.Steam64, vehicle.id, vehicle.asset.vehicleName, DateTime.Now);
                     }
                     /*
@@ -383,7 +383,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             if (player == null) continue;
             int xp = Points.XPConfig.FlagCapturedXP;
 
-            Points.AwardXP(player, player.NearbyMemberBonus(xp, 60), Translation.Translate("xp_flag_captured", player.Steam64));
+            Points.AwardXP(player, player.NearbyMemberBonus(xp, 60), Localization.Translate("xp_flag_captured", player.Steam64));
 
             if (player.IsNearSquadLeader(50))
             {
@@ -412,8 +412,8 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             if (player == null) continue;
             int xp = Points.XPConfig.FlagNeutralizedXP;
 
-            Points.AwardXP(player, xp, Translation.Translate("xp_flag_neutralized", player.Steam64));
-            Points.AwardXP(player, player.NearbyMemberBonus(xp, 60) - xp, Translation.Translate("xp_squad_bonus", player.Steam64));
+            Points.AwardXP(player, xp, Localization.Translate("xp_flag_neutralized", player.Steam64));
+            Points.AwardXP(player, player.NearbyMemberBonus(xp, 60) - xp, Localization.Translate("xp_squad_bonus", player.Steam64));
         }
 
         UpdateUI(1);
@@ -434,28 +434,28 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam1[j],
                             Points.XPConfig.FlagAttackXP,
-                            Translation.Translate("xp_flag_attack", flag.PlayersOnFlagTeam1[j]));
+                            Localization.Translate("xp_flag_attack", flag.PlayersOnFlagTeam1[j]));
                 }
                 else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                             Points.XPConfig.FlagAttackXP,
-                            Translation.Translate("xp_flag_attack", flag.PlayersOnFlagTeam2[j]));
+                            Localization.Translate("xp_flag_attack", flag.PlayersOnFlagTeam2[j]));
                 }
                 else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam1[j],
                             Points.XPConfig.FlagDefendXP,
-                            Translation.Translate("xp_flag_defend", flag.PlayersOnFlagTeam1[j]));
+                            Localization.Translate("xp_flag_defend", flag.PlayersOnFlagTeam1[j]));
                 }
                 else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                             Points.XPConfig.FlagDefendXP,
-                            Translation.Translate("xp_flag_defend", flag.PlayersOnFlagTeam2[j]));
+                            Localization.Translate("xp_flag_defend", flag.PlayersOnFlagTeam2[j]));
                 }
             }
         }
@@ -474,7 +474,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
                     for (int j = 0; j < cache.Cache.NearbyDefenders.Count; j++)
                         Points.AwardXP(cache.Cache.NearbyDefenders[j],
                             Points.XPConfig.FlagDefendXP,
-                            Translation.Translate("xp_flag_defend", cache.Cache.NearbyDefenders[j]));
+                            Localization.Translate("xp_flag_defend", cache.Cache.NearbyDefenders[j]));
                 }
             }
         }

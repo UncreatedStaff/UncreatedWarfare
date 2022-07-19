@@ -23,7 +23,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes;
 
 public delegate Task TeamWinDelegate(ulong team);
-public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartListener, IReloadableSingleton
+public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartListener, IReloadableSingleton, ITranslationArgument
 {
     protected const float MATCH_PRESENT_THRESHOLD = 0.65f;
     public const string GAMEMODE_RELOAD_KEY = "gamemode";
@@ -287,14 +287,14 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                     if (sp.player.transform == null)
                     {
                         L.Log($"Kicking {F.GetPlayerOriginalNames(sp).PlayerName} ({sp.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                        Provider.kick(sp.playerID.steamID, Translation.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
+                        Provider.kick(sp.playerID.steamID, Localization.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
                         continue;
                     }
                 }
                 catch (NullReferenceException)
                 {
                     L.Log($"Kicking {F.GetPlayerOriginalNames(sp).PlayerName} ({sp.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                    Provider.kick(sp.playerID.steamID, Translation.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
+                    Provider.kick(sp.playerID.steamID, Localization.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
                     continue;
                 }
                 // TODO: Fix
@@ -329,6 +329,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 L.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
         }
     }
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)
     {
         shutdownAfterGame = true;
@@ -502,7 +503,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public virtual void ShowStagingUI(UCPlayer player)
     {
         CTFUI.StagingUI.SendToPlayer(player.Connection);
-        CTFUI.StagingUI.Top.SetText(player.Connection, Translation.Translate("phases_briefing", player));
+        CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate("phases_briefing", player));
     }
     public void ClearStagingUI(UCPlayer player)
     {

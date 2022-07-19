@@ -1,8 +1,12 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -10,7 +14,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 /// Do not depend on object equality for your plugins. Zone objects will be cycled every time the file is re-read.
 /// The equality operators and function will compare names with <see cref="StringComparison.OrdinalIgnoreCase"/>. This is the most reliable way to compare <see cref="Zone"/>s.
 /// </summary>
-public abstract class Zone
+public abstract class Zone : IDeployable
 {
     internal int Id = -1;
     private static bool isReady = false;
@@ -171,6 +175,8 @@ public abstract class Zone
         }
     }
 
+    Vector3 IDeployable.Position => Center3D + new Vector3(0, 1.5f, 0);
+
     protected abstract DrawData GenerateDrawData();
     public struct DrawData
     {
@@ -227,4 +233,45 @@ public abstract class Zone
     }
     /// <summary>Hashes <see cref="Name"/></summary>
     public override int GetHashCode() => Name.GetHashCode();
+
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx) => true;
+    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat) => true;
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        if (format is not null && (format.Equals(Flag.SHORT_NAME_FORMAT, StringComparison.Ordinal) || 
+                                   format.Equals(Flag.SHORT_NAME_FORMAT_COLORED, StringComparison.Ordinal) ||
+                                   format.Equals(Flag.SHORT_NAME_FORMAT_COLORED_DISCOVER, StringComparison.Ordinal) ||
+                                   format.Equals(Flag.SHORT_NAME_FORMAT_DISCOVER, StringComparison.Ordinal)))
+            return string.IsNullOrEmpty(ShortName) ? Name : ShortName!;
+
+        return Name;
+    }
+    float IDeployable.Yaw => Data.UseCase switch
+    {
+        EZoneUseCase.T1_MAIN => TeamManager.Team1SpawnAngle,
+        EZoneUseCase.T2_MAIN => TeamManager.Team2SpawnAngle,
+        EZoneUseCase.LOBBY => TeamManager.LobbySpawnAngle,
+        _ => 0f
+    };
+    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    {
+        if (Data.UseCase is EZoneUseCase.T1_MAIN or EZoneUseCase.T2_MAIN)
+        {
+            ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "MAIN BASE " + TeamManager.TranslateName(Data.UseCase == EZoneUseCase.T1_MAIN ? 1ul : 2ul, 0), player);
+            if (chat)
+                player.Message("deploy_s", "f0c28d", "MAIN");
+        }
+        else if (Data.UseCase is EZoneUseCase.LOBBY)
+        {
+            if (chat)
+                player.Message("deploy_s", "f0c28d", "LOBBY");
+            ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "LOBBY", player);
+        }
+        else
+        {
+            if (chat)
+                player.Message("deploy_s", "f0c28d", Name);
+            ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "ZONE " + Name, player);
+        }
+    }
 }

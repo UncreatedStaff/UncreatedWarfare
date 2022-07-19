@@ -66,12 +66,12 @@ public class BanCommand : Command
             {
                 if (ctx.IsConsole)
                 {
-                    L.Log(Translation.Translate("ban_permanent_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("ban_permanent_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
                     Chat.Broadcast("ban_permanent_broadcast_operator", name.CharacterName);
                 }
                 else
                 {
-                    L.Log(Translation.Translate("ban_permanent_console", 0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
+                    L.Log((string)Warfare.Localization.Translate("ban_permanent_console", (ulong)0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
                         ctx.CallerID.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
                     Chat.BroadcastToAllExcept(ctx.CallerID, "ban_permanent_broadcast", name.CharacterName, callerName.CharacterName);
                     ctx.Reply("ban_permanent_feedback", name.CharacterName);
@@ -79,16 +79,16 @@ public class BanCommand : Command
             }
             else
             {
-                string time = duration.GetTimeFromSeconds(JSONMethods.DEFAULT_LANGUAGE);
+                string time = Localization.GetTimeFromSeconds(duration, JSONMethods.DEFAULT_LANGUAGE);
                 if (ctx.IsConsole)
                 {
-                    L.Log(Translation.Translate("ban_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
+                    L.Log(Localization.Translate("ban_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
                     bool f = false;
-                    foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+                    foreach (LanguageSet set in Localization.EnumerateLanguageSets())
                     {
                         if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
                         {
-                            time = duration.GetTimeFromSeconds(set.Language);
+                            time = Localization.GetTimeFromSeconds(duration, set.Language);
                             f = true;
                         }
                         Chat.Broadcast(set, "ban_broadcast_operator", name.PlayerName, time);
@@ -96,22 +96,22 @@ public class BanCommand : Command
                 }
                 else
                 {
-                    L.Log(Translation.Translate("ban_console", 0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
+                    L.Log(Localization.Translate("ban_console", (ulong)0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
                         ctx.CallerID.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
                     bool f = false;
-                    foreach (LanguageSet set in Translation.EnumerateLanguageSetsExclude(ctx.CallerID))
+                    foreach (LanguageSet set in Localization.EnumerateLanguageSetsExclude(ctx.CallerID))
                     {
                         if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
                         {
-                            time = duration.GetTimeFromSeconds(set.Language);
+                            time = Localization.GetTimeFromSeconds(duration, set.Language);
                             f = true;
                         }
                         Chat.Broadcast(set, "ban_broadcast", name.CharacterName, callerName.CharacterName, time);
                     }
                     if (f)
-                        time = duration.GetTimeFromSeconds(ctx.CallerID);
+                        time = Localization.GetTimeFromSeconds(duration, ctx.CallerID);
                     else if (Data.Languages.TryGetValue(ctx.CallerID, out string lang) && !lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
-                        time = duration.GetTimeFromSeconds(lang);
+                        time = Localization.GetTimeFromSeconds(duration, lang);
                     ctx.Reply("ban_feedback", name.CharacterName, time);
                 }
             }

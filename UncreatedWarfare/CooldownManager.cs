@@ -100,7 +100,7 @@ public class CooldownConfig : ConfigData
     }
     public CooldownConfig() { }
 }
-public class Cooldown
+public class Cooldown : ITranslationArgument
 {
     public UCPlayer player;
     public ECooldownType type;
@@ -134,19 +134,43 @@ public class Cooldown
             line += time.Seconds + "s";
         return line;
     }
+
+    public const string NAME_FORMAT = "n";
+    public const string TIME_LEFT_FORMAT = "tl1";
+    public const string TIMESTAMP_LEFT_FORMAT = "tl2";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        if (format is null) goto end;
+        if (format.Equals(NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.TranslateEnum(type, language);
+        else if (format.Equals(TIME_LEFT_FORMAT, StringComparison.Ordinal))
+            return Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language);
+        else if (format.Equals(TIMESTAMP_LEFT_FORMAT, StringComparison.Ordinal))
+            return ToString();
+
+        end:
+        return Localization.TranslateEnumName<ECooldownType>(language) + ": " + Localization.TranslateEnum(type, language) + ": " + Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language);
+    }
 }
+[Translatable("Cooldown Type")]
 public enum ECooldownType
 {
+    [Translatable("Combat")]
     COMBAT,
+    [Translatable("Deploy")]
     DEPLOY,
+    [Translatable("Ammo Request")]
     AMMO,
+    [Translatable("Paid Kit Request")]
     PREMIUM_KIT,
+    [Translatable("Kit Request")]
     REQUEST_KIT,
+    [Translatable("Vehicle Request")]
     REQUEST_VEHICLE,
-    COMMAND_BOOST,
-    COMMAND_WARN,
-    WARNINGS,
+    [Translatable("Vehicle Ammo Request")]
     AMMO_VEHICLE,
+    [Translatable("Team Change")]
     CHANGE_TEAMS,
+    [Translatable("Report Player1")]
     REPORT
 }

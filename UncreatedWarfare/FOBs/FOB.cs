@@ -2,10 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
@@ -123,20 +125,23 @@ public class FOBComponent : MonoBehaviour
         Destroy(this);
     }
 }
-public class FOB
+public class FOB : IFOB, IDeployable
 {
     public BarricadeDrop Radio;
     private FOBComponent component;
     public int Number;
-    public string Name;
-    public string GridCoordinates { get; private set; }
-    public string ClosestLocation { get; private set; }
-    public ulong Team { get => Radio.GetServersideData().group; }
-    public ulong Owner { get => Radio.GetServersideData().owner; }
+    private string _name;
+    private readonly string _cl;
+    private readonly GridLocation _gc;
+    public string Name { get => _name; set => _name = value; }
+    public GridLocation GridLocation => _gc;
+    public string ClosestLocation => _cl;
+    public ulong Team => Radio.GetServersideData().group.GetTeam();
+    public ulong Owner => Radio.GetServersideData().owner;
     public BarricadeDrop? Bunker { get; private set; }
-    public Vector3 Position { get => Radio.model.position; }
+    public Vector3 Position => Radio.model.position;
+    public float Yaw => Bunker == null || Bunker.model == null ? 0 : (Bunker.model.rotation.eulerAngles.y + 90f);
     public float Radius { get; private set; }
-
     public float SqrRadius
     {
         get
@@ -149,7 +154,6 @@ public class FOB
     public int Ammo { get; private set; }
     public bool IsBleeding { get; private set; }
     public bool IsSpawnable { get => !IsBleeding && Radio != null && Bunker != null && !Radio.GetServersideData().barricade.isDead && !Bunker.GetServersideData().barricade.isDead; }
-
     public string UIColor
     {
         get
@@ -209,7 +213,6 @@ public class FOB
         }
     }
     public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.Config.Buildables.Where(bl => bl.Type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
-
     public List<UCPlayer> FriendliesOnFOB { get; private set; }
     public List<UCPlayer> NearbyEnemies { get; private set; }
     public ulong Killer { get; private set; }
@@ -241,8 +244,8 @@ public class FOB
         Ammo = 0;
         Build = 0;
 
-        GridCoordinates = F.ToGridPosition(Position);
-        ClosestLocation = F.GetClosestLocation(Position);
+        _gc = new GridLocation(Position);
+        _cl = F.GetClosestLocation(Position);
 
         if (Data.Is(out IFlagRotation fg))
         {
@@ -250,7 +253,7 @@ public class FOB
             if (flag != null)
             {
                 if (!string.IsNullOrEmpty(flag.ShortName))
-                    ClosestLocation = flag.ShortName;
+                    _cl = flag.ShortName;
             }
         }
 
@@ -316,7 +319,7 @@ public class FOB
                             tw *= 2;
                         }
 
-                        Points.AwardXP(creator, groupsUnloaded * xp, Translation.Translate("xp_supplies_unloaded", creator));
+                        Points.AwardXP(creator, groupsUnloaded * xp, Localization.Translate("xp_supplies_unloaded", creator));
                     }
                 }
 
@@ -410,7 +413,7 @@ public class FOB
                                 component.Quota += 0.33F;
                             }
 
-                            Points.AwardXP(player, xp, Translation.Translate("xp_supplies_unloaded", player));
+                            Points.AwardXP(player, xp, Localization.Translate("xp_supplies_unloaded", player));
 
                             player.SuppliesUnloaded = 0;
                         }
@@ -712,8 +715,90 @@ public class FOB
         EFOBRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
         _ => 0
     };
+
+    public const string COLORED_NAME_FORMAT = "cn";
+    public const string NAME_FORMAT = "cn";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        if (format is not null && format.Equals(COLORED_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(UIColor, Name, flags);
+        return Name;
+    }
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    {
+        if (NearbyEnemies.Count != 0)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_c_enemiesNearby");
+            return false;
+        }
+        if (IsBleeding)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_c_bleeding");
+            return false;
+        }
+        if (Bunker == null)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_e_nobunker");
+            return false;
+        }
+        if (!IsSpawnable)
+        {
+            if (ctx is not null)
+                throw ctx.Reply("deploy_c_notspawnable");
+            return false;
+        }
+
+        return true;
+    }
+    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
+    {
+        if (NearbyEnemies.Count != 0)
+        {
+            if (chat)
+                player.SendChat("deploy_c_enemiesNearby");
+            return false;
+        }
+        if (IsBleeding)
+        {
+            if (chat)
+                player.SendChat("deploy_c_bleeding");
+            return false;
+        }
+        if (Bunker == null)
+        {
+            if (chat)
+                player.SendChat("deploy_e_nobunker");
+            return false;
+        }
+        if (!IsSpawnable)
+        {
+            if (chat)
+                player.SendChat("deploy_c_notspawnable");
+            return false;
+        }
+
+        return true;
+    }
+    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    {
+        ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        if (chat)
+            player.Message("deploy_s", UIColor, Name);
+    }
 }
-public enum EFOBRadius
+
+public interface IFOB : ITranslationArgument
+{
+    Vector3 Position { get; }
+    string Name { get; }
+    string ClosestLocation { get; }
+    GridLocation GridLocation { get; }
+}
+
+public enum EFOBRadius : byte
 {
     SHORT,
     FULL,

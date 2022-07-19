@@ -55,7 +55,7 @@ public class LoadCommand : Command
                                 if (c.forceSupplyLoop == null)
                                     c.StartForceLoadSupplies(ctx.Caller, type, amount);
 
-                                ctx.LogAction(EActionLogType.LOAD_SUPPLIES, type.ToString());
+                                ctx.LogAction(EActionLogType.LOAD_SUPPLIES, type.ToString() + " x" + amount);
                                 ctx.Defer();
                             }
                             else throw ctx.Reply("load_e_toofast");

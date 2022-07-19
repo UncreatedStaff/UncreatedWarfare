@@ -9,7 +9,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Gamemodes.Flags
 {
     public delegate void DiscoveryDelegate(ulong team);
-    public class Flag : IDisposable
+    public class Flag : IDisposable, ITranslationArgument, IObjective
     {
         public delegate void EvaluatePointsDelegate(Flag flag, bool overrideInactiveCheck = false);
         public delegate bool IsContestedDelegate(Flag flag, out ulong winner);
@@ -407,6 +407,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
             {
                 1 => _discovered1,
                 2 => _discovered2,
+                3 => true,
                 _ => false
             };
         }
@@ -523,6 +524,48 @@ namespace Uncreated.Warfare.Gamemodes.Flags
         internal float GetCaptureAmount(float captureScale, ulong team)
         {
             return captureScale * Mathf.Log10((team == 0 ? Math.Max(Team1TotalCappers, Team2TotalCappers) : (team == 1 ? Team1TotalCappers : Team2TotalCappers)) + 1);
+        }
+
+        public const string NAME_FORMAT_COLORED = "nc";
+        public const string NAME_FORMAT = "n";
+        public const string SHORT_NAME_FORMAT_COLORED = "snc";
+        public const string SHORT_NAME_FORMAT = "sn";
+        public const string NAME_FORMAT_COLORED_DISCOVER = "ncd";
+        public const string NAME_FORMAT_DISCOVER = "nd";
+        public const string SHORT_NAME_FORMAT_COLORED_DISCOVER = "sncd";
+        public const string SHORT_NAME_FORMAT_DISCOVER = "snd";
+        string ITranslationArgument.Translate(string language, string? format, UCPlayer? target,
+            ref TranslationFlags flags)
+        {
+            if (format is null) goto end;
+            if (format.Equals(NAME_FORMAT_COLORED, StringComparison.Ordinal))
+                return Localization.Colorize(TeamSpecificHexColor, Name, flags);
+            if (format.Equals(NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(TeamSpecificHexColor, Name, flags);
+            if (format.Equals(SHORT_NAME_FORMAT_COLORED, StringComparison.Ordinal))
+                return Localization.Colorize(TeamSpecificHexColor, ShortName, flags);
+            if (format.Equals(SHORT_NAME_FORMAT, StringComparison.Ordinal))
+                return ShortName;
+            if (format.Equals(NAME_FORMAT_COLORED_DISCOVER, StringComparison.Ordinal))
+                return target is null || Discovered(target.GetTeam())
+                    ? Localization.Colorize(TeamSpecificHexColor, Name, flags)
+                    : Localization.Colorize(UCWarfare.GetColorHex("undiscovered_flag"),
+                        Localization.Translate("undiscovered_flag", target), flags);
+            if (format.Equals(NAME_FORMAT_DISCOVER, StringComparison.Ordinal))
+                return target is null || Discovered(target.GetTeam())
+                    ? Name
+                    : Localization.Translate("undiscovered_flag", target);
+            if (format.Equals(SHORT_NAME_FORMAT_COLORED_DISCOVER, StringComparison.Ordinal))
+                return target is null || Discovered(target.GetTeam())
+                    ? Localization.Colorize(TeamSpecificHexColor, ShortName, flags)
+                    : Localization.Colorize(UCWarfare.GetColorHex("undiscovered_flag"),
+                        Localization.Translate("undiscovered_flag", target), flags);
+            if (format.Equals(SHORT_NAME_FORMAT_DISCOVER, StringComparison.Ordinal))
+                return target is null || Discovered(target.GetTeam())
+                    ? Name
+                    : Localization.Translate("undiscovered_flag", target);
+        end:
+            return Name;
         }
     }
 }

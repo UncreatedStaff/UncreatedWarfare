@@ -43,15 +43,15 @@ public abstract class TicketGamemode : FlagGamemode, ITickets
         string img2 = TeamManager.Team2Faction.FlagImageURL;
         string tick1 = TicketManager.Team1Tickets.ToString(Data.Locale);
         string tick2 = TicketManager.Team2Tickets.ToString(Data.Locale);
-        foreach (LanguageSet set in Translation.EnumerateLanguageSets())
+        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
         {
-            string t1tickets = Translation.Translate("win_ui_value_tickets", set.Language, tick1);
+            string t1tickets = Localization.Translate("win_ui_value_tickets", set.Language, tick1);
             if (TicketManager.Team1Tickets <= 0)
                 t1tickets = t1tickets.Colorize("969696");
-            string t2tickets = Translation.Translate("win_ui_value_tickets", set.Language, tick2);
+            string t2tickets = Localization.Translate("win_ui_value_tickets", set.Language, tick2);
             if (TicketManager.Team2Tickets <= 0)
                 t2tickets = t2tickets.Colorize("969696");
-            string header = Translation.Translate("win_ui_header_winner", set.Language, TeamManager.TranslateName(winner, set.Language, true));
+            string header = Localization.Translate("win_ui_header_winner", set.Language, TeamManager.TranslateName(winner, set.Language, true));
             while (set.MoveNext())
             {
                 if (!set.Next.IsOnline || set.Next.HasUIHidden) continue;

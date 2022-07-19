@@ -30,7 +30,7 @@ public class CaptureUI : UnturnedUI
             return;
         }
         GetColors(p.Team, p.Type, out string backcolor, out string forecolor);
-        string translation = p.Type is EFlagStatus.BLANK ? string.Empty : Translation.TranslateEnum(p.Type, player.channel.owner.playerID.steamID.m_SteamID);
+        string translation = p.Type is EFlagStatus.BLANK ? string.Empty : Localization.TranslateEnum(p.Type, player.channel.owner.playerID.steamID.m_SteamID);
         ITransportConnection c = player.channel.owner.transportConnection;
         string desc = new string(Gamemode.Config.UI.ProgressChars[CTFUI.FromMax(p.Points)], 1);
         if (p.Type is not EFlagStatus.BLANK or EFlagStatus.DONT_DISPLAY && Gamemode.Config.UI.ShowPointsOnUI)

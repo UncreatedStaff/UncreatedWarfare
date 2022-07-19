@@ -33,6 +33,12 @@ public class DeployCommand : Command
 
         ctx.AssertArgs(1, SYNTAX + " - " + HELP);
 
+        if (ctx.MatchParameter(0, "cancel") && F.TryGetPlayerData(ctx.Caller.Player, out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
+        {
+            comp.CancelTeleport();
+            throw ctx.Reply("deploy_cancelled");
+        }
+
         if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(ctx.CallerID))
             throw ctx.Reply("deploy_e_injured");
 

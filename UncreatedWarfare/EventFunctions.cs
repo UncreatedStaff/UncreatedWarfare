@@ -500,12 +500,12 @@ public static class EventFunctions
             FPlayerName names = F.GetPlayerOriginalNames(ucplayer);
             if (Data.Is<ITeams>())
             {
-                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Translation.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", ucplayer,
+                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", ucplayer,
                     UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO));
             }
             else
             {
-                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Translation.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", ucplayer,
+                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", ucplayer,
                     UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO));
             }
             if (Data.PlaytimeComponents.ContainsKey(ucplayer.Steam64))
@@ -691,7 +691,7 @@ public static class EventFunctions
         FPlayerName names = F.GetPlayerOriginalNames(client.player);
         ulong team = client.GetTeam();
         Chat.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
-        L.Log(Translation.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
+        L.Log(Localization.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
         if (UCWarfare.Config.ModerationSettings.BattleyeExclusions != null &&
             !UCWarfare.Config.ModerationSettings.BattleyeExclusions.Contains(reason))
         {
@@ -1420,7 +1420,7 @@ public static class EventFunctions
             if (kick)
             {
                 isValid = false;
-                explanation = Translation.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
+                explanation = Localization.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
                 return;
             }
             else
@@ -1435,7 +1435,7 @@ public static class EventFunctions
             if (player.playerID.characterName.Length < 3 && player.playerID.nickName.Length < 3)
             {
                 isValid = false;
-                explanation = Translation.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
+                explanation = Localization.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
                 return;
             }
             else if (player.playerID.characterName.Length < 3)

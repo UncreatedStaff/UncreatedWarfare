@@ -19,6 +19,8 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Commands.CommandSystem;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
@@ -144,7 +146,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             SpecialFOB special = SpecialFOBs[i];
             if (special.DisappearAroundEnemies)
             {
-                if (Provider.clients.Count(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Point).sqrMagnitude < Math.Pow(70, 2)) > 0)
+                if (Provider.clients.Count(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Position).sqrMagnitude < Math.Pow(70, 2)) > 0)
                 {
                     DeleteSpecialFOB(special.Name, special.Team);
                 }
@@ -287,7 +289,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             for (int i = 0; i < Singleton.SpecialFOBs.Count; ++i)
             {
-                if ((Singleton.SpecialFOBs[i].Point - point).sqrMagnitude <= INSIDE_FOB_RANGE_SQR)
+                if ((Singleton.SpecialFOBs[i].Position - point).sqrMagnitude <= INSIDE_FOB_RANGE_SQR)
                 {
                     specialFob = Singleton.SpecialFOBs[i];
                 }
@@ -416,11 +418,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             {
                 if (killer.GetTeam() == team)
                 {
-                    Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", killer));
+                    Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, Localization.Translate("xp_fob_teamkilled", killer));
                 }
                 else
                 {
-                    Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, Translation.Translate("xp_fob_killed", killer));
+                    Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, Localization.Translate("xp_fob_killed", killer));
 
                     Points.TryAwardDriverAssist(killer.Player, Points.XPConfig.FOBKilledXP, 5);
 
@@ -500,11 +502,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             if (killer.GetTeam() == team)
             {
-                Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, Translation.Translate("xp_fob_teamkilled", killer));
+                Points.AwardXP(killer, Points.XPConfig.FOBTeamkilledXP, Localization.Translate("xp_fob_teamkilled", killer));
             }
             else
             {
-                Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, Translation.Translate("xp_fob_killed", killer));
+                Points.AwardXP(killer, Points.XPConfig.FOBKilledXP, Localization.Translate("xp_fob_killed", killer));
                 Stats.StatsManager.ModifyStats(killer.Steam64, x => x.FobsDestroyed++, false);
                 Stats.StatsManager.ModifyTeam(team, t => t.FobsDestroyed++, false);
             }
@@ -688,7 +690,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             int ii = i + offset;
             if (ListUI.FOBNames.Length > ii)
             {
-                ListUI.FOBNames[ii].SetText(player.Connection, Translation.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridCoordinates.Colorize("ebe8df"), FOBList[i].ClosestLocation));
+                ListUI.FOBNames[ii].SetText(player.Connection, Localization.Translate("fob_ui", player.Steam64, FOBList[i].Name.Colorize(FOBList[i].UIColor), FOBList[i].GridLocation.ToString().Colorize("ebe8df"), FOBList[i].ClosestLocation));
                 ListUI.FOBResources[ii].SetText(player.Connection, FOBList[i].UIResourceString);
             }
         }
@@ -721,9 +723,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             }
             if (ListUI.FOBNames.Length > i)
             {
-                ListUI.FOBNames[i].SetText(player.Connection, Translation.Translate("fob_ui", player.Steam64,
+                ListUI.FOBNames[i].SetText(player.Connection, Localization.Translate("fob_ui", player.Steam64,
                     Singleton.SpecialFOBs[i].Name.Colorize(Singleton.SpecialFOBs[i].UIColor),
-                    Singleton.SpecialFOBs[i].GridCoordinates, Singleton.SpecialFOBs[i].ClosestLocation));
+                    Singleton.SpecialFOBs[i].GridLocation.ToString(), Singleton.SpecialFOBs[i].ClosestLocation));
             }
         }
     }
@@ -760,9 +762,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             int ii = i + offset;
             if (ListUI.FOBNames.Length > ii)
             {
-                ListUI.FOBNames[ii].SetText(player.Connection, Translation.Translate("fob_ui", player.Steam64,
+                ListUI.FOBNames[ii].SetText(player.Connection, Localization.Translate("fob_ui", player.Steam64,
                     Singleton.Caches[i].Name.Colorize(Singleton.Caches[i].UIColor),
-                    Singleton.Caches[i].GridCoordinates,
+                    Singleton.Caches[i].GridLocation.ToString(),
                     Singleton.Caches[i].ClosestLocation));
             }
         }
@@ -783,9 +785,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (Singleton.SpecialFOBs[i].IsActive && Singleton.SpecialFOBs[i].Team == team)
             {
                 ListUI.FOBParents[i2].SetVisibility(connection, true);
-                ListUI.FOBNames[i2].SetText(connection, Translation.Translate("fob_ui", player.Steam64,
+                ListUI.FOBNames[i2].SetText(connection, Localization.Translate("fob_ui", player.Steam64,
                     Singleton.SpecialFOBs[i].Name.Colorize(Singleton.SpecialFOBs[i].UIColor),
-                    Singleton.SpecialFOBs[i].GridCoordinates,
+                    Singleton.SpecialFOBs[i].GridLocation.ToString(),
                     Singleton.SpecialFOBs[i].ClosestLocation));
                 i2++;
             }
@@ -797,9 +799,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             for (int i = 0; i < min; i++)
             {
                 ListUI.FOBParents[i2].SetVisibility(connection, true);
-                ListUI.FOBNames[i2].SetText(connection, Translation.Translate("fob_ui", player.Steam64,
+                ListUI.FOBNames[i2].SetText(connection, Localization.Translate("fob_ui", player.Steam64,
                     Singleton.Caches[i].Name.Colorize(Singleton.Caches[i].UIColor),
-                    Singleton.Caches[i].GridCoordinates,
+                    Singleton.Caches[i].GridLocation.ToString(),
                     Singleton.Caches[i].ClosestLocation));
                 ListUI.FOBResources[i2].SetText(connection, string.Empty);
                 i2++;
@@ -810,9 +812,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         for (int i = 0; i < min; i++)
         {
             ListUI.FOBParents[i2].SetVisibility(connection, true);
-            ListUI.FOBNames[i2].SetText(connection, Translation.Translate("fob_ui", player.Steam64,
+            ListUI.FOBNames[i2].SetText(connection, Localization.Translate("fob_ui", player.Steam64,
                 fobs[i].Name.Colorize(fobs[i].UIColor),
-                fobs[i].GridCoordinates,
+                fobs[i].GridLocation.ToString(),
                 fobs[i].ClosestLocation));
             ListUI.FOBResources[i2].SetText(connection, fobs[i].UIResourceString);
             i2++;
@@ -824,40 +826,69 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     }
 }
 
-public class SpecialFOB
+public class SpecialFOB : IFOB, IDeployable
 {
-    public string Name;
-    public Vector3 Point;
-    public string ClosestLocation;
-    public string GridCoordinates;
+    private readonly string _name;
+    private readonly string _cl;
+    private readonly GridLocation _gc;
+    private readonly Vector3 _pos;
     public ulong Team;
     public string UIColor;
     public bool IsActive;
     public bool DisappearAroundEnemies;
+    public string Name => _name;
+    public Vector3 Position => _pos;
+    float IDeployable.Yaw => 0f;
+    public string ClosestLocation => _cl;
+    public GridLocation GridLocation => _gc;
 
     public SpecialFOB(string name, Vector3 point, ulong team, string color, bool disappearAroundEnemies)
     {
-        Name = name;
-        ClosestLocation =
-            (LevelNodes.nodes
-            .Where(n => n.type == ENodeType.LOCATION)
-            .Aggregate((n1, n2) =>
-                (n1.point - point).sqrMagnitude <= (n2.point - point).sqrMagnitude ? n1 : n2) as LocationNode)?
-            .name ?? string.Empty;
+        _name = name;
+        _cl = F.GetClosestLocation(point);
 
         if (Data.Is(out IFlagRotation fg))
         {
-            Flag flag = fg.LoadedFlags.Find(f => f.Name == ClosestLocation);
-            if (flag != null && flag.ShortName != "")
-                ClosestLocation = flag.ShortName;
+            Flag flag = fg.LoadedFlags.Find(f => f.Name.Equals(ClosestLocation, StringComparison.OrdinalIgnoreCase));
+            if (flag is not null)
+                _cl = flag.ShortName;
         }
 
         Team = team;
-        Point = point;
-        GridCoordinates = F.ToGridPosition(Point);
+        _pos = point;
+        _gc = new GridLocation(in point);
         UIColor = color;
         IsActive = true;
         DisappearAroundEnemies = disappearAroundEnemies;
+    }
+
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        if (format is not null && format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(UIColor ?? TeamManager.GetTeamHexColor(Team), Name, flags);
+        return Name;
+    }
+    bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
+    {
+        if (IsActive)
+            return true;
+        if (ctx is not null)
+            throw ctx.Reply("deploy_c_notactive");
+        return false;
+    }
+    bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
+    {
+        if (IsActive)
+            return true;
+        if (chat)
+            player.SendChat("deploy_c_notactive");
+        return false;
+    }
+    void IDeployable.OnDeploy(UCPlayer player, bool chat)
+    {
+        ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        if (chat)
+            player.Message("deploy_s", UIColor, Name);
     }
 }
 [JsonSerializable(typeof(FOBConfigData))]
@@ -1184,7 +1215,7 @@ public class FOBConfigData : ConfigData
 }
 
 [JsonSerializable(typeof(BuildableData))]
-public class BuildableData
+public class BuildableData : ITranslationArgument
 {
     [JsonPropertyName("foundationID")]
     public JsonAssetReference<ItemBarricadeAsset> Foundation;
@@ -1200,6 +1231,25 @@ public class BuildableData
     public int Team;
     [JsonPropertyName("emplacementData")]
     public EmplacementData? Emplacement;
+
+    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        ItemBarricadeAsset asset;
+        if (Emplacement is not null)
+        {
+            if (Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
+                return vasset.vehicleName;
+            if (Emplacement.BaseBarricade.ValidReference(out asset))
+                return asset.itemName;
+            if (Emplacement.Ammo.ValidReference(out ItemAsset iasset))
+                return iasset.itemName;
+        }
+
+        if (BuildableBarricade.ValidReference(out asset) || Foundation.ValidReference(out asset))
+            return asset.itemName;
+
+        return Type.ToString();
+    }
 }
 
 [JsonSerializable(typeof(EmplacementData))]
