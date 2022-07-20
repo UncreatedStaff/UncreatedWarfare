@@ -543,10 +543,10 @@ public class UCPlayer : IPlayer
     public const string NICK_NAME_FORMAT = "nn";
     public const string PLAYER_NAME_FORMAT = "pn";
     public const string STEAM_64_FORMAT = "64";
-    public const string COLORIZED_CHARACTER_NAME_FORMAT = "ccn";
-    public const string COLORIZED_NICK_NAME_FORMAT = "cnn";
-    public const string COLORIZED_PLAYER_NAME_FORMAT = "cpn";
-    public const string COLORIZED_STEAM_64_FORMAT = "c64";
+    public const string COLOR_CHARACTER_NAME_FORMAT = "ccn";
+    public const string COLOR_NICK_NAME_FORMAT = "cnn";
+    public const string COLOR_PLAYER_NAME_FORMAT = "cpn";
+    public const string COLOR_STEAM_64_FORMAT = "c64";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is null) goto end;
@@ -561,13 +561,13 @@ public class UCPlayer : IPlayer
         else
         {
             string hex = TeamManager.GetTeamHexColor(this.GetTeam());
-            if (format.Equals(COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+            if (format.Equals(COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, Name.CharacterName, flags);
-            else if (format.Equals(COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
+            else if (format.Equals(COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, Name.NickName, flags);
-            else if (format.Equals(COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+            else if (format.Equals(COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, Name.PlayerName, flags);
-            else if (format.Equals(COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
+            else if (format.Equals(COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, Steam64.ToString(Data.Locale), flags);
         }
     end:
@@ -591,6 +591,11 @@ public struct OfflinePlayer : IPlayer
         if (cacheUsernames)
             _names = F.GetPlayerOriginalNames(steam64);
     }
+    public OfflinePlayer(in FPlayerName names)
+    {
+        _s64 = names.Steam64;
+        _names = names;
+    }
     public async Task CacheUsernames()
     {
         _names = await F.GetPlayerOriginalNamesAsync(_s64);
@@ -610,13 +615,13 @@ public struct OfflinePlayer : IPlayer
         else
         {
             string hex = TeamManager.GetTeamHexColor(PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0);
-            if (format.Equals(UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+            if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).CharacterName, flags);
-            else if (format.Equals(UCPlayer.COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
+            else if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).NickName, flags);
-            else if (format.Equals(UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+            else if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).PlayerName, flags);
-            else if (format.Equals(UCPlayer.COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
+            else if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
                 return Localization.Colorize(hex, _s64.ToString(Data.Locale), flags);
         }
     end:

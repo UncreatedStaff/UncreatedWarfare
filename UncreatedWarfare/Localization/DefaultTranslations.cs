@@ -1,11 +1,15 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
@@ -24,11 +28,13 @@ internal static class T
     internal const string LOWERCASE = "lower";
     internal const string PROPERCASE = "proper";
     public static readonly Translation[] Translations;
+    public static readonly Dictionary<string, Translation> Signs;
     static T()
     {
         FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
         Translations = new Translation[fields.Length - NON_TRANSLATION_FIELD_COUNT];
         int i2 = -1;
+        int signCt = 0;
         for (int i = 0; i < fields.Length; ++i)
         {
             FieldInfo field = fields[i];
@@ -42,17 +48,32 @@ internal static class T
                     tr.Id = i2;
                     tr.AttributeData = Attribute.GetCustomAttribute(field, typeof(TranslationDataAttribute)) as TranslationDataAttribute;
                     tr.Init();
+                    if (tr.AttributeData is not null && !string.IsNullOrEmpty(tr.AttributeData.SignId))
+                        ++signCt;
                     Translations[++i2] = tr;
                 }
                 else
-                    L.LogError("Ran out of space in translation array for " + field.Name + " at " + (i2 + 1));
+                    L.LogError("Ran out of space in translation array for " + field.Name + " at " + (i2 + 1), method: "TRANSLATIONS");
             }
         }
 
         if (Translations.Length != i2 + 1)
         {
-            L.LogWarning("Translations had to resize for some reason from " + Translations.Length + " to " + (i2 + 1) + ". Check to make sure there's only one field that isn't a translation.");
+            L.LogWarning("Translations had to resize for some reason from " + Translations.Length + " to " + (i2 + 1) + ". Check to make sure there's only one field that isn't a translation.", 
+                method: "TRANSLATIONS");
             Array.Resize(ref Translations, i2 + 1);
+        }
+        Signs = new Dictionary<string, Translation>(signCt);
+        for (int i = 0; i < Translations.Length; ++i)
+        {
+            Translation tr = Translations[i];
+            if (tr.AttributeData is not null && !string.IsNullOrEmpty(tr.AttributeData.SignId))
+            {
+                if (Signs.ContainsKey(tr.AttributeData.SignId!))
+                    L.LogWarning("Duplicate Sign ID: \"" + tr.AttributeData.SignId + "\" in translation \"" + tr.Key + "\".", method: "TRANSLATIONS");
+                else
+                    Signs.Add(tr.AttributeData.SignId!, tr);
+            }
         }
     }
 
@@ -102,6 +123,10 @@ internal static class T
         [TranslationData(Section = SECTION_COMMON_ERRORS,
         Description = "The caller of a command has permission to use the command but isn't on duty.", LegacyTranslationId = "no_permissions_on_duty")]
     public static readonly Translation NotOnDuty = new Translation(ERROR_COLOR + "You must be on duty to execute that command.");
+
+        [TranslationData(Section = SECTION_COMMON_ERRORS,
+        Description = "The value of a parameter was not in a valid time span format..", LegacyTranslationId = "ban_invalid_number", FormattingDescriptions = new string[] { "Inputted text." })]
+    public static readonly Translation<string> InvalidTime = new Translation<string>(ERROR_COLOR + "<#d09595>{0}</color> should be in a valid <#cedcde>TIME SPAN</color> format. Example: <#d09595>10d12h</color>, <#d09595>4mo15d12h</color>, <#d09595>2y</color>, <#d09595>permanent</color>.", UCPlayer.CHARACTER_NAME_FORMAT);
     #endregion
 
     #region Flags
@@ -112,51 +137,51 @@ internal static class T
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent when the player enters the capture radius of an active flag.", LegacyTranslationId = "entered_cap_radius", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> EnteredCaptureRadius = new Translation<Flag>(SUCCESS_COLOR + "You have entered the capture radius of {0}.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> EnteredCaptureRadius = new Translation<Flag>(SUCCESS_COLOR + "You have entered the capture radius of {0}.", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent when the player leaves the capture radius of an active flag.", LegacyTranslationId = "left_cap_radius", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> LeftCaptureRadius = new Translation<Flag>(SUCCESS_COLOR + "You have left the capture radius of {0}.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> LeftCaptureRadius = new Translation<Flag>(SUCCESS_COLOR + "You have left the capture radius of {0}.", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to all players on a flag that's being captured by their team (from neutral).", LegacyTranslationId = "capturing", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagCapturing = new Translation<Flag>(SUCCESS_COLOR + "Your team is capturing {0}!", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagCapturing = new Translation<Flag>(SUCCESS_COLOR + "Your team is capturing {0}!", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to all players on a flag that's being captured by the other team.", LegacyTranslationId = "losing", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagLosing = new Translation<Flag>(ERROR_COLOR + "Your team is losing {0}!", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagLosing = new Translation<Flag>(ERROR_COLOR + "Your team is losing {0}!", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to all players on a flag when it begins being contested.", LegacyTranslationId = "contested", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagContested = new Translation<Flag>("<#c$contested$>{0} is contested, eliminate some enemies to secure it!", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagContested = new Translation<Flag>("<#c$contested$>{0} is contested, eliminate some enemies to secure it!", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to all players on a flag that's being cleared by their team (from the other team's ownership).", LegacyTranslationId = "clearing", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagClearing = new Translation<Flag>(SUCCESS_COLOR + "Your team is clearing {0}!", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagClearing = new Translation<Flag>(SUCCESS_COLOR + "Your team is clearing {0}!", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to all players on a flag when it gets secured by their team.", LegacyTranslationId = "secured", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagSecured = new Translation<Flag>("<#c$secured$>{0} is secure for now, keep up the defense.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagSecured = new Translation<Flag>("<#c$secured$>{0} is secure for now, keep up the defense.", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to a player that walks in the radius of a flag that isn't their team's objective.", LegacyTranslationId = "nocap", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagNoCap = new Translation<Flag>("<#c$nocap$>{0} is not your objective, check the right of your screen to see which points to attack and defend.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagNoCap = new Translation<Flag>("<#c$nocap$>{0} is not your objective, check the right of your screen to see which points to attack and defend.", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to a player that walks in the radius of a flag that is owned by the other team and enough of the other team is on the flag so they can't contest the point.", LegacyTranslationId = "notowned", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagNotOwned = new Translation<Flag>("<#c$nocap$>{0} is owned by the enemies. Get more players to capture it.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagNotOwned = new Translation<Flag>("<#c$nocap$>{0} is owned by the enemies. Get more players to capture it.", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to a player that walks in the radius of a flag that is owned by the other team and has been locked from recapture.", LegacyTranslationId = "locked", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagLocked = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", Flag.NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> FlagLocked = new Translation<Flag>("<#c$locked$>{0} has already been captured, try to protect the objective to win.", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to all players when a flag gets neutralized.", LegacyTranslationId = "flag_neutralized", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagNeutralized = new Translation<Flag>(SUCCESS_COLOR + "{0} has been neutralized!", Flag.NAME_FORMAT_COLORED_DISCOVER);
+    public static readonly Translation<Flag> FlagNeutralized = new Translation<Flag>(SUCCESS_COLOR + "{0} has been neutralized!", Flag.COLOR_NAME_DISCOVER_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
-        Description = "Gets broadcasted when a team captures a flag..", LegacyTranslationId = "team_capture")]
-    public static readonly Translation<FactionInfo, Flag> TeamCaptured = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT, Flag.NAME_FORMAT_COLORED_DISCOVER);
+        Description = "Gets broadcasted when a team captures a flag.", LegacyTranslationId = "team_capture")]
+    public static readonly Translation<FactionInfo, Flag> TeamCaptured = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT, Flag.COLOR_NAME_DISCOVER_FORMAT);
 
     [TranslationData(Section = SECTION_FLAGS,
         Description = "Backup translation for team 0 name and short name.", LegacyTranslationId = "neutral")]
@@ -220,25 +245,63 @@ internal static class T
     public static readonly Translation<FactionInfo> TeamJoinDM                  = new Translation<FactionInfo>("<#a0ad8e>You've joined {0}.", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
         [TranslationData(Section = SECTION_TEAMS,
         Description = "Gets broadcasted to everyone when someone joins a team.", LegacyTranslationId = "teams_join_announce")]
-    public static readonly Translation<FactionInfo, IPlayer> TeamJoinAnnounce   = new Translation<FactionInfo, IPlayer>("<#a0ad8e>{1} joined {0}!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<FactionInfo, IPlayer> TeamJoinAnnounce   = new Translation<FactionInfo, IPlayer>("<#a0ad8e>{1} joined {0}!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
         [TranslationData(Section = SECTION_TEAMS,
         Description = "Gets broadcasted when the game is over.", LegacyTranslationId = "team_win")]
     public static readonly Translation<FactionInfo> TeamWin                     = new Translation<FactionInfo>("<#a0ad8e>{0} has won the battle!", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
     #endregion
 
     #region Players
-        [TranslationData(Section = SECTION_TEAMS,
+    private const string SECTION_PLAYERS = "Players";
+
+        [TranslationData(Section = SECTION_PLAYERS,
         Description = "Gets broadcasted when a player connects.", LegacyTranslationId = "player_connected")]
-    public static readonly Translation<IPlayer> PlayerConnected                 = new Translation<IPlayer>(SUCCESS_COLOR + "{0} joined the server.");
-        [TranslationData(Section = SECTION_TEAMS,
+    public static readonly Translation<IPlayer> PlayerConnected          = new Translation<IPlayer>(SUCCESS_COLOR + "{0} joined the server.");
+        [TranslationData(Section = SECTION_PLAYERS,
         Description = "Gets broadcasted when a player disconnects.", LegacyTranslationId = "player_disconnected")]
-    public static readonly Translation<IPlayer> PlayerDisconnected              = new Translation<IPlayer>(SUCCESS_COLOR + "{0} left the server.");
-        [TranslationData(Section = SECTION_TEAMS,
+    public static readonly Translation<IPlayer> PlayerDisconnected       = new Translation<IPlayer>(SUCCESS_COLOR + "{0} left the server.");
+        [TranslationData(Section = SECTION_PLAYERS,
         Description = "Kick message for a player that suffers from a rare bug which will cause GameObject.get_transform() to throw a NullReferenceException (not return null). They are kicked if this happens.", LegacyTranslationId = "null_transform_kick_message")]
-    public static readonly Translation<string>   NullTransformKickMessage       = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationFlags.NoColor);
-        [TranslationData(Section = SECTION_TEAMS,
+    public static readonly Translation<string> NullTransformKickMessage  = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationFlags.NoColor);
+        [TranslationData(Section = SECTION_PLAYERS,
         Description = "Gets sent to a player when their message gets blocked by the chat filter.", LegacyTranslationId = "text_chat_feedback_chat_filter")]
-    public static readonly Translation<string>   ChatFilterFeedback             = new Translation<string>(ERROR_COLOR + "Our chat filter flagged <#fdfdfd>{0}</color>, so the message wasn't sent.");
+    public static readonly Translation<string> ChatFilterFeedback        = new Translation<string>(ERROR_COLOR + "Our chat filter flagged <#fdfdfd>{0}</color>, so the message wasn't sent.");
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Gets sent to a player when their message gets blocked by the chat filter.", LegacyTranslationId = "kick_autokick_namefilter", FormattingDescriptions = new string[] { "Required successive alphanumeric character setting." })]
+    public static readonly Translation<int> NameFilterKickMessage        = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationFlags.NoColor);
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Gets sent to a player who is attempting to main camp the other team.", LegacyTranslationId = "amc_reverse_damage")]
+    public static readonly Translation AntiMainCampWarning               = new Translation("<#fa9e9e>Stop <b><#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.");
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Gets sent to a player who is attempting to main camp the other team.", LegacyTranslationId = "no_placement_on_vehicle", FormattingDescriptions = new string[] { "Barricade attempting to be placed (plural)." })]
+    public static readonly Translation<ItemBarricadeAsset> NoPlacementOnVehicle = new Translation<ItemBarricadeAsset>("<#fa9e9e>You can't place <#d9e882>{0}</color> on a vehicle!</color>", PLURAL);
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Generic message sent when a player is placing something in a place they shouldn't.", LegacyTranslationId = "no_placement_on_vehicle", FormattingDescriptions = new string[] { "Object attempting to be placed (plural)." })]
+    public static readonly Translation<ItemAsset> ProhibitedPlacement    = new Translation<ItemAsset>("<#fa9e9e>You're not allowed to place <#d9e882>{0}</color> here.</color>", PLURAL);
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Sent when a player tries to steal a battery.", LegacyTranslationId = "cant_steal_batteries")]
+    public static readonly Translation NoStealingBatteries               = new Translation("<#fa9e9e>Stealing batteries is not allowed.</color>");
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Sent when a player tries to manually leave their group.", LegacyTranslationId = "cant_leave_group")]
+    public static readonly Translation NoLeavingGroup                    = new Translation("<#fa9e9e>You are not allowed to manually change groups, use <#cedcde>/teams</color> instead.");
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Message sent when a player tries to place a non-whitelisted item in a storage inventory.", LegacyTranslationId = "cant_store_this_item", FormattingDescriptions = new string[] { "Item the player is trying to store (plural)." })]
+    public static readonly Translation<ItemAsset> ProhibitedStoring      = new Translation<ItemAsset>("<#fa9e9e>You are not allowed to store <#d9e882>{0}</color>.", PLURAL);
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Sent when a player tries to point or mark while not a squad leader.", LegacyTranslationId = "marker_not_in_squad", FormattingDescriptions = new string[] { "Item the player is trying to store (plural)." })]
+    public static readonly Translation MarkerNotInSquad                  = new Translation("<#fa9e9e>Only your squad can see markers, join a squad with <#cedcde>/squad join <name></color> or <color=#cedcde>/squad create <name></color> to use this feature.");
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Sent on a SEVERE toast when the player enters enemy territory.", LegacyTranslationId = "entered_enemy_territory", FormattingDescriptions = new string[] { "Long time string." })]
+    public static readonly Translation<string> EnteredEnemyTerritory     = new Translation<string>("Too close to enemy base! You will die in <#cedcde>{0}</color>!", TranslationFlags.UnityUI, PLURAL);
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "WARNING toast sent when someone's about to get mortared by a friendly.", LegacyTranslationId = "friendly_mortar_incoming", FormattingDescriptions = new string[] { "Seconds remaining." })]
+    public static readonly Translation<float> MortarStrikeWarning        = new Translation<float>("FRIENDLY MORTAR STRIKE INCOMING: {0} SECONDS OUT", TranslationFlags.UnityUI, "F1");
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Sent 2 times before a player is kicked for inactivity.", LegacyTranslationId = "afk_warning", FormattingDescriptions = new string[] { "Long timestamp remaining" })]
+    public static readonly Translation<string> InactivityWarning         = new Translation<string>("<#fa9e9e>You will be AFK-Kicked in <#cedcde>{0}</color> if you don't move.</color>");
+        [TranslationData(Section = SECTION_PLAYERS,
+        Description = "Broadcasted when a player is removed from the game by BattlEye.", LegacyTranslationId = "battleye_kick_broadcast", FormattingDescriptions = new string[] { "Long timestamp remaining" })]
+    public static readonly Translation<IPlayer> BattlEyeKickBroadcast    = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#feed00>BattlEye</color>.", UCPlayer.PLAYER_NAME_FORMAT);
     #endregion
 
     #region Leaderboards
@@ -255,12 +318,12 @@ internal static class T
         [TranslationData(Section = SECTION_LEADERBOARD, LegacyTranslationId = "lb_warstats_header")]
     public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_COLORIZED_FORMAT, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
         [TranslationData(Section = SECTION_LEADERBOARD, LegacyTranslationId = "lb_playerstats_header")]
-    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1}% presence", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, "P0");
+    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1}% presence", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT, "P0");
         [TranslationData(Section = SECTION_LEADERBOARD, LegacyTranslationId = "lb_winner_title")]
     public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationFlags.UnityUI, FactionInfo.SHORT_NAME_COLORIZED_FORMAT);
 
         [TranslationData(Section = SECTION_LEADERBOARD, LegacyTranslationId = "lb_longest_shot", FormattingDescriptions = new string[] { "Distance", "Gun Name", "Player" })]
-    public static readonly Translation<float, string, IPlayer> LongestShot     = new Translation<float, string, IPlayer>("{0}m - {1}\n{2}", TranslationFlags.UnityUI, "F1", arg3Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<float, string, IPlayer> LongestShot     = new Translation<float, string, IPlayer>("{0}m - {1}\n{2}", TranslationFlags.UnityUI, "F1", arg3Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     #endregion
 
     #region CTFBase
@@ -432,9 +495,9 @@ internal static class T
     #region Toasts
     private const string SECTION_TOASTS = "Toasts";
         [TranslationData(Section = SECTION_TOASTS, Description = "Sent when the player joins for the 2nd+ time..", LegacyTranslationId = "welcome_message", FormattingDescriptions = new string[] { "Joining player." })]
-    public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
         [TranslationData(Section = SECTION_TOASTS, Description = "Sent when the player joins for the 1st time..", LegacyTranslationId = "welcome_message_first_time", FormattingDescriptions = new string[] { "Joining player." })]
-    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nTalk to the NPCs to get started.", TranslationFlags.UnityUI, UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nTalk to the NPCs to get started.", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     #endregion
 
     #region KitCommand
@@ -455,20 +518,20 @@ internal static class T
     public static readonly Translation<string> KitNotFound                    = new Translation<string>(ERROR_COLOR + "A kit named <#fff>{0}</color> doesn't exists.");
     public static readonly Translation<string> KitPropertyNotFound            = new Translation<string>(ERROR_COLOR + "Kits don't have a <#eee>{0}</color> property.");
     public static readonly Translation<string> KitPropertyProtected           = new Translation<string>(ERROR_COLOR + "<#eee>{0}</color> can not be changed on kits.");
-    public static readonly Translation<IPlayer, Kit> KitAlreadyHasAccess      = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} already has access to <#fff>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
-    public static readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess  = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
-    public static readonly Translation<Cooldown> KitOnCooldown                = new Translation<Cooldown>(ERROR_COLOR + "You can request this kit again in: <#bafeff>{0}</color>.", Cooldown.TIMESTAMP_LEFT_FORMAT);
-    public static readonly Translation<Cooldown> KitOnGlobalCooldown          = new Translation<Cooldown>(ERROR_COLOR + "You can request another kit again in: <#bafeff>{0}</color>.", Cooldown.TIMESTAMP_LEFT_FORMAT);
-    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven         = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
-    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked       = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, Kit> KitAlreadyHasAccess      = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} already has access to <#fff>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess  = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<Cooldown> KitOnCooldown                = new Translation<Cooldown>(ERROR_COLOR + "You can request this kit again in: <#bafeff>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
+    public static readonly Translation<Cooldown> KitOnGlobalCooldown          = new Translation<Cooldown>(ERROR_COLOR + "You can request another kit again in: <#bafeff>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven         = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked       = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
     public static readonly Translation<string, Type, string> KitInvalidPropertyValue = new Translation<string, Type, string>(ERROR_COLOR + "<#fff>{2}</color> isn't a valid value for <#eee>{0}</color> (<#aaa>{1}</color>).");
-    public static readonly Translation<EClass, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<EClass, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg2Fmt: UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, arg3Fmt: UCPlayer.STEAM_64_FORMAT, arg4Fmt: Kit.ID_FORMAT);
+    public static readonly Translation<EClass, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<EClass, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg2Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT, arg3Fmt: UCPlayer.STEAM_64_FORMAT, arg4Fmt: Kit.ID_FORMAT);
     #endregion
 
     #region RangeCommand
     public static readonly Translation<float> RangeOutput  = new Translation<float>("<#9e9c99>The range to your squad's marker is: <#8aff9f>{0}m</color>.", "N0");
     public static readonly Translation RangeNoMarker       = new Translation("<#9e9c99>You squad has no marker.");
-    public static readonly Translation RangeNotSquadleader = new Translation("<#9e9c99>Only <color=#cedcde>SQUAD LEADERS</color> can place markers.");
+    public static readonly Translation RangeNotSquadleader = new Translation("<#9e9c99>Only <#cedcde>SQUAD LEADERS</color> can place markers.");
     public static readonly Translation RangeNotInSquad     = new Translation("<#9e9c99>You must JOIN A SQUAD in order to do /range.");
     #endregion
 
@@ -489,17 +552,17 @@ internal static class T
     public static readonly Translation<Squad> SquadLocked           = new Translation<Squad>("<#a89791>{0} is locked.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation<Squad> SquadFull             = new Translation<Squad>("<#a89791>{0} is full.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation SquadTargetNotInSquad        = new Translation("<#a89791>That player isn't in a squad.");
-    public static readonly Translation<IPlayer> SquadPlayerJoined   = new Translation<IPlayer>("<#b9bdb3>{0} joined your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
-    public static readonly Translation<IPlayer> SquadPlayerLeft     = new Translation<IPlayer>("<#b9bdb3>{0} left your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
-    public static readonly Translation<IPlayer> SquadPlayerPromoted = new Translation<IPlayer>("<#b9bdb3>{0} was promoted to <#cedcde>sqauad leader</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
-    public static readonly Translation<IPlayer> SquadPlayerKicked   = new Translation<IPlayer>("<#b9bdb3>{0} was kicked from your squad.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerJoined   = new Translation<IPlayer>("<#b9bdb3>{0} joined your squad.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerLeft     = new Translation<IPlayer>("<#b9bdb3>{0} left your squad.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerPromoted = new Translation<IPlayer>("<#b9bdb3>{0} was promoted to <#cedcde>sqauad leader</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> SquadPlayerKicked   = new Translation<IPlayer>("<#b9bdb3>{0} was kicked from your squad.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation SquadsDisabled               = new Translation("<#a89791>Squads are disabled in this gamemode.");
     public static readonly Translation<int> SquadsTooMany           = new Translation<int>("<#a89791>There can not be more than {0} squads on a team at once.");
 
     public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount = new Translation<Squad, int, int>("<#bd6b5b>{0}</color {1}/{2}", TranslationFlags.UnityUI, Squad.NAME_FORMAT);
     public static readonly Translation<int, int> SquadsUIPlayerCountSmall         = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
     public static readonly Translation<int, int> SquadsUIPlayerCountSmallLocked   = new Translation<int, int>("<#969696>{0}/{1}</color>", TranslationFlags.UnityUI);
-    public static readonly Translation squad_ui_expanded                          = new Translation("...", TranslationFlags.UnityUI);
+    public static readonly Translation SquadUIExpanded                            = new Translation("...", TranslationFlags.UnityUI);
     #endregion
 
     #region Orders
@@ -520,21 +583,21 @@ internal static class T
     public static readonly Translation OrderBuildFOBTooMany         = new Translation(ERROR_COLOR + "There are already too many FOBs on your team.");
     public static readonly Translation OrderSquadTooClose           = new Translation(ERROR_COLOR + "{0} is already near that marker. Try placing it further away.");
     public static readonly Translation<Squad, Order> OrderSent      = new Translation<Squad, Order>("<#9fa1a6>Order sent to {0}: <#9dbccf>{1}</color>.", Squad.COLORED_NAME_FORMAT, Order.MESSAGE_FORMAT);
-    public static readonly Translation<IPlayer, Order> OrderReceived   = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
+    public static readonly Translation<IPlayer, Order> OrderReceived   = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
     public static readonly Translation<IPlayer> OrderUICommander       = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
     public static readonly Translation<Order> OrderUIMessage           = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
     public static readonly Translation<TimeSpan> OrderUITimeLeft       = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
     public static readonly Translation<int> OrderUIReward              = new Translation<int>("- Reward: {0} XP", TranslationFlags.UnityUI);
-    public static readonly Translation<Flag> OrderUIAttackObjective    = new Translation<Flag>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<Flag> OrderUIAttackFlag         = new Translation<Flag>("Attack: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<Flag> OrderUIDefendObjective    = new Translation<Flag>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<Flag> OrderUIDefendFlag         = new Translation<Flag>("Defend: {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIAttackObjective    = new Translation<Flag>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<Flag> OrderUIAttackFlag         = new Translation<Flag>("Attack: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<Flag> OrderUIDefendObjective    = new Translation<Flag>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<Flag> OrderUIDefendFlag         = new Translation<Flag>("Defend: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
     public static readonly Translation<Cache> OrderUIAttackCache       = new Translation<Cache>("Attack: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
     public static readonly Translation<Cache> OrderUIDefendCache       = new Translation<Cache>("Defend: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
     public static readonly Translation<string> OrderUIAttackNearArea   = new Translation<string>("Attack near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
     public static readonly Translation<string> OrderUIDefendNearArea   = new Translation<string>("Defend near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<Flag> OrderUIBuildFobFlag       = new Translation<Flag>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
-    public static readonly Translation<string> OrderUIBuildFobNearArea = new Translation<string>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI, Flag.SHORT_NAME_FORMAT_COLORED);
+    public static readonly Translation<Flag> OrderUIBuildFobFlag       = new Translation<Flag>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<string> OrderUIBuildFobNearArea = new Translation<string>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
     public static readonly Translation<Cache> OrderUIBuildFobNearCache = new Translation<Cache>("Build a FOB near {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
     #endregion
 
@@ -586,9 +649,7 @@ internal static class T
     public static readonly Translation BuildFOBTooCloseToMain  = new Translation("<#ffab87>You can't build a FOB this close to main base.");
     public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
     public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.COLORED_NAME_FORMAT, "F0", "F0");
-
     public static readonly Translation<FOB, GridLocation, string> FOBUI    = new Translation<FOB, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.NAME_FORMAT);
-
     public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
     public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
     public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <#e3c59a>{0}</color>", TranslationFlags.UnityUI, UPPERCASE);
@@ -610,273 +671,231 @@ internal static class T
     public static readonly Translation<string> DeployableNotFound           = new Translation<string>("<#ffa238>There is no location by the name of <#e3c27f>{0}</color>.", UPPERCASE);
     public static readonly Translation DeployNotNearFOB                     = new Translation<string>("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or in <#cedcde>MAIN BASE</color> in order to deploy.", UPPERCASE);
     public static readonly Translation DeployNotNearFOBInsurgency           = new Translation<string>("<#ffa238>You must be near a friendly <#cedcde>FOB</color> or <#e8d1a7>CACHE</color>, or in <#cedcde>MAIN BASE</color> in order to deploy.", UPPERCASE);
-    public static readonly Translation<Cooldown> DeployCooldown             = new Translation<Cooldown>("<#ffa238>You can deploy again in: <#e3c27f>{0}</color>", Cooldown.TIME_LEFT_FORMAT);
+    public static readonly Translation<Cooldown> DeployCooldown             = new Translation<Cooldown>("<#ffa238>You can deploy again in: <#e3c27f>{0}</color>", Cooldown.LONG_TIME_FORMAT);
     public static readonly Translation DeployAlreadyActive                  = new Translation("<#b5a591>You're already deploying somewhere.");
-    public static readonly Translation<Cooldown> DeployInCombat             = new Translation<Cooldown>("<#ffaa42>You are in combat, soldier! You can deploy in another: <#e3987f>{0}</color>.", Cooldown.TIME_LEFT_FORMAT);
+    public static readonly Translation<Cooldown> DeployInCombat             = new Translation<Cooldown>("<#ffaa42>You are in combat, soldier! You can deploy in another: <#e3987f>{0}</color>.", Cooldown.LONG_TIME_FORMAT);
     public static readonly Translation DeployInjured                        = new Translation("<#ffaa42>You can not deploy while injured, get a medic to revive you or give up.");
     public static readonly Translation DeployLobbyRemoved                   = new Translation("<#fae69c>The lobby has been removed, use  <#e3c27f>/teams</color> to switch teams instead.");
     #endregion
 
     #region
-    public static readonly Translation AmmoNoTarget                = new Translation("<#ffab87>Look at an AMMO CRATE, AMMO BAG or VEHICLE in order to resupply.");
+    public static readonly Translation AmmoNoTarget                = new Translation("<#ffab87>Look at an <#cedcde>AMMO CRATE</color>, <#cedcde>AMMO BAG</color> or <#cedcde>VEHICLE</color> in order to resupply.");
     public static readonly Translation<int, int> AmmoResuppliedKit = new Translation<int, int>("<#d1bda7>Resupplied kit. Consumed: <#d97568>{0} AMMO</color> <#948f8a>({1} left)</color>.");
+    public static readonly Translation<int> AmmoResuppliedKitMain  = new Translation<int>("<#d1bda7>Resupplied kit. Consumed: <#d97568>{0} AMMO</color>.");
+    public static readonly Translation AmmoAutoSupply              = new Translation("<#b3a6a2>This vehicle will <#cedcde>AUTO RESUPPLY</color> when in main. You can also use '<color=#c9bfad>/load <color=#d4c49d>build</color>|<color=#d97568>ammo</color> <amount></color>'.");
+    public static readonly Translation AmmoNotNearFOB              = new Translation("<#b3a6a2>This ammo crate is not built on a friendly FOB.");
+    public static readonly Translation<int, int> AmmoOutOfStock    = new Translation<int, int>("<#b3a6a2>Insufficient ammo. Required: <#d97568>{0}/{1} AMMO</color>.", VehicleData.COLORED_NAME);
+    public static readonly Translation AmmoNoKit                   = new Translation("<#b3a6a2>You don't have a kit yet. Go request one from the armory in your team's headquarters.");
+    public static readonly Translation<Cooldown> AmmoCooldown      = new Translation<Cooldown>("<#b7bab1>More <#cedcde>AMMO</color> arriving in: <color=#de95a8>{0}</color>", Cooldown.SHORT_TIME_FORMAT);
+    public static readonly Translation AmmoNotRifleman             = new Translation("<#b7bab1>You must be a <#cedcde>RIFLEMAN</color> in order to place this <#cedcde>AMMO BAG</color>.");
     public static readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#d97568>{1} AMMO</color> <#948f8a>({2} left)</color>.", VehicleData.COLORED_NAME);
+    public static readonly Translation<VehicleData, int> AmmoResuppliedVehicleMain  = new Translation<VehicleData, int>("<#d1bda7>Resupplied {0}. Consumed: <#d97568>{1} AMMO</color>.", VehicleData.COLORED_NAME);
+    public static readonly Translation<VehicleData> AmmoVehicleCantRearm            = new Translation<VehicleData>("<#d1bda7>{0} can't be resupplied.", VehicleData.COLORED_NAME + PLURAL);
+    public static readonly Translation<VehicleData> AmmoVehicleFullAlready          = new Translation<VehicleData>("<#b3a6a2>Your {0} does not need to be resupplied.", VehicleData.COLORED_NAME);
+    public static readonly Translation<VehicleData> AmmoVehicleNotNearRepairStation = new Translation<VehicleData>("<#b3a6a2>Your {0} must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.", VehicleData.COLORED_NAME);
+    #endregion
+
+    #region Load Command
+    public static readonly Translation LoadNoTarget = new Translation("<#b3a6a2>Look at a friendly <#cedcde>LOGISTICS VEHICLE</color>.");
+    public static readonly Translation LoadUsage = new Translation("<#b3a6a2>Try typing: '<#e6d1b3>/load ammo <amount></color>' or '<#e6d1b3>/load build <amount></color>'.");
+    public static readonly Translation<string> LoadInvalidAmount = new Translation<string>("<#b3a6a2>'{0}' is not a valid amount of supplies.", UPPERCASE);
+    public static readonly Translation LoadNotInMain = new Translation("<#b3a6a2>You must be in <#cedcde>MAIN</color> to load up this vehicle.");
+    public static readonly Translation LoadNotLogisticsVehicle = new Translation("<#b3a6a2>Only <#cedcde>LOGISTICS VEHICLES</color> can be loaded with supplies.");
+    public static readonly Translation LoadSpeed = new Translation("<#b3a6a2>You can only load supplies while the vehicle is stopped.");
+    public static readonly Translation<int> LoadCompleteBuild = new Translation<int>("<#d1bda7>Loading complete. <#d4c49d>{0} BUILD</color> loaded.");
+    public static readonly Translation<int> LoadCompleteAmmo = new Translation<int>("<#d1bda7>Loading complete. <#d97568>{0} AMMO</color> loaded.");
+    #endregion
+
+    #region Vehicles
+    public static readonly Translation<VehicleData> VehicleStaging  = new Translation<VehicleData>("<#b3a6a2>You can't enter a {0} during the <#cedcde>STAGING PHASE</color>.", VehicleData.COLORED_NAME);
+    public static readonly Translation<IPlayer> VehicleWaitForOwner = new Translation<IPlayer>("<#bda897>Only the owner, {0}, can enter the driver's seat right now.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, Squad> VehicleWaitForOwnerOrSquad = new Translation<IPlayer, Squad>("<#bda897>Only the owner, {0}, or members of {1} Squad can enter the driver's seat right now.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Squad.COLORED_NAME_FORMAT);
+    public static readonly Translation VehicleNoKit = new Translation("<#ff684a>You can not get in a vehicle without a kit.");
+    public static readonly Translation VehicleTooHigh = new Translation("<#ff684a>The vehicle is too high off the ground to exit.");
+    public static readonly Translation<EClass> VehicleMissingKit = new Translation<EClass>("<#bda897>You need a <#cedcde>{0}</color> kit in order to man this vehicle.");
+    public static readonly Translation VehicleDriverNeeded = new Translation("<#bda897>Your vehicle needs a <#cedcde>DRIVER</color> before you can switch to the gunner's seat on the battlefield.");
+    public static readonly Translation VehicleAbandoningDriver = new Translation("<#bda897>You cannot abandon the driver's seat on the battlefield.");
+    public static readonly Translation VehicleNoPassengerSeats = new Translation("<#bda897>There are no free passenger seats in this vehicle.");
+    #endregion
+
+    #region Signs
+    private const string SECTION_SIGNS = "Signs";
+        [TranslationData(Section = SECTION_SIGNS, SignId = "rules", Description = "Server rules")]
+    public static readonly Translation SignRules = new Translation("Rules\nNo suicide vehicles.\netc.", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "kitdelay", Description = "Shown on new seasons when elite kits and loadouts are locked.")]
+    public static readonly Translation SignKitDelay = new Translation("<#e6e6e6>All <#3bede1>Elite Kits</color> and <#32a852>Loadouts</color> are locked for the two weeks of the season.\nThey will be available again after <#d8addb>September 1st, 2022</color>.", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_squadleader")]
+    public static readonly Translation SignClassDescriptionSquadleader   = new Translation("\n\n<#cecece>Help your squad by supplying them with <#f0a31c>rally points</color> and placing <#f0a31c>FOB radios</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_rifleman")]
+    public static readonly Translation SignClassDescriptionRifleman      = new Translation("\n\n<#cecece>Resupply your teammates in the field with an <#f0a31c>Ammo Bag</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_medic")]
+    public static readonly Translation SignClassDescriptionMedic         = new Translation("\n\n<#cecece><#f0a31c>Revive</color> your teammates after they've been injured.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_breacher")]
+    public static readonly Translation SignClassDescriptionBreacher      = new Translation("\n\n<#cecece>Use <#f0a31c>high-powered explosives</color> to take out <#f01f1c>enemy FOBs</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_autorifleman")]
+    public static readonly Translation SignClassDescriptionAutoRifleman  = new Translation("\n\n<#cecece>Equipped with a high-capacity and powerful <#f0a31c>LMG</color> to spray-and-pray your enemies.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_machinegunner")]
+    public static readonly Translation SignClassDescriptionMachineGunner = new Translation("\n\n<#cecece>Equipped with a powerful <#f0a31c>Machine Gun</color> to shred the enemy team in combat.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_lat")]
+    public static readonly Translation SignClassDescriptionLAT           = new Translation("\n\n<#cecece>A balance between an anti-tank and combat loadout, used to conveniently destroy <#f01f1c>armored enemy vehicles</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_hat")]
+    public static readonly Translation SignClassDescriptionHAT           = new Translation("\n\n<#cecece>Equipped with multiple powerful <#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_grenadier")]
+    public static readonly Translation SignClassDescription              = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_marksman")]
+    public static readonly Translation SignClassDescriptionMarksman      = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_sniper")]
+    public static readonly Translation SignClassDescriptionSniper        = new Translation("\n\n<#cecece>Equipped with a high-powered <#f0a31c>sniper rifle</color> to take out enemies from great distances.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_aprifleman")]
+    public static readonly Translation SignClassDescriptionAPRifleman    = new Translation("\n\n<#cecece>Equipped with <#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_engineer")]
+    public static readonly Translation SignClassDescriptionEngineer      = new Translation("\n\n<#cecece>Features 200% <#f0a31c>build speed</color> and are equipped with <#f0a31c>fortifications</color> and traps to help defend their team's FOBs.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_crewman")]
+    public static readonly Translation SignClassDescriptionCrewman       = new Translation("\n\n<#cecece>The only kits than can man <#f0a31c>armored vehicles</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_pilot")]
+    public static readonly Translation SignClassDescriptionPilot         = new Translation("\n\n<#cecece>The only kits that can fly <#f0a31c>aircraft</color>.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_specops")]
+    public static readonly Translation SignClassDescriptionSpecOps       = new Translation("\n\n<#cecece>Equipped with <#f0a31c>night-vision</color> to help see at night.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_misc")]
+    public static readonly Translation SignBundleMisc       = new Translation("<#f0a31c>Misc.", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_caf")]
+    public static readonly Translation SignBundleCanada     = new Translation("<#f0a31c>Canadian Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_fr")]
+    public static readonly Translation SignBundleFrance     = new Translation("<#f0a31c>French Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_ger")]
+    public static readonly Translation SignBundleGermany    = new Translation("<#f0a31c>German Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_usmc")]
+    public static readonly Translation SignBundleUSMC       = new Translation("<#f0a31c>USMC Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_usa")]
+    public static readonly Translation SignBundleUSA        = new Translation("<#f0a31c>USA Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_pl")]
+    public static readonly Translation SignBundlePoland     = new Translation("<#f0a31c>Polish Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_idf")]
+    public static readonly Translation SignBundleIsrael     = new Translation("<#f0a31c>IDF Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_militia")]
+    public static readonly Translation SignBundleMilitia    = new Translation("<#f0a31c>Militia Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_ru")]
+    public static readonly Translation SignBundleRussia     = new Translation("<#f0a31c>Russia Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_soviet")]
+    public static readonly Translation SignBundleSoviet     = new Translation("<#f0a31c>Soviet Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "sign_loadout_info", Description = "Information on how to obtain a loadout.")]
+    public static readonly Translation SignLoadoutInfo      = new Translation("<#cecece>Loadouts and elite kits can be purchased\nin our <#7483c4>Discord</color> server.</color>\n\n<#7483c4>/discord</color>", TranslationFlags.TMProSign);
+    #endregion
+
+    #region Kick Command
+    public static readonly Translation NoReasonProvided                       = new Translation("<#9cffb3>You must provide a reason.");
+    public static readonly Translation<IPlayer> KickSuccessFeedback           = new Translation<IPlayer>("<#00ffff>You kicked <#d8addb>{0}</color>.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer> KickSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> KickSuccessBroadcastOperator  = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was kicked by an operator.", UCPlayer.CHARACTER_NAME_FORMAT);
+    #endregion
+
+    #region Ban Command
+    public static readonly Translation<IPlayer> BanPermanentSuccessFeedback           = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer> BanPermanentSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> BanPermanentSuccessBroadcastOperator  = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was <b>permanently</b> banned by an operator.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, string> BanSuccessFeedback            = new Translation<IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color>.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, string> BanSuccessBroadcast  = new Translation<IPlayer, IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color> by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, string> BanSuccessBroadcastOperator   = new Translation<IPlayer, string>("<#00ffff><#d8addb>{0}</color> was banned for <#9cffb3>{1}</color> by an operator.", UCPlayer.CHARACTER_NAME_FORMAT);
+    #endregion
+
+    #region Unban Command
+    public static readonly Translation<IPlayer> UnbanNotBanned = new Translation<IPlayer>("<#9cffb3><#d8addb>{0}</color> is not currently banned.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> UnbanSuccessFeedback = new Translation<IPlayer>("<#00ffff><#d8addb>{0}</color> was unbanned.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer> UnbanSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#00ffff><#d8addb>{0}</color> was unbanned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> UnbanSuccessBroadcastOperator = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unbanned by an operator.", UCPlayer.CHARACTER_NAME_FORMAT);
+    #endregion
+    
+    #region Warn Command
+    public static readonly Translation<IPlayer> WarnSuccessFeedback           = new Translation<IPlayer>("<#ffff00>You warned <#d8addb>{0}</color>.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer> WarnSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> WarnSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was warned by an operator.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> warned you for <#fff>{1}</color>.", UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<string> WarnSuccessDMOperator          = new Translation<string>("<#ffff00>An operator warned you for <#fff>{0}</color>.", UCPlayer.PLAYER_NAME_FORMAT);
+    #endregion
+
+    #region Mute Command
+    public static readonly Translation<IPlayer, IPlayer, EMuteType> MutePermanentSuccessFeedback = new Translation<IPlayer, IPlayer, EMuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, LOWERCASE);
+    public static readonly Translation<IPlayer, IPlayer, string, EMuteType> MuteSuccessFeedback  = new Translation<IPlayer, IPlayer, string, EMuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted for <#9cffb3>{2}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, arg4Fmt: LOWERCASE);
+    public static readonly Translation<IPlayer, IPlayer, EMuteType> MutePermanentSuccessBroadcastOperator  = new Translation<IPlayer, IPlayer, EMuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by an operator.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, LOWERCASE);
+    public static readonly Translation<IPlayer, IPlayer, EMuteType, IPlayer> MutePermanentSuccessBroadcast = new Translation<IPlayer, IPlayer, EMuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted by <#" + TeamManager.AdminColorHex + ">{3}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, LOWERCASE, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, string, EMuteType> MuteSuccessBroadcastOperator   = new Translation<IPlayer, IPlayer, string, EMuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by an operator for <#9cffb3>{2}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, arg4Fmt: LOWERCASE);
+    public static readonly Translation<IPlayer, IPlayer, string, EMuteType, IPlayer> MuteSuccessBroadcast  = new Translation<IPlayer, IPlayer, string, EMuteType, IPlayer>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted by <#" + TeamManager.AdminColorHex + ">{4}</color> for <#9cffb3>{2}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, arg4Fmt: LOWERCASE, arg5Fmt: UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, string, string, EMuteType> MuteSuccessDM  = new Translation<IPlayer, string, string, EMuteType>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> <#9cffb3>{3}</color> muted you for <#9cffb3>{2}</color> because: <#9cffb3>{1}</color>.", UCPlayer.PLAYER_NAME_FORMAT, arg4Fmt: LOWERCASE);
+    public static readonly Translation<IPlayer, string, EMuteType> MuteSuccessDMPermanent = new Translation<IPlayer, string, EMuteType>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> permanently <#9cffb3>{2}</color> muted you because: <#9cffb3>{1}</color>.", UCPlayer.PLAYER_NAME_FORMAT, arg3Fmt: LOWERCASE);
+    public static readonly Translation<string, string, EMuteType> MuteSuccessDMOperator   = new Translation<string, string, EMuteType>("<#ffff00>An operator <#9cffb3>{2}</color> muted you for <#9cffb3>{1}</color> because: <#9cffb3>{0}</color>.", arg3Fmt: LOWERCASE);
+    public static readonly Translation<string, EMuteType> MuteSuccessDMPermanentOperator  = new Translation<string, EMuteType>("<#ffff00>>An operator permanently <#9cffb3>{1}</color> muted you because: <#9cffb3>{0}</color>.", arg2Fmt: LOWERCASE);
+
+    public static readonly Translation<string> MuteTextChatFeedbackPermanent  = new Translation<string>("<#ffff00>You're permanently muted in text chat because: <#9cffb3>{0}</color>.");
+    public static readonly Translation<DateTime, string> MuteTextChatFeedback = new Translation<DateTime, string>("<#ffff00>You're muted in text chat until <#cedcde>{0}</color> UTC because <#9cffb3>{1}</color>.", "g");
+    #endregion
+
+    #region Unmute Command
+    public static readonly Translation<IPlayer> UnmuteNotMuted                  = new Translation<IPlayer>("<#9cffb3><#d8addb>{0}</color> is not currently muted.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> UnmuteSuccessFeedback           = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer> UnmuteSuccessBroadcast = new Translation<IPlayer, IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted by <#" + TeamManager.AdminColorHex + ">{1}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.PLAYER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> UnmuteSuccessBroadcastOperator  = new Translation<IPlayer>("<#ffff00><#d8addb>{0}</color> was unmuted by an operator.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> UnmuteSuccessDM                 = new Translation<IPlayer>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> unmuted you.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation UnmuteSuccessDMOperator                  = new Translation("<#ffff00>An operator unmuted you.");
+    #endregion
+
+    #region Duty Command
+    public static readonly Translation DutyOnFeedback            = new Translation("<#c6d4b8>You are now <#95ff4a>on duty</color>.");
+    public static readonly Translation DutyOffFeedback           = new Translation("<#c6d4b8>You are now <#ff8c4a>off duty</color>.");
+    public static readonly Translation<IPlayer> DutyOnBroadcast  = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#95ff4a>on duty</color>.");
+    public static readonly Translation<IPlayer> DutyOffBroadcast = new Translation<IPlayer>("<#c6d4b8><#d9e882>{0}</color> is now <#ff8c4a>off duty</color>.");
+    #endregion
+
+    #region Request
+    public static readonly Translation<Kit> RequestSignSaved = new Translation<Kit>("<#a4baa9>Saved kit: <#ffebbd>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<Kit> RequestSignRemoved = new Translation<Kit>("<#a8918a>Removed kit sign: <#ffebbd>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation RequestNoTarget = new Translation("<#a4baa9>You must be looking at a request sign or vehicle.");
+    public static readonly Translation RequestSignAlreadySaved = new Translation("<#a4baa9>That sign is already saved.");
+    public static readonly Translation RequestSignNotSaved = new Translation("<#a4baa9>That sign is not saved.");
+    public static readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#b8ffc1>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
+    public static readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This kit has not been created yet.");
+    public static readonly Translation RequestKitAlreadyEquipped = new Translation("<#a8918a>You already have this kit.");
+    public static readonly Translation RequestMissingAccess = new Translation("<#a8918a>You already have this kit.");
+    public static readonly Translation<int> RequestNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#b8ffc1>C </color><#ffffff>{0}</color>.");
+    public static readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this kit.");
+    public static readonly Translation RequestNotBuyable = new Translation("<#a8918a>This kit cannot be purchased with credits.");
+    public static readonly Translation<int> RequestKitLimited = new Translation<int>("<#a8918a>Your team already has a max of <#d9e882>{0}</color> players using this kit. Try again later.");
+    public static readonly Translation<RankData> RequestKitLowLevel = new Translation<RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to use this kit.", RankData.NAME_FORMAT);
+    public static readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", BaseQuestData.COLOR_QUEST_ASSET_FORMAT);
+    public static readonly Translation RequestKitNotSquadleader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to get this kit.");
+    public static readonly Translation RequestLoadoutNotOwned = new Translation("<#a8918a>You do not own this loadout.");
+    public static readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to request this vehicle.");
+    public static readonly Translation<Cooldown> RequestVehicleCooldown = new Translation<Cooldown>("<#b3ab9f>This vehicle can't be requested for another: <#ffe2ab>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
+    public static readonly Translation RequestVehicleNotInSquad = new Translation("<#b3ab9f>You must be <#cedcde>IN A SQUAD</color> in order to request this vehicle.");
+    public static readonly Translation RequestVehicleNoKit = new Translation("<#a8918a>Get a kit before you request vehicles.");
+    public static readonly Translation<FactionInfo> RequestVehicleOtherTeam = new Translation<FactionInfo>("<#a8918a>You must be on {0} to request this vehicle.", FactionInfo.DISPLAY_NAME_COLORIZED_FORMAT);
+    public static readonly Translation<EClass> RequestVehicleWrongClass = new Translation<EClass>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle.");
+    public static readonly Translation<RankData> RequestVehicleMissingLevels = new Translation<RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.");
+    public static readonly Translation<Ranks.RankData> RequestVehicleRankIncomplete = new Translation<Ranks.RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.", Ranks.RankData.COLOR_NAME_FORMAT);
+    public static readonly Translation<QuestAsset> RequestVehicleQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this vehicle.", BaseQuestData.COLOR_QUEST_ASSET_FORMAT);
+    public static readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<VehicleData> RequestVehicleAlreadyOwned = new Translation<VehicleData>("<#a8918a>You already have a nearby {0}.", VehicleData.COLORED_NAME);
+    public static readonly Translation<VehicleData> RequestVehicleSuccess = new Translation<VehicleData>("<#b3a591>This {0} is now yours to take into battle.", VehicleData.COLORED_NAME);
+
+    #region Vehicle Request Delays
+    public static readonly Translation<string> RequestVehicleTimeDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed for another: <#94cfff>{0}</color>.");
+    public static readonly Translation<Cache> RequestVehicleCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#94cfff>{0}</color> to request this vehicle.", FOB.NAME_FORMAT);
+    public static readonly Translation<Cache> RequestVehicleCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this vehicle until you lose <color=#94cfff>{0}</color>.", FOB.NAME_FORMAT);
+    public static readonly Translation RequestVehicleCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#94cfff>Discover and Destroy</color> the next cache to request this vehicle.");
+    public static readonly Translation RequestVehicleCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this vehicle until you've <color=#94cfff>uncovered and lost</color> your next cache.");
+    public static readonly Translation<int> RequestVehicleCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#94cfff>{0} more caches</color> to request this vehicle.");
+    public static readonly Translation<int> RequestVehicleCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this vehicle until you've lost <#94cfff>{0} more caches</color>.");
+    public static readonly Translation<Flag> RequestVehicleFlagDelay1 = new Translation<Flag>("<#b3ab9f>Capture {0} to request this vehicle.", Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> RequestVehicleLoseFlagDelay1 = new Translation<Flag>("<#b3ab9f>You can't request this vehicle until you lose {0}.", Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<int> RequestVehicleFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#94cfff>{0} more flags</color> to request this vehicle.");
+    public static readonly Translation<int> RequestVehicleLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this vehicle until you lose <#94cfff>{0} more flags</color>.");
+    public static readonly Translation RequestVehicleStagingDelay = new Translation("<#a6918a>This vehicle can only be requested after the game starts.");
+    public static readonly Translation RequestVehicleUnknownDelay = new Translation("<#b3ab9f>This vehicle is delayed because: <color=#94cfff>{0}</color>.");
+    #endregion
+
     #endregion
 
     static Dictionary<string, string> _translations = new Dictionary<string, string>()
     {
-            #region AmmoCommand
-            { "ammo_error_nocrate", "<color=#ffab87>Look at an AMMO CRATE, AMMO BAG or VEHICLE in order to resupply.</color>" },
-            { "ammo_success", "<color=#d1bda7>Resupplied kit. Consumed: <color=#d97568>{0} AMMO</color> <color=#948f8a>({1} left)</color></color>" },
-            { "ammo_success_vehicle", "<color=#d1bda7>Resupplied vehicle. Consumed: <color=#d97568>{0} AMMO</color> <color=#948f8a>({1} left)</color></color>" },
-            { "ammo_success_main", "<color=#d1bda7>Resupplied kit. Consumed: <color=#d97568>{0} AMMO</color></color>" },
-            { "ammo_success_vehicle_main", "<color=#d1bda7>Resupplied vehicle. Consumed: <color=#d97568>{0} AMMO</color></color>" },
-            { "ammo_vehicle_cant_rearm", "<color=#b3a6a2>This vehicle can't be resupplied.</color>" },
-            { "ammo_auto_resupply", "<color=#b3a6a2>This vehicle will AUTO RESUPPLY when in main. You can also use '<color=#c9bfad>/load <color=#d4c49d>build</color>|<color=#d97568>ammo</color> <amount></color>'.</color>" },
-            { "ammo_vehicle_full_already", "<color=#b3a6a2>This vehicle does not need to be resupplied.</color>" },
-            { "ammo_not_near_fob", "<color=#b3a6a2>This ammo crate is not built on a friendly FOB.</color>" },
-            { "ammo_not_near_repair_station", "<color=#b3a6a2>Your vehicle must be next to a <color=#e3d5ba>REPAIR STATION</color> in order to rearm.</color>" },
-            { "ammo_not_in_team", "<color=#b3a6a2>You must be on a team to use this feature.</color>" },
-            { "ammo_not_enough_stock", "<color=#b3a6a2>Insufficient ammo. Required: <color=#d97568>{0}/{1} AMMO</color></color>" },
-            { "vehicle_staging", "<color=#b3a6a2>You cannot enter this vehicle during the staging phase.</color>" },
-            { "ammo_no_kit", "<color=#b3a6a2>You don't have a kit yet. Go and request one at main.</color>" },
-            { "ammo_cooldown", "<color=#b7bab1>More AMMO arriving in: <color=#de95a8>{0}</color></color>" },
-            { "ammo_not_rifleman", "<color=#b3a6a2>You must be a RIFLEMAN in order to place this Ammo Bag.</color>" },
-            #endregion
-            
-            #region LoadCommand
-            { "load_e_novehicle", "<color=#b3a6a2>Look at a friendly LOGISTICS TRUCK or HELICOPTER to load it.</color>" },
-            { "load_e_usage", "<color=#b3a6a2>Try typing: '<color=#e6d1b3>/load ammo <amount></color>' or '<color=#e6d1b3>/load build <amount></color>'.</color>" },
-            { "load_e_invalidamount", "<color=#b3a6a2>'{0}' is not a valid amount of supplies.</color>" },
-            { "load_e_notinmain", "<color=#b3a6a2>You must be in MAIN to load up this vehicle.</color>" },
-            { "load_e_notlogi", "<color=#b3a6a2>Only LOGISTICS TRUCKS and TRANSPORT HELICOPTERS can be loaded with supplies.</color>" },
-            { "load_e_toofast", "<color=#b3a6a2>Vehicle is moving too fast.</color>" },
-            { "load_e_itemassetnotfound", "<color=#b3a6a2>The item required to resupply does not exist. Please report this to the admins.</color>" },
-            { "load_s_build", "<color=#d1bda7>Loading complete. <color=#d4c49d>{0} BUILD</color> loaded.</color>" },
-            { "load_s_ammo", "<color=#d1bda7>Loading complete. <color=#d97568>{0} AMMO</color> loaded.</color>" },
-            #endregion
-            
-            #region Custom Signs
-            { "sign_rules", "Rules\nNo suicide vehicles.\netc." },
-            { "sign_kitdelay", "<color=#e6e6e6>All <color=#3bede1>Elite Kits</color> and <color=#32a852>Loadouts</color> are locked for the two weeks of the season.\nThey will be available again after <color=#d8addb>April 1st</color></color>" },
-            { "sign_class_desc_squadleader", "\n\n<color=#cecece>Help your squad by supplying them with <color=#f0a31c>rally points</color> and placing <color=#f0a31c>FOB radios</color>.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_rifleman", "\n\n<color=#cecece>Resupply your teammates in the field with an <color=#f0a31c>Ammo Bag</color>.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_medic", "\n\n<color=#cecece><color=#f0a31c>Revive</color> your teammates after they've been injured.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_breacher", "\n\n<color=#cecece>Use <color=#f0a31c>high-powered explosives</color> to take out <color=#f01f1c>enemy FOBs</color>.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_autorifleman", "\n\n<color=#cecece>Equipped with a high-capacity and powerful <color=#f0a31c>LMG</color> to spray-and-pray your enemies.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_machinegunner", "\n\n<color=#cecece>Equipped with a powerful <color=#f0a31c>Machine Gun</color> to shred the enemy team in combat.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_lat", "\n\n<color=#cecece>A balance between an anti-tank and combat loadout, used to conveniently destroy armored enemy vehicles.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_hat", "\n\n<color=#cecece>Equipped with multiple powerful <color=#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_grenadier", "\n\n<color=#cecece>Equipped with a <color=#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_marksman", "\n\n<color=#cecece>Equipped with a <color=#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_sniper", "\n\n<color=#cecece>Equipped with a high-powered <color=#f0a31c>sniper rifle</color> to take out enemies from great distances.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_aprifleman", "\n\n<color=#cecece>Equipped with <color=#f0a31c>explosive traps</color> to cover entry-points and entrap enemy vehicles.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_engineer", "\n\n<color=#cecece>Features 200% <color=#f0a31c>build speed</color> and are equipped with <color=#f0a31c>fortifications</color> and traps to help defend their team's FOBs.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_crewman", "\n\n<color=#cecece>The only kits than can man <color=#f0a31c>armored vehicles</color>.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_pilot", "\n\n<color=#cecece>The only kits that can fly <color=#f0a31c>aircraft</color>.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_class_desc_specops", "\n\n<color=#cecece>Equipped with <color=#f0a31c>night-vision</color> to help see at night.</color>\n<color=#f01f1c>\\/</color>" },
-            { "sign_bundle_misc", "<color=#f0a31c>Misc.</color>" },
-            { "sign_bundle_caf", "<color=#f0a31c>Canadian Bundle</color>" },
-            { "sign_bundle_fr", "<color=#f0a31c>French Bundle</color>" },
-            { "sign_bundle_ger", "<color=#f0a31c>German Bundle</color>" },
-            { "sign_bundle_usmc", "<color=#f0a31c>USMC Bundle</color>" },
-            { "sign_bundle_usa", "<color=#f0a31c>USA Bundle</color>" },
-            { "sign_bundle_pl", "<color=#f0a31c>Polish Bundle</color>" },
-            { "sign_bundle_idf", "<color=#f0a31c>IDF Bundle</color>" },
-            { "sign_bundle_militia", "<color=#f0a31c>Militia Bundle</color>" },
-            { "sign_bundle_ru", "<color=#f0a31c>Russia Bundle</color>" },
-            { "sign_bundle_soviet", "<color=#f0a31c>Soviet Bundle</color>" },
-            { "sign_loadout_info", "<color=#cecece>Loadouts and elite kits can be purchased\nin our <color=#7483c4>Discord</color> server.\n\n<color=#7483c4>/discord</color>" },
-            #endregion
-            
-            #region KickOverrideCommand
-            { "kick_syntax", "<color=#9cffb3>Syntax: <i>/kick <player> <reason ...></i>.</color>" },
-            { "kick_no_reason_provided", "<color=#9cffb3>You must provide a reason.</color>" },
-            { "kick_no_player_found", "<color=#9cffb3>No player found from <color=#d8addb>{0}</color>.</color>" },
-            { "kick_kicked_feedback", "<color=#00ffff>You kicked <color=#d8addb>{0}</color>.</color>" },
-            { "kick_kicked_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by <color=#00ffff>{1}</color>.</color>" },
-            { "kick_kicked_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was kicked by an operator.</color>" },
-            { "kick_kicked_console_operator", "{0} ({1}) was kicked by an operator because: {2}." },
-            { "kick_kicked_console", "{0} ({1}) was kicked by {2} ({3}) because: {4}." },
-            { "kick_autokick_namefilter", "Your name does not contain enough alphanumeric characters in succession (5), please change your name and rejoin." },
-            #endregion
-            
-            #region BanOverrideCommand
-            { "ban_syntax", "<color=#9cffb3>Syntax: <i>/ban <player> <duration minutes> <reason ...></i>.</color>" },
-            { "ban_permanent_feedback", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned.</color>" },
-            { "ban_permanent_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned by <color=#00ffff>{1}</color>.</color>" },
-            { "ban_permanent_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was <b>permanently</b> banned by an operator.</color>" },
-            { "ban_permanent_console_operator", "{0} ({1}) was permanently banned by an operator because: {2}." },
-            { "ban_permanent_console", "{0} ({1}) was permanently banned by {2} ({3}) because: {4}." },
-            { "ban_feedback", "<color=#00ffff><color=#d8addb>{0}</color> was banned for <color=#9cffb3>{1}</color>.</color>" },
-            { "ban_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was banned by <color=#00ffff>{1}</color> for <color=#9cffb3>{2}</color>.</color>" },
-            { "ban_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was banned by an operator for <color=#9cffb3>{2}</color>.</color>" },
-            { "ban_console_operator", "{0} ({1}) was banned by an operator for {3} because: {2}." },
-            { "ban_console", "{0} ({1}) was banned by {2} ({3}) for {5} because: {4}." },
-            { "ban_no_player_found", "<color=#9cffb3>No player found from <color=#d8addb>{0}</color>.</color>" },
-            { "ban_invalid_number", "<color=#9cffb3><color=#9cffb3>{0}</color> should be a whole number between <color=#00ffff>1</color> and <color=#00ffff>2147483647</color>.</color>" },
-            { "ban_no_reason_provided", "<color=#9cffb3>You must provide a reason.</color>" },
-            #endregion
-            
-            #region WarnCommand
-            { "warn_syntax", "<color=#9cffb3>Syntax: <i>/warn <player> <reason ...></i>.</color>" },
-            { "warn_no_player_found", "<color=#9cffb3>No player found from <color=#d8addb>{0}</color>.</color>" },
-            { "warn_no_reason_provided", "<color=#9cffb3>You must provide a reason.</color>" },
-            { "warn_warned_private_operator", "<color=#ffff00>An operator warned you for: <b>{0}</b>.</color>" },
-            { "warn_warned_console_operator", "Warned {0} ({1}) for: {2}" },
-            { "warn_warned_broadcast_operator", "<color=#ffff00><color=#d8addb>{0}</color> was warned by an operator.</color>" },
-            { "warn_warned_feedback", "<color=#ffff00>You warned <color=#d8addb>{0}</color>.</color>" },
-            { "warn_warned_private", "<color=#ffff00><color=#00ffff>{0}</color> warned you for: <b>{1}</b>.</color>" },
-            { "warn_warned_console", "{0} ({1}) was warned by {2} ({3}) for: {4}" },
-            { "warn_warned_broadcast", "<color=#ffff00><color=#d8addb>{0}</color> was warned by <color=#00ffff>{1}</color>.</color>" },
-            #endregion
-
-            #region MuteCommand
-            { "mute_syntax", "<color=#9cffb3>Syntax: /mute <voice|text|both> <name or steam64> <permanent | duration in minutes> <reason...></color>" },
-            { "mute_no_player_found", "<color=#9cffb3>No online players found with the name <color=#d8addb>{0}</color>. To mute someone that's offline, use their Steam64 ID.</color>" },
-            { "mute_cant_read_duration", "<color=#9cffb3>The given value for duration must be a positive number or 'permanent'.</color>" },
-            { "mute_feedback", "<color=#00ffff><color=#d8addb>{0}</color> ({1}) was {3} muted for <color=#9cffb3>{2}</color>.</color>" },
-            { "mute_feedback_permanent", "<color=#00ffff><color=#d8addb>{0}</color> ({1}) was {2} muted <color=#9cffb3>permanently</color>.</color>" },
-            { "mute_broadcast", "<color=#00ffff><color=#d8addb>{0}</color> was {3} muted by <color=#00ffff>{1}</color> for <color=#9cffb3>{2}</color>.</color>" },
-            { "mute_broadcast_operator", "<color=#00ffff><color=#d8addb>{0}</color> was {1} muted by an operator for <color=#9cffb3>{2}</color>.</color>" },
-            { "mute_broadcast_permanent", "<color=#00ffff><color=#d8addb>{0}</color> was <color=#9cffb3>permanently</color> {2} muted by <color=#00ffff>{1}</color>.</color>" },
-            { "mute_broadcast_operator_permanent", "<color=#00ffff><color=#d8addb>{0}</color> was <color=#9cffb3>permanently</color> {1} muted by an operator.</color>" },
-            { "mute_dm", "<color=#ffff00><color=#00ffff>{0}</color> {3} muted you for <color=#9cffb3>{2}</color> because: <color=#9cffb3><b>{1}</b></color>.</color>" },
-            { "mute_dm_permanent", "<color=#ffff00><color=#00ffff>{0}</color> <color=#9cffb3>permanently</color> {2} muted you for: <color=#9cffb3><b>{1}</b></color>.</color>" },
-            { "mute_dm_operator", "<color=#ffff00>An operator {2} muted you for <color=#9cffb3>{1}</color> because: <color=#9cffb3><b>{0}</b></color>.</color>" },
-            { "mute_dm_operator_permanent", "<color=#ffff00>An operator <color=#9cffb3>permanently</color> {1} muted you for: <color=#9cffb3><b>{0}</b></color>.</color>" },
-            { "text_chat_feedback_muted_permanent", "<color=#ffff00>You're permanently muted in text chat because: {0}.</color>" },
-            { "text_chat_feedback_muted", "<color=#ffff00>You're muted in text chat until {0} because {1}.</color>" },
-            #endregion
-
-            #region UnmuteCommnad
-            { "unmute_not_found", "<color=#9cffb3>\"{0}\" doesn't match a player. To unmute an offline player use their Steam64 ID.</color>" },
-            { "unmute_not_muted", "<color=#9cffb3>{0} is not currently muted.</color>" },
-            { "unmute_unmuted_broadcast", "<color=#ffff00><color=#d8addb>{0}</color> was unmuted by <color=#00ffff>{1}</color>.</color>" },
-            { "unmute_unmuted_broadcast_operator", "<color=#ffff00><color=#d8addb>{0}</color> was unmuted by an operator.</color>" },
-            { "unmute_unmuted_dm", "<color=#ffff00><color=#00ffff>{0}</color> has lifted your mute.</color>" },
-            { "unmute_unmuted_dm_operator", "<color=#ffff00>Your mute has been lifted.</color>" },
-            { "unmute_unmuted", "<color=#ffff00><color=#d8addb>{0}</color> was successfully unmuted.</color>" },
-            #endregion
-
-            #region Anti-Main-Camp
-            { "amc_reverse_damage", "<color=#f53b3b>Stop <b><color=#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.</color>" },
-            #endregion
-
-            #region UnbanCommand
-            { "unban_syntax", "<color=#9cffb3>Syntax: <i>/unban <player id></i>.</color>" },
-            { "unban_no_player_found", "<color=#9cffb3>No player ID found from <color=#d8addb>{0}</color>.</color>" },
-            { "unban_player_not_banned_console", "Player \"{0}\" is not banned. You must use Steam64's for /unban." },
-            { "unban_unbanned_console_name_operator", "Sucessfully unbanned {0} ({1})." },
-            { "unban_unbanned_console_id_operator", "Sucessfully unbanned {0}." },
-            { "unban_unbanned_broadcast_name_operator", "<color=#00ffff><color=#d8addb>{0}</color> was unbanned by an operator.</color>" },
-            { "unban_unbanned_broadcast_id_operator", "<color=#00ffff><color=#d8addb>{0}</color> was unbanned by an operator.</color>" },
-            { "unban_unbanned_console_name", "{0} ({1}) was unbanned by {2} ({3})." },
-            { "unban_unbanned_console_id", "{0} was unbanned by {1} ({2})." },
-            { "unban_unbanned_broadcast_name", "<color=#00ffff><color=#d8addb>{0}</color> was unbanned by <color=#00ffff>{1}</color>.</color>" },
-            { "unban_unbanned_broadcast_id", "<color=#00ffff><color=#d8addb>{0}</color> was unbanned by <color=#00ffff>{1}</color>.</color>" },
-            { "unban_unbanned_feedback_name", "<color=#00ffff>You unbanned <color=#d8addb>{0}</color>.</color>" },
-            { "unban_unbanned_feedback_id", "<color=#00ffff>You unbanned <color=#d8addb>{0}</color>.</color>" },
-            #endregion
-            
-            #region LoadBansCommand
-            { "loadbans_NoBansErrorText", "There are no banned players." },
-            { "loadbans_LogBansDisabled", "Can't upload, Logging bans is disabled." },
-            #endregion
-
-            #region DutyCommand
-            { "duty_admin_on_console", "{0} ({1}) went on duty." },
-            { "duty_admin_off_console", "{0} ({1}) went off duty." },
-            { "duty_intern_on_console", "{0} ({1}) went on duty." },
-            { "duty_intern_off_console", "{0} ({1}) went off duty." },
-            { "duty_on_feedback", "<color=#c6d4b8>You are now <color=#95ff4a>on duty</color>.</color>" },
-            { "duty_off_feedback", "<color=#c6d4b8>You are now <color=#ff8c4a>off duty</color>.</color>" },
-            { "duty_on_broadcast", "<color=#c6d4b8><color=#d9e882>{0}</color> is now <color=#95ff4a>on duty</color>.</color>" },
-            { "duty_off_broadcast", "<color=#c6d4b8><color=#d9e882>{0}</color> is now <color=#ff8c4a>off duty</color>.</color>" },
-            #endregion
-
-            #region Teamkills
-            { "teamkilled_console_log", "{0} ({1}) teamkilled {2} ({3})!!" },
-            #endregion
-
-            #region Restrictions
-            { "no_placement_on_vehicle", "<color=#f53b3b>You can't place a{1} <color=#d9e882>{0}</color> on a vehicle!</color>" },
-            { "no_place_trap", "<color=#f53b3b>You're not allowed to place a{1} <color=#d9e882>{0}</color> here.</color>" },
-            { "cant_steal_batteries", "<color=#f53b3b>Stealing batteries is not allowed.</color>" },
-            { "cant_leave_group", "<color=#f53b3b>You are not allowed to manually change groups.</color>" },
-            { "cant_store_this_item", "<color=#f53b3b>You are not allowed to store <color=#d9e882>{0}</color>.</color>" },
-            { "marker_not_in_squad", "<color=#f53b3b>Only your squad can see markers, join a squad with <color=#d9e882>/squad join <name></color> or <color=#d9e882>/squad create <name></color> to use this feature.</color>" },
-            { "entered_enemy_territory", "Too close to enemy base! You will die in {0} second{1}!" },
-            #endregion
-
-            #region OnVehicleEnterRequested
-            { "vehicle_wait_for_owner", "<color=#bda897>Only the owner (<color=#cedcde>{0}</color>) can enter the driver's seat right now.</color>" },
-            { "vehicle_wait_for_owner_or_squad", "<color=#bda897>Only the owner (<color=#cedcde>{0}</color>) and/or members of squad <color=#cedcde>{1}</color> can enter the driver's seat right now.</color>" },
-            { "vehicle_no_kit", "<color=#bda897>You cannot get in a vehicle without a kit.</color>" },
-            { "vehicle_too_high", "<color=#ff684a>Vehicle is too high off the ground!</color>" },
-            { "vehicle_not_valid_kit", "<color=#bda897>You need a <color=#cedcde>{0}</color> kit in order to man this vehicle.</color>" },
-            { "vehicle_need_driver", "<color=#bda897>Your vehicle needs a <color=#cedcde>DRIVER</color> before you can switch to the gunner's seat on the battlefield.</color>" },
-            { "vehicle_cannot_abandon_driver", "<color=#bda897>You cannot abandon the driver's seat on the battlefield.</color>" },
-            { "vehicle_no_passenger_seats", "<color=#bda897>There are no free passenger seats in this vehicle.</color>" },
-            #endregion
-            
-            #region Warnings
-            { "friendly_mortar_incoming", "FRIENDLY MORTAR STRIKE INCOMING" },
-            { "afk_warning", "<color=#f53b3b>You will be AFK-Kicked in {0} if you don't move.</color>" },
-            #endregion
-            
-            #region BattlEye
-            { "battleye_kick_console", "{0} ({1}) was kicked by BattlEye because: \"{2}\"" },
-            { "battleye_kick_broadcast", "<color=#00ffff>{0} was kicked by <color=#feed00>BattlEye</color>.</color>" },
-            #endregion
-            
-            #region RequestCommand
-            { "request_saved_sign", "<color=#a4baa9>Saved kit: <color=#ffebbd>{0}</color>.</color>" },
-            { "request_removed_sign", "<color=#a4baa9>Removed kit sign: <color=#ffebbd>{0}</color>.</color>" },
-            { "request_not_looking", "<color=#a8918a>You must be looking at a request sign or vehicle.</color>" },
-            { "request_already_saved", "<color=#a8918a>That sign is already saved.</color>" },
-            { "request_already_removed", "<color=#a8918a>That sign has already been removed.</color>" },
-            { "request_kit_given", "<color=#99918d>You have been allocated a <color=#cedcde>{0}</color> kit!</color>" },
-            { "request_kit_boughtcredits", "<color=#c4a36a>Kit bought for <color=#b8ffc1>C </color><color=#ffffff>{0}</color>. Request it with '<color=#b3b0ab>/request</color>'.</color>" },
-            { "request_kit_e_kitnoexist", "<color=#a8918a>This kit has not been created yet.</color>" },
-            { "request_kit_e_alreadyhaskit", "<color=#a8918a>You already have this kit.</color>" },
-            { "request_kit_e_notallowed", "<color=#a8918a>You do not have access to this kit.</color>" },
-            { "request_kit_e_notboughtcredits", "<color=#99918d>Look at this sign and type '<color=#ffe2ab>/buy</color>' to unlock this kit permanently for <color=#b8ffc1>C </color><color=#ffffff>{0}</color></color>" },
-            { "request_kit_e_notenoughcredits", "<color=#a8918a>You are missing <color=#b8ffc1>C </color><color=#ffffff>{0}</color> needed to unlock this kit.</color>" },
-            { "request_kit_e_notbuyablecredits", "<color=#a8918a>This kit cannot be purchased with credits.</color>" },
-            { "request_kit_e_limited", "<color=#a8918a>Your team already has a max of {0} players using this kit. Try again later.</color>" },
-            { "request_kit_e_wronglevel", "<color=#b3ab9f>You must be rank <color=#ffc29c>{0}</color> to use this kit.</color>" },
-            { "request_kit_e_wrongrank", "<color=#b3ab9f>You must be a <color=#{1}>{0}</color> to request this kit.</color>" },
-            { "request_kit_e_quest_incomplete", "<color=#b3ab9f>Complete the <color=#ffc29c>{0}</color> quest to request this kit.</color>" },
-            { "request_kit_e_notsquadleader", "<color=#b3ab9f>You must be a <color=#cedcde>SQUAD LEADER</color> in order to get this kit.</color>" },
-            { "request_loadout_e_notallowed", "<color=#a8918a>You do not own this loadout.</color>" },
-            { "request_vehicle_e_notenoughcredits", "<color=#a8918a>You are missing <color=#b8ffc1>C </color><color=#ffffff>{0}</color> needed to request this vehicle.</color>" },
-            { "request_vehicle_e_cooldown", "<color=#b3ab9f>This vehicle can be requested in: <color=#ffe2ab>{0}</color>.</color>" },
-            { "request_vehicle_e_time_delay", "<color=#b3ab9f>This vehicle is delayed for another: <color=#94cfff>{0}</color>.</color>" },
-            { "request_vehicle_e_cache_delay_atk_1", "<color=#b3ab9f>Destroy <color=#94cfff>{0}</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_cache_delay_def_1", "<color=#b3ab9f>Lose <color=#94cfff>{0}</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_cache_delay_atk_undiscovered_1", "<color=#b3ab9f><color=#94cfff>Discover and Destroy</color> the next cache to request this vehicle.</color>" },
-            { "request_vehicle_e_cache_delay_def_undiscovered_1", "<color=#b3ab9f><color=#94cfff>Discover and Lose</color> the next cache to request this vehicle.</color>" },
-            { "request_vehicle_e_cache_delay_atk_2+", "<color=#b3ab9f>Destroy <color=#94cfff>{0} more caches</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_cache_delay_def_2+", "<color=#b3ab9f>Lose <color=#94cfff>{0} more caches</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_flag_delay_1", "<color=#b3ab9f>Capture <color=#94cfff>{0}</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_flag_lose_delay_1", "<color=#b3ab9f>Lose <color=#94cfff>{0}</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_flag_delay_2+", "<color=#b3ab9f>Capture <color=#94cfff>{0} more flags</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_flag_lose_delay_2+", "<color=#b3ab9f>Lose <color=#94cfff>{0} more flags</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_staging_delay", "<color=#a6918a>This vehicle can only be requested after the game starts.</color>" },
-            { "request_vehicle_e_notinsquad", "<color=#b3ab9f>You must be <color=#cedcde>IN A SQUAD</color> in order to request this vehicle.</color>" },
-            { "request_vehicle_e_nokit", "<color=#a8918a>Get a kit before you request vehicles.</color>" },
-            { "request_vehicle_e_notinteam", "<color=#a8918a>You must be on the other team to request this vehicle.</color>" },
-            { "request_vehicle_e_wrongkit", "<color=#b3ab9f>You need a {0} kit in order to request this vehicle.</color>" },
-            { "request_vehicle_e_wronglevel", "<color=#b3ab9f>You must be rank <color=#ffc29c>{0}</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_wrongrank", "<color=#b3ab9f>You must be a <color=#{1}>{0}</color> to request this vehicle.</color>" },
-            { "request_vehicle_e_quest_incomplete", "<color=#b3ab9f>Complete the <color=#ffc29c>{0}</color> quest to request this vehicle.</color>" },
-            { "request_vehicle_e_alreadyrequested", "<color=#a8918a>This vehicle has already been requested.</color>" },
-            { "request_vehicle_e_already_owned", "<color=#a8918a>You have already requested a nearby vehicle.</color>" },
-            { "request_vehicle_e_unknown_delay", "<color=#b3ab9f>This vehicle is delayed because: <color=#94cfff>{0}</color>.</color>" },
-            { "request_vehicle_given", "<color=#b3a591>This <color=#ffe2ab>{0}</color> is now yours to take into battle.</color>" },
-            #endregion
-            
             #region StructureCommand
             { "structure_not_looking", "<color=#ff8c69>You must be looking at a barricade, structure, or vehicle.</color>" },
             { "structure_saved", "<color=#e6e3d5>Saved <color=#c6d4b8>{0}</color>.</color>" },

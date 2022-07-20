@@ -46,6 +46,7 @@ public static class Localization
             ? (UNITY_RICH_TEXT_COLOR_BASE_START + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE)
             : (TMPRO_RICH_TEXT_COLOR_BASE + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE);
     }
+    [Obsolete("Use the new generics system instead.")]
     public static string ObjectTranslate(string key, string language, params object[] formatting)
     {
 #if DEBUG
@@ -127,6 +128,7 @@ public static class Localization
             return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     public static string ObjectTranslate(string key, ulong player, params object[] formatting)
     {
 #if DEBUG
@@ -272,18 +274,25 @@ public static class Localization
             }
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     public static string Translate(string key, UCPlayer player, params string[] formatting) =>
         Translate(key, player.Steam64, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static string Translate(string key, UCPlayer player, out Color color, params string[] formatting) =>
         Translate(key, player.Steam64, out color, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static string Translate(string key, SteamPlayer player, params string[] formatting) =>
         Translate(key, player.playerID.steamID.m_SteamID, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static string Translate(string key, SteamPlayer player, out Color color, params string[] formatting) =>
         Translate(key, player.playerID.steamID.m_SteamID, out color, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static string Translate(string key, Player player, params string[] formatting) =>
         Translate(key, player.channel.owner.playerID.steamID.m_SteamID, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static string Translate(string key, Player player, out Color color, params string[] formatting) =>
         Translate(key, player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
+    [Obsolete("Use the new generics system instead.")]
     /// <summary>
     /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the Original message (non-color removed)
     /// </summary>
@@ -433,6 +442,7 @@ public static class Localization
             }
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     /// <summary>
     /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the color-removed message along with the color.
     /// </summary>
@@ -595,6 +605,7 @@ public static class Localization
             }
         }
     }
+    [Obsolete("Use the new generics system instead.")]
 
     /// <summary>
     /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the color-removed message along with the color.
@@ -691,6 +702,7 @@ public static class Localization
             return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     /// <summary>
     /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the message with color still in it.
     /// </summary>
@@ -779,6 +791,21 @@ public static class Localization
             return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
         }
     }
+
+    public static string Translate(Translation translation, UCPlayer? player) =>
+        Translate(translation, player is null ? 0 : player.Steam64);
+    public static string Translate(Translation translation, ulong player)
+    {
+        if (player == 0 || !Data.Languages.TryGetValue(player, out string lang))
+            lang = JSONMethods.DEFAULT_LANGUAGE;
+        return translation.Translate(lang);
+    }
+    public static string Translate(Translation translation, ulong player, out Color color)
+    {
+        if (player == 0 || !Data.Languages.TryGetValue(player, out string lang))
+            lang = JSONMethods.DEFAULT_LANGUAGE;
+        return translation.Translate(lang, out color);
+    }
     public static string GetTimeFromSeconds(this int seconds, ulong player)
     {
         if (seconds < 1) seconds = 1;
@@ -787,7 +814,7 @@ public static class Localization
         else if (seconds < 3600) // < 1 hour
         {
             int minutes = F.DivideRemainder(seconds, 60, out int secondOverflow);
-            return $"{minutes} {Translate("time_minute" + minutes.S(), player)}{(secondOverflow == 0 ? "" : $" {Translate("time_and", player)} {secondOverflow} {Translate("time_second" + secondOverflow.S(), player)}")}";
+            return $"{minutes} {Translate(minutes == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural, player)}{(secondOverflow == 0 ? "" : $" {Translate(T.TimeAnd, player)} {secondOverflow} {Translate(secondOverflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural, player)}")}";
         }
         else if (seconds < 86400) // < 1 day 
         {
@@ -949,8 +976,9 @@ public static class Localization
         try
         {
             if (key == null) return string.Empty;
-            if (!key.StartsWith("sign_")) return Translate(key, language);
+            if (!key.StartsWith("sign_")) return key;
             string key2 = key.Substring(5);
+
             if (key2.StartsWith("loadout_"))
             {
                 return TranslateLoadoutSign(key2, language, ucplayer);
@@ -959,7 +987,13 @@ public static class Localization
             {
                 return TranslateKitSign(language, kit, ucplayer);
             }
-            else return Translate(key, language);
+            else
+            {
+                Translation? tr = Translation.FromSignId(key2);
+                if (tr != null) return tr.Translate(language);
+
+                return Translate(key, language);
+            }
         }
         catch (Exception ex)
         {
@@ -1129,110 +1163,6 @@ public static class Localization
         if (!Data.Languages.TryGetValue(player.Steam64, out string lang))
             lang = JSONMethods.DEFAULT_LANGUAGE;
         return TranslateSign(key, lang, player, important);
-    }
-    public static string DecideLanguage<TVal>(ulong player, Dictionary<string, TVal> searcher)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (player == 0)
-        {
-            if (!searcher.ContainsKey(JSONMethods.DEFAULT_LANGUAGE))
-            {
-                if (searcher.Count > 0)
-                {
-                    return searcher.ElementAt(0).Key;
-                }
-                else return JSONMethods.DEFAULT_LANGUAGE;
-            }
-            else return JSONMethods.DEFAULT_LANGUAGE;
-        }
-        else
-        {
-            if (!Data.Languages.TryGetValue(player, out string lang) || !searcher.ContainsKey(lang))
-            {
-                if (searcher.Count > 0)
-                {
-                    return searcher.ElementAt(0).Key;
-                }
-                else return JSONMethods.DEFAULT_LANGUAGE;
-            }
-            return lang;
-        }
-    }
-    /// <param name="backupcause">Used in case the key can not be found.</param>
-    public static string TranslateDeath(string language, string key, EDeathCause backupcause, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, ELimb limb, string itemName, float distance, bool usePlayerName = false, bool translateKillerName = false, bool colorize = true)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        string deadname = usePlayerName ? dead.PlayerName : dead.CharacterName;
-        if (colorize) deadname = F.ColorizeName(deadname, deadTeam);
-        string murderername = translateKillerName ? Translate(killerName.PlayerName, language) : (usePlayerName ? killerName.PlayerName : killerName.CharacterName);
-        if (colorize) murderername = F.ColorizeName(murderername, killerTeam);
-        string dis = Mathf.RoundToInt(distance).ToString(Data.Locale) + 'm';
-
-        return key + $" ({deadname}, {murderername}, {limb}, {itemName}, {Mathf.RoundToInt(distance).ToString(Data.Locale) + "m"}";
-    }
-    public static string TranslateLandmineDeath(string language, string key, FPlayerName dead, ulong deadTeam, FPlayerName killerName, ulong killerTeam, FPlayerName triggererName, ulong triggererTeam, ELimb limb, string landmineName, bool usePlayerName = false, bool colorize = true)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        string deadname = usePlayerName ? dead.PlayerName : dead.CharacterName;
-        if (colorize) deadname = F.ColorizeName(deadname, deadTeam);
-        string murderername = usePlayerName ? killerName.PlayerName : killerName.CharacterName;
-        if (colorize) murderername = F.ColorizeName(murderername, killerTeam);
-        string triggerername = usePlayerName ? triggererName.PlayerName : triggererName.CharacterName;
-        if (colorize) triggerername = F.ColorizeName(triggerername, triggererTeam);
-
-        return key + $" ({deadname}, {murderername}, {limb}, {landmineName}, 0m, {triggerername}";
-    }
-    public static string TranslateBranch(EBranch branch, UCPlayer player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        string branchName = "team";
-        ulong team = player.GetTeam();
-        if (team == 1)
-            branchName += "1_";
-        else if (team == 2)
-            branchName += "2_";
-        else
-            branchName += "1_";
-        return Translate(branchName + branch.ToString().ToLower(), player.Steam64, out _);
-    }
-    public static string TranslateBranch(EBranch branch, ulong player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        string branchName = "team";
-        ulong team = player.GetTeamFromPlayerSteam64ID();
-        if (team == 1)
-            branchName += "1_";
-        else if (team == 2)
-            branchName += "2_";
-        else
-            branchName += "1_";
-        return Translate(branchName + branch.ToString().ToLower(), player, out _);
-    }
-    public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, ulong player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (player == 0)
-        {
-            return TranslateVBS(spawn, data, JSONMethods.DEFAULT_LANGUAGE);
-        }
-        else
-        {
-            if (!Data.Languages.TryGetValue(player, out string lang))
-                lang = JSONMethods.DEFAULT_LANGUAGE;
-            return TranslateVBS(spawn, data, lang);
-        }
     }
 
     private static readonly Guid F15 = new Guid("423d31c55cf84396914be9175ea70d0c");

@@ -239,9 +239,9 @@ public abstract class Zone : IDeployable
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is not null && (format.Equals(Flag.SHORT_NAME_FORMAT, StringComparison.Ordinal) || 
-                                   format.Equals(Flag.SHORT_NAME_FORMAT_COLORED, StringComparison.Ordinal) ||
-                                   format.Equals(Flag.SHORT_NAME_FORMAT_COLORED_DISCOVER, StringComparison.Ordinal) ||
-                                   format.Equals(Flag.SHORT_NAME_FORMAT_DISCOVER, StringComparison.Ordinal)))
+                                   format.Equals(Flag.COLOR_SHORT_NAME_FORMAT, StringComparison.Ordinal) ||
+                                   format.Equals(Flag.COLOR_SHORT_NAME_DISCOVER_FORMAT, StringComparison.Ordinal) ||
+                                   format.Equals(Flag.SHORT_NAME_DISCOVER_FORMAT, StringComparison.Ordinal)))
             return string.IsNullOrEmpty(ShortName) ? Name : ShortName!;
 
         return Name;

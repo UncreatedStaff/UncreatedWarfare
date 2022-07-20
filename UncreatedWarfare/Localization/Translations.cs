@@ -8,6 +8,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Quests;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -209,12 +210,22 @@ public class Translation
                 16 => CheckCase((value as BarricadeData)?.barricade?.asset?.itemName ?? value.ToString(), format),
                 17 => CheckCase((value as StructureData)?.structure?.asset?.itemName ?? value.ToString(), format),
                 18 => value is Guid guid ? guid.ToString(format ?? "N", locale) : value.ToString(),
+                19 => value is QuestAsset qa ? CheckCase(QuestAssetToString(qa, format), format) : value.ToString(),
                 _ => value.ToString(),
             };
             if ((flags & TranslationFlags.Plural) == TranslationFlags.Plural)
                 str = Pluralize(str, language, flags);
 
             return str;
+        }
+        private static string QuestAssetToString(QuestAsset asset, string? format)
+        {
+            if (format is not null)
+            {
+                if (format.Equals(BaseQuestData.COLOR_QUEST_ASSET_FORMAT, StringComparison.Ordinal))
+                    return asset.questName;
+            }
+            return F.RemoveColorTag(asset.questName);
         }
         private static string CheckCase(string str, string? format)
         {
@@ -269,19 +280,19 @@ public class Translation
             {
                 if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return names.CharacterName;
-                else if (format.Equals(UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.CharacterName, flags);
                 else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return names.NickName;
-                else if (format.Equals(UCPlayer.COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.NickName, flags);
                 else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return names.PlayerName;
-                else if (format.Equals(UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.PlayerName, flags);
                 else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
                     return player.channel.owner.playerID.steamID.m_SteamID.ToString(Warfare.Data.Locale);
-                else if (format.Equals(UCPlayer.COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), player.channel.owner.playerID.steamID.m_SteamID.ToString(Warfare.Data.Locale), flags);
             }
             return names.CharacterName;
@@ -294,13 +305,13 @@ public class Translation
 
             if (format is not null)
             {
-                if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return player.characterName;
-                else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return player.nickName;
-                else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return player.playerName;
-                else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal)    || format.Equals(UCPlayer.COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal)    || format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
                     return player.steamID.m_SteamID.ToString(Warfare.Data.Locale);
             }
             return player.characterName;
@@ -343,6 +354,11 @@ public class Translation
             if (typeof(SteamPlayerID).IsAssignableFrom(t))
             {
                 type = 11;
+                return;
+            }
+            if (typeof(QuestAsset).IsAssignableFrom(t))
+            {
+                type = 19;
                 return;
             }
             if (typeof(Asset).IsAssignableFrom(t))
@@ -971,7 +987,6 @@ public class Translation
     }
     private static void WriteTranslation(StreamWriter writer, Translation t, string val, ref string? lastSection)
     {
-        val = val.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t");
         if (string.IsNullOrEmpty(val)) return;
         string? sect = t.attr?.Section;
         if (sect != lastSection)
@@ -1003,12 +1018,13 @@ public class Translation
         {
             writer.WriteLine("# Default Value: " + t.DefaultData.Original.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t"));
         }
+        val = val.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t");
 
         writer.Write(t.Key);
         writer.Write(": ");
         if (val[0] == ' ')
             val = @"\" + val;
-        writer.Write(val);
+        writer.WriteLine(val);
     }
     public static Translation? FromLegacyId(string legacyId)
     {
@@ -1019,6 +1035,26 @@ public class Translation
                 return t;
         }
 
+        return null;
+    }
+    public static Translation? FromSignId(string signId)
+    {
+        if (signId.StartsWith("sign_", StringComparison.Ordinal))
+            signId = signId.Substring(5);
+        
+        if (T.Signs.TryGetValue(signId, out Translation tr))
+            return tr;
+        
+        foreach (Translation tr2 in T.Signs.Values)
+        {
+            if (signId.Equals(tr2.AttributeData?.SignId, StringComparison.OrdinalIgnoreCase))
+                return tr2;
+        }
+        foreach (Translation tr2 in T.Signs.Values)
+        {
+            if (signId.Equals(tr2.Key, StringComparison.OrdinalIgnoreCase))
+                return tr2;
+        }
         return null;
     }
 }
@@ -1045,6 +1081,8 @@ public enum TranslationFlags
     NoColor = 32,
     /// <summary>Tells the translator to translate the messsage for each player when broadcasted.</summary>
     PerPlayerTranslation = 64,
+    /// <summary>Checks for and removes any &lt;size&gt tags.</summary>
+    TMProSign = 128,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 1.</summary>
     Team1 = 256,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 2.</summary>
@@ -1064,7 +1102,9 @@ public enum TranslationFlags
     /// <summary>Tells the translator to not try to turn arguments plural.</summary>
     NoPlural,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent in chat.</summary>
-    ForChat
+    ForChat,
+    /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent in chat.</summary>
+    ForSign,
 }
 
 public interface ITranslationArgument
@@ -1580,11 +1620,11 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
         }
     }
 }
-
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 sealed class TranslationDataAttribute : Attribute
 {
     private string? _legacyTranslationID;
+    private string? _signId;
     private string? _description;
     private string? _section;
     private string[]? _formatArgs;
@@ -1593,6 +1633,7 @@ sealed class TranslationDataAttribute : Attribute
 
     }
     public string? LegacyTranslationId { get => _legacyTranslationID; set => _legacyTranslationID = value; }
+    public string? SignId { get => _signId; set => _signId = value; }
     public string? Description { get => _description; set => _description = value; }
     public string? Section { get => _section; set => _section = value; }
     public string[]? FormattingDescriptions { get => _formatArgs; set => _formatArgs = value; }
