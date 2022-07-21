@@ -820,20 +820,38 @@ public class FactionInfo : ITranslationArgument
         FlagImageURL = flagImage;
     }
 
+    public const string ID_FORMAT = "i";
+    public const string COLOR_ID_FORMAT = "ic";
     public const string SHORT_NAME_FORMAT = "s";
     public const string DISPLAY_NAME_FORMAT = "d";
-    public const string SHORT_NAME_COLORIZED_FORMAT = "sc";
-    public const string DISPLAY_NAME_COLORIZED_FORMAT = "dc";
+    public const string COLOR_SHORT_NAME_FORMAT = "sc";
+    public const string COLOR_DISPLAY_NAME_FORMAT = "dc";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is null) goto end;
-        if (format.Equals(DISPLAY_NAME_COLORIZED_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(HexColor, Name, flags);
-        else if (format.Equals(SHORT_NAME_FORMAT, StringComparison.Ordinal))
-            return ShortName;
-        else if (format.Equals(SHORT_NAME_COLORIZED_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(HexColor, ShortName, flags);
-    end:
+        if (format is not null)
+        {
+            if (format.Equals(COLOR_DISPLAY_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(HexColor, Name, flags);
+            else if (format.Equals(SHORT_NAME_FORMAT, StringComparison.Ordinal))
+                return ShortName;
+            else if (format.Equals(COLOR_SHORT_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(HexColor, ShortName, flags);
+            else if (format.Equals(ID_FORMAT, StringComparison.Ordinal) ||
+                     format.Equals(COLOR_ID_FORMAT, StringComparison.Ordinal))
+            {
+                ulong team = 0;
+                if (TeamManager.Team1Faction == this)
+                    team = 1;
+                else if (TeamManager.Team2Faction == this)
+                    team = 2;
+                else if (TeamManager.AdminFaction == this)
+                    team = 3;
+                if (format.Equals(ID_FORMAT, StringComparison.Ordinal))
+                    return team.ToString(Data.Locale);
+
+                return Localization.Colorize(TeamManager.GetTeamHexColor(team), team.ToString(Data.Locale), flags);
+            }
+        }
         return Name;
     }
 }

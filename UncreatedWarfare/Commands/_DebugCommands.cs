@@ -64,7 +64,7 @@ internal class _DebugCommand : Command
             }
             catch (Exception ex)
             {
-                if (ex is BaseCommandInteraction b)
+                if (ex.InnerException is BaseCommandInteraction b)
                     throw b;
                 L.LogError(ex.InnerException ?? ex);
                 throw ctx.Reply("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
@@ -956,7 +956,21 @@ internal class _DebugCommand : Command
     private void translationtest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
-
-        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
+        ItemAsset asset = Assets.find<ItemAsset>(Guid.ParseExact("5c9b2fb5a600438daa34453a95576803", "N"));
+        ctx.Caller.SendChat(test, 3, asset);
+        ctx.Caller.SendChat(test, 1, asset);
+        const string dlr = "inch";
+        ctx.Caller.SendChat(test2, 3.64f, dlr);
+        ctx.Caller.SendChat(test2, 1f, dlr);
     }
+    static readonly Translation<int, ItemAsset> test = new Translation<int, ItemAsset>("<#fda>You have {0} {1}.", arg1Fmt: T.RARITY_COLOR_FORMAT + T.PLURAL + "{0}")
+    {
+        Key = "test",
+        Id = -1
+    };
+    static readonly Translation<float, string> test2 = new Translation<float, string>("<#fda>Height: {0} {1}.", "F2", T.PLURAL + "{0}")
+    {
+        Key = "test2",
+        Id = -2
+    };
 }
