@@ -186,7 +186,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         SendWinUI(winner);
 
         QuestManager.OnGameOver(winner);
-        ActionLog.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
+        ActionLogger.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
         string c = TeamManager.GetTeamHexColor(winner);
         foreach (LanguageSet set in Localization.EnumerateLanguageSets())
         {
@@ -479,7 +479,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
 #endif
         if (NewOwner == 1)
         {
-            ActionLog.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
+            ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
             if (_objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
             {
                 DeclareWin(1);
@@ -500,7 +500,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         }
         else if (NewOwner == 2)
         {
-            ActionLog.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
+            ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
             if (_objectiveT2Index < 1) // if t2 just capped the last flag
             {
                 DeclareWin(2);

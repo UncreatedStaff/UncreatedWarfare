@@ -238,7 +238,7 @@ public class Insurgency :
         SendWinUI(winner);
 
         QuestManager.OnGameOver(winner);
-        ActionLog.Add(EActionLogType.TEAM_WON, t);
+        ActionLogger.Add(EActionLogType.TEAM_WON, t);
 
         string c = TeamManager.GetTeamHexColor(winner);
         foreach (LanguageSet set in Localization.EnumerateLanguageSets())
@@ -602,7 +602,7 @@ public class Insurgency :
             .Where(x => x.GetTeam() == _attackTeam && (x.player.transform.position - cache.Position).sqrMagnitude < 10000f)
             .Select(x => x.playerID.steamID.m_SteamID).ToArray());
 
-        ActionLog.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(AttackingTeam, 0) + " DESTROYED CACHE");
+        ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(AttackingTeam, 0) + " DESTROYED CACHE");
 
         if (CachesLeft == 0)
         {

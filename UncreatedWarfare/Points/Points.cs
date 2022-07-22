@@ -147,7 +147,7 @@ public static class Points
 
             player.CachedCredits = currentAmount;
 
-            ActionLog.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, player);
+            ActionLogger.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, player);
 
             if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
             {
@@ -213,7 +213,7 @@ public static class Points
                 UpdateXPUI(player);
             }
 
-            ActionLog.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, player);
+            ActionLogger.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, player);
 
             if (awardCredits)
                 AwardCredits(player, Mathf.RoundToInt(0.15f * amount), null, true);

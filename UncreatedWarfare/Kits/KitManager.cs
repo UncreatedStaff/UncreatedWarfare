@@ -1321,7 +1321,7 @@ public class KitManager : BaseReloadSingleton
 
             await AddKit(loadout);
 
-            ActionLog.Add(EActionLogType.CREATE_KIT, loadoutName, fromPlayer);
+            ActionLogger.Add(EActionLogType.CREATE_KIT, loadoutName, fromPlayer);
 
             return (loadout, 0);
         }
@@ -1455,9 +1455,9 @@ public static class KitEx
             {
                 Task<bool> t = state ? KitManager.GiveAccess(k, player, type) : KitManager.RemoveAccess(k, player);
                 if (state)
-                    ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " GIVEN ACCESS TO " + kit + ", REASON: " + type.ToString(), admin);
+                    ActionLogger.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " GIVEN ACCESS TO " + kit + ", REASON: " + type.ToString(), admin);
                 else
-                    ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " DENIED ACCESS TO " + kit, admin);
+                    ActionLogger.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " DENIED ACCESS TO " + kit, admin);
                 context.Reply(SendAckSetKitAccess, true);
                 KitManager.UpdateSigns(k);
                 return t;
@@ -1477,9 +1477,9 @@ public static class KitEx
                     Task<bool> t = state ? KitManager.GiveAccess(k, player, type) : KitManager.RemoveAccess(k, player);
                     await t;
                     if (state)
-                        ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " GIVEN ACCESS TO " + kit + ", REASON: " + type.ToString(), admin);
+                        ActionLogger.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " GIVEN ACCESS TO " + kit + ", REASON: " + type.ToString(), admin);
                     else
-                        ActionLog.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " DENIED ACCESS TO " + kit, admin);
+                        ActionLogger.Add(EActionLogType.CHANGE_KIT_ACCESS, player.ToString(Data.Locale) + " DENIED ACCESS TO " + kit, admin);
                     successes[i] = true;
                 }
             }

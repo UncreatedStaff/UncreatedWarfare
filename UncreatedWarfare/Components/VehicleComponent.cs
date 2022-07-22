@@ -126,7 +126,7 @@ public class VehicleComponent : MonoBehaviour
             LastDriverTime = Time.realtimeSinceStartup;
             totalDistance = 0;
         }
-        ActionLog.Add(EActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
+        ActionLogger.Add(EActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
                                                          $"ID: ({vehicle.instanceID}) Seat move: >> " +
                                                          $"{toSeat.ToString(Warfare.Data.Locale)}", player.Steam64);
 

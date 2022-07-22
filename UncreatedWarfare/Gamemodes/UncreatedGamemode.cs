@@ -361,7 +361,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 if (Data.Gamemode is null)
                     goto error;
                 Data.Singletons.LoadSingleton(Data.Gamemode);
-                ActionLog.Add(EActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
+                ActionLogger.Add(EActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
                 L.Log("Chosen new gamemode " + Data.Gamemode.DisplayName, ConsoleColor.DarkCyan);
                 return true;
             }

@@ -1225,7 +1225,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public void LogAction(EActionLogType type, string? data = null)
     {
-        ActionLog.Add(type, data, CallerID);
+        ActionLogger.Add(type, data, CallerID);
     }
     public bool HasPermission(EAdminType level, PermissionComparison comparison = PermissionComparison.AtLeast)
     {

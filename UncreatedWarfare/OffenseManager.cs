@@ -693,7 +693,7 @@ public static class OffenseManager
                 callerName = F.GetPlayerOriginalNames(callerId);
             else
                 callerName = FPlayerName.Console;
-            ActionLog.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
+            ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
                 (duration == -1 ? "PERMANENT" : (duration.ToString(Data.Locale) + " SECONDS")), callerId);
 
             LogBanPlayer(targetId, callerId, reason, duration, DateTime.Now);
@@ -766,7 +766,7 @@ public static class OffenseManager
 
         LogKickPlayer(target, caller, reason, DateTime.Now);
 
-        ActionLog.Add(EActionLogType.KICK_PLAYER, $"KICKED {target.ToString(Data.Locale)} FOR \"{reason}\"", caller);
+        ActionLogger.Add(EActionLogType.KICK_PLAYER, $"KICKED {target.ToString(Data.Locale)} FOR \"{reason}\"", caller);
         if (caller == 0)
         {
             L.Log(Localization.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, target.ToString(Data.Locale), reason), ConsoleColor.Cyan);
@@ -797,7 +797,7 @@ public static class OffenseManager
         LogUnbanPlayer(targetId, callerId, DateTime.Now);
 
         string tid = targetId.ToString(Data.Locale);
-        ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", callerId);
+        ActionLogger.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", callerId);
         if (callerId == 0)
         {
             if (tid.Equals(targetNames.PlayerName, StringComparison.Ordinal))
@@ -843,7 +843,7 @@ public static class OffenseManager
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
 
         string tid = targetId.ToString(Data.Locale);
-        ActionLog.Add(EActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", callerId);
+        ActionLogger.Add(EActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
             L.Log(Localization.Translate("warn_warned_console_operator", 0, out _, targetNames.PlayerName, tid, reason!), ConsoleColor.Cyan);
@@ -887,7 +887,7 @@ public static class OffenseManager
             LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
 
             string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
-            ActionLog.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur);
+            ActionLogger.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur);
 
             if (muter == null)
             {
@@ -995,7 +995,7 @@ public static class OffenseManager
                         Chat.BroadcastToAllExcept(targetId, "unmute_unmuted_broadcast", names.CharacterName, n2.CharacterName);
                         onlinePlayer?.SendChat("unmute_unmuted_dm", n2.CharacterName);
                     }
-                    ActionLog.Add(EActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
+                    ActionLogger.Add(EActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
                     if (caller is not null)
                         caller.SendChat("unmute_unmuted", names.CharacterName);
                     else if (callerId == 0)

@@ -177,14 +177,14 @@ public class ReportCommand : Command
                         L.Log(
                             Localization.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
                                 string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
-                        ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl2, ctx.Caller);
+                        ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl2, ctx.Caller);
                     }
                     else
                     {
                         L.Log(
                             Localization.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
                                 string.Empty, "0"), ConsoleColor.Cyan);
-                        ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
+                        ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
                     }
                     return;
                 }
@@ -199,7 +199,7 @@ public class ReportCommand : Command
                             targetPl.playerID.playerName,
                             targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl),
                         ConsoleColor.Cyan);
-                    ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl, ctx.Caller);
+                    ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl, ctx.Caller);
                 }
                 else
                 {
@@ -207,7 +207,7 @@ public class ReportCommand : Command
                         Localization.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
                             targetPl.playerID.playerName,
                             targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                    ActionLog.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
+                    ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
                 }
             }
             catch (Exception ex)

@@ -94,7 +94,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         this._state = EState.FINISHED;
 
         QuestManager.OnGameOver(winner);
-        ActionLog.Add(EActionLogType.TEAM_WON, Teams.TeamManager.TranslateName(winner, 0));
+        ActionLogger.Add(EActionLogType.TEAM_WON, Teams.TeamManager.TranslateName(winner, 0));
         StartCoroutine(EndGameCoroutine(winner));
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)

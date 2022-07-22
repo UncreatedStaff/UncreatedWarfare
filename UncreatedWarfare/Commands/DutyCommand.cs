@@ -57,7 +57,7 @@ public class DutyCommand : Command
         Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
         RequestSigns.UpdateAllSigns(player.Player.channel.owner);
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
-        ActionLog.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
+        ActionLogger.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
     }
     public static void AdminOnToOff(UCPlayer player, FPlayerName names)
     {
@@ -74,7 +74,7 @@ public class DutyCommand : Command
             RequestSigns.UpdateAllSigns(player.Player.channel.owner);
         }
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
-        ActionLog.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
+        ActionLogger.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
     }
     public static void InternOffToOn(UCPlayer player, FPlayerName names)
     {
@@ -84,7 +84,7 @@ public class DutyCommand : Command
         Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
         RequestSigns.UpdateAllSigns(player.Player.channel.owner);
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
-        ActionLog.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
+        ActionLogger.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
     }
     public static void InternOnToOff(UCPlayer player, FPlayerName names)
     {
@@ -99,7 +99,7 @@ public class DutyCommand : Command
             RequestSigns.UpdateAllSigns(player.Player.channel.owner);
         }
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
-        ActionLog.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
+        ActionLogger.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
     }
     public static void SetVanishMode(Player player, bool vanished)
     {

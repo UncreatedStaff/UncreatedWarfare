@@ -288,7 +288,7 @@ public class Invasion :
 #endif
         if (NewOwner == 1)
         {
-            ActionLog.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0) + (_attackTeam == 1 ? " ATTACK" : " DEFENSE"));
+            ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0) + (_attackTeam == 1 ? " ATTACK" : " DEFENSE"));
             if (_attackTeam == 1 && _objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
             {
                 DeclareWin(1);
@@ -313,7 +313,7 @@ public class Invasion :
         }
         else if (NewOwner == 2)
         {
-            ActionLog.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0) + (_attackTeam == 2 ? " ATTACK" : " DEFENSE"));
+            ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0) + (_attackTeam == 2 ? " ATTACK" : " DEFENSE"));
             if (_attackTeam == 2 && ObjectiveT2Index < 1) // if t2 just capped the last flag
             {
                 DeclareWin(2);

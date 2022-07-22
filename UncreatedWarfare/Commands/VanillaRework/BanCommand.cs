@@ -54,7 +54,7 @@ public class BanCommand : Command
                 callerName = F.GetPlayerOriginalNames(ctx.Caller);
             else
                 callerName = FPlayerName.Console;
-            ActionLog.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
+            ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
                 (duration == -1 ? "PERMANENT" : duration.ToString(Data.Locale) + " SECONDS"), ctx.CallerID);
 
             // TODO Convert database to seconds!!!

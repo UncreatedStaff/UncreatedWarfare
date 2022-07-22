@@ -30,7 +30,7 @@ public static class L
         _init = true;
         if (File.Exists(Data.Paths.CurrentLog))
         {
-            string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLog.DATE_HEADER_FORMAT) + ".txt");
+            string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLogger.DATE_HEADER_FORMAT) + ".txt");
             if (File.Exists(n))
                 File.Delete(n);
             File.Move(Data.Paths.CurrentLog, n);

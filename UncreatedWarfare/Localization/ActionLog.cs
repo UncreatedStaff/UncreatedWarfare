@@ -10,11 +10,11 @@ using Uncreated.Networking;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
-public class ActionLog : MonoBehaviour
+public class ActionLogger : MonoBehaviour
 {
     private readonly Queue<ActionLogItem> items = new Queue<ActionLogItem>(16);
     public const string DATE_HEADER_FORMAT = "yyyy-MM-dd_HH-mm-ss";
-    private static ActionLog Instance;
+    private static ActionLogger Instance;
     private static DateTime CurrentLogSt;
     private static string CurrentFileName;
     private void Awake()
