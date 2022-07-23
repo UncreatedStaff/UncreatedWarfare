@@ -15,9 +15,9 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Teams;
 
-public class JoinManager : BaseSingletonComponent
+public class JoinManagerOld : BaseSingletonComponent
 {
-    private static JoinManager Singleton;
+    private static JoinManagerOld Singleton;
     public static readonly JoinUI JoinUI = new JoinUI();
     private List<LobbyPlayer> LobbyPlayers;
     private float secondsLeft;

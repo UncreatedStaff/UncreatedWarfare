@@ -23,7 +23,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
 
     public override string DisplayName => "Team Deathmatch";
     public override bool UseWhitelist => true;
-    public override bool UseJoinUI => true;
+    public override bool UseTeamSelector => true;
     public override bool TransmitMicWhileNotActive => true;
     public override bool EnableAMC => true;
     public override bool ShowXPUI => true;

@@ -468,10 +468,14 @@ public class KitManager : BaseReloadSingleton
         if (res)
         {
             UCPlayer? pl = UCPlayer.FromID(player);
-            if (pl != null && pl.AccessibleKits != null)
+            if (pl != null)
             {
-                if (!pl.AccessibleKits.Exists(x => x == kit || x.Name.Equals(kit.Name, StringComparison.Ordinal)))
+                if (pl.AccessibleKits is null)
+                    pl.AccessibleKits = new List<Kit>(1) { kit };
+                else if (!pl.AccessibleKits.Exists(x => x == kit || x.Name.Equals(kit.Name, StringComparison.Ordinal)))
                     pl.AccessibleKits.Add(kit);
+                if ((kit.IsPremium || kit.IsLoadout) && Data.Is(out ITeams teams) && teams.UseTeamSelector && teams.TeamSelector is not null)
+                    teams.TeamSelector.OnKitsUpdated(pl);
             }
         }
         return res;
@@ -489,10 +493,14 @@ public class KitManager : BaseReloadSingleton
         }
         if (res)
         {
-            if (player.AccessibleKits != null)
+            if (player != null)
             {
-                if (!player.AccessibleKits.Exists(x => x == kit || x.Name.Equals(kit.Name, StringComparison.Ordinal)))
+                if (player.AccessibleKits is null)
+                    player.AccessibleKits = new List<Kit>(1) { kit };
+                else if (!player.AccessibleKits.Exists(x => x == kit || x.Name.Equals(kit.Name, StringComparison.Ordinal)))
                     player.AccessibleKits.Add(kit);
+                if ((kit.IsPremium || kit.IsLoadout) && Data.Is(out ITeams teams) && teams.UseTeamSelector && teams.TeamSelector is not null)
+                    teams.TeamSelector.OnKitsUpdated(player);
             }
         }
         return res;
@@ -525,7 +533,11 @@ public class KitManager : BaseReloadSingleton
             res = await RemoveAccess(kit.Name, player);
         }
         if (res)
+        {
             player.AccessibleKits?.RemoveAll(x => x == kit || x.Name.Equals(kit.Name, StringComparison.Ordinal));
+            if ((kit.IsPremium || kit.IsLoadout) && Data.Is(out ITeams teams) && teams.UseTeamSelector && teams.TeamSelector is not null)
+                teams.TeamSelector.OnKitsUpdated(player);
+        }
         return res;
     }
     public static async Task<bool> RemoveAccess(Kit kit, ulong player)
@@ -542,7 +554,12 @@ public class KitManager : BaseReloadSingleton
         if (res)
         {
             UCPlayer? pl = UCPlayer.FromID(player);
-            pl?.AccessibleKits?.RemoveAll(x => x == kit || x.Name.Equals(kit.Name, StringComparison.Ordinal));
+            if (pl is not null)
+            {
+                pl.AccessibleKits?.RemoveAll(x => x == kit || x.Name.Equals(kit.Name, StringComparison.Ordinal));
+                if ((kit.IsPremium || kit.IsLoadout) && Data.Is(out ITeams teams) && teams.UseTeamSelector && teams.TeamSelector is not null)
+                    teams.TeamSelector.OnKitsUpdated(pl);
+            }
         }
         return res;
     }
@@ -623,7 +640,26 @@ public class KitManager : BaseReloadSingleton
         await singleton._threadLocker.WaitAsync();
         singleton.Kits.Remove(primaryKey);
         singleton._threadLocker.Release();
+        DequipKit(primaryKey);
         return await Data.DatabaseManager.NonQueryAsync("DELETE FROM `kit_data` WHERE `pk` = @0;", new object[1] { primaryKey }) > 0;
+    }
+    public static void DequipKit(string name)
+    {
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.Kit is not null && pl.Kit.Name.Equals(name, StringComparison.Ordinal))
+                TryGiveRiflemanKit(pl);
+        }
+    }
+    public static void DequipKit(int primaryKey)
+    {
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.Kit is not null && pl.Kit.PrimaryKey == primaryKey)
+                TryGiveRiflemanKit(pl);
+        }
     }
     public static async Task<bool> DeleteKit(string name)
     {
@@ -633,6 +669,7 @@ public class KitManager : BaseReloadSingleton
         if (fod.Value != null)
             singleton.Kits.Remove(fod.Key);
         singleton._threadLocker.Release();
+        DequipKit(name);
         return await Data.DatabaseManager.NonQueryAsync("SET @pk := (SELECT `pk` FROM `kit_data` WHERE `InternalName` = @0 LIMIT 1); " +
             "DELETE FROM `kit_data` WHERE @pk IS NOT NULL AND `pk` = @pk;", new object[1]
         {
@@ -1250,15 +1287,6 @@ public class KitManager : BaseReloadSingleton
                 }
             }
         }
-    }
-    public static IEnumerable<Kit> GetAccessibleKits(ulong playerID)
-    {
-        UCPlayer? pl = UCPlayer.FromID(playerID);
-        if (pl != null && pl.AccessibleKits != null)
-        {
-            return pl.AccessibleKits;
-        }
-        else return Array.Empty<Kit>();
     }
     public static async Task<char> GetLoadoutCharacter(ulong playerId)
     {

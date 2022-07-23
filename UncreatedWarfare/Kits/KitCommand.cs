@@ -225,6 +225,7 @@ public class KitCommand : Command
                                 newValue = "3";
                         }
                         bool wasLoadout = kit.IsLoadout;
+                        bool wasPremium = kit.IsPremium;
                         ESetFieldResult result = KitEx.SetProperty(kit, property, newValue);
                         switch (result)
                         {
@@ -246,6 +247,7 @@ public class KitCommand : Command
                                 Task.Run(async () =>
                                 {
                                     KitManager.UpdateSigns(await KitManager.AddKit(kit));
+                                    await UCWarfare.ToUpdate();
                                     ctx.Reply("kit_setprop", property, kitName, newValue);
                                     ctx.LogAction(EActionLogType.SET_KIT_PROPERTY, kitName + ": " + property.ToUpper() + " >> " + newValue.ToUpper());
                                 }).ConfigureAwait(false);

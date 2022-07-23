@@ -20,13 +20,13 @@ public class TeamsCommand : Command
 #endif
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
-        ctx.AssertGamemode(out ITeams teamgm);
-        if (Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> il) && il.isScreenUp)
-            throw ctx.SendGamemodeError();
-
         ctx.AssertRanByPlayer();
 
-        if (!teamgm.UseJoinUI)
+        ctx.AssertGamemode(out ITeams teamgm);
+        if (Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> il) && il.isScreenUp)
+            throw ctx.SendUnknownError();
+
+        if (!teamgm.UseTeamSelector || teamgm.TeamSelector is null)
             throw ctx.SendGamemodeError();
 
         if (!ctx.Caller.OnDuty() && CooldownManager.HasCooldown(ctx.Caller, ECooldownType.CHANGE_TEAMS, out Cooldown cooldown))
@@ -35,12 +35,12 @@ public class TeamsCommand : Command
             return;
         }
         ulong team = ctx.Caller.GetTeam();
-        if ((team == 1ul || team == 2ul) && !ctx.Caller.Player.IsInMain())
+        if ((team is 1 or 2) && !ctx.Caller.Player.IsInMain())
         {
             ctx.Reply("teams_e_notinmain");
             return;
         }
-        teamgm.JoinManager.JoinLobby(ctx.Caller);
+        teamgm.TeamSelector!.JoinSelectionMenu(ctx.Caller);
         ctx.Defer();
     }
 }

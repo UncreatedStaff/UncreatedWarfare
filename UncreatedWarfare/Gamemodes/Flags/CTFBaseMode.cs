@@ -66,7 +66,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
     public override bool TransmitMicWhileNotActive => true;
-    public override bool UseJoinUI => false; // todo change back
+    public override bool UseTeamSelector => false; // todo change back
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
@@ -612,10 +612,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
         }
-        if (UseJoinUI && !_joinManager.IsInLobby(player) && PlayerSave.TryReadSaveFile(player, out PlayerSave save) && (save.LastGame != _gameID || save.ShouldRespawnOnJoin))
-            _joinManager.OnPlayerConnected(player, !wasAlreadyOnline);
-        else if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
-            OnPlayerJoinedTeam(player);
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
         base.PlayerInit(player, wasAlreadyOnline);

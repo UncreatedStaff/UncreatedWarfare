@@ -27,6 +27,14 @@ public interface IPlayerConnectListener : IUncreatedSingleton
 {
     void OnPlayerConnecting(UCPlayer player);
 }
+public interface IPlayerAsyncInitListener : IUncreatedSingleton
+{
+    void OnAsyncInitComplete(UCPlayer player);
+}
+public interface IJoinedTeamListener : IUncreatedSingleton
+{
+    void OnJoinTeam(UCPlayer player, ulong team);
+}
 public interface IPlayerInitListener : IUncreatedSingleton
 {
     void OnPlayerInit(UCPlayer player, bool wasAlreadyOnline);
