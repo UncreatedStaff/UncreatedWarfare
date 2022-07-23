@@ -66,7 +66,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
     public override bool TransmitMicWhileNotActive => true;
-    public override bool UseTeamSelector => false; // todo change back
+    public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
@@ -616,15 +616,9 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
         base.PlayerInit(player, wasAlreadyOnline);
     }
-    public override void OnJoinTeam(UCPlayer player, ulong newTeam)
+    public override void OnJoinTeam(UCPlayer player, ulong team)
     {
-        OnPlayerJoinedTeam(player);
-        base.OnJoinTeam(player, newTeam);
-    }
-    private void OnPlayerJoinedTeam(UCPlayer player)
-    {
-        ulong team = player.GetTeam();
-        if (team is > 0 and < 3)
+        if (team is 1 or 2)
         {
             if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
                 KitManager.GiveKit(player, unarmed);
@@ -642,15 +636,11 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             _endScreen.OnPlayerJoined(player);
         }
         else
-        {
             InitUI(player);
-        }
+        base.OnJoinTeam(player, team);
     }
-    protected virtual void InitUI(UCPlayer player)
-    {
-        if (State == EState.STAGING)
-            this.ShowStagingUI(player);
-    }
+
+    protected abstract void InitUI(UCPlayer player);
     public override void PlayerLeave(UCPlayer player)
     {
 #if DEBUG

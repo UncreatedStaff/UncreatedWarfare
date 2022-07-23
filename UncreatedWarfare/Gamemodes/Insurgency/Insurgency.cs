@@ -66,7 +66,7 @@ public class Insurgency :
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
     public override bool TransmitMicWhileNotActive => true;
-    public override bool UseTeamSelector => false; // todo change back
+    public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;

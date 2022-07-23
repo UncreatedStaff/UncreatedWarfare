@@ -505,7 +505,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
 
             UpdateStagingUIForAll();
 
-            yield return new WaitForSeconds(1);
+            yield return new WaitForSeconds(1f);
             _stagingSeconds--;
         }
         EndStagingPhase();
@@ -522,8 +522,12 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     }
     public void ShowStagingUIForAll()
     {
-        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-            ShowStagingUI(player);
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+        {
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            if (!player.HasUIHidden)
+                ShowStagingUI(player);
+        }
     }
     public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
     {
@@ -532,10 +536,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public void UpdateStagingUIForAll()
     {
         TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
-        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
             ulong team = player.GetTeam();
-            if (team == 1 || team == 2)
+            if (team is 1 or 2)
                 UpdateStagingUI(player, timeLeft);
         }
     }

@@ -11,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
-using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
@@ -23,11 +22,13 @@ namespace Uncreated.Warfare.Kits;
 public delegate void KitChangedHandler(UCPlayer player, Kit kit, string oldKit);
 public class KitManager : BaseReloadSingleton
 {
-    public static bool Loaded => _singleton.IsLoaded();
+    private static readonly byte[] GUID_BUFFER = new byte[16];
     private readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 5);
-    public KitManager() : base("kits") { }
     public static event KitChangedHandler OnKitChanged;
     public Dictionary<int, Kit> Kits = new Dictionary<int, Kit>(256);
+    private static KitManager _singleton;
+    public static bool Loaded => _singleton.IsLoaded();
+    public KitManager() : base("kits") { }
     public override void Load()
     {
         PlayerLife.OnPreDeath += PlayerLife_OnPreDeath;
@@ -51,7 +52,6 @@ public class KitManager : BaseReloadSingleton
                 L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
         }).ConfigureAwait(false);
     }
-
     internal static string Search(string searchTerm)
     {
         KitManager singleton = GetSingleton();
@@ -77,14 +77,12 @@ public class KitManager : BaseReloadSingleton
         }
         return sb.ToString();
     }
-
     public override void Unload()
     {
         _isLoaded = false;
         _singleton = null!;
         PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
     }
-    private static readonly byte[] GUID_BUFFER = new byte[16];
     public async Task ReloadKits()
     {
         SingletonEx.AssertLoaded<KitManager>(_isLoaded);
@@ -710,8 +708,6 @@ public class KitManager : BaseReloadSingleton
         singleton._threadLocker.Release();
         return kit != null;
     }
-    private static KitManager _singleton;
-
     /// <exception cref="SingletonUnloadedException"/>
     internal static KitManager GetSingleton()
     {
@@ -761,19 +757,19 @@ public class KitManager : BaseReloadSingleton
         List<KitClothing> clothes = new List<KitClothing>(7);
 
         if (playerClothes.shirtAsset != null)
-            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.shirtAsset.GUID), EClothingType.SHIRT));
+            clothes.Add(new KitClothing(TeamManager.GetClothingRedirectGuid(playerClothes.shirtAsset.GUID), EClothingType.SHIRT));
         if (playerClothes.pantsAsset != null)
-            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.pantsAsset.GUID), EClothingType.PANTS));
+            clothes.Add(new KitClothing(TeamManager.GetClothingRedirectGuid(playerClothes.pantsAsset.GUID), EClothingType.PANTS));
         if (playerClothes.vestAsset != null)
-            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.vestAsset.GUID), EClothingType.VEST));
+            clothes.Add(new KitClothing(TeamManager.GetClothingRedirectGuid(playerClothes.vestAsset.GUID), EClothingType.VEST));
         if (playerClothes.hatAsset != null)
-            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.hatAsset.GUID), EClothingType.HAT));
+            clothes.Add(new KitClothing(TeamManager.GetClothingRedirectGuid(playerClothes.hatAsset.GUID), EClothingType.HAT));
         if (playerClothes.maskAsset != null)
-            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.maskAsset.GUID), EClothingType.MASK));
+            clothes.Add(new KitClothing(TeamManager.GetClothingRedirectGuid(playerClothes.maskAsset.GUID), EClothingType.MASK));
         if (playerClothes.backpackAsset != null)
-            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.backpackAsset.GUID), EClothingType.BACKPACK));
+            clothes.Add(new KitClothing(TeamManager.GetClothingRedirectGuid(playerClothes.backpackAsset.GUID), EClothingType.BACKPACK));
         if (playerClothes.glassesAsset != null)
-            clothes.Add(new KitClothing(TeamManager.GetRedirectGuid(playerClothes.glassesAsset.GUID), EClothingType.GLASSES));
+            clothes.Add(new KitClothing(TeamManager.GetClothingRedirectGuid(playerClothes.glassesAsset.GUID), EClothingType.GLASSES));
         
         return clothes;
     }
@@ -854,7 +850,6 @@ public class KitManager : BaseReloadSingleton
         }
         return affectedKit;
     }
-
     public static void GiveKit(UCPlayer player, Kit kit)
     {
         if (kit == null)
@@ -923,7 +918,7 @@ public class KitManager : BaseReloadSingleton
         {
             foreach (KitClothing clothing in kit.Clothes)
             {
-                if (Assets.find(TeamManager.CheckAssetRedirect(clothing.id, team)) is ItemAsset asset)
+                if (Assets.find(TeamManager.CheckClothingAssetRedirect(clothing.id, team)) is ItemAsset asset)
                 {
                     if (clothing.type == EClothingType.SHIRT)
                         player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);

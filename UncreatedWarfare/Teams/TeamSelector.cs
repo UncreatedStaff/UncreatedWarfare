@@ -228,6 +228,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
                 team is 1 ? TeamManager.Team1Main.Center3D : TeamManager.Team2Main.Center3D, 
                 team is 1 ? TeamManager.Team1SpawnAngle    : TeamManager.Team2SpawnAngle);
 
+            UpdateList();
+
             string clr = TeamManager.GetTeamHexColor(team);
             foreach (LanguageSet set in Localization.EnumerateLanguageSetsExclude(player.Steam64))
                 Chat.Broadcast(set, "teams_join_announce", player.CharacterName, TeamManager.TranslateName(team, set.Language), clr);
@@ -260,11 +262,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
         JoinUI.Team1Image.SetImage(c, TeamManager.Team1Faction.FlagImageURL);
         JoinUI.Team2Image.SetImage(c, TeamManager.Team2Faction.FlagImageURL);
 
-        UpdateList(player);
-    }
-    private void UpdateList(UCPlayer player)
-    {
-        ITransportConnection c = player.Connection;
         int t1ct = 0, t2ct = 0;
         foreach (UCPlayer pl in PlayerManager.OnlinePlayers.OrderBy(pl => pl.TeamSelectorData is not null && pl.TeamSelectorData.IsSelecting))
         {
@@ -278,20 +275,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
                 JoinUI.Team2Players[t2ct++].SetText(c, text);
         }
 
-        if (player.TeamSelectorData!.SelectedTeam is 1)
-        {
-            SetButtonState(player, 2, CheckTeam(1, 2, t1ct, t2ct));
-        }
-        else if (player.TeamSelectorData.SelectedTeam is 2)
-        {
-            SetButtonState(player, 1, CheckTeam(2, 1, t1ct, t2ct));
-        }
-        else
-        {
-            GetTeamCounts(out int t1, out int t2);
-            SetButtonState(player, 1, CheckTeam(0, 1, t1ct, t2ct));
-            SetButtonState(player, 2, CheckTeam(0, 2, t1ct, t2ct));
-        }
+        SetButtonState(player, 1, CheckTeam(1, 0, t1ct, t2ct));
+        SetButtonState(player, 2, CheckTeam(2, 0, t1ct, t2ct));
 
         JoinUI.Team1PlayerCount.SetText(c, t1ct.ToString(Data.Locale));
         JoinUI.Team2PlayerCount.SetText(c, t2ct.ToString(Data.Locale));
@@ -322,6 +307,9 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
                         : "team_ui_click_to_join") : "team_ui_full", player));
         }
     }
+
+    private int _t1Amt = -1;
+    private int _t2Amt = -1;
     private void UpdateList()
     {
         int t1ct = 0, t2ct = 0;
@@ -339,10 +327,27 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
                     lbl.SetText(pl2.Connection, pl.Steam64 == pl2.Steam64 ? F.Colorize(pl.CharacterName, SELF_HEX) : text);
             }
         }
+
+        for (int j = 0; j < PlayerManager.OnlinePlayers.Count; ++j)
+        {
+            ITransportConnection c = PlayerManager.OnlinePlayers[j].Connection;
+            for (int i = t1ct; i < _t1Amt; ++i)
+                JoinUI.Team1Players[i].SetText(c, string.Empty);
+            for (int i = t2ct; i < _t2Amt; ++i)
+                JoinUI.Team2Players[i].SetText(c, string.Empty);
+        }
+
+        if (_t1Amt < t1ct)
+            _t1Amt = t1ct;
+
+        if (_t2Amt < t2ct)
+            _t2Amt = t2ct;
+
         bool b1 = CheckTeam(1, 0, t1ct, t2ct),
              b2 = CheckTeam(2, 0, t1ct, t2ct),
              b3 = CheckTeam(1, 2, t1ct, t2ct),
              b4 = CheckTeam(2, 1, t1ct, t2ct);
+        
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
@@ -383,17 +388,16 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
         GetTeamCounts(out int t1ct, out int t2ct);
         if (player.TeamSelectorData!.SelectedTeam is 1)
         {
-            SetButtonState(player, 2, CheckTeam(1, 2, t1ct, t2ct));
+            SetButtonState(player, 2, CheckTeam(2, 1, t1ct, t2ct));
         }
         else if (player.TeamSelectorData.SelectedTeam is 2)
         {
-            SetButtonState(player, 1, CheckTeam(2, 1, t1ct, t2ct));
+            SetButtonState(player, 1, CheckTeam(1, 2, t1ct, t2ct));
         }
         else
         {
-            GetTeamCounts(out int t1, out int t2);
-            SetButtonState(player, 1, CheckTeam(0, 1, t1ct, t2ct));
-            SetButtonState(player, 2, CheckTeam(0, 2, t1ct, t2ct));
+            SetButtonState(player, 1, CheckTeam(1, 0, t1ct, t2ct));
+            SetButtonState(player, 2, CheckTeam(2, 0, t1ct, t2ct));
         }
     }
     private static void CheckAccess(List<Kit> kits, ref bool t1Donor, ref bool t2Donor)
@@ -465,14 +469,15 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             ++t1;
             --t2;
         }
+        int maxDiff = Mathf.Max(2, Mathf.CeilToInt(Provider.clients.Count * 0.10f));
+        L.LogDebug($"Team: {team}, Difference: {maxDiff}, t1: {t1}, t2: {t2}");
         if (t1 == t2)
             return true;
         if (team == 1 && t1 <= t2)
             return true;
         if (team == 2 && t2 <= t1)
             return true;
-
-        int maxDiff = Mathf.CeilToInt(Provider.clients.Count * 0.10f);
+        
 
         if (team == 1 && t2 - maxDiff <= t1)
             return true;

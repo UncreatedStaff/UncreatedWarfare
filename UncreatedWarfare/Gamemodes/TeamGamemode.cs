@@ -35,6 +35,14 @@ public abstract class TeamGamemode : Gamemode, ITeams
         if (HasOnReadyRan)
             DestroyBlockers();
     }
+    protected override void PostInit()
+    {
+        if (UseTeamSelector)
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
+        }
+    }
     protected override void PreGameStarting(bool isOnLoad)
     {
         if (UseTeamSelector)
@@ -42,6 +50,12 @@ public abstract class TeamGamemode : Gamemode, ITeams
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 _teamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
         }
+
+        base.PreGameStarting(isOnLoad);
+    }
+    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    {
+        base.PlayerInit(player, wasAlreadyOnline);
     }
     protected override void OnReady()
     {
@@ -250,8 +264,15 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     protected override void OnAsyncInitComplete(UCPlayer player)
     {
-        _teamSelector.JoinSelectionMenu(player);
+        if (UseTeamSelector)
+            _teamSelector.JoinSelectionMenu(player);
+
         base.OnAsyncInitComplete(player);
     }
-    public virtual void OnJoinTeam(UCPlayer player, ulong newTeam) {  }
+
+    public virtual void OnJoinTeam(UCPlayer player, ulong team)
+    {
+        if (team is 1 or 2 && _state == EState.STAGING)
+            ShowStagingUI(player);
+    }
 }

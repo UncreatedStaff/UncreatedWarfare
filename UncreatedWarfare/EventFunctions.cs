@@ -177,8 +177,8 @@ public static class EventFunctions
             return;
         }
 
-        SDG.Unturned.Rocket[] rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true);
-        foreach (SDG.Unturned.Rocket rocket in rockets)
+        Rocket[] rockets = projectile.GetComponentsInChildren<Rocket>(true);
+        foreach (Rocket rocket in rockets)
         {
             rocket.killer = gun.player.channel.owner.playerID.steamID;
         }
