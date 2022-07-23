@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
@@ -22,11 +23,10 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     {
         Squads.SquadManager SquadManager { get; }
     }
-    public interface ITeams : IGamemode
+    public interface ITeams : IGamemode, IJoinedTeamListener
     {
-        bool UseJoinUI { get; }
-        Teams.JoinManager JoinManager { get; }
-        void OnJoinTeam(UCPlayer player, ulong newTeam);
+        bool UseTeamSelector { get; }
+        Teams.TeamSelector? TeamSelector { get; }
     }
     public interface ITickets : IGamemode
     {

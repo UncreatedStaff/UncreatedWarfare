@@ -269,7 +269,7 @@ public static class Points
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
+        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp))
             return;
 
         EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.Connection, true);
@@ -295,7 +295,7 @@ public static class Points
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
 
-        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
+        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp))
             return;
 
         EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CREDITSUI_KEY, player.Connection, true);

@@ -426,7 +426,6 @@ public class Invasion :
     protected override void InitUI(UCPlayer player)
     {
         InvasionUI.SendFlagList(player);
-        base.InitUI(player);
     }
     public override void ShowStagingUI(UCPlayer player)
     {

@@ -79,9 +79,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
 
     public static void OnGameStarting()
     {
-        RemoveCooldown(ECooldownType.REQUEST_KIT);
-        RemoveCooldown(ECooldownType.PREMIUM_KIT);
-        RemoveCooldown(ECooldownType.REQUEST_VEHICLE);
+        Singleton.cooldowns.RemoveAll(x => x.type is not ECooldownType.REPORT);
     }
 }
 public class CooldownConfig : ConfigData

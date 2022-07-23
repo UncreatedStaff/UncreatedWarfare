@@ -20,13 +20,11 @@ public class UnstuckCommand : Command
 
         ctx.AssertGamemode(out ITeams t);
 
-        if (!t.UseJoinUI) throw ctx.SendGamemodeError();
+        if (!t.UseTeamSelector) throw ctx.SendGamemodeError();
 
         if (TeamManager.LobbyZone.IsInside(ctx.Caller.Position))
         {
-            t.JoinManager.OnPlayerDisconnected(ctx.Caller);
-            t.JoinManager.CloseUI(ctx.Caller);
-            t.JoinManager.OnPlayerConnected(ctx.Caller, true);
+            t.TeamSelector?.ResetState(ctx.Caller);
         }
         else throw ctx.SendUnknownError();
     }

@@ -551,7 +551,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (!Data.Is(out TeamGamemode gm)) return;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            if (PlayerManager.OnlinePlayers[i].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[i]))
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.GetTeam() == team && !pl.HasUIHidden)
                 UpdateFOBList(PlayerManager.OnlinePlayers[i], fob);
         }
     }
@@ -564,8 +565,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (!Data.Is(out TeamGamemode gm)) return;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            if (PlayerManager.OnlinePlayers[i].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[i]))
-                UpdateFOBList(PlayerManager.OnlinePlayers[i], fob);
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.GetTeam() == team && !pl.HasUIHidden)
+                UpdateFOBList(pl, fob);
         }
     }
     public static void UpdateFOBListForTeam(ulong team, Cache? fob = null)
@@ -577,7 +579,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (!Data.Is(out TeamGamemode gm)) return;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            if (PlayerManager.OnlinePlayers[i].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[i]))
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.GetTeam() == team && !pl.HasUIHidden)
                 UpdateFOBList(PlayerManager.OnlinePlayers[i], fob);
         }
     }
@@ -590,7 +593,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         if (!Data.Is(out TeamGamemode gm)) return;
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            if (PlayerManager.OnlinePlayers[i].GetTeam() == team && !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[i]))
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            if (pl.GetTeam() == team && !pl.HasUIHidden)
                 SendFOBList(PlayerManager.OnlinePlayers[i]);
         }
     }
@@ -648,10 +652,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 
         for (int j = 0; j < PlayerManager.OnlinePlayers.Count; j++)
         {
-            if (PlayerManager.OnlinePlayers[j].GetTeam() == team && (!JoinManager.Loaded || !gm.JoinManager.IsInLobby(PlayerManager.OnlinePlayers[j])))
-            {
+            UCPlayer pl = PlayerManager.OnlinePlayers[j];
+            if (pl.GetTeam() == team && !pl.HasUIHidden)
                 ListUI.FOBResources[i].SetText(PlayerManager.OnlinePlayers[j].Connection, fob.UIResourceString);
-            }
         }
     }
     public static void UpdateFOBList(UCPlayer player, FOB? fob = null)

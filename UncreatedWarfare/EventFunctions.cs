@@ -177,8 +177,8 @@ public static class EventFunctions
             return;
         }
 
-        SDG.Unturned.Rocket[] rockets = projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true);
-        foreach (SDG.Unturned.Rocket rocket in rockets)
+        Rocket[] rockets = projectile.GetComponentsInChildren<Rocket>(true);
+        foreach (Rocket rocket in rockets)
         {
             rocket.killer = gun.player.channel.owner.playerID.steamID;
         }
@@ -523,19 +523,27 @@ public static class EventFunctions
                 Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
                 Task<int> t2 = Data.DatabaseManager.GetXP(ucplayer.Steam64, team);
                 Task<int> t3 = Data.DatabaseManager.GetCredits(ucplayer.Steam64, team);
-                Task<List<Kit>> t4 = Data.DatabaseManager.GetAccessibleKits(ucplayer.Steam64);
+                Task t4 = ucplayer.DownloadKits();
                 await Data.DatabaseManager.RegisterLogin(ucplayer.Player);
                 await t1;
                 ucplayer.CachedXP = await t2;
                 ucplayer.CachedCredits = await t3;
-                ucplayer.AccessibleKits = await t4;
+                await t4;
                 await OffenseManager.ApplyMuteSettings(ucplayer);
                 await UCWarfare.ToUpdate();
                 RequestSigns.UpdateAllSigns(ucplayer.Player.channel.owner);
                 VehicleSpawner.UpdateSigns(ucplayer);
                 Points.UpdateCreditsUI(ucplayer);
                 Points.UpdateXPUI(ucplayer);
-                ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
+                try
+                {
+                    Data.Gamemode.InternalOnAsyncInitComplete(ucplayer);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error in the " + Data.Gamemode.Name + " OnAsyncInitComplete:");
+                    L.LogError(ex);
+                }
             }).ConfigureAwait(false);
 
             try
@@ -547,6 +555,7 @@ public static class EventFunctions
                 L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerJoined:");
                 L.LogError(ex);
             }
+            ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
             ActionLogger.Add(EActionLogType.CONNECT, $"Players online: {Provider.clients.Count}", ucplayer);
             Chat.Broadcast("player_connected", names.CharacterName);
             Data.Reporter?.OnPlayerJoin(ucplayer.SteamPlayer);
@@ -1292,16 +1301,13 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team;
-        if (PlayerSave.TryReadSaveFile(playerID.steamID.m_SteamID, out PlayerSave save))
-        {
-            if (Data.Gamemode is not null && Data.Gamemode.GameID == save.LastGame && !save.ShouldRespawnOnJoin)
-                return;
-            team = save.Team;
-        }
-        else team = 0;
-        point = team.GetBaseSpawnFromTeam();
-        yaw = team.GetBaseAngle();
+        // leave the player where they logged off if they logged off in the same game.
+        if (PlayerSave.TryReadSaveFile(playerID.steamID.m_SteamID, out PlayerSave save) && 
+            Data.Gamemode is not null && Data.Gamemode.GameID == save.LastGame && !save.ShouldRespawnOnJoin)
+            return;
+        
+        point = TeamManager.LobbySpawn;
+        yaw = TeamManager.LobbySpawnAngle;
         initialStance = EPlayerStance.STAND;
         needsNewSpawnpoint = false;
     }
@@ -1322,8 +1328,6 @@ public static class EventFunctions
         {
             Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
             Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
-            if (Data.Is(out ITeams gm) && gm.UseJoinUI)
-                gm.JoinManager.OnPlayerDisconnected(ucplayer);
             kit = ucplayer.KitName;
 
             EAdminType type = ucplayer.PermissionLevel;

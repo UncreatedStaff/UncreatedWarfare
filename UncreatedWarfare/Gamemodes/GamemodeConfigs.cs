@@ -23,7 +23,7 @@ public sealed class GamemodeConfig : Config<GamemodeConfigData>
         FOBs.FOBManager.ResourceUI.LoadFromConfig(ui.NearbyResourcesGUID);
         CTFUI.ListUI.LoadFromConfig(ui.FlagListGUID);
         CTFUI.CaptureUI.LoadFromConfig(ui.CaptureGUID);
-        Teams.JoinManager.JoinUI.LoadFromConfig(ui.JoinUIGUID);
+        Teams.TeamSelector.JoinUI.LoadFromConfig(ui.JoinUIGUID);
         UCPlayer.MutedUI.LoadFromConfig(ui.MutedUI);
         UCPlayerData.ReloadToastIDs();
         Tickets.TicketManager.TicketUI.LoadFromConfig(ui.TicketUI);

@@ -72,7 +72,6 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     protected override void InitUI(UCPlayer player)
     {
         CTFUI.SendFlagList(player);
-        base.InitUI(player);
     }
     public override bool IsAttackSite(ulong team, Flag flag) => flag.IsObj(team);
     public override bool IsDefenseSite(ulong team, Flag flag) => flag.T1Obj && team == 2 && flag.Owner == 2 || flag.T2Obj && team == 1 && flag.Owner == 1;

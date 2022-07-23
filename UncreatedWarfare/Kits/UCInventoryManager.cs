@@ -188,7 +188,7 @@ public static class UCInventoryManager
                 EClothingType.MASK => Data.SendWearMask,
                 EClothingType.GLASSES => Data.SendWearGlasses,
                 _ => null
-            })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckAssetRedirect(clothing.id, team), 100, blank);
+            })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckClothingAssetRedirect(clothing.id, team), 100, blank);
         }
         for (int i = 0; i < 7; ++i)
         {

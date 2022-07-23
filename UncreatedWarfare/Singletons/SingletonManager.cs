@@ -728,7 +728,7 @@ public class SingletonUnloadedException : Exception
     protected SingletonUnloadedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     public override string ToString()
     {
-        if (singletonType is not null)
+        if (singletonType is not null && Message is not null)
             return this.Message + "\n" + StackTrace;
         else
             return base.ToString();

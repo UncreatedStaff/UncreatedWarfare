@@ -4,6 +4,8 @@ using Uncreated.Warfare.Gamemodes;
 namespace Uncreated.Warfare.Teams;
 public class JoinUI : UnturnedUI
 {
+    public readonly UnturnedLabel Heading = new UnturnedLabel("Heading");
+
     public readonly UnturnedLabel Team1Name = new UnturnedLabel("Team1Name");
     public readonly UnturnedUIElement Team1Highlight = new UnturnedUIElement("Team1Highlight");
     public readonly UnturnedLabel Team1PlayerCount = new UnturnedLabel("Team1PlayerCount");

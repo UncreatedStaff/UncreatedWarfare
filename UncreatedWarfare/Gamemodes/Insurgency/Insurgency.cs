@@ -66,7 +66,7 @@ public class Insurgency :
     public override bool ShowOFPUI => true;
     public override bool ShowXPUI => true;
     public override bool TransmitMicWhileNotActive => true;
-    public override bool UseJoinUI => false; // todo change back
+    public override bool UseTeamSelector => true;
     public override bool UseWhitelist => true;
     public override bool AllowCosmetics => UCWarfare.Config.AllowCosmetics;
     public VehicleSpawner VehicleSpawner => _vehicleSpawner;
@@ -360,10 +360,6 @@ public class Insurgency :
             player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
         }
         ulong team = player.GetTeam();
-        if (UseJoinUI && !_joinManager.IsInLobby(player) && PlayerSave.TryReadSaveFile(player, out PlayerSave save) && (save.LastGame != _gameID || save.ShouldRespawnOnJoin))
-            _joinManager.OnPlayerConnected(player, !wasAlreadyOnline);
-        else if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
-            OnPlayerJoinedTeam(player);
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
     }
@@ -388,7 +384,7 @@ public class Insurgency :
         {
             _endScreen.OnPlayerJoined(player);
         }
-        else if (!UseJoinUI)
+        else if (!UseTeamSelector)
         {
             if (State == EState.STAGING)
                 this.ShowStagingUI(player);

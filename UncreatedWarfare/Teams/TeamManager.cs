@@ -710,6 +710,20 @@ public static class TeamManager
         else
             _data.Reload();
     }
+    internal static Guid CheckClothingAssetRedirect(Guid input, ulong team)
+    {
+        if (team is not 1 and not 2) return input;
+        if (input == BACKPACK_REDIRECT)
+            GetFaction(team).DefaultBackpack.ValidReference(out input);
+        else if (input == SHIRT_REDIRECT)
+            GetFaction(team).DefaultShirt.ValidReference(out input);
+        else if (input == PANTS_REDIRECT)
+            GetFaction(team).DefaultPants.ValidReference(out input);
+        else if (input == VEST_REDIRECT)
+            GetFaction(team).DefaultVest.ValidReference(out input);
+
+        return input;
+    }
     internal static Guid CheckAssetRedirect(Guid input, ulong team)
     {
         if (team is < 1 or > 2) return input;
@@ -730,6 +744,32 @@ public static class TeamManager
         }
         return input;
     }
+    internal static Guid GetClothingRedirectGuid(Guid input)
+    {
+        if (input == Guid.Empty) return input;
+
+        // backpack
+        FactionInfo faction1 = GetFaction(1);
+        if (faction1.DefaultBackpack.ValidReference(out Guid guid) && guid == input)
+            return BACKPACK_REDIRECT;
+        FactionInfo faction2 = GetFaction(2);
+        if (faction2.DefaultBackpack.ValidReference(out guid) && guid == input)
+            return BACKPACK_REDIRECT;
+
+        // shirt
+        if (faction1.DefaultShirt.ValidReference(out guid) && guid == input || faction2.DefaultShirt.ValidReference(out guid) && guid == input)
+            return SHIRT_REDIRECT;
+
+        // pants
+        if (faction1.DefaultPants.ValidReference(out guid) && guid == input || faction2.DefaultPants.ValidReference(out guid) && guid == input)
+            return PANTS_REDIRECT;
+
+        // vest
+        if (faction1.DefaultVest.ValidReference(out guid) && guid == input || faction2.DefaultVest.ValidReference(out guid) && guid == input)
+            return VEST_REDIRECT;
+
+        return input;
+    }
     internal static Guid GetRedirectGuid(Guid input)
     {
         if (input == Guid.Empty) return input;
@@ -743,37 +783,36 @@ public static class TeamManager
             return RADIO_REDIRECT;
 
         // rally point supplies
-        if (faction1.RallyPoint.ValidReference(out guid) && guid == input)
-            return RALLY_POINT_REDIRECT;
-        if (faction2.RallyPoint.ValidReference(out guid) && guid == input)
+        if (faction1.RallyPoint.ValidReference(out guid) && guid == input || faction2.RallyPoint.ValidReference(out guid) && guid == input)
             return RALLY_POINT_REDIRECT;
 
         // building supplies
-        if (faction1.Build.ValidReference(out guid) && guid == input)
-            return BUILDING_SUPPLIES_REDIRECT;
-        if (faction2.Build.ValidReference(out guid) && guid == input)
+        if (faction1.Build.ValidReference(out guid) && guid == input || faction2.Build.ValidReference(out guid) && guid == input)
             return BUILDING_SUPPLIES_REDIRECT;
 
         // ammo supplies
-        if (faction1.Ammo.ValidReference(out guid) && guid == input)
-            return AMMO_SUPPLIES_REDIRECT;
-        if (faction2.Ammo.ValidReference(out guid) && guid == input)
+        if (faction1.Ammo.ValidReference(out guid) && guid == input || faction2.Ammo.ValidReference(out guid) && guid == input)
             return AMMO_SUPPLIES_REDIRECT;
 
         // zone blockers
-        if (Gamemode.Config.Barricades.Team1ZoneBlocker.ValidReference(out guid) && guid == input)
-            return ZONE_BLOCKER_REDIRECT;
-        if (Gamemode.Config.Barricades.Team2ZoneBlocker.ValidReference(out guid) && guid == input)
+        if (Gamemode.Config.Barricades.Team1ZoneBlocker.ValidReference(out guid) && guid == input || Gamemode.Config.Barricades.Team2ZoneBlocker.ValidReference(out guid) && guid == input)
             return ZONE_BLOCKER_REDIRECT;
 
         return input;
     }
 
+    // items
     private static readonly Guid RADIO_REDIRECT                 = new Guid("dea738f0e4894bd4862fd0c850185a6d");
     private static readonly Guid RALLY_POINT_REDIRECT           = new Guid("60240b23b1604ffbbc1bb3771ea5081f");
     private static readonly Guid BUILDING_SUPPLIES_REDIRECT     = new Guid("96e27895c1b34e128121296c14dd9bf5");
     private static readonly Guid AMMO_SUPPLIES_REDIRECT         = new Guid("c4cee82e290b4b26b7a6e2be9cd70df7");
     private static readonly Guid ZONE_BLOCKER_REDIRECT          = new Guid("7959dc824a154035934049289e011a70");
+
+    // clothes
+    private static readonly Guid BACKPACK_REDIRECT              = new Guid("bfc294a392294438b29194abfa9792f9");
+    private static readonly Guid SHIRT_REDIRECT                 = new Guid("bc84a3c778884f38a4804da8ab1ca925");
+    private static readonly Guid PANTS_REDIRECT                 = new Guid("dacac5a5628a44d7b40b16f14be681f4");
+    private static readonly Guid VEST_REDIRECT                  = new Guid("2b22ac1b5de74755a24c2f05219c5e1f");
 }
 public class FactionInfo : ITranslationArgument
 {
@@ -808,6 +847,14 @@ public class FactionInfo : ITranslationArgument
     public JsonAssetReference<ItemBarricadeAsset>? RallyPoint;
     [JsonPropertyName("radio")]
     public JsonAssetReference<ItemBarricadeAsset>? FOBRadio;
+    [JsonPropertyName("defaultBackpack")]
+    public JsonAssetReference<ItemBackpackAsset>? DefaultBackpack;
+    [JsonPropertyName("defaultShirt")]
+    public JsonAssetReference<ItemShirtAsset>? DefaultShirt;
+    [JsonPropertyName("defaultPants")]
+    public JsonAssetReference<ItemPantsAsset>? DefaultPants;
+    [JsonPropertyName("defaultVest")]
+    public JsonAssetReference<ItemVestAsset>? DefaultVest;
     public FactionInfo() { }
     public FactionInfo(string factionId, string name, string abbreviation, string shortName, string hexColor, string unarmedKit, string flagImage = UNKNOWN_TEAM_IMG_URL)
     {

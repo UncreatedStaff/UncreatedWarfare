@@ -14,34 +14,48 @@ namespace Uncreated.Warfare.Gamemodes;
 public abstract class TeamGamemode : Gamemode, ITeams
 {
     protected const int AMC_TIME = 10;
-    protected JoinManager _joinManager;
+    protected TeamSelector _teamSelector;
     public List<ulong> InAMC = new List<ulong>();
     private Transform? _blockerBarricadeT1;
     private Transform? _blockerBarricadeT2;
-    public JoinManager JoinManager { get => _joinManager; }
-    public virtual bool UseJoinUI { get => true; }
+    public TeamSelector TeamSelector { get => _teamSelector; }
+    public virtual bool UseTeamSelector { get => true; }
     public virtual bool EnableAMC { get => true; }
-    protected TeamGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
+    protected TeamGamemode(string name, float eventLoopSpeed) : base(name, eventLoopSpeed)
     {
 
     }
     protected override void PreInit()
     {
-        if (UseJoinUI)
-            AddSingletonRequirement(ref _joinManager);
+        if (UseTeamSelector)
+            AddSingletonRequirement(ref _teamSelector);
     }
     protected override void PreDispose()
     {
         if (HasOnReadyRan)
             DestroyBlockers();
     }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override void PostInit()
     {
-        if (UseJoinUI)
+        if (UseTeamSelector)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                _joinManager.JoinLobby(PlayerManager.OnlinePlayers[i]);
+                TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
         }
+    }
+    protected override void PreGameStarting(bool isOnLoad)
+    {
+        if (UseTeamSelector)
+        {
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                _teamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
+        }
+
+        base.PreGameStarting(isOnLoad);
+    }
+    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    {
+        base.PlayerInit(player, wasAlreadyOnline);
     }
     protected override void OnReady()
     {
@@ -248,6 +262,17 @@ public abstract class TeamGamemode : Gamemode, ITeams
         InAMC.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
+    protected override void OnAsyncInitComplete(UCPlayer player)
+    {
+        if (UseTeamSelector)
+            _teamSelector.JoinSelectionMenu(player);
 
-    public virtual void OnJoinTeam(UCPlayer player, ulong newTeam) {  }
+        base.OnAsyncInitComplete(player);
+    }
+
+    public virtual void OnJoinTeam(UCPlayer player, ulong team)
+    {
+        if (team is 1 or 2 && _state == EState.STAGING)
+            ShowStagingUI(player);
+    }
 }
