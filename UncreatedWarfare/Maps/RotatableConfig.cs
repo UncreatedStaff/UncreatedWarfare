@@ -298,10 +298,12 @@ public class RotatableConfig<T>
 
     public static implicit operator T(RotatableConfig<T> config)
     {
-        if (config._isNull)
+        if (config is null || config._isNull)
         {
             if (isNullableClass) return default!;
             if (isNullableStruct) return (T)Activator.CreateInstance(type);
+
+            return default!;
         }
         return config.Value;
     }
