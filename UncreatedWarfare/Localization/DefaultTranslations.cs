@@ -977,37 +977,32 @@ internal static class T
     public static readonly Translation<int, int> OfficerInvalidRank = new Translation<int, int>("<#b08989><#ddd>{0}</color> is not a valid officer level. Try numbers <#ddd>1</color> - <#ddd>{1}</color>.");
     public static readonly Translation<IPlayer, int, int> OfficerChangedRankFeedback = new Translation<IPlayer, int, int>("<#c6d6c1>{0}'s officer rank was successfully changed to <#ddd>{1}</color> of <#ddd>{2}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation<IPlayer> OfficerDischargedFeedback = new Translation<IPlayer>("<#c6d6c1>{0} was successfully discharged.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    #endregion
+
+    #region Clear
+    public static readonly Translation ClearNoPlayerConsole = new Translation("Specify a player name when clearing from console.", TranslationFlags.NoColor);
+    public static readonly Translation ClearInventorySelf = new Translation("<#e6e3d5>Cleared your inventory.");
+    public static readonly Translation<IPlayer> ClearInventoryOther = new Translation<IPlayer>("<#e6e3d5>Cleared {0}'s inventory.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation ClearItems = new Translation("<#e6e3d5>Cleared all dropped items.");
+    public static readonly Translation<IPlayer> ClearItemsOther = new Translation<IPlayer>("<#e6e3d5>Cleared {0}'s dropped items.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation ClearStructures = new Translation("<#e6e3d5>Cleared all placed structures and barricades.");
+    public static readonly Translation ClearVehicles = new Translation("<#e6e3d5>Cleared all vehicles.");
+    #endregion
+
+    #region Shutdown
+    public static readonly Translation<string> ShutdownBroadcastAfterGame = new Translation<string>("<#00ffff>A shutdown has been scheduled after this game because: \"<#6699ff>{0}</color>\".");
+    public static readonly Translation ShutdownBroadcastDaily = new Translation("<#00ffff>A daily restart will occur after this game. Down-time estimate: <#6699ff>2 minutes</color>.");
+    public static readonly Translation ShutdownBroadcastCancelled = new Translation("<#00ffff>The scheduled shutdown has been canceled.");
+    public static readonly Translation<string, string> ShutdownBroadcastTime = new Translation<string, string>("<#00ffff>A shutdown has been scheduled in {0} because: \"<color=#6699ff>{1}</color>\".");
+    public static readonly Translation<string, string> ShutdownBroadcastReminder = new Translation<string, string>("<#00ffff>A shutdown is scheduled to occur after this game because: \"<#6699ff>{0}</color>\".");
+    #endregion
+
+    #region RequestSigns
+    public static readonly Translation KitExclusive = new Translation("<#aaa>EXCLUSIVE</color>", TranslationFlags.NoColor);
+    #endregion
 
     static Dictionary<string, string> _translations = new Dictionary<string, string>()
     {
-        #region ClearCommand
-        { "clear_inventory_console_identity", "Specify a player name when clearing from console." }, // runs from console only, no color needed.
-        { "clear_inventory_player_not_found", "<color=#ff8c69>A player was not found from <color=#8ce4ff>\"{0}\"</color>.</color>" },
-        { "clear_inventory_self", "<color=#e6e3d5>Cleared your inventory.</color>" },
-        { "clear_inventory_others", "<color=#e6e3d5>Cleared <color=#8ce4ff>{0}</color>'s inventory.</color>" },
-        { "clear_items_cleared", "<color=#e6e3d5>Cleared all dropped items.</color>" },
-        { "clear_structures_cleared", "<color=#e6e3d5>Cleared all placed structures and barricades.</color>" },
-        { "clear_vehicles_cleared", "<color=#e6e3d5>Cleared all vehicles.</color>" },
-        #endregion
-        
-        #region UCDeaths
-        { "zombie", "a zombie" },
-        #endregion
-        
-        #region ShutdownOverrideCommand
-        { "shutdown_syntax", "<color=#9cffb3>Corrent syntax: /shutdown <aftergame|*seconds*|instant> <reason>.</color>" },
-        { "shutdown_broadcast_after_game", "<color=#00ffff>A shutdown has been scheduled after this game because: \"<color=#6699ff>{0}</color>\".</color>" },
-        { "shutdown_broadcast_after_game_daily", "<color=#00ffff>A daily restart will occur after this game. Down-time estimate: <color=#6699ff>2 minutes</color>.</color>" },
-        { "shutdown_broadcast_after_game_canceled", "<color=#00ffff>The scheduled shutdown has been canceled.</color>" },
-        { "shutdown_broadcast_after_game_canceled_console", "The scheduled shutdown was canceled." },
-        { "shutdown_broadcast_after_game_canceled_console_player", "The scheduled shutdown was canceled by {0}." },
-        { "shutdown_broadcast_after_time", "<color=#00ffff>A shutdown has been scheduled in {0} because: \"<color=#6699ff>{1}</color>\".</color>" },
-        { "shutdown_broadcast_after_game_console", "A shutdown has been scheduled after this game because: \"{0}\"." },
-        { "shutdown_broadcast_after_game_reminder", "<color=#00ffff>A shutdown is scheduled to occur after this game because: \"<color=#6699ff>{0}</color>\".</color>" },
-        { "shutdown_broadcast_after_game_console_player", "A shutdown has been scheduled after this game by {0} because: \"{1}\"." },
-        { "shutdown_broadcast_after_time_console", "A shutdown has been scheduled in {0} because: \"{1}\"." },
-        #endregion
-        
         #region RequestSigns
         { "kit_name", "<b>{0}</b>" },
         { "kit_weapons", "<b>{0}</b>" },
