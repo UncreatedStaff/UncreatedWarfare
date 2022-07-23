@@ -14,7 +14,10 @@ public class SquadCommand : Command
     private const string SYNTAX = "/squad <create|join|(un)lock|kick|leave|disband|promote> [parameters...]";
     private const string HELP = "Join, create, or manage your squad.";
 
-    public SquadCommand() : base("squad", EAdminType.MEMBER) { }
+    public SquadCommand() : base("squad", EAdminType.MEMBER)
+    {
+        AddAlias("sqaud");
+    }
 
     public override void Execute(CommandInteraction ctx)
     {
