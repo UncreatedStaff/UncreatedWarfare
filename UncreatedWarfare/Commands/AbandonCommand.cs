@@ -12,12 +12,12 @@ using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
 namespace Uncreated.Warfare.Commands;
-public class BlankCommand : Command
+public class AbandonCommand : Command
 {
     private const string SYNTAX = "/abandon | /av";
     private const string HELP = "If you no longer want to use your vehicle, you can return it to the vehicle pool.";
 
-    public BlankCommand() : base("abandon", EAdminType.MEMBER)
+    public AbandonCommand() : base("abandon", EAdminType.MEMBER)
     {
         AddAlias("av");
     }
