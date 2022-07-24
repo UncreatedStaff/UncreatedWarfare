@@ -16,6 +16,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
@@ -275,7 +276,46 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
     }
     // TODO
     internal static bool OnQuestCompleted(UCPlayer player, Guid presetKey) => false;
+    public static void AbandonAllVehicles()
+    {
+        for (int i = 0; i < VehicleSpawner.Singleton.Count; ++i)
+        {
+            VehicleSpawn v = VehicleSpawner.Singleton[i];
+            if (v.HasLinkedVehicle(out InteractableVehicle veh))
+            {
+                ulong t = veh.lockedGroup.m_SteamID.GetTeam();
+                if (t == 1 && TeamManager.Team1Main.IsInside(veh.transform.position) ||
+                    t == 2 && TeamManager.Team2Main.IsInside(veh.transform.position))
+                {
+                    AbandonVehicle(veh, null, v, false);
+                }
+            }
+        }
+    }
+    public static void AbandonVehicle(InteractableVehicle vehicle, VehicleData? data, VehicleSpawn? spawn, bool respawn = true)
+    {
+        if (data is null && !VehicleExists(vehicle.asset.GUID, out data))
+            return;
+        if (spawn is null && !VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out spawn))
+            return;
 
+        UCPlayer? pl = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
+        if (pl != null)
+        {
+            int creditReward = 0;
+            if (data.CreditCost > 0 && spawn.Component != null && spawn.Component.RequestTime != 0)
+                creditReward = data.CreditCost - Mathf.Min(data.CreditCost, Mathf.FloorToInt(data.AbandonValueLossSpeed * (Time.realtimeSinceStartup - spawn.Component.RequestTime)));
+
+            Points.AwardCredits(pl, creditReward,
+                T.AbandonCompensationToast.Translate(Data.Languages.TryGetValue(pl, out string lang) ? lang : JSONMethods.DEFAULT_LANGUAGE),
+                false, false);
+        }
+
+        VehicleBay.DeleteVehicle(vehicle);
+
+        if (respawn)
+            spawn.SpawnVehicle();
+    }
     public static void ResupplyVehicleBarricades(InteractableVehicle vehicle, VehicleData vehicleData)
     {
 #if DEBUG
@@ -647,6 +687,10 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
     public bool RequiresSL;
     [JsonSettable]
     public ushort UnlockLevel;
+    [JsonSettable]
+    public bool DisallowAbandons;
+    [JsonSettable]
+    public float AbandonValueLossSpeed = 0.125f;
     public BaseUnlockRequirement[] UnlockRequirements;
     public Guid[] Items;
     public Delay[] Delays;
