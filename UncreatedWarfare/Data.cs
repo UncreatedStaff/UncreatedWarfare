@@ -229,8 +229,6 @@ public static class Data
             return;
         }
 
-        Quests.QuestManager.Init();
-
         Colors = JSONMethods.LoadColors(out ColorsHex);
         Localization = JSONMethods.LoadTranslations();
         Deaths.Localization.Reload();
@@ -387,7 +385,9 @@ public static class Data
         StatsManager.LoadVehicles();
         for (int i = 0; i < Provider.clients.Count; i++)
             StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
-        //Quests.DailyQuests.OnLoad();
+
+        Quests.QuestManager.Init();
+        Quests.DailyQuests.Load();
     }
 
     private static void OnSingletonReloaded(IReloadableSingleton singleton, bool success)
@@ -451,6 +451,7 @@ public static class Data
         L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
         PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
         ActionLogger.OnConnected();
+        Quests.DailyQuests.OnConnectedToServer();
         if (Gamemode.shutdownAfterGame)
             ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
         Task.Run(OffenseManager.OnConnected).ConfigureAwait(false);

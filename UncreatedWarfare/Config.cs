@@ -78,8 +78,8 @@ public class SystemConfigData : ConfigData
     public bool EnableReporter;
     [JsonPropertyName("blockLandmineFriendlyFire")]
     public bool BlockLandmineFriendlyFire;
-    [JsonPropertyName("enableQuests")]
-    public bool EnableQuests;
+    [JsonPropertyName("disableDailyQuests")]
+    public bool DisableDailyQuests;
 
     public override void SetDefaults()
     {
@@ -111,6 +111,7 @@ public class SystemConfigData : ConfigData
         this.MinAlphanumericStringLength = 5;
         this.EnableReporter = true;
         this.BlockLandmineFriendlyFire = true;
+        this.DisableDailyQuests = false;
     }
     public class ModerationConfig
     {

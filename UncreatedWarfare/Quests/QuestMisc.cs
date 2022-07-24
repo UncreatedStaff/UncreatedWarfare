@@ -2436,16 +2436,17 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             {
                 if (_behavior == EChoiceBehavior.ALLOW_ONE)
                 {
-                    int r1 = (int)(object)value.Range.Minimum;
-                    int r2 = (int)(object)value.Range.Maximum;
+                    
+                    int r1 = ((IConvertible)value.Range.Minimum).ToInt32(Data.Locale);
+                    int r2 = ((IConvertible)value.Range.Maximum).ToInt32(Data.Locale);
                     int r3 = UnityEngine.Random.Range(r1, r2 + 1);
-                    _value = (TEnum)(object)r3;
+                    _value = (TEnum)Enum.ToObject(typeof(TEnum), r3);
                 }
                 else
                 {
-                    _minValUnderlying = (int)(object)value.Range.Minimum;
+                    _minValUnderlying = ((IConvertible)value.Range.Minimum).ToInt32(Data.Locale);
                     _minVal = value.Range.Minimum;
-                    _maxValUnderlying = (int)(object)value.Range.Maximum;
+                    _maxValUnderlying = ((IConvertible)value.Range.Maximum).ToInt32(Data.Locale);
                     _maxVal = value.Range.Maximum;
                 }
             }

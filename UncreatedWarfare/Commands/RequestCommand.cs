@@ -150,41 +150,37 @@ public class RequestCommand : Command
                             !UCWarfare.Config.OverrideKitRequirements)
                             throw ctx.Reply("kit_e_cooldown", premiumCooldown.ToString());
 
-                        if (UCWarfare.Config.EnableQuests)
+                        for (int i = 0; i < kit.UnlockRequirements.Length; i++)
                         {
-                            // level, rank, and quest unlock requirements, disabled for now.
-                            for (int i = 0; i < kit.UnlockRequirements.Length; i++)
+                            BaseUnlockRequirement req = kit.UnlockRequirements[i];
+                            if (req.CanAccess(caller2))
+                                continue;
+                            if (req is LevelUnlockRequirement level)
+                                throw ctx.Reply("request_kit_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
+                            else if (req is RankUnlockRequirement rank)
                             {
-                                BaseUnlockRequirement req = kit.UnlockRequirements[i];
-                                if (req.CanAccess(caller2))
-                                    continue;
-                                if (req is LevelUnlockRequirement level)
-                                    throw ctx.Reply("request_kit_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
-                                else if (req is RankUnlockRequirement rank)
+                                ref Ranks.RankData data = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
+                                if (!success)
+                                    L.LogWarning("Invalid rank order in kit requirement: " + kit.Name + " :: " + rank.UnlockRank + ".");
+                                throw ctx.Reply("request_kit_e_wrongrank", data.GetName(ctx.CallerID), data.Color ?? UCWarfare.GetColorHex("default"));
+                            }
+                            else if (req is QuestUnlockRequirement quest)
+                            {
+                                if (Assets.find(quest.QuestID) is QuestAsset asset)
                                 {
-                                    ref Ranks.RankData data = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
-                                    if (!success)
-                                        L.LogWarning("Invalid rank order in kit requirement: " + kit.Name + " :: " + rank.UnlockRank + ".");
-                                    throw ctx.Reply("request_kit_e_wrongrank", data.GetName(ctx.CallerID), data.Color ?? UCWarfare.GetColorHex("default"));
-                                }
-                                else if (req is QuestUnlockRequirement quest)
-                                {
-                                    if (Assets.find(quest.QuestID) is QuestAsset asset)
-                                    {
-                                        ctx.Caller.Player.quests.sendAddQuest(asset.id);
-                                        throw ctx.Reply("request_kit_e_quest_incomplete", asset.questName);
-                                    }
-                                    else
-                                    {
-                                        throw ctx.Reply("request_kit_e_quest_incomplete", kit.Name);
-                                    }
+                                    ctx.Caller.Player.quests.sendAddQuest(asset.id);
+                                    throw ctx.Reply("request_kit_e_quest_incomplete", asset.questName);
                                 }
                                 else
                                 {
-                                    L.LogWarning("Unhandled kit requirement type: " + req.GetType().Name);
+                                    throw ctx.Reply("request_kit_e_quest_incomplete", kit.Name);
                                 }
-                                return;
                             }
+                            else
+                            {
+                                L.LogWarning("Unhandled kit requirement type: " + req.GetType().Name);
+                            }
+                            return;
                         }
 
                         Task.Run(async () =>
@@ -353,43 +349,40 @@ public class RequestCommand : Command
             RequestVehicleIsDelayed(ucplayer, ref delay, team, data);
             return;
         }
-        if (UCWarfare.Config.EnableQuests)
+
+        for (int i = 0; i < data.UnlockRequirements.Length; i++)
         {
-            // level, rank, and quest unlock requirements, disabled for now.
-            for (int i = 0; i < data.UnlockRequirements.Length; i++)
+            BaseUnlockRequirement req = data.UnlockRequirements[i];
+            if (req.CanAccess(ucplayer))
+                continue;
+            if (req is LevelUnlockRequirement level)
             {
-                BaseUnlockRequirement req = data.UnlockRequirements[i];
-                if (req.CanAccess(ucplayer))
-                    continue;
-                if (req is LevelUnlockRequirement level)
+                ucplayer.Message("request_vehicle_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
+            }
+            else if (req is RankUnlockRequirement rank)
+            {
+                ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
+                if (!success)
+                    L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + rank.UnlockRank + ".");
+                ucplayer.Message("request_vehicle_e_wrongrank", rankData.GetName(ucplayer.Steam64), rankData.Color ?? UCWarfare.GetColorHex("default"));
+            }
+            else if (req is QuestUnlockRequirement quest)
+            {
+                if (Assets.find(quest.QuestID) is QuestAsset asset)
                 {
-                    ucplayer.Message("request_vehicle_e_wronglevel", level.UnlockLevel.ToString(Data.Locale));
-                }
-                else if (req is RankUnlockRequirement rank)
-                {
-                    ref Ranks.RankData rankData = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
-                    if (!success)
-                        L.LogWarning("Invalid rank order in vehicle requirement: " + data.VehicleID + " :: " + rank.UnlockRank + ".");
-                    ucplayer.Message("request_vehicle_e_wrongrank", rankData.GetName(ucplayer.Steam64), rankData.Color ?? UCWarfare.GetColorHex("default"));
-                }
-                else if (req is QuestUnlockRequirement quest)
-                {
-                    if (Assets.find(quest.QuestID) is QuestAsset asset)
-                    {
-                        ucplayer.Message("request_vehicle_e_quest_incomplete", asset.questName);
-                        ucplayer.Player.quests.sendAddQuest(asset.id);
-                    }
-                    else
-                    {
-                        ucplayer.Message("request_vehicle_e_quest_incomplete", vehicle.asset.name);
-                    }
+                    ucplayer.Message("request_vehicle_e_quest_incomplete", asset.questName);
+                    ucplayer.Player.quests.sendAddQuest(asset.id);
                 }
                 else
                 {
-                    L.LogWarning("Unhandled vehicle requirement type: " + req.GetType().Name);
+                    ucplayer.Message("request_vehicle_e_quest_incomplete", vehicle.asset.name);
                 }
-                return;
             }
+            else
+            {
+                L.LogWarning("Unhandled vehicle requirement type: " + req.GetType().Name);
+            }
+            return;
         }
         if (vehicle.asset != default && vehicle.asset.canBeLocked)
         {

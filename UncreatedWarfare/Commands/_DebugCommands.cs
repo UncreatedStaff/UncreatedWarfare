@@ -734,8 +734,6 @@ internal class _DebugCommand : Command
     }
     private void questdump(CommandInteraction ctx)
     {
-        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
-
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertRanByPlayer();
@@ -744,8 +742,6 @@ internal class _DebugCommand : Command
     }
     private void completequest(CommandInteraction ctx)
     {
-        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
-
         ctx.AssertPermissions(EAdminType.ADMIN);
 
         ctx.AssertRanByPlayer();
@@ -808,8 +804,6 @@ internal class _DebugCommand : Command
 #endif
     private void questtest(CommandInteraction ctx)
     {
-        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
-
         ctx.AssertRanByPlayer();
 
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);

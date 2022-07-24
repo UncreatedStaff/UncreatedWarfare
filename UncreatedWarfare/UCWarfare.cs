@@ -110,6 +110,9 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
+
+        Quests.DailyQuests.EarlyLoad();
+
         ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
     }
 

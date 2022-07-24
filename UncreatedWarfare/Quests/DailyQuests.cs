@@ -1,8 +1,11 @@
-﻿using SDG.Unturned;
+﻿using HarmonyLib;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -16,6 +19,7 @@ namespace Uncreated.Warfare.Quests;
 
 public static class DailyQuests
 {
+    private const ulong DAILY_QUESTS_WORKSHOP_ID = 2773379635ul;
     public static BaseQuestData[] DailyQuestDatas = new BaseQuestData[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
     public static IQuestState[] States = new IQuestState[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
     public static Dictionary<ulong, DailyQuestTracker> DailyTrackers = new Dictionary<ulong, DailyQuestTracker>();
@@ -27,33 +31,53 @@ public static class DailyQuests
     public static TimeSpan TimeLeftForQuests => DateTime.Now - _nextRefresh;
     public static void OnConnectedToServer()
     {
-        if (!sentCurrent)
-        {
+        if (!needsCreate && !sentCurrent)
             ReplicateQuestChoices();
-        }
     }
-    public static void OnLoad()
+    public static void EarlyLoad()
     {
-        string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests") + Path.DirectorySeparatorChar;
-        if (Directory.Exists(p))
-        {
-            L.Log("Loading DailyQuests mod");
-            Assets.load(p, true, EAssetOrigin.WORKSHOP, true, 2773379635ul);
-        }
         ReadQuests();
-        CreateNewDailyQuests();
-        _nextRefresh = _quests[index + 1].StartDate;
+
+        MethodInfo? m = typeof(Provider).GetMethod("onDedicatedUGCInstalled", BindingFlags.NonPublic | BindingFlags.Static);
+        if (m is not null)
+            Patches.Patcher.Patch(m,
+                prefix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnRegisteredWorkshopID),
+                    BindingFlags.Static | BindingFlags.NonPublic)));
+        else L.LogWarning("Unable to patch Provider.onDedicatedUGCInstalled to register the quest mod!");
+    }
+    public static void Load()
+    {
+        if (needsCreate)
+        {
+            CreateNewModContent();
+            needsCreate = false;
+        }
+
+        ref DailyQuestSave next = ref _quests[index + 1];
+        _nextRefresh = next.StartDate;
+        Tick();
+        LoadAssets();
+        PrintQuests();
+    }
+    private static void PrintQuests()
+    {
         if (sentCurrent)
         {
             for (int i = 0; i < _quests.Length; i++)
             {
                 ref DailyQuestSave save = ref _quests[i];
+                L.Log("Daily Quests (current: " + index + "):");
+                using IDisposable indent = L.IndentLog(1);
                 if (Assets.find(save.guid) is not QuestAsset asset)
-                {
                     L.LogWarning("Cannot find asset for day " + i + "quest.");
-                }
+                else
+                    L.Log("Day " + i + ": " + asset.questName);
             }
         }
+    }
+    private static void OnRegisteredWorkshopID()
+    {
+        Provider.registerServerUsingWorkshopFileId(DAILY_QUESTS_WORKSHOP_ID);
     }
     public static void Tick()
     {
@@ -177,7 +201,7 @@ public static class DailyQuests
                 pset.PresetObj = preset;
                 pset.Type = data.QuestType;
                 cond.FlagValue = preset.State.FlagValue.InsistValue();
-                cond.Translation = tempTracker.GetDisplayString(true) ?? data.QuestType.ToString();
+                cond.Translation = tempTracker.GetDisplayString(true);
                 cond.Key = preset.Key;
             }
             else
@@ -295,17 +319,10 @@ public static class DailyQuests
     }
     public static void ReplicateQuestChoices()
     {
-        SendNextQuests.NetInvoke(_sendQuests);
-    }
-    [NetCall(ENetCall.FROM_SERVER, 1126)]
-    public static async Task ReceiveQuestData(MessageContext context, Folder folder)
-    {
-        string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests") + Path.DirectorySeparatorChar;
-        folder.WriteToDisk(p);
-        await UCWarfare.ToUpdate();
-        L.Log("Received mod folder: " + folder.name);
-        Assets.load(p, true, EAssetOrigin.WORKSHOP, true, 2773379635ul);
-        sentCurrent = true;
+        if (UCWarfare.CanUseNetCall)
+            NetCalls.SendNextQuests.NetInvoke(_sendQuests);
+        else
+            L.Log("Scheduled to send " + _sendQuests.Length + " daily quests once the bot connects.", ConsoleColor.Magenta);
     }
     public static void SaveQuests()
     {
@@ -324,7 +341,7 @@ public static class DailyQuests
                 ref DailyQuestSave quest = ref _quests[i];
                 writer.WriteStartObject();
                 writer.WritePropertyName("start_time");
-                writer.WriteNumberValue(quest.StartDate.Ticks);
+                writer.WriteStringValue(quest.StartDate.ToUniversalTime());
                 writer.WritePropertyName("asset_guid");
                 writer.WriteStringValue(quest.guid);
                 writer.WritePropertyName("presets");
@@ -351,12 +368,13 @@ public static class DailyQuests
             writer.Dispose();
         }
     }
+    private static bool needsCreate = false;
     public static void ReadQuests()
     {
         string p = Path.Combine(QuestManager.QUEST_FOLDER, "daily_quests.json");
         if (!File.Exists(p))
         {
-            CreateNewModContent();
+            needsCreate = true;
             return;
         }
         using (FileStream stream = new FileStream(p, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -408,13 +426,11 @@ public static class DailyQuests
                                                     switch (prop)
                                                     {
                                                         case "start_time":
-                                                            if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt64(out long ticks))
-                                                                save.StartDate = new DateTime(ticks);
-                                                            else if (reader.TokenType == JsonTokenType.String)
+                                                            if (reader.TokenType == JsonTokenType.String)
                                                             {
                                                                 string? v = reader.GetString();
                                                                 if (v != null) 
-                                                                    DateTime.TryParse(v, Data.Locale, System.Globalization.DateTimeStyles.AssumeLocal, out save.StartDate);
+                                                                    DateTime.TryParse(v, Data.Locale, DateTimeStyles.AssumeUniversal, out save.StartDate);
                                                             }
                                                             break;
                                                         case "asset_guid":
@@ -574,9 +590,50 @@ public static class DailyQuests
         deleteFile:
         File.Delete(path);
     }
+    public static void LoadAssets()
+    {
+        string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests", DailyQuest.WORKSHOP_FILE_NAME) + Path.DirectorySeparatorChar;
+        L.Log("Loading assets from \"" + p + "\"...", ConsoleColor.Magenta);
+        if (!Directory.Exists(p))
+        {
+            L.LogError("Directory doesn't exist!");
+        }
+        else
+        {
+            Assets.load(p, true, EAssetOrigin.WORKSHOP, true, DAILY_QUESTS_WORKSHOP_ID);
+            L.Log("Assets loaded", ConsoleColor.Magenta);
+            PrintQuests();
+        }
+    }
 
-    internal static readonly NetCallRaw<DailyQuest[]> SendNextQuests = new NetCallRaw<DailyQuest[]>(1125, DailyQuest.ReadMany, DailyQuest.WriteMany);
-    internal static readonly NetCallRaw<Folder> AckNextQuestsUploaded = new NetCallRaw<Folder>(ReceiveQuestData, Folder.Read, Folder.Write, 65536);
+    public static class NetCalls
+    {
+        public static readonly NetCallRaw<DailyQuest[]> SendNextQuests = new NetCallRaw<DailyQuest[]>(1125, DailyQuest.ReadMany, DailyQuest.WriteMany);
+        public static readonly NetCallRaw<Folder> AckNextQuestsUploaded = new NetCallRaw<Folder>(ReceiveQuestData, Folder.Read, Folder.Write, 65536);
+
+
+        [NetCall(ENetCall.FROM_SERVER, 1126)]
+        public static async Task ReceiveQuestData(MessageContext context, Folder folder)
+        {
+            try
+            {
+                string p = Path.Combine(QuestManager.QUEST_FOLDER, "DailyQuests") + Path.DirectorySeparatorChar;
+                L.Log("Received mod folder: " + folder.name, ConsoleColor.Magenta);
+                if (Directory.Exists(p))
+                    Directory.Delete(p, true);
+                folder.WriteToDisk(p);
+                await UCWarfare.ToUpdate();
+                LoadAssets();
+                sentCurrent = true;
+                PrintQuests();
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error receiving quest mod data.");
+                L.LogError(ex);
+            }
+        }
+    }
 }
 public class DailyQuestTracker
 {
