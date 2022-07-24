@@ -175,7 +175,7 @@ public class BARRICADE_IDS
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> RepairStationGUID;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> RepairStationBaseGUID;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> AmmoBagGUID;
-    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> VehicleBayGUID;
+    public RotatableConfig<JsonAssetReference<ItemAsset>> VehicleBayGUID;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> TimeLimitedStorages;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> FOBRadioGUIDs;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> Team1ZoneBlocker;
@@ -191,7 +191,7 @@ public class BARRICADE_IDS
         RepairStationGUID       = new JsonAssetReference<ItemBarricadeAsset>("c0d11e0666694ddea667377b4c0580be");
         RepairStationBaseGUID   = new JsonAssetReference<ItemBarricadeAsset>("26a6b91cd1944730a0f28e5f299cebf9");
         AmmoBagGUID             = new JsonAssetReference<ItemBarricadeAsset>("16f55b999e9b4f158be12645e41dd753");
-        VehicleBayGUID          = new JsonAssetReference<ItemBarricadeAsset>("c076f9e9f35f42a4b8b5711dfb230010");
+        VehicleBayGUID          = new JsonAssetReference<ItemAsset>("c076f9e9f35f42a4b8b5711dfb230010");
         TimeLimitedStorages     = new JsonAssetReference<ItemBarricadeAsset>[]
         {
             AmmoCrateGUID,

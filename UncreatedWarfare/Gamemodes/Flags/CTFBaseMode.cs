@@ -221,6 +221,9 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             }
         }
         TicketManager.OnRoundWin(winner);
+
+        VehicleBay.AbandonAllVehicles();
+
         StartCoroutine(EndGameCoroutine(winner));
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)

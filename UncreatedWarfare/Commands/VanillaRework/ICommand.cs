@@ -97,35 +97,32 @@ public class ICommand : Command
                         goto foundItem;
                 }
             }
+            // now try find an asset using all arguments except the last, which could be treated as a number.
+
+            if (ctx.TryGet(ctx.ArgumentCount - 1, out amount) && amount <= MAX_ITEMS && amount > 0) // if this runs, then the last ID is treated as an amount
+            {
+                itemName = ctx.GetRange(0, ctx.ArgumentCount - 1)!;
+
+                asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
+                if (asset != null)
+                {
+                    // success
+                    goto foundItem;
+                }
+                else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+            }
             else
             {
-                // now try find an asset using all arguments except the last, which could be treated as a number.
+                amount = 1;
+                itemName = ctx.GetRange(0)!;
 
-                if (ctx.TryGet(ctx.ArgumentCount - 1, out amount) && amount <= MAX_ITEMS && amount > 0) // if this runs, then the last ID is treated as an amount
+                asset = UCAssetManager.FindItemAsset(itemName.Trim(), out similarNamesCount, true);
+                if (asset != null)
                 {
-                    itemName = ctx.GetRange(0, ctx.ArgumentCount - 1)!;
-
-                    asset = UCAssetManager.FindItemAsset(itemName, out similarNamesCount, true);
-                    if (asset != null)
-                    {
-                        // success
-                        goto foundItem;
-                    }
-                    else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+                    // success
+                    goto foundItem;
                 }
-                else
-                {
-                    amount = 1;
-                    itemName = ctx.GetRange(0)!;
-
-                    asset = UCAssetManager.FindItemAsset(itemName.Trim(), out similarNamesCount, true);
-                    if (asset != null)
-                    {
-                        // success
-                        goto foundItem;
-                    }
-                    else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
-                }
+                else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
             }
         }
 

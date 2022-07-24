@@ -470,7 +470,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             --t2;
         }
         int maxDiff = Mathf.Max(2, Mathf.CeilToInt(Provider.clients.Count * 0.10f));
-        L.LogDebug($"Team: {team}, Difference: {maxDiff}, t1: {t1}, t2: {t2}");
         if (t1 == t2)
             return true;
         if (team == 1 && t1 <= t2)

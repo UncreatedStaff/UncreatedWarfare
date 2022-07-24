@@ -277,6 +277,8 @@ public class Insurgency :
 
 
         TicketManager.OnRoundWin(winner);
+
+        VehicleBay.AbandonAllVehicles();
         StartCoroutine(EndGameCoroutine(winner));
     }
     private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()

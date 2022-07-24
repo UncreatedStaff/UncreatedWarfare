@@ -18,7 +18,7 @@ namespace Uncreated.Warfare.Vehicles;
 [SingletonDependency(typeof(StructureSaver))]
 public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, IGameStartListener
 {
-    private static VehicleSpawner Singleton;
+    public static VehicleSpawner Singleton;
     public static bool Loaded => Singleton.IsLoaded<VehicleSpawner, VehicleSpawn>();
     public const float VEHICLE_HEIGHT_OFFSET = 5f;
     public VehicleSpawner() : base("vehiclespawns", Path.Combine(Data.Paths.VehicleStorage, "vehiclespawns.json")) { }
@@ -608,7 +608,7 @@ public class VehicleSpawn
             return false;
         }
         vehicle = VehicleManager.getVehicle(VehicleInstanceID);
-        return vehicle != null && !vehicle.isDead && !vehicle.isDrowned;
+        return vehicle != null && !vehicle.isDead && !vehicle.isDrowned && !vehicle.isExploded;
     }
     public void LinkNewVehicle(InteractableVehicle vehicle)
     {
@@ -752,7 +752,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
     private InteractableVehicle? vehicle;
     public EVehicleBayState State => state;
     public Vector3 lastLoc = Vector3.zero;
-
+    public float RequestTime = 0f;
     public void Init(VehicleSpawn spawn, VehicleData data)
     {
         spawnData = spawn;
@@ -771,15 +771,17 @@ public sealed class VehicleBayComponent : MonoBehaviour
     private float lastDelayCheck = 0f;
     public void OnSpawn(InteractableVehicle vehicle)
     {
+        RequestTime = 0f;
         this.vehicle = vehicle;
-        IdleTime = 0;
-        DeadTime = 0;
+        IdleTime = 0f;
+        DeadTime = 0f;
         if (vehicleData.IsDelayed(out Delay delay))
             this.state = delay.type == EDelayType.TIME ? EVehicleBayState.TIME_DELAYED : EVehicleBayState.DELAYED;
         else this.state = EVehicleBayState.READY;
     }
     public void OnRequest()
     {
+        RequestTime = Time.realtimeSinceStartup;
         state = EVehicleBayState.IN_USE;
     }
     private bool checkTime = false;
