@@ -258,7 +258,8 @@ public static class QuestManager
                     if (!KitManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
                         VehicleBay.OnQuestCompleted(tracker.Player, tracker.PresetKey);
             }
-            // TODO: Update a UI and check for giving levels, etc.
+
+            tracker.TryGiveRewards();
         }
         DeregisterTracker(tracker);
     }
@@ -307,28 +308,30 @@ public static class QuestManager
     }
 
     #region read/write
-    public static readonly Dictionary<EQuestType, Type> QuestTypes = new Dictionary<EQuestType, Type>();
+    public static readonly Dictionary<EQuestType, Type> QuestTypes = new Dictionary<EQuestType, Type>(32);
+    public static readonly Dictionary<EQuestRewardType, Type> QuestRewardTypes = new Dictionary<EQuestRewardType, Type>(8);
     /// <summary>Registers all the <see cref="QuestDataAttribute"/>'s to <see cref="QuestTypes"/>.</summary>
     public static void InitTypesReflector()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
+        Type[] types = Assembly.GetExecutingAssembly().GetTypes();
 #endif
-        foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(x => x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
+        foreach (Type type in types.Where<Type>(x => x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
-            QuestDataAttribute attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
+            QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
             if (attribute != null && attribute.Type != EQuestType.INVALID && !QuestTypes.ContainsKey(attribute.Type))
-            {
                 QuestTypes.Add(attribute.Type, type);
-            }
+        }
+        foreach (Type type in types.Where(x => x.IsClass && typeof(IQuestReward).IsAssignableFrom(x)))
+        {
+            if (Attribute.GetCustomAttribute(type, typeof(QuestRewardAttribute)) is QuestRewardAttribute attr && attr.Type != EQuestRewardType.NONE)
+                QuestRewardTypes.Add(attr.Type, type);
         }
     }
     /// <summary>Creates an instance of the provided <paramref name="type"/>. Pulls from <see cref="QuestTypes"/>. <see cref="InitTypesReflector"/> should be ran before use.</summary>
     public static BaseQuestData? GetQuestData(EQuestType type)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         if (QuestTypes.TryGetValue(type, out Type result))
         {
             try
@@ -347,6 +350,27 @@ public static class QuestManager
             }
         }
         L.LogError("Failed to create a quest object of type " + type);
+        return null;
+    }
+    public static IQuestReward? GetQuestReward(EQuestRewardType type)
+    {
+        if (QuestRewardTypes.TryGetValue(type, out Type result))
+        {
+            try
+            {
+                if (Activator.CreateInstance(result) is IQuestReward data)
+                {
+                    data.Type = type;
+                    return data;
+                }
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Failed to create a quest reward of type " + type);
+                L.LogError(ex);
+            }
+        }
+        L.LogError("Failed to create a quest reward of type " + type);
         return null;
     }
 

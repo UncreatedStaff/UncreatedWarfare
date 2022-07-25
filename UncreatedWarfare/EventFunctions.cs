@@ -568,7 +568,7 @@ public static class EventFunctions
                     Steam64 = ucplayer.Steam64,
                     Team = ucplayer.Player.GetTeamByte()
                 });
-                //Quests.DailyQuests.RegisterDailyTrackers(ucplayer);
+                Quests.DailyQuests.RegisterDailyTrackers(ucplayer);
                 //KitManager.OnPlayerJoinedQuestHandling(ucplayer);
                 //VehicleBay.OnPlayerJoinedQuestHandling(ucplayer);
                 //Ranks.RankManager.OnPlayerJoin(ucplayer);

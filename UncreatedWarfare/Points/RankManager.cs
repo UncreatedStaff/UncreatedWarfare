@@ -3,9 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using Uncreated.Players;
 using Uncreated.Warfare.Quests;
+using static UnityEngine.TouchScreenKeyboard;
 
 namespace Uncreated.Warfare.Ranks;
 public static class RankManager
@@ -247,7 +249,7 @@ public static class RankManager
     }
     public static void OnPlayerJoin(UCPlayer player)
     {
-        player.RankData = ReadRankData(player);
+        player.RankData ??= ReadRankData(player);
         int index = GetRankIndex(player);
         if (index != -1 && index < Config.Ranks.Length - 1)
         {
@@ -270,9 +272,92 @@ public static class RankManager
             }
         }
     }
+    public static bool SkipToRank(UCPlayer player, int order)
+    {
+        player.RankData ??= ReadRankData(player);
+        int index = GetRankIndex(player);
+        if (index < 0)
+            index = 0;
+        if (index > Config.Ranks.Length - 2)
+            return false;
+        ref RankData data = ref Config.Ranks[index];
+        if (data.Order <= order)
+            return false;
+        data = ref Config.Ranks[index + 1];
+        ref RankStatus status = ref player.RankData[index + 1];
+
+        ClearRank(player, in data);
+        
+        for (int i = 0; i < Config.Ranks.Length; ++i)
+        {
+            data = ref Config.Ranks[i];
+            if (data.Order <= order && player.RankData.Length > i)
+            {
+                status = ref player.RankData[i];
+                if (!status.IsCompelete)
+                {
+                    for (int j = 0; j < status.Completions.Length; ++j)
+                        status.Completions[j] = true;
+                    status.IsCompelete = true;
+                }
+            }
+        }
+        WriteRankData(player, player.RankData);
+
+        OnPlayerJoin(player);
+        return true;
+    }
+    public static void ResetRanks(UCPlayer player)
+    {
+        int l = Config.Ranks.Length;
+        if (player.RankData is not null)
+        {
+            int index = GetRankIndex(player);
+            if (player.RankData.Length - 1 > index)
+            {
+                ref RankStatus status = ref player.RankData[index + 1];
+                ref RankData data = ref Config.Ranks[index + 1];
+                ClearRank(player, in data);
+            }
+        }
+        RankStatus[] statuses = new RankStatus[l];
+        --l;
+        for (; l >= 0; --l)
+        {
+            statuses[l] = new RankStatus(Config.Ranks[l].Order, l == 0, new bool[Config.Ranks[l].UnlockRequirements.Length]);
+        }
+        WriteRankData(player, statuses);
+        player.RankData = statuses;
+        OnPlayerJoin(player);
+    }
+
+    private static void ClearRank(UCPlayer player, in RankData data)
+    {
+        for (int i = 0; i < QuestManager.RegisteredTrackers.Count; ++i)
+        {
+            if (QuestManager.RegisteredTrackers[i].Player == player)
+            {
+                BaseQuestTracker tr = QuestManager.RegisteredTrackers[i];
+                for (int j = 0; j < data.UnlockRequirements.Length; ++j)
+                {
+                    if (data.UnlockRequirements[j] == tr.PresetKey)
+                    {
+                        QuestManager.DeregisterTracker(tr);
+                        player.Player.quests.sendRemoveFlag(tr.Flag);
+                        goto n;
+                    }
+                }
+            }
+        n:;
+        }
+
+        if (Assets.find(data.QuestID) is QuestAsset qa)
+            player.Player.quests.sendRemoveQuest(qa.id);
+    }
+
     public static bool OnQuestCompleted(UCPlayer player, Guid key)
     {
-        player.RankData = ReadRankData(player);
+        player.RankData ??= ReadRankData(player);
         int index = GetRankIndex(player);
         if (index != -1 && index < Config.Ranks.Length - 1)
         {

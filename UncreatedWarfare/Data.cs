@@ -424,22 +424,16 @@ public static class Data
     {
         if (UCWarfare.Config.Debug)
         {
-            L.Log("Received from TCP server on " + connection.Identity + ": " + string.Join(",", message), ConsoleColor.DarkGray);
+            MessageOverhead ovh = new MessageOverhead(message);
+            L.Log("Received from TCP server: " + ovh.ToString() + ".", ConsoleColor.DarkGray);
         }
     }
     private static void OnClientSentMessage(IConnection connection, byte[] message)
     {
         if (UCWarfare.Config.Debug)
         {
-            try
-            {
-                ushort id = BitConverter.ToUInt16(message, 0);
-                //if (id != L.NetCalls.SendLogMessage.ID)
-                //{
-                L.Log("Sent over TCP server on " + connection.Identity + ": " + message.Length, ConsoleColor.DarkGray);
-                //}
-            }
-            catch { }
+            MessageOverhead ovh = new MessageOverhead(message);
+            L.Log("Sent over TCP server    : " + ovh.ToString() + ".", ConsoleColor.DarkGray);
         }
     }
     private static void OnClientDisconnected(IConnection connection)

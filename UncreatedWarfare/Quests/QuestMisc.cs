@@ -129,6 +129,16 @@ public sealed class QuestDataAttribute : Attribute
         _type = type;
     }
 }
+[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
+public sealed class QuestRewardAttribute : Attribute
+{
+    public EQuestRewardType Type => _type;
+    private readonly EQuestRewardType _type;
+    public QuestRewardAttribute(EQuestRewardType type)
+    {
+        _type = type;
+    }
+}
 
 public static class QuestJsonEx
 {
@@ -2843,6 +2853,7 @@ public interface IQuestPreset
 {
     public Guid Key { get; }
     public IQuestState State { get; }
+    public IQuestReward[]? RewardOverrides { get; }
     public ulong Team { get; }
     public ushort Flag { get; }
 }

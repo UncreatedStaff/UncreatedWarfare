@@ -27,8 +27,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
 {
     public static TeamSelector Instance;
     public static readonly JoinUI JoinUI = new JoinUI();
-    public event PlayerDelegate OnPlayerSelecting;
-    public event PlayerDelegate OnPlayerSelected;
+    public static event PlayerDelegate OnPlayerSelecting;
+    public static event PlayerDelegate OnPlayerSelected;
     private const string SELECTED_HEX = "afffc9";
     private const string SELF_HEX = "9bf3f3";
     public override void Load()

@@ -15,6 +15,7 @@ public abstract class BaseQuestData
 {
     private EQuestType _type;
     private Dictionary<string, string> _translations;
+    private RewardExpression[] _rewardExpressions;
     public bool CanBeDailyQuest = true;
     public abstract IEnumerable<IQuestPreset> Presets { get; }
     public virtual int XPReward { get => 1; } // remove ?
@@ -56,6 +57,7 @@ public abstract class BaseQuestData
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
+    protected static readonly List<IQuestReward> rewardTempList = new List<IQuestReward>(3);
     public abstract BaseQuestTracker? GetTracker(UCPlayer? player, ref IQuestState state);
     public abstract BaseQuestTracker? GetTracker(UCPlayer? player, IQuestPreset preset);
     public abstract IQuestPreset ReadPreset(ref Utf8JsonReader reader);
@@ -73,20 +75,23 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         public readonly ulong _team;
         public readonly ushort _flag;
         public readonly TState _state;
-        public Preset(Guid key, TState state, ulong team, ushort flag)
+        public readonly IQuestReward[]? _rewards;
+        public Preset(Guid key, TState state, IQuestReward[]? rewards, ulong team, ushort flag)
         {
             this._key = key;
             this._state = state;
             this._team = team;
             this._flag = flag;
+            this._rewards = rewards;
         }
         public Guid Key => _key;
         public IQuestState State => _state;
+        public IQuestReward[]? RewardOverrides => _rewards;
         public ulong Team => _team;
         public ushort Flag => _flag;
 
         public override string ToString() =>
-            $"Preset {_key}. Team: {_team}, Flag: {_flag}, State: {_state}";
+            $"Preset {_key}. Team: {_team}, Flag: {_flag}, State: {_state}" + (_rewards is null ? ", No reward overrides" : (", " + _rewards.Length + " reward override(s)."));
     }
     public override sealed IQuestState GetState() => GetNewState();
     public TState GetNewState()
@@ -149,6 +154,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
         Guid key = default;
         ulong varTeam = default;
         TState? state = default;
+        IQuestReward[]? rewards = null;
         ushort flag = 0;
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
@@ -173,6 +179,68 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                 }
                 else
                     L.LogWarning("Failed to parse 'varient_team' UInt64 from " + QuestType + " preset.");
+            }
+            else if (prop.Equals("rewards"))
+            {
+                if (reader.TokenType != JsonTokenType.Null)
+                {
+                    if (reader.TokenType == JsonTokenType.StartArray)
+                    {
+                        lock (rewardTempList)
+                        {
+                            rewardTempList.Clear();
+                            while (reader.Read())
+                            {
+                                if (reader.TokenType == JsonTokenType.StartObject)
+                                {
+                                    IQuestReward? reward = null;
+                                    EQuestRewardType type = EQuestRewardType.NONE;
+                                    while (reader.Read())
+                                    {
+                                        if (reader.TokenType == JsonTokenType.PropertyName)
+                                        {
+                                            string prop2 = reader.GetString()!;
+                                            if (type == EQuestRewardType.NONE && prop2.Equals("quest_type", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                if (reader.Read())
+                                                {
+                                                    if (reader.TokenType == JsonTokenType.String)
+                                                    {
+                                                        prop2 = reader.GetString()!;
+                                                        if (Enum.TryParse(prop2, true, out type))
+                                                        {
+                                                            reward = QuestManager.GetQuestReward(type);
+                                                        }
+                                                    }
+                                                    else
+                                                        L.LogWarning("Failed to parse 'reward'.'quest_type' IQuestReward object property as a EQuestRewardType with key {" +
+                                                                     key.ToString("N") + "} from " + QuestType + " presets.");
+                                                }
+                                            }
+                                            else if (reward != null)
+                                            {
+                                                reward.ReadJson(ref reader);
+                                                if (reader.TokenType == JsonTokenType.EndObject)
+                                                    break;
+                                            }
+                                        }
+                                        else if (reader.TokenType == JsonTokenType.EndObject)
+                                            break;
+                                    }
+
+                                    if (reward != null)
+                                        rewardTempList.Add(reward);
+                                }
+                                else break;
+                            }
+                            if (rewardTempList.Count > 0)
+                            {
+                                rewards = rewardTempList.ToArray();
+                                rewardTempList.Clear();
+                            }
+                        }
+                    }
+                }
             }
             else if (flag == 0 && prop.Equals("flag"))
             {
@@ -219,7 +287,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                     L.LogWarning("Failed to parse 'state' IQuestState object with key {" + key.ToString("N") + "} from " + QuestType + " presets.");
             }
         }
-        return new Preset(key, state!, varTeam, flag);
+        return new Preset(key, state!, rewards, varTeam, flag);
     }
     public override sealed void ReadPresets(ref Utf8JsonReader reader)
     {
@@ -239,7 +307,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
                         goto next;
                 }
                 presets.Add(preset);
-                next:
+            next:
                 while (reader.TokenType != JsonTokenType.EndObject && reader.Read()) ;
             }
         }
@@ -248,7 +316,7 @@ public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestDa
     }
     public override sealed IQuestPreset CreateRandomPreset(ushort flag = 0)
     {
-        return new Preset(Guid.NewGuid(), GetNewState(), 0, flag);
+        return new Preset(Guid.NewGuid(), GetNewState(), null, 0, flag);
     }
 }
 
@@ -261,6 +329,7 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     public bool IsTemperary => _player == null;
     public BaseQuestData QuestData;
     public IQuestPreset? Preset;
+    public IQuestReward[] Rewards;
     private string? _translationCache;
     protected bool isDisposed;
     //private bool _isComplete;
@@ -335,5 +404,15 @@ public abstract class BaseQuestTracker : IDisposable, INotifyTracker
     {
         if (Preset != null)
             QuestManager.SaveProgress(this, Preset.Team);
+    }
+    internal void TryGiveRewards()
+    {
+        if (Rewards is null || Rewards.Length == 0)
+            return;
+
+        for (int i = 0; i < Rewards.Length; ++i)
+        {
+            Rewards[i].GiveReward(_player, this);
+        }
     }
 }

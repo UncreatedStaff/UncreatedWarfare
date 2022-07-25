@@ -1610,5 +1610,6 @@ public enum EKitAccessType : byte
     UNKNOWN,
     CREDITS,
     EVENT,
-    PURCHASE
+    PURCHASE,
+    QUEST_REWARD
 }

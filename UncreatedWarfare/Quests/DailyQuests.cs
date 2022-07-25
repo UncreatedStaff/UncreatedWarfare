@@ -28,6 +28,7 @@ public static class DailyQuests
     private static DateTime _nextRefresh;
     private static int index = 0;
     private volatile static bool sentCurrent = false;
+    private static bool sendHrNotif = false;
     public static TimeSpan TimeLeftForQuests => DateTime.Now - _nextRefresh;
     public static void OnConnectedToServer()
     {
@@ -44,6 +45,12 @@ public static class DailyQuests
                 prefix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnRegisteredWorkshopID),
                     BindingFlags.Static | BindingFlags.NonPublic)));
         else L.LogWarning("Unable to patch Provider.onDedicatedUGCInstalled to register the quest mod!");
+        m = typeof(PlayerQuests).GetMethod(nameof(PlayerQuests.ReceiveAbandonQuest), BindingFlags.Instance | BindingFlags.Public);
+        if (m is not null)
+            Patches.Patcher.Patch(m,
+                postfix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnAbandonedQuest),
+                    BindingFlags.Static | BindingFlags.NonPublic)));
+        else L.LogWarning("Unable to patch PlayerQuests.ReceiveAbandonQuest to prevent abandoning daily missions!");
     }
     public static void Load()
     {
@@ -55,29 +62,41 @@ public static class DailyQuests
 
         ref DailyQuestSave next = ref _quests[index + 1];
         _nextRefresh = next.StartDate;
+        Guid index2 = _quests[index].Guid;
         Tick();
+        if (index2 == _quests[index].Guid)
+        {
+            CreateNewDailyQuests();
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+                RegisterDailyTrackers(PlayerManager.OnlinePlayers[i]);
+        }
         LoadAssets();
-        PrintQuests();
+
+        Teams.TeamSelector.OnPlayerSelected += OnPlayerJoinedTeam;
     }
     private static void PrintQuests()
     {
         if (sentCurrent)
         {
+            L.LogDebug("Daily Quests (current: " + index + "):");
+            using IDisposable indent = L.IndentLog(1);
             for (int i = 0; i < _quests.Length; i++)
             {
                 ref DailyQuestSave save = ref _quests[i];
-                L.Log("Daily Quests (current: " + index + "):");
-                using IDisposable indent = L.IndentLog(1);
-                if (Assets.find(save.guid) is not QuestAsset asset)
+                if (Assets.find(save.Guid) is not QuestAsset asset)
                     L.LogWarning("Cannot find asset for day " + i + "quest.");
                 else
-                    L.Log("Day " + i + ": " + asset.questName);
+                    L.LogDebug("Day " + i + ": " + asset.questName);
             }
         }
     }
     private static void OnRegisteredWorkshopID()
     {
         Provider.registerServerUsingWorkshopFileId(DAILY_QUESTS_WORKSHOP_ID);
+    }
+    private static void OnAbandonedQuest(PlayerQuests __instance, ushort id)
+    {
+        __instance.sendAddQuest(id);
     }
     public static void Tick()
     {
@@ -88,29 +107,58 @@ public static class DailyQuests
         if (_nextRefresh <= now)
         {
             L.Log("Loading new Daily Quests.", ConsoleColor.Magenta);
-            index++;
-            if (index > DailyQuest.DAILY_QUEST_LENGTH / 2)
+            if ((now - _nextRefresh).TotalDays > DailyQuest.DAILY_QUEST_LENGTH / 2)
             {
-                L.Log("Generating new Daily Quests.", ConsoleColor.Magenta);
+                L.Log("Generating next week's Daily Quests, as new one's haven't been generated in so long.", ConsoleColor.Magenta);
                 index = 0;
-                CreateNextModContent();
+                CreateNewModContent();
             }
+            else
+            {
+                do
+                {
+                    index++;
+                    if (index > DailyQuest.DAILY_QUEST_LENGTH / 2)
+                    {
+                        L.Log("Generating next week's Daily Quests.", ConsoleColor.Magenta);
+                        index = 0;
+                        CreateNextModContent();
+                    }
+
+                    _nextRefresh = _quests[index + 1].StartDate;
+                } while (_nextRefresh <= now);
+            }
+            sendHrNotif = false;
             CreateNewDailyQuests();
 
-            _nextRefresh = _quests[index + 1].StartDate;
             if (index != 0)
                 SaveQuests();
 
+            L.Log("New daily quests put into action: #" + index + ", to be changed over at: " + _nextRefresh.ToString("f") + " UTC");
+            Chat.Broadcast(T.DailyQuestsNewIndex, _nextRefresh);
+
+            ref DailyQuestSave today = ref _quests[index];
+            QuestAsset? tasset = Assets.find<QuestAsset>(today.Guid);
             foreach (KeyValuePair<ulong, DailyQuestTracker> tracker in DailyTrackers)
             {
                 for (int i = 0; i < DailyQuest.DAILY_QUEST_CONDITION_LENGTH; i++)
+                {
                     QuestManager.DeregisterTracker(tracker.Value.Trackers[i]);
+                }
+
+                if (tasset is not null)
+                    tracker.Value.Player.Player.quests.sendRemoveQuest(tasset.id);
             }
             DailyTrackers.Clear();
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 RegisterDailyTrackers(PlayerManager.OnlinePlayers[i]);
             }
+        }
+        else if (!sendHrNotif && (_nextRefresh - now).TotalHours <= 1d)
+        {
+            sendHrNotif = true;
+            Chat.Broadcast(T.DailyQuestsOneHourRemaining);
         }
     }
     public static void CreateNewModContent()
@@ -125,7 +173,7 @@ public static class DailyQuests
         {
             ref DailyQuest dq = ref _sendQuests[day];
             ref DailyQuestSave save = ref _quests[day];
-            GetConditions(ref dq, ref save, day, now);
+            GetConditions(ref dq, ref save, day, now, (ushort)(DailyQuest.DAILY_QUEST_START_ID + day));
         }
         SaveQuests();
         ReplicateQuestChoices();
@@ -139,36 +187,37 @@ public static class DailyQuests
         }
         int half = DailyQuest.DAILY_QUEST_LENGTH / 2;
         DailyQuest[] quests = _sendQuests;
+        DailyQuestSave[] quests2 = _quests;
         _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
+        _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
         for (int i = half; i < DailyQuest.DAILY_QUEST_LENGTH; ++i)
         {
             ref DailyQuest q = ref quests[i];
             _sendQuests[i - half] = q;
-        }
-        DailyQuestSave[] quests2 = _quests;
-        _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
-        for (int i = half; i < DailyQuest.DAILY_QUEST_LENGTH; ++i)
-        {
-            ref DailyQuestSave q = ref quests2[i];
-            _quests[i - half] = q;
+            ref DailyQuestSave q2 = ref quests2[i];
+            _quests[i - half] = q2;
         }
 
         DateTime now = DateTime.Today;
-        _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
-        _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
+        ref DailyQuestSave save = ref _quests[half - 1];
+        ushort startId = (ushort)(save.Id - DailyQuest.DAILY_QUEST_FLAG_START_ID);
+        if (startId >= half)
+            startId -= (ushort)half;
         for (int day = half; day < DailyQuest.DAILY_QUEST_LENGTH; ++day)
         {
             ref DailyQuest dq = ref _sendQuests[day];
-            ref DailyQuestSave save = ref _quests[day];
-            GetConditions(ref dq, ref save, day, now);
+            save = ref _quests[day];
+            GetConditions(ref dq, ref save, day, now, (ushort)(DailyQuest.DAILY_QUEST_FLAG_START_ID + ++startId));
         }
         SaveQuests();
         ReplicateQuestChoices();
     }
-    private static void GetConditions(ref DailyQuest dq, ref DailyQuestSave save, int day, DateTime now)
+    private static void GetConditions(ref DailyQuest dq, ref DailyQuestSave save, int day, DateTime now, ushort newId)
     {
-        dq.guid = Guid.NewGuid();
-        save.guid = dq.guid;
+        dq.Guid = Guid.NewGuid();
+        save.Guid = dq.Guid;
+        dq.Id = newId;
+        save.Id = newId;
         dq.conditions = new DailyQuest.Condition[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
         save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
         save.StartDate = day == 0 ? now : now.AddDays(day);
@@ -200,7 +249,7 @@ public static class DailyQuests
                 pset.isValid = true;
                 pset.PresetObj = preset;
                 pset.Type = data.QuestType;
-                cond.FlagValue = preset.State.FlagValue.InsistValue();
+                cond.FlagValue = checked((short)preset.State.FlagValue.InsistValue());
                 cond.Translation = tempTracker.GetDisplayString(true);
                 cond.Key = preset.Key;
             }
@@ -209,6 +258,11 @@ public static class DailyQuests
                 L.LogWarning("Failed to get daily tracker for " + data.QuestType);
             }
         }
+    }
+    private static void OnPlayerJoinedTeam(UCPlayer player)
+    {
+        if (Assets.find(_quests[index].Guid) is QuestAsset qa)
+            player.Player.quests.sendTrackQuest(qa.id);
     }
     /// <summary>Should run on player connected.</summary>
     public static void RegisterDailyTrackers(UCPlayer player)
@@ -225,6 +279,7 @@ public static class DailyQuests
                 QuestManager.RegisterTracker(tracker);
                 tracker.IsDailyQuest = true;
                 trackers[i] = tracker;
+                L.LogDebug("Registered " + tracker.QuestData.QuestType.ToString() + " tracker for " + player.CharacterName);
             }
             else
             {
@@ -234,19 +289,23 @@ public static class DailyQuests
 
         DailyQuestTracker tr = new DailyQuestTracker(player, trackers);
         ref DailyQuestSave save = ref _quests[index];
-        if (Assets.find(save.guid) is QuestAsset quest)
+        if (Assets.find(save.Guid) is QuestAsset quest)
         {
             player.Player.quests.sendAddQuest(quest.id);
+            L.LogDebug("Sent quest " + quest.name + " / " + quest.id.ToString() + " to " + player.CharacterName);
         }
         else
         {
-            L.LogWarning("Couldn't find asset for " + save.guid);
+            L.LogWarning("Couldn't find asset for " + save.Guid);
         }
         LoadSave(tr);
         if (DailyTrackers.TryGetValue(player.Steam64, out DailyQuestTracker tr2))
         {
-            for (int i = 0; i < DailyQuest.DAILY_QUEST_CONDITION_LENGTH; i++)
-                QuestManager.DeregisterTracker(tr2.Trackers[i]);
+            if (tr2 != null)
+            {
+                for (int i = 0; i < DailyQuest.DAILY_QUEST_CONDITION_LENGTH; i++)
+                    QuestManager.DeregisterTracker(tr2.Trackers[i]);
+            }
             DailyTrackers[player.Steam64] = tr;
         }
         else
@@ -320,7 +379,7 @@ public static class DailyQuests
     public static void ReplicateQuestChoices()
     {
         if (UCWarfare.CanUseNetCall)
-            NetCalls.SendNextQuests.NetInvoke(_sendQuests);
+            NetCalls.SendNextQuests.NetInvoke(_sendQuests, _quests[0].StartDate.ToUniversalTime());
         else
             L.Log("Scheduled to send " + _sendQuests.Length + " daily quests once the bot connects.", ConsoleColor.Magenta);
     }
@@ -341,9 +400,11 @@ public static class DailyQuests
                 ref DailyQuestSave quest = ref _quests[i];
                 writer.WriteStartObject();
                 writer.WritePropertyName("start_time");
-                writer.WriteStringValue(quest.StartDate.ToUniversalTime());
+                writer.WriteStringValue(quest.StartDate.ToUniversalTime().ToString("s"));
                 writer.WritePropertyName("asset_guid");
-                writer.WriteStringValue(quest.guid);
+                writer.WriteStringValue(quest.Guid);
+                writer.WritePropertyName("asset_id");
+                writer.WriteNumberValue(quest.Id);
                 writer.WritePropertyName("presets");
                 writer.WriteStartArray();
                 for (int j = 0; j < quest.Presets.Length; ++j)
@@ -358,6 +419,18 @@ public static class DailyQuests
                     writer.WriteStartObject();
                     preset.PresetObj.State.WriteQuestState(writer);
                     writer.WriteEndObject();
+                    if (preset.PresetObj.RewardOverrides is not null && preset.PresetObj.RewardOverrides.Length > 0)
+                    {
+                        writer.WritePropertyName("rewards");
+                        writer.WriteStartArray();
+                        for (int k = 0; k < preset.PresetObj.RewardOverrides.Length; ++k)
+                        {
+                            writer.WriteStartObject();
+                            preset.PresetObj.RewardOverrides[k].WriteJson(writer);
+                            writer.WriteEndObject();
+                        }
+                        writer.WriteEndArray();
+                    }
                     writer.WriteEndObject();
                 }
                 writer.WriteEndArray();
@@ -410,6 +483,7 @@ public static class DailyQuests
                                 if (reader.TokenType == JsonTokenType.StartArray)
                                 {
                                     _quests = new DailyQuestSave[DailyQuest.DAILY_QUEST_LENGTH];
+                                    _sendQuests = new DailyQuest[DailyQuest.DAILY_QUEST_LENGTH];
                                     int i = -1;
                                     while (reader.Read())
                                     {
@@ -423,6 +497,7 @@ public static class DailyQuests
                                                 if (reader.Read() && prop != null)
                                                 {
                                                     ref DailyQuestSave save = ref _quests[i];
+                                                    ref DailyQuest send = ref _sendQuests[i];
                                                     switch (prop)
                                                     {
                                                         case "start_time":
@@ -430,12 +505,18 @@ public static class DailyQuests
                                                             {
                                                                 string? v = reader.GetString();
                                                                 if (v != null) 
-                                                                    DateTime.TryParse(v, Data.Locale, DateTimeStyles.AssumeUniversal, out save.StartDate);
+                                                                    DateTime.TryParseExact(v, "s", Data.Locale, DateTimeStyles.AssumeUniversal, out save.StartDate);
                                                             }
                                                             break;
                                                         case "asset_guid":
                                                             if (reader.TokenType == JsonTokenType.String)
-                                                                reader.TryGetGuid(out save.guid);
+                                                            {
+                                                                reader.TryGetGuid(out save.Guid);
+                                                            }
+                                                            break;
+                                                        case "asset_id":
+                                                            if (reader.TokenType == JsonTokenType.Number)
+                                                                reader.TryGetUInt16(out save.Id);
                                                             break;
                                                         case "presets":
                                                             save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
@@ -503,7 +584,7 @@ public static class DailyQuests
             Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
             writer.WriteStartObject();
             writer.WritePropertyName("guid");
-            writer.WriteStringValue(_quests[index].guid);
+            writer.WriteStringValue(_quests[index].Guid);
             writer.WritePropertyName("daily_challenges");
             writer.WriteStartArray();
             for (int i = 0; i < DailyQuest.DAILY_QUEST_CONDITION_LENGTH; i++)
@@ -541,7 +622,7 @@ public static class DailyQuests
                     {
                         if (reader.Read() && reader.TokenType == JsonTokenType.String && reader.TryGetGuid(out Guid time))
                         {
-                            if (time != _quests[index].guid)
+                            if (time != _quests[index].Guid)
                                 goto deleteFile; // expired progress file from another day, delete the file and load default values
                         }
                     }
@@ -600,7 +681,7 @@ public static class DailyQuests
         }
         else
         {
-            Assets.load(p, true, EAssetOrigin.WORKSHOP, true, DAILY_QUESTS_WORKSHOP_ID);
+            Assets.load(p, false, EAssetOrigin.WORKSHOP, true, DAILY_QUESTS_WORKSHOP_ID);
             L.Log("Assets loaded", ConsoleColor.Magenta);
             PrintQuests();
         }
@@ -608,7 +689,7 @@ public static class DailyQuests
 
     public static class NetCalls
     {
-        public static readonly NetCallRaw<DailyQuest[]> SendNextQuests = new NetCallRaw<DailyQuest[]>(1125, DailyQuest.ReadMany, DailyQuest.WriteMany);
+        public static readonly NetCallRaw<DailyQuest[], DateTime> SendNextQuests = new NetCallRaw<DailyQuest[], DateTime>(1125, DailyQuest.ReadMany, null, DailyQuest.WriteMany, null);
         public static readonly NetCallRaw<Folder> AckNextQuestsUploaded = new NetCallRaw<Folder>(ReceiveQuestData, Folder.Read, Folder.Write, 65536);
 
 
@@ -626,6 +707,7 @@ public static class DailyQuests
                 LoadAssets();
                 sentCurrent = true;
                 PrintQuests();
+                SaveQuests();
             }
             catch (Exception ex)
             {
@@ -653,7 +735,8 @@ public struct DailyQuestSave
 {
     public DateTime StartDate;
     public Preset[] Presets;
-    public Guid guid;
+    public Guid Guid;
+    public ushort Id;
 
     public struct Preset
     {

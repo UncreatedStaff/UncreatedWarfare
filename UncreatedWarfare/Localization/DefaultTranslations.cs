@@ -615,6 +615,14 @@ internal static class T
     public static readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationFlags.UnityUI);
     #endregion
 
+    #region DailyQuests
+    private const string DAILY_QUEST_SECTION = "Daily Quests";
+    [TranslationData(Section = DAILY_QUEST_SECTION, Description = "Sent when new daily quests are put into action.")]
+    public static readonly Translation<DateTime> DailyQuestsNewIndex = new Translation<DateTime>("<#66ccff>New daily quests have been generated! They will be active until <#cedcde>{0}</color> UTC.", "G");
+    [TranslationData(Section = DAILY_QUEST_SECTION, Description = "Sent 1 hour before new daily quests are put into action.")]
+    public static readonly Translation DailyQuestsOneHourRemaining = new Translation("<#66ccff>You have one hour until new daily quests will be generated!");
+    #endregion
+
     static Dictionary<string, string> _translations = new Dictionary<string, string>()
     {
             #region AmmoCommand

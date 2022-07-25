@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -950,5 +951,80 @@ internal class _DebugCommand : Command
         ctx.AssertRanByPlayer();
 
         ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
+    }
+    private void quest(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.ADMIN);
+        if (ctx.MatchParameter(0, "add"))
+        {
+            if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
+            {
+                ctx.Caller.Player.quests.sendAddQuest(asset.id);
+                ctx.Reply("Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+            }
+            else ctx.Reply("Quest not found.");
+        }
+        else if (ctx.MatchParameter(0, "track"))
+        {
+            if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
+            {
+                ctx.Caller.Player.quests.sendTrackQuest(asset.id);
+                ctx.Reply("Tracked quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+            }
+            else ctx.Reply("Quest not found.");
+        }
+        else if (ctx.MatchParameter(0, "remove"))
+        {
+            if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
+            {
+                ctx.Caller.Player.quests.sendRemoveQuest(asset.id);
+                ctx.Reply("Removed quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+            }
+            else ctx.Reply("Quest not found.");
+        }
+        else ctx.Reply("Syntax: /test quest <add|track|remove> <id>");
+    }
+
+    private void flag(CommandInteraction ctx)
+    {
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.ADMIN);
+
+        if (ctx.MatchParameter(0, "set"))
+        {
+            if (ctx.TryGet(2, out short value) && ctx.TryGet(1, out ushort flag))
+            {
+                bool f = ctx.Caller.Player.quests.getFlag(flag, out short old);
+                ctx.Caller.Player.quests.sendSetFlag(flag, value);
+                ctx.Reply("Set quest flag " + flag + " to " + value + " <#ddd>(from " +
+                          (f ? old.ToString() : "<b>not set</b>") + ")</color>.");
+                return;
+            }
+        }
+        else if (ctx.MatchParameter(0, "get"))
+        {
+            if (ctx.TryGet(1, out ushort flag))
+            {
+                bool f = ctx.Caller.Player.quests.getFlag(flag, out short val);
+                ctx.Reply("Quest flag " + flag + " is " + (f ? val.ToString() : "<b>not set</b>") + ")</color>.");
+                return;
+            }
+        }
+        else if (ctx.MatchParameter(0, "remove", "delete"))
+        {
+            if (ctx.TryGet(1, out ushort flag))
+            {
+                bool f = ctx.Caller.Player.quests.getFlag(flag, out short old);
+                if (f)
+                {
+                    ctx.Caller.Player.quests.sendRemoveFlag(flag);
+                    ctx.Reply("Quest flag " + flag + " was removed" + " <#ddd>(from " + old.ToString() + ")</color>.");
+                }
+                else ctx.Reply("Quest flag " + flag + " is not set.");
+                return;
+            }
+        }
+        ctx.Reply("Syntax: /test flag <set|get|remove> <flag> [value]");
     }
 }
