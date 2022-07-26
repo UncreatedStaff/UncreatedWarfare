@@ -399,8 +399,6 @@ public class Invasion :
     {
         base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);
         InvasionUI.ReplicateFlagUpdate(flag, true);
-        QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-            .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
     }
     protected override void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {

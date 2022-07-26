@@ -11,6 +11,36 @@ using Uncreated.Warfare.Kits;
 namespace Uncreated.Warfare.Quests;
 public static class QuestRewards
 {
+    public static readonly Dictionary<EQuestRewardType, Type> QuestRewardTypes = new Dictionary<EQuestRewardType, Type>(8);
+    internal static void LoadTypes(Type[] types)
+    {
+        foreach (Type type in types.Where(x => x != null && x.IsClass && typeof(IQuestReward).IsAssignableFrom(x)))
+        {
+            if (Attribute.GetCustomAttribute(type, typeof(QuestRewardAttribute)) is QuestRewardAttribute attr && attr.Type != EQuestRewardType.NONE)
+                QuestRewardTypes.Add(attr.Type, type);
+        }
+    }
+    public static IQuestReward? GetQuestReward(EQuestRewardType type)
+    {
+        if (QuestRewardTypes.TryGetValue(type, out Type result))
+        {
+            try
+            {
+                if (Activator.CreateInstance(result) is IQuestReward data)
+                {
+                    data.Type = type;
+                    return data;
+                }
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Failed to create a quest reward of type " + type);
+                L.LogError(ex);
+            }
+        }
+        L.LogError("Failed to create a quest reward of type " + type);
+        return null;
+    }
 }
 public enum EQuestRewardType
 {
@@ -20,7 +50,7 @@ public enum EQuestRewardType
     CREDITS,
     KIT_ACCESS
 }
-[QuestReward(EQuestRewardType.XP)]
+[QuestReward(EQuestRewardType.XP, typeof(int))]
 public class XPReward : IQuestReward
 {
     public EQuestRewardType Type { get; set; }
@@ -61,8 +91,10 @@ public class XPReward : IQuestReward
         writer.WritePropertyName("xp");
         writer.WriteNumberValue(XP);
     }
+
+    public override string ToString() => "Reward: " + XP + " XP";
 }
-[QuestReward(EQuestRewardType.CREDITS)]
+[QuestReward(EQuestRewardType.CREDITS, typeof(int))]
 public class CreditsReward : IQuestReward
 {
     public EQuestRewardType Type { get; set; }
@@ -103,8 +135,10 @@ public class CreditsReward : IQuestReward
         writer.WritePropertyName("credits");
         writer.WriteNumberValue(Credits);
     }
+
+    public override string ToString() => "Reward: C " + Credits;
 }
-[QuestReward(EQuestRewardType.RANK)]
+[QuestReward(EQuestRewardType.RANK, typeof(int))]
 public class RankReward : IQuestReward
 {
     public EQuestRewardType Type { get; set; }
@@ -141,8 +175,13 @@ public class RankReward : IQuestReward
         writer.WritePropertyName("order");
         writer.WriteNumberValue(RankOrder);
     }
+    public override string ToString()
+    {
+        ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
+        return "Reward: Unlock " + (success ? d.GetName(JSONMethods.DEFAULT_LANGUAGE) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
+    }
 }
-[QuestReward(EQuestRewardType.KIT_ACCESS)]
+[QuestReward(EQuestRewardType.KIT_ACCESS, typeof(string))]
 public class KitAccessReward : IQuestReward
 {
     public EQuestRewardType Type { get; set; }
@@ -179,6 +218,7 @@ public class KitAccessReward : IQuestReward
         writer.WritePropertyName("kit_id");
         writer.WriteStringValue(KitId);
     }
+    public override string ToString() => "Reward: Unlock \"" + KitId + "\"";
 }
 
 public interface IQuestReward : IJsonReadWrite
@@ -186,51 +226,4 @@ public interface IQuestReward : IJsonReadWrite
     EQuestRewardType Type { get; internal set; }
     void Init(object value);
     void GiveReward(UCPlayer player, BaseQuestTracker tracker);
-}
-
-public class RewardExpression : IJsonReadWrite
-{
-    public EQuestType QuestType { get; internal set; }
-    public EQuestRewardType RewardType { get; private set; }
-    private string _expression;
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        do
-        {
-            if (reader.TokenType == JsonTokenType.StartObject) continue;
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string? prop = reader.GetString()!;
-                if (reader.Read())
-                {
-                    if (RewardType == EQuestRewardType.NONE && prop.Equals("type", StringComparison.OrdinalIgnoreCase))
-                    {
-                        prop = reader.GetString()!;
-                        if (!Enum.TryParse(prop, true, out EQuestRewardType type) || !QuestManager.QuestRewardTypes.ContainsKey(type))
-                            L.LogWarning("Invalid quest type " + prop + " in " + QuestType + " RewardExpression read.");
-                        else
-                            RewardType = type;
-                    }
-                    else if (prop.Equals("expression", StringComparison.OrdinalIgnoreCase))
-                    {
-                        _expression = reader.GetString()!;
-                        if (!ValidateExpression())
-                            L.LogWarning("Invalid expression: \"" + _expression + "\" in " + QuestType + " RewardExpression read.");
-                    }
-                }
-            }
-        } while (reader.Read());
-    }
-    private static readonly char[] TOKEN_SPLITS = new char[] { ' ', '*', '/', '+', '-', '%', '^' }
-    private bool ValidateExpression()
-    {
-        List<string> tokens = new List<string>(32);
-
-        return true;
-    }
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        throw new NotImplementedException();
-    }
 }

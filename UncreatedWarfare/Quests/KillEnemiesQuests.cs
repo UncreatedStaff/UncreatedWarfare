@@ -19,7 +19,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
     // > 0 will run the Tick function in trackers
     public override int TickFrequencySeconds => 0;
     // just copy paste this couldn't do it with generics.
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, in preset);
     // used to read from JSON, add a case for each property.
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
@@ -33,6 +33,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
     public struct State : IQuestState<Tracker, KillEnemiesQuest>
     {
         // in this case we store the resulting value of kill threshold in Init(..)
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public void Init(KillEnemiesQuest data)
@@ -63,7 +64,7 @@ public class KillEnemiesQuest : BaseQuestData<KillEnemiesQuest.Tracker, KillEnem
         public override short FlagValue => (short)_kills;
         public override int Reward => KillThreshold * 10;
         // loads a tracker from a state instead of randomly picking values each time.
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue(); // insisting for a value asks for ONE value (defined with a $, otherwise it returns 0)
         }
@@ -105,7 +106,7 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
     public DynamicIntegerValue KillCount;
     public DynamicFloatValue Range;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -116,12 +117,14 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
         else if (propertyname.Equals("range", StringComparison.Ordinal))
         {
             if (!reader.TryReadFloatValue(out Range))
-                Range = new DynamicFloatValue(new FloatRange(50, 200));
+                Range = new DynamicFloatValue(new FloatRange(50, 200, 5));
         }
     }
     public struct State : IQuestState<Tracker, KillEnemiesRangeQuest>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
+        [RewardField("d")]
         public IDynamicValue<float>.IChoice Range;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -150,7 +153,7 @@ public class KillEnemiesRangeQuest : BaseQuestData<KillEnemiesRangeQuest.Tracker
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Range = questState.Range.InsistValue();
@@ -192,7 +195,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
     public DynamicIntegerValue KillCount;
     public DynamicAssetValue<ItemWeaponAsset> Weapon = new DynamicAssetValue<ItemWeaponAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -208,6 +211,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestWeapon>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public DynamicAssetValue<ItemWeaponAsset>.Choice Weapon;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
@@ -239,7 +243,7 @@ public class KillEnemiesQuestWeapon : BaseQuestData<KillEnemiesQuestWeapon.Track
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Weapon = questState.Weapon;
@@ -285,7 +289,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
     public DynamicAssetValue<ItemWeaponAsset> Weapon = new DynamicAssetValue<ItemWeaponAsset>(EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ALL);
     public DynamicFloatValue Range;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -301,13 +305,15 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         else if (propertyname.Equals("range", StringComparison.Ordinal))
         {
             if (!reader.TryReadFloatValue(out Range))
-                Range = new DynamicFloatValue(new FloatRange(50, 200));
+                Range = new DynamicFloatValue(new FloatRange(50, 200, 5));
         }
     }
     public struct State : IQuestState<Tracker, KillEnemiesRangeQuestWeapon>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public DynamicAssetValue<ItemWeaponAsset>.Choice Weapon;
+        [RewardField("d")]
         public IDynamicValue<float>.IChoice Range;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -343,7 +349,7 @@ public class KillEnemiesRangeQuestWeapon : BaseQuestData<KillEnemiesRangeQuestWe
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Weapon = questState.Weapon;
@@ -390,7 +396,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
     public DynamicIntegerValue KillCount;
     public DynamicStringValue Kits = new DynamicStringValue(true, EDynamicValueType.ANY, EChoiceBehavior.ALLOW_ONE);
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -406,6 +412,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestKit>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         internal DynamicStringValue.Choice Kit;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
@@ -436,7 +443,7 @@ public class KillEnemiesQuestKit : BaseQuestData<KillEnemiesQuestKit.Tracker, Ki
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Kit = questState.Kit;
@@ -478,7 +485,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
     public DynamicStringValue Kits;
     public DynamicFloatValue Range;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -499,8 +506,10 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestKitRange>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         internal DynamicStringValue.Choice Kit;
+        [RewardField("d")]
         public IDynamicValue<float>.IChoice Range;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -535,7 +544,7 @@ public class KillEnemiesQuestKitRange : BaseQuestData<KillEnemiesQuestKitRange.T
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Kit = questState.Kit;
@@ -579,7 +588,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
     public DynamicIntegerValue KillCount;
     public DynamicEnumValue<EClass> Class;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -598,6 +607,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestKitClass>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         internal DynamicEnumValue<EClass>.Choice Class;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
@@ -628,7 +638,7 @@ public class KillEnemiesQuestKitClass : BaseQuestData<KillEnemiesQuestKitClass.T
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Class = questState.Class;
@@ -670,7 +680,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
     public DynamicEnumValue<EClass> Class;
     public DynamicFloatValue Range;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -694,8 +704,10 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestKitClassRange>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         internal DynamicEnumValue<EClass>.Choice Class;
+        [RewardField("d")]
         public IDynamicValue<float>.IChoice Range;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -730,7 +742,7 @@ public class KillEnemiesQuestKitClassRange : BaseQuestData<KillEnemiesQuestKitCl
         private int _kills;
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Class = questState.Class;
@@ -774,7 +786,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
     public DynamicIntegerValue KillCount;
     public DynamicEnumValue<EWeaponClass> Class;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -793,6 +805,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestWeaponClass>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         internal DynamicEnumValue<EWeaponClass>.Choice Class;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
@@ -824,7 +837,7 @@ public class KillEnemiesQuestWeaponClass : BaseQuestData<KillEnemiesQuestWeaponC
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Class = questState.Class;
@@ -864,7 +877,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
     public DynamicIntegerValue KillCount;
     public DynamicEnumValue<EBranch> Branch;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -883,6 +896,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestBranch>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         internal DynamicEnumValue<EBranch>.Choice Branch;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
@@ -914,7 +928,7 @@ public class KillEnemiesQuestBranch : BaseQuestData<KillEnemiesQuestBranch.Track
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Branch = questState.Branch;
@@ -954,7 +968,7 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
     public DynamicIntegerValue KillCount;
     public DynamicAssetValue<ItemGunAsset> Turrets;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -972,6 +986,7 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestTurret>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public DynamicAssetValue<ItemGunAsset>.Choice Weapon;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
@@ -1003,7 +1018,7 @@ public class KillEnemiesQuestTurret : BaseQuestData<KillEnemiesQuestTurret.Track
         public override short FlagValue => (short)_kills;
         private string translationCache1;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
             Weapon = questState.Weapon;
@@ -1053,7 +1068,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -1064,6 +1079,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestSquad>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -1088,7 +1104,7 @@ public class KillEnemiesQuestSquad : BaseQuestData<KillEnemiesQuestSquad.Tracker
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
         }
@@ -1125,7 +1141,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -1136,6 +1152,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestFullSquad>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -1160,7 +1177,7 @@ public class KillEnemiesQuestFullSquad : BaseQuestData<KillEnemiesQuestFullSquad
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
         }
@@ -1197,7 +1214,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -1208,6 +1225,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestDefense>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -1232,7 +1250,7 @@ public class KillEnemiesQuestDefense : BaseQuestData<KillEnemiesQuestDefense.Tra
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
         }
@@ -1314,7 +1332,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -1325,6 +1343,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
     }
     public struct State : IQuestState<Tracker, KillEnemiesQuestAttack>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -1349,7 +1368,7 @@ public class KillEnemiesQuestAttack : BaseQuestData<KillEnemiesQuestAttack.Track
         protected override bool CompletedCheck => _kills >= KillThreshold;
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
         }
@@ -1431,7 +1450,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
 {
     public DynamicIntegerValue KillCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("kills", StringComparison.Ordinal))
@@ -1442,6 +1461,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
     }
     public struct State : IQuestState<Tracker, KingSlayerQuest>
     {
+        [RewardField("k")]
         public IDynamicValue<int>.IChoice KillThreshold;
         public IDynamicValue<int>.IChoice FlagValue => KillThreshold;
         public bool IsEligable(UCPlayer player) => true;
@@ -1467,7 +1487,7 @@ public class KingSlayerQuest : BaseQuestData<KingSlayerQuest.Tracker, KingSlayer
         public override short FlagValue => (short)_kills;
         public override void ResetToDefaults() => _kills = 0;
         protected override bool CompletedCheck => _kills >= KillThreshold;
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             KillThreshold = questState.KillThreshold.InsistValue();
         }
@@ -1536,7 +1556,7 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
     public DynamicIntegerValue StreakCount;
     public DynamicIntegerValue StreakLength;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("num_streaks", StringComparison.Ordinal))
@@ -1552,7 +1572,9 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
     }
     public struct State : IQuestState<Tracker, KillStreakQuest>
     {
+        [RewardField("strNum")]
         public IDynamicValue<int>.IChoice StreakCount;
+        [RewardField("strLen")]
         public IDynamicValue<int>.IChoice StreakLength;
         public IDynamicValue<int>.IChoice FlagValue => StreakCount;
         public bool IsEligable(UCPlayer player) => true;
@@ -1587,7 +1609,7 @@ public class KillStreakQuest : BaseQuestData<KillStreakQuest.Tracker, KillStreak
             _streaks = 0;
             _streakProgress = 0;
         }
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             StreakCount = questState.StreakCount.InsistValue();
             StreakLength = questState.StreakLength.InsistValue();

@@ -207,7 +207,14 @@ public static class QuestManager
         for (int i = 0; i < RegisteredTrackers.Count; i++)
         {
             if (RegisteredTrackers[i].Player!.Steam64 == player.Steam64)
+            {
                 L.Log("    Tracker type " + RegisteredTrackers[i].QuestData!.QuestType + " - \"" + RegisteredTrackers[i].GetDisplayString() + "\".");
+                L.Log("    Rewards: ");
+                for (int j = 0; j < RegisteredTrackers[i].Rewards.Length; ++j)
+                {
+                    L.Log("      " + RegisteredTrackers[i].Rewards[j].ToString());
+                }
+            }
         }
     }
     /// <summary>Ticks any <see cref="BaseQuestTracker"/> that's data has overridden <see cref="BaseQuestData.TickFrequencySeconds"/> and has set it > 0.</summary>
@@ -287,7 +294,6 @@ public static class QuestManager
         }
         L.LogDebug("Quest updated: " + tracker.GetDisplayString());
     }
-
     public static bool QuestComplete(this UCPlayer player, Guid key)
     {
 #if DEBUG
@@ -309,25 +315,30 @@ public static class QuestManager
 
     #region read/write
     public static readonly Dictionary<EQuestType, Type> QuestTypes = new Dictionary<EQuestType, Type>(32);
-    public static readonly Dictionary<EQuestRewardType, Type> QuestRewardTypes = new Dictionary<EQuestRewardType, Type>(8);
     /// <summary>Registers all the <see cref="QuestDataAttribute"/>'s to <see cref="QuestTypes"/>.</summary>
     public static void InitTypesReflector()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
-        Type[] types = Assembly.GetExecutingAssembly().GetTypes();
 #endif
-        foreach (Type type in types.Where<Type>(x => x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
+        Type[] types;
+        try
+        {
+            types = Assembly.GetExecutingAssembly().GetTypes();
+        }
+        catch (ReflectionTypeLoadException e)
+        {
+            types = e.Types;
+        }
+        
+        foreach (Type type in types.Where<Type>(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
             if (attribute != null && attribute.Type != EQuestType.INVALID && !QuestTypes.ContainsKey(attribute.Type))
                 QuestTypes.Add(attribute.Type, type);
         }
-        foreach (Type type in types.Where(x => x.IsClass && typeof(IQuestReward).IsAssignableFrom(x)))
-        {
-            if (Attribute.GetCustomAttribute(type, typeof(QuestRewardAttribute)) is QuestRewardAttribute attr && attr.Type != EQuestRewardType.NONE)
-                QuestRewardTypes.Add(attr.Type, type);
-        }
+
+        QuestRewards.LoadTypes(types);
     }
     /// <summary>Creates an instance of the provided <paramref name="type"/>. Pulls from <see cref="QuestTypes"/>. <see cref="InitTypesReflector"/> should be ran before use.</summary>
     public static BaseQuestData? GetQuestData(EQuestType type)
@@ -352,28 +363,6 @@ public static class QuestManager
         L.LogError("Failed to create a quest object of type " + type);
         return null;
     }
-    public static IQuestReward? GetQuestReward(EQuestRewardType type)
-    {
-        if (QuestRewardTypes.TryGetValue(type, out Type result))
-        {
-            try
-            {
-                if (Activator.CreateInstance(result) is IQuestReward data)
-                {
-                    data.Type = type;
-                    return data;
-                }
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Failed to create a quest reward of type " + type);
-                L.LogError(ex);
-            }
-        }
-        L.LogError("Failed to create a quest reward of type " + type);
-        return null;
-    }
-
     /// <summary>Read function to parse a quest data with quest type <paramref name="type"/>.</summary>
     public static BaseQuestData? ReadQuestData(ref Utf8JsonReader reader)
     {
@@ -430,14 +419,19 @@ public static class QuestManager
                             if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
                                 quest.CanBeDailyQuest = !reader.GetBoolean();
                         }
-                        else if (propertyName.Equals("presets"))
+                        else if (propertyName.Equals("presets", StringComparison.OrdinalIgnoreCase))
                         {
                             if (reader.TokenType == JsonTokenType.StartArray)
-                            {
                                 quest.ReadPresets(ref reader);
-                            }
                             else
                                 L.LogWarning("Failed to read \"presets\" property correctly.");
+                        }
+                        else if (propertyName.Equals("rewards", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (reader.TokenType == JsonTokenType.StartArray)
+                                quest.ReadRewards(ref reader);
+                            else
+                                L.LogWarning("Failed to read \"rewards\" property correctly.");
                         }
                         else
                         {

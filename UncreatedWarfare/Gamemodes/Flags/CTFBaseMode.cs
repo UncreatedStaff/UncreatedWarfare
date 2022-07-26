@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -411,10 +412,16 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
                 }
             }
         }
+        QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
+            .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
     }
     protected virtual void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
         TicketManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+        if (capturedTeam == 1)
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
+        else if (capturedTeam == 2)
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
     }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
     {
