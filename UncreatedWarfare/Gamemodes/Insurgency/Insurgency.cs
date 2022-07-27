@@ -85,7 +85,7 @@ public class Insurgency :
     public List<CacheData> ActiveCaches => Caches.Where(c => c.IsActive && !c.IsDestroyed).ToList();
     public List<CacheData> DiscoveredCaches => Caches.Where(c => c.IsActive && !c.IsDestroyed && c.IsDestroyed).ToList();
     public int ActiveCachesCount => Caches.Count(c => c.IsActive && !c.IsDestroyed);
-    public bool isScreenUp => _isScreenUp;
+    public bool IsScreenUp => _isScreenUp;
     public InsurgencyTracker WarstatsTracker => _gameStats;
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
     object IGameStats.GameStats => _gameStats;
@@ -382,7 +382,7 @@ public class Insurgency :
             else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
         }
         _gameStats.OnPlayerJoin(player);
-        if (isScreenUp && _endScreen != null)
+        if (IsScreenUp && _endScreen != null)
         {
             _endScreen.OnPlayerJoined(player);
         }

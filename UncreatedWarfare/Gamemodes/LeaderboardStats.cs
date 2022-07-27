@@ -423,20 +423,12 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats
 
 public readonly struct LongestShot
 {
-    public static readonly LongestShot Nil = new LongestShot();
+    public static readonly LongestShot Nil = default;
     public readonly bool IsValue;
     public readonly ulong Player;
     public readonly float Distance;
     public readonly Guid Gun;
     public readonly ulong Team;
-    public LongestShot()
-    {
-        IsValue = false;
-        Player = 0;
-        Distance = 0;
-        Gun = default;
-        Team = 0;
-    }
     public LongestShot(ulong player, float distance, Guid gun, ulong team)
     {
         this.IsValue = true;

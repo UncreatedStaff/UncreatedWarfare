@@ -2,7 +2,6 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using Uncreated.Players;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -10,7 +9,6 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
@@ -79,7 +77,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
     Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
-    public bool isScreenUp => _isScreenUp;
+    public bool IsScreenUp => _isScreenUp;
     public StatTracker WarstatsTracker => _gameStats;
     object IGameStats.GameStats => _gameStats;
     public CTFBaseMode(string name, float timing) : base(name, timing)
@@ -634,7 +632,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
         }
         _gameStats.OnPlayerJoin(player);
-        if (isScreenUp && _endScreen != null)
+        if (IsScreenUp && _endScreen != null)
         {
             _endScreen.OnPlayerJoined(player);
         }

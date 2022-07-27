@@ -149,7 +149,7 @@ public static class Points
 
             ActionLogger.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, player);
 
-            if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
+            if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
             {
                 string key = "gain_credits";
                 if (amount < 0)
@@ -197,7 +197,7 @@ public static class Points
                     kd.AddXP(amount);
             }
 
-            if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
+            if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
             {
                 string number = Localization.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale));
 
@@ -269,7 +269,7 @@ public static class Points
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp))
+        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.IsScreenUp))
             return;
 
         EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.Connection, true);
@@ -295,7 +295,7 @@ public static class Points
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
 
-        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp))
+        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.IsScreenUp))
             return;
 
         EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CREDITSUI_KEY, player.Connection, true);

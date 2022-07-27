@@ -23,7 +23,7 @@ public class TeamsCommand : Command
         ctx.AssertRanByPlayer();
 
         ctx.AssertGamemode(out ITeams teamgm);
-        if (Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> il) && il.isScreenUp)
+        if (Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> il) && il.IsScreenUp)
             throw ctx.SendUnknownError();
 
         if (!teamgm.UseTeamSelector || teamgm.TeamSelector is null)

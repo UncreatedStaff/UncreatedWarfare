@@ -236,14 +236,14 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     {
                         PlayersOnFlagTeam1.Add(p.player);
                         Team1TotalPlayers++;
-                        if (p.player.movement.getVehicle() == null)
+                        if (Manager.AllowPassengersToCapture || p.player.movement.getVehicle() == null)
                             Team1TotalCappers++;
                     }
                     else if (team == 2)
                     {
                         PlayersOnFlagTeam2.Add(p.player);
                         Team2TotalPlayers++;
-                        if (p.player.movement.getVehicle() == null)
+                        if (Manager.AllowPassengersToCapture || p.player.movement.getVehicle() == null)
                             Team2TotalCappers++;
                     }
                 }

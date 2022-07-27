@@ -36,7 +36,8 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         { "TeamCTF", typeof(TeamCTF) },
         { "Invasion", typeof(Invasion) },
         { "TDM", typeof(TeamDeathmatch.TeamDeathmatch) },
-        { "Insurgency", typeof(Insurgency.Insurgency) }
+        { "Insurgency", typeof(Insurgency.Insurgency) },
+        { "Conquest", typeof(Flags.Conquest) }
     };
     public event TeamWinDelegate OnTeamWin;
     public Whitelister Whitelister;
@@ -184,8 +185,9 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     /// <remarks>No base</remarks>
     protected virtual void OnAsyncInitComplete(UCPlayer player) { }
 
-    ///<summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
-    public bool EveryXSeconds(float seconds) => _ticks % Mathf.RoundToInt(seconds / _eventLoopSpeed) == 0;
+    /// <summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
+    /// <remarks>Returns true if the second mark passed between the end of last tick and the start of this tick.</remarks>
+    public bool EveryXSeconds(float seconds) => _ticks * _eventLoopSpeed % seconds < _eventLoopSpeed;
     private void InternalPreInit()
     {
         AddSingletonRequirement(ref Cooldowns);
@@ -733,5 +735,6 @@ public enum EGamemode : byte
     [Translatable("Advance and Secure")]
     TEAM_CTF,
     INVASION,
-    INSURGENCY
+    INSURGENCY,
+    CONQUEST
 }
