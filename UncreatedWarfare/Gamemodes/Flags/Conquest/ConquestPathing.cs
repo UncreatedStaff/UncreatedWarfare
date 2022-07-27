@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 using Random = UnityEngine.Random;
 
 
@@ -15,7 +12,6 @@ public partial class Conquest
 {
     private void IntlLoadRotation()
     {
-        List<Flag> flags = _allFlags;
         int amt = Config.Conquest.PointCount;
 
         if (_rotation is null)
