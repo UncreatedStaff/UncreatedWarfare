@@ -106,8 +106,6 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
-
-        InvokeOnTeamWin(winner);
         EndGame();
     }
     private void OnScoreUpdated()

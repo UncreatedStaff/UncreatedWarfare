@@ -993,7 +993,7 @@ public static class EventFunctions
         if (Data.Is<IFlagRotation>(out _) && e.Player.Player.IsOnFlag(out Flag flag))
         {
             CaptureUIParameters p = CTFUI.RefreshStaticUI(e.Player.GetTeam(), flag, true);
-            CTFUI.CaptureUI.Send(e.Player, ref p);
+            CTFUI.CaptureUI.Send(e.Player, in p);
         }
     }
     static readonly Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();

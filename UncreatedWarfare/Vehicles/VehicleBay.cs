@@ -25,7 +25,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(Whitelister))]
-public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
+public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDeclareWinListener
 {
     private static VehicleBayConfig _config;
     private static VehicleBay Singleton;
@@ -62,6 +62,10 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener
         EventDispatcher.OnVehicleSwapSeatRequested -= OnVehicleSwapSeatRequested;
         EventDispatcher.OnEnterVehicleRequested -= OnVehicleEnterRequested;
         _config = null!;
+    }
+    public void OnWinnerDeclared(ulong winner)
+    {
+        VehicleBay.AbandonAllVehicles();
     }
     private void OnVehicleSpawned(VehicleSpawned e)
     {

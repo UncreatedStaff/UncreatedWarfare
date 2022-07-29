@@ -230,55 +230,9 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (this._state == EState.FINISHED) return;
-        this._state = EState.FINISHED;
-        string t = TeamManager.TranslateName(winner, 0);
-        L.Log(t + " just won the game!", ConsoleColor.Cyan);
-
         SendWinUI(winner);
+        base.DeclareWin(winner);
 
-        QuestManager.OnGameOver(winner);
-        ActionLogger.Add(EActionLogType.TEAM_WON, t);
-
-        string c = TeamManager.GetTeamHexColor(winner);
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-        {
-            t = TeamManager.TranslateName(winner, set.Language);
-            Chat.Broadcast(set, "team_win", t, c);
-        }
-        foreach (SteamPlayer client in Provider.clients)
-        {
-            client.player.movement.forceRemoveFromVehicle();
-            if (Config.UI.InjuredUI.ValidReference(out ushort id))
-                EffectManager.askEffectClearByID(Config.UI.InjuredUI.Value.Id, client.transportConnection);
-        }
-        StatsManager.ModifyTeam(winner, t => t.Wins++, false);
-        StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
-
-
-        foreach (InsurgencyPlayerStats played in _gameStats.stats.Values)
-        {
-            // Any player who was online for 70% of the match will be awarded a win or punished with a loss
-            if ((float)played.onlineCount1 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
-            {
-                if (winner == 1)
-                    StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                else
-                    StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-            }
-            else if ((float)played.onlineCount2 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
-            {
-                if (winner == 2)
-                    StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                else
-                    StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-            }
-        }
-
-
-        TicketManager.OnRoundWin(winner);
-
-        VehicleBay.AbandonAllVehicles();
         StartCoroutine(EndGameCoroutine(winner));
     }
     private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
@@ -300,8 +254,6 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        InvokeOnTeamWin(winner);
-
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
@@ -398,13 +350,6 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (State == EState.STAGING)
-        {
-            if (e.NewTeam is < 1 or > 2)
-                ClearStagingUI(e.Player);
-            else
-                ShowStagingUI(e.Player);
-        }
         if (e.NewTeam is > 0 and < 3)
         {
             InsurgencyUI.SendCacheList(e.Player);

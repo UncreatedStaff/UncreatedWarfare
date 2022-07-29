@@ -8,7 +8,7 @@ using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
-public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker>
+public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker, TeamCTFTicketProvider>
 {
     public override string DisplayName => "Advance and Secure";
     public override EGamemode GamemodeType => EGamemode.TEAM_CTF;
@@ -45,17 +45,11 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     {
         base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);
         CTFUI.ReplicateFlagUpdate(flag, true);
-        QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-                    .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
     }
     protected override void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
         base.InvokeOnFlagNeutralized(flag, capturedTeam, lostTeam);
         CTFUI.ReplicateFlagUpdate(flag, true);
-        if (capturedTeam == 1)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
-        else if (capturedTeam == 2)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
     }
     public override void OnGroupChanged(GroupChanged e)
     {
@@ -64,7 +58,7 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
         {
             CaptureUIParameters p = CTFUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
                                                                           ?? _rotation[0], e.Player.Player.movement.getVehicle() != null);
-            CTFUI.CaptureUI.Send(e.Player, ref p);
+            CTFUI.CaptureUI.Send(e.Player, in p);
         }
         CTFUI.SendFlagList(e.Player);
         base.OnGroupChanged(e);
@@ -80,4 +74,14 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
 public class TeamCTFLeaderboard : BaseCTFLeaderboard<BaseCTFStats, TeamCTFTracker>
 {
 
+}
+
+public sealed class TeamCTFTicketProvider : BaseCTFTicketProvider
+{
+    public override void Load()
+    {
+        Manager.Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
+        Manager.Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
+        base.Load();
+    }
 }

@@ -24,20 +24,18 @@ namespace Uncreated.Warfare.Tickets;
 public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener
 {
     private static TicketManager Singleton;
+    public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
     public static readonly TicketUI TicketUI = new TicketUI();
     public static bool Loaded => Singleton.IsLoaded();
-    public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
-
-    public static int Team1Tickets;
-    public static int Team2Tickets;
-    public TicketManager()
-    {
-    }
+    public int Team1Tickets { get; set; }
+    public int Team2Tickets { get; set; }
+    public ITicketProvider Provider { get; internal set; }
+    public TicketManager() { }
     public override void Load()
     {
         Singleton = this;
-        Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
-        Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
+        Provider.Manager = this;
+        Provider.Load();
         VehicleManager.OnVehicleExploded += OnVehicleExploded;
         EventDispatcher.OnPlayerDied += OnPlayerDeath;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
@@ -45,6 +43,11 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     public override void Unload()
     {
         Singleton = null!;
+        Provider.Unload();
+        Provider.Manager = null!;
+        Provider = null!;
+        Team1Tickets = 0;
+        Team2Tickets = 0;
         EventDispatcher.OnGroupChanged -= OnGroupChanged;
         EventDispatcher.OnPlayerDied -= OnPlayerDeath;
         VehicleManager.OnVehicleExploded -= OnVehicleExploded;
@@ -54,6 +57,8 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (Provider is IPlayerInitListener il)
+            il.OnPlayerInit(player, wasAlreadyOnline);
         SendUI(player);
     }
     private void OnPlayerDeath(PlayerDied e)
@@ -68,12 +73,12 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         if (e.Killer is not null && e.Killer.Steam64 != e.Player.Steam64)
         {
             if (!e.WasTeamkill)
-                OnEnemyKilled(e.Player, e.Killer);
+                OnEnemyKilled(e);
             else
-                OnFriendlyKilled(e.Player, e.Killer);
+                OnFriendlyKilled(e);
         }
     }
-    public static void OnEnemyKilled(UCPlayer dead, UCPlayer killer)
+    public void OnEnemyKilled(PlayerDied e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -300,30 +305,6 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
 
         if (spotted != null)
             UnityEngine.Object.Destroy(spotted);
-    }
-    public static void OnRoundWin(ulong team)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        /*
-        float winMultiplier = 0.15f;
-
-        List<UCPlayer> players = PlayerManager.OnlinePlayers.Where(p => p.GetTeam() == team).ToList();
-
-        for (int i = 0; i < players.Count; i++)
-        {
-            UCPlayer player = players[i];
-
-            if (player.CSteamID.TryGetPlaytimeComponent(out PlaytimeComponent component) && component.stats is IExperienceStats exp)
-            {
-                //if (exp.XPGained > 0)
-                //    Points.AwardXP(player.Player, Mathf.RoundToInt(exp.XPGained * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
-
-                if (exp.Credits > 0)
-                    Points.AwardTW(player, Mathf.RoundToInt(exp.Credits * winMultiplier), Translation.Translate("xp_victory", player.Steam64));
-            }
-        }*/
     }
     public static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
@@ -619,7 +600,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
             if (pl.GetTeam() == team && !pl.HasUIHidden)
             {
-                //TicketUI.Bleed.SetText(pl.Connection, bleed);
+                TicketUI.Bleed.SetText(pl.Connection, bleed.ToString(Data.Locale));
                 TicketUI.Tickets.SetText(pl.Connection, tickets);
                 TicketUI.Status.SetText(pl.Connection, message);
             }
@@ -633,7 +614,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
             if (pl.GetTeam() == team && !pl.HasUIHidden)
             {
-                //TicketUI.Bleed.SetText(pl.Connection, bleed);
+                TicketUI.Bleed.SetText(pl.Connection, bleed.ToString(Data.Locale));
                 TicketUI.Tickets.SetText(pl.Connection, tickets);
                 TicketUI.Status.SetText(pl.Connection, message);
             }

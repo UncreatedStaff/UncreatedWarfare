@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Events.Players;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;
@@ -14,6 +15,10 @@ public interface IUncreatedSingleton
 public interface ILevelStartListener : IUncreatedSingleton
 {
     void OnLevelReady();
+}
+public interface IDeclareWinListener : IUncreatedSingleton
+{
+    void OnWinnerDeclared(ulong winner);
 }
 public interface IGameStartListener : IUncreatedSingleton
 {

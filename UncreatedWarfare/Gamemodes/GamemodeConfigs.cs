@@ -270,6 +270,7 @@ public class CONQUEST_CONFIG
     public int PointCount;
     public float FlagTickSeconds;
     public float TicketTickSeconds;
+    public int StagingPhaseSeconds;
 
     public void SetDefaults()
     {
@@ -278,6 +279,7 @@ public class CONQUEST_CONFIG
         PointCount = 5;
         FlagTickSeconds = 4f;
         TicketTickSeconds = 8f;
+        StagingPhaseSeconds = 60;
     }
 }
 public class INVASION

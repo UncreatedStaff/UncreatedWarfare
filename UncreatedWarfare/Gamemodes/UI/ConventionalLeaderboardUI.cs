@@ -839,7 +839,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             {
                 if (tracker is not null)
                     PlayerStatsHeader.SetText(c, Localization.ObjectTranslate("lb_playerstats_header", lang,
-                        names.CharacterName, TeamManager.GetTeamHexColor(team), (float)(stats.onlineCount1 + stats.onlineCount2) / tracker.coroutinect * 100f));
+                        names.CharacterName, TeamManager.GetTeamHexColor(team), tracker.GetPresence(stats) * 100f));
                 else
                     PlayerStatsHeader.SetText(c, Localization.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
                 PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));
@@ -1161,7 +1161,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             {
                 if (tracker is not null)
                     PlayerStatsHeader.SetText(c, Localization.ObjectTranslate("lb_playerstats_header", lang,
-                        names.CharacterName, TeamManager.GetTeamHexColor(team), (float)(stats.onlineCount1 + stats.onlineCount2) / tracker.coroutinect * 100f));
+                        names.CharacterName, TeamManager.GetTeamHexColor(team), tracker.GetPresence(stats) * 100f));
                 else
                     PlayerStatsHeader.SetText(c, Localization.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
                 PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));

@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -23,8 +24,8 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 public delegate void ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, ulong Team, int OldObj, int NewObj);
 public delegate void FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
 public delegate void FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
-public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
-    TicketGamemode,
+public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvider> :
+    TicketGamemode<TTicketProvider>,
     IFlagTeamObjectiveGamemode,
     IVehicles,
     IFOBs,
@@ -38,6 +39,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     where Leaderboard : BaseCTFLeaderboard<Stats, StatTracker>
     where Stats : BaseCTFStats
     where StatTracker : BaseCTFTracker<Stats>
+    where TTicketProvider : class, ITicketProvider, new()
 {
     // vars
     protected int _objectiveT1Index;
@@ -111,8 +113,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
     protected override void PostDispose()
     {
         CTFUI.StagingUI.ClearFromAllPlayers();
-        if (_stagingPhaseTimer != null)
-            StopCoroutine(_stagingPhaseTimer);
         Destroy(_gameStats);
         base.PostDispose();
     }
@@ -126,19 +126,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         else
         {
             _counter++;
-            return false;
-        }
-    }
-    protected override bool TimeToTicket()
-    {
-        if (_counter2 > Config.TeamCTF.EvaluateTime * 2)
-        {
-            _counter2 = 0;
-            return true;
-        }
-        else
-        {
-            _counter2++;
             return false;
         }
     }
@@ -177,51 +164,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (this._state == EState.FINISHED) return;
-        this._state = EState.FINISHED;
-        L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
-
-        SendWinUI(winner);
-
-        QuestManager.OnGameOver(winner);
-        ActionLogger.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
-        string c = TeamManager.GetTeamHexColor(winner);
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-        {
-            string t = TeamManager.TranslateName(winner, set.Language);
-            Chat.Broadcast(set, "team_win", t, c);
-        }
-
-        foreach (SteamPlayer client in Provider.clients)
-        {
-            client.player.movement.forceRemoveFromVehicle();
-            if (Config.UI.InjuredUI.ValidReference(out ushort id))
-                EffectManager.askEffectClearByID(id, client.transportConnection);
-        }
-        StatsManager.ModifyTeam(winner, t => t.Wins++, false);
-        StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
-        foreach (Stats played in _gameStats.stats.Values)
-        {
-            // Any player who was online for 70% of the match will be awarded a win or punished with a loss
-            if ((float)played.onlineCount1 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
-            {
-                if (winner == 1)
-                    StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                else
-                    StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-            }
-            else if ((float)played.onlineCount2 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
-            {
-                if (winner == 2)
-                    StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                else
-                    StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-            }
-        }
-        TicketManager.OnRoundWin(winner);
-
-        VehicleBay.AbandonAllVehicles();
-
+        base.DeclareWin(winner);
         StartCoroutine(EndGameCoroutine(winner));
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
@@ -235,7 +178,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
 
-        InvokeOnTeamWin(winner);
         _endScreen = UCWarfare.I.gameObject.AddComponent<Leaderboard>();
         _endScreen.OnLeaderboardExpired = OnShouldStartNewGame;
         _endScreen.SetShutdownConfig(shutdownAfterGame, shutdownMessage);
@@ -374,45 +316,19 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
-        StatsManager.ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
-        StatsManager.ModifyTeam(lostTeam, t => t.FlagsLost++, false);
         VehicleSigns.OnFlagCaptured();
-        List<string> kits = new List<string>();
-        if (capturedTeam == 1)
-        {
-            for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
-            {
-                StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
-                if (KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
-                {
-                    StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
-                    kits.Add(kit.Name);
-                }
-            }
-            if (flag.IsObj(2))
-                for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
-                    StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
-        }
-        else if (capturedTeam == 2)
-        {
-            if (flag.IsObj(1))
-                for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
-                    StatsManager.ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
-            for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
-            {
-                StatsManager.ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
-                if (KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
-                {
-                    StatsManager.ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
-                    kits.Add(kit.Name);
-                }
-            }
-        }
+        StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+        TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
+        QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
+            .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
     }
     protected virtual void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
         TicketManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
+        if (capturedTeam == 1)
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
+        else if (capturedTeam == 2)
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
     }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
     {
@@ -460,16 +376,16 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
             if (t == 1)
             {
                 if (capper.movement.getVehicle() == null)
-                    CTFUI.CaptureUI.Send(capper, ref t1);
+                    CTFUI.CaptureUI.Send(capper, in t1);
                 else
-                    CTFUI.CaptureUI.Send(capper, ref t1v);
+                    CTFUI.CaptureUI.Send(capper, in t1v);
             }
             else if (t == 2)
             {
                 if (capper.movement.getVehicle() == null)
-                    CTFUI.CaptureUI.Send(capper, ref t2);
+                    CTFUI.CaptureUI.Send(capper, in t2);
                 else
-                    CTFUI.CaptureUI.Send(capper, ref t2v);
+                    CTFUI.CaptureUI.Send(capper, in t2v);
             }
         }
     }
@@ -570,20 +486,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker> :
         if (NewPoints == 0)
             flag.SetOwner(0);
         UpdateFlag(flag);
-    }
-    public override void OnGroupChanged(GroupChanged e)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (State == EState.STAGING)
-        {
-            if (e.NewTeam is < 1 or > 2)
-                ClearStagingUI(e.Player);
-            else
-                ShowStagingUI(e.Player);
-        }
-        base.OnGroupChanged(e);
     }
     public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {

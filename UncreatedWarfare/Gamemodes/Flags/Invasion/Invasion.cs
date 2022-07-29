@@ -14,7 +14,7 @@ using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion;
 
 public class Invasion :
-    CTFBaseMode<InvasionLeaderboard, BaseCTFStats, InvasionTracker>,
+    CTFBaseMode<InvasionLeaderboard, BaseCTFStats, InvasionTracker, InvasionTicketProvider>,
     IAttackDefense
 {
     protected ulong _attackTeam;
@@ -257,16 +257,16 @@ public class Invasion :
             if (t == 1)
             {
                 if (capper.movement.getVehicle() == null)
-                    CTFUI.CaptureUI.Send(capper, ref t1);
+                    CTFUI.CaptureUI.Send(capper, in t1);
                 else
-                    CTFUI.CaptureUI.Send(capper, ref t1v);
+                    CTFUI.CaptureUI.Send(capper, in t1v);
             }
             else if (t == 2)
             {
                 if (capper.movement.getVehicle() == null)
-                    CTFUI.CaptureUI.Send(capper, ref t2);
+                    CTFUI.CaptureUI.Send(capper, in t2);
                 else
-                    CTFUI.CaptureUI.Send(capper, ref t2v);
+                    CTFUI.CaptureUI.Send(capper, in t2v);
             }
         }
     }
@@ -399,8 +399,6 @@ public class Invasion :
     {
         base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);
         InvasionUI.ReplicateFlagUpdate(flag, true);
-        QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-            .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
     }
     protected override void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
@@ -417,7 +415,7 @@ public class Invasion :
         {
             CaptureUIParameters p = InvasionUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
                                                                           ?? _rotation[0], e.Player.Player.movement.getVehicle() != null, AttackingTeam);
-            CTFUI.CaptureUI.Send(e.Player, ref p);
+            CTFUI.CaptureUI.Send(e.Player, in p);
         }
 
         InvasionUI.SendFlagList(e.Player);
@@ -453,6 +451,11 @@ public class Invasion :
 }
 
 public class InvasionLeaderboard : BaseCTFLeaderboard<BaseCTFStats, InvasionTracker>
+{
+
+}
+
+public sealed class InvasionTicketProvider : BaseCTFTicketProvider
 {
 
 }
