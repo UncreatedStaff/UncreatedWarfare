@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -8,8 +9,12 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using static Uncreated.Encoding.ByteWriter;
+using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Point;
 
@@ -256,14 +261,6 @@ public static class Points
         else
             L.LogWarning("Unable to find player.");
     }
-    [Obsolete]
-    public static void AwardTW(UCPlayer player, int amount, string message = "")
-    {
-    }
-    [Obsolete]
-    public static void AwardTW(Player player, int amount, string message = "")
-    {
-    }
     public static void UpdateXPUI(UCPlayer player)
     {
 #if DEBUG
@@ -303,11 +300,6 @@ public static class Points
             "Credits", "<color=#b8ffc1>C</color>  " + player.CachedCredits
         );
     }
-    [Obsolete]
-    public static void UpdateTWUI(UCPlayer player)
-    {
-
-    }
     public static string GetProgressBar(int currentPoints, int totalPoints, int barLength = 50)
     {
 #if DEBUG
@@ -326,6 +318,15 @@ public static class Points
         }
         return new string(bars);
     }
+    public static void TryAwardDriverAssist(PlayerDied args, int amount, float quota = 0)
+    {
+        if (args.DriverAssist is null || !args.DriverAssist.IsOnline) return;
+
+        AwardXP(args.DriverAssist, amount, Localization.Translate("xp_driver_assist", args.DriverAssist));
+        /*
+        if (quota != 0 && args.ActiveVehicle != null && args.ActiveVehicle.TryGetComponent(out VehicleComponent comp))
+            comp.Quota += quota;*/
+    }
     public static void TryAwardDriverAssist(Player gunner, int amount, float quota = 0)
     {
 #if DEBUG
@@ -337,7 +338,7 @@ public static class Points
             SteamPlayer driver = vehicle.passengers[0].player;
             if (driver != null && driver.playerID.steamID != gunner.channel.owner.playerID.steamID)
             {
-                AwardXP(driver.player, amount, Localization.Translate("xp_driver_assist", gunner));
+                AwardXP(driver.player, amount, Localization.Translate("xp_driver_assist", driver.playerID.steamID.m_SteamID));
             }
 
             //if (vehicle.transform.TryGetComponent(out VehicleComponent component))
@@ -365,6 +366,95 @@ public static class Points
                 AwardXP(placer, amount, Localization.Translate(translationKey, placer));
         }
     }
+    public static void FlagNeutralized(Flag flag, ulong team)
+    {
+        foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => p.GetTeam() == team))
+        {
+            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
+
+            if (player == null) continue;
+            int xp = XPConfig.FlagNeutralizedXP;
+
+            AwardXP(player, xp, Localization.Translate("xp_flag_neutralized", player));
+            xp = player.NearbyMemberBonus(xp, 60) - xp;
+            if (xp > 0)
+                AwardXP(player, xp, Localization.Translate("xp_squad_bonus", player));
+        }
+    }
+    public static void FlagCaptured(Flag flag, ulong team)
+    {
+        Dictionary<Squad, int> alreadyUpdated = new Dictionary<Squad, int>();
+
+        foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => p.GetTeam() == team))
+        {
+            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
+
+            if (player == null) continue;
+
+            AwardXP(player, player.NearbyMemberBonus(XPConfig.FlagCapturedXP, 60), Localization.Translate("xp_flag_captured", player.Steam64));
+        }
+    }
+    public static void OnPlayerDeath(PlayerDied e)
+    {
+        if (e.Killer is null || !e.Killer.IsOnline) return;
+        if (e.WasTeamkill)
+        {
+            AwardXP(e.Killer, XPConfig.FriendlyKilledXP, Localization.Translate("xp_friendly_killed", e.Killer));
+            return;
+        }
+        AwardXP(e.Killer, XPConfig.EnemyKilledXP, Localization.Translate("xp_enemy_killed", e.Killer));
+
+        if (e.Player.Player.TryGetPlayerData(out UCPlayerData component))
+        {
+            ulong killerID = e.Killer.Steam64;
+            ulong victimID = e.Player.Steam64;
+
+            UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
+            if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
+            {
+                AwardXP(assister, XPConfig.KillAssistXP, Localization.Translate("xp_kill_assist", e.Killer));
+            }
+
+            if (e.Player.Player.TryGetComponent(out SpottedComponent spotted))
+            {
+                spotted.OnTargetKilled(XPConfig.EnemyKilledXP);
+            }
+
+            component.ResetAttackers();
+        }
+        TryAwardDriverAssist(e, XPConfig.EnemyKilledXP, 1);
+    }
+    /*
+    public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
+    {
+        string xpstr = Translation.Translate(KeyplayerTranslationKey, ucplayer.Steam64);
+        string sqstr = Translation.Translate(squadTranslationKey, ucplayer.Steam64);
+        Points.AwardXP(ucplayer.Player, xp, xpstr);
+
+        if (ucplayer.Squad != null && ucplayer.Squad.Members.Count > 1)
+        {
+            if (ucplayer == ucplayer.Squad.Leader)
+                OfficerManager.AddOfficerPoints(ucplayer.Player, ofp, sqstr);
+
+            int squadxp = (int)Math.Round(xp * squadMultiplier);
+            int squadofp = (int)Math.Round(ofp * squadMultiplier);
+
+            if (squadxp > 0)
+            {
+                for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
+                {
+                    UCPlayer member = ucplayer.Squad.Members[i];
+                    if (member != ucplayer && ucplayer.IsNearOtherPlayer(member, range))
+                    {
+                        Points.AwardXP(member.Player, squadxp, sqstr);
+                        if (member.IsSquadLeader())
+                            OfficerManager.AddOfficerPoints(ucplayer.Player, squadofp, sqstr);
+                    }
+                }
+            }
+        }
+    }
+    */
 }
 
 public class XPConfig : ConfigData

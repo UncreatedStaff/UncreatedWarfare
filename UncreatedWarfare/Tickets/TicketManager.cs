@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -23,22 +24,56 @@ namespace Uncreated.Warfare.Tickets;
 
 public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener
 {
-    private static TicketManager Singleton;
+    public static TicketManager Singleton;
     public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
     public static readonly TicketUI TicketUI = new TicketUI();
+    private int _t1Tickets;
+    private int _t2Tickets;
     public static bool Loaded => Singleton.IsLoaded();
-    public int Team1Tickets { get; set; }
-    public int Team2Tickets { get; set; }
     public ITicketProvider Provider { get; internal set; }
+    public int Team1Tickets
+    {
+        get => _t1Tickets;
+        set
+        {
+            int oldv = _t1Tickets;
+            _t1Tickets = value;
+            if (_t1Tickets < 0)
+                _t1Tickets = 0;
+            bool upd = true;
+            if (Provider != null)
+                Provider.OnTicketsChanged(1, oldv, _t1Tickets, ref upd);
+            if (upd)
+                UpdateUI(1);
+        }
+    }
+    public int Team2Tickets
+    {
+        get => _t2Tickets;
+        set
+        {
+            int oldv = _t2Tickets;
+            _t2Tickets = value;
+            if (_t2Tickets < 0)
+                _t2Tickets = 0;
+            bool upd = true;
+            if (Provider != null)
+                Provider.OnTicketsChanged(2ul, oldv, _t2Tickets, ref upd);
+            if (upd)
+                UpdateUI(2ul);
+        }
+    }
     public TicketManager() { }
     public override void Load()
     {
         Singleton = this;
+        if (Provider is null)
+            throw new InvalidOperationException("You must set TicketManager." + nameof(Provider) + " before TicketManager loads.");
         Provider.Manager = this;
         Provider.Load();
-        VehicleManager.OnVehicleExploded += OnVehicleExploded;
         EventDispatcher.OnPlayerDied += OnPlayerDeath;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
+        EventDispatcher.OnUIRefreshRequested += ReloadUI;
     }
     public override void Unload()
     {
@@ -48,677 +83,79 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         Provider = null!;
         Team1Tickets = 0;
         Team2Tickets = 0;
+        EventDispatcher.OnUIRefreshRequested -= ReloadUI;
         EventDispatcher.OnGroupChanged -= OnGroupChanged;
         EventDispatcher.OnPlayerDied -= OnPlayerDeath;
-        VehicleManager.OnVehicleExploded -= OnVehicleExploded;
     }
-    void IPlayerInitListener.OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    private void ReloadUI(PlayerEvent e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Provider is IPlayerInitListener il)
-            il.OnPlayerInit(player, wasAlreadyOnline);
-        SendUI(player);
+        SendUI(e.Player);
+    }
+    public void SendUI(UCPlayer player)
+    {
+        if (Provider == null || player is null || !player.IsOnline || player.HasUIHidden)
+            return;
+        L.Log("Sending UI to " + player.CharacterName);
+        TicketUI.SendToPlayer(player.Connection);
+        string? url = TeamManager.GetFaction(player.GetTeam())?.FlagImageURL;
+        if (url is not null)
+            TicketUI.Flag.SetImage(player.Connection, url);
+        Provider.UpdateUI(player);
+    }
+    public void UpdateUI(UCPlayer player) => Provider.UpdateUI(player);
+    public void UpdateUI(ulong team)
+    {
+        if (SDG.Unturned.Provider.clients.Count < 1) return;
+        Provider.UpdateUI(team);
+    }
+    public void UpdateUI()
+    {
+        if (SDG.Unturned.Provider.clients.Count < 1) return;
+        Provider.UpdateUI(1ul);
+        Provider.UpdateUI(2ul);
+    }
+    public void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
+    {
+        if (Provider is IFlagCapturedListener cl)
+            cl.OnFlagCaptured(flag, capturedTeam, lostTeam);
     }
     private void OnPlayerDeath(PlayerDied e)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (e.DeadTeam == 1)
-            AddTeam1Tickets(-1);
-        else if (e.DeadTeam == 2)
-            AddTeam2Tickets(-1);
-        if (e.Killer is not null && e.Killer.Steam64 != e.Player.Steam64)
-        {
-            if (!e.WasTeamkill)
-                OnEnemyKilled(e);
-            else
-                OnFriendlyKilled(e);
-        }
-    }
-    public void OnEnemyKilled(PlayerDied e)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out Insurgency insurgency))
-        {
-            if (dead.GetTeam() == insurgency.DefendingTeam)
-            {
-                insurgency.AddIntelligencePoints(1);
-                if (killer.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is InsurgencyPlayerStats s)
-                    s._intelligencePointsCollected++;
-                insurgency.WarstatsTracker.intelligenceGathered++;
-            }
-        }
-
-        Points.AwardXP(killer, Points.XPConfig.EnemyKilledXP, Localization.Translate("xp_enemy_killed", killer));
-
-        if (dead.Player.TryGetPlayerData(out UCPlayerData component))
-        {
-            ulong killerID = killer.Steam64;
-            ulong victimID = dead.Steam64;
-
-                UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
-                if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
-                {
-                    Points.AwardXP(
-                        assister,
-                        Points.XPConfig.KillAssistXP,
-                        Localization.Translate("xp_kill_assist", killer));
-                }
-
-                if (dead.Player.TryGetComponent(out SpottedComponent spotted))
-                {
-                    spotted.OnTargetKilled(Points.XPConfig.EnemyKilledXP);
-                }
-
-                component.ResetAttackers();
-            }
-
-        Points.TryAwardDriverAssist(killer, Points.XPConfig.EnemyKilledXP, 1);
-    }
-    public static void OnFriendlyKilled(UCPlayer dead, UCPlayer killer)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        Points.AwardXP(killer, Points.XPConfig.FriendlyKilledXP, Localization.Translate("xp_friendly_killed", killer));
-    }
-    private static void OnVehicleExploded(InteractableVehicle vehicle)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-
-        var spotted = vehicle.transform.GetComponent<SpottedComponent>();
-
-        if (vehicle.gameObject.TryGetComponent(out FOBs.BuiltBuildableComponent comp))
-            UnityEngine.Object.Destroy(comp);
-
-        if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
-        {
-            ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
-
-            if (lteam == 1)
-                AddTeam1Tickets(-data.TicketCost);
-            else if (lteam == 2)
-                AddTeam2Tickets(-data.TicketCost);
-
-            if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
-            {
-                UCPlayer? owner = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
-                if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
-                {
-                    UCPlayer? player = UCPlayer.FromID(vc.LastInstigator);
-
-                    if (player == null)
-                        player = UCPlayer.FromID(vc.LastDriver);
-                    if (player == null)
-                        return;
-
-                    ulong dteam = player.GetTeam();
-                    bool vehicleWasEnemy = (dteam == 1 && lteam == 2) || (dteam == 2 && lteam == 1);
-                    bool vehicleWasFriendly = dteam == lteam;
-                    if (!vehicleWasFriendly)
-                        Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
-                    if (!Points.XPConfig.VehicleDestroyedXP.TryGetValue(data.Type, out int fullXP))
-                        fullXP = 0;
-                    string message = string.Empty;
-
-                    if (vc.IsAircraft)
-                        message = "xp_aircraft_destroyed";
-                    else
-                        message = "xp_vehicle_destroyed";
-
-
-                    float totalDamage = 0;
-                    foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
-                    {
-                        if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
-                            totalDamage += entry.Value.Key;
-                    }
-
-                    if (vehicleWasEnemy)
-                    {
-                        Asset asset = Assets.find(vc.LastItem);
-                        string reason = string.Empty;
-                        if (asset != null)
-                        {
-                            if (asset is ItemAsset item)
-                                reason = item.itemName;
-                            else if (asset is VehicleAsset v)
-                                reason = "suicide " + v.vehicleName;
-                        }
-
-                            int distance = Mathf.RoundToInt((player.Position - vehicle.transform.position).magnitude);
-
-                            if (reason.Length == 0)
-                                Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
-                            else
-                                Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason, distance.ToString());
-
-                        ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
-                                                                         $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
-
-                        QuestManager.OnVehicleDestroyed(owner, player, data, vc);
-
-                        float resMax = 0f;
-                        UCPlayer? resMaxPl = null;
-                        foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
-                        {
-                            if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
-                            {
-                                float responsibleness = entry.Value.Key / totalDamage;
-                                int reward = Mathf.RoundToInt(responsibleness * fullXP);
-
-                                    UCPlayer? attacker = UCPlayer.FromID(entry.Key);
-                                    if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
-                                    {
-                                        if (attacker.CSteamID.m_SteamID == vc.LastInstigator)
-                                        {
-                                            Points.AwardXP(attacker, reward, Localization.Translate(message, player, data.Type.ToString()).ToUpper());
-                                            Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
-
-                                            if (spotted != null)
-                                            {
-                                                spotted.OnTargetKilled(reward);
-                                                UnityEngine.Object.Destroy(spotted);
-                                            }
-                                        }
-                                        else if (responsibleness > 0.1F)
-                                            Points.AwardXP(attacker, reward, Localization.Translate("xp_vehicle_assist", attacker));
-                                        if (responsibleness > resMax)
-                                        {
-                                            resMax = responsibleness;
-                                            resMaxPl = attacker;
-                                        }
-                                    }
-                                }
-                            }
-
-                        if (resMaxPl != null && resMax > 0 && player.Steam64 != resMaxPl.Steam64)
-                        {
-                            QuestManager.OnVehicleDestroyed(owner, resMaxPl, data, vc);
-                        }
-                    
-                        Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
-                        Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
-                    }
-                    else if (vehicleWasFriendly)
-                    {
-                        Chat.Broadcast("VEHICLE_TEAMKILLED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
-
-                        ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
-                                                                         $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
-
-                        if (message != string.Empty) message = "xp_friendly_" + message;
-                        Points.AwardCredits(player, Mathf.Clamp(data.CreditCost, 5, 1000), Localization.Translate(message, player.Steam64), true);
-                        OffenseManager.LogVehicleTeamkill(player.Steam64, vehicle.id, vehicle.asset.vehicleName, DateTime.Now);
-                    }
-                    /*
-                    float missingQuota = vc.Quota - vc.RequiredQuota;
-                    if (missingQuota < 0)
-                    {
-                        // give quota penalty
-                        if (vc.RequiredQuota != -1 && (vehicleWasEnemy || wasCrashed))
-                        {
-                            for (byte i = 0; i < vehicle.passengers.Length; i++)
-                            {
-                                Passenger passenger = vehicle.passengers[i];
-
-                                if (passenger.player is not null)
-                                {
-                                    vc.EvaluateUsage(passenger.player);
-                                }
-                            }
-
-                            double totalTime = 0;
-                            foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
-                                totalTime += entry.Value;
-
-                            foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
-                            {
-                                float responsibleness = (float)(entry.Value / totalTime);
-                                int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
-
-                                UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
-                                if (assetWaster != null)
-                                    Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
-                            }
-                        }
-                    }
-                    */
-                    
-                    if (Data.Reporter is not null)
-                    {
-                        if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
-                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID, vc.LastInstigator, vehicle.asset!.GUID, vc.LastItem, vc.LastDamageOrigin, vehicleWasFriendly);
-                        else
-                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.LastInstigator, vehicle.asset!.GUID, vc.LastItem, vc.LastDamageOrigin, vehicleWasFriendly);
-                    }
-                }
-            }
-        }
-
-        if (spotted != null)
-            UnityEngine.Object.Destroy(spotted);
-    }
-    public static void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        int team1bleed = GetTeamBleed(1);
-        int team2bleed = GetTeamBleed(2);
-
-        if (Data.Is<Invasion>(out _))
-        {
-            if (capturedTeam == 1)
-            {
-                Team1Tickets += Gamemode.Config.Invasion.TicketsFlagCaptured;
-                flag.HasBeenCapturedT1 = true;
-            }
-            else if (capturedTeam == 2)
-            {
-                Team2Tickets += Gamemode.Config.Invasion.TicketsFlagCaptured;
-                flag.HasBeenCapturedT2 = true;
-            }
-        }
-        else if (Data.Is(out IFlagRotation r))
-        {
-            if (capturedTeam == 1) flag.HasBeenCapturedT1 = true;
-            if (capturedTeam == 2) flag.HasBeenCapturedT2 = true;
-
-            if (r.Rotation.Count / 2f + 0.5f == flag.index) // if is middle flag
-            {
-                if (capturedTeam == 1) Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
-                if (capturedTeam == 2) Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
-            }
-
-            if (team2bleed < 0)
-            {
-                Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
-            }
-            else if (team1bleed < 0)
-            {
-                Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
-            }
-
-            if (lostTeam == 1) Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
-            if (lostTeam == 2) Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
-        }
-        
-
-        UpdateUI(1, team1bleed);
-        UpdateUI(2, team2bleed);
-
-        Dictionary<Squad, int> alreadyUpdated = new Dictionary<Squad, int>();
-
-        foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
-        {
-            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
-
-            if (player == null) continue;
-            int xp = Points.XPConfig.FlagCapturedXP;
-
-            Points.AwardXP(player, player.NearbyMemberBonus(xp, 60), Localization.Translate("xp_flag_captured", player.Steam64));
-
-            if (player.IsNearSquadLeader(50))
-            {
-                if (alreadyUpdated.TryGetValue(player.Squad!, out int amount))
-                {
-                    amount += Points.TWConfig.MemberFlagCapturePoints;
-                }
-                else
-                {
-                    alreadyUpdated.Add(player.Squad!, Points.TWConfig.MemberFlagCapturePoints);
-                }
-            }
-        }
-    }
-    public static void OnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        Dictionary<string, int> alreadyUpdated = new Dictionary<string, int>();
-
-        foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => TeamManager.IsFriendly(p, capturedTeam)))
-        {
-            UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
-
-            if (player == null) continue;
-            int xp = Points.XPConfig.FlagNeutralizedXP;
-
-            Points.AwardXP(player, xp, Localization.Translate("xp_flag_neutralized", player.Steam64));
-            Points.AwardXP(player, player.NearbyMemberBonus(xp, 60) - xp, Localization.Translate("xp_squad_bonus", player.Steam64));
-        }
-
-        UpdateUI(1);
-        UpdateUI(2);
-    }
-    public static void OnFlag20Seconds()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out IFlagRotation fg))
-        {
-            for (int i = 0; i < fg.Rotation.Count; i++)
-            {
-                Flag flag = fg.Rotation[i];
-                if (flag.LastDeltaPoints > 0 && flag.Owner != 1)
-                {
-                    for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam1[j],
-                            Points.XPConfig.FlagAttackXP,
-                            Localization.Translate("xp_flag_attack", flag.PlayersOnFlagTeam1[j]));
-                }
-                else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
-                {
-                    for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam2[j],
-                            Points.XPConfig.FlagAttackXP,
-                            Localization.Translate("xp_flag_attack", flag.PlayersOnFlagTeam2[j]));
-                }
-                else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
-                {
-                    for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam1[j],
-                            Points.XPConfig.FlagDefendXP,
-                            Localization.Translate("xp_flag_defend", flag.PlayersOnFlagTeam1[j]));
-                }
-                else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
-                {
-                    for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
-                        Points.AwardXP(flag.PlayersOnFlagTeam2[j],
-                            Points.XPConfig.FlagDefendXP,
-                            Localization.Translate("xp_flag_defend", flag.PlayersOnFlagTeam2[j]));
-                }
-            }
-        }
-    }
-    public static void OnCache20Seconds()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out Insurgency ins))
-        {
-            foreach (Insurgency.CacheData cache in ins.ActiveCaches)
-            {
-                if (cache.IsActive && !cache.IsDestroyed)
-                {
-                    for (int j = 0; j < cache.Cache.NearbyDefenders.Count; j++)
-                        Points.AwardXP(cache.Cache.NearbyDefenders[j],
-                            Points.XPConfig.FlagDefendXP,
-                            Localization.Translate("xp_flag_defend", cache.Cache.NearbyDefenders[j]));
-                }
-            }
-        }
+        if (Provider is IPlayerDeathListener pd)
+            pd.OnPlayerDeath(e);
     }
     private void OnGroupChanged(GroupChanged e)
     {
         if (e.NewTeam is > 0 and < 3)
-        {
             SendUI(e.Player);
-        }
         else
             ClearUI(e.Player);
     }
+    void IPlayerInitListener.OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    {
+        if (Provider is IPlayerInitListener il)
+            il.OnPlayerInit(player, wasAlreadyOnline);
+        SendUI(player);
+    }
     void IGameStartListener.OnGameStarting(bool isOnLoad)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out Invasion invasion))
-        {
-            int attack = Gamemode.Config.Invasion.AttackStartingTickets;
-            int defence = Gamemode.Config.Invasion.AttackStartingTickets + invasion.Rotation.Count * Gamemode.Config.Invasion.TicketsFlagCaptured;
-
-            if (invasion.AttackingTeam == 1)
-            {
-                Team1Tickets = attack;
-                Team2Tickets = defence;
-            }
-            else if (invasion.AttackingTeam == 2)
-            {
-                Team2Tickets = attack;
-                Team1Tickets = defence;
-            }
-        }
-        else if (Data.Is(out Insurgency insurgency))
-        {
-            int attack = Gamemode.Config.Insurgency.AttackStartingTickets;
-            int defence = insurgency.CachesLeft;
-
-            if (insurgency.AttackingTeam == 1)
-            {
-                Team1Tickets = attack;
-                Team2Tickets = defence;
-            }
-            else if (insurgency.AttackingTeam == 2)
-            {
-                Team2Tickets = attack;
-                Team1Tickets = defence;
-            }
-        }
-        else
-        {
-            Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
-            Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
-        }
-
-        UpdateUI(1);
-        UpdateUI(2);
+        if (Provider != null)
+            Provider.OnGameStarting(isOnLoad);
     }
-
-    public static void AddTeam1Tickets(int number)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == 1)
-            return;
-
-        Team1Tickets += number;
-        if (Team1Tickets <= 0)
-        {
-            Team1Tickets = 0;
-            Data.Gamemode.DeclareWin(2);
-        }
-        UpdateUI(1);
-    }
-    public static void AddTeam2Tickets(int number)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out Insurgency insurgency) && insurgency.DefendingTeam == 2)
-            return;
-
-        Team2Tickets += number;
-        if (Team2Tickets <= 0)
-        {
-            Team2Tickets = 0;
-            Data.Gamemode.DeclareWin(1);
-        }
-
-        UpdateUI(2);
-    }
-    public static void GetUIDisplayerInfo(ulong team, int bleed, out string tickets, out string message)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out Insurgency insurgency))
-        {
-            if (insurgency.DefendingTeam == team)
-            {
-                tickets = insurgency.CachesLeft + " left";
-                message = "DEFEND THE WEAPONS CACHES";
-            }
-            else if (insurgency.AttackingTeam == team)
-            {
-                tickets = string.Empty;
-                if (insurgency.DiscoveredCaches.Count == 0)
-                    message = "FIND THE WEAPONS CACHES\n(kill enemies for intel)";
-                else
-                    message = "DESTROY THE WEAPONS CACHES";
-            }
-            else
-            {
-                tickets = string.Empty;
-                message = string.Empty;
-            }
-        }
-        else
-        {
-            tickets = (team switch { 1 => Team1Tickets, 2 => Team2Tickets, _ => 0 }).ToString();
-            if (bleed < 0)
-                message = $"{bleed} per minute".Colorize("eb9898");
-            else
-                message = string.Empty;
-        }
-    }
-
-    public static void SendUI(ITransportConnection connection, ulong team, string message, string status)
-    {
-        if (team is < 1 or > 2) return;
-        TicketUI.SendToPlayer(connection, message,
-            string.Empty, status);
-        TicketUI.Flag.SetImage(connection, TeamManager.GetFaction(team).FlagImageURL);
-    }
-    public static void UpdateUI(ulong team)
-    {
-        GetUIDisplayerInfo(team, GetTeamBleed(team), out string tickets, out string message);
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-        {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            if (pl.GetTeam() == team && !pl.HasUIHidden)
-            {
-                TicketUI.Bleed.SetText(pl.Connection, bleed.ToString(Data.Locale));
-                TicketUI.Tickets.SetText(pl.Connection, tickets);
-                TicketUI.Status.SetText(pl.Connection, message);
-            }
-        }
-    }
-    public static void UpdateUI(ulong team, int bleed)
-    {
-        GetUIDisplayerInfo(team, bleed, out string tickets, out string message);
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-        {
-            UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            if (pl.GetTeam() == team && !pl.HasUIHidden)
-            {
-                TicketUI.Bleed.SetText(pl.Connection, bleed.ToString(Data.Locale));
-                TicketUI.Tickets.SetText(pl.Connection, tickets);
-                TicketUI.Status.SetText(pl.Connection, message);
-            }
-        }
-    }
-    public static void SendUI(UCPlayer player)
-    {
-        if (player.HasUIHidden) return;
-        ulong team = player.GetTeam();
-        if (team is < 1 or > 2) return;
-        GetUIDisplayerInfo(team, GetTeamBleed(team), out string tickets, out string message);
-        SendUI(player.Connection, team, tickets, message);
-    }
-    public static void ClearUI(UCPlayer player)
-    {
-        TicketUI.ClearFromPlayer(player.Connection);
-    }
-    public static void ClearUI(ITransportConnection connection)
-    {
-        TicketUI.ClearFromPlayer(connection);
-    }
-    public static int GetTeamBleed(ulong team)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out IFlagRotation fg))
-        {
-            if (Data.Is(out Invasion invasion))
-            {
-                if (team == invasion.AttackingTeam)
-                {
-                    int defenderFlags = fg.Rotation.Where(f => f.Owner == invasion.DefendingTeam).Count();
-
-                    if (defenderFlags == fg.Rotation.Count)
-                    {
-                        return -1;
-                    }
-                }
-            }
-            else
-            {
-                int friendly = fg.Rotation.Where(f => f.Owner == team).Count();
-                int enemy = fg.Rotation.Where(f => f.Owner != team && f.Owner != 0).Count();
-                int total = fg.Rotation.Count;
-
-                float friendlyRatio = (float)friendly / total;
-                float enemyRatio = (float)enemy / total;
-
-                if (enemyRatio >= 0.6f)
-                {
-                    if (enemyRatio > 0.75f)
-                    {
-                        if (enemyRatio > 0.85f)
-                            return -3;
-                        else
-                            return -2;
-                    }
-                    else
-                        return -1;
-                }
-            }
-        }
-        return 0;
-    }
-    //public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
-    //{
-    //    string xpstr = Translation.Translate(KeyplayerTranslationKey, ucplayer.Steam64);
-    //    string sqstr = Translation.Translate(squadTranslationKey, ucplayer.Steam64);
-    //    Points.AwardXP(ucplayer.Player, xp, xpstr);
-
-    //    if (ucplayer.Squad != null && ucplayer.Squad?.Members.Count > 1)
-    //    {
-    //        if (ucplayer == ucplayer.Squad.Leader)
-    //            OfficerManager.AddOfficerPoints(ucplayer.Player, ofp, sqstr);
-
-    //        int squadxp = (int)Math.Round(xp * squadMultiplier);
-    //        int squadofp = (int)Math.Round(ofp * squadMultiplier);
-
-    //        if (squadxp > 0)
-    //        {
-    //            for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
-    //            {
-    //                UCPlayer member = ucplayer.Squad.Members[i];
-    //                if (member != ucplayer && ucplayer.IsNearOtherPlayer(member, range))
-    //                {
-    //                    Points.AwardXP(member.Player, squadxp, sqstr);
-    //                    if (member.IsSquadLeader())
-    //                        OfficerManager.AddOfficerPoints(ucplayer.Player, squadofp, sqstr);
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
+    public void ClearUI(UCPlayer player) => TicketUI.ClearFromPlayer(player.Connection);
+    public void ClearUI(ITransportConnection connection) => TicketUI.ClearFromPlayer(connection);
 }
 public class TicketData : ConfigData
 {
     public int TicketHandicapDifference;
     public int FOBCost;
+    public int PlayerDeathCost;
     public ushort Team1TicketUIID;
     public ushort Team2TicketUIID;
 
     public override void SetDefaults()
     {
+        PlayerDeathCost = 1;
         TicketHandicapDifference = 40;
         FOBCost = 15;
         Team1TicketUIID = 36035;

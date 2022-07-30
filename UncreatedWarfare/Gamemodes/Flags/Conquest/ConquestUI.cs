@@ -132,24 +132,19 @@ public static class ConquestUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (flag.LastDeltaPoints == 0)
+        if (flag.IsContested(out _))
         {
-            if (flag.IsContested(out _))
-            {
-                if (Mathf.Abs(flag.Points) >= Flag.MAX_POINTS)
-                    goto full;
+            if (Mathf.Abs(flag.Points) < Flag.MAX_POINTS)
                 return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
-            }
-            full:
+            else
                 return new CaptureUIParameters(team, flag.Owner == team ? EFlagStatus.SECURED : EFlagStatus.NOT_OWNED, flag);
         }
-        else if (flag.LastDeltaPoints > 0)
-        {
-            return new CaptureUIParameters(team, team == 2 ? EFlagStatus.LOSING : (flag.Points < 0 ? EFlagStatus.CLEARING : EFlagStatus.CAPTURING), flag);
-        }
+
+        if (flag.Owner == 0)
+            return new CaptureUIParameters(team, EFlagStatus.CAPTURING, flag);
+        else if (flag.Owner == team)
+            return new CaptureUIParameters(team, EFlagStatus.SECURED, flag);
         else
-        {
-            return new CaptureUIParameters(team, team == 1 ? EFlagStatus.LOSING : (flag.Points > 0 ? EFlagStatus.CLEARING : EFlagStatus.CAPTURING), flag);
-        }
+            return new CaptureUIParameters(team, EFlagStatus.CLEARING, flag);
     }
 }

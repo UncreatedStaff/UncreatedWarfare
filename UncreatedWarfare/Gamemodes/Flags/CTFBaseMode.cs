@@ -8,8 +8,10 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
@@ -39,7 +41,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     where Leaderboard : BaseCTFLeaderboard<Stats, StatTracker>
     where Stats : BaseCTFStats
     where StatTracker : BaseCTFTracker<Stats>
-    where TTicketProvider : class, ITicketProvider, new()
+    where TTicketProvider : BaseCTFTicketProvider, new()
 {
     // vars
     protected int _objectiveT1Index;
@@ -128,36 +130,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             _counter++;
             return false;
         }
-    }
-    protected override void EvaluateTickets()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (_state == EState.ACTIVE)
-        {
-            if (EveryMinute)
-            {
-                int Team1Bleed = TicketManager.GetTeamBleed(1);
-                int Team2Bleed = TicketManager.GetTeamBleed(2);
-
-                if (Team1Bleed < 0)
-                {
-                    TicketManager.Team1Tickets += Team1Bleed;
-                    TicketManager.UpdateUI(1, Team1Bleed);
-                }
-                if (Team2Bleed < 0)
-                {
-                    TicketManager.Team2Tickets += Team2Bleed;
-                    TicketManager.UpdateUI(2, Team2Bleed);
-                }
-            }
-        }
-        if (EveryXSeconds(5))
-        {
-            _FOBManager.Tick();
-        }
-        base.EvaluateTickets();
     }
     public override void DeclareWin(ulong winner)
     {
@@ -311,6 +283,49 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             }
         }
     }
+    protected override void EventLoopAction()
+    {
+        base.EventLoopAction();
+
+        if (EveryXSeconds(5f))
+            FOBManager.Tick();
+
+        if (EveryXSeconds(20f))
+        {
+            for (int i = 0; i < _rotation.Count; i++)
+            {
+                Flag flag = _rotation[i];
+                if (flag.LastDeltaPoints > 0 && flag.Owner != 1)
+                {
+                    for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
+                        Points.AwardXP(flag.PlayersOnFlagTeam1[j],
+                            Points.XPConfig.FlagAttackXP,
+                            Localization.Translate("xp_flag_attack", flag.PlayersOnFlagTeam1[j]));
+                }
+                else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
+                {
+                    for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
+                        Points.AwardXP(flag.PlayersOnFlagTeam2[j],
+                            Points.XPConfig.FlagAttackXP,
+                            Localization.Translate("xp_flag_attack", flag.PlayersOnFlagTeam2[j]));
+                }
+                else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
+                {
+                    for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
+                        Points.AwardXP(flag.PlayersOnFlagTeam1[j],
+                            Points.XPConfig.FlagDefendXP,
+                            Localization.Translate("xp_flag_defend", flag.PlayersOnFlagTeam1[j]));
+                }
+                else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
+                {
+                    for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
+                        Points.AwardXP(flag.PlayersOnFlagTeam2[j],
+                            Points.XPConfig.FlagDefendXP,
+                            Localization.Translate("xp_flag_defend", flag.PlayersOnFlagTeam2[j]));
+                }
+            }
+        }
+    }
     protected virtual void InvokeOnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
 #if DEBUG
@@ -324,11 +339,12 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     protected virtual void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
-        TicketManager.OnFlagNeutralized(flag, capturedTeam, lostTeam);
         if (capturedTeam == 1)
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
         else if (capturedTeam == 2)
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
+        if (TicketManager.Provider is IFlagNeutralizedListener fnl)
+            fnl.OnFlagNeutralized(flag, capturedTeam, lostTeam);
     }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player)
     {
@@ -389,12 +405,12 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             }
         }
     }
-    protected override void FlagOwnerChanged(ulong OldOwner, ulong NewOwner, Flag flag)
+    protected override void FlagOwnerChanged(ulong lastOwner, ulong newOwner, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (NewOwner == 1)
+        if (newOwner == 1)
         {
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
             if (_objectiveT1Index >= _rotation.Count - 1) // if t1 just capped the last flag
@@ -407,7 +423,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             {
                 _objectiveT1Index = flag.index + 1;
                 InvokeOnObjectiveChanged(flag, _rotation[_objectiveT1Index], 1, flag.index, _objectiveT1Index);
-                InvokeOnFlagCaptured(flag, 1, OldOwner);
+                InvokeOnFlagCaptured(flag, 1, lastOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
                     if (flag.PlayersOnFlagTeam1[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -415,7 +431,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 }
             }
         }
-        else if (NewOwner == 2)
+        else if (newOwner == 2)
         {
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
             if (_objectiveT2Index < 1) // if t2 just capped the last flag
@@ -429,7 +445,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 
                 _objectiveT2Index = flag.index - 1;
                 InvokeOnObjectiveChanged(flag, _rotation[_objectiveT2Index], 2, flag.index, _objectiveT2Index);
-                InvokeOnFlagCaptured(flag, 2, OldOwner);
+                InvokeOnFlagCaptured(flag, 2, lastOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
                     if (flag.PlayersOnFlagTeam2[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
@@ -437,7 +453,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 }
             }
         }
-        if (OldOwner == 1)
+        if (lastOwner == 1)
         {
             int oldindex = _objectiveT1Index;
             _objectiveT1Index = flag.index;
@@ -447,7 +463,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 InvokeOnFlagNeutralized(flag, 2, 1);
             }
         }
-        else if (OldOwner == 2)
+        else if (lastOwner == 2)
         {
             int oldindex = _objectiveT2Index;
             _objectiveT2Index = flag.index;
@@ -459,7 +475,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         }
 
         UpdateFlag(flag);
-        if (NewOwner == 0)
+        if (newOwner == 0)
         {
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
@@ -472,8 +488,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 ulong team = player.GetTeam();
-                player.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(NewOwner, player.Player),
-                    TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : Localization.Translate("undiscovered_flag", player),
+                player.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(newOwner, player.Player),
+                    TeamManager.GetTeamHexColor(newOwner), flag.Discovered(team) ? flag.Name : Localization.Translate("undiscovered_flag", player),
                     flag.TeamSpecificHexColor);
             }
         }
@@ -502,19 +518,11 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         }
         ulong team = player.GetTeam();
         if (!AllowCosmetics)
-        {
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
-        }
+            player.SetCosmeticStates(false);
+
         if (UCWarfare.Config.ModifySkillLevels)
-        {
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 2);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 1);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
-        }
+            Skillset.SetDefaultSkills(player);
+
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
         base.PlayerInit(player, wasAlreadyOnline);
@@ -539,7 +547,10 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             _endScreen.OnPlayerJoined(player);
         }
         else
+        {
+            TicketManager.SendUI(player);
             InitUI(player);
+        }
         base.OnJoinTeam(player, team);
     }
 

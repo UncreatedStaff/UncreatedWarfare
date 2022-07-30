@@ -45,6 +45,7 @@ public static class EventDispatcher
     public static event EventDelegate<BattlEyeKicked> OnPlayerBattlEyeKicked;
     public static event EventDelegate<PlayerDied> OnPlayerDied;
     public static event EventDelegate<GroupChanged> OnGroupChanged;
+    public static event EventDelegate<PlayerEvent> OnUIRefreshRequested;
     internal static void SubscribeToAll()
     {
         EventPatches.TryPatchAll();
@@ -210,6 +211,7 @@ public static class EventDispatcher
             if (!e.CanContinue) break;
             TryInvoke(inv, e, nameof(OnPlayerDied));
         }
+        e.ActiveVehicle = null;
     }
     private static void ProviderOnServerDisconnected(CSteamID steamID)
     {
@@ -445,6 +447,16 @@ public static class EventDispatcher
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(OnGroupChanged));
+        }
+    }
+    internal static void InvokeUIRefreshRequest(UCPlayer player)
+    {
+        if (OnUIRefreshRequested == null || player is null) return;
+        PlayerEvent args = new PlayerEvent(player);
+        foreach (EventDelegate<PlayerEvent> inv in OnUIRefreshRequested.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
+        {
+            if (!args.CanContinue) break;
+            TryInvoke(inv, args, nameof(OnUIRefreshRequested));
         }
     }
 }

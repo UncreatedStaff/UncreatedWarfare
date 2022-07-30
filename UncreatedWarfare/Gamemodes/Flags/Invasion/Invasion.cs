@@ -10,6 +10,7 @@ using Uncreated.Warfare.Quests;
 using UnityEngine;
 using Uncreated.Warfare.Events.Players;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
+using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion;
 
@@ -136,7 +137,7 @@ public class Invasion :
         base.InitFlag(flag);
         flag.EvaluatePointsOverride = FlagCheck;
         flag.IsContestedOverride = ContestedCheck;
-        flag.SetOwnerNoEventInvocation(_defenseTeam);
+        flag.SetOwner(_defenseTeam, false);
         flag.SetPoints(_attackTeam == 2 ? Flag.MAX_POINTS : -Flag.MAX_POINTS, true, true);
     }
     private void FlagCheck(Flag flag, bool overrideInactiveCheck = false)
@@ -455,7 +456,43 @@ public class InvasionLeaderboard : BaseCTFLeaderboard<BaseCTFStats, InvasionTrac
 
 }
 
-public sealed class InvasionTicketProvider : BaseCTFTicketProvider
+public sealed class InvasionTicketProvider : BaseCTFTicketProvider, IFlagCapturedListener
 {
+    public override int GetTeamBleed(ulong team)
+    {
+        if (!Data.Is(out IFlagRotation fg) || !Data.Is(out IAttackDefense ad)) return 0;
+        if (team == ad.AttackingTeam)
+        {
+            int defenderFlags = fg.Rotation.Count(f => f.Owner == ad.DefendingTeam);
 
+            if (defenderFlags == fg.Rotation.Count)
+                return -1;
+        }
+
+        return 0;
+    }
+    public override void OnGameStarting(bool isOnLoaded)
+    {
+        if (!Data.Is(out IFlagRotation fg) || !Data.Is(out IAttackDefense ad)) return;
+        int attack = Gamemode.Config.Invasion.AttackStartingTickets;
+        int defense = Gamemode.Config.Invasion.AttackStartingTickets + fg.Rotation.Count * Gamemode.Config.Invasion.TicketsFlagCaptured;
+
+        if (ad.AttackingTeam == 1)
+        {
+            Manager.Team1Tickets = attack;
+            Manager.Team2Tickets = defense;
+        }
+        else if (ad.AttackingTeam == 2)
+        {
+            Manager.Team2Tickets = attack;
+            Manager.Team1Tickets = defense;
+        }
+    }
+    public void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner)
+    {
+        if (newOwner == 1)
+            Manager.Team1Tickets += Gamemode.Config.Invasion.TicketsFlagCaptured;
+        else if (newOwner == 2)
+            Manager.Team2Tickets += Gamemode.Config.Invasion.TicketsFlagCaptured;
+    }
 }

@@ -1,10 +1,6 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Uncreated.Warfare.Events.Players;
 public class PlayerDied : PlayerEvent
@@ -22,6 +18,9 @@ public class PlayerDied : PlayerEvent
     public bool PrimaryAssetIsVehicle { get; internal set; }
     public float KillDistance { get; internal set; }
     public string? KitName { get; internal set; }
+    public Deaths.DeathMessageArgs LocalizationArgs { get; internal set; }
+    public UCPlayer? DriverAssist { get; internal set; }
+    public InteractableVehicle? ActiveVehicle { get; internal set; }
     public PlayerDied(UCPlayer player) : base(player)
     {
     }

@@ -522,7 +522,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         foreach (IPlayerDisconnectListener listener in _singletons.OfType<IPlayerDisconnectListener>())
             listener.OnPlayerDisconnecting(player);
     }
-    public virtual void OnPlayerDeath(PlayerDied e) { }
+
+    public virtual void OnPlayerDeath(PlayerDied e)
+    {
+        Point.Points.OnPlayerDeath(e);
+    }
     public static Type? FindGamemode(string name)
     {
 #if DEBUG

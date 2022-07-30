@@ -1313,6 +1313,332 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
         }
     }
+    public void SendConquestLeaderboard(LanguageSet set, ref LongestShot info, List<ConquestStats>? t1Stats, List<ConquestStats>? t2Stats, ConquestStatTracker tracker, string? shutdownReason, ulong winner)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        string color = TeamManager.GetTeamHexColor(winner);
+        string lang = set.Language;
+        int len = 47;
+        if (t1Stats is not null)
+            len += Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1) * 7;
+        if (t2Stats is not null)
+            len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
+        string[] values = new string[len];
+        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+
+        values[0] = Localization.Translate("lb_winner_title", lang, TeamManager.TranslateName(winner, lang), color);
+        values[1] = shutdownReason is null ?
+            Localization.Translate("lb_next_game", lang) :
+            Localization.Translate("lb_next_game_shut_down", lang, shutdownReason);
+
+        values[2] = Localization.ObjectTranslate("lb_next_game_time_format", lang, TimeSpan.FromSeconds(secondsLeft));
+        values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
+        values[4] = Localization.Translate("lb_warstats_header", lang,
+            TeamManager.TranslateName(1, lang), TeamManager.Team1ColorHex,
+            TeamManager.TranslateName(2, lang), TeamManager.Team2ColorHex);
+
+        values[5] = Localization.Translate("ins_lb_warstats_0", lang);
+        values[6] = Localization.Translate("ins_lb_warstats_1", lang);
+        values[7] = Localization.Translate("ins_lb_warstats_2", lang);
+        values[8] = Localization.Translate("ins_lb_warstats_3", lang);
+        values[9] = Localization.Translate("ins_lb_warstats_4", lang);
+        values[10] = Localization.Translate("ins_lb_warstats_5", lang);
+        values[11] = Localization.Translate("ins_lb_warstats_6", lang);
+        values[12] = Localization.Translate("ins_lb_warstats_7", lang);
+        values[13] = Localization.Translate("ins_lb_warstats_8", lang);
+        values[14] = Localization.Translate("ins_lb_warstats_9", lang);
+        values[15] = Localization.Translate("ins_lb_warstats_10", lang);
+        values[16] = Localization.Translate("ins_lb_warstats_11", lang);
+
+        values[17] = Localization.Translate("ins_lb_playerstats_0", lang);
+        values[18] = Localization.Translate("ins_lb_playerstats_1", lang);
+        values[19] = Localization.Translate("ins_lb_playerstats_2", lang);
+        values[20] = Localization.Translate("ins_lb_playerstats_3", lang);
+        values[21] = Localization.Translate("ins_lb_playerstats_4", lang);
+        values[22] = Localization.Translate("ins_lb_playerstats_5", lang);
+        values[23] = Localization.Translate("ins_lb_playerstats_6", lang);
+        values[24] = Localization.Translate("ins_lb_playerstats_7", lang);
+        values[25] = Localization.Translate("ins_lb_playerstats_8", lang);
+        values[26] = Localization.Translate("ins_lb_playerstats_9", lang);
+        values[27] = Localization.Translate("ins_lb_playerstats_10", lang);
+        values[28] = Localization.Translate("ins_lb_playerstats_11", lang);
+
+        values[41] = Localization.Translate("ins_lb_header_0", lang);
+        values[42] = Localization.Translate("ins_lb_header_1", lang);
+        values[43] = Localization.Translate("ins_lb_header_2", lang);
+        values[44] = Localization.Translate("ins_lb_header_3", lang);
+        values[45] = Localization.Translate("ins_lb_header_4", lang);
+        values[46] = Localization.Translate("ins_lb_header_5", lang);
+
+        if (tracker is not null)
+        {
+            values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, Data.Locale);
+            values[30] = tracker.casualtiesT1.ToString(Data.Locale);
+            values[31] = tracker.casualtiesT2.ToString(Data.Locale);
+            values[32] = tracker.intelligenceGathered.ToString(Data.Locale);
+            values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
+            values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
+            values[35] = tracker.fobsPlacedT1.ToString(Data.Locale);
+            values[36] = tracker.fobsPlacedT2.ToString(Data.Locale);
+            values[37] = tracker.fobsDestroyedT1.ToString(Data.Locale);
+            values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
+            values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
+            values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
+                Localization.Translate("lb_longest_shot", lang, info.Distance.ToString(STAT_FLOAT_FORMAT, Data.Locale),
+                    Assets.find<ItemAsset>(info.Gun)?.itemName ?? info.Gun.ToString("N"),
+                    F.ColorizeName(F.GetPlayerOriginalNames(info.Player).CharacterName, info.Team));
+        }
+        else
+        {
+            for (int i = 29; i < 47; ++i)
+                values[i] = LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER;
+        }
+
+        int index = 46;
+        if (t1Stats is not null && t1Stats.Count > 0)
+        {
+            int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);
+            for (int i = 0; i < num; ++i)
+            {
+                ConquestStats stats = t1Stats[i];
+                values[++index] = i == 0 ?
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                values[++index] = stats.kills.ToString(Data.Locale);
+                values[++index] = stats.deaths.ToString(Data.Locale);
+                values[++index] = stats.XPGained.ToString(Data.Locale);
+                values[++index] = stats.Credits.ToString(Data.Locale);
+                values[++index] = stats.KDR.ToString(Data.Locale);
+                values[++index] = stats.DamageDone.ToString(Data.Locale);
+            }
+        }
+
+        if (t2Stats is not null && t2Stats.Count > 0)
+        {
+            int num = Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1);
+            for (int i = 0; i < num; ++i)
+            {
+                ConquestStats stats = t2Stats[i];
+                values[++index] = i == 0 ?
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                values[++index] = stats.kills.ToString(Data.Locale);
+                values[++index] = stats.deaths.ToString(Data.Locale);
+                values[++index] = stats.XPGained.ToString(Data.Locale);
+                values[++index] = stats.Credits.ToString(Data.Locale);
+                values[++index] = stats.KDR.ToString(Data.Locale);
+                values[++index] = stats.DamageDone.ToString(Data.Locale);
+            }
+        }
+
+        while (set.MoveNext())
+        {
+            UCPlayer pl = set.Next;
+            ulong team = pl.GetTeam();
+            ConquestStats? stats = team switch
+            {
+                1 => t1Stats?.Find(x => x.Steam64 == pl.Steam64),
+                2 => t2Stats?.Find(x => x.Steam64 == pl.Steam64),
+                _ => null
+            };
+            ITransportConnection c = pl.Connection;
+            FPlayerName names = F.GetPlayerOriginalNames(pl);
+
+            SendToPlayer(c);
+
+            Title.SetText(c, values[0]);
+            if (Data.Gamemode is not null)
+                Gamemode.SetText(c, Data.Gamemode.DisplayName);
+            else
+                Gamemode.SetText(c, string.Empty);
+
+            NextGameStartLabel.SetText(c, values[1]);
+            NextGameSeconds.SetText(c, values[2]);
+            NextGameSecondsCircle.SetText(c, values[3]);
+            TeamStatsHeader.SetText(c, values[4]);
+
+            TeamDurationLabel.SetText(c, values[5]);
+            TeamT1CasualtiesLabel.SetText(c, values[6]);
+            TeamT2CasualtiesLabel.SetText(c, values[7]);
+            TeamFlagCapturesLabel.SetText(c, values[8]);
+            TeamT1AveragePlayersLabel.SetText(c, values[9]);
+            TeamT2AveragePlayersLabel.SetText(c, values[10]);
+            TeamT1FOBsPlacedLabel.SetText(c, values[11]);
+            TeamT2FOBsPlacedLabel.SetText(c, values[12]);
+            TeamT1FOBsDestroyedLabel.SetText(c, values[13]);
+            TeamT2FOBsDestroyedLabel.SetText(c, values[14]);
+            TeamTeamkillsLabel.SetText(c, values[15]);
+            TeamLongestShotLabel.SetText(c, values[16]);
+
+            PersonalStats0Label.SetText(c, values[17]);
+            PersonalStats1Label.SetText(c, values[18]);
+            PersonalStats2Label.SetText(c, values[19]);
+            PersonalStats3Label.SetText(c, values[20]);
+            PersonalStats4Label.SetText(c, values[21]);
+            PersonalStats5Label.SetText(c, values[22]);
+            PersonalStats6Label.SetText(c, values[23]);
+            PersonalStats7Label.SetText(c, values[24]);
+            PersonalStats8Label.SetText(c, values[25]);
+            PersonalStats9Label.SetText(c, values[26]);
+            PersonalStats10Label.SetText(c, values[27]);
+            PersonalStats11Label.SetText(c, values[28]);
+
+            if (stats is not null)
+            {
+                if (tracker is not null)
+                    PlayerStatsHeader.SetText(c, Localization.ObjectTranslate("lb_playerstats_header", lang,
+                        names.CharacterName, TeamManager.GetTeamHexColor(team), tracker.GetPresence(stats) * 100f));
+                else
+                    PlayerStatsHeader.SetText(c, Localization.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
+                PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));
+                PersonalStats1.SetText(c, stats.Deaths.ToString(Data.Locale));
+                PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_PRECISION_FLOAT_FORMAT, Data.Locale));
+                if (Data.Gamemode is IAttackDefense iad)
+                    PersonalStats3.SetText(c, (team == iad.AttackingTeam ? stats.KillsAttack : stats.KillsDefense).ToString(Data.Locale));
+                else
+                    PersonalStats3.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, Data.Locale));
+                PersonalStats5.SetText(c, stats.XPGained.ToString(Data.Locale));
+                PersonalStats6.SetText(c, stats._intelligencePointsCollected.ToString(Data.Locale));
+                PersonalStats7.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER /* todo */);
+                PersonalStats8.SetText(c, stats._cachesDestroyed.ToString(Data.Locale));
+                PersonalStats9.SetText(c, stats.Teamkills.ToString(Data.Locale));
+                PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(Data.Locale));
+                PersonalStats11.SetText(c, stats.Credits.ToString(Data.Locale));
+            }
+            else
+            {
+                PlayerStatsHeader.SetText(c, Localization.Translate("lb_playerstats_header_backup", lang, names.CharacterName, TeamManager.GetTeamHexColor(team)));
+                PersonalStats0.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats1.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats2.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats3.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats4.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats5.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats6.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats7.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats8.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats9.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats10.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats11.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+            }
+
+            TeamDuration.SetText(c, values[29]);
+            TeamT1Casualties.SetText(c, values[30]);
+            TeamT2Casualties.SetText(c, values[31]);
+            TeamFlagCaptures.SetText(c, values[32]);
+            TeamT1AveragePlayers.SetText(c, values[33]);
+            TeamT2AveragePlayers.SetText(c, values[34]);
+            TeamT1FOBsPlaced.SetText(c, values[35]);
+            TeamT2FOBsPlaced.SetText(c, values[36]);
+            TeamT1FOBsDestroyed.SetText(c, values[37]);
+            TeamT2FOBsDestroyed.SetText(c, values[38]);
+            TeamTeamkills.SetText(c, values[39]);
+            TeamLongestShot.SetText(c, values[40]);
+
+
+            Team1Header0.SetText(c, values[41]);
+            Team2Header0.SetText(c, values[41]);
+            Team1Header1.SetText(c, values[42]);
+            Team2Header1.SetText(c, values[42]);
+            Team1Header2.SetText(c, values[43]);
+            Team2Header2.SetText(c, values[43]);
+            Team1Header3.SetText(c, values[44]);
+            Team2Header3.SetText(c, values[44]);
+            Team1Header4.SetText(c, values[45]);
+            Team2Header4.SetText(c, values[45]);
+            Team1Header5.SetText(c, values[46]);
+            Team2Header5.SetText(c, values[46]);
+
+            index = 46;
+            if (t1Stats is not null && t1Stats.Count > 0)
+            {
+                int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);
+                for (int i = 0; i < num; ++i)
+                {
+                    if (i == 0)
+                    {
+                        Team1Name.SetText(c, values[++index]);
+                        Team1Kills.SetText(c, values[++index]);
+                        Team1Deaths.SetText(c, values[++index]);
+                        Team1XP.SetText(c, values[++index]);
+                        Team1Credits.SetText(c, values[++index]);
+                        Team1Captures.SetText(c, values[++index]);
+                        Team1Damage.SetText(c, values[++index]);
+                    }
+                    else
+                    {
+                        int i3 = i - 1;
+                        if (t1Stats[i].Steam64 == pl.Steam64)
+                        {
+                            Team1PlayerNames[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerKills[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerDeaths[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerXP[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerCredits[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerCaptures[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team1PlayerDamage[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                        }
+                        else
+                        {
+                            Team1PlayerNames[i3].SetText(c, values[++index]);
+                            Team1PlayerKills[i3].SetText(c, values[++index]);
+                            Team1PlayerDeaths[i3].SetText(c, values[++index]);
+                            Team1PlayerXP[i3].SetText(c, values[++index]);
+                            Team1PlayerCredits[i3].SetText(c, values[++index]);
+                            Team1PlayerCaptures[i3].SetText(c, values[++index]);
+                            Team1PlayerDamage[i3].SetText(c, values[++index]);
+                        }
+                        if (i != 0)
+                            Team1PlayerVCs[i3].SetVisibility(c, false);
+                    }
+                }
+            }
+            if (t2Stats is not null && t2Stats.Count > 0)
+            {
+                int num = Math.Min(t2Stats.Count, Team1PlayerNames.Length + 1);
+                for (int i = 0; i < num; ++i)
+                {
+                    if (i == 0)
+                    {
+                        Team2Name.SetText(c, values[++index]);
+                        Team2Kills.SetText(c, values[++index]);
+                        Team2Deaths.SetText(c, values[++index]);
+                        Team2XP.SetText(c, values[++index]);
+                        Team2Credits.SetText(c, values[++index]);
+                        Team2Captures.SetText(c, values[++index]);
+                        Team2Damage.SetText(c, values[++index]);
+                    }
+                    else
+                    {
+                        int i3 = i - 1;
+                        if (t2Stats[i].Steam64 == pl.Steam64)
+                        {
+                            Team2PlayerNames[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerKills[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerDeaths[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerXP[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerCredits[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerCaptures[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                            Team2PlayerDamage[i3].SetText(c, values[++index].Colorize("dbffdc"));
+                        }
+                        else
+                        {
+                            Team2PlayerNames[i3].SetText(c, values[++index]);
+                            Team2PlayerKills[i3].SetText(c, values[++index]);
+                            Team2PlayerDeaths[i3].SetText(c, values[++index]);
+                            Team2PlayerXP[i3].SetText(c, values[++index]);
+                            Team2PlayerCredits[i3].SetText(c, values[++index]);
+                            Team2PlayerCaptures[i3].SetText(c, values[++index]);
+                            Team2PlayerDamage[i3].SetText(c, values[++index]);
+                        }
+                        if (i != 0)
+                            Team2PlayerVCs[i3].SetVisibility(c, false);
+                    }
+                }
+            }
+        }
+    }
     public void UpdateTime(LanguageSet set, int secondsLeft)
     {
         int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);

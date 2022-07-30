@@ -269,8 +269,9 @@ public class CONQUEST_CONFIG
     public float CaptureScale;
     public int PointCount;
     public float FlagTickSeconds;
-    public float TicketTickSeconds;
+    public float TicketBleedIntervalPerPoint;
     public int StagingPhaseSeconds;
+    public int StartingTickets;
 
     public void SetDefaults()
     {
@@ -278,8 +279,9 @@ public class CONQUEST_CONFIG
         CaptureScale = 3.222f;
         PointCount = 5;
         FlagTickSeconds = 4f;
-        TicketTickSeconds = 8f;
+        TicketBleedIntervalPerPoint = 12f;
         StagingPhaseSeconds = 60;
+        StartingTickets = 250;
     }
 }
 public class INVASION

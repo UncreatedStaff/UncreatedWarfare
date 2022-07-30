@@ -9,10 +9,10 @@ public class ConquestLeaderboard : ConventionalLeaderboard<ConquestStats, Conque
 {
     public override void Calculate()
     {
-        throw new NotImplementedException();
+        tracker.GetTopStats(14, out statsT1, out statsT2);
     }
     public override void SendLeaderboard(LanguageSet set)
     {
-        throw new NotImplementedException();
+        LeaderboardUI.SendConquestLeaderboard(set, in tracker.LongestShot, statsT1, statsT2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
     }
 }

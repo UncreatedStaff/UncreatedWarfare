@@ -636,8 +636,8 @@ public readonly struct Skillset : IEquatable<Skillset>
         player.Player.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
     public static Skillset Read(ref Utf8JsonReader reader)
     {
-        bool f2 = false;
-        bool f3 = false;
+        bool valFound = false;
+        bool lvlFound = false;
         EPlayerSpeciality spec = default;
         EPlayerOffense offense = default;
         EPlayerDefense defense = default;
@@ -656,7 +656,7 @@ public readonly struct Skillset : IEquatable<Skillset>
                         if (value2 != null)
                         {
                             Enum.TryParse(value2, true, out offense);
-                            f2 = true;
+                            valFound = true;
                         }
                         break;
                     case "defense":
@@ -665,7 +665,7 @@ public readonly struct Skillset : IEquatable<Skillset>
                         if (value3 != null)
                         {
                             Enum.TryParse(value3, true, out defense);
-                            f2 = true;
+                            valFound = true;
                         }
                         break;
                     case "support":
@@ -674,19 +674,19 @@ public readonly struct Skillset : IEquatable<Skillset>
                         if (value4 != null)
                         {
                             Enum.TryParse(value4, true, out support);
-                            f2 = true;
+                            valFound = true;
                         }
                         break;
                     case "level":
                         if (reader.TryGetInt32(out level))
                         {
-                            f3 = true;
+                            lvlFound = true;
                         }
                         break;
                 }
             }
         }
-        if (f2 && f3)
+        if (valFound && lvlFound)
         {
             switch (spec)
             {
@@ -766,6 +766,16 @@ public readonly struct Skillset : IEquatable<Skillset>
     }
     public bool Equals(Skillset other) => EqualsHelper(ref other, true);
     public bool TypeEquals(ref Skillset skillset) => EqualsHelper(ref skillset, false);
+
+    public static void SetDefaultSkills(UCPlayer player)
+    {
+        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
+        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 2);
+        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 1);
+        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
+        player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
+    }
+
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(ref b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(ref b, true);
 }

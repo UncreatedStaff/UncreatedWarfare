@@ -16,22 +16,17 @@ public abstract class TicketGamemode<TProvider> : FlagGamemode, ITickets where T
     protected override void PreInit()
     {
         AddSingletonRequirement(ref _ticketManager);
+        _ticketManager.Provider = new TProvider();
         base.PreInit();
     }
     protected override void PostInit()
     {
-        _ticketManager.Provider = new TProvider();
         base.PostInit();
     }
     protected override void EventLoopAction()
     {
-        EvaluateTickets();
         base.EventLoopAction();
-    }
-    protected virtual void EvaluateTickets()
-    {
-        if (EveryXSeconds(20))
-            TicketManager.OnFlag20Seconds();
+        TicketManager.Provider.Tick();
     }
     public override void DeclareWin(ulong winner)
     {

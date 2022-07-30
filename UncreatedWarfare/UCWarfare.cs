@@ -298,6 +298,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        EventDispatcher.InvokeUIRefreshRequest(player);
         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
         foreach (BarricadeRegion region in BarricadeManager.regions)
         {
@@ -348,8 +349,6 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             FOBManager.SendFOBList(ucplayer);
         if (Data.Gamemode.ShowXPUI)
             Points.UpdateXPUI(ucplayer);
-        if (TicketManager.Loaded)
-            TicketManager.UpdateUI(ucplayer);
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out ZonePlayerComponent comp))

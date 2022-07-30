@@ -506,6 +506,7 @@ internal static class Localization
             else
                 ActionLogger.Add(EActionLogType.DEATH, log, e.Player.Steam64);
         }
+        e.LocalizationArgs = args;
         EventDispatcher.InvokeOnPlayerDied(e);
     }
     internal static void Reload()

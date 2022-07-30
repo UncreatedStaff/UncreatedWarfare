@@ -9,6 +9,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
@@ -20,7 +21,7 @@ using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public partial class Conquest :
-    TicketGamemode,
+    TicketGamemode<ConquestTicketProvider>,
     IFlagRotation,
     IVehicles,
     IFOBs,
@@ -102,35 +103,12 @@ public partial class Conquest :
         Destroy(_gameStats);
         base.PostDispose();
     }
-    protected override void EvaluateTickets()
+    protected override void EventLoopAction()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (_state == EState.ACTIVE)
-        {
-            if (EveryXSeconds(Config.Conquest.PointCount * 12f))
-            {
-                GetTeamBleed(out int t1Bleed, out int t2Bleed);
+        base.EventLoopAction();
 
-                if (t1Bleed > 0)
-                {
-                    TicketManager.Team1Tickets -= t1Bleed;
-                    TicketManager.UpdateUI(1ul, -t1Bleed);
-                }
-                if (t2Bleed > 0)
-                {
-                    TicketManager.Team2Tickets -= t2Bleed;
-                    TicketManager.UpdateUI(2ul, -t2Bleed);
-                }
-
-                TicketManager.BroadcastUI();
-            }
-        }
-        if (EveryXSeconds(5))
-            _FOBManager.Tick();
-
-        base.EvaluateTickets();
+        if (EveryXSeconds(5f))
+            FOBManager.Tick();
     }
     private void GetTeamBleed(out int t1Bleed, out int t2Bleed)
     {
@@ -312,11 +290,12 @@ public partial class Conquest :
 #endif
         foreach (LanguageSet set in Localization.EnumerateLanguageSets())
             Chat.Broadcast(set, "flag_neutralized", flag.Name, flag.TeamSpecificHexColor);
-        TicketManager.OnFlagNeutralized(flag, neutralizingTeam, lostTeam);
         if (neutralizingTeam == 1)
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), neutralizingTeam);
         else if (neutralizingTeam == 2)
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), neutralizingTeam);
+        if (TicketManager.Provider is IFlagNeutralizedListener fnl)
+            fnl.OnFlagNeutralized(flag, neutralizingTeam, lostTeam);
     }
     private void OnFlagCaptured(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
@@ -333,6 +312,7 @@ public partial class Conquest :
         VehicleSigns.OnFlagCaptured();
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
             .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
+        TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
     }
     private void UpdateFlag(Flag flag)
     {
@@ -390,29 +370,18 @@ public partial class Conquest :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (KitManager.KitExists(player.KitName, out Kit kit))
+        if (!KitManager.KitExists(player.KitName, out Kit kit) || (!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
         {
-            if ((!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
-            {
-                if (!KitManager.TryGiveRiflemanKit(player))
-                    KitManager.TryGiveUnarmedKit(player);
-            }
+            if (!KitManager.TryGiveRiflemanKit(player))
+                KitManager.TryGiveUnarmedKit(player);
         }
         ulong team = player.GetTeam();
         if (!AllowCosmetics)
-        {
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
-        }
+            player.SetCosmeticStates(false);
+
         if (UCWarfare.Config.ModifySkillLevels)
-        {
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 2);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 1);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
-        }
+            Skillset.SetDefaultSkills(player);
+
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
         base.PlayerInit(player, wasAlreadyOnline);
@@ -434,6 +403,11 @@ public partial class Conquest :
         _gameStats.OnPlayerJoin(player);
         if (IsScreenUp && _endScreen != null)
             _endScreen.OnPlayerJoined(player);
+        else
+        {
+            TicketManager.SendUI(player);
+            ConquestUI.SendFlagList(player);
+        }
         base.OnJoinTeam(player, team);
     }
     public override void OnGroupChanged(GroupChanged e)
@@ -445,10 +419,68 @@ public partial class Conquest :
         base.OnGroupChanged(e);
     }
 }
-/*
- * Rotation: FLAG_T1, MID_T1 (adjacent to one of the t1 adjacencies), MID * n-4 (not adjacent to t1 adj, t2 adj), MID_T2 (adjacent to one of the t2 adjacencies), FLAG_T2
- * 
- * 
- * 
- * 
- */
+
+public class ConquestTicketProvider : BaseTicketProvider
+{
+    public override void Load() { }
+    public override void Unload() { }
+    public override void OnGameStarting(bool isOnLoaded)
+    {
+        Manager.Team1Tickets = Gamemode.Config.Conquest.StartingTickets;
+        Manager.Team2Tickets = Gamemode.Config.Conquest.StartingTickets;
+    }
+    public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
+    {
+        int intlBld = GetTeamBleed(team);
+        tickets = (team switch { 1 => Manager.Team1Tickets, 2 => Manager.Team2Tickets, _ => 0 }).ToString(Data.Locale);
+        if (intlBld < 0)
+        {
+            message = $"{intlBld} per minute".Colorize("eb9898");
+            bleed = intlBld.ToString(Data.Locale);
+        }
+        else
+            bleed = message = string.Empty;
+    }
+    public override int GetTeamBleed(ulong team)
+    {
+        if (Data.Is(out IFlagRotation fr))
+        {
+            int t1 = 0, t2 = 0;
+            for (int i = 0; i < fr.Rotation.Count; ++i)
+            {
+                ulong owner = fr.Rotation[i].Owner;
+                if (owner == 1)
+                    ++t1;
+                else if (owner == 2)
+                    ++t2;
+            }
+            if (team == 1)
+                return -t2;
+            else if (team == 2)
+                return -t1;
+        }
+
+        return 0;
+    }
+    public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
+    {
+        if (oldValue > 0 && newValue <= 0)
+            Data.Gamemode.DeclareWin(TeamManager.Other(team));
+    }
+    public override void Tick()
+    {
+        if (Data.Gamemode.State == EState.ACTIVE)
+        {
+            if (Data.Gamemode.EveryXSeconds(Gamemode.Config.Conquest.PointCount * Gamemode.Config.Conquest.TicketBleedIntervalPerPoint))
+            {
+                int t1Bleed = GetTeamBleed(1ul);
+                int t2Bleed = GetTeamBleed(2ul);
+
+                if (t1Bleed < 0)
+                    Manager.Team1Tickets += t1Bleed;
+                if (t2Bleed < 0)
+                    Manager.Team2Tickets += t2Bleed;
+            }
+        }
+    }
+}

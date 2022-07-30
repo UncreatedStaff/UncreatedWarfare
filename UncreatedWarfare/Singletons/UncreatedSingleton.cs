@@ -2,6 +2,7 @@
 using System.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes.Flags;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;
@@ -12,37 +13,49 @@ public interface IUncreatedSingleton
     void Load();
     void Unload();
 }
-public interface ILevelStartListener : IUncreatedSingleton
+public interface ILevelStartListener
 {
     void OnLevelReady();
 }
-public interface IDeclareWinListener : IUncreatedSingleton
+public interface IDeclareWinListener
 {
     void OnWinnerDeclared(ulong winner);
 }
-public interface IGameStartListener : IUncreatedSingleton
+public interface IGameStartListener
 {
     void OnGameStarting(bool isOnLoad);
 }
-public interface IPlayerDisconnectListener : IUncreatedSingleton
+public interface IFlagCapturedListener
+{
+    void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner);
+}
+public interface IFlagNeutralizedListener
+{
+    void OnFlagNeutralized(Flag flag, ulong newOwner, ulong oldOwner);
+}
+public interface IPlayerDisconnectListener
 {
     void OnPlayerDisconnecting(UCPlayer player);
 }
-public interface IPlayerConnectListener : IUncreatedSingleton
+public interface IPlayerConnectListener
 {
     void OnPlayerConnecting(UCPlayer player);
 }
-public interface IPlayerAsyncInitListener : IUncreatedSingleton
+public interface IPlayerAsyncInitListener
 {
     void OnAsyncInitComplete(UCPlayer player);
 }
-public interface IJoinedTeamListener : IUncreatedSingleton
+public interface IJoinedTeamListener
 {
     void OnJoinTeam(UCPlayer player, ulong team);
 }
-public interface IPlayerInitListener : IUncreatedSingleton
+public interface IPlayerInitListener
 {
     void OnPlayerInit(UCPlayer player, bool wasAlreadyOnline);
+}
+public interface IPlayerDeathListener
+{
+    void OnPlayerDeath(PlayerDied e);
 }
 
 public interface IReloadableSingleton : IUncreatedSingleton
