@@ -794,7 +794,6 @@ public class Translation
 
             FileInfo info = new FileInfo(Path.Combine(langFolder.FullName, LOCAL_FILE_NAME));
             if (!info.Exists) continue;
-            L.Log("Reading translations from " + info.FullName, ConsoleColor.Magenta);
             string lang = langFolder.Name;
             if (lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.OrdinalIgnoreCase))
             {

@@ -57,8 +57,10 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     public interface IFlagStats : IStats
     {
         int Captures { get; }
+        int KillsOnPoint { get; }
         void AddCapture();
         void AddCaptures(int amount);
+        void AddKillOnPoint();
     }
     public interface IFOBStats : IStats
     {

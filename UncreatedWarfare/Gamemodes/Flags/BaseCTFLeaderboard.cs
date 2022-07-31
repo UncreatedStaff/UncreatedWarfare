@@ -1,9 +1,7 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Gamemodes.UI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -13,9 +11,9 @@ public class BaseCTFLeaderboard<Stats, StatTracker> : ConventionalLeaderboard<St
     {
         tracker.GetTopStats(14, out statsT1, out statsT2);
     }
-    public override void SendLeaderboard(LanguageSet set)
+    public override void SendLeaderboard(in LanguageSet set)
     {
-        LeaderboardUI.SendCTFLeaderboard(set, ref tracker.LongestShot, statsT1, statsT2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
+        LeaderboardUI.SendCTFLeaderboard(set, in tracker.LongestShot, statsT1, statsT2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
     }
 }
 

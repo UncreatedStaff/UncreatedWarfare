@@ -86,6 +86,8 @@ public sealed class ConquestStats : TeamPlayerStats, IExperienceStats, IFlagStat
     private int _fobsDestroyed;
     private int _fobsPlaced;
     private int _revives;
+    private int _killsOnPt;
+
     public ConquestStats(UCPlayer player) : base(player) { }
     public ConquestStats(ulong player) : base(player) { }
 
@@ -95,6 +97,7 @@ public sealed class ConquestStats : TeamPlayerStats, IExperienceStats, IFlagStat
     public int FOBsDestroyed => _fobsDestroyed;
     public int FOBsPlaced => _fobsPlaced;
     public int Revives => _revives;
+    public int KillsOnPoint => _killsOnPt;
     public void AddCaptures(int amount)
     {
         _captures += amount;
@@ -115,6 +118,10 @@ public sealed class ConquestStats : TeamPlayerStats, IExperienceStats, IFlagStat
     {
         ++_fobsDestroyed;
     }
+    public void AddKillOnPoint()
+    {
+        ++_killsOnPt;
+    }
     public void AddFOBPlaced()
     {
         ++_fobsPlaced;
@@ -132,5 +139,6 @@ public sealed class ConquestStats : TeamPlayerStats, IExperienceStats, IFlagStat
         _fobsDestroyed = 0;
         _fobsPlaced = 0;
         _revives = 0;
+        _killsOnPt = 0;
     }
 }

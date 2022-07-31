@@ -20,7 +20,7 @@ using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
-public partial class Conquest :
+public sealed partial class Conquest :
     TicketGamemode<ConquestTicketProvider>,
     IFlagRotation,
     IVehicles,
@@ -33,19 +33,17 @@ public partial class Conquest :
     IStagingPhase,
     IGameStats
 {
-    protected VehicleSpawner _vehicleSpawner;
-    protected VehicleBay _vehicleBay;
-    protected VehicleSigns _vehicleSigns;
-    protected FOBManager _FOBManager;
-    protected RequestSigns _requestSigns;
-    protected KitManager _kitManager;
-    protected ReviveManager _reviveManager;
-    protected SquadManager _squadManager;
-    protected StructureSaver _structureSaver;
-    protected ConquestLeaderboard? _endScreen;
+    private VehicleSpawner _vehicleSpawner;
+    private VehicleBay _vehicleBay;
+    private VehicleSigns _vehicleSigns;
+    private FOBManager _FOBManager;
+    private RequestSigns _requestSigns;
+    private KitManager _kitManager;
+    private ReviveManager _reviveManager;
+    private SquadManager _squadManager;
+    private StructureSaver _structureSaver;
+    private ConquestLeaderboard? _endScreen;
     private ConquestStatTracker _gameStats;
-    protected Transform? _blockerBarricadeT1 = null;
-    protected Transform? _blockerBarricadeT2 = null;
     private bool _isScreenUp = false;
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
@@ -70,9 +68,7 @@ public partial class Conquest :
     object IGameStats.GameStats => _gameStats;
     public override string DisplayName => "Conquest";
     public override EGamemode GamemodeType => EGamemode.CONQUEST;
-    public Conquest() : base(nameof(Conquest), Config.TeamCTF.EvaluateTime)
-    {
-    }
+    public Conquest() : base(nameof(Conquest), Config.TeamCTF.EvaluateTime) { }
     protected override void PreInit()
     {
         AddSingletonRequirement(ref _vehicleSpawner);
@@ -420,8 +416,10 @@ public partial class Conquest :
     }
 }
 
-public class ConquestTicketProvider : BaseTicketProvider
+public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener, IFlagNeutralizedListener
 {
+    private int _t1Bleed;
+    private int _t2Bleed;
     public override void Load() { }
     public override void Unload() { }
     public override void OnGameStarting(bool isOnLoaded)
@@ -441,7 +439,7 @@ public class ConquestTicketProvider : BaseTicketProvider
         else
             bleed = message = string.Empty;
     }
-    public override int GetTeamBleed(ulong team)
+    private void UpdateTeamBleeds()
     {
         if (Data.Is(out IFlagRotation fr))
         {
@@ -454,13 +452,22 @@ public class ConquestTicketProvider : BaseTicketProvider
                 else if (owner == 2)
                     ++t2;
             }
-            if (team == 1)
-                return -t2;
-            else if (team == 2)
-                return -t1;
-        }
 
-        return 0;
+            if (_t1Bleed != -t2)
+            {
+                _t1Bleed = -t2;
+                Manager.UpdateUI(1ul);
+            }
+            if (_t2Bleed != -t1)
+            {
+                _t2Bleed = -t1;
+                Manager.UpdateUI(2ul);
+            }
+        }
+    }
+    public override int GetTeamBleed(ulong team)
+    {
+        return team == 1 ? _t1Bleed : (team == 2 ? _t2Bleed : 0);
     }
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
@@ -473,14 +480,13 @@ public class ConquestTicketProvider : BaseTicketProvider
         {
             if (Data.Gamemode.EveryXSeconds(Gamemode.Config.Conquest.PointCount * Gamemode.Config.Conquest.TicketBleedIntervalPerPoint))
             {
-                int t1Bleed = GetTeamBleed(1ul);
-                int t2Bleed = GetTeamBleed(2ul);
-
-                if (t1Bleed < 0)
-                    Manager.Team1Tickets += t1Bleed;
-                if (t2Bleed < 0)
-                    Manager.Team2Tickets += t2Bleed;
+                if (_t1Bleed < 0)
+                    Manager.Team1Tickets += _t1Bleed;
+                if (_t2Bleed < 0)
+                    Manager.Team2Tickets += _t2Bleed;
             }
         }
     }
+    public void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner) => UpdateTeamBleeds();
+    public void OnFlagNeutralized(Flag flag, ulong newOwner, ulong oldOwner) => UpdateTeamBleeds();
 }

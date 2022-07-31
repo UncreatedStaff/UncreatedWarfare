@@ -665,7 +665,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             Team2Player13VC,
         };
     }
-    public void SendCTFLeaderboard<Stats, StatTracker>(LanguageSet set, ref LongestShot info, List<Stats>? t1Stats, List<Stats>? t2Stats, StatTracker tracker, string? shutdownReason, ulong winner) where Stats : BaseCTFStats where StatTracker : BaseCTFTracker<Stats>
+    public void SendCTFLeaderboard<Stats, StatTracker>(LanguageSet set, in LongestShot info, List<Stats>? t1Stats, List<Stats>? t2Stats, StatTracker tracker, string? shutdownReason, ulong winner) where Stats : BaseCTFStats where StatTracker : BaseCTFTracker<Stats>
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -987,7 +987,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
         }
     }
-    public void SendInsurgencyLeaderboard<Stats, StatTracker>(LanguageSet set, ref LongestShot info, List<Stats>? t1Stats, List<Stats>? t2Stats, StatTracker tracker, string? shutdownReason, ulong winner) where Stats : InsurgencyPlayerStats where StatTracker : InsurgencyTracker
+    public void SendInsurgencyLeaderboard(LanguageSet set, in LongestShot info, List<InsurgencyPlayerStats>? t1Stats, List<InsurgencyPlayerStats>? t2Stats, InsurgencyTracker tracker, string? shutdownReason, ulong winner)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1076,7 +1076,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             int num = Math.Min(t1Stats.Count, Team1PlayerNames.Length + 1);
             for (int i = 0; i < num; ++i)
             {
-                Stats stats = t1Stats[i];
+                InsurgencyPlayerStats stats = t1Stats[i];
                 values[++index] = i == 0 ?
                     TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
@@ -1093,7 +1093,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             int num = Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1);
             for (int i = 0; i < num; ++i)
             {
-                Stats stats = t2Stats[i];
+                InsurgencyPlayerStats stats = t2Stats[i];
                 values[++index] = i == 0 ?
                     TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
@@ -1109,7 +1109,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         {
             UCPlayer pl = set.Next;
             ulong team = pl.GetTeam();
-            Stats? stats = team switch
+            InsurgencyPlayerStats? stats = team switch
             {
                 1 => t1Stats?.Find(x => x.Steam64 == pl.Steam64),
                 2 => t2Stats?.Find(x => x.Steam64 == pl.Steam64),
@@ -1313,7 +1313,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
         }
     }
-    public void SendConquestLeaderboard(LanguageSet set, ref LongestShot info, List<ConquestStats>? t1Stats, List<ConquestStats>? t2Stats, ConquestStatTracker tracker, string? shutdownReason, ulong winner)
+    public void SendConquestLeaderboard(LanguageSet set, in LongestShot info, List<ConquestStats>? t1Stats, List<ConquestStats>? t2Stats, ConquestStatTracker tracker, string? shutdownReason, ulong winner)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1339,45 +1339,45 @@ public class ConventionalLeaderboardUI : UnturnedUI
             TeamManager.TranslateName(1, lang), TeamManager.Team1ColorHex,
             TeamManager.TranslateName(2, lang), TeamManager.Team2ColorHex);
 
-        values[5] = Localization.Translate("ins_lb_warstats_0", lang);
-        values[6] = Localization.Translate("ins_lb_warstats_1", lang);
-        values[7] = Localization.Translate("ins_lb_warstats_2", lang);
-        values[8] = Localization.Translate("ins_lb_warstats_3", lang);
-        values[9] = Localization.Translate("ins_lb_warstats_4", lang);
-        values[10] = Localization.Translate("ins_lb_warstats_5", lang);
-        values[11] = Localization.Translate("ins_lb_warstats_6", lang);
-        values[12] = Localization.Translate("ins_lb_warstats_7", lang);
-        values[13] = Localization.Translate("ins_lb_warstats_8", lang);
-        values[14] = Localization.Translate("ins_lb_warstats_9", lang);
-        values[15] = Localization.Translate("ins_lb_warstats_10", lang);
-        values[16] = Localization.Translate("ins_lb_warstats_11", lang);
+        values[5] = Localization.Translate("cqt_lb_warstats_0", lang);
+        values[6] = Localization.Translate("cqt_lb_warstats_1", lang);
+        values[7] = Localization.Translate("cqt_lb_warstats_2", lang);
+        values[8] = Localization.Translate("cqt_lb_warstats_3", lang);
+        values[9] = Localization.Translate("cqt_lb_warstats_4", lang);
+        values[10] = Localization.Translate("cqt_lb_warstats_5", lang);
+        values[11] = Localization.Translate("cqt_lb_warstats_6", lang);
+        values[12] = Localization.Translate("cqt_lb_warstats_7", lang);
+        values[13] = Localization.Translate("cqt_lb_warstats_8", lang);
+        values[14] = Localization.Translate("cqt_lb_warstats_9", lang);
+        values[15] = Localization.Translate("cqt_lb_warstats_10", lang);
+        values[16] = Localization.Translate("cqt_lb_warstats_11", lang);
 
-        values[17] = Localization.Translate("ins_lb_playerstats_0", lang);
-        values[18] = Localization.Translate("ins_lb_playerstats_1", lang);
-        values[19] = Localization.Translate("ins_lb_playerstats_2", lang);
-        values[20] = Localization.Translate("ins_lb_playerstats_3", lang);
-        values[21] = Localization.Translate("ins_lb_playerstats_4", lang);
-        values[22] = Localization.Translate("ins_lb_playerstats_5", lang);
-        values[23] = Localization.Translate("ins_lb_playerstats_6", lang);
-        values[24] = Localization.Translate("ins_lb_playerstats_7", lang);
-        values[25] = Localization.Translate("ins_lb_playerstats_8", lang);
-        values[26] = Localization.Translate("ins_lb_playerstats_9", lang);
-        values[27] = Localization.Translate("ins_lb_playerstats_10", lang);
-        values[28] = Localization.Translate("ins_lb_playerstats_11", lang);
+        values[17] = Localization.Translate("cqt_lb_playerstats_0", lang);
+        values[18] = Localization.Translate("cqt_lb_playerstats_1", lang);
+        values[19] = Localization.Translate("cqt_lb_playerstats_2", lang);
+        values[20] = Localization.Translate("cqt_lb_playerstats_3", lang);
+        values[21] = Localization.Translate("cqt_lb_playerstats_4", lang);
+        values[22] = Localization.Translate("cqt_lb_playerstats_5", lang);
+        values[23] = Localization.Translate("cqt_lb_playerstats_6", lang);
+        values[24] = Localization.Translate("cqt_lb_playerstats_7", lang);
+        values[25] = Localization.Translate("cqt_lb_playerstats_8", lang);
+        values[26] = Localization.Translate("cqt_lb_playerstats_9", lang);
+        values[27] = Localization.Translate("cqt_lb_playerstats_10", lang);
+        values[28] = Localization.Translate("cqt_lb_playerstats_11", lang);
 
-        values[41] = Localization.Translate("ins_lb_header_0", lang);
-        values[42] = Localization.Translate("ins_lb_header_1", lang);
-        values[43] = Localization.Translate("ins_lb_header_2", lang);
-        values[44] = Localization.Translate("ins_lb_header_3", lang);
-        values[45] = Localization.Translate("ins_lb_header_4", lang);
-        values[46] = Localization.Translate("ins_lb_header_5", lang);
+        values[41] = Localization.Translate("cqt_lb_header_0", lang);
+        values[42] = Localization.Translate("cqt_lb_header_1", lang);
+        values[43] = Localization.Translate("cqt_lb_header_2", lang);
+        values[44] = Localization.Translate("cqt_lb_header_3", lang);
+        values[45] = Localization.Translate("cqt_lb_header_4", lang);
+        values[46] = Localization.Translate("cqt_lb_header_5", lang);
 
         if (tracker is not null)
         {
             values[29] = tracker.Duration.ToString(STAT_TIME_FORMAT, Data.Locale);
             values[30] = tracker.casualtiesT1.ToString(Data.Locale);
             values[31] = tracker.casualtiesT2.ToString(Data.Locale);
-            values[32] = tracker.intelligenceGathered.ToString(Data.Locale);
+            values[32] = tracker.flagOwnerChanges.ToString(Data.Locale);
             values[33] = tracker.AverageTeam1Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
             values[34] = tracker.AverageTeam2Size.ToString(STAT_FLOAT_FORMAT, Data.Locale);
             values[35] = tracker.fobsPlacedT1.ToString(Data.Locale);
@@ -1433,6 +1433,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 
         while (set.MoveNext())
         {
+            L.LogWarning(set.ToString());
             UCPlayer pl = set.Next;
             ulong team = pl.GetTeam();
             ConquestStats? stats = team switch
@@ -1493,15 +1494,12 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 PersonalStats0.SetText(c, stats.Kills.ToString(Data.Locale));
                 PersonalStats1.SetText(c, stats.Deaths.ToString(Data.Locale));
                 PersonalStats2.SetText(c, stats.DamageDone.ToString(STAT_PRECISION_FLOAT_FORMAT, Data.Locale));
-                if (Data.Gamemode is IAttackDefense iad)
-                    PersonalStats3.SetText(c, (team == iad.AttackingTeam ? stats.KillsAttack : stats.KillsDefense).ToString(Data.Locale));
-                else
-                    PersonalStats3.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER);
+                PersonalStats3.SetText(c, stats.KillsOnPoint.ToString(STAT_PRECISION_FLOAT_FORMAT, Data.Locale));
                 PersonalStats4.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, Data.Locale));
                 PersonalStats5.SetText(c, stats.XPGained.ToString(Data.Locale));
-                PersonalStats6.SetText(c, stats._intelligencePointsCollected.ToString(Data.Locale));
-                PersonalStats7.SetText(c, LeaderboardEx.NO_PLAYER_VALUE_PLACEHOLDER /* todo */);
-                PersonalStats8.SetText(c, stats._cachesDestroyed.ToString(Data.Locale));
+                PersonalStats6.SetText(c, TimeSpan.FromSeconds(stats.timedeployed).ToString(STAT_TIME_FORMAT, Data.Locale));
+                PersonalStats7.SetText(c, stats.Captures.ToString(Data.Locale));
+                PersonalStats8.SetText(c, TimeSpan.FromSeconds(stats.timeonpoint).ToString(STAT_TIME_FORMAT, Data.Locale));
                 PersonalStats9.SetText(c, stats.Teamkills.ToString(Data.Locale));
                 PersonalStats10.SetText(c, stats.FOBsDestroyed.ToString(Data.Locale));
                 PersonalStats11.SetText(c, stats.Credits.ToString(Data.Locale));
