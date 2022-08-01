@@ -1451,6 +1451,28 @@ internal class ZonePlayerComponent : MonoBehaviour
                 EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Position", FromV2(_currentBuilder.X, _currentBuilder.Z));
                 break;
         }
+
+        float rot = player.Player.transform.rotation.eulerAngles.y;
+        for (int i = 1; i < 5; ++i)
+        {
+            if (rot > 90 * i - 5f && rot < 90 * i + 5f)
+                rot = 90 * i;
+        }
+        switch (_currentBuilder.UseCase)
+        {
+            case EZoneUseCase.T1_MAIN:
+                Teams.TeamManager.Config.Team1SpawnYaw.SetCurrentMapValue(rot);
+                Teams.TeamManager.SaveConfig();
+                break;
+            case EZoneUseCase.T2_MAIN:
+                Teams.TeamManager.Config.Team2SpawnYaw.SetCurrentMapValue(rot);
+                Teams.TeamManager.SaveConfig();
+                break;
+            case EZoneUseCase.LOBBY:
+                Teams.TeamManager.Config.LobbySpawnpointYaw.SetCurrentMapValue(rot);
+                Teams.TeamManager.SaveConfig();
+                break;
+        }
         player.SendChat("edit_zone_center_success", FromV2(x, z));
         RefreshPreview();
     }
