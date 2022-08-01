@@ -1033,6 +1033,14 @@ partial class JSONMethods
 
             #region Teams
             { "teams_e_cooldown", "<color=#ff8c69>You can't use /teams for another {0}.</color>" },
+            { "team_ui_header", "Choose a Team" },
+            { "team_ui_click_to_join", "CLICK TO JOIN" },
+            { "team_ui_click_to_join_donor", "<color=#e3b552>CLICK TO JOIN</color>" },
+            { "team_ui_joined", "JOINED" },
+            { "team_ui_joined_donor", "<color=#e3b552>JOINED</color>" },
+            { "team_ui_full", "<color=#bf6363>FULL</color>" },
+            { "team_ui_confirm", "<color=#888888>CONFIRM</color>" },
+            { "team_ui_joining", "<color=#999999>JOINING...</color>" },
             #endregion
 
             #region Spotting

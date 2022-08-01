@@ -624,7 +624,7 @@ internal class _DebugCommand : Command
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
         ctx.AssertGamemode(out ITeams t);
-        if (t.UseJoinUI)
+        if (t.UseTeamSelector)
         {
             if (!ctx.HasArgs(1))
             {
@@ -633,9 +633,7 @@ internal class _DebugCommand : Command
             }
             if (ctx.TryGet(0, out _, out UCPlayer? player) && player is not null)
             {
-                t.JoinManager.OnPlayerDisconnected(player);
-                t.JoinManager.CloseUI(player);
-                t.JoinManager.OnPlayerConnected(player, true);
+                t.TeamSelector?.ResetState(player);
                 FPlayerName name = F.GetPlayerOriginalNames(player);
                 ctx.Reply("test_resetlobby_success", ctx.IsConsole ? name.PlayerName : name.CharacterName);
             }

@@ -20,7 +20,7 @@ public class ShutdownCommand : Command
 
         if (ctx.ArgumentCount == 0)
         {
-            ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
+            ActionLogger.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
             UCWarfare.ShutdownNow("None specified", ctx.CallerID);
             throw ctx.Defer();
         }
@@ -28,12 +28,12 @@ public class ShutdownCommand : Command
         {
             if (ctx.TryGetRange(1, out string reason))
             {
-                ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT: " + reason, ctx.CallerID);
+                ActionLogger.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT: " + reason, ctx.CallerID);
                 UCWarfare.ShutdownNow(reason, ctx.CallerID);
             }
             else
             {
-                ActionLog.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
+                ActionLogger.AddPriority(EActionLogType.SHUTDOWN_SERVER, "INSTANT", ctx.CallerID);
                 UCWarfare.ShutdownNow("None specified", ctx.CallerID);
             }
             ctx.Defer();
@@ -86,7 +86,7 @@ public class ShutdownCommand : Command
             {
                 a = true;
                 L.Log(Localization.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
-                ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
+                ActionLogger.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
             }
             Chat.Broadcast(set, "shutdown_broadcast_after_time", time, reason);
         }
@@ -94,7 +94,7 @@ public class ShutdownCommand : Command
         {
             time = seconds.GetTimeFromSeconds(JSONMethods.DEFAULT_LANGUAGE);
             L.Log(Localization.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
-            ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
+            ActionLogger.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
         }
         NetCalls.SendShuttingDownInSeconds.NetInvoke(instigator, reason, (uint)seconds);
         Provider.shutdown(seconds, reason);
@@ -102,7 +102,7 @@ public class ShutdownCommand : Command
     public static void ShutdownAfterGameDaily() => ShutdownAfterGame("Daily Restart", true);
     public static void ShutdownAfterGame(string reason, bool isDaily)
     {
-        ActionLog.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
+        ActionLogger.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
         Chat.Broadcast(isDaily ? "shutdown_broadcast_after_game_daily" : "shutdown_broadcast_after_game", reason);
         L.Log(Localization.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
         Data.Gamemode?.ShutdownAfterGame(reason, 0);

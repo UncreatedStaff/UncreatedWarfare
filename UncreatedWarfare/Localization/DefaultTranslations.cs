@@ -762,7 +762,7 @@ internal static class T
     public static readonly Translation<IPlayer, string> WarnSuccessDM         = new Translation<IPlayer, string>("<#ffff00><#" + TeamManager.AdminColorHex + ">{0}</color> warned you for <#fff>{1}</color>.", UCPlayer.PLAYER_NAME_FORMAT);
     public static readonly Translation<string> WarnSuccessDMOperator          = new Translation<string>("<#ffff00>An operator warned you for <#fff>{0}</color>.", UCPlayer.PLAYER_NAME_FORMAT);
     #endregion
-
+    
     #region Mute Command
     public static readonly Translation<IPlayer, IPlayer, EMuteType> MutePermanentSuccessFeedback = new Translation<IPlayer, IPlayer, EMuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <b>permanently</b> <#cedcde>{2}</color> muted.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, LOWERCASE);
     public static readonly Translation<IPlayer, IPlayer, string, EMuteType> MuteSuccessFeedback  = new Translation<IPlayer, IPlayer, string, EMuteType>("<#00ffff><#d8addb>{0}</color> <#cedcde>({1})</color> was <#cedcde>{3}</color> muted for <#9cffb3>{2}</color>.", UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, arg3Fmt: LOWERCASE);
@@ -1092,6 +1092,28 @@ internal static class T
     public static readonly Translation ReportNotConnected = new Translation("<#ff8c69>The report system is not available right now, please try again later.");
     #endregion
 
+    #region Abandon
+    private const string ABANDON_SECTION = "Abandon";
+    [TranslationData(Section = ABANDON_SECTION, Description = "Sent when a player isn't looking at a vehicle when doing /abandon.", LegacyTranslationId = "abandon_no_target")]
+    public static readonly Translation AbandonNoTarget = new Translation(ERROR_COLOR + "You must be looking at a vehicle.");
+    [TranslationData(Section = ABANDON_SECTION, Description = "Sent when a player is looking at a vehicle they didn't request.", LegacyTranslationId = "abandon_not_owned")]
+    public static readonly Translation<InteractableVehicle> AbandonNotOwned = new Translation<InteractableVehicle>(ERROR_COLOR + "You did not request that {0}.");
+    [TranslationData(Section = ABANDON_SECTION, Description = "Sent when a player does /abandon while not in main.", LegacyTranslationId = "abandon_not_in_main")]
+    public static readonly Translation AbandonNotInMain = new Translation(ERROR_COLOR + "You must be in main to abandon a vehicle.");
+    [TranslationData(Section = ABANDON_SECTION, Description = "Sent when a player tries to abandon a damaged vehicle.", LegacyTranslationId = "abandon_damaged")]
+    public static readonly Translation<InteractableVehicle> AbandonDamaged = new Translation<InteractableVehicle>(ERROR_COLOR + "Your <#cedcde>{0}</color> is damaged, repair it before returning it to the yard.");
+    [TranslationData(Section = ABANDON_SECTION, Description = "Sent when a player tries to abandon a vehicle with low fuel.", LegacyTranslationId = "abandon_needs_fuel")]
+    public static readonly Translation<InteractableVehicle> AbandonNeedsFuel = new Translation<InteractableVehicle>(ERROR_COLOR + "Your <#cedcde>{0}</color> is not fully fueled, .");
+    [TranslationData(Section = ABANDON_SECTION, Description = "Sent when a player tries to abandon a vehicle and all the bays for that vehicle are already full, theoretically should never happen.", LegacyTranslationId = "abandon_no_space")]
+    public static readonly Translation<InteractableVehicle> AbandonNoSpace = new Translation<InteractableVehicle>(ERROR_COLOR + "There's no space for <#cedcde>{0}</color> in the yard.", PLURAL);
+    [TranslationData(Section = ABANDON_SECTION, Description = "Sent when a player tries to abandon a vehicle that isn't allowed to be abandoned.", LegacyTranslationId = "abandon_not_allowed")]
+    public static readonly Translation<InteractableVehicle> AbandonNotAllowed = new Translation<InteractableVehicle>(ERROR_COLOR + "<#cedcde>{0}</color> can not be abandoned.", PLURAL);
+    [TranslationData(Section = ABANDON_SECTION, Description = "Sent when a player abandons a vehicle.", LegacyTranslationId = "abandon_success")]
+    public static readonly Translation<InteractableVehicle> AbandonSuccess = new Translation<InteractableVehicle>("<#a0ad8e>Your <#cedcde>{0}</color> was returned to the yard.", PLURAL);
+    [TranslationData(Section = ABANDON_SECTION, Description = "Credits toast for returning a vehicle soon after requesting it.", LegacyTranslationId = "abandon_compensation_toast")]
+    public static readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationFlags.UnityUI);
+    #endregion
+
     #region Tips
     public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationFlags.UnityUI);
     public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationFlags.UnityUI);
@@ -1285,8 +1307,7 @@ internal static class T
     public static readonly Translation<int> WinUIValueCaches = new Translation<int>("{0} Caches Left", TranslationFlags.UnityUI);
     public static readonly Translation<int> WinUIHeaderWinner = new Translation<int>("{0}\r\nhas won the battle!", TranslationFlags.UnityUI);
     #endregion
-
-
+    
     private const int NON_TRANSLATION_FIELD_COUNT = 11;
     private const string ERROR_COLOR = "<#ff8c69>";
     private const string SUCCESS_COLOR = "<#e6e3d5>";

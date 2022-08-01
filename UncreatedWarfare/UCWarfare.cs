@@ -106,11 +106,11 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         UCInventoryManager.OnLoad();
 
-        gameObject.AddComponent<ActionLog>();
+        gameObject.AddComponent<ActionLogger>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
-        ActionLog.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
+        ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
     }
 
     public void Load()
@@ -495,6 +495,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     {
         for (int i = 0; i < Provider.clients.Count; ++i)
             Provider.kick(Provider.clients[i].playerID.steamID, "Intentional Shutdown: " + reason);
+
+        if (VehicleBay.Loaded && VehicleSpawner.Loaded)
+            VehicleBay.AbandonAllVehicles();
+
         if (CanUseNetCall)
         {
             ShutdownCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);

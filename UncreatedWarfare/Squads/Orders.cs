@@ -178,7 +178,7 @@ namespace Uncreated.Warfare.Squads
                 case EOrder.BUILDFOB:
                     foreach (UCPlayer player in Squad.Members)
                     {
-                        ActionLog.Add(EActionLogType.FUFILLED_ORDER, "BUILD FOB AT " + Marker.ToString("N2"), player);
+                        ActionLogger.Add(EActionLogType.FUFILLED_ORDER, "BUILD FOB AT " + Marker.ToString("N2"), player);
                         GiveReward(player);
                         HideUI(player);
                     }
@@ -188,7 +188,7 @@ namespace Uncreated.Warfare.Squads
                     {
                         if (player.IsOnline)
                         {
-                            ActionLog.Add(EActionLogType.FUFILLED_ORDER, "MOVE TO " + Marker.ToString("N2"), player);
+                            ActionLogger.Add(EActionLogType.FUFILLED_ORDER, "MOVE TO " + Marker.ToString("N2"), player);
                             GiveReward(player);
                             HideUI(player);
                         }

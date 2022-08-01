@@ -90,15 +90,15 @@ public class VehicleComponent : MonoBehaviour
         DamageTable = new Dictionary<ulong, KeyValuePair<ushort, DateTime>>();
         IsResupplied = true;
 
-    _quota = 0;
-    _requiredQuota = -1;
+        _quota = 0;
+        _requiredQuota = -1;
 
-    if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
-    {
-        Data = data;
-        isInVehiclebay = true;
-    }
-    lastPos = this.transform.position;
+        if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
+        {
+            Data = data;
+            isInVehiclebay = true;
+        }
+        lastPos = this.transform.position;
 
         countermeasures = new List<Transform>();
 
@@ -126,7 +126,7 @@ public class VehicleComponent : MonoBehaviour
             LastDriverTime = Time.realtimeSinceStartup;
             totalDistance = 0;
         }
-        ActionLog.Add(EActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
+        ActionLogger.Add(EActionLogType.ENTER_VEHICLE_SEAT, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}, Owner: {vehicle.lockedOwner.m_SteamID}, " +
                                                          $"ID: ({vehicle.instanceID}) Seat move: >> " +
                                                          $"{toSeat.ToString(Warfare.Data.Locale)}", player.Steam64);
 

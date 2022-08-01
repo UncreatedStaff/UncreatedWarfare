@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.UI;
@@ -40,6 +41,9 @@ public class UCPlayer : IPlayer
     public string KitName;
     public Kit? Kit;
     public Squad? Squad;
+    public volatile bool HasDownloadedKits;
+    public volatile bool IsDownloadingKits;
+    public TeamSelectorData? TeamSelectorData;
     public Player Player { get; internal set; }
     public bool IsTalking => !lastMuted && isTalking && IsOnline;
     public CSteamID CSteamID { get; internal set; }
@@ -103,7 +107,7 @@ public class UCPlayer : IPlayer
             return _rank.Value;
         }
     }
-    public List<Kit> AccessibleKits;
+    public List<Kit>? AccessibleKits;
 
     internal List<Guid>? _completedQuests;
     public void RedownloadMedals()
@@ -114,12 +118,6 @@ public class UCPlayer : IPlayer
     public float LastSpoken = 0f;
 
     private bool _otherDonator;
-    /// <summary>Slow, loops through all kits, only use once.</summary>
-    /// <exception cref="SingletonUnloadedException"/>
-    public bool IsDonator
-    {
-        get => _otherDonator || AccessibleKits.Any(x => x.IsPremium && x.PremiumCost > 0f || x.IsLoadout);
-    }
     public bool GodMode { get => _godMode; set => _godMode = value; }
     private bool _godMode = false;
     public bool VanishMode { get => _vanishMode; set => _vanishMode = value; }
@@ -335,7 +333,6 @@ public class UCPlayer : IPlayer
         _otherDonator = donator;
         LifeCounter = 0;
         SuppliesUnloaded = 0;
-        AccessibleKits = new List<Kit>();
         CurrentMarkers = new List<SpottedComponent>();
         if (Data.UseFastKits)
         {
@@ -480,10 +477,6 @@ public class UCPlayer : IPlayer
 
         return (Position - player.Position).sqrMagnitude < Math.Pow(distance, 2);
     }
-    public bool IsInLobby()
-    {
-        return Data.Gamemode is Gamemodes.Interfaces.ITeams teammode && teammode.JoinManager.IsInLobby(this);
-    }
 
     /// <summary>Gets some of the values from the playersave again.</summary>
     public static void Refresh(ulong Steam64)
@@ -572,6 +565,20 @@ public class UCPlayer : IPlayer
         }
     end:
         return Name.CharacterName;
+    }
+    public async Task DownloadKits()
+    {
+        if (IsDownloadingKits)
+        {
+            SpinWait.SpinUntil(() => HasDownloadedKits, 2500);
+            return;
+        }
+        else
+        {
+            AccessibleKits = await Data.DatabaseManager.GetAccessibleKits(Steam64);
+            HasDownloadedKits = true;
+            IsDownloadingKits = false;
+        }
     }
 }
 

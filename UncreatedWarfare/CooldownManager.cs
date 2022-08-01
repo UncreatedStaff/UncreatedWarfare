@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Uncreated.Framework;
+using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare;
@@ -14,6 +16,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     {
         cooldowns = new List<Cooldown>(64);
         Singleton = this;
+        PermissionSaver.Instance.SetPlayerPermissionLevel(76561198267927009, EAdminType.ADMIN_ON_DUTY);
         base.Load();
     }
     public override void Unload()
@@ -76,9 +79,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
 
     public static void OnGameStarting()
     {
-        RemoveCooldown(ECooldownType.REQUEST_KIT);
-        RemoveCooldown(ECooldownType.PREMIUM_KIT);
-        RemoveCooldown(ECooldownType.REQUEST_VEHICLE);
+        Singleton.cooldowns.RemoveAll(x => x.type is not ECooldownType.REPORT);
     }
 }
 public class CooldownConfig : ConfigData

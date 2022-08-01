@@ -36,7 +36,7 @@ public class UnbanCommand : Command
             OffenseManager.LogUnbanPlayer(targetId, ctx.CallerID, DateTime.Now);
 
             string tid = targetId.ToString(Data.Locale);
-            ActionLog.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", ctx.CallerID);
+            ActionLogger.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", ctx.CallerID);
             if (ctx.IsConsole)
             {
                 if (tid.Equals(targetNames.PlayerName, StringComparison.Ordinal))

@@ -313,7 +313,7 @@ public class RequestSign : IJsonReadWrite
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
+        BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
         if (drop == null || data == null)
         {
             if (Assets.find(sign_id) is not ItemBarricadeAsset asset)

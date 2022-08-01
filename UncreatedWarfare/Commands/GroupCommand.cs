@@ -55,8 +55,8 @@ public class GroupCommand : Command
                 GroupManager.save();
                 EventDispatcher.InvokeOnGroupChanged(ctx.Caller, oldgroup, groupInfo.groupID.m_SteamID);
                 ulong team = ctx.Caller.GetTeam();
-                if (gm.JoinManager != null)
-                    gm.JoinManager.UpdatePlayer(ctx.Caller);
+                if (gm.TeamSelector != null)
+                    gm.TeamSelector.ForceUpdate();
                 if (team == 0) team = ctx.Caller.Player.quests.groupID.m_SteamID;
                 if (team > 0 && team < 4)
                 {

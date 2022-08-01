@@ -180,6 +180,10 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     /// <remarks>No base</remarks>
     public virtual void PlayerInit(UCPlayer player, bool wasAlreadyOnline) { }
 
+    /// <summary>Ran after a player joins once all async functions have been ran. Good for things that need to know about kit access, xp, credits, etc.</summary>
+    /// <remarks>No base</remarks>
+    protected virtual void OnAsyncInitComplete(UCPlayer player) { }
+
     ///<summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
     public bool EveryXSeconds(float seconds) => _ticks % Mathf.RoundToInt(seconds / _eventLoopSpeed) == 0;
     private void InternalPreInit()
@@ -297,15 +301,16 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                     Provider.kick(sp.playerID.steamID, Localization.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
                     continue;
                 }
+                /*
                 // TODO: Fix
-                if (Data.Is(out ITeams t) && t.UseJoinUI && Teams.TeamManager.LobbyZone.IsInside(sp.player.transform.position) && sp.player.movement.getVehicle() == null &&
+                if (Data.Is(out ITeams t) && t.UseTeamSelector && Teams.TeamManager.LobbyZone.IsInside(sp.player.transform.position) && sp.player.movement.getVehicle() == null &&
                     UCPlayer.FromSteamPlayer(sp) is UCPlayer pl && pl.GetTeam() != 3 && !t.JoinManager.IsInLobby(pl))
                 {
                     L.Log($"{pl.Steam64} was stuck in lobby and was auto-rejoined.");
                     t.JoinManager.OnPlayerDisconnected(pl);
                     t.JoinManager.CloseUI(pl);
                     t.JoinManager.OnPlayerConnected(pl, true);
-                }
+                }*/
             }
             try
             {
@@ -361,7 +366,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 if (Data.Gamemode is null)
                     goto error;
                 Data.Singletons.LoadSingleton(Data.Gamemode);
-                ActionLog.Add(EActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
+                ActionLogger.Add(EActionLogType.GAMEMODE_CHANGED_AUTO, Data.Gamemode.DisplayName);
                 L.Log("Chosen new gamemode " + Data.Gamemode.DisplayName, ConsoleColor.DarkCyan);
                 return true;
             }
@@ -427,6 +432,12 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         foreach (IPlayerConnectListener listener in _singletons.OfType<IPlayerConnectListener>())
             listener.OnPlayerConnecting(player);
         InternalPlayerInit(player, false);
+    }
+    internal void InternalOnAsyncInitComplete(UCPlayer player)
+    {
+        foreach (IPlayerAsyncInitListener listener in _singletons.OfType<IPlayerAsyncInitListener>())
+            listener.OnAsyncInitComplete(player);
+        OnAsyncInitComplete(player);
     }
     public virtual void OnGroupChanged(GroupChanged e) { }
     private void OnGroupChangedIntl(GroupChanged e)
@@ -494,7 +505,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
 
             UpdateStagingUIForAll();
 
-            yield return new WaitForSeconds(1);
+            yield return new WaitForSeconds(1f);
             _stagingSeconds--;
         }
         EndStagingPhase();
@@ -511,8 +522,12 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     }
     public void ShowStagingUIForAll()
     {
-        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-            ShowStagingUI(player);
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+        {
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            if (!player.HasUIHidden)
+                ShowStagingUI(player);
+        }
     }
     public void UpdateStagingUI(UCPlayer player, TimeSpan timeleft)
     {
@@ -521,10 +536,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public void UpdateStagingUIForAll()
     {
         TimeSpan timeLeft = TimeSpan.FromSeconds(StagingSeconds);
-        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
             ulong team = player.GetTeam();
-            if (team == 1 || team == 2)
+            if (team is 1 or 2)
                 UpdateStagingUI(player, timeLeft);
         }
     }

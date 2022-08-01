@@ -147,7 +147,7 @@ public static class Points
 
             player.CachedCredits = currentAmount;
 
-            ActionLog.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, player);
+            ActionLogger.Add(EActionLogType.CREDITS_CHANGED, oldamt + " >> " + currentAmount, player);
 
             if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.isScreenUp))
             {
@@ -213,7 +213,7 @@ public static class Points
                 UpdateXPUI(player);
             }
 
-            ActionLog.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, player);
+            ActionLogger.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, player);
 
             if (awardCredits)
                 AwardCredits(player, Mathf.RoundToInt(0.15f * amount), null, true);
@@ -269,7 +269,7 @@ public static class Points
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
+        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp))
             return;
 
         EffectManager.sendUIEffect(XPConfig.RankUI, XPUI_KEY, player.Connection, true);
@@ -295,7 +295,7 @@ public static class Points
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
 
-        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp) || (Data.Is(out ITeams teams) && teams.JoinManager.IsInLobby(player)))
+        if (player.HasUIHidden || (Data.Is(out IEndScreen lb) && lb.isScreenUp))
             return;
 
         EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CREDITSUI_KEY, player.Connection, true);

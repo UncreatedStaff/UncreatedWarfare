@@ -486,9 +486,9 @@ internal static class Localization
                 string log = F.RemoveRichText(msg);
                 L.Log(log, ConsoleColor.DarkCyan);
                 if (e.Killer is not null)
-                    ActionLog.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
+                    ActionLogger.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
                 else
-                    ActionLog.Add(EActionLogType.DEATH, log, e.Player.Steam64);
+                    ActionLogger.Add(EActionLogType.DEATH, log, e.Player.Steam64);
                 sentInConsole = true;
             }
             while (set.MoveNext())
@@ -502,9 +502,9 @@ internal static class Localization
             string log = F.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args));
             L.Log(log, ConsoleColor.DarkCyan);
             if (e.Killer is not null)
-                ActionLog.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
+                ActionLogger.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
             else
-                ActionLog.Add(EActionLogType.DEATH, log, e.Player.Steam64);
+                ActionLogger.Add(EActionLogType.DEATH, log, e.Player.Steam64);
         }
         EventDispatcher.InvokeOnPlayerDied(e);
     }

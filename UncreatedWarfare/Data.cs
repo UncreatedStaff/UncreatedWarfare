@@ -450,7 +450,7 @@ public static class Data
     {
         L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
         PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
-        ActionLog.OnConnected();
+        ActionLogger.OnConnected();
         if (Gamemode.shutdownAfterGame)
             ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
         Task.Run(OffenseManager.OnConnected).ConfigureAwait(false);

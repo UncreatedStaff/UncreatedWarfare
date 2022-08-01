@@ -48,8 +48,8 @@ public class BuyCommand : Command
 
             Task.Run(async () =>
             {
-                if (ctx.Caller.AccessibleKits == null)
-                    ctx.Caller.AccessibleKits = await Data.DatabaseManager.GetAccessibleKits(ctx.Caller.Steam64);
+                if (!ctx.Caller.HasDownloadedKits)
+                    await ctx.Caller.DownloadKits();
 
                 await KitManager.GiveAccess(kit, ctx.Caller, EKitAccessType.CREDITS);
 
