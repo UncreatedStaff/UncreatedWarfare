@@ -18,7 +18,6 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
-using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -118,6 +117,7 @@ public class UCPlayer : IPlayer
     public float LastSpoken = 0f;
 
     private bool _otherDonator;
+    public bool IsOtherDonator => _otherDonator;
     public bool GodMode { get => _godMode; set => _godMode = value; }
     private bool _godMode = false;
     public bool VanishMode { get => _vanishMode; set => _vanishMode = value; }
@@ -579,6 +579,13 @@ public class UCPlayer : IPlayer
             HasDownloadedKits = true;
             IsDownloadingKits = false;
         }
+    }
+
+    public void SetCosmeticStates(bool state)
+    {
+        Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, state);
+        Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, state);
+        Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, state);
     }
 }
 

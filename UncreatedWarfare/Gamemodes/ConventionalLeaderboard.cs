@@ -18,7 +18,7 @@ public abstract class ConventionalLeaderboard<Stats, StatTracker> : Leaderboard<
         foreach (LanguageSet set in Localization.EnumerateLanguageSets())
             LeaderboardUI.UpdateTime(set, sl);
     }
-    public abstract void SendLeaderboard(LanguageSet set);
+    public abstract void SendLeaderboard(in LanguageSet set);
     public override void SendLeaderboard()
     {
         state1 = new bool[Math.Min(LeaderboardUI.Team1PlayerVCs.Length, statsT1!.Count - 1)];
@@ -27,14 +27,30 @@ public abstract class ConventionalLeaderboard<Stats, StatTracker> : Leaderboard<
         {
             while (set.MoveNext()) LeaderboardEx.ApplyLeaderboardModifiers(set.Next);
             set.Reset();
-            SendLeaderboard(set);
+            try
+            {
+                SendLeaderboard(in set);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error sending " + this.GetType().Name + " to all players.");
+                L.LogError(ex);
+            }
         }
     }
     public override void OnPlayerJoined(UCPlayer player)
     {
         LanguageSet single = new LanguageSet(player);
         LeaderboardEx.ApplyLeaderboardModifiers(player);
-        SendLeaderboard(single);
+        try
+        {
+            SendLeaderboard(in single);
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Error sending " + this.GetType().Name + " to " + player.Steam64.ToString(Data.Locale) + ".");
+            L.LogError(ex);
+        }
     }
 
     bool[]? state1;

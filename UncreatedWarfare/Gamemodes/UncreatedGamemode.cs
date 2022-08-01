@@ -9,23 +9,26 @@ using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes;
 
-public delegate Task TeamWinDelegate(ulong team);
 public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartListener, IReloadableSingleton, ITranslationArgument
 {
-    protected const float MATCH_PRESENT_THRESHOLD = 0.65f;
+    public const float MATCH_PRESENT_THRESHOLD = 0.65f;
     public const string GAMEMODE_RELOAD_KEY = "gamemode";
     internal static readonly GamemodeConfig ConfigObj = new GamemodeConfig();
     public static readonly WinToastUI WinToastUI = new WinToastUI();
@@ -36,9 +39,9 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         { "TeamCTF", typeof(TeamCTF) },
         { "Invasion", typeof(Invasion) },
         { "TDM", typeof(TeamDeathmatch.TeamDeathmatch) },
-        { "Insurgency", typeof(Insurgency.Insurgency) }
+        { "Insurgency", typeof(Insurgency.Insurgency) },
+        { "Conquest", typeof(Flags.Conquest) }
     };
-    public event TeamWinDelegate OnTeamWin;
     public Whitelister Whitelister;
     public CooldownManager Cooldowns;
     public Tips Tips;
@@ -184,8 +187,9 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     /// <remarks>No base</remarks>
     protected virtual void OnAsyncInitComplete(UCPlayer player) { }
 
-    ///<summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
-    public bool EveryXSeconds(float seconds) => _ticks % Mathf.RoundToInt(seconds / _eventLoopSpeed) == 0;
+    /// <summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
+    /// <remarks>Returns true if the second mark passed between the end of last tick and the start of this tick.</remarks>
+    public bool EveryXSeconds(float seconds) => _ticks * _eventLoopSpeed % seconds < _eventLoopSpeed;
     private void InternalPreInit()
     {
         AddSingletonRequirement(ref Cooldowns);
@@ -247,11 +251,6 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     private void InternalUnsubscribe()
     {
         EventDispatcher.OnGroupChanged -= OnGroupChangedIntl;
-    }
-    protected void InvokeOnTeamWin(ulong winner)
-    {
-        if (OnTeamWin != null)
-            OnTeamWin.Invoke(winner);
     }
     /// <summary>Adds a singleton to be loaded at the end of PreInit</summary>
     /// <typeparam name="T">Type of singleton to be loaded.</typeparam>
@@ -347,7 +346,69 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         shutdownMessage = string.Empty;
         shutdownPlayer = 0;
     }
-    public abstract void DeclareWin(ulong winner);
+
+    public virtual void DeclareWin(ulong winner)
+    {
+        this._state = EState.FINISHED;
+        L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
+        foreach (IDeclareWinListener listener in _singletons.OfType<IDeclareWinListener>())
+            listener.OnWinnerDeclared(winner);
+
+        QuestManager.OnGameOver(winner);
+
+        ActionLogger.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
+        string c = TeamManager.GetTeamHexColor(winner);
+        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
+        {
+            Chat.Broadcast(set, "team_win", TeamManager.TranslateName(winner, set.Language), c);
+        }
+        foreach (SteamPlayer client in Provider.clients)
+            client.player.movement.forceRemoveFromVehicle();
+
+        if (this is IGameStats gs)
+        {
+            if (gs.GameStats is BaseStatTracker<BasePlayerStats> tps)
+            {
+                foreach (IStats played in tps.stats.Values.OfType<IStats>())
+                {
+                    // Any player who was online for 65% of the match will be awarded a win or punished with a loss
+                    if (played is ITeamPresenceStats ps)
+                    {
+                        if (tps.GetPresence(ps, 1) >= MATCH_PRESENT_THRESHOLD)
+                        {
+                            if (winner == 1)
+                                StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
+                            else
+                                StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
+                        }
+                        else if (tps.GetPresence(ps, 2) >= MATCH_PRESENT_THRESHOLD)
+                        {
+                            if (winner == 2)
+                                StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
+                            else
+                                StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
+                        }
+                    }
+                    else if (played is IPresenceStats ps2)
+                    {
+                        if (tps.GetPresence(ps2) >= MATCH_PRESENT_THRESHOLD)
+                        {
+                            if (IsWinner(played.Player))
+                                StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
+                            else
+                                StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
+                        }
+                    }
+                }
+            }
+        }
+
+        StatsManager.ModifyTeam(winner, t => t.Wins++, false);
+        StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
+    }
+
+    protected virtual bool IsWinner(UCPlayer player) =>
+        throw new NotImplementedException("IsWinner is not overridden by a non-team gamemode.");
     public static bool TryLoadGamemode(Type type)
     {
         if (type is not null && typeof(Gamemode).IsAssignableFrom(type))
@@ -442,6 +503,13 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public virtual void OnGroupChanged(GroupChanged e) { }
     private void OnGroupChangedIntl(GroupChanged e)
     {
+        if (State == EState.STAGING)
+        {
+            if (e.NewTeam is < 1 or > 2)
+                ClearStagingUI(e.Player);
+            else
+                ShowStagingUI(e.Player);
+        }
         OnGroupChanged(e);
     }
     public virtual void PlayerLeave(UCPlayer player)
@@ -454,7 +522,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         foreach (IPlayerDisconnectListener listener in _singletons.OfType<IPlayerDisconnectListener>())
             listener.OnPlayerDisconnecting(player);
     }
-    public virtual void OnPlayerDeath(PlayerDied e) { }
+
+    public virtual void OnPlayerDeath(PlayerDied e)
+    {
+        Point.Points.OnPlayerDeath(e);
+    }
     public static Type? FindGamemode(string name)
     {
 #if DEBUG
@@ -733,5 +805,6 @@ public enum EGamemode : byte
     [Translatable("Advance and Secure")]
     TEAM_CTF,
     INVASION,
-    INSURGENCY
+    INSURGENCY,
+    CONQUEST
 }

@@ -1340,7 +1340,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1350,11 +1350,9 @@ public static class Localization
                 if (!found)
                     languages.Add(new LanguageSet(lang, pl));
             }
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSets(byte x, byte y, byte regionDistance)
@@ -1372,7 +1370,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1382,11 +1380,9 @@ public static class Localization
                 if (!found)
                     languages.Add(new LanguageSet(lang, pl));
             }
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<SteamPlayer> players)
@@ -1404,7 +1400,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1415,11 +1411,9 @@ public static class Localization
                     languages.Add(new LanguageSet(lang, pl));
             }
             players.Dispose();
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSets(params ulong[] exclude)
@@ -1438,7 +1432,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1449,11 +1443,9 @@ public static class Localization
                     languages.Add(new LanguageSet(lang, pl));
                 next: ;
             }
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSetsExclude(ulong exclude)
@@ -1471,7 +1463,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1481,11 +1473,9 @@ public static class Localization
                 if (!found)
                     languages.Add(new LanguageSet(lang, pl));
             }
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<Player> players)
@@ -1503,7 +1493,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1514,11 +1504,9 @@ public static class Localization
                     languages.Add(new LanguageSet(lang, pl));
             }
             players.Dispose();
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumeratePermissions(EAdminType type)
@@ -1536,7 +1524,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1546,11 +1534,9 @@ public static class Localization
                 if (!found)
                     languages.Add(new LanguageSet(lang, pl));
             }
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<UCPlayer> players)
@@ -1567,7 +1553,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1578,11 +1564,9 @@ public static class Localization
                     languages.Add(new LanguageSet(lang, pl));
             }
             players.Dispose();
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSets(ulong team)
@@ -1600,7 +1584,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1610,11 +1594,9 @@ public static class Localization
                 if (!found)
                     languages.Add(new LanguageSet(lang, pl) { Team = team });
             }
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSets(Squads.Squad squad)
@@ -1632,7 +1614,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1642,11 +1624,9 @@ public static class Localization
                 if (!found)
                     languages.Add(new LanguageSet(lang, pl) { Team = squad.Team });
             }
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static IEnumerable<LanguageSet> EnumerateLanguageSets(Predicate<UCPlayer> selector)
@@ -1664,7 +1644,7 @@ public static class Localization
                 bool found = false;
                 for (int i2 = 0; i2 < languages.Count; i2++)
                 {
-                    if (languages[i2].Language == lang)
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
                     {
                         languages[i2].Add(pl);
                         found = true;
@@ -1674,11 +1654,9 @@ public static class Localization
                 if (!found)
                     languages.Add(new LanguageSet(lang, pl));
             }
-            for (int i = 0; i < languages.Count; i++)
-            {
-                yield return languages[i];
-            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
             languages.Clear();
+            return rtn;
         }
     }
     public static string TranslateEnum<TEnum>(TEnum value, string language)
@@ -1841,50 +1819,57 @@ public static class Localization
             }
         }
     }
+    private class LanguageSetEnumerator : IEnumerable<LanguageSet>
+    {
+        public readonly LanguageSet[] Sets;
+        public LanguageSetEnumerator(LanguageSet[] sets)
+        {
+            Sets = sets;
+        }
+        public IEnumerator<LanguageSet> GetEnumerator() => ((IEnumerable<LanguageSet>)Sets).GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => Sets.GetEnumerator();
+    }
 }
 /// <summary>Disposing calls <see cref="Reset"/>.</summary>
 public struct LanguageSet : IEnumerator<UCPlayer>
 {
-    public string Language;
+    public readonly string Language;
     public ulong Team = 0;
-    public List<UCPlayer> Players;
-    private int nextIndex;
+    public readonly List<UCPlayer> Players;
+    private int index;
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public UCPlayer Next;
-
     UCPlayer IEnumerator<UCPlayer>.Current => Next;
-
     object IEnumerator.Current => Next;
     public LanguageSet(UCPlayer player)
     {
         if (!Data.Languages.TryGetValue(player.Steam64, out Language))
             Language = JSONMethods.DEFAULT_LANGUAGE;
         Players = new List<UCPlayer>(1) { player };
-        nextIndex = 0;
+        index = -1;
         Next = null!;
     }
     public LanguageSet(string lang)
     {
         this.Language = lang;
-        this.Players = new List<UCPlayer>(lang == JSONMethods.DEFAULT_LANGUAGE ? Provider.clients.Count : 4);
-        this.nextIndex = 0;
+        this.Players = new List<UCPlayer>(lang == JSONMethods.DEFAULT_LANGUAGE ? Provider.clients.Count : 2);
+        this.index = -1;
         this.Next = null!;
     }
     public LanguageSet(string lang, UCPlayer first)
     {
         this.Language = lang;
-        this.Players = new List<UCPlayer>(lang == JSONMethods.DEFAULT_LANGUAGE ? Provider.clients.Count : 4) { first };
-        this.nextIndex = 0;
+        this.Players = new List<UCPlayer>(lang == JSONMethods.DEFAULT_LANGUAGE ? Provider.clients.Count : 2) { first };
+        this.index = -1;
         this.Next = null!;
     }
     public void Add(UCPlayer pl) => this.Players.Add(pl);
     /// <summary>Use <see cref="MoveNext"/> to enumerate through the players and <seealso cref="Reset"/> to reset it.</summary>
     public bool MoveNext()
     {
-        if (nextIndex < this.Players.Count)
+        if (index < this.Players.Count - 1 && index > -2)
         {
-            Next = this.Players[nextIndex];
-            nextIndex++;
+            Next = this.Players[++index];
             return true;
         }
         else
@@ -1894,9 +1879,13 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     public void Reset()
     {
         Next = null!;
-        nextIndex = 0;
+        index = -1;
     }
     public void Dispose() => Reset();
+    public override string ToString()
+    {
+        return index.ToString(Data.Locale) + "   " + string.Join(", ", Players.Select(x => x == null ? "null" : x.CharacterName)) + "   Current: " + (Next == null ? "null" : Next.CharacterName);
+    }
 }
 
 [AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field, Inherited = false, AllowMultiple = false)]

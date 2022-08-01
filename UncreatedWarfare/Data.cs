@@ -88,25 +88,6 @@ public static class Data
     internal static WarfareSQL DatabaseManager;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
-    public static bool Is<T>(out T gamemode) where T : Gamemodes.Interfaces.IGamemode
-    {
-        if (Gamemode is T gm)
-        {
-            gamemode = gm;
-            return true;
-        }
-        gamemode = default!;
-        return false;
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Is<T>() where T : Gamemodes.Interfaces.IGamemode
-    {
-        return Gamemode is T;
-    }
-    internal static ClientInstanceMethod<string> SendChangeText { get; private set; }
-    internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
-    internal static ClientStaticMethod SendEffectClearAll { get; private set; }
-    internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
     internal static MethodInfo ReplicateStance;
     internal static FieldInfo PrivateStance;
     internal static FieldInfo ItemManagerInstanceCount;
@@ -127,10 +108,19 @@ public static class Data
     internal delegate void OutputToConsole(string value, ConsoleColor color);
     internal static OutputToConsole? OutputToConsoleMethod;
     internal static SingletonManager Singletons;
-
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
+    internal static ClientInstanceMethod<string> SendChangeText { get; private set; }
+    internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
+    internal static ClientStaticMethod SendEffectClearAll { get; private set; }
+    internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Is<T>(out T gamemode) where T : class, Gamemodes.Interfaces.IGamemode => (gamemode = (Gamemode as T)!) is not null;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Is<T>() where T : class, Gamemodes.Interfaces.IGamemode => Gamemode is T;
 
     public static void LoadColoredConsole()
     {

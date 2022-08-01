@@ -14,7 +14,7 @@ internal class MapScheduler : MonoBehaviour
     internal static MapScheduler Instance;
     // active map
     private int _map = -1;
-    private const int STATIC_MAP = 0;
+    private const int STATIC_MAP = 3;
 
     /* MAP DATA */
     private static readonly List<MapData> mapRotation = new List<MapData>()

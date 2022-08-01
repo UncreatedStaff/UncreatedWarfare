@@ -16,10 +16,11 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
+using static UnityEngine.GraphicsBuffer;
 
 namespace Uncreated.Warfare.Revives;
 
-public class ReviveManager : BaseSingleton, IPlayerConnectListener
+public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinListener
 {
     public readonly Dictionary<ulong, DownedPlayerData> DownedPlayers;
     public readonly List<UCPlayer> Medics = new List<UCPlayer>();
@@ -35,7 +36,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
     }
     public bool CanPlayerInjure(ref DamagePlayerParameters parameters)
     {
-        return parameters.player != null && SafezoneManager.checkPointValid(parameters.player.transform.position) &&
+        return parameters.player != null && 
+               SafezoneManager.checkPointValid(parameters.player.transform.position) &&
                !parameters.player.life.isDead &&
                parameters.damage > parameters.player.life.health &&
                (parameters.cause is not EDeathCause.LANDMINE or EDeathCause.VEHICLE) &&
@@ -210,9 +212,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
                 else
                     Stats.StatsManager.ModifyStats(medic.channel.owner.playerID.steamID.m_SteamID, s => s.Revives++, false);
             }
-            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI.Value, target.channel.owner.transportConnection);
-            EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, target.channel.owner.transportConnection);
-            ClearInjuredMarker(target.channel.owner.playerID.steamID.m_SteamID, tteam);
         }
     }
     public void RevivePlayer(Player target)
@@ -220,8 +219,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Gamemode.Config.UI.InjuredUI.ValidReference(out ushort id))
-            EffectManager.askEffectClearByID(id, target.channel.owner.transportConnection);
         if (DownedPlayers.ContainsKey(target.channel.owner.playerID.steamID.m_SteamID))
         {
             if (target.TryGetComponent(out Reviver r))
@@ -560,6 +557,17 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
         SpawnMedicMarkers(player, medics, clearOld);
     }
 
+    public void OnWinnerDeclared(ulong winner)
+    {
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            if (DownedPlayers.TryGetValue(PlayerManager.OnlinePlayers[i].Steam64, out _))
+            {
+                if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out Reviver r))
+                    r.RevivePlayer(null, true);
+            }
+        }
+    }
 
     private class Reviver : MonoBehaviour
     {
@@ -669,9 +677,18 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener
             if (g == default) Data.Is<IRevives>(out g);
             if (g != default)
             {
+                if (Gamemode.Config.UI.InjuredUI.ValidReference(out ushort id))
+                    EffectManager.askEffectClearByID(id, Player.Player.channel.owner.transportConnection);
+
+                if (Squads.SquadManager.Config.MedicMarker.ValidReference(out id))
+                    EffectManager.askEffectClearByID(id, Player.Player.channel.owner.transportConnection);
+
+                g.ReviveManager.ClearInjuredMarker(Player.Player.channel.owner.playerID.steamID.m_SteamID, Player.GetTeam());
+
                 Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
                 Player.Player.movement.sendPluginJumpMultiplier(1.0f);
                 Player.Player.life.serverSetBleeding(false);
+                
                 CancelStance();
                 if (remove)
                 {

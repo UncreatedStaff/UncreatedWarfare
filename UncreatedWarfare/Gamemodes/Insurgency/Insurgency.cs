@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Uncreated.Players;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -85,7 +87,7 @@ public class Insurgency :
     public List<CacheData> ActiveCaches => Caches.Where(c => c.IsActive && !c.IsDestroyed).ToList();
     public List<CacheData> DiscoveredCaches => Caches.Where(c => c.IsActive && !c.IsDestroyed && c.IsDestroyed).ToList();
     public int ActiveCachesCount => Caches.Count(c => c.IsActive && !c.IsDestroyed);
-    public bool isScreenUp => _isScreenUp;
+    public bool IsScreenUp => _isScreenUp;
     public InsurgencyTracker WarstatsTracker => _gameStats;
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
     object IGameStats.GameStats => _gameStats;
@@ -230,55 +232,9 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (this._state == EState.FINISHED) return;
-        this._state = EState.FINISHED;
-        string t = TeamManager.TranslateName(winner, 0);
-        L.Log(t + " just won the game!", ConsoleColor.Cyan);
-
         SendWinUI(winner);
+        base.DeclareWin(winner);
 
-        QuestManager.OnGameOver(winner);
-        ActionLogger.Add(EActionLogType.TEAM_WON, t);
-
-        string c = TeamManager.GetTeamHexColor(winner);
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-        {
-            t = TeamManager.TranslateName(winner, set.Language);
-            Chat.Broadcast(set, "team_win", t, c);
-        }
-        foreach (SteamPlayer client in Provider.clients)
-        {
-            client.player.movement.forceRemoveFromVehicle();
-            if (Config.UI.InjuredUI.ValidReference(out ushort id))
-                EffectManager.askEffectClearByID(Config.UI.InjuredUI.Value.Id, client.transportConnection);
-        }
-        StatsManager.ModifyTeam(winner, t => t.Wins++, false);
-        StatsManager.ModifyTeam(TeamManager.Other(winner), t => t.Losses++, false);
-
-
-        foreach (InsurgencyPlayerStats played in _gameStats.stats.Values)
-        {
-            // Any player who was online for 70% of the match will be awarded a win or punished with a loss
-            if ((float)played.onlineCount1 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
-            {
-                if (winner == 1)
-                    StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                else
-                    StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-            }
-            else if ((float)played.onlineCount2 / _gameStats.coroutinect >= MATCH_PRESENT_THRESHOLD)
-            {
-                if (winner == 2)
-                    StatsManager.ModifyStats(played.Steam64, s => s.Wins++, false);
-                else
-                    StatsManager.ModifyStats(played.Steam64, s => s.Losses++, false);
-            }
-        }
-
-
-        TicketManager.OnRoundWin(winner);
-
-        VehicleBay.AbandonAllVehicles();
         StartCoroutine(EndGameCoroutine(winner));
     }
     private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
@@ -300,8 +256,6 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        InvokeOnTeamWin(winner);
-
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
@@ -333,6 +287,17 @@ public class Insurgency :
         CheckPlayersAMC();
         TeamManager.EvaluateBases();
     }
+    public override void OnPlayerDeath(PlayerDied e)
+    {
+        if (e.Killer is not null && !e.WasTeamkill && e.DeadTeam == _defendTeam)
+        {
+            AddIntelligencePoints(1);
+            if (e.Killer!.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is InsurgencyPlayerStats s)
+                s._intelligencePointsCollected++;
+            WarstatsTracker.intelligenceGathered++;
+        }
+        base.OnPlayerDeath(e);
+    }
     public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
 #if DEBUG
@@ -348,19 +313,11 @@ public class Insurgency :
             }
         }
         if (!AllowCosmetics)
-        {
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, false);
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, false);
-            player.Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, false);
-        }
+            player.SetCosmeticStates(false);
+
         if (UCWarfare.Config.ModifySkillLevels)
-        {
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.PARKOUR, 2);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.EXERCISE, 1);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
-            player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
-        }
+            Skillset.SetDefaultSkills(player);
+
         ulong team = player.GetTeam();
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
@@ -382,15 +339,14 @@ public class Insurgency :
             else L.LogWarning("Unable to give " + names.PlayerName + " a kit.");
         }
         _gameStats.OnPlayerJoin(player);
-        if (isScreenUp && _endScreen != null)
+        if (IsScreenUp && _endScreen != null)
         {
             _endScreen.OnPlayerJoined(player);
         }
-        else if (!UseTeamSelector)
+        else
         {
-            if (State == EState.STAGING)
-                this.ShowStagingUI(player);
             InsurgencyUI.SendCacheList(player);
+            TicketManager.SendUI(player);
         }
     }
     public override void OnGroupChanged(GroupChanged e)
@@ -398,13 +354,6 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (State == EState.STAGING)
-        {
-            if (e.NewTeam is < 1 or > 2)
-                ClearStagingUI(e.Player);
-            else
-                ShowStagingUI(e.Player);
-        }
         if (e.NewTeam is > 0 and < 3)
         {
             InsurgencyUI.SendCacheList(e.Player);
@@ -932,4 +881,75 @@ public class Insurgency :
             })
         };
     #endregion
+}
+
+public sealed class InsurgencyTicketProvider : BaseTicketProvider
+{
+    public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
+    {
+        int b = GetTeamBleed(team);
+        bleed = b == 0 ? string.Empty : b.ToString(Data.Locale);
+        if (Data.Is(out Insurgency ins))
+        {
+            if (ins.DefendingTeam == team)
+            {
+                tickets = ins.CachesLeft + " left";
+                message = "DEFEND THE WEAPONS CACHES";
+                return;
+            }
+            else if (ins.AttackingTeam == team)
+            {
+                tickets = string.Empty;
+                if (ins.DiscoveredCaches.Count == 0)
+                    message = "FIND THE WEAPONS CACHES\n(kill enemies for intel)";
+                else
+                    message = "DESTROY THE WEAPONS CACHES";
+                return;
+            }
+        }
+        tickets = message = string.Empty;
+    }
+    public override int GetTeamBleed(ulong team)
+    {
+        throw new NotImplementedException();
+    }
+    public override void Load() { }
+    public override void Unload() { }
+    public override void OnGameStarting(bool isOnLoaded)
+    {
+        if (!Data.Is(out Insurgency ins)) return;
+        int attack = Gamemode.Config.Insurgency.AttackStartingTickets;
+        int defence = ins.CachesLeft;
+
+        if (ins.AttackingTeam == 1)
+        {
+            Manager.Team1Tickets = attack;
+            Manager.Team2Tickets = defence;
+        }
+        else if (ins.AttackingTeam == 2)
+        {
+            Manager.Team2Tickets = attack;
+            Manager.Team1Tickets = defence;
+        }
+    }
+    public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
+    {
+        if (Data.Is(out Insurgency ins) && ins.DefendingTeam == team)
+            throw new InvalidOperationException("Tried to change tickets of defending team during Insurgency.");
+        if (oldValue > 0 && newValue <= 0)
+            Data.Gamemode.DeclareWin(TeamManager.Other(team));
+    }
+    public override void Tick()
+    {
+        if (!Data.Gamemode.EveryXSeconds(20f) || !Data.Is(out Insurgency ins)) return;
+        for (int i = 0; i < ins.ActiveCaches.Count; i++)
+        {
+            Insurgency.CacheData cache = ins.ActiveCaches[i];
+            if (cache.IsActive && !cache.IsDestroyed)
+            {
+                for (int j = 0; j < cache.Cache.NearbyDefenders.Count; j++)
+                    Points.AwardXP(cache.Cache.NearbyDefenders[j], Points.XPConfig.FlagDefendXP, Localization.Translate("xp_flag_defend", cache.Cache.NearbyDefenders[j]));
+            }
+        }
+    }
 }

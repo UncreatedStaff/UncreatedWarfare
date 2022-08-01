@@ -17,6 +17,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     public List<Flag> Rotation { get => _rotation; }
     public List<Flag> LoadedFlags { get => _allFlags; }
     public Dictionary<ulong, int> OnFlag { get => _onFlag; }
+    public virtual bool AllowPassengersToCapture => false;
     public FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
     { }
     protected abstract bool TimeToCheck();

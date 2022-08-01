@@ -7,6 +7,6 @@
     }
     public interface IEndScreen : IGamemode
     {
-        bool isScreenUp { get; }
+        bool IsScreenUp { get; }
     }
 }

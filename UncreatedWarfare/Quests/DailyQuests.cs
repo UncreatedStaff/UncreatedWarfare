@@ -143,8 +143,8 @@ public static class DailyQuests
     }
     private static void GetConditions(ref DailyQuest dq, ref DailyQuestSave save, int day, DateTime now)
     {
-        dq.guid = Guid.NewGuid();
-        save.guid = dq.guid;
+        dq.Guid = Guid.NewGuid();
+        save.guid = dq.Guid;
         dq.conditions = new DailyQuest.Condition[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
         save.Presets = new DailyQuestSave.Preset[DailyQuest.DAILY_QUEST_CONDITION_LENGTH];
         save.StartDate = day == 0 ? now : now.AddDays(day);
@@ -176,7 +176,7 @@ public static class DailyQuests
                 pset.isValid = true;
                 pset.PresetObj = preset;
                 pset.Type = data.QuestType;
-                cond.FlagValue = preset.State.FlagValue.InsistValue();
+                cond.FlagValue = (short)preset.State.FlagValue.InsistValue();
                 cond.Translation = tempTracker.GetDisplayString(true) ?? data.QuestType.ToString();
                 cond.Key = preset.Key;
             }

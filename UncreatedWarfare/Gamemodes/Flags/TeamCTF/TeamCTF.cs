@@ -4,11 +4,12 @@ using System.Linq;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Singletons;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
-public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker>
+public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTracker, TeamCTFTicketProvider>
 {
     public override string DisplayName => "Advance and Secure";
     public override EGamemode GamemodeType => EGamemode.TEAM_CTF;
@@ -45,17 +46,11 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     {
         base.InvokeOnFlagCaptured(flag, capturedTeam, lostTeam);
         CTFUI.ReplicateFlagUpdate(flag, true);
-        QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-                    .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
     }
     protected override void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
         base.InvokeOnFlagNeutralized(flag, capturedTeam, lostTeam);
         CTFUI.ReplicateFlagUpdate(flag, true);
-        if (capturedTeam == 1)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
-        else if (capturedTeam == 2)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
     }
     public override void OnGroupChanged(GroupChanged e)
     {
@@ -64,7 +59,7 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
         {
             CaptureUIParameters p = CTFUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
                                                                           ?? _rotation[0], e.Player.Player.movement.getVehicle() != null);
-            CTFUI.CaptureUI.Send(e.Player, ref p);
+            CTFUI.CaptureUI.Send(e.Player, in p);
         }
         CTFUI.SendFlagList(e.Player);
         base.OnGroupChanged(e);
@@ -80,4 +75,48 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
 public class TeamCTFLeaderboard : BaseCTFLeaderboard<BaseCTFStats, TeamCTFTracker>
 {
 
+}
+
+public sealed class TeamCTFTicketProvider : BaseCTFTicketProvider, IFlagCapturedListener
+{
+    public override int GetTeamBleed(ulong team)
+    {
+        if (!Data.Is(out IFlagRotation fg)) return 0;
+        float enemyRatio = (float)fg.Rotation.Count(f => f.Owner != team && f.Owner != 0) / fg.Rotation.Count;
+
+        return enemyRatio switch
+        {
+            > 0.85f => -3,
+            > 0.75f => -2,
+            > 0.6f => -1,
+            _ => 0
+        };
+    }
+    public override void OnGameStarting(bool isOnLoaded)
+    {
+        Manager.Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
+        Manager.Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
+    }
+    public void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner)
+    {
+        if (!Data.Is(out IFlagRotation r)) return;
+        
+        if (r.Rotation.Count / 2f + 0.5f == flag.index) // if is middle flag
+        {
+            if (newOwner == 1) Manager.Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+            else if (newOwner == 2) Manager.Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+        }
+
+        if (GetTeamBleed(2ul) < 0)
+        {
+            Manager.Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+        }
+        else if (GetTeamBleed(1ul) < 0)
+        {
+            Manager.Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+        }
+
+        if (oldOwner == 1) Manager.Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+        else if (oldOwner == 2) Manager.Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+    }
 }

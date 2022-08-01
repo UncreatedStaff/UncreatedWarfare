@@ -1,10 +1,9 @@
-﻿namespace Uncreated.Warfare.Gamemodes.Interfaces
+﻿namespace Uncreated.Warfare.Gamemodes.Interfaces;
+
+public interface IGamemode
 {
-    public interface IGamemode
-    {
-        string DisplayName { get; }
-        long GameID { get; }
-        string Name { get; }
-        EState State { get; }
-    }
+    string DisplayName { get; }
+    long GameID { get; }
+    string Name { get; }
+    EState State { get; }
 }

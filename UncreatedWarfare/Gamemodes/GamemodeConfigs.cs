@@ -33,13 +33,13 @@ public sealed class GamemodeConfig : Config<GamemodeConfigData>
             Warfare.Data.Gamemode.SetTiming(Data.TeamCTF.EvaluateTime);
     }
 }
-[JsonSerializable(typeof(GamemodeConfigData))]
 public class GamemodeConfigData : ConfigData
 {
     public BARRICADE_IDS Barricades;
     public ITEM_IDS Items;
     public UI_CONFIG UI;
     public TEAM_CTF_CONFIG TeamCTF;
+    public CONQUEST_CONFIG Conquest;
     public INVASION Invasion;
     public INSURGENCY Insurgency;
     public GENERAL_GM_CONFIG GeneralConfig;
@@ -58,11 +58,12 @@ public class GamemodeConfigData : ConfigData
         Insurgency.SetDefaults();
         TeamCTF = new TEAM_CTF_CONFIG();
         TeamCTF.SetDefaults();
+        Conquest = new CONQUEST_CONFIG();
+        Conquest.SetDefaults();
         GeneralConfig = new GENERAL_GM_CONFIG();
         GeneralConfig.SetDefaults();
     }
 }
-[JsonSerializable(typeof(GENERAL_GM_CONFIG))]
 public class GENERAL_GM_CONFIG
 {
     public RotatableConfig<float> AMCKillTime;
@@ -76,7 +77,6 @@ public class GENERAL_GM_CONFIG
     }
 }
 
-[JsonSerializable(typeof(UI_CONFIG))]
 public class UI_CONFIG
 {
     public RotatableConfig<JsonAssetReference<EffectAsset>> CaptureGUID;
@@ -163,7 +163,7 @@ public class UI_CONFIG
         LockIcon = '²';
     }
 }
-[JsonSerializable(typeof(BARRICADE_IDS))]
+
 public class BARRICADE_IDS
 {
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> InsurgencyCacheGUID;
@@ -180,24 +180,25 @@ public class BARRICADE_IDS
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> FOBRadioGUIDs;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> Team1ZoneBlocker;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> Team2ZoneBlocker;
+
     public void SetDefaults()
     {
-        InsurgencyCacheGUID     = new JsonAssetReference<ItemBarricadeAsset>("39051f33f24449b4b3417d0d666a4f27");
-        FOBRadioDamagedGUID     = new JsonAssetReference<ItemBarricadeAsset>("07e68489e3b547879fa26f94ea227522");
-        FOBGUID                 = new JsonAssetReference<ItemBarricadeAsset>("61c349f10000498fa2b92c029d38e523");
-        FOBBaseGUID             = new JsonAssetReference<ItemBarricadeAsset>("1bb17277dd8148df9f4c53d1a19b2503");
-        AmmoCrateGUID           = new JsonAssetReference<ItemBarricadeAsset>("6fe208519d7c45b0be38273118eea7fd");
-        AmmoCrateBaseGUID       = new JsonAssetReference<ItemBarricadeAsset>("eccfe06e53d041d5b83c614ffa62ee59");
-        RepairStationGUID       = new JsonAssetReference<ItemBarricadeAsset>("c0d11e0666694ddea667377b4c0580be");
-        RepairStationBaseGUID   = new JsonAssetReference<ItemBarricadeAsset>("26a6b91cd1944730a0f28e5f299cebf9");
-        AmmoBagGUID             = new JsonAssetReference<ItemBarricadeAsset>("16f55b999e9b4f158be12645e41dd753");
-        VehicleBayGUID          = new JsonAssetReference<ItemAsset>("c076f9e9f35f42a4b8b5711dfb230010");
-        TimeLimitedStorages     = new JsonAssetReference<ItemBarricadeAsset>[]
+        InsurgencyCacheGUID = new JsonAssetReference<ItemBarricadeAsset>("39051f33f24449b4b3417d0d666a4f27");
+        FOBRadioDamagedGUID = new JsonAssetReference<ItemBarricadeAsset>("07e68489e3b547879fa26f94ea227522");
+        FOBGUID = new JsonAssetReference<ItemBarricadeAsset>("61c349f10000498fa2b92c029d38e523");
+        FOBBaseGUID = new JsonAssetReference<ItemBarricadeAsset>("1bb17277dd8148df9f4c53d1a19b2503");
+        AmmoCrateGUID = new JsonAssetReference<ItemBarricadeAsset>("6fe208519d7c45b0be38273118eea7fd");
+        AmmoCrateBaseGUID = new JsonAssetReference<ItemBarricadeAsset>("eccfe06e53d041d5b83c614ffa62ee59");
+        RepairStationGUID = new JsonAssetReference<ItemBarricadeAsset>("c0d11e0666694ddea667377b4c0580be");
+        RepairStationBaseGUID = new JsonAssetReference<ItemBarricadeAsset>("26a6b91cd1944730a0f28e5f299cebf9");
+        AmmoBagGUID = new JsonAssetReference<ItemBarricadeAsset>("16f55b999e9b4f158be12645e41dd753");
+        VehicleBayGUID = new JsonAssetReference<ItemAsset>("c076f9e9f35f42a4b8b5711dfb230010");
+        TimeLimitedStorages = new JsonAssetReference<ItemBarricadeAsset>[]
         {
             AmmoCrateGUID,
             RepairStationGUID,
             "a2eb76590cf74401aeb7ff4b4b79fd86", // supply crate
-            "2193aa0b272f4cc1938f719c8e8badb1"  // supply roll
+            "2193aa0b272f4cc1938f719c8e8badb1" // supply roll
         };
         FOBRadioGUIDs = new JsonAssetReference<ItemBarricadeAsset>[]
         {
@@ -205,21 +206,23 @@ public class BARRICADE_IDS
             "fb910102ad954169abd4b0cb06a112c8",
             "c7754ac78083421da73006b12a56811a"
         };
-        Team1ZoneBlocker = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty), 
+        Team1ZoneBlocker = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
+            new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty),
             new RotatableDefaults<JsonAssetReference<ItemBarricadeAsset>>()
-        {
-            { MapScheduler.Nuijamaa, "57927806-0501-4735-ab01-2f1f7adaf714" },
-            { MapScheduler.GulfOfAqaba, "57927806-0501-4735-ab01-2f1f7adaf714" },
-        });
-        Team2ZoneBlocker = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty), 
+            {
+                { MapScheduler.Nuijamaa, "57927806-0501-4735-ab01-2f1f7adaf714" },
+                { MapScheduler.GulfOfAqaba, "57927806-0501-4735-ab01-2f1f7adaf714" },
+            });
+        Team2ZoneBlocker = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
+            new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty),
             new RotatableDefaults<JsonAssetReference<ItemBarricadeAsset>>()
-        {
-            { MapScheduler.Nuijamaa, "b4c0a51b-7005-4ad5-b6fe-06aead982d94" },
-            { MapScheduler.GulfOfAqaba, "b4c0a51b-7005-4ad5-b6fe-06aead982d94" },
-        });
+            {
+                { MapScheduler.Nuijamaa, "b4c0a51b-7005-4ad5-b6fe-06aead982d94" },
+                { MapScheduler.GulfOfAqaba, "b4c0a51b-7005-4ad5-b6fe-06aead982d94" },
+            });
     }
 }
-[JsonSerializable(typeof(ITEM_IDS))]
+
 public class ITEM_IDS
 {
     public RotatableConfig<JsonAssetReference<ItemMeleeAsset>> EntrenchingTool;
@@ -228,7 +231,7 @@ public class ITEM_IDS
         EntrenchingTool = new JsonAssetReference<ItemMeleeAsset>("6cee2662e8884d7bad3a5d743f8222da");
     }
 }
-[JsonSerializable(typeof(TEAM_CTF_CONFIG))]
+
 public class TEAM_CTF_CONFIG
 {
     public int StagingTime;
@@ -259,7 +262,28 @@ public class TEAM_CTF_CONFIG
         CaptureScale = 3.222f;
     }
 }
-[JsonSerializable(typeof(INVASION))]
+
+public class CONQUEST_CONFIG
+{
+    public float EvaluateTime;
+    public float CaptureScale;
+    public int PointCount;
+    public float FlagTickSeconds;
+    public float TicketBleedIntervalPerPoint;
+    public int StagingPhaseSeconds;
+    public int StartingTickets;
+
+    public void SetDefaults()
+    {
+        EvaluateTime = 0.25f;
+        CaptureScale = 3.222f;
+        PointCount = 5;
+        FlagTickSeconds = 4f;
+        TicketBleedIntervalPerPoint = 12f;
+        StagingPhaseSeconds = 60;
+        StartingTickets = 250;
+    }
+}
 public class INVASION
 {
     public int StagingTime;

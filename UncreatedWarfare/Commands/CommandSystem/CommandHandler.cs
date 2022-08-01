@@ -1240,13 +1240,13 @@ public class CommandInteraction : BaseCommandInteraction
             throw SendNoPermission();
     }
     /// <exception cref="CommandInteraction"/>
-    public void AssertGamemode<T>() where T : IGamemode
+    public void AssertGamemode<T>() where T : class, IGamemode
     {
         if (!Warfare.Data.Is<T>())
             throw SendGamemodeError();
     }
     /// <exception cref="CommandInteraction"/>
-    public void AssertGamemode<T>(out T gamemode) where T : IGamemode
+    public void AssertGamemode<T>(out T gamemode) where T : class, IGamemode
     {
         if (!Warfare.Data.Is(out gamemode))
             throw SendGamemodeError();
