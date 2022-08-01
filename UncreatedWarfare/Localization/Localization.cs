@@ -1698,7 +1698,7 @@ public static class Localization
             string name = type.Name;
             if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
                 name = name.Substring(1);
-            return name.ToProperCase();
+            return name;
         }
     }
     public static string TranslateEnumName<TEnum>(string language) where TEnum : struct, Enum => TranslateEnumName(typeof(TEnum), language);

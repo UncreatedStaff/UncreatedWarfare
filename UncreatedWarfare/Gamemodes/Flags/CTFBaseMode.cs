@@ -3,8 +3,6 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Uncreated.Players;
-using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
