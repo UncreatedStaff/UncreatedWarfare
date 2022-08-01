@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -70,6 +71,8 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        Data.ZoneProvider.Reload();
+        TeamManager.OnReloadFlags();
         _allFlags.Clear();
         _allFlags.Capacity = Data.ZoneProvider.Zones.Count;
         for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)

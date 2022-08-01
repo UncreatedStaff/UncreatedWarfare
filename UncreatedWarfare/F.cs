@@ -90,6 +90,24 @@ public static class F
         if (color.b > 0.5f) i |= 1;
         return (ConsoleColor)i;
     }
+    public static Color GetColor(ConsoleColor color)
+    {
+        int c = (int)color;
+        float r = 0f, g = 0f, b = 0f;
+        if ((c & 8) == 8)
+        {
+            r += 0.5f;
+            g += 0.5f;
+            b += 0.5f;
+        }
+        if ((c & 4) == 4)
+            r += 0.25f;
+        if ((c & 2) == 2)
+            g += 0.25f;
+        if ((c & 1) == 1)
+            b += 0.25f;
+        return new Color(r, g, b);
+    }
     public static string RemoveRichText(string text)
     {
         return RemoveRichTextRegex.Replace(text, string.Empty);

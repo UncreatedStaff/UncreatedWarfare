@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -13,6 +14,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
@@ -699,14 +701,18 @@ public class Insurgency :
         }
     }
 
-    public class CacheData
+    public class CacheData : IObjective, IDeployable, IFOB
     {
         public int Number { get => Cache != null ? Cache.Number : 0;  }
         public bool IsActive { get => Cache != null;  }
         public bool IsDestroyed { get => Cache != null && Cache.Structure.GetServersideData().barricade.isDead; }
         public bool IsDiscovered { get => Cache != null && Cache.IsDiscovered; }
         public Cache Cache { get; private set; }
-
+        public string Name => ((IObjective)Cache).Name;
+        public Vector3 Position => ((IObjective)Cache).Position;
+        public float Yaw => ((IDeployable)Cache).Yaw;
+        public string ClosestLocation => ((IFOB)Cache).ClosestLocation;
+        public GridLocation GridLocation => ((IFOB)Cache).GridLocation;
         public CacheData()
         {
             Cache = null!;
@@ -715,6 +721,10 @@ public class Insurgency :
         {
             Cache = cache;
         }
+        public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => ((ITranslationArgument)Cache).Translate(language, format, target, ref flags);
+        public bool CheckDeployable(UCPlayer player, CommandInteraction? ctx) => ((IDeployable)Cache).CheckDeployable(player, ctx);
+        public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
+        public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);
     }
     #region DEFAULT CACHE SPAWNS
     private static readonly KeyValuePair<string, SerializableTransform[]>[] DefaultCacheSpawns =

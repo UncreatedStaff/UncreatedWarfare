@@ -10,10 +10,8 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using static Uncreated.Encoding.ByteWriter;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Point;
@@ -136,6 +134,12 @@ public static class Points
         int strt = GetLevelXP(lvl);
         return (float)(xp - strt) / (GetNextLevelXP(lvl) - strt);
     }
+    public static void AwardCredits(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false) =>
+        AwardCredits(player, amount, Localization.Translate(message, player), redmessage, isPurchase);
+    public static void AwardCredits<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false) =>
+        AwardCredits(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase);
+    public static void AwardCredits<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false) =>
+        AwardCredits(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase);
     public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
     {
 #if DEBUG
@@ -156,16 +160,16 @@ public static class Points
 
             if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
             {
-                string key = "gain_credits";
+                Translation<int> key = T.XPToastGainCredits;
                 if (amount < 0)
                 {
                     if (redmessage)
-                        key = "loss_credits";
+                        key = T.XPToastLoseCredits;
                     else
-                        key = "subtract_credits";
+                        key = T.XPToastPurchaseCredits;
                 }
 
-                string number = Localization.Translate(key, player, Math.Abs(amount).ToString(Data.Locale));
+                string number = Localization.Translate(key, player, Math.Abs(amount));
                 if (!string.IsNullOrEmpty(message))
                     ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message!.Colorize("adadad"), EToastMessageSeverity.MINI));
                 else
@@ -181,6 +185,12 @@ public static class Points
             }
         });
     }
+    public static void AwardXP(UCPlayer player, int amount, Translation message, bool awardCredits = true) =>
+        AwardXP(player, amount, Localization.Translate(message, player), awardCredits);
+    public static void AwardXP<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool awardCredits = true) =>
+        AwardXP(player, amount, Localization.Translate(message, player, arg), awardCredits);
+    public static void AwardXP<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool awardCredits = true) =>
+        AwardXP(player, amount, Localization.Translate(message, player, arg1, arg2), awardCredits);
     public static void AwardXP(UCPlayer player, int amount, string? message = null, bool awardCredits = true)
     {
         if (!Data.TrackStats || amount == 0 || _xpconfig.Data.XPMultiplier == 0f) return;
@@ -204,7 +214,7 @@ public static class Points
 
             if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
             {
-                string number = Localization.Translate(amount >= 0 ? "gain_xp" : "loss_xp", player, Math.Abs(amount).ToString(Data.Locale));
+                string number = Localization.Translate(amount >= 0 ? T.XPToastGainXP : T.XPToastLoseXP, player, Math.Abs(amount));
 
                 if (amount > 0)
                     number = number.Colorize("e3e3e3");
@@ -221,11 +231,11 @@ public static class Points
             ActionLogger.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, player);
 
             if (awardCredits)
-                AwardCredits(player, Mathf.RoundToInt(0.15f * amount), null, true);
+                AwardCredits(player, Mathf.RoundToInt(0.15f * amount), redmessage: true);
 
             if (player.Rank.Level > oldRank.Level)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("promoted_xp_1", player), Localization.Translate("promoted_xp_2", player, player.Rank.Name.ToUpper()), EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Rank.Name.ToUpper(), EToastMessageSeverity.BIG));
 
                 if (VehicleSpawner.Loaded)
                 {
@@ -238,7 +248,7 @@ public static class Points
             }
             else if (player.Rank.Level < oldRank.Level)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("demoted_xp_1", player), Localization.Translate("demoted_xp_2", player, player.Rank.Name.ToUpper()), EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Rank.Name.ToUpper(), EToastMessageSeverity.BIG));
 
                 if (VehicleSpawner.Loaded)
                 {
@@ -252,8 +262,7 @@ public static class Points
             }
         });
     }
-    
-    public static void AwardXP(Player player, int amount, string message = "", bool awardCredits = true)
+    public static void AwardXP(Player player, int amount, string? message = null, bool awardCredits = true)
     {
         UCPlayer? pl = UCPlayer.FromPlayer(player);
         if (pl != null)
@@ -322,7 +331,7 @@ public static class Points
     {
         if (args.DriverAssist is null || !args.DriverAssist.IsOnline) return;
 
-        AwardXP(args.DriverAssist, amount, Localization.Translate("xp_driver_assist", args.DriverAssist));
+        AwardXP(args.DriverAssist, amount, Localization.Translate(T.XPToastKillDriverAssist, args.DriverAssist));
         /*
         if (quota != 0 && args.ActiveVehicle != null && args.ActiveVehicle.TryGetComponent(out VehicleComponent comp))
             comp.Quota += quota;*/
@@ -338,7 +347,7 @@ public static class Points
             SteamPlayer driver = vehicle.passengers[0].player;
             if (driver != null && driver.playerID.steamID != gunner.channel.owner.playerID.steamID)
             {
-                AwardXP(driver.player, amount, Localization.Translate("xp_driver_assist", driver.playerID.steamID.m_SteamID));
+                AwardXP(driver.player, amount, Localization.Translate(T.XPToastKillDriverAssist, driver.playerID.steamID.m_SteamID));
             }
 
             //if (vehicle.transform.TryGetComponent(out VehicleComponent component))
@@ -347,7 +356,7 @@ public static class Points
             //}
         }
     }
-    public static void TryAwardFOBCreatorXP(FOB fob, int amount, string translationKey)
+    public static void TryAwardFOBCreatorXP(FOB fob, int amount, Translation translationKey)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -356,14 +365,14 @@ public static class Points
 
         if (creator != null)
         {
-            AwardXP(creator, amount, Localization.Translate(translationKey, creator));
+            AwardXP(creator, amount, translationKey);
         }
 
         if (fob.Placer != fob.Creator)
         {
             UCPlayer? placer = UCPlayer.FromID(fob.Placer);
             if (placer != null)
-                AwardXP(placer, amount, Localization.Translate(translationKey, placer));
+                AwardXP(placer, amount, translationKey);
         }
     }
     public static void FlagNeutralized(Flag flag, ulong team)
@@ -375,10 +384,10 @@ public static class Points
             if (player == null) continue;
             int xp = XPConfig.FlagNeutralizedXP;
 
-            AwardXP(player, xp, Localization.Translate("xp_flag_neutralized", player));
+            AwardXP(player, xp, T.XPToastFlagNeutralized);
             xp = player.NearbyMemberBonus(xp, 60) - xp;
             if (xp > 0)
-                AwardXP(player, xp, Localization.Translate("xp_squad_bonus", player));
+                AwardXP(player, xp, T.XPToastSquadBonus);
         }
     }
     public static void FlagCaptured(Flag flag, ulong team)
@@ -391,7 +400,7 @@ public static class Points
 
             if (player == null) continue;
 
-            AwardXP(player, player.NearbyMemberBonus(XPConfig.FlagCapturedXP, 60), Localization.Translate("xp_flag_captured", player.Steam64));
+            AwardXP(player, player.NearbyMemberBonus(XPConfig.FlagCapturedXP, 60), T.XPToastFlagCaptured);
         }
     }
     public static void OnPlayerDeath(PlayerDied e)
@@ -399,10 +408,10 @@ public static class Points
         if (e.Killer is null || !e.Killer.IsOnline) return;
         if (e.WasTeamkill)
         {
-            AwardXP(e.Killer, XPConfig.FriendlyKilledXP, Localization.Translate("xp_friendly_killed", e.Killer));
+            AwardXP(e.Killer, XPConfig.FriendlyKilledXP, T.XPToastFriendlyKilled);
             return;
         }
-        AwardXP(e.Killer, XPConfig.EnemyKilledXP, Localization.Translate("xp_enemy_killed", e.Killer));
+        AwardXP(e.Killer, XPConfig.EnemyKilledXP, T.XPToastEnemyKilled);
 
         if (e.Player.Player.TryGetPlayerData(out UCPlayerData component))
         {
@@ -412,7 +421,7 @@ public static class Points
             UCPlayer? assister = UCPlayer.FromID(component.secondLastAttacker.Key);
             if (assister != null && assister.Steam64 != killerID && assister.Steam64 != victimID && (DateTime.Now - component.secondLastAttacker.Value).TotalSeconds <= 30)
             {
-                AwardXP(assister, XPConfig.KillAssistXP, Localization.Translate("xp_kill_assist", e.Killer));
+                AwardXP(assister, XPConfig.KillAssistXP, T.XPToastKillAssist);
             }
 
             if (e.Player.Player.TryGetComponent(out SpottedComponent spotted))

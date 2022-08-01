@@ -439,6 +439,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         Vector3 pos = player.Position;
         if (pos == default)
             return;
+        ctx.Defer();
         if (ctx.MatchParameter(0, "existing", "open", "current"))
         {
             if (_currentBuilder != null)

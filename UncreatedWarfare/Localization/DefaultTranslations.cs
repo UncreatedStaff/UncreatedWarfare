@@ -9,6 +9,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Point;
@@ -581,12 +582,12 @@ internal static class T
     #endregion
 
     #region Orders
-    public static readonly Translation OrderUsageAll              = new Translation("<#9fa1a6>To give orders: <#9dbccf>/order <squad> <type></color>. Type <#d1bd90>/order actions</color> to see a list of actions.");
-    public static readonly Translation<Squad> OrderUsageNoAction  = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <action></color>.", Squad.NAME_FORMAT);
-    public static readonly Translation<Squad> OrderUsageBadAction = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <b><action></b></color>. Type <#d1bd90>/order actions</color> to see a list of actions.", Squad.NAME_FORMAT);
-    public static readonly Translation<string> OrderActions       = new Translation<string>("<#9fa1a6>Order actions: <#9dbccf>{0}</color>.");
-    public static readonly Translation<string> OrderSquadNoExist  = new Translation<string>(ERROR_COLOR + "There is no friendly <lowercase><#c$neutral$>{0}</color></lowercase> squad.");
-    public static readonly Translation OrderNotSquadleader        = new Translation(ERROR_COLOR + "You must be a <#cedcde>sqauad leader</color> to give orders.");
+    public static readonly Translation OrderUsageAll                = new Translation("<#9fa1a6>To give orders: <#9dbccf>/order <squad> <type></color>. Type <#d1bd90>/order actions</color> to see a list of actions.");
+    public static readonly Translation OrderUsageNoAction    = new Translation("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase><squad name></lowercase> <action></color>.", Squad.NAME_FORMAT);
+    public static readonly Translation<Squad> OrderUsageBadAction   = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <b><action></b></color>. Type <#d1bd90>/order actions</color> to see a list of actions.", Squad.NAME_FORMAT);
+    public static readonly Translation<string> OrderActions         = new Translation<string>("<#9fa1a6>Order actions: <#9dbccf>{0}</color>.");
+    public static readonly Translation<string> OrderSquadNoExist    = new Translation<string>(ERROR_COLOR + "There is no friendly <lowercase><#c$neutral$>{0}</color></lowercase> squad.");
+    public static readonly Translation OrderNotSquadleader          = new Translation(ERROR_COLOR + "You must be a <#cedcde>sqauad leader</color> to give orders.");
     public static readonly Translation<Squad> OrderAttackMarkerCTF  = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to attack.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation<Squad> OrderAttackMarkerIns  = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to attack.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation<Squad> OrderDefenseMarkerCTF = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to defend.", Squad.COLORED_NAME_FORMAT);
@@ -597,24 +598,27 @@ internal static class T
     public static readonly Translation OrderBuildFOBTooMany         = new Translation(ERROR_COLOR + "There are already too many FOBs on your team.");
     public static readonly Translation<Squad> OrderSquadTooClose    = new Translation<Squad>(ERROR_COLOR + "{0} is already near that marker. Try placing it further away.");
     public static readonly Translation<Squad, Order> OrderSent      = new Translation<Squad, Order>("<#9fa1a6>Order sent to {0}: <#9dbccf>{1}</color>.", Squad.COLORED_NAME_FORMAT, Order.MESSAGE_FORMAT);
-    public static readonly Translation<string, string> OrderActionInvalid   = new Translation<string, string>(ERROR_COLOR + "<#fff>{0}</color> is not a valid action. Try one of these: <#9dbccf>{1}</color>.");
-    public static readonly Translation<Squad, IPlayer> OrderAlreadyHasOrder = new Translation<Squad, IPlayer>("Squad {0} led by {1} already has orders.", Squad.COLORED_NAME_FORMAT, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
-    public static readonly Translation<IPlayer, Order> OrderReceived   = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
-    public static readonly Translation<IPlayer> OrderUICommander       = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
-    public static readonly Translation<Order> OrderUIMessage           = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
-    public static readonly Translation<TimeSpan> OrderUITimeLeft       = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
-    public static readonly Translation<int> OrderUIReward              = new Translation<int>("- Reward: {0} XP", TranslationFlags.UnityUI);
-    public static readonly Translation<Flag> OrderUIAttackObjective    = new Translation<Flag>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<Flag> OrderUIAttackFlag         = new Translation<Flag>("Attack: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<Flag> OrderUIDefendObjective    = new Translation<Flag>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<Flag> OrderUIDefendFlag         = new Translation<Flag>("Defend: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<Cache> OrderUIAttackCache       = new Translation<Cache>("Attack: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<Cache> OrderUIDefendCache       = new Translation<Cache>("Defend: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
-    public static readonly Translation<string> OrderUIAttackNearArea   = new Translation<string>("Attack near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<string> OrderUIDefendNearArea   = new Translation<string>("Defend near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
-    public static readonly Translation<Flag> OrderUIBuildFobFlag       = new Translation<Flag>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<string> OrderUIBuildFobNearArea = new Translation<string>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
-    public static readonly Translation<Cache> OrderUIBuildFobNearCache = new Translation<Cache>("Build a FOB near {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<string, string> OrderActionInvalid    = new Translation<string, string>(ERROR_COLOR + "<#fff>{0}</color> is not a valid action. Try one of these: <#9dbccf>{1}</color>.");
+    public static readonly Translation<Squad, IPlayer> OrderAlreadyHasOrder  = new Translation<Squad, IPlayer>("Squad {0} led by {1} already has orders.", Squad.COLORED_NAME_FORMAT, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, Order> OrderReceived         = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
+    public static readonly Translation<IPlayer> OrderUICommander             = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<Order> OrderUIMessage                 = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
+    public static readonly Translation<TimeSpan> OrderUITimeLeft             = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
+    public static readonly Translation<int> OrderUIReward                    = new Translation<int>("- Reward: {0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<IObjective> OrderUIAttackObjective    = new Translation<IObjective>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective> OrderUIAttackFlag         = new Translation<IObjective>("Attack: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective> OrderUIDefendObjective    = new Translation<IObjective>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective> OrderUIDefendFlag         = new Translation<IObjective>("Defend: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective> OrderUIAttackCache        = new Translation<IObjective>("Attack: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IObjective> OrderUIDefendCache        = new Translation<IObjective>("Defend: {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<GridLocation> OrderUIAttackNearArea   = new Translation<GridLocation>("Attack near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<GridLocation> OrderUIDefendNearArea   = new Translation<GridLocation>("Defend near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<IObjective> OrderUIBuildFobFlag       = new Translation<IObjective>("Build a FOB on {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<GridLocation> OrderUIBuildFobNearArea = new Translation<GridLocation>("Build a FOB near <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<IObjective> OrderUIBuildFobNearCache  = new Translation<IObjective>("Build a FOB near {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IObjective> OrderUIMoveFlag           = new Translation<IObjective>("Move to {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<GridLocation> OrderUIMoveNearArea     = new Translation<GridLocation>("Move to <#9dbccf>{0}</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation<IObjective> OrderUIMoveCache          = new Translation<IObjective>("Move to {0}.", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
     #endregion
 
     #region Rallies
@@ -1002,7 +1006,7 @@ internal static class T
 
     #region Shutdown
     public static readonly Translation<string> ShutdownBroadcastAfterGame = new Translation<string>("<#00ffff>A shutdown has been scheduled after this game because: \"<#6699ff>{0}</color>\".");
-    public static readonly Translation ShutdownBroadcastDaily = new Translation("<#00ffff>A daily restart will occur after this game. Down-time estimate: <#6699ff>2 minutes</color>.");
+    public static readonly Translation<string> ShutdownBroadcastDaily = new Translation<string>("<#00ffff>A daily restart will occur after this game. Down-time estimate: <#6699ff>2 minutes</color>.", TranslationFlags.SuppressWarnings);
     public static readonly Translation ShutdownBroadcastCancelled = new Translation("<#00ffff>The scheduled shutdown has been canceled.");
     public static readonly Translation<string, string> ShutdownBroadcastTime = new Translation<string, string>("<#00ffff>A shutdown has been scheduled in {0} because: \"<color=#6699ff>{1}</color>\".");
     public static readonly Translation<string> ShutdownBroadcastReminder = new Translation<string>("<#00ffff>A shutdown is scheduled to occur after this game because: \"<#6699ff>{0}</color>\".");

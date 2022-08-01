@@ -19,14 +19,13 @@ public class KickCommand : Command
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         if (!ctx.HasArgs(2))
-            throw ctx.Reply("kick_syntax");
+            throw ctx.SendCorrectUsage(SYNTAX);
 
         if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target) || target is null)
-            throw ctx.Reply("kick_no_player_found", ctx.Parameters[0]);
+            throw ctx.Reply(T.PlayerNotFound);
 
-        string? reason = ctx.GetRange(1);
-        if (string.IsNullOrEmpty(reason))
-            throw ctx.Reply("kick_no_reason_provided", ctx.Parameters[1]);
+        if (!ctx.TryGet(1, out string reason))
+            throw ctx.Reply(T.NoReasonProvided);
 
         FPlayerName names = F.GetPlayerOriginalNames(target);
         Provider.kick(target.Player.channel.owner.playerID.steamID, reason!);
@@ -36,17 +35,15 @@ public class KickCommand : Command
         ctx.LogAction(EActionLogType.KICK_PLAYER, $"KICKED {targetId.ToString(Data.Locale)} FOR \"{reason}\"");
         if (ctx.IsConsole)
         {
-            L.Log(Localization.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
-            Chat.Broadcast("kick_kicked_broadcast_operator", names.CharacterName);
-            ctx.Defer();
+            ctx.ReplyString($"{names.PlayerName} ({targetId.ToString(Data.Locale)}) was kicked by an operator because: {reason}.", ConsoleColor.Cyan);
+            Chat.Broadcast(T.KickSuccessBroadcastOperator, names);
         }
         else
         {
             FPlayerName callerNames = ctx.Caller is null ? FPlayerName.Console : F.GetPlayerOriginalNames(ctx.Caller);
-            L.Log(Localization.Translate("kick_kicked_console", 0, out _, names.PlayerName, targetId.ToString(Data.Locale),
-                callerNames.PlayerName, ctx.CallerID.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
-            Chat.BroadcastToAllExcept(ctx.CallerID, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
-            ctx.Reply("kick_kicked_feedback", names.CharacterName);
+            L.Log($"{names.PlayerName} ({targetId.ToString(Data.Locale)}) was kicked by {callerNames.PlayerName} ({ctx.CallerID.ToString(Data.Locale)}) because: {reason}.", ConsoleColor.Cyan);
+            Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.KickSuccessBroadcast, names, callerNames);
+            ctx.Reply(T.KickSuccessFeedback, names);
         }
     }
 }

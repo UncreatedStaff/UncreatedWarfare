@@ -69,8 +69,8 @@ public class OrderCommand : Command
                     if (Physics.Raycast(new Vector3(playerMarker.x, Level.HEIGHT, playerMarker.z), new Vector3(0f, -1, 0f), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
                     {
                         Vector3 marker = hit.point;
-                        string message;
-                        string[] formatting;
+                        Translation message;
+                        object[] formatting;
                         switch (type)
                         {
                             case EOrder.ATTACK or EOrder.DEFEND:
@@ -81,23 +81,23 @@ public class OrderCommand : Command
                                         throw ctx.SendGamemodeError();
                                     case IFlagRotation rot:
                                         Vector2 mkr = new Vector2(marker.x, marker.z);
-                                        Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                        Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.ZoneData.IsInside(mkr));
                                         if (flag is null)
                                             goto default;
-                                        formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
+                                        formatting = new object[] { flag };
                                         if (type is EOrder.ATTACK)
                                         {
                                             if (flag.IsAttackSite(team))
-                                                message = "order_attack_objective";
+                                                message = T.OrderUIAttackObjective;
                                             else
-                                                message = "order_attack_flag";
+                                                message = T.OrderUIAttackFlag;
                                         }
                                         else
                                         {
                                             if (flag.IsDefenseSite(team))
-                                                message = "order_defend_objective";
+                                                message = T.OrderUIDefendObjective;
                                             else
-                                                message = "order_defend_flag";
+                                                message = T.OrderUIDefendFlag;
                                         }
                                         break;
                                     case Insurgency ins:
@@ -119,19 +119,19 @@ public class OrderCommand : Command
                                             goto default;
                                         else
                                         {
-                                            formatting = new string[] { ins.Caches[ind].Cache.Name };
+                                            formatting = new object[] { ins.Caches[ind].Cache };
                                             if (type is EOrder.ATTACK)
-                                                message = "order_attack_cache";
+                                                message = T.OrderUIAttackCache;
                                             else
-                                                message = "order_defend_cache";
+                                                message = T.OrderUIDefendCache;
                                         }
                                         break;
                                     default:
-                                        formatting = new string[] { new GridLocation(marker).ToString() };
+                                        formatting = new object[] { new GridLocation(marker) };
                                         if (type is EOrder.ATTACK)
-                                            message = "order_attack_area";
+                                            message = T.OrderUIAttackNearArea;
                                         else
-                                            message = "order_defend_area";
+                                            message = T.OrderUIDefendNearArea;
                                         break;
                                 }
                                 ctx.LogAction(EActionLogType.CREATED_ORDER, (type is EOrder.ATTACK ? "ATTACK" : "DEFEND") + " AT " + marker.ToString("N2"));
@@ -151,12 +151,12 @@ public class OrderCommand : Command
                                             throw ctx.SendGamemodeError();
                                         case IFlagRotation rot:
                                             Vector2 mkr = new Vector2(marker.x, marker.z);
-                                            Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                            Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.ZoneData.IsInside(mkr));
                                             // flag is not discovered or is taken
-                                            if (flag is null || !flag.Discovered(team) || flag.IsFull(Teams.TeamManager.Other(team)))
+                                            if (flag is null || flag.IsFull(Teams.TeamManager.Other(team)))
                                                 goto default;
-                                            formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
-                                            message = "order_buildfob_flag";
+                                            formatting = new object[] { flag };
+                                            message = T.OrderUIBuildFobFlag;
                                             break;
                                         case Insurgency ins:
                                             float sqrDst = float.NaN;
@@ -175,13 +175,13 @@ public class OrderCommand : Command
                                                 goto default;
                                             else
                                             {
-                                                formatting = new string[] { ins.Caches[ind].Cache.Name };
-                                                message = "order_buildfob_cache";
+                                                formatting = new object[] { ins.Caches[ind].Cache };
+                                                message = T.OrderUIBuildFobNearCache;
                                             }
                                             break;
                                         default:
-                                            formatting = new string[] { new GridLocation(marker).ToString() };
-                                            message = "order_buildfob_area";
+                                            formatting = new object[] { new GridLocation(marker) };
+                                            message = T.OrderUIBuildFobNearArea;
                                             break;
                                     }
 
@@ -209,8 +209,8 @@ public class OrderCommand : Command
                                             // flag is not discovered or is taken
                                             if (flag is null || !flag.Discovered(team))
                                                 goto default;
-                                            formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
-                                            message = "order_move_flag";
+                                            formatting = new object[] { flag };
+                                            message = T.OrderUIMoveFlag;
                                             break;
                                         case Insurgency ins:
                                             float sqrDst = float.NaN;
@@ -229,18 +229,15 @@ public class OrderCommand : Command
                                                 goto default;
                                             else
                                             {
-                                                formatting = new string[] { ins.Caches[ind].Cache.Name };
-                                                message = "order_move_cache";
+                                                formatting = new object[] { ins.Caches[ind].Cache };
+                                                message = T.OrderUIMoveCache;
                                             }
                                             break;
                                         default:
-                                            formatting = new string[] { new GridLocation(marker).ToString() };
-                                            message = "order_move_area";
+                                            formatting = new object[] { new GridLocation(marker) };
+                                            message = T.OrderUIMoveNearArea;
                                             break;
                                     }
-                                    formatting = new string[] { new GridLocation(marker).ToString() };
-                                    message = "order_move_squad";
-
                                     ctx.LogAction(EActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"));
 
                                 }
@@ -265,14 +262,14 @@ public class OrderCommand : Command
                 });
             }
             else
-                ctx.Reply("order_e_actioninvalid", ctx.Get(1)!, ACTIONS);
+                ctx.Reply(T.OrderActionInvalid, ctx.Get(1)!, ACTIONS);
         }
         else
         {
             if (ctx.HasArgsExact(1))
-                ctx.Reply("order_usage_2", "squad_name");
+                ctx.Reply(T.OrderUsageNoAction);
             else
-                ctx.Reply("order_e_squadnoexist", ctx.Get(0)!);
+                ctx.Reply(T.OrderSquadNoExist, ctx.Get(0)!);
         }
 #endif
     }

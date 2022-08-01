@@ -867,7 +867,7 @@ public class Translation
         color = data.Color;
         return data.ProcessedInner;
     }
-    private static string BaseUnsafeTranslate(Type t, string val, string language, Type[] gens, Translation translation, object[] formatting, UCPlayer? target, ulong targetTeam)
+    private string BaseUnsafeTranslate(Type t, string val, string language, Type[] gens, object[] formatting, UCPlayer? target, ulong targetTeam)
     {
         if (gens.Length > formatting.Length)
             throw new ArgumentException("Insufficient amount of formatting arguments supplied.", nameof(formatting));
@@ -880,7 +880,7 @@ public class Translation
                 {
                     formatting[i] = typeof(ToStringHelperClass<>).MakeGenericType(v.GetType())
                         .GetMethod("ToString", BindingFlags.Static | BindingFlags.Public)
-                        .Invoke(null, new object[] { language, (t.GetField("_arg" + i + "Fmt")?.GetValue(translation) as string)!, target!, Warfare.Data.Locale, translation.Flags });
+                        .Invoke(null, new object[] { language, (t.GetField("_arg" + i + "Fmt", BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(this) as string)!, target!, Warfare.Data.Locale, this.Flags });
                     continue;
                 }
                 throw new ArgumentException("Formatting argument at index " + i + " is not a type compatable with it's generic type!", nameof(formatting) + "[" + i + "]");
@@ -894,27 +894,27 @@ public class Translation
         newCallArr[ind] = language;
         newCallArr[ind + 1] = target!;
         newCallArr[ind + 2] = targetTeam;
-        newCallArr[ind + 3] = translation.Flags;
-        return (string)TRANSLATE_METHODS[gens.Length - 1].MakeGenericMethod(gens).Invoke(translation, newCallArr);
+        newCallArr[ind + 3] = this.Flags;
+        return (string)TRANSLATE_METHODS[gens.Length - 1].MakeGenericMethod(gens).Invoke(this, newCallArr);
     }
     /// <exception cref="ArgumentException">Either not enough formatting arguments were supplied or </exception>
-    internal static string TranslateUnsafe(Translation translation, string language, object[] formatting, UCPlayer? target = null, ulong targetTeam = 0)
+    internal string TranslateUnsafe(string language, object[] formatting, UCPlayer? target = null, ulong targetTeam = 0)
     {
-        Type t = translation.GetType();
+        Type t = this.GetType();
         Type[] gens = t.GenericTypeArguments;
-        string val = translation.Translate(language);
+        string val = this.Translate(language);
         if (gens.Length == 0 || formatting is null || formatting.Length == 0)
             return val;
-        return BaseUnsafeTranslate(t, val, language, gens, translation, formatting, target, targetTeam);
+        return BaseUnsafeTranslate(t, val, language, gens, formatting, target, targetTeam);
     }
-    internal static string TranslateUnsafe(Translation translation, string language, out Color color, object[] formatting, UCPlayer? target = null, ulong targetTeam = 0)
+    internal string TranslateUnsafe(string language, out Color color, object[] formatting, UCPlayer? target = null, ulong targetTeam = 0)
     {
-        Type t = translation.GetType();
+        Type t = this.GetType();
         Type[] gens = t.GenericTypeArguments;
-        string val = translation.Translate(language, out color);
+        string val = this.Translate(language, out color);
         if (gens.Length == 0 || formatting is null || formatting.Length == 0)
             return val;
-        return BaseUnsafeTranslate(t, val, language, gens, translation, formatting, target, targetTeam);
+        return BaseUnsafeTranslate(t, val, language, gens, formatting, target, targetTeam);
     }
     internal static void OnColorsReloaded()
     {

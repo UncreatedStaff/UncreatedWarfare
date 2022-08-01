@@ -1,16 +1,14 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
@@ -23,7 +21,6 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -49,10 +46,10 @@ internal class _DebugCommand : Command
             }
             catch (AmbiguousMatchException)
             {
-                throw ctx.Reply("test_multiple_matches", operation);
+                throw ctx.Reply(T.DebugMultipleMatches, operation);
             }
             if (info == null)
-                throw ctx.Reply("test_no_method", operation);
+                throw ctx.Reply(T.DebugNoMethod, operation);
             try
             {
 #if DEBUG
@@ -68,7 +65,7 @@ internal class _DebugCommand : Command
                 if (ex.InnerException is BaseCommandInteraction b)
                     throw b;
                 L.LogError(ex.InnerException ?? ex);
-                throw ctx.Reply("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
+                throw ctx.Reply(T.DebugErrorExecuting, info.Name, (ex.InnerException ?? ex).GetType().Name);
             }
         }
         else throw ctx.SendCorrectUsage("/test <operation> [parameters...]");
@@ -102,39 +99,30 @@ internal class _DebugCommand : Command
                                 await Data.DatabaseManager.AddXP(player, team, amount);
                                 FPlayerName name = await Data.DatabaseManager.GetUsernamesAsync(player);
                                 await UCWarfare.ToUpdate();
-                                ctx.Reply("test_givexp_success", amount.ToString(Data.Locale), ctx.IsConsole ? name.PlayerName : name.CharacterName);
+                                ctx.ReplyString($"Given {amount} XP to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                             });
                             ctx.Defer();
                         }
                         else
-                        {
                             ctx.SendCorrectUsage(GIVE_XP_SYNTAX);
-                        }
                     }
                     else
-                    {
-                        ctx.Reply("test_givexp_player_not_found", ctx.Get(0)!);
-                    }
+                        ctx.Reply(T.PlayerNotFound);
                 }
                 else
                 {
                     if (team < 1 || team > 2)
                         team = onlinePlayer.GetTeam();
-                    Points.AwardXP(onlinePlayer, amount, ctx.IsConsole ? Localization.Translate("xp_from_operator", player) :
-                        Localization.Translate("xp_from_player", player, F.GetPlayerOriginalNames(ctx.CallerID).CharacterName.ToUpper()));
+                    Points.AwardXP(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
                     FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
-                    ctx.Reply("test_givexp_success", amount.ToString(Data.Locale), ctx.IsConsole ? names.PlayerName : names.CharacterName);
+                    ctx.ReplyString($"Given {amount} XP to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
                 }
             }
             else
-            {
                 ctx.SendCorrectUsage(GIVE_XP_SYNTAX);
-            }
         }
         else
-        {
-            ctx.Reply("test_givexp_invalid_amount", ctx.Get(1)!);
-        }
+            ctx.ReplyString($"Couldn't parse {ctx.Get(1)!} as a number.");
     }
     private const string GIVE_CREDITS_SYNTAX = "/test givecredits <player> <amount> [team - required if offline]";
     private void givecredits(CommandInteraction ctx)
@@ -162,39 +150,30 @@ internal class _DebugCommand : Command
                                 await Data.DatabaseManager.AddCredits(player, team, amount);
                                 FPlayerName name = await Data.DatabaseManager.GetUsernamesAsync(player);
                                 await UCWarfare.ToUpdate();
-                                ctx.Reply("test_givecredits_success", amount.ToString(Data.Locale), ctx.IsConsole ? name.PlayerName : name.CharacterName);
+                                ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}C</color> {amount} to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                             });
                             ctx.Defer();
                         }
                         else
-                        {
                             ctx.SendCorrectUsage(GIVE_CREDITS_SYNTAX);
-                        }
                     }
                     else
-                    {
-                        ctx.Reply("test_givecredits_player_not_found", ctx.Get(0)!);
-                    }
+                        ctx.Reply(T.PlayerNotFound);
                 }
                 else
                 {
                     if (team < 1 || team > 2)
                         team = onlinePlayer.GetTeam();
-                    Points.AwardCredits(onlinePlayer, amount, ctx.IsConsole ? Localization.Translate("credits_from_operator", player) :
-                        Localization.Translate("credits_from_player", player, F.GetPlayerOriginalNames(ctx.CallerID).CharacterName.ToUpper()));
+                    Points.AwardCredits(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
                     FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
-                    ctx.Reply("test_givecredits_success", amount.ToString(Data.Locale), ctx.IsConsole ? names.PlayerName : names.CharacterName);
+                    ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}C</color> {amount} to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
                 }
             }
             else
-            {
                 ctx.SendCorrectUsage(GIVE_CREDITS_SYNTAX);
-            }
         }
         else
-        {
-            ctx.Reply("test_givecredits_invalid_amount", ctx.Get(1)!);
-        }
+            ctx.ReplyString($"Couldn't parse {ctx.Get(1)!} as a number.");
     }
     private void quickcap(CommandInteraction ctx)
     {
@@ -206,10 +185,7 @@ internal class _DebugCommand : Command
         Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller.Player));
         if (flag == default)
         {
-            Vector3 pos = ctx.Caller.Position;
-            ctx.Reply("test_zone_not_in_zone",
-                pos.x.ToString(Data.Locale), pos.y.ToString(Data.Locale),
-                pos.z.ToString(Data.Locale), fg.Rotation.Count.ToString(Data.Locale));
+            ctx.Reply(T.ZoneNoResultsLocation);
             return;
         }
         ulong team = ctx.Caller.GetTeam();
@@ -235,7 +211,7 @@ internal class _DebugCommand : Command
                 flag.CapT2(Flag.MAX_POINTS - flag.Points - 2);
             }
         }
-        else ctx.Reply("gamemode_flag_not_on_cap_team");
+        else ctx.SendGamemodeError();
     }
     private void quickwin(CommandInteraction ctx)
     {
@@ -248,7 +224,7 @@ internal class _DebugCommand : Command
             team = ctx.Caller!.GetTeam();
         else
         {
-            ctx.Reply("gamemode_flag_not_on_cap_team_console");
+            ctx.Reply(T.NotOnCaptureTeam);
             return;
         }
         Data.Gamemode.DeclareWin(team);

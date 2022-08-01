@@ -1328,6 +1328,18 @@ public class CommandInteraction : BaseCommandInteraction
             Caller.SendString(message, color);
         return this;
     }
+    public Exception ReplyString(string message, ConsoleColor color)
+    {
+        if (message is null) throw new ArgumentNullException(nameof(message));
+        if (IsConsole || Caller is null)
+        {
+            message = F.RemoveRichText(message);
+            L.Log(message, color);
+        }
+        else
+            Caller.SendString(message, F.GetColor(color));
+        return this;
+    }
     public Exception ReplyString(string message, string hex)
     {
         if (message is null) throw new ArgumentNullException(nameof(message));

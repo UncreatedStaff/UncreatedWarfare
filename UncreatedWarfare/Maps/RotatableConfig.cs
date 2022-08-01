@@ -15,9 +15,9 @@ public class RotatableConfig<T>
     private static readonly bool isNullableClass = !type.IsValueType;
     private static readonly bool isNullableStruct = type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
     private readonly MapValue[] _vals;
-    private readonly bool _isNull;
+    private bool _isNull;
     private readonly bool _isDefaulted;
-    private readonly T _val;
+    private T _val;
     private readonly int _current = -1;
 
     public T Value
@@ -109,6 +109,7 @@ public class RotatableConfig<T>
                 def = i;
             else if (v._mapInd == _current)
             {
+                _current = i;
                 _isNull = v._val == null;
                 _val = v._val;
                 return;
@@ -349,6 +350,37 @@ public class RotatableConfig<T>
         }
 
         return type.Name + " config, using setting for \"" + mname + "\" map: \"" + (_isNull ? "null" : _val!.ToString()) + "\"";
+    }
+    public void SetCurrentMapValue(T val)
+    {
+        if (val == null) SetCurrentMapValueNull();
+
+        if (_current != -1)
+        {
+            ref MapValue v = ref _vals[_current];
+            v = new MapValue(v._isDefault ? -1 : v._mapInd, val, val == null);
+            _isNull = val == null;
+            _val = val;
+        }
+        else
+        {
+            _val = val;
+        }
+    }
+    public void SetCurrentMapValueNull()
+    {
+        if (_current != -1)
+        {
+            ref MapValue v = ref _vals[_current];
+            v = new MapValue(v._isDefault ? -1 : v._mapInd, default!, true);
+            _isNull = true;
+            _val = default!;
+        }
+        else
+        {
+            _val = default!;
+            _isNull = true;
+        }
     }
 
     internal struct MapValue

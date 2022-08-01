@@ -354,6 +354,7 @@ public static class TeamManager
         _lobbyZone = null;
         _lobbySpawn = default;
     }
+    internal static void SaveConfig() => _data.Save();
     internal static void OnReloadFlags()
     {
         ResetLocations();

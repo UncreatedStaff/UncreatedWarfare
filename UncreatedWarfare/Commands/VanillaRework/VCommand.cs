@@ -81,6 +81,6 @@ public class VCommand : Command
             turrets,
             255);
 
-        ctx.Reply($"<color=#bfb9ac>Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).</color>");
+        ctx.ReplyString($"Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).", "bfb9ac");
     }
 }

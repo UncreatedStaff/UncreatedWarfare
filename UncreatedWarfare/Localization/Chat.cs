@@ -373,14 +373,14 @@ public static class Chat
         CheckTranslationLength(lang, ref value, translation, ref textColor);
         SendTranslationChat(value, translation, textColor, player);
     }
-    public static void Broadcast(in LanguageSet set, Translation translation)
+    public static void Broadcast(LanguageSet set, Translation translation)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         CheckTranslationLength(lang, ref value, translation, ref textColor);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T>(in LanguageSet set, Translation<T> translation, T arg1)
+    public static void Broadcast<T>(LanguageSet set, Translation<T> translation, T arg1)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -388,7 +388,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2>(in LanguageSet set, Translation<T1, T2> translation, T1 arg1, T2 arg2)
+    public static void Broadcast<T1, T2>(LanguageSet set, Translation<T1, T2> translation, T1 arg1, T2 arg2)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -396,7 +396,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3>(in LanguageSet set, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
+    public static void Broadcast<T1, T2, T3>(LanguageSet set, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -404,7 +404,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4>(in LanguageSet set, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    public static void Broadcast<T1, T2, T3, T4>(LanguageSet set, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -412,7 +412,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5>(in LanguageSet set, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    public static void Broadcast<T1, T2, T3, T4, T5>(LanguageSet set, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -420,7 +420,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6>(in LanguageSet set, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    public static void Broadcast<T1, T2, T3, T4, T5, T6>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -428,7 +428,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7>(in LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -436,7 +436,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8>(in LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -444,7 +444,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9>(in LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, null, set.Team, translation.Flags | TranslationFlags.ForChat);
@@ -452,7 +452,7 @@ public static class Chat
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
     }
-    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(in LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(LanguageSet set, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
         GetBroadcastTranslationData(in set, translation, out string value, out string lang, out Color textColor);
         value = translation.Translate(value, lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, null, set.Team, translation.Flags | TranslationFlags.ForChat);
