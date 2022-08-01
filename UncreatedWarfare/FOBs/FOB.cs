@@ -717,11 +717,20 @@ public class FOB : IFOB, IDeployable
     };
 
     public const string COLORED_NAME_FORMAT = "cn";
+    public const string CLOSEST_LOCATION_FORMAT = "l";
+    public const string GRID_LOCATION_FORMAT = "g";
     public const string NAME_FORMAT = "n";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is not null && format.Equals(COLORED_NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(UIColor, Name, flags);
+        if (format is not null)
+        {
+            if (format.Equals(COLORED_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(UIColor, Name, flags);
+            else if (format.Equals(CLOSEST_LOCATION_FORMAT, StringComparison.Ordinal))
+                return ClosestLocation;
+            else if (format.Equals(GRID_LOCATION_FORMAT, StringComparison.Ordinal))
+                return GridLocation.ToString();
+        }
         return Name;
     }
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)

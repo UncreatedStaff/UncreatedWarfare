@@ -864,8 +864,15 @@ public class SpecialFOB : IFOB, IDeployable
 
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is not null && format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(UIColor ?? TeamManager.GetTeamHexColor(Team), Name, flags);
+        if (format is not null)
+        {
+            if (format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(UIColor ?? TeamManager.GetTeamHexColor(Team), Name, flags);
+            else if (format.Equals(FOB.CLOSEST_LOCATION_FORMAT, StringComparison.Ordinal))
+                return ClosestLocation;
+            else if (format.Equals(FOB.GRID_LOCATION_FORMAT, StringComparison.Ordinal))
+                return GridLocation.ToString();
+        }
         return Name;
     }
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)

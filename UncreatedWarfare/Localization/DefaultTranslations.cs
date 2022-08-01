@@ -1,11 +1,14 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Point;
@@ -20,64 +23,6 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 namespace Uncreated.Warfare;
 internal static class T
 {
-    private const int NON_TRANSLATION_FIELD_COUNT = 11;
-    private const string ERROR_COLOR = "<#ff8c69>";
-    private const string SUCCESS_COLOR = "<#e6e3d5>";
-    internal const string PLURAL = "$plural$";
-    internal const string UPPERCASE = "upper";
-    internal const string LOWERCASE = "lower";
-    internal const string PROPERCASE = "proper";
-    internal const string RARITY_COLOR_FORMAT = "rarity";
-    public static readonly Translation[] Translations;
-    public static readonly Dictionary<string, Translation> Signs;
-    static T()
-    {
-        FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-        Translations = new Translation[fields.Length - NON_TRANSLATION_FIELD_COUNT];
-        int i2 = -1;
-        int signCt = 0;
-        for (int i = 0; i < fields.Length; ++i)
-        {
-            FieldInfo field = fields[i];
-            if (typeof(Translation).IsAssignableFrom(field.FieldType))
-            {
-                if (field.GetValue(null) is not Translation tr)
-                    L.LogError("Failed to convert " + field.Name + " to a translation!");
-                else if (i2 + 1 < Translations.Length)
-                {
-                    tr.Key = field.Name;
-                    tr.Id = i2;
-                    tr.AttributeData = Attribute.GetCustomAttribute(field, typeof(TranslationDataAttribute)) as TranslationDataAttribute;
-                    tr.Init();
-                    if (tr.AttributeData is not null && !string.IsNullOrEmpty(tr.AttributeData.SignId))
-                        ++signCt;
-                    Translations[++i2] = tr;
-                }
-                else
-                    L.LogError("Ran out of space in translation array for " + field.Name + " at " + (i2 + 1), method: "TRANSLATIONS");
-            }
-        }
-
-        if (Translations.Length != i2 + 1)
-        {
-            L.LogWarning("Translations had to resize for some reason from " + Translations.Length + " to " + (i2 + 1) + ". Check to make sure there's only one field that isn't a translation.", 
-                method: "TRANSLATIONS");
-            Array.Resize(ref Translations, i2 + 1);
-        }
-        Signs = new Dictionary<string, Translation>(signCt);
-        for (int i = 0; i < Translations.Length; ++i)
-        {
-            Translation tr = Translations[i];
-            if (tr.AttributeData is not null && !string.IsNullOrEmpty(tr.AttributeData.SignId))
-            {
-                if (Signs.ContainsKey(tr.AttributeData.SignId!))
-                    L.LogWarning("Duplicate Sign ID: \"" + tr.AttributeData.SignId + "\" in translation \"" + tr.Key + "\".", method: "TRANSLATIONS");
-                else
-                    Signs.Add(tr.AttributeData.SignId!, tr);
-            }
-        }
-    }
-
     /*
      * c$value$ will be replaced by the color "value" on startup
      */
@@ -856,19 +801,19 @@ internal static class T
     public static readonly Translation RequestNoTarget = new Translation("<#a4baa9>You must be looking at a request sign or vehicle.");
     public static readonly Translation RequestSignAlreadySaved = new Translation("<#a4baa9>That sign is already saved.");
     public static readonly Translation RequestSignNotSaved = new Translation("<#a4baa9>That sign is not saved.");
-    public static readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#b8ffc1>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
+    public static readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#c$credits$>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
     public static readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This kit has not been created yet.");
     public static readonly Translation RequestKitAlreadyEquipped = new Translation("<#a8918a>You already have this kit.");
     public static readonly Translation RequestMissingAccess = new Translation("<#a8918a>You already have this kit.");
-    public static readonly Translation<int> RequestNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#b8ffc1>C </color><#ffffff>{0}</color>.");
-    public static readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to unlock this kit.");
+    public static readonly Translation<int> RequestNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#c$credits$>C </color><#ffffff>{0}</color>.");
+    public static readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to unlock this kit.");
     public static readonly Translation RequestNotBuyable = new Translation("<#a8918a>This kit cannot be purchased with credits.");
     public static readonly Translation<int> RequestKitLimited = new Translation<int>("<#a8918a>Your team already has a max of <#d9e882>{0}</color> players using this kit. Try again later.");
     public static readonly Translation<RankData> RequestKitLowLevel = new Translation<RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to use this kit.", RankData.NAME_FORMAT);
     public static readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", BaseQuestData.COLOR_QUEST_ASSET_FORMAT);
     public static readonly Translation RequestKitNotSquadleader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to get this kit.");
     public static readonly Translation RequestLoadoutNotOwned = new Translation("<#a8918a>You do not own this loadout.");
-    public static readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#b8ffc1>C </color><#ffffff>{0}</color> / <#b8ffc1>C </color><#ffffff>{1}</color> needed to request this vehicle.");
+    public static readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to request this vehicle.");
     public static readonly Translation<Cooldown> RequestVehicleCooldown = new Translation<Cooldown>("<#b3ab9f>This vehicle can't be requested for another: <#ffe2ab>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
     public static readonly Translation RequestVehicleNotInSquad = new Translation("<#b3ab9f>You must be <#cedcde>IN A SQUAD</color> in order to request this vehicle.");
     public static readonly Translation RequestVehicleNoKit = new Translation("<#a8918a>Get a kit before you request vehicles.");
@@ -997,386 +942,406 @@ internal static class T
     public static readonly Translation<string, string> ShutdownBroadcastReminder = new Translation<string, string>("<#00ffff>A shutdown is scheduled to occur after this game because: \"<#6699ff>{0}</color>\".");
     #endregion
 
-    #region RequestSigns
+    #region Request Signs
     public static readonly Translation KitExclusive = new Translation("<#aaa>EXCLUSIVE</color>", TranslationFlags.NoColor);
+    public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);
+    public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);
+    public static readonly Translation<float> KitPremiumCost = new Translation<float>("$ {0}", TranslationFlags.NoColor, "N2");
+    [TranslationData(FormattingDescriptions = new string[] { "Level", "Color depending on player's current level." })]
+    public static readonly Translation<float, Color> KitRequiredLevel = new Translation<float, Color>("<#{1}>{0}</color>", TranslationFlags.NoColor);
+    [TranslationData(FormattingDescriptions = new string[] { "Rank", "Color depending on player's current rank." })]
+    public static readonly Translation<float, Color> KitRequiredRank = new Translation<float, Color>("<#{1}>Rank: {0}</color>", TranslationFlags.NoColor);
+    [TranslationData(FormattingDescriptions = new string[] { "Quest", "Color depending on whether the player has completed the quest." })]
+    public static readonly Translation<float, Color> KitRequiredQuest = new Translation<float, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationFlags.NoColor);
+    [TranslationData(FormattingDescriptions = new string[] { "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" })]
+    public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>", TranslationFlags.NoColor);
+    public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>", TranslationFlags.NoColor);
+    public static readonly Translation KitPremiumOwned = new Translation("OWNED", TranslationFlags.NoColor);
+    public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>", TranslationFlags.NoColor);
+    public static readonly Translation KitUnlimited = new Translation("unlimited", TranslationFlags.NoColor);
+    public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}", TranslationFlags.NoColor);
+    [Obsolete(@"Remember to put a \n after this.")]
+    public static readonly Translation<int> LoadoutName = new Translation<int>("LOADOUT {0}", TranslationFlags.NoColor);
     #endregion
 
-    static Dictionary<string, string> _translations = new Dictionary<string, string>()
+    #region Vehicle Bay Signs
+    public static readonly Translation<int> VBSTickets = new Translation<int>("<#fff>{0}</color> <#f0f0f0>Tickets</color>", TranslationFlags.NoColor);
+    public static readonly Translation<int> VBSStateReady = new Translation<int>("<#33cc33>Ready!</color> <#aaa><b>/request</b></color>", TranslationFlags.NoColor);
+    [TranslationData(FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
+    public static readonly Translation<int> VBSStateDead = new Translation<int>("<#ff0000>{0}:{1}</color>", TranslationFlags.NoColor);
+    [TranslationData(FormattingDescriptions = new string[] { "Nearest location." })]
+    public static readonly Translation<int> VBSStateActive = new Translation<int>("<#ff9933>{0}</color>", TranslationFlags.NoColor);
+    [TranslationData(FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
+    public static readonly Translation<int> VBSStateIdle = new Translation<int>("<#ffcc00>Idle: {0}:{1}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<int> VBSDelayStaging = new Translation<int>("<#94cfff>Locked Until Start</color>", TranslationFlags.NoColor);
+    [TranslationData(FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
+    public static readonly Translation<int> VBSDelayTime = new Translation<int>("<#94cfff>Locked: {0}:{1}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#94cfff>Capture {0}</color>", TranslationFlags.NoColor, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#94cfff>Lose {0}</color>", TranslationFlags.NoColor, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#94cfff>Lose {0} more flags.</color>", TranslationFlags.NoColor);
+    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#94cfff>Capture {0} more flags.</color>", TranslationFlags.NoColor);
+    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#94cfff>Destroy {0}</color>", TranslationFlags.NoColor, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#94cfff>Destroy Next Cache</color>", TranslationFlags.NoColor);
+    public static readonly Translation VBSDelayAttackCacheMultiple = new Translation("<#94cfff>Destroy {0} more caches.</color>", TranslationFlags.NoColor);
+    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#94cfff>Lose {0}</color>", TranslationFlags.NoColor, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#94cfff>Lose Next Cache</color>", TranslationFlags.NoColor);
+    public static readonly Translation VBSDelayDefendCacheMultiple = new Translation("<#94cfff>Lose {0} more caches.</color>", TranslationFlags.NoColor);
+    #endregion
+
+    #region Revives
+    public static readonly Translation ReviveNotMedic = new Translation("<#bdae9d>Only a <color=#ff758f>MEDIC</color> can heal or revive teammates.");
+    public static readonly Translation ReviveHealEnemies = new Translation("<#bdae9d>You cannot aid enemy soldiers.");
+    #endregion
+
+    #region Reload Command
+    public static readonly Translation ReloadedAll = new Translation("<#e6e3d5>Reloaded all Uncreated Warfare components.");
+    public static readonly Translation ReloadedTranslations = new Translation("<#e6e3d5>Reloaded all translation files.");
+    public static readonly Translation ReloadedFlags = new Translation("<#e6e3d5>Reloaded flag data.");
+    public static readonly Translation ReloadFlagsInvalidGamemode = new Translation("<#ff8c69>You must be on a flag gamemode to use this command!");
+    public static readonly Translation ReloadedPermissions = new Translation("<#e6e3d5>Reloaded the permission saver file.");
+    public static readonly Translation ReloadedGeneric = new Translation("<#e6e3d5>Reloaded the '{0}' module.");
+    public static readonly Translation ReloadedTCP = new Translation("<#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.");
+    public static readonly Translation ReloadedSQL = new Translation("<#e6e3d5>Reopened the MySql Connection.");
+    #endregion
+
+    #region Debug Commands
+    public static readonly Translation<string> DebugNoMethod = new Translation<string>("<#ff8c69>No method found called <#ff758f>{0}</color>.");
+    public static readonly Translation<string, string> DebugErrorExecuting = new Translation<string, string>("<#ff8c69>Ran into an error while executing: <#ff758f>{0} - {1}</color>.");
+    public static readonly Translation<string> DebugMultipleMatches = new Translation<string>("<#ff8c69>Multiple methods match <#ff758f>{0}</color>.");
+    #endregion
+
+    #region Phases
+    public static readonly Translation PhaseBriefing                      = new Translation("BRIEFING PHASE", TranslationFlags.UnityUI);
+    public static readonly Translation PhasePreparation                   = new Translation("PREPARATION PHASE", TranslationFlags.UnityUI);
+    public static readonly Translation PhaseBreifingInvasionAttack        = new Translation("BRIEFING PHASE", TranslationFlags.UnityUI);
+    public static readonly Translation<Flag> PhaseBreifingInvasionDefense = new Translation<Flag>("PREPARATION PHASE\nFORTIFY {0}", TranslationFlags.UnityUI);
+    #endregion
+
+    #region XP Toasts
+    public static readonly Translation XPToastFromOperator = new Translation("FROM OPERATOR", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFromPlayer = new Translation("FROM ADMIN", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastHealedTeammate = new Translation("HEALED TEAMMATE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastEnemyInjured = new Translation("<color=#e3e3e3>DOWNED</color>", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyInjured = new Translation("<color=#e3e3e3>DOWNED FRIENDLY</color>", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastEnemyKilled = new Translation("KILLED ENEMY", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastKillAssist = new Translation("ASSIST", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastKillVehicleAssist = new Translation("VEHICLE ASSIST", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastKillDriverAssist = new Translation("DRIVER ASSIST", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastSpotterAssist = new Translation("SPOTTER", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyKilled = new Translation("TEAMKILLED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFOBDestroyed = new Translation("FOB DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyFOBDestroyed = new Translation("FRIENDLY FOB DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFOBUsed = new Translation("FOB IN USE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastSuppliesUnloaded = new Translation("RESUPPLIED FOB", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastResuppliedTeammate = new Translation("RESUPPLIED TEAMMATE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastRepairedVehicle = new Translation("REPAIRED VEHICLE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFOBRepairedVehicle = new Translation("FOB REPAIRED VEHICLE", TranslationFlags.UnityUI);
+    public static readonly Translation<EVehicleType> XPToastVehicleDestroyed = new Translation<EVehicleType>("{0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation<EVehicleType> XPToastAircraftDestroyed = new Translation<EVehicleType>("{0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationFlags.UnityUI);
+
+    public static readonly Translation XPToastFlagCaptured = new Translation("FLAG CAPTURED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFlagNeutralized = new Translation("FLAG NEUTRALIZED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFlagAttackTick = new Translation("ATTACK", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFlagDefenseTick = new Translation("DEFENSE", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastCacheDestroyed = new Translation("CACHE DESTROYED", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastFriendlyCacheDestroyed = new Translation("FRIENDLY CACHE DESTROYED", TranslationFlags.UnityUI);
+
+    public static readonly Translation XPToastSquadBonus = new Translation("SQUAD BONUS", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastOnDuty = new Translation("ON DUTY", TranslationFlags.UnityUI);
+
+    public static readonly Translation<int> XPToastGainXP = new Translation<int>("+{0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastLoseXP = new Translation<int>("-{0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastGainCredits = new Translation<int>("+{0} <color=#c$credits$>C</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastPurchaseCredits = new Translation<int>("-{0} <color=#c$credits$>C</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> XPToastLoseCredits = new Translation<int>("-{0} <color=#d69898>C</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<int> ToastPromoted = new Translation<int>("YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO", TranslationFlags.UnityUI);
+    public static readonly Translation<int> ToastDemoted = new Translation<int>("YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO", TranslationFlags.UnityUI);
+    #endregion
+
+    #region Injured UI
+    public static readonly Translation InjuredUIHeader = new Translation("You are injured", TranslationFlags.UnityUI);
+    public static readonly Translation InjuredUIGiveUp = new Translation("Press <color=#cecece><b><plugin_2/></b></color> to give up.", TranslationFlags.UnityUI);
+    public static readonly Translation InjuredUIGiveUpChat = new Translation("<#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.");
+    #endregion
+
+    #region Insurgency
+    public static readonly Translation InsurgencyListHeader = new Translation("Caches", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyUnknownCacheAttack = new Translation("<color=#696969>Undiscovered</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyUnknownCacheDefense = new Translation("<color=#696969>Unknown</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyDestroyedCacheAttack = new Translation("<color=#5a6e5c>Destroyed</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyDestroyedCacheDefense = new Translation("<color=#6b5858>Lost</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyCacheAttack = new Translation("<color=#ffca61>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyCacheDefense = new Translation("<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI);
+    public static readonly Translation InsurgencyCacheDefenseUndiscovered = new Translation("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI);
+    #endregion
+
+    #region Report Command
+    public static readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob greifing\", \"cheating\".");
+    public static readonly Translation ReportDiscordNotLinked = new Translation("<#9cffb3>Your account must be linked in our Discord server to use this command. Type <#7483c4>/discord</color> then type <#fff>-link {0}</color> in <#c480d9>#warfare-stats</color>.");
+    public static readonly Translation ReportPlayerNotFound = new Translation("<#9cffb3>Unable to find a player with that name, you can use their <color=#ffffff>Steam64 ID</color> instead, as names are only stored until they've been offline for 20 minutes.");
+    public static readonly Translation ReportUnknownError = new Translation("<#9cffb3>Unable to generate a report for an unknown reason, check your syntax again with <color=#ffffff>/report help</color>.");
+    public static readonly Translation<IPlayer, string, EReportType> ReportSuccessMessage1 = new Translation<IPlayer, string, EReportType>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation ReportSuccessMessage2 = new Translation("<#c480d9>If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.");
+    public static readonly Translation<IPlayer, IPlayer, string, EReportType> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, EReportType>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report.\nCheck <#c480d9>#player-reports</color> for more information.", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<string> ReportNotifyViolatorToast = new Translation<string>("<#c480d9>You've been reported for <#00ffff>{0}</color>.\nCheck <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.", TranslationFlags.UnityUI);
+    public static readonly Translation<EReportType, string> ReportNotifyViolatorMessage1 = new Translation<EReportType, string>("<#c480d9>You've been reported for <#00ffff>{0} - {1}</color>.");
+    public static readonly Translation<EReportType, string> ReportNotifyViolatorMessage2 = new Translation<EReportType, string>("<#c480d9>Check <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.");
+    public static readonly Translation<IPlayer> ReportCooldown = new Translation<IPlayer>("<#9cffb3>You've already reported {0} in the past hour.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<ulong, IPlayer> ReportConfirm = new Translation<ulong, IPlayer>("<#c480d9>Did you mean to report {1} <i><#444>{0}</color></i>? Type <#ff8c69>/confirm</color> to continue.", arg1Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation ReportNotConnected = new Translation("<#ff8c69>The report system is not available right now, please try again later.");
+    #endregion
+
+    #region Tips
+    public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationFlags.UnityUI);
+    public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationFlags.UnityUI);
+    public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationFlags.UnityUI);
+    public static readonly Translation<IPlayer> TipHelpBuild = new Translation<IPlayer>("<#d9c69a>{0} needs help building!", TranslationFlags.UnityUI, UCPlayer.COLOR_NICK_NAME_FORMAT);
+    public static readonly Translation<EVehicleType> TipLogisticsVehicleResupplied = new Translation<EVehicleType>("Your <#009933>{0}</color> has been auto resupplied.", TranslationFlags.UnityUI, UPPERCASE);
+    #endregion
+
+    #region Zone Command
+    public static readonly Translation ZoneNoResultsLocation = new Translation("<#ff8c69>You aren't in any existing zone.");
+    public static readonly Translation ZoneNoResultsName = new Translation("<#ff8c69>Couldn't find a zone by that name.");
+    public static readonly Translation ZoneNoResults = new Translation("<#ff8c69>You must be in a zone or specify a valid zone name to use this command.");
+    public static readonly Translation<Zone> ZoneGoSuccess = new Translation<Zone>("<#e6e3d5>Teleported to <#5a6e5c>{0}</color>.", Flag.NAME_FORMAT);
+    public static readonly Translation<int, Zone> ZoneVisualizeSuccess = new Translation<int, Zone>("<#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.", arg1Fmt: Flag.NAME_FORMAT);
+
+    // Zone > Delete
+    public static readonly Translation ZoneDeleteZoneNotInZone = new Translation("<#ff8c69>You must be standing in 1 zone (not 0 or multiple). Alternatively, provide a zone name as another argument.");
+    public static readonly Translation<string> ZoneDeleteZoneNotFound = new Translation<string>("<#ff8c69>Failed to find a zone named \"{0}\".");
+    public static readonly Translation<Zone> ZoneDeleteZoneConfirm = new Translation<Zone>("Did you mean to delete <#666>{0}</color>? Type <#ff8c69>/confirm</color> to continue.", Flag.NAME_FORMAT);
+    public static readonly Translation<Zone> ZoneDeleteZoneSuccess = new Translation<Zone>("<#e6e3d5>Deleted <#666>{0}</color>.", Flag.NAME_FORMAT);
+    public static readonly Translation<Zone> ZoneDeleteEditingZoneDeleted = new Translation<Zone>("<#ff8c69>Someone deleted the zone you're working on, saving this will create a new one.", Flag.NAME_FORMAT);
+
+    // Zone > Create
+    public static readonly Translation<Zone, EZoneType> ZoneCreated = new Translation<Zone, EZoneType>("<#ff8c69>Someone deleted the zone you're working on, saving this will create a new one.", Flag.NAME_FORMAT);
+    public static readonly Translation<string> ZoneCreateNameTaken = new Translation<string>("<#ff8c69>The name \"{0}\" is already in use by another zone.");
+    public static readonly Translation<string, IPlayer> ZoneCreateNameTakenEditing = new Translation<string, IPlayer>("<#ff8c69>The name \"{0}\" is already in use by another zone being created by {1}.");
+    
+    // Zone > Edit
+    public static readonly Translation<int> ZoneEditPointNotDefined = new Translation<int>("<#ff8c69>Point <#ff9999>#{0}</color> is not defined.");
+    public static readonly Translation<int> ZoneEditPointNotNearby = new Translation<int>("<#ff8c69>There is no point near <#ff9999>{0}</color>.");
+
+    // Zone > Edit > Existing
+    public static readonly Translation ZoneEditExistingInvalid = new Translation("<#ff8c69>Edit existing zone requires the zone name as a parameter. Alternatively stand in the zone (without overlapping another).");
+    public static readonly Translation ZoneEditExistingInProgress = new Translation("<#ff8c69>Cancel or finalize the zone you're currently editing first.");
+    public static readonly Translation<Zone, EZoneType> ZoneEditExistingSuccess = new Translation<Zone, EZoneType>("<#e6e3d5>Started editing zone <#fff>{0}</color>, a <#ff9999>{1}</color> zone.");
+
+    // Zone > Edit > Finalize
+    public static readonly Translation ZoneEditNotStarted = new Translation("<#ff8c69>Start creating a zone with <#fff>/zone create <polygon|rectangle|circle> <name></color>.");
+    public static readonly Translation ZoneEditFinalizeExists = new Translation("<#ff8c69>There's already a zone saved with that id.");
+    public static readonly Translation<string> ZoneEditFinalizeSuccess = new Translation<string>("<#e6e3d5>Successfully finalized and saved {0}.");
+    public static readonly Translation<string> ZoneEditFinalizeFailure = new Translation<string>("<#ff8c69>The provided zone data was invalid because: <#fff>{0}</color>.");
+    public static readonly Translation ZoneEditFinalizeUseCaseUnset = new Translation("<#ff8c69>Before saving you must set a use case with /zone edit use case <type>: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".");
+    public static readonly Translation<Zone> ZoneEditFinalizeOverwrote = new Translation<Zone>("<#e6e3d5>Successfully overwrote <#fff>{0}</color>.", Flag.NAME_FORMAT);
+
+    // Zone > Edit > Cancel
+    public static readonly Translation<string> ZoneEditCancelled = new Translation<string>("<#e6e3d5>Successfully cancelled making <#fff>{0}</color>.");
+
+    // Zone > Edit > Type
+    public static readonly Translation ZoneEditTypeInvlaid = new Translation("<#ff8c69>Type must be rectangle, circle, or polygon.");
+    public static readonly Translation<EZoneType> ZoneEditTypeAlreadySet = new Translation<EZoneType>("<#ff8c69>This zone is already a <#ff9999>{0}</color>.");
+    public static readonly Translation<EZoneType> ZoneEditTypeSuccess = new Translation<EZoneType>("<#ff8c69>Set type to <#ff9999>{0}</color>.");
+
+    // Zone > Edit > Max-Height
+    public static readonly Translation ZoneEditMaxHeightInvalid = new Translation("<#ff8c69>Maximum Height must be a decimal or whole number, or leave it blank to use the player's current height.");
+    public static readonly Translation<float> ZoneEditMaxHeightSuccess = new Translation<float>("<#e6e3d5>Set maximum height to <#ff9999>{0}</color>.", "0.##");
+
+    // Zone > Edit > Min-Height
+    public static readonly Translation ZoneEditMinHeightInvalid = new Translation("<#ff8c69>Minimum Height must be a decimal or whole number, or leave it blank to use the player's current height.");
+    public static readonly Translation<float> ZoneEditMinHeightSuccess = new Translation<float>("<#e6e3d5>Set minimum height to <#ff9999>{0}</color>.", "0.##");
+
+    // Zone > Edit > Add-Point
+    public static readonly Translation ZoneEditAddPointInvalid = new Translation("<#ff8c69>Adding a point requires either: blank (appends, current pos), <index> (current pos), <x> <z> (appends), or <index> <x> <z> parameters.");
+    public static readonly Translation<int, Vector2> ZoneEditAddPointSuccess = new Translation<int, Vector2>("<#e6e3d5>Added point <#ff9999>#{0}</color> at <#ff9999>{1}</color>.", arg1Fmt: "0.##");
+
+    // Zone > Edit > Delete-Point
+    public static readonly Translation ZoneEditDeletePointInvalid = new Translation("<#ff8c69>Deleting a point requires either: nearby X and Z parameters, a point number, or leave them blank to use the player's current position");
+    public static readonly Translation<int, Vector2> ZoneEditDeletePointSuccess = new Translation<int, Vector2>("<#e6e3d5>Removed point <#ff9999>#{0}</color> at <#ff9999>{1}</color>.", arg1Fmt: "0.##");
+
+    // Zone > Edit > Set-Point
+    public static readonly Translation ZoneEditSetPointInvalid = new Translation("<#ff8c69>Moving a point requires either: blank (move nearby closer), <nearby src x> <nearby src z> <dest x> <dest z>, <pt num> (destination is player position), <pt num> <dest x> <dest z>, or <nearby src x> <nearby src z> (destination is nearby player).");
+    public static readonly Translation<int, Vector2> ZoneEditSetPointSuccess = new Translation<int, Vector2>("<#e6e3d5>Removed point <#ff9999>#{0}</color> at <#ff9999>{1}</color>.", arg1Fmt: "0.##");
+
+    // Zone > Edit > Order-Point
+    public static readonly Translation ZoneEditOrderPointInvalid = new Translation("<#ff8c69>Ordering a point requires either: <from-index> <to-index>, <to-index> (from is nearby player), or <src x> <src z> <to-index>.");
+    public static readonly Translation<int, int> ZoneEditOrderPointSuccess = new Translation<int, int>("<#e6e3d5>Moved point <#ff9999>#{0}</color> to index <#ff9999>#{1}</color>.");
+
+    // Zone > Edit > Clear-Points
+    [TranslationData(FormattingDescriptions = new string[] { "Amount of points restored.", "\"s\" unless {0} == 1." })]
+    public static readonly Translation<int, string> ZoneEditUnclearedSuccess = new Translation<int, string>("<#e6e3d5>Restored {0} point{1}.");
+    public static readonly Translation ZoneEditClearSuccess = new Translation("<#e6e3d5>Cleared all polygon points.");
+
+    // Zone > Edit > Radius
+    public static readonly Translation ZoneEditRadiusInvalid = new Translation("<#ff8c69>Radius must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.");
+    public static readonly Translation<float> ZoneEditRadiusSuccess = new Translation<float>("<#e6e3d5>Set radius to <#ff9999>{0}</color>.", "0.##");
+
+    // Zone > Edit > Size-X
+    public static readonly Translation ZoneEditSizeXInvalid = new Translation("<#ff8c69>Size X must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.");
+    public static readonly Translation<float> ZoneEditSizeXSuccess = new Translation<float>("<#e6e3d5>Set size x to <#ff9999>{0}</color>.", "0.##");
+
+    // Zone > Edit > Size-Z
+    public static readonly Translation ZoneEditSizeZInvalid = new Translation("<#ff8c69>Size Z must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.");
+    public static readonly Translation<float> ZoneEditSizeZSuccess = new Translation<float>("<#e6e3d5>Set size z to <#ff9999>{0}</color>.", "0.##");
+
+    // Zone > Edit > Center
+    public static readonly Translation ZoneEditCenterInvalid = new Translation("<#ff8c69>To set center you must provide two decimal or whole numbers, or leave them blank to use the player's current position.");
+    public static readonly Translation<Vector2> ZoneEditCenterSuccess = new Translation<Vector2>("<#e6e3d5>Set center position to <#ff9999>{0}</color>.", "0.##");
+
+    // Zone > Edit > Name
+    public static readonly Translation ZoneEditNameInvalid = new Translation("<#ff8c69>Name requires one string argument. Quotation marks aren't required.");
+    public static readonly Translation<string> ZoneEditNameSuccess = new Translation<string>("<#e6e3d5>Set name to \"<#ff9999>{0}</color>\".");
+
+    // Zone > Edit > Short-Name
+    public static readonly Translation ZoneEditShortNameInvalid = new Translation("<#ff8c69>Short name requires one string argument. Quotation marks aren't required.");
+    public static readonly Translation<string> ZoneEditShortNameSuccess = new Translation<string>("<#e6e3d5>Set short name to \"<#ff9999>{0}</color>\".");
+    public static readonly Translation ZoneEditShortNameRemoved = new Translation("<#e6e3d5>Removed short name.");
+
+    // Zone > Edit > Use-Case
+    public static readonly Translation ZoneEditUseCaseInvalid = new Translation("<#ff8c69>Use case requires one string argument: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".");
+    public static readonly Translation<EZoneUseCase> ZoneEditUseCaseSuccess = new Translation<EZoneUseCase>("<#e6e3d5>Set use case to \"<#ff9999>{0}</color>\".");
+
+    // Zone > Edit > Transactions
+    public static readonly Translation ZoneEditUndoEmpty = new Translation("<#ff8c69>There is nothing to undo.");
+    public static readonly Translation ZoneEditRedoEmpty = new Translation("<#ff8c69>There is nothing to redo.");
+
+    // Zone > Edit > UI
+    public static readonly Translation ZoneEditUIYLimits = new Translation("Y: {0} - {1}", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditUIYLimitsInfinity = new Translation("∞", TranslationFlags.UnityUI);
+
+    // Zone > Edit > UI > Suggestions
+    public static readonly Translation ZoneEditSuggestedCommandsHeader = new Translation("Suggested Commands", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand1  = new Translation("/ze maxheight [value]", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand2  = new Translation("/ze minheight [value]", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand3  = new Translation("/ze finalize", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand4  = new Translation("/ze cancel", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand5  = new Translation("/ze addpt [x z]", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand6  = new Translation("/ze delpt [number | x z]", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand7  = new Translation("/ze setpt <number | src: x z | number dest: x z | src: x z dest: x z>", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand8  = new Translation("/ze orderpt <from-index to-index | to-index | src: x z to-index>", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand9  = new Translation("/ze radius [value]", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand10 = new Translation("/ze sizex [value]", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand11 = new Translation("/ze sizez [value]", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand12 = new Translation("/zone util location", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand13 = new Translation("/ze type <rectangle | circle | polygon>", TranslationFlags.UnityUI);
+    public static readonly Translation ZoneEditSuggestedCommand14 = new Translation("/ze clearpoints", TranslationFlags.UnityUI);
+
+    // Zone > Util > Location
+    [TranslationData(FormattingDescriptions = new string[] { "X m", "Y m", "Z m", "Yaw °" })]
+    public static readonly Translation<float, float, float, float> ZoneUtilLocation = new Translation<float, float, float, float>("<#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.");
+    #endregion
+
+    #region Teams Command
+    public static readonly Translation<Cooldown> TeamsCooldown = new Translation<Cooldown>("<#ff8c69>You can't use /teams for another {0}.", Cooldown.LONG_TIME_FORMAT);
+    #endregion
+
+    #region Spotting
+    public static readonly Translation SpottedToast = new Translation("<#b9ffaa>SPOTTED", TranslationFlags.UnityUI);
+    #endregion
+
+    #region Teleport
+    public static readonly Translation<IPlayer> TeleportTargetDead = new Translation<IPlayer>("<#8f9494>{0} is not alive.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, InteractableVehicle> TeleportSelfSuccessVehicle = new Translation<IPlayer, InteractableVehicle>("<#bfb9ac>You were put in {0}'s {1}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RARITY_COLOR_FORMAT);
+    public static readonly Translation<IPlayer> TeleportSelfSuccessPlayer = new Translation<IPlayer>("<#bfb9ac>You were teleported to {0}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> TeleportSelfPlayerObstructed = new Translation<IPlayer>("<#8f9494>Failed to teleport you to {0}, their position is obstructed.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<string> TeleportLocationNotFound = new Translation<string>("<#8f9494>Failed to find a location similar to <#ddd>{0}</color>.");
+    public static readonly Translation<string> TeleportSelfLocationSuccess = new Translation<string>("<#bfb9ac>You were teleported to <#ddd>{0}</color>.");
+    public static readonly Translation<string> TeleportSelfLocationObstructed = new Translation<string>("<#8f9494>Failed to teleport you to <#ddd>{0}</color>, it's position is obstructed.");
+    public static readonly Translation<IPlayer, IPlayer, InteractableVehicle> TeleportOtherSuccessVehicle = new Translation<IPlayer, IPlayer, InteractableVehicle>("<#bfb9ac>{0} was put in {1}'s {2}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RARITY_COLOR_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer> TeleportOtherSuccessPlayer = new Translation<IPlayer, IPlayer>("<#bfb9ac>{0} was teleported to {1}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer> TeleportOtherObstructedPlayer = new Translation<IPlayer, IPlayer>("<#8f9494>Failed to teleport {0} to {1}, their position is obstructed.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, string> TeleportOtherSuccessLocation = new Translation<IPlayer, string>("<#bfb9ac>{0} was teleported to <#ddd>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, string> TeleportOtherObstructedLocation = new Translation<IPlayer, string>("<#8f9494>Failed to teleport {0} to <#ddd>{1}</color>, it's position is obstructed.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<string> TeleportTargetNotFound = new Translation<string>("<#8f9494>Failed to find a player from <#ddd>{0}</color>.");
+    public static readonly Translation TeleportInvalidCoordinates = new Translation("<#8f9494>Use of coordinates should look like: <#eee>/tp [player] <x y z></color>.");
+    #endregion
+
+    #region Heal Command
+    public static readonly Translation<IPlayer> HealPlayer = new Translation<IPlayer>("<#ff9966>You healed {0}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation HealSelf = new Translation("<#ff9966>You we're healed.");
+    #endregion
+
+    #region God Command
+    public static readonly Translation GodModeEnabled = new Translation("<#bfb9ac>God mode <#99ff66>enabled</color>.");
+    public static readonly Translation GodModeDisabled = new Translation("<#ff9966>God mode <#ff9999>disabled</color>.");
+    #endregion
+
+    #region Vanish Command
+    public static readonly Translation VanishModeEnabled = new Translation("<#bfb9ac>Vanish mode <#99ff66>enabled</color>.");
+    public static readonly Translation VanishModeDisabled = new Translation("<#ff9966>Vanish mode <#ff9999>disabled</color>.");
+    #endregion
+
+    #region Permission Command
+    public static readonly Translation<string> PermissionsCurrent = new Translation<string>("<#bfb9ac>Current permisions: <color=#ffdf91>{0}</color>.");
+    public static readonly Translation<EAdminType, IPlayer, ulong> PermissionGrantSuccess = new Translation<EAdminType, IPlayer, ulong>("<#bfb9ac><#7f8182>{1}</color> <#ddd>({2})</color> is now a <#ffdf91>{0}</color>.");
+    public static readonly Translation<EAdminType, IPlayer, ulong> PermissionGrantAlready = new Translation<EAdminType, IPlayer, ulong>("<#bfb9ac><#7f8182>{1}</color> <#ddd>({2})</color> is already at the <#ffdf91>{0}</color> level.");
+    public static readonly Translation<IPlayer, ulong> PermissionRevokeSuccess = new Translation<IPlayer, ulong>("<#bfb9ac><#7f8182>{0}</color> <#ddd>({1})</color> is now a <#ffdf91>member</color>.");
+    public static readonly Translation<IPlayer, ulong> PermissionRevokeAlready = new Translation<IPlayer, ulong>("<#bfb9ac><#7f8182>{0}</color> <#ddd>({1})</color> is already a <#ffdf91>member</color>.");
+    #endregion
+
+    #region Win UI
+    public static readonly Translation<int> WinUIValueTickets = new Translation<int>("{0} Tickets", TranslationFlags.UnityUI);
+    public static readonly Translation<int> WinUIValueCaches = new Translation<int>("{0} Caches Left", TranslationFlags.UnityUI);
+    public static readonly Translation<int> WinUIHeaderWinner = new Translation<int>("{0}\r\nhas won the battle!", TranslationFlags.UnityUI);
+    #endregion
+
+
+    private const int NON_TRANSLATION_FIELD_COUNT = 11;
+    private const string ERROR_COLOR = "<#ff8c69>";
+    private const string SUCCESS_COLOR = "<#e6e3d5>";
+    internal const string PLURAL = "$plural$";
+    internal const string UPPERCASE = "upper";
+    internal const string LOWERCASE = "lower";
+    internal const string PROPERCASE = "proper";
+    internal const string RARITY_COLOR_FORMAT = "rarity";
+    public static readonly Translation[] Translations;
+    public static readonly Dictionary<string, Translation> Signs;
+    static T()
     {
-        #region RequestSigns
-        { "kit_name", "<b>{0}</b>" },
-        { "kit_weapons", "<b>{0}</b>" },
-        { "kit_price_dollars", "$ {0:N2}" },
-        { "kit_premium_exclusive", "EXCLUSIVE" },
-        { "kit_required_level", "<color=#{1}>{0}</color>" }, // {0} = level number
-        { "kit_required_rank", "<color=#{1}>Rank: {0}</color>" },
-        { "kit_required_quest", "<color=#{1}>Quest: <color=#ffffff>{0}</color></color>" },
-        { "kit_required_quest_unknown", "<color=#{1}>Finish <color=#ffffff>{0}</color> quest{2}</color>" },
-        { "kit_required_quest_done", "<color=#ff974d>Kit Unlocked</color>" },
-        { "kit_premium_owned", "OWNED" },
-        { "kit_cost", "<color=#b8ffc1>C</color> <color=#ffffff>{0}</color>" },
-        { "kit_unlimited", "unlimited" },
-        { "kit_player_count", "{0}/{1}" },
-        { "sign_kit_request", "{0}\n{1}\n{2}\n{3}" },
-        { "loadout_name", "LOADOUT {0}\n" },
-        { "loadout_name_owned", "" },
-        #endregion
-        
-        #region Vehiclebay Signs
-        { "vbs_tickets_postfix", "Tickets" },
-        { "vbs_state_ready", "Ready!  <b>/request</b>" },
-        { "vbs_state_dead", "{0}:{1}" },
-        { "vbs_state_active", "{0}" },
-        { "vbs_state_idle", "Idle: {0}:{1}" },
-        { "vbs_state_delay_staging", "Locked Until Start" },
-        { "vbs_state_delay_time", "Locked: {0}:{1}" },
-        { "vbs_state_delay_flags_1", "Capture {0}" },
-        { "vbs_state_delay_flags_lose_1", "Lose {0}" },
-        { "vbs_state_delay_caches_atk_1", "Destroy {0}" },
-        { "vbs_state_delay_caches_atk_undiscovered_1", "Discover Next Cache" },
-        { "vbs_state_delay_caches_def_1", "Lose {0}" },
-        { "vbs_state_delay_caches_def_undiscovered_1", "Lose Next Cache" },
-        { "vbs_state_delay_flags_lose_2+", "Lose {0} more flags" },
-        { "vbs_state_delay_flags_2+", "Capture {0} more flags" },
-        { "vbs_state_delay_caches_atk_2+", "Destroy {0} more caches" },
-        { "vbs_state_delay_caches_def_2+", "Lose {0} more caches" },
-        #endregion
+        FieldInfo[] fields = typeof(T).GetFields(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).Where(x => typeof(Translation).IsAssignableFrom(x.FieldType)).ToArray();
+        Translations = new Translation[fields.Length - NON_TRANSLATION_FIELD_COUNT];
+        int i2 = -1;
+        int signCt = 0;
+        for (int i = 0; i < fields.Length; ++i)
+        {
+            FieldInfo field = fields[i];
+            if (typeof(Translation).IsAssignableFrom(field.FieldType))
+            {
+                if (field.GetValue(null) is not Translation tr)
+                    L.LogError("Failed to convert " + field.Name + " to a translation!");
+                else if (i2 + 1 < Translations.Length)
+                {
+                    tr.Key = field.Name;
+                    tr.Id = i2;
+                    tr.AttributeData = Attribute.GetCustomAttribute(field, typeof(TranslationDataAttribute)) as TranslationDataAttribute;
+                    tr.Init();
+                    if (tr.AttributeData is not null && !string.IsNullOrEmpty(tr.AttributeData.SignId))
+                        ++signCt;
+                    Translations[++i2] = tr;
+                }
+                else
+                    L.LogError("Ran out of space in translation array for " + field.Name + " at " + (i2 + 1), method: "TRANSLATIONS");
+            }
+        }
 
-        #region ReviveManager
-        { "heal_e_notmedic", "<color=#bdae9d>Only a <color=#ff758f>MEDIC</color> can heal or revive teammates.</color>" },
-        { "heal_e_enemy", "<color=#bdae9d>You cannot aid enemy soldiers.</color>" },
-        #endregion
-        
-        #region ReloadCommand
-        { "reload_syntax", "<color=#ff8c69>Syntax: /reload [help|module].</color>" },
-        { "reload_reloaded_all", "<color=#e6e3d5>Reloaded all Uncreated Warfare components.</color>" },
-        { "reload_reloaded_translations", "<color=#e6e3d5>Reloaded all translation files.</color>" },
-        { "reload_reloaded_flags", "<color=#e6e3d5>Reloaded flag data.</color>" },
-        { "reload_reloaded_flags_gm", "<color=#ff8c69>You must be on a flag gamemode to use this command!</color>" },
-        { "reload_reloaded_permissions", "<color=#e6e3d5>Reloaded the permission saver file.</color>" },
-        { "reload_reloaded_generic", "<color=#e6e3d5>Reloaded the '{0}' config file.</color>" },
-        { "reload_reloaded_tcp", "<color=#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.</color>" },
-        { "reload_reloaded_sql", "<color=#e6e3d5>Reopened the MySql Connection.</color>" },
-        #endregion
-        
-        #region Debug Commands
-        { "test_no_method", "<color=#ff8c69>No method found called <color=#ff758f>{0}</color>.</color>" },
-        { "test_error_executing", "<color=#ff8c69>Ran into an error while executing: <color=#ff758f>{0} - {1}</color>.</color>" },
-        { "test_multiple_matches", "<color=#ff8c69>Multiple methods match <color=#ff758f>{0}</color>.</color>" },
-
-        { "test_zonearea_syntax", "<color=#ff8c69>Syntax: <i>/test zonearea [active|all] <show extra zones: true|false> <show path: true|false> <show range: true|false></i>.</color>" },
-        { "test_zonearea_started", "<color=#e6e3d5>Picture has to generate, wait around a minute.</color>" },
-
-        { "test_givexp_player_not_found", "<color=#ff8c69>Could not find player named <color=#ff758f>{0}</color></color>" },
-        { "test_givexp_success", "<color=#e6e3d5>Given {0} XP to {1}.</color>" },
-        { "test_givexp_invalid_amount", "<color=#ff8c69><color=#ff758f>{0}</color> is not a valid amount (Int32).</color>" },
-
-        { "test_givecredits_player_not_found", "<color=#ff8c69>Could not find player named <color=#ff758f>{0}</color></color>" },
-        { "test_givecredits_success", "<color=#e6e3d5>Given {0} credits to {1}.</color>" },
-        { "test_givecredits_invalid_amount", "<color=#ff8c69><color=#ff758f>{0}</color> is not a valid amount (Int32).</color>" },
-
-        { "test_zone_not_in_zone", "<color=#e6e3d5>No flag zone found at position <color=#4785ff>({0}, {1}, {2})</color> - <color=#4785ff>{3}°</color>, out of <color=#4785ff>{4}</color> registered flags.</color>" },
-        { "test_zone_current_zone", "<color=#e6e3d5>You are in flag zone: <color=#4785ff>{0}</color>, at position <color=#4785ff>({1}, {2}, {3})</color>.</color>" },
-
-        { "test_time_enabled_console", "Enabled coroutine timing." },
-
-        { "test_down_success", "<color=#e6e3d5>Applied <color=#8ce4ff>{0}</color> damage to player.</color>" },
-
-        { "test_sign_no_sign", "<color=#ff8c69>No sign found.</color>" },
-        { "test_sign_success", "<color=#e6e3d5>Sign text: <color=#8ce4ff>\"{0}\"</color>.</color>" },
-
-        { "test_gamemode_skipped_staging", "<color=#e6e3d5>The staging phase was skipped.</color>" },
-        { "test_gamemode_loaded_gamemode", "<color=#e6e3d5>Loaded gamemode: {0}.</color>" },
-        { "test_gamemode_failed_loading_gamemode", "<color=#ff8c69>Failed to load gamemode \"{0}\". Check Console.</color>" },
-        { "test_gamemode_type_not_found", "<color=#ff8c69>There is no gamemode with the name \"{0}\".</color>" },
-
-        { "test_trackstats_enabled", "<color=#e6e3d5>Tracking stats has been enabled.</color>" },
-        { "test_trackstats_disabled", "<color=#e6e3d5>Tracking stats has been disabled.</color>" },
-
-        { "test_destroyblocker_failure", "<color=#ff8c69>Found no zone blockers to destroy.</color>" },
-        { "test_destroyblocker_success", "<color=#e6e3d5>Destroyed {0} zone blocker{1}.</color>" },
-
-        { "test_resetlobby_success", "<color=#e6e3d5>Reset {0}'s lobby state.</color>" },
-
-        { "test_instid_not_found", "<color=#ff8c69>An object with an Instance ID was not found.</color>" },
-        { "test_instid_found_barricade", "<color=#e6e3d5>Found barricade with instance id {0}.</color>" },
-        { "test_instid_found_structure", "<color=#e6e3d5>Found structure with instance id {0}.</color>" },
-        { "test_instid_found_vehicle", "<color=#e6e3d5>Found vehicle with instance id {0}.</color>" },
-        { "test_instid_found_object", "<color=#e6e3d5>Found level object with instance id {0}.</color>" },
-
-        { "test_playersave_success", "<color=#e6e3d5>Successfully set {1} in {0}'s playersave to {2}.</color>" },
-        { "test_playersave_field_not_found", "<color=#ff8c69>Couldn't find a field by the name {0} in PlayerSave.</color>" },
-        { "test_playersave_field_protected", "<color=#ff8c69>The field {0} in PlayerSave must have the JsonSettable attribute applied to it to set it.</color>" },
-        { "test_playersave_couldnt_parse", "<color=#ff8c69>Couldn't convert {0} to a value {1} can use.</color>" },
-        { "test_playersave_not_found", "<color=#ff8c69>A player with that ID has not joined.</color>" },
-
-        #endregion
-
-        #region Phases
-        { "phases_briefing", "BRIEFING PHASE" },
-        { "phases_preparation", "PREPARATION PHASE" },
-        { "phases_invasion_attack", "BRIEFING PHASE" },
-        { "phases_invasion_defense", "PREPARATION PHASE\nFORTIFY {0}" },
-        #endregion
-        
-        #region XP Toasts
-        { "xp_from_operator", "FROM OPERATOR" },
-        { "xp_from_player", "FROM {0}" },
-        { "xp_healed_teammate", "HEALED {0}" },
-        { "xp_enemy_downed", "<color=#e3e3e3>DOWNED</color>" },
-        { "xp_friendly_downed", "<color=#e3e3e3>DOWNED FRIENDLY</color>" },
-        { "xp_enemy_killed", "KILLED ENEMY" },
-        { "xp_kill_assist", "ASSIST" },
-        { "xp_vehicle_assist", "VEHICLE ASSIST" },
-        { "xp_driver_assist", "DRIVER ASSIST" },
-        { "xp_spotted_assist", "SPOTTER" },
-        { "xp_friendly_killed", "TEAMKILLED" },
-        { "xp_fob_killed", "FOB DESTROYED" },
-        { "xp_fob_teamkilled", "FRIENDLY FOB DESTROYED" },
-        { "xp_fob_in_use", "FOB IN USE" },
-        { "xp_supplies_unloaded", "RESUPPLIED FOB" },
-        { "xp_resupplied_teammate", "RESUPPLIED TEAMMATE" },
-        { "xp_repaired_vehicle", "REPAIRED VEHICLE" },
-        { "xp_fob_repaired_vehicle", "FOB REPAIRED VEHICLE" },
-        { "xp_vehicle_destroyed", "{0} DESTROYED" },
-        { "xp_aircraft_destroyed", "{0} SHOT DOWN" },
-
-        { "xp_flag_captured", "FLAG CAPTURED" },
-        { "xp_flag_neutralized", "FLAG NEUTRALIZED" },
-        { "xp_flag_attack", "ATTACK" },
-        { "xp_flag_defend", "DEFENSE" },
-        { "xp_cache_killed", "CACHE DESTROYED" },
-        { "xp_cache_teamkilled", "FRIENDLY CACHE DESTROYED" },
-
-        { "xp_squad_bonus", "SQUAD BONUS" },
-        { "xp_on_duty", "ON DUTY" },
-
-        { "xp_transporting_players", "TRANSPORTING PLAYERS" },
-
-        { "gain_xp", "+{0} XP" },
-        { "loss_xp", "-{0} XP" },
-        { "gain_credits", "+{0} <color=#b8ffc1>C</color>" },
-        { "subtract_credits", "-{0} <color=#b8ffc1>C</color>" },
-        { "loss_credits", "-{0} <color=#d69898>C</color>" },
-        { "promoted_xp_1", "YOU HAVE BEEN <color=#ffbd8a>PROMOTED</color> TO" },
-        { "promoted_xp_2", "{0}" },
-        { "demoted_xp_1", "YOU HAVE BEEN <color=#e86868>DEMOTED</color> TO" },
-        { "demoted_xp_2", "{0}" },
-        #endregion
-
-        #region Injured UI
-        { "injured_ui_header", "You are injured" },
-        { "injured_ui_give_up", "Press <b>'/'</b> to give up.\n " },
-        { "injured_chat", "<color=#ff8c69>You were injured, press <color=#cedcde><plugin_2/></color> to give up.</color>" },
-        #endregion
-        
-        #region Insurgency
-        { "insurgency_ui_unknown_attack", "<color=#696969>Undiscovered</color>" },
-        { "insurgency_ui_unknown_defense", "<color=#696969>Unknown</color>" },
-        { "insurgency_ui_destroyed_attack", "<color=#5a6e5c>Destroyed</color>" },
-        { "insurgency_ui_destroyed_defense", "<color=#6b5858>Lost</color>" },
-        { "insurgency_ui_cache_attack", "<color=#ffca61>{0}</color> <color=#c2c2c2>{1}</color>" },
-        { "insurgency_ui_cache_defense_undiscovered", "<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>" },
-        { "insurgency_ui_cache_defense_discovered", "<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>" },
-        { "caches_header", "Caches" },
-        #endregion
-        
-        #region ReportCommand
-        { "report_syntax", "<color=#9cffb3>Corrent syntax: /report <player> [\"report reason\"] [custom message...]</color>" },
-        { "report_reasons", "<color=#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob greifing\".</color>" },
-        { "report_discord_not_linked", "<color=#9cffb3>Your account must be linked in our Discord server to use this command. Type <color=#7483c4>/discord</color> then type <color=#ffffff>-link {0}</color> in <color=#c480d9>#warfare-stats</color>.</color>" },
-        { "report_player_not_found", "<color=#9cffb3>Unable to find a player with that name, you can use their <color=#ffffff>Steam64 ID</color> instead, as names are only stored until they've been offline for 20 minutes.</color>" },
-        { "report_unknown_error", "<color=#9cffb3>Unable to generate a report for an unknown reason, check your syntax again with <color=#ffffff>/report help</color>.</color>" },
-        { "report_success_p1", "<color=#c480d9>Successfully reported {0} for <color=#ffffff>{1}</color> as a <color=#00ffff>{2}</color> report.</color>" },
-        { "report_success_p2", "<color=#c480d9>If possible please post evidence in <color=#ffffff>#player-reports</color> in our <color=#7483c4>Discord</color> server.</color>" },
-        { "report_notify_admin", "<color=#c480d9>{0} reported {1} for <color=#ffffff>{2}</color> as a <color=#00ffff>{3}</color> report.\nCheck <color=#c480d9>#player-reports</color> for more information.</color>" },
-        { "report_notify_violator", "<color=#c480d9>You've been reported for <color=#00ffff>{0}</color>.\nCheck <color=#ffffff>#player-reports</color> in our <color=#7483c4>Discord</color> (/discord) for more information and to defend yourself.</color>" },
-        { "report_notify_violator_chat_p1", "<color=#c480d9>You've been reported for <color=#00ffff>{0} - {1}</color>.</color>" },
-        { "report_notify_violator_chat_p2", "<color=#c480d9>Check <color=#ffffff>#player-reports</color> in our <color=#7483c4>Discord</color> (/discord) for more information and to defend yourself.</color>" },
-        { "report_console", "{0} ({1}) reported {2} ({3}) for \"{4}\" as a {5} report." },
-        { "report_console_record", "Report against {0} ({1}) record: \"{2}\"" },
-        { "report_console_record_failed", "Report against {0} ({1}) failed to send to UCDB." },
-        { "report_cooldown", "You've already reported {0} in the past hour." },
-        { "report_cancelled", "You did not confirm your report in time." },
-        { "report_confirm", "Did you mean to report {1} <i><color=#444444>{0}</color></i>? Type <color=#ff8c69>/confirm</color> to continue." },
-        { "report_not_connected", "<color=#ff8c69>The report system is not available right now, please try again later.</color>" },
-        #endregion
-        
-        #region Tips
-        { "tip_place_radio", "Place a <color=#ababab>FOB RADIO</color>." },
-        { "tip_place_bunker", "Build a <color=#a5c3d9>FOB BUNKER</color> so that your team can spawn." },
-        { "tip_unload_supplies", "<color=#d9c69a>DROP SUPPLIES</color> onto the FOB." },
-        { "tip_help_build", "<color=#d9c69a>{0} needs help building!</color>" },
-        { "tip_logi_resupplied", "Your {0} has been auto resupplied." },
-        #endregion
-
-        #region ZoneCommand
-        { "zone_syntax", "<color=#ff8c69>Syntax: /zone <visualize|go|edit|list|create|util></color>" },
-        { "zone_visualize_no_results", "<color=#ff8c69>You aren't in any existing zone.</color>" },
-        { "zone_go_no_results", "<color=#ff8c69>Couldn't find a zone by that name.</color>" },
-        { "zone_go_success", "<color=#e6e3d5>Teleported to <color=#5a6e5c>{0}</color>.</color>" },
-        { "zone_visualize_success", "<color=#e6e3d5>Spawned {0} particles around <color=#cedcde>{1}</color>.</color>" },
-        { "enter_zone_test", "<color=#e6e3d5>You've entered the zone <color=#cedcde>{0}</color>.</color>" },
-        { "exit_zone_test", "<color=#e6e3d5>You've exited the zone <color=#cedcde>{0}</color>.</color>" },
-
-        // zone delete
-        { "delete_zone_badvalue_self", "<color=#ff8c69>You must be standing in 1 zone (not 0 or multiple). Alternatively, provide a zone name as another argument.</color>" },
-        { "delete_zone_badvalue", "<color=#ff8c69>Failed to find a zone named \"{0}\".</color>" },
-        { "delete_zone_confirm", "Did you mean to delete <color=#666666>{0}</color>? Type <color=#ff8c69>/confirm</color> to continue." },
-        { "delete_zone_success", "<color=#e6e3d5>Deleted <color=#666666>{0}</color>.</color>" },
-        { "delete_zone_deleted_working_zone", "<color=#ff8c69>Someone deleted the zone you're working on, saving this will create a new one.</color>" },
-
-        // zone create
-        { "create_zone_syntax", "<color=#ff8c69>Syntax: /zone create <polygon|rectangle|circle> <name>.</color>" },
-        { "create_zone_success", "<color=#e6e3d5>Started zone builder for {0}, a {1} zone.</color>" },
-        { "create_zone_name_taken", "<color=#ff8c69>\"{0}\" is already in use by another zone.</color>" },
-        { "create_zone_name_taken_2", "<color=#ff8c69>\"{0}\" is already in use by another zone being created by {1}.</color>" },
-
-        // zone edit
-        { "edit_zone_syntax", "<color=#ff8c69>Syntax: /zone edit <existing|maxheight|minheight|finalize|cancel|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|shortname|type> [value]</color>" },
-        { "edit_zone_not_started", "<color=#ff8c69>Start creating a zone with <color=#ffffff>/zone create <polygon|rectangle|circle> <name></color>.</color>" },
-        { "edit_zone_finalize_exists", "<color=#ff8c69>There's already a zone saved with that id.</color>" },
-        { "edit_zone_finalize_success", "<color=#e6e3d5>Successfully finalized and saved {0}.</color>" },
-        { "edit_zone_finalize_failure", "<color=#ff8c69>The provided zone data was invalid because: <color=#ffffff>{0}</color></color>" },
-        { "edit_zone_finalize_use_case", "<color=#ff8c69>Before saving you must set a use case with /zone edit use case <type>: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".</color>" },
-        { "edit_zone_finalize_success_overwrite", "<color=#e6e3d5>Successfully overwrote {0}.</color>" },
-        { "edit_zone_cancel_success", "<color=#e6e3d5>Successfully cancelled making {0}.</color>" },
-        { "edit_zone_finalize_error", "<color=#ff8c69>There was a problem finalizing your zone: \"{0}\".</color>" },
-        { "edit_zone_maxheight_badvalue", "<color=#ff8c69>Maximum Height must be a decimal or whole number, or leave it blank to use the player's current height.</color>" },
-        { "edit_zone_maxheight_success", "<color=#e6e3d5>Set maximum height to {0}.</color>" },
-        { "edit_zone_minheight_badvalue", "<color=#ff8c69>Minimum Height must be a decimal or whole number, or leave it blank to use the player's current height.</color>" },
-        { "edit_zone_minheight_success", "<color=#e6e3d5>Set minimum height to {0}.</color>" },
-        { "edit_zone_type_badvalue", "<color=#ff8c69>Type must be rectangle, circle, or polygon.</color>" },
-        { "edit_zone_type_already_set", "<color=#ff8c69>This zone is already a {0}.</color>" },
-        { "edit_zone_type_success", "<color=#e6e3d5>Set type to {0}.</color>" },
-        { "edit_zone_addpoint_badvalues", "<color=#ff8c69>Adding a point requires either: blank (appends, current pos), <index> (current pos), <x> <z> (appends), or <index> <x> <z> parameters.</color>" },
-        { "edit_zone_addpoint_success", "<color=#e6e3d5>Added point #{0} at {1}.</color>" },
-        { "edit_zone_delpoint_badvalues", "<color=#ff8c69>Deleting a point requires either: nearby X and Z parameters, a point number, or leave them blank to use the player's current position.</color>" },
-        { "edit_zone_point_number_not_point", "<color=#ff8c69>Point #{0} is not defined.</color>" },
-        { "edit_zone_point_none_nearby", "<color=#ff8c69>There is no point near {0}.</color>" },
-        { "edit_zone_delpoint_success", "<color=#e6e3d5>Removed point #{0} at {1}.</color>" },
-        { "edit_zone_setpoint_badvalues", "<color=#ff8c69>Moving a point requires either: blank (move nearby closer), <nearby src x> <nearby src z> <dest x> <dest z>, <pt num> (destination is player position }, <pt num> <dest x> <dest z>, or <nearby src x> <nearby src z> (destination is nearby player).</color>" },
-        { "edit_zone_setpoint_success", "<color=#e6e3d5>Moved point #{0} from {1} to {2}.</color>" },
-        { "edit_zone_orderpoint_success", "<color=#e6e3d5>Moved point #{0} to index #{1}.</color>" },
-        { "edit_zone_orderpoint_badvalue", "<color=#ff8c69>Ordering a point requires either: <from-index> <to-index>, <to-index> (from is nearby player), or <src x> <src z> <to-index>.</color>" },
-        { "edit_zone_radius_badvalue", "<color=#ff8c69>Radius must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.</color>" },
-        { "edit_zone_radius_success", "<color=#e6e3d5>Set radius to {0}.</color>" },
-        { "edit_zone_sizex_badvalue", "<color=#ff8c69>Size X must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.</color>" },
-        { "edit_zone_sizex_success", "<color=#e6e3d5>Set size x to {0}.</color>" },
-        { "edit_zone_sizez_badvalue", "<color=#ff8c69>Size Z must be a decimal or whole number, or leave it blank to use the player's current distance from the center point.</color>" },
-        { "edit_zone_sizez_success", "<color=#e6e3d5>Set size z to {0}.</color>" },
-        { "edit_zone_center_badvalue", "<color=#ff8c69>To set center you must provide two decimal or whole numbers, or leave them blank to use the player's current position.</color>" },
-        { "edit_zone_center_success", "<color=#e6e3d5>Set center position to {0}.</color>" },
-        { "edit_zone_clearpoints_success", "<color=#e6e3d5>Cleared all polygon points.</color>" },
-        { "edit_zone_clearpoints_uncleared", "<color=#e6e3d5>Restored {0} point{1}.</color>" },
-        { "edit_zone_name_badvalue", "<color=#ff8c69>Name requires one string argument. Quotation marks aren't required.</color>" },
-        { "edit_zone_name_success", "<color=#e6e3d5>Set name to \"{0}\".</color>" },
-        { "edit_zone_short_name_badvalue", "<color=#ff8c69>Short name requires one string argument. Quotation marks aren't required.</color>" },
-        { "edit_zone_short_name_success", "<color=#e6e3d5>Set short name to \"{0}\".</color>" },
-        { "edit_zone_short_name_removed", "<color=#e6e3d5>Removed short name.</color>" },
-        { "edit_zone_existing_badvalue", "<color=#ff8c69>Edit existing zone requires the zone name as a parameter. Alternatively stand in the zone (without overlapping another).</color>" },
-        { "edit_zone_existing_in_progress", "<color=#ff8c69>Cancel or finalize the zone you're currently editing first.</color>" },
-        { "edit_zone_existing_success", "<color=#e6e3d5>Started editing zone {0}, a {1} zone.</color>" },
-        { "edit_zone_use_case_badvalue", "<color=#ff8c69>Use case requires one string argument: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".</color>" },
-        { "edit_zone_use_case_success", "<color=#e6e3d5>Set use case to \"{0}\".</color>" },
-        { "edit_zone_undo_failure", "<color=#ff8c69>There is nothing to undo.</color>" },
-        { "edit_zone_redo_failure", "<color=#ff8c69>There is nothing to redo.</color>" },
-
-
-        // edit zone ui
-        { "edit_zone_ui_suggested_command_1", "/ze maxheight [value]" },
-        { "edit_zone_ui_suggested_command_2", "/ze minheight [value]" },
-        { "edit_zone_ui_suggested_command_3", "/ze finalize" },
-        { "edit_zone_ui_suggested_command_4", "/ze cancel" },
-        { "edit_zone_ui_suggested_command_5_p", "/ze addpt [x z]" },
-        { "edit_zone_ui_suggested_command_6_p", "/ze delpt [number | x z]" },
-        { "edit_zone_ui_suggested_command_7_p", "/ze setpt <number | src: x z | number dest: x z | src: x z dest: x z>" },
-        { "edit_zone_ui_suggested_command_8_p", "/ze orderpt <from-index to-index | to-index | src: x z to-index>" },
-        { "edit_zone_ui_suggested_command_9_c", "/ze radius [value]" },
-        { "edit_zone_ui_suggested_command_10_r", "/ze sizex [value]" },
-        { "edit_zone_ui_suggested_command_11_r", "/ze sizez [value]" },
-        { "edit_zone_ui_suggested_command_12", "/zone util location" },
-        { "edit_zone_ui_suggested_command_13", "/ze type <rectangle | circle | polygon>" },
-        { "edit_zone_ui_suggested_command_14_p", "/ze clearpoints" },
-        { "edit_zone_ui_suggested_commands", "Suggested Commands" },
-        { "edit_zone_ui_y_limits", "Y: {0} - {1}" },
-        { "edit_zone_ui_y_limits_infinity", "∞" },
-
-        // zone util
-        { "util_zone_syntax", "<color=#ff8c69>Syntax: /zone util <location></color>" },
-        { "util_zone_location", "<color=#e6e3d5>Location: {0}, {1}, {2} | Yaw: {3}°.</color>" },
-        #endregion
-
-        #region Teams
-        { "teams_e_cooldown", "<color=#ff8c69>You can't use /teams for another {0}.</color>" },
-        #endregion
-
-        #region Spotting
-        { "spotted", "<color=#b9ffaa>SPOTTED</color>" },
-        #endregion
-
-        #region VehicleTypes
-        { "HUMVEE", "Humvee" },
-        { "TRANSPORT", "Transport Truck" },
-        { "LOGISTICS", "Logistics Truck" },
-        { "SCOUT_CAR", "Scout Car" },
-        { "APC", "APC" },
-        { "IFV", "IFV" },
-        { "MBT", "Tank" },
-        { "HELI_TRANSPORT", "Transport Heli" },
-        { "HELI_ATTACK", "Attack Heli" },
-        { "JET", "Jet" },
-        { "EMPLACEMENT", "Emplacement" },
-        #endregion
-
-        #region TeleportCommand
-        { "tp_target_dead", "<color=#8f9494><color=#{1}>{0}</color> is not alive.</color>" },
-        { "tp_entered_vehicle", "<color=#bfb9ac>You were put in <color=#{2}>{1}</color>'s <color=#dddddd>{0}</color>.</color>" },
-        { "tp_teleported_player", "<color=#bfb9ac>You were teleported to <color=#{1}>{0}</color>.</color>" },
-        { "tp_obstructed_player", "<color=#8f9494>Failed to teleport you to <color=#{1}>{0}</color>, their position is obstructed.</color>" },
-        { "tp_location_not_found", "<color=#8f9494>Failed to find a location similar to <color=#dddddd>{0}</color>.</color>" },
-        { "tp_teleported_location", "<color=#bfb9ac>You were teleported to <color=#dddddd>{0}</color>.</color>" },
-        { "tp_obstructed_location", "<color=#8f9494>Failed to teleport you to <color=#dddddd>{0}</color>, it's position is obstructed.</color>" },
-        { "tp_entered_vehicle_other", "<color=#bfb9ac><color=#{4}>{3}</color> was put in <color=#{2}>{1}</color>'s <color=#dddddd>{0}</color>.</color>" },
-        { "tp_teleported_player_other", "<color=#bfb9ac><color=#{3}>{2}</color> was teleported to <color=#{1}>{0}</color>.</color>" },
-        { "tp_obstructed_player_other", "<color=#8f9494>Failed to teleport <color=#{3}>{2}</color> to <color=#{1}>{0}</color>, their position is obstructed.</color>" },
-        { "tp_teleported_location_other", "<color=#bfb9ac><color=#{2}>{1}</color> was teleported to <color=#dddddd>{0}</color>.</color>" },
-        { "tp_obstructed_location_other", "<color=#8f9494>Failed to teleport <color=#{2}>{1}</color> to <color=#dddddd>{0}</color>, it's position is obstructed.</color>" },
-        { "tp_target_not_found", "<color=#8f9494>Failed to find a player from <color=#dddddd>{0}</color></color>" },
-        { "tp_invalid_coordinates", "<color=#8f9494>Use of coordinates should look like: <color=#eeeeee>/tp [player] <x y z></color>.</color>" },
-        { "tp_teleported_player_location", "<color=#bfb9ac>You were teleported to <color=#eeeeee>{0}</color>.</color>" },
-        { "tp_obstructed_player_location", "<color=#8f9494>Failed to teleport you to <color=#eeeeee>{0}</color>, that point is obstructed.</color>" },
-        { "tp_teleported_player_location_other", "<color=#bfb9ac><color=#{2}>{1}</color> was teleported to <color=#eeeeee>{0}</color>.</color>" },
-        { "tp_obstructed_player_location_other", "<color=#8f9494>Failed to teleport <color=#{2}>{1}</color> to <color=#eeeeee>{0}</color>, that point is obstructed.</color>" },
-        #endregion
-
-        #region HealCommand
-        { "heal_player", "<color=#ff9966>You healed <color=#{1}>{0}</color>.</color>" },
-        { "heal_self", "<color=#ff9966>You we're healed.</color>" },
-        #endregion
-
-        #region GodCommand
-        { "god_mode_enabled", "<color=#bfb9ac>God mode enabled.</color>" },
-        { "god_mode_disabled", "<color=#bfb9ac>God mode disabled.</color>" },
-        #endregion
-
-        #region VanishCommand
-        { "vanish_mode_enabled", "<color=#bfb9ac>Vanish mode enabled.</color>" },
-        { "vanish_mode_disabled", "<color=#bfb9ac>Vanish mode disabled.</color>" },
-        #endregion
-
-        #region PermissionCommand
-        { "permissions_current", "<color=#bfb9ac>Current permisions: <color=#ffdf91>{0}</color>.</color>" },
-        { "permissions_grant_success", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is now a <color=#ffdf91>{0}</color>.</color>" },
-        { "permissions_grant_already", "<color=#bfb9ac><color=#7f8182>{1}</color> <color=#dddddd>({2})</color> is already at the <color=#ffdf91>{0}</color> level.</color>" },
-        { "permissions_revoke_already", "<color=#bfb9ac><color=#7f8182>{0}</color> <color=#dddddd>({1})</color> is already a <color=#ffdf91>member</color>.</color>" },
-        { "permissions_revoke_success", "<color=#bfb9ac><color=#7f8182>{0}</color> <color=#dddddd>({1})</color> is now a <color=#ffdf91>member</color>.</color>" },
-        #endregion
-
-        #region Win UI
-        { "win_ui_value_tickets", "{0} Tickets" },
-        { "win_ui_value_caches", "{0} Caches Left" },
-        { "win_ui_header_winner", "{0}\r\nhas won the battle!" },
-        #endregion
-    };
+        if (Translations.Length != i2 + 1)
+        {
+            L.LogWarning("Translations had to resize for some reason from " + Translations.Length + " to " + (i2 + 1) + ". Check to make sure there's only one field that isn't a translation.",
+                method: "TRANSLATIONS");
+            Array.Resize(ref Translations, i2 + 1);
+        }
+        Signs = new Dictionary<string, Translation>(signCt);
+        for (int i = 0; i < Translations.Length; ++i)
+        {
+            Translation tr = Translations[i];
+            if (tr.AttributeData is not null && !string.IsNullOrEmpty(tr.AttributeData.SignId))
+            {
+                if (Signs.ContainsKey(tr.AttributeData.SignId!))
+                    L.LogWarning("Duplicate Sign ID: \"" + tr.AttributeData.SignId + "\" in translation \"" + tr.Key + "\".", method: "TRANSLATIONS");
+                else
+                    Signs.Add(tr.AttributeData.SignId!, tr);
+            }
+        }
+    }
 }
