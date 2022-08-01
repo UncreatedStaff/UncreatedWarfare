@@ -83,7 +83,6 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
                 _cl = flag.ShortName;
         }
 
-        loop = StartCoroutine(Tick());
         EventDispatcher.OnPlayerLeaving += OnPlayerDisconnect;
     }
     private void OnDestroy()
@@ -120,7 +119,6 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
     }
 
     private float lastTick = 0;
-    private uint ticks = 0;
     private const float TICK_SPEED = 0.25f;
     private void Update()
     {
@@ -162,77 +160,6 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
                         OnDefenderLeft(pl);
                 }
             }
-            if (ticks % (20 / TICK_SPEED) == 0)
-                Tickets.TicketManager.OnCache20Seconds();
-
-            ++ticks;
-        }
-    }
-    private IEnumerator<WaitForSeconds> Tick()
-    {
-        float time = 0;
-        float tickFrequency = 0.25F;
-
-        while (true)
-        {
-            time += tickFrequency;
-
-            if (IsDestroyed) yield break;
-
-#if DEBUG
-            IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-            {
-                if (player.GetTeam() == Team)
-                {
-                    if ((player.Position - Position).sqrMagnitude < Math.Pow(Radius, 2))
-                    {
-                        if (!NearbyDefenders.Contains(player))
-                        {
-                            NearbyDefenders.Add(player);
-                            OnDefenderEntered(player);
-                        }
-                    }
-                    else
-                    {
-                        if (NearbyDefenders.Remove(player))
-                        {
-                            OnDefenderLeft(player);
-                        }
-                    }
-                }
-                else
-                {
-                    if ((player.Position - Position).sqrMagnitude < Math.Pow(Radius, 2))
-                    {
-                        if (!NearbyAttackers.Contains(player))
-                        {
-                            NearbyAttackers.Add(player);
-                            OnAttackerEntered(player);
-                        }
-                    }
-                    else
-                    {
-                        if (NearbyAttackers.Remove(player))
-                        {
-                            OnAttackerLeft(player);
-                        }
-                    }
-                }
-            }
-
-            if (time % 20 == 0)
-            {
-                Tickets.TicketManager.OnCache20Seconds();
-            }
-
-            if (time >= 60)
-                time = 0;
-#if DEBUG
-            profiler.Dispose();
-#endif
-            yield return new WaitForSeconds(tickFrequency);
         }
     }
     public void Destroy()
@@ -254,8 +181,15 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
     }
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is not null && format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), Name, flags);
+        if (format is not null)
+        {
+            if (format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), Name, flags);
+            else if (format.Equals(FOB.CLOSEST_LOCATION_FORMAT, StringComparison.Ordinal))
+                return ClosestLocation;
+            else if (format.Equals(FOB.GRID_LOCATION_FORMAT, StringComparison.Ordinal))
+                return GridLocation.ToString();
+        }
         return Name;
     }
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)

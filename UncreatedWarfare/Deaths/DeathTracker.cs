@@ -296,11 +296,13 @@ public class DeathTracker : BaseReloadSingleton
                                     {
                                         args.Player3Name = F.GetPlayerOriginalNames(veh.passengers[0].player).CharacterName;
                                         args.Player3Team = veh.passengers[0].player.GetTeam();
+                                        e.DriverAssist = UCPlayer.FromSteamPlayer(veh.passengers[0].player);
                                         args.Flags |= EDeathFlags.PLAYER3;
                                     }
                                     break;
                                 }
                             }
+                            e.ActiveVehicle = veh;
                         }
                     }
                 }

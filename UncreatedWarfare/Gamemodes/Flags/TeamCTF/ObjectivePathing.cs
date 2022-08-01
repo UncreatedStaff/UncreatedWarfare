@@ -172,4 +172,28 @@ public static class ObjectivePathing
         flag = null!;
         return false;
     }
+    public static int PickWeightedAdjacency(AdjacentFlagData[] adj)
+    {
+        float ttl = 0f;
+        for (int i = 0; i < adj.Length; ++i)
+            ttl += adj[i].weight;
+        float pick = UnityEngine.Random.Range(0, ttl);
+        ttl = 0f;
+        int id = -1;
+        for (int i = 0; i < adj.Length; ++i)
+        {
+            ref AdjacentFlagData d = ref adj[i];
+            ttl += d.weight;
+            if (pick <= ttl)
+            {
+                id = d.flag_id;
+                break;
+            }
+        }
+
+        if (id == -1)
+            id = adj[adj.Length - 1].flag_id;
+
+        return id;
+    }
 }

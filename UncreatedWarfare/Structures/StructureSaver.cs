@@ -129,25 +129,13 @@ public enum EStructType : byte
     BARRICADE = 2
 }
 
-public class Structure : IJsonReadWrite
+public class Structure : IJsonReadWrite, ITranslationArgument
 {
     public const string ARGUMENT_EXCEPTION_VEHICLE_SAVED = "ERROR_VEHICLE_SAVED";
     public const string ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND = "ERROR_BARRICADE_NOT_FOUND";
     public Guid id;
     [JsonIgnore]
-    public ItemAsset? Asset
-    {
-        get
-        {
-            if (_asset != default) return _asset;
-            if (Assets.find(id) is ItemAsset asset)
-            {
-                _asset = asset;
-                return asset;
-            }
-            return default;
-        }
-    }
+    public ItemAsset? Asset => _asset ??= Assets.find<ItemAsset>(id);
     [JsonIgnore]
     private ItemAsset? _asset;
     [JsonIgnore]
@@ -413,7 +401,6 @@ public class Structure : IJsonReadWrite
         structure.ReadJson(ref reader);
         return structure;
     }
-
     public void WriteJson(Utf8JsonWriter writer)
     {
         writer.WriteProperty(nameof(id), id);
@@ -463,7 +450,10 @@ public class Structure : IJsonReadWrite
             Init();
         }
     }
-
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        return Asset?.itemName ?? id.ToString("N");
+    }
     public Structure(StructureDrop drop, StructureData data)
     {
         this.id = data.structure.asset.GUID;

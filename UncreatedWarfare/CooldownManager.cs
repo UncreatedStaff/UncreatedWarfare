@@ -136,21 +136,23 @@ public class Cooldown : ITranslationArgument
         return line;
     }
 
+    /// <summary>Translated <see cref="ECooldownType"/>.</summary>
     public const string NAME_FORMAT = "n";
-    public const string TIME_LEFT_FORMAT = "tl1";
-    public const string TIMESTAMP_LEFT_FORMAT = "tl2";
+    /// <summary>3 hours and 4 minutes</summary>
+    public const string LONG_TIME_FORMAT = "tl1";
+    /// <summary>3h 4m 20s</summary>
+    public const string SHORT_TIME_FORMAT = "tl2";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is null) goto end;
-        if (format.Equals(NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.TranslateEnum(type, language);
-        else if (format.Equals(TIME_LEFT_FORMAT, StringComparison.Ordinal))
-            return Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language);
-        else if (format.Equals(TIMESTAMP_LEFT_FORMAT, StringComparison.Ordinal))
-            return ToString();
+        if (format is not null)
+        {
+            if (format.Equals(NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.TranslateEnum(type, language);
+            else if (format.Equals(LONG_TIME_FORMAT, StringComparison.Ordinal))
+                return Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language);
+        }
 
-        end:
-        return Localization.TranslateEnumName<ECooldownType>(language) + ": " + Localization.TranslateEnum(type, language) + ": " + Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language);
+        return ToString();
     }
 }
 [Translatable("Cooldown Type")]

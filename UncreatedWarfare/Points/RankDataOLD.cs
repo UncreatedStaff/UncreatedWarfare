@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Point;
 
+[Obsolete("Unused", true)]
 public class RankDataOLD
 {
     public static readonly RankDataOLD Nil = new RankDataOLD(0, -1, EBranch.DEFAULT, 0);
@@ -26,24 +27,8 @@ public class RankDataOLD
     {
         Steam64 = steamID;
         Branch = branch;
-
-        // have to assign all variables in constructor in structures
-
-        TotalXP = -1;
-        Level = -1;
-        CurrentXP = -1;
-        RequiredXP = -1;
-
-        RankTier = -1;
-
-        Name = null!;
-        Abbreviation = null!;
-
         OfficerTeam = officerTeam;
-        OfficerTier = -1;
-
         Update(xp);
-
     }
 
     public bool IsNil => TotalXP == -1;
@@ -170,7 +155,7 @@ public class RankDataOLD
         };
     }
 }
-public struct RankData
+public struct RankData : ITranslationArgument
 {
     public int TotalXP { get; private set; }
     public int CurrentXP { get; private set; }
@@ -228,5 +213,21 @@ public struct RankData
             8 => "W.O.",
             _ => "L " + level.ToString(Data.Locale),
         };
+    }
+
+    public const string NUMERIC_FORMAT = "x";
+    public const string ABBREVIATION_FORMAT = "a";
+    public const string NAME_FORMAT = "n";
+    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        if (format is not null)
+        {
+            if (format.Equals(NUMERIC_FORMAT, StringComparison.Ordinal))
+                return Level.ToString(Data.Locale);
+            else if (format.Equals(ABBREVIATION_FORMAT, StringComparison.Ordinal))
+                return Abbreviation;
+        }
+
+        return Name;
     }
 }

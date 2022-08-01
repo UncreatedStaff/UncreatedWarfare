@@ -65,7 +65,7 @@ internal class _DebugCommand : Command
             }
             catch (Exception ex)
             {
-                if (ex is BaseCommandInteraction b)
+                if (ex.InnerException is BaseCommandInteraction b)
                     throw b;
                 L.LogError(ex.InnerException ?? ex);
                 throw ctx.Reply("test_error_executing", info.Name, (ex.InnerException ?? ex).GetType().Name);
@@ -949,7 +949,6 @@ internal class _DebugCommand : Command
     private void translationtest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
-
         ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
     }
     private void quest(CommandInteraction ctx)

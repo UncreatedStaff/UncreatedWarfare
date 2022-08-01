@@ -867,8 +867,15 @@ public class SpecialFOB : IFOB, IDeployable
 
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is not null && format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
-            return Localization.Colorize(UIColor ?? TeamManager.GetTeamHexColor(Team), Name, flags);
+        if (format is not null)
+        {
+            if (format.Equals(FOB.COLORED_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(UIColor ?? TeamManager.GetTeamHexColor(Team), Name, flags);
+            else if (format.Equals(FOB.CLOSEST_LOCATION_FORMAT, StringComparison.Ordinal))
+                return ClosestLocation;
+            else if (format.Equals(FOB.GRID_LOCATION_FORMAT, StringComparison.Ordinal))
+                return GridLocation.ToString();
+        }
         return Name;
     }
     bool IDeployable.CheckDeployable(UCPlayer player, CommandInteraction? ctx)
@@ -1241,17 +1248,37 @@ public class BuildableData : ITranslationArgument
         if (Emplacement is not null)
         {
             if (Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vasset))
-                return vasset.vehicleName;
+            {
+                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                    return Localization.Colorize(ItemTool.getRarityColorUI(vasset.rarity).Hex(), Translation.Pluralize(vasset.vehicleName, flags), flags);
+                else
+                    return Translation.Pluralize(vasset.vehicleName, flags);
+            }
             if (Emplacement.BaseBarricade.ValidReference(out asset))
-                return asset.itemName;
+            {
+                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Translation.Pluralize(asset.itemName, flags), flags);
+                else
+                    return Translation.Pluralize(asset.itemName, flags);
+            }
             if (Emplacement.Ammo.ValidReference(out ItemAsset iasset))
-                return iasset.itemName;
+            {
+                if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                    return Localization.Colorize(ItemTool.getRarityColorUI(iasset.rarity).Hex(), Translation.Pluralize(iasset.itemName, flags), flags);
+                else
+                    return Translation.Pluralize(iasset.itemName, flags);
+            }
         }
 
         if (BuildableBarricade.ValidReference(out asset) || Foundation.ValidReference(out asset))
-            return asset.itemName;
+        {
+            if (format is not null && format.Equals(T.RARITY_COLOR_FORMAT))
+                return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Translation.Pluralize(asset.itemName, flags), flags);
+            else
+                return Translation.Pluralize(asset.itemName, flags);
+        }
 
-        return Type.ToString();
+        return Localization.TranslateEnum(Type, language);
     }
 }
 

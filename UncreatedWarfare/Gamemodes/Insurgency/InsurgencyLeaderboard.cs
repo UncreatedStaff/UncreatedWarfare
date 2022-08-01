@@ -15,9 +15,9 @@ public class InsurgencyLeaderboard : ConventionalLeaderboard<InsurgencyPlayerSta
     {
         tracker.GetTopStats(14, out statsT1, out statsT2);
     }
-    public override void SendLeaderboard(LanguageSet set)
+    public override void SendLeaderboard(in LanguageSet set)
     {
-        LeaderboardUI.SendInsurgencyLeaderboard(set, ref tracker._longestShot, statsT1, statsT2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
+        LeaderboardUI.SendInsurgencyLeaderboard(set, in tracker._longestShot, statsT1, statsT2, tracker, shuttingDown ? shuttingDownMessage : null, _winner);
     }
 }
 public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILongestShotTracker, IFobsTracker

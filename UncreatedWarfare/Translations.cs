@@ -142,6 +142,40 @@ partial class JSONMethods
             { "ins_lb_header_3", "Credits" },
             { "ins_lb_header_4", "KDR" },
             { "ins_lb_header_5", "Damage" },
+
+            // conquest
+            { "cqt_lb_playerstats_0", "Kills: " },
+            { "cqt_lb_playerstats_1", "Deaths: " },
+            { "cqt_lb_playerstats_2", "Damage Done: " },
+            { "cqt_lb_playerstats_3", "Objective Kills: " },
+            { "cqt_lb_playerstats_4", "Time Deployed: " },
+            { "cqt_lb_playerstats_5", "XP Gained: " },
+            { "cqt_lb_playerstats_6", "Revives: " },
+            { "cqt_lb_playerstats_7", "Flags Captured: " },
+            { "cqt_lb_playerstats_8", "Time on Flag: " },
+            { "cqt_lb_playerstats_9", "Teamkills: " },
+            { "cqt_lb_playerstats_10", "FOBs Destroyed: " },
+            { "cqt_lb_playerstats_11", "Credits Gained: " },
+
+            { "cqt_lb_warstats_0", "Duration: " },
+            { "cqt_lb_warstats_1", "US Casualties: " },
+            { "cqt_lb_warstats_2", "MEC Casualties: " },
+            { "cqt_lb_warstats_3", "Flag Captures: " },
+            { "cqt_lb_warstats_4", "US Average Army: " },
+            { "cqt_lb_warstats_5", "MEC Average Army: " },
+            { "cqt_lb_warstats_6", "US FOBs Placed: " },
+            { "cqt_lb_warstats_7", "MEC FOBs Placed: " },
+            { "cqt_lb_warstats_8", "US FOBs Destroyed: " },
+            { "cqt_lb_warstats_9", "MEC FOBs Destroyed: " },
+            { "cqt_lb_warstats_10", "Teamkill Casualties: " },
+            { "cqt_lb_warstats_11", "Longest Shot: " },
+
+            { "cqt_lb_header_0", "Kills" },
+            { "cqt_lb_header_1", "Deaths" },
+            { "cqt_lb_header_2", "XP" },
+            { "cqt_lb_header_3", "Credits" },
+            { "cqt_lb_header_4", "KDR" },
+            { "cqt_lb_header_5", "Damage" },
             #endregion
 
             #region GroupCommand
@@ -1467,6 +1501,7 @@ partial class JSONMethods
         { "insurgency_cache_undiscovered_color", "b780d9" },
         { "insurgency_cache_discovered_color", "555bcf" },
         { "neutral_color", "c2c2c2" },
+        { "credits", "b8ffc1" },
 
         // capture ui
         { "contested", "ffdc8a" },

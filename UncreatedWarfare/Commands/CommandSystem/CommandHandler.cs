@@ -511,6 +511,7 @@ public class CommandInteraction : BaseCommandInteraction
         return this;
     }
 
+    [Obsolete("Use the new generics system instead.")]
     public Exception Reply(string key, params string[] formatting)
     {
         _responded = true;
@@ -1219,6 +1220,7 @@ public class CommandInteraction : BaseCommandInteraction
         player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
         return player != null && player.IsOnline;
     }
+    [Obsolete("Use the new generics system instead.")]
     public bool AssertOnDuty(string noPermissionMessageKey = Localization.Common.NO_PERMISSIONS)
     {
         bool perm = IsConsole || Caller is not null && Caller.OnDuty();
@@ -1226,6 +1228,7 @@ public class CommandInteraction : BaseCommandInteraction
             Reply(noPermissionMessageKey);
         return perm;
     }
+    [Obsolete("Use the new generics system instead.")]
     public bool OnDutyOrReply(string[] formatting, string noPermissionMessageKey = Localization.Common.NO_PERMISSIONS)
     {
         bool perm = IsConsole || Caller is not null && Caller.OnDuty();
@@ -1247,13 +1250,13 @@ public class CommandInteraction : BaseCommandInteraction
             throw SendNoPermission();
     }
     /// <exception cref="CommandInteraction"/>
-    public void AssertGamemode<T>() where T : IGamemode
+    public void AssertGamemode<T>() where T : class, IGamemode
     {
         if (!Warfare.Data.Is<T>())
             throw SendGamemodeError();
     }
     /// <exception cref="CommandInteraction"/>
-    public void AssertGamemode<T>(out T gamemode) where T : IGamemode
+    public void AssertGamemode<T>(out T gamemode) where T : class, IGamemode
     {
         if (!Warfare.Data.Is(out gamemode))
             throw SendGamemodeError();
@@ -1276,12 +1279,14 @@ public class CommandInteraction : BaseCommandInteraction
         if (!HasArgs(count))
             throw JSONMethods.DefaultTranslations.ContainsKey(usage) ? Reply(usage) : SendCorrectUsage(usage);
     }
+    [Obsolete("Use the new generics system instead.")]
     /// <exception cref="CommandInteraction"/>
     public void AssertArgs(int count, string usage, params string[] formatting)
     {
         if (!HasArgs(count))
             throw Reply(usage, formatting);
     }
+    [Obsolete("Use the new generics system instead.")]
     /// <exception cref="CommandInteraction"/>
     public void AssertArgsExact(int count, string usage, params string[] formatting)
     {
@@ -1360,6 +1365,7 @@ public class CommandInteraction : BaseCommandInteraction
                 CallerCSteamID = caller.CSteamID;
             }
         }
+        [Obsolete("Use the new generics system instead.")]
         public void Reply(string translationKey, params string[] formatting)
         {
             if (translationKey is null) throw new ArgumentNullException(nameof(translationKey));

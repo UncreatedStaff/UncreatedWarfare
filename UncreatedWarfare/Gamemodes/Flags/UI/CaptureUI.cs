@@ -22,7 +22,7 @@ public class CaptureUI : UnturnedUI
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
     public CaptureUI() : base(12005, Gamemode.Config.UI.CaptureGUID, true, false) { }
 
-    public void Send(Player player, ref CaptureUIParameters p)
+    public void Send(Player player, in CaptureUIParameters p)
     {
         if (p.Type == EFlagStatus.DONT_DISPLAY)
         {

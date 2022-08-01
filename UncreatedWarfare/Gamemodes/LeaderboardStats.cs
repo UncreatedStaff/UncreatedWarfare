@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
@@ -113,11 +114,13 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
 {
     private DateTime start;
     public TimeSpan Duration { get => DateTime.Now - start; }
-    
-    public int coroutinect;
+    public int Ticks => coroutinect;
+    protected int coroutinect;
     public Dictionary<ulong, IndividualStats> stats;
     protected Coroutine ticker;
     public void Awake() => Reset();
+    public float GetPresence(IPresenceStats stats) => (float)stats.OnlineTicks / coroutinect;
+    public float GetPresence(ITeamPresenceStats stats, ulong team) => team == 1 ? ((float)stats.OnlineTicksT1 / coroutinect) : (team == 2 ? (stats.OnlineTicksT2 / coroutinect) : 0f);
     public virtual void Reset()
     {
 #if DEBUG
@@ -196,9 +199,9 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
     protected void StartTicking()
     {
         StopTicking();
-        ticker = StartCoroutine(CompileAverages());
+        ticker = StartCoroutine(Ticker());
     }
-    private IEnumerator<WaitForSeconds> CompileAverages()
+    private IEnumerator<WaitForSeconds> Ticker()
     {
         while (true)
         {
@@ -298,12 +301,13 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
     }
 }
 
-public abstract class BasePlayerStats : IStats
+public abstract class BasePlayerStats : IStats, IPresenceStats
 {
     protected UCPlayer _player;
     public UCPlayer Player { get => _player; set => _player = value; }
     public int onlineCount;
     public readonly ulong _id;
+    public int OnlineTicks => onlineCount;
     public ulong Steam64 => _id;
     public static T New<T>(UCPlayer player) where T : BasePlayerStats
     {
@@ -365,7 +369,7 @@ public abstract class FFAPlayerStats : BasePlayerStats, IPVPModeStats
     }
 }
 
-public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats
+public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats, ITeamPresenceStats
 {
     public int onlineCount1;
     public int onlineCount2;
@@ -382,6 +386,8 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats
     public int Deaths => deaths;
     public float DamageDone => damage;
     public float KDR => deaths == 0 ? kills : kills / (float)deaths;
+    public int OnlineTicksT1 => onlineCount1;
+    public int OnlineTicksT2 => onlineCount2;
     public void AddDamage(float amount) => damage += amount;
     public void AddDeath() => deaths++;
     public void AddKill() => kills++;
@@ -423,20 +429,12 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats
 
 public readonly struct LongestShot
 {
-    public static readonly LongestShot Nil = new LongestShot();
+    public static readonly LongestShot Nil = default;
     public readonly bool IsValue;
     public readonly ulong Player;
     public readonly float Distance;
     public readonly Guid Gun;
     public readonly ulong Team;
-    public LongestShot()
-    {
-        IsValue = false;
-        Player = 0;
-        Distance = 0;
-        Gun = default;
-        Team = 0;
-    }
     public LongestShot(ulong player, float distance, Guid gun, ulong team)
     {
         this.IsValue = true;

@@ -629,6 +629,44 @@ public static class StatsManager
         else
             ModifyStats(e.Player, s => s.Deaths++, false);
     }
+
+    internal static void OnFlagCaptured(Gamemodes.Flags.Flag flag, ulong capturedTeam, ulong lostTeam)
+    {
+        ModifyTeam(capturedTeam, t => t.FlagsCaptured++, false);
+        ModifyTeam(lostTeam, t => t.FlagsLost++, false);
+        List<string> kits = new List<string>(flag.Team1TotalPlayers + flag.Team2TotalPlayers);
+        if (capturedTeam == 1)
+        {
+            for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
+            {
+                ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                if (KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
+                {
+                    ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
+                    kits.Add(kit.Name);
+                }
+            }
+            if (flag.IsObj(2))
+                for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
+                    ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+        }
+        else if (capturedTeam == 2)
+        {
+            if (flag.IsObj(1))
+                for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
+                    ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+            for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
+            {
+                ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                if (KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
+                {
+                    ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
+                    kits.Add(kit.Name);
+                }
+            }
+        }
+    }
+
     public static class NetCalls
     {
         public static readonly NetCall<ulong> RequestPlayerData = new NetCall<ulong>(ReceiveRequestPlayerData);

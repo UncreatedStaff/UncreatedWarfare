@@ -7,34 +7,31 @@ using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
-public abstract class TicketGamemode : FlagGamemode, ITickets
+public abstract class TicketGamemode<TProvider> : FlagGamemode, ITickets where TProvider : class, ITicketProvider, new()
 {
     private TicketManager _ticketManager;
     public TicketManager TicketManager => _ticketManager;
-    protected abstract bool TimeToTicket();
     protected TicketGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
     { }
     protected override void PreInit()
     {
         AddSingletonRequirement(ref _ticketManager);
+        _ticketManager.Provider = new TProvider();
         base.PreInit();
     }
-    protected override void PostDispose()
+    protected override void PostInit()
     {
-        base.PostDispose();
+        base.PostInit();
     }
     protected override void EventLoopAction()
     {
-        if (TimeToTicket())
-            EvaluateTickets();
         base.EventLoopAction();
+        TicketManager.Provider.Tick();
     }
-    protected virtual void EvaluateTickets()
+    public override void DeclareWin(ulong winner)
     {
-        if (EveryXSeconds(20))
-        {
-            TicketManager.OnFlag20Seconds();
-        }
+        base.DeclareWin(winner);
+        SendWinUI(winner);
     }
     protected void SendWinUI(ulong winner)
     {

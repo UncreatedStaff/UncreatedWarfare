@@ -11,7 +11,7 @@ using Uncreated.Warfare.Kits;
 namespace Uncreated.Warfare.Quests;
 /// <summary>Stores information about a <see cref="EQuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
 /// Rank and kit quests should overridden with a set <see cref="IQuestState{TTracker, TDataNew}"/>.</summary>
-public abstract class BaseQuestData
+public abstract class BaseQuestData : ITranslationArgument
 {
     private EQuestType _type;
     private Dictionary<string, string> _translations;
@@ -42,7 +42,7 @@ public abstract class BaseQuestData
 #endif
         if (forAsset)
         {
-            if (formatting.Length > 0) formatting[0] = "{0}";
+            if (formatting is not null && formatting.Length > 0) formatting[0] = "{0}";
             else formatting = new object[1] { "{0}" };
         }
         if (Translations == null)
@@ -64,8 +64,8 @@ public abstract class BaseQuestData
         }
         return string.Join(", ", formatting);
     }
-    public string Translate(bool forAsset, UCPlayer player, params object[] formatting) => 
-        Translate(forAsset, Data.Languages.TryGetValue(player == null ? 0 : player.Steam64, out string language) ? language : JSONMethods.DEFAULT_LANGUAGE, formatting);
+    public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) => 
+        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : JSONMethods.DEFAULT_LANGUAGE, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
@@ -97,6 +97,19 @@ public abstract class BaseQuestData
         }
     }
     public abstract IQuestPreset CreateRandomPreset(ushort flag = 0);
+    public const string TYPE_FORMAT = "t";
+    /// <summary>For <see cref="QuestAsset"/> formatting.</summary>
+    public const string COLOR_QUEST_ASSET_FORMAT = "c";
+    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        if (format is not null)
+        {
+            if (format.Equals(TYPE_FORMAT, StringComparison.Ordinal))
+                return Localization.TranslateEnum(QuestType, language);
+        }
+
+        return Localization.TranslateEnum(QuestType, language);
+    }
 }
 /// <inheritdoc/>
 public abstract class BaseQuestData<TTracker, TState, TDataParent> : BaseQuestData where TTracker : BaseQuestTracker where TState : IQuestState<TTracker, TDataParent>, new() where TDataParent : BaseQuestData<TTracker, TState, TDataParent>

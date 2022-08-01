@@ -63,7 +63,12 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
     public void OnAsyncInitComplete(UCPlayer player)
     {
         bool t1Donor = false, t2Donor = false;
-        if (player.AccessibleKits is not null)
+        if (player.IsOtherDonator)
+        {
+            t1Donor = true;
+            t2Donor = true;
+        }
+        else if (player.AccessibleKits is not null)
             CheckAccess(player.AccessibleKits, ref t1Donor, ref t2Donor);
         if (player.TeamSelectorData is null)
         {
@@ -152,10 +157,16 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
     {
         if (player.TeamSelectorData is null)
         {
-            bool t1Donar = false, t2Donar = false;
+            bool t1Donor = false, t2Donor = false;
+            if (player.IsOtherDonator)
+            {
+                t1Donor = true;
+                t2Donor = true;
+            }
+            else
             if (player.HasDownloadedKits && player.AccessibleKits is not null)
-                CheckAccess(player.AccessibleKits, ref t1Donar, ref t2Donar);
-            player.TeamSelectorData = new TeamSelectorData(true, t1Donar, t2Donar);
+                CheckAccess(player.AccessibleKits, ref t1Donor, ref t2Donor);
+            player.TeamSelectorData = new TeamSelectorData(true, t1Donor, t2Donor);
         }
         else
         {
@@ -213,9 +224,6 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
 
             EventDispatcher.InvokeOnGroupChanged(player, 0, groupInfo.groupID.m_SteamID);
 
-            if (Data.Gamemode is IJoinedTeamListener tl)
-                tl.OnJoinTeam(player, team);
-
             player.HasUIHidden = false;
 
             UpdateList();
@@ -236,6 +244,9 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
 
             CooldownManager.StartCooldown(player, ECooldownType.CHANGE_TEAMS, TeamManager.TeamSwitchCooldown);
             ToastMessage.QueueMessage(player, new ToastMessage(string.Empty, Data.Gamemode.DisplayName, EToastMessageSeverity.BIG));
+
+            if (Data.Gamemode is IJoinedTeamListener tl)
+                tl.OnJoinTeam(player, team);
 
             OnPlayerSelected?.Invoke(player);
         }

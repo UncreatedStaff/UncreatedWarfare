@@ -21,8 +21,10 @@ using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -993,7 +995,7 @@ public static class EventFunctions
         if (Data.Is<IFlagRotation>(out _) && e.Player.Player.IsOnFlag(out Flag flag))
         {
             CaptureUIParameters p = CTFUI.RefreshStaticUI(e.Player.GetTeam(), flag, true);
-            CTFUI.CaptureUI.Send(e.Player, ref p);
+            CTFUI.CaptureUI.Send(e.Player, in p);
         }
     }
     static readonly Dictionary<ulong, long> lastSentMessages = new Dictionary<ulong, long>();
@@ -1569,6 +1571,188 @@ public static class EventFunctions
             r.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
             r.ReviveManager.OnPlayerHealed(instigator, target);
         }
+    }
+    private static void OnVehicleExploded(InteractableVehicle vehicle)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+
+        var spotted = vehicle.transform.GetComponent<SpottedComponent>();
+
+        if (vehicle.gameObject.TryGetComponent(out BuiltBuildableComponent comp))
+            UnityEngine.Object.Destroy(comp);
+
+        if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
+        {
+            ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
+
+            if (TicketManager.Loaded)
+            {
+                if (lteam == 1)
+                    TicketManager.Singleton.Team1Tickets -= data.TicketCost;
+                else if (lteam == 2)
+                    TicketManager.Singleton.Team2Tickets -= data.TicketCost;
+            }
+
+            if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
+            {
+                UCPlayer? owner = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
+                if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
+                {
+                    UCPlayer? player = UCPlayer.FromID(vc.LastInstigator);
+
+                    if (player == null)
+                        player = UCPlayer.FromID(vc.LastDriver);
+                    if (player == null)
+                        return;
+
+                    ulong dteam = player.GetTeam();
+                    bool vehicleWasEnemy = (dteam == 1 && lteam == 2) || (dteam == 2 && lteam == 1);
+                    bool vehicleWasFriendly = dteam == lteam;
+                    if (!vehicleWasFriendly)
+                        Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
+                    if (!Points.XPConfig.VehicleDestroyedXP.TryGetValue(data.Type, out int fullXP))
+                        fullXP = 0;
+                    string message = string.Empty;
+
+                    if (vc.IsAircraft)
+                        message = "xp_aircraft_destroyed";
+                    else
+                        message = "xp_vehicle_destroyed";
+
+
+                    float totalDamage = 0;
+                    foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
+                    {
+                        if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
+                            totalDamage += entry.Value.Key;
+                    }
+
+                    if (vehicleWasEnemy)
+                    {
+                        Asset asset = Assets.find(vc.LastItem);
+                        string reason = string.Empty;
+                        if (asset != null)
+                        {
+                            if (asset is ItemAsset item)
+                                reason = item.itemName;
+                            else if (asset is VehicleAsset v)
+                                reason = "suicide " + v.vehicleName;
+                        }
+
+                        int distance = Mathf.RoundToInt((player.Position - vehicle.transform.position).magnitude);
+
+                        if (reason.Length == 0)
+                            Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
+                        else
+                            Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason, distance.ToString());
+
+                        ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
+                                                                         $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
+
+                        QuestManager.OnVehicleDestroyed(owner, player, data, vc);
+
+                        float resMax = 0f;
+                        UCPlayer? resMaxPl = null;
+                        foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
+                        {
+                            if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
+                            {
+                                float responsibleness = entry.Value.Key / totalDamage;
+                                int reward = Mathf.RoundToInt(responsibleness * fullXP);
+
+                                UCPlayer? attacker = UCPlayer.FromID(entry.Key);
+                                if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
+                                {
+                                    if (attacker.CSteamID.m_SteamID == vc.LastInstigator)
+                                    {
+                                        Points.AwardXP(attacker, reward, Localization.Translate(message, player, data.Type.ToString()).ToUpper());
+                                        Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
+
+                                        if (spotted != null)
+                                        {
+                                            spotted.OnTargetKilled(reward);
+                                            UnityEngine.Object.Destroy(spotted);
+                                        }
+                                    }
+                                    else if (responsibleness > 0.1F)
+                                        Points.AwardXP(attacker, reward, Localization.Translate("xp_vehicle_assist", attacker));
+                                    if (responsibleness > resMax)
+                                    {
+                                        resMax = responsibleness;
+                                        resMaxPl = attacker;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (resMaxPl != null && resMax > 0 && player.Steam64 != resMaxPl.Steam64)
+                        {
+                            QuestManager.OnVehicleDestroyed(owner, resMaxPl, data, vc);
+                        }
+
+                        Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
+                        Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
+                    }
+                    else if (vehicleWasFriendly)
+                    {
+                        Chat.Broadcast("VEHICLE_TEAMKILLED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
+
+                        ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
+                                                                         $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
+
+                        if (message != string.Empty) message = "xp_friendly_" + message;
+                        Points.AwardCredits(player, Mathf.Clamp(data.CreditCost, 5, 1000), Localization.Translate(message, player.Steam64), true);
+                        OffenseManager.LogVehicleTeamkill(player.Steam64, vehicle.id, vehicle.asset.vehicleName, DateTime.Now);
+                    }
+                    /*
+                    float missingQuota = vc.Quota - vc.RequiredQuota;
+                    if (missingQuota < 0)
+                    {
+                        // give quota penalty
+                        if (vc.RequiredQuota != -1 && (vehicleWasEnemy || wasCrashed))
+                        {
+                            for (byte i = 0; i < vehicle.passengers.Length; i++)
+                            {
+                                Passenger passenger = vehicle.passengers[i];
+
+                                if (passenger.player is not null)
+                                {
+                                    vc.EvaluateUsage(passenger.player);
+                                }
+                            }
+
+                            double totalTime = 0;
+                            foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
+                                totalTime += entry.Value;
+
+                            foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
+                            {
+                                float responsibleness = (float)(entry.Value / totalTime);
+                                int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
+
+                                UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
+                                if (assetWaster != null)
+                                    Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
+                            }
+                        }
+                    }
+                    */
+
+                    if (Data.Reporter is not null)
+                    {
+                        if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
+                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID, vc.LastInstigator, vehicle.asset!.GUID, vc.LastItem, vc.LastDamageOrigin, vehicleWasFriendly);
+                        else
+                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.LastInstigator, vehicle.asset!.GUID, vc.LastItem, vc.LastDamageOrigin, vehicleWasFriendly);
+                    }
+                }
+            }
+        }
+
+        if (spotted != null)
+            UnityEngine.Object.Destroy(spotted);
     }
     internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
     {

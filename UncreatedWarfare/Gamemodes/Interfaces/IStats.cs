@@ -38,6 +38,15 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
         int Revives { get; }
         void AddRevive();
     }
+    public interface ITeamPresenceStats : IStats
+    {
+        int OnlineTicksT1 { get; }
+        int OnlineTicksT2 { get; }
+    }
+    public interface IPresenceStats : IStats
+    {
+        int OnlineTicks { get; }
+    }
     public interface IExperienceStats : IStats
     {
         int XPGained { get; }
@@ -48,8 +57,10 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces
     public interface IFlagStats : IStats
     {
         int Captures { get; }
+        int KillsOnPoint { get; }
         void AddCapture();
         void AddCaptures(int amount);
+        void AddKillOnPoint();
     }
     public interface IFOBStats : IStats
     {

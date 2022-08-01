@@ -352,7 +352,7 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
             {
                 if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2 &&
                     st2.stats.TryGetValue(_player.Steam64, out BasePlayerStats st3) && st3 is TeamPlayerStats teamstats &&
-                    (winner == 1 ? teamstats.onlineCount1 : teamstats.onlineCount2) / (float)st2.coroutinect > 0.65f)
+                    st2.GetPresence(teamstats, winner) > Gamemodes.Gamemode.MATCH_PRESENT_THRESHOLD)
                 {
                     _wins++;
                     if (_wins >= WinCount)
