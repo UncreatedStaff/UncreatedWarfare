@@ -5,7 +5,7 @@ using Uncreated.Warfare;
 
 namespace Uncreated.Players;
 
-public struct FPlayerName
+public struct FPlayerName : IPlayer
 {
     public static readonly FPlayerName Nil = new FPlayerName() { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
     public static readonly FPlayerName Console = new FPlayerName() { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = 0 };
@@ -14,6 +14,7 @@ public struct FPlayerName
     public string CharacterName;
     public string NickName;
     public bool WasFound;
+    ulong IPlayer.Steam64 => Steam64;
 
     public FPlayerName(SteamPlayerID player)
     {
@@ -68,6 +69,7 @@ public struct FPlayerName
     public static bool operator !=(FPlayerName left, FPlayerName right) => left.Steam64 != right.Steam64;
     public override bool Equals(object obj) => obj is FPlayerName pn && this.Steam64 == pn.Steam64;
     public override int GetHashCode() => Steam64.GetHashCode();
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, ref flags);
 }
 public struct ToastMessage
 {
