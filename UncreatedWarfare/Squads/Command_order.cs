@@ -34,27 +34,29 @@ public class OrderCommand : Command
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         ctx.AssertGamemode<ISquads>();
-
-        ctx.AssertArgs(1, "order_usage_1");
+        
+        if (!ctx.HasArgs(1))
+            throw ctx.Reply(T.OrderUsageAll);
 
         if (ctx.MatchParameter(0, "actions"))
-            throw ctx.Reply("order_actions");
+            throw ctx.Reply(T.OrderActions, ACTIONS);
 
         string squadName = ctx.Get(0)!;
 
         if (ctx.Caller.Squad == null || ctx.Caller.Squad.Leader.Steam64 != ctx.Caller.Steam64)
-            throw ctx.Reply("order_e_not_squadleader");
+            throw ctx.Reply(T.OrderNotSquadleader);
 
         if (SquadManager.FindSquad(squadName, ctx.Caller.GetTeam(), out Squad squad))
         {
-            ctx.AssertArgs(2, "order_usage_3", squad.Name);
+            if (!ctx.HasArgs(2))
+                throw ctx.Reply(T.OrderUsageBadAction, squad);
 
             if (ctx.TryGet(1, out EOrder type))
             {
                 if (Orders.HasOrder(squad, out Order order) && order.Commander != ctx.Caller)
                 {
                     // TODO: check if order can be overwritten
-                    throw ctx.Reply("order_e_alreadyhasorder", squad.Name, order.Commander.CharacterName);
+                    throw ctx.Reply(T.OrderAlreadyHasOrder, squad, order.Commander);
                 }
                 else
                 {
@@ -138,9 +140,9 @@ public class OrderCommand : Command
                                 ctx.AssertGamemode<IFOBs>();
 
                                 if (FOB.GetNearestFOB(marker, EFOBRadius.FOB_PLACEMENT, team) != null)
-                                    throw ctx.Reply("order_e_buildfob_fobexists");
+                                    throw ctx.Reply(T.OrderBuildFOBExists);
                                 else if (FOB.GetFOBs(team).Count >= FOBManager.Config.FobLimit)
-                                    throw ctx.Reply("order_e_buildfob_foblimit");
+                                    throw ctx.Reply(T.OrderBuildFOBTooMany);
                                 else
                                 {
                                     switch (Data.Gamemode)
@@ -242,7 +244,7 @@ public class OrderCommand : Command
                                     ctx.LogAction(EActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"));
 
                                 }
-                                else throw ctx.Reply("order_e_squadtooclose", squad.Name);
+                                else throw ctx.Reply(T.OrderSquadTooClose, squad);
                                 break;
                             default:
                                 throw ctx.SendUnknownError();
@@ -255,11 +257,11 @@ public class OrderCommand : Command
             markerError:
                 throw ctx.Reply(type switch
                 {
-                    EOrder.ATTACK => Data.Is<Insurgency>() ? "order_e_attack_marker_ins" : "order_e_attack_marker",
-                    EOrder.DEFEND => Data.Is<Insurgency>() ? "order_e_defend_marker_ins" : "order_e_defend_marker",
-                    EOrder.BUILDFOB => "order_e_buildfob_marker",
-                    EOrder.MOVE => "order_e_move_marker",
-                    _ => "unknown_error"
+                    EOrder.ATTACK => Data.Is<Insurgency>() ? T.OrderAttackMarkerIns : T.OrderAttackMarkerCTF,
+                    EOrder.DEFEND => Data.Is<Insurgency>() ? T.OrderDefenseMarkerIns : T.OrderDefenseMarkerCTF,
+                    EOrder.BUILDFOB => T.OrderBuildFOBError,
+                    EOrder.MOVE => T.OrderMoveError,
+                    _ => T.UnknownError
                 });
             }
             else

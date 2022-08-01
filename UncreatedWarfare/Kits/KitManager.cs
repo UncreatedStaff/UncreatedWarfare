@@ -1161,7 +1161,7 @@ public class KitManager : BaseReloadSingleton
     public static bool HasKit(SteamPlayer player, out Kit kit) => HasKit(player.playerID.steamID.m_SteamID, out kit);
     public static bool HasKit(Player player, out Kit kit) => HasKit(player.channel.owner.playerID.steamID.m_SteamID, out kit);
     public static bool HasKit(CSteamID player, out Kit kit) => HasKit(player.m_SteamID, out kit);
-    public static void UpdateText(Kit kit, string text, string language = JSONMethods.DEFAULT_LANGUAGE)
+    public static void UpdateText(Kit kit, string text, string language = L.DEFAULT)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1549,7 +1549,7 @@ public static class KitEx
         {
             if (KitManager.KitExists(kitID, out Kit kit))
             {
-                if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out string signtext))
+                if (!kit.SignTexts.TryGetValue(L.DEFAULT, out string signtext))
                     signtext = kit.SignTexts.Values.FirstOrDefault() ?? kit.Name;
 
                 context.Reply(SendKitClass, kitID, kit.Class, signtext);

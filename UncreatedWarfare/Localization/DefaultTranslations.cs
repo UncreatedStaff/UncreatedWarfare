@@ -587,7 +587,6 @@ internal static class T
     public static readonly Translation<string> OrderActions       = new Translation<string>("<#9fa1a6>Order actions: <#9dbccf>{0}</color>.");
     public static readonly Translation<string> OrderSquadNoExist  = new Translation<string>(ERROR_COLOR + "There is no friendly <lowercase><#c$neutral$>{0}</color></lowercase> squad.");
     public static readonly Translation OrderNotSquadleader        = new Translation(ERROR_COLOR + "You must be a <#cedcde>sqauad leader</color> to give orders.");
-    public static readonly Translation<string, string> OrderActionInvalid = new Translation<string, string>(ERROR_COLOR + "<#fff>{0}</color> is not a valid action. Try one of these: <#9dbccf>{1}</color>.");
     public static readonly Translation<Squad> OrderAttackMarkerCTF  = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to attack.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation<Squad> OrderAttackMarkerIns  = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>cache</color> where you want {0} to attack.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation<Squad> OrderDefenseMarkerCTF = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> or <#d1bd90>flag</color> where you want {0} to defend.", Squad.COLORED_NAME_FORMAT);
@@ -596,8 +595,10 @@ internal static class T
     public static readonly Translation<Squad> OrderMoveError        = new Translation<Squad>(ERROR_COLOR + "Place a map marker on a <#d1bd90>position</color> you want {0} to move to.", Squad.COLORED_NAME_FORMAT);
     public static readonly Translation OrderBuildFOBExists          = new Translation(ERROR_COLOR + "There is already a friendly FOB near that marker.");
     public static readonly Translation OrderBuildFOBTooMany         = new Translation(ERROR_COLOR + "There are already too many FOBs on your team.");
-    public static readonly Translation OrderSquadTooClose           = new Translation(ERROR_COLOR + "{0} is already near that marker. Try placing it further away.");
+    public static readonly Translation<Squad> OrderSquadTooClose    = new Translation<Squad>(ERROR_COLOR + "{0} is already near that marker. Try placing it further away.");
     public static readonly Translation<Squad, Order> OrderSent      = new Translation<Squad, Order>("<#9fa1a6>Order sent to {0}: <#9dbccf>{1}</color>.", Squad.COLORED_NAME_FORMAT, Order.MESSAGE_FORMAT);
+    public static readonly Translation<string, string> OrderActionInvalid   = new Translation<string, string>(ERROR_COLOR + "<#fff>{0}</color> is not a valid action. Try one of these: <#9dbccf>{1}</color>.");
+    public static readonly Translation<Squad, IPlayer> OrderAlreadyHasOrder = new Translation<Squad, IPlayer>("Squad {0} led by {1} already has orders.", Squad.COLORED_NAME_FORMAT, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation<IPlayer, Order> OrderReceived   = new Translation<IPlayer, Order>("<#9fa1a6>{0} has given your squad new orders:" + Environment.NewLine + "<#d4d4d4>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Order.MESSAGE_FORMAT);
     public static readonly Translation<IPlayer> OrderUICommander       = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
     public static readonly Translation<Order> OrderUIMessage           = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
@@ -904,7 +905,7 @@ internal static class T
     public static readonly Translation<int> RequestVehicleFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#94cfff>{0} more flags</color> to request this vehicle.");
     public static readonly Translation<int> RequestVehicleLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this vehicle until you lose <#94cfff>{0} more flags</color>.");
     public static readonly Translation RequestVehicleStagingDelay = new Translation("<#a6918a>This vehicle can only be requested after the game starts.");
-    public static readonly Translation RequestVehicleUnknownDelay = new Translation("<#b3ab9f>This vehicle is delayed because: <#94cfff>{0}</color>.");
+    public static readonly Translation<string> RequestVehicleUnknownDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed because: <#94cfff>{0}</color>.");
     #endregion
 
     #endregion
@@ -1047,10 +1048,10 @@ internal static class T
     public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#94cfff>Capture {0} more flags.</color>", TranslationFlags.NoColor);
     public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#94cfff>Destroy {0}</color>", TranslationFlags.NoColor, FOB.CLOSEST_LOCATION_FORMAT);
     public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#94cfff>Destroy Next Cache</color>", TranslationFlags.NoColor);
-    public static readonly Translation VBSDelayAttackCacheMultiple = new Translation("<#94cfff>Destroy {0} more caches.</color>", TranslationFlags.NoColor);
+    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#94cfff>Destroy {0} more caches.</color>", TranslationFlags.NoColor);
     public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#94cfff>Lose {0}</color>", TranslationFlags.NoColor, FOB.CLOSEST_LOCATION_FORMAT);
     public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#94cfff>Lose Next Cache</color>", TranslationFlags.NoColor);
-    public static readonly Translation VBSDelayDefendCacheMultiple = new Translation("<#94cfff>Lose {0} more caches.</color>", TranslationFlags.NoColor);
+    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#94cfff>Lose {0} more caches.</color>", TranslationFlags.NoColor);
     #endregion
 
     #region Revives
@@ -1064,9 +1065,9 @@ internal static class T
     public static readonly Translation ReloadedFlags = new Translation("<#e6e3d5>Reloaded flag data.");
     public static readonly Translation ReloadFlagsInvalidGamemode = new Translation("<#ff8c69>You must be on a flag gamemode to use this command!");
     public static readonly Translation ReloadedPermissions = new Translation("<#e6e3d5>Reloaded the permission saver file.");
-    public static readonly Translation ReloadedGeneric = new Translation("<#e6e3d5>Reloaded the '{0}' module.");
     public static readonly Translation ReloadedTCP = new Translation("<#e6e3d5>Tried to close any existing TCP connection to UCDiscord and re-open it.");
     public static readonly Translation ReloadedSQL = new Translation("<#e6e3d5>Reopened the MySql Connection.");
+    public static readonly Translation<string> ReloadedGeneric = new Translation<string>("<#e6e3d5>Reloaded the '{0}' module.");
     #endregion
 
     #region Debug Commands
@@ -1136,14 +1137,14 @@ internal static class T
     public static readonly Translation InsurgencyUnknownCacheDefense = new Translation("<color=#696969>Unknown</color>", TranslationFlags.UnityUI);
     public static readonly Translation InsurgencyDestroyedCacheAttack = new Translation("<color=#5a6e5c>Destroyed</color>", TranslationFlags.UnityUI);
     public static readonly Translation InsurgencyDestroyedCacheDefense = new Translation("<color=#6b5858>Lost</color>", TranslationFlags.UnityUI);
-    public static readonly Translation InsurgencyCacheAttack = new Translation("<color=#ffca61>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI);
-    public static readonly Translation InsurgencyCacheDefense = new Translation("<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI);
-    public static readonly Translation InsurgencyCacheDefenseUndiscovered = new Translation("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheAttack = new Translation<Cache, Cache>("<color=#ffca61>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.NAME_FORMAT, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheDefense = new Translation<Cache, Cache>("<color=#555bcf>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.NAME_FORMAT, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation<Cache, Cache> InsurgencyCacheDefenseUndiscovered = new Translation<Cache, Cache>("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.NAME_FORMAT, FOB.CLOSEST_LOCATION_FORMAT);
     #endregion
 
     #region Report Command
     public static readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob greifing\", \"cheating\".");
-    public static readonly Translation ReportDiscordNotLinked = new Translation("<#9cffb3>Your account must be linked in our Discord server to use this command. Type <#7483c4>/discord</color> then type <#fff>-link {0}</color> in <#c480d9>#warfare-stats</color>.");
+    public static readonly Translation<IPlayer> ReportDiscordNotLinked = new Translation<IPlayer>("<#9cffb3>Your account must be linked in our Discord server to use this command. Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", UCPlayer.COLOR_STEAM_64_FORMAT);
     public static readonly Translation ReportPlayerNotFound = new Translation("<#9cffb3>Unable to find a player with that name, you can use their <color=#ffffff>Steam64 ID</color> instead, as names are only stored until they've been offline for 20 minutes.");
     public static readonly Translation ReportUnknownError = new Translation("<#9cffb3>Unable to generate a report for an unknown reason, check your syntax again with <color=#ffffff>/report help</color>.");
     public static readonly Translation<IPlayer, string, EReportType> ReportSuccessMessage1 = new Translation<IPlayer, string, EReportType>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report.", UCPlayer.CHARACTER_NAME_FORMAT);
@@ -1302,7 +1303,8 @@ internal static class T
     public static readonly Translation ZoneEditRedoEmpty = new Translation("<#ff8c69>There is nothing to redo.");
 
     // Zone > Edit > UI
-    public static readonly Translation ZoneEditUIYLimits = new Translation("Y: {0} - {1}", TranslationFlags.UnityUI);
+    [TranslationData(FormattingDescriptions = new string[] { "Minimum Height (or ∞ if not set)", "Maximum Height (or ∞ if not set)" })]
+    public static readonly Translation<string, string> ZoneEditUIYLimits = new Translation<string, string>("Y: {0} - {1}", TranslationFlags.UnityUI);
     public static readonly Translation ZoneEditUIYLimitsInfinity = new Translation("∞", TranslationFlags.UnityUI);
 
     // Zone > Edit > UI > Suggestions

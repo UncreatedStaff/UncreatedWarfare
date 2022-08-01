@@ -15,7 +15,7 @@ namespace Uncreated.Warfare.Squads
     {
         public static List<Order> orders = new List<Order>(16);
 
-        public static Order GiveOrder(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, string[] formatting)
+        public static Order GiveOrder(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, Translation message, string[] formatting)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -84,7 +84,7 @@ namespace Uncreated.Warfare.Squads
         public Squad Squad { get; private set; }
         public EOrder Type { get; private set; }
         public Vector3 Marker { get; private set; }
-        public string Message { get; private set; }
+        public Translation Message { get; private set; }
         public string[]? Formatting { get; private set; }
         public int TimeLeft { get; private set; }
         public string MinutesLeft => Mathf.CeilToInt(TimeLeft / 60F).ToString(Data.Locale);
@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Squads
 
         private Coroutine loop;
 
-        public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, string message, Flag? flag = null, string[]? formatting = null)
+        public void Initialize(Squad squad, UCPlayer commander, EOrder type, Vector3 marker, Translation message, Flag? flag = null, string[]? formatting = null)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();

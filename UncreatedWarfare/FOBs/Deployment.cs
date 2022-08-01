@@ -35,7 +35,7 @@ internal static class Deployment
                 if (ctx is not null)
                 {
                     TranslationFlags flags = TranslationFlags.None;
-                    ctx.Reply("deploy_standby", location.Translate(JSONMethods.DEFAULT_LANGUAGE, FOB.COLORED_NAME_FORMAT, null, ref flags));
+                    ctx.Reply("deploy_standby", location.Translate(L.DEFAULT, FOB.COLORED_NAME_FORMAT, null, ref flags));
                 }
                 data.CurrentTeleportRequest = player.Player.StartCoroutine(DeployToCoroutine(player, location, delay, ctx is not null));
             }

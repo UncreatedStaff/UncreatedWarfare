@@ -82,7 +82,7 @@ public class ShutdownCommand : Command
         foreach (LanguageSet set in Localization.EnumerateLanguageSetsExclude(instigator))
         {
             time = seconds.GetTimeFromSeconds(set.Language);
-            if (set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE))
+            if (set.Language.Equals(L.DEFAULT))
             {
                 a = true;
                 L.Log(Localization.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
@@ -92,7 +92,7 @@ public class ShutdownCommand : Command
         }
         if (!a)
         {
-            time = seconds.GetTimeFromSeconds(JSONMethods.DEFAULT_LANGUAGE);
+            time = seconds.GetTimeFromSeconds(L.DEFAULT);
             L.Log(Localization.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
             ActionLogger.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
         }

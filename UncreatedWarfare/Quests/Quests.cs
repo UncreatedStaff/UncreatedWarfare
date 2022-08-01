@@ -50,7 +50,7 @@ public abstract class BaseQuestData : ITranslationArgument
             L.LogWarning("No translations for " + QuestType.ToString() + " quest.");
             return QuestType.ToString() + " - " + string.Join("|", formatting);
         }
-        if (Translations.TryGetValue(language, out string v) || (!language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && Translations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out v)))
+        if (Translations.TryGetValue(language, out string v) || (!language.Equals(L.DEFAULT, StringComparison.Ordinal) && Translations.TryGetValue(L.DEFAULT, out v)))
         {
             try
             {
@@ -65,7 +65,7 @@ public abstract class BaseQuestData : ITranslationArgument
         return string.Join(", ", formatting);
     }
     public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) => 
-        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : JSONMethods.DEFAULT_LANGUAGE, formatting);
+        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : L.DEFAULT, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();

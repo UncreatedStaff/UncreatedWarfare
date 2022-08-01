@@ -311,7 +311,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                 creditReward = data.CreditCost - Mathf.Min(data.CreditCost, Mathf.FloorToInt(data.AbandonValueLossSpeed * (Time.realtimeSinceStartup - spawn.Component.RequestTime)));
 
             Points.AwardCredits(pl, creditReward,
-                T.AbandonCompensationToast.Translate(Data.Languages.TryGetValue(pl, out string lang) ? lang : JSONMethods.DEFAULT_LANGUAGE),
+                T.AbandonCompensationToast.Translate(Data.Languages.TryGetValue(pl, out string lang) ? lang : L.DEFAULT),
                 false, false);
         }
 

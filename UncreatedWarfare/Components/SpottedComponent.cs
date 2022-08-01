@@ -82,7 +82,7 @@ public class SpottedComponent : MonoBehaviour
             {
                 if (vehicle.transform.TryGetComponent(out VehicleComponent vc))
                 {
-                    spotted.TryAnnounce(spotter, Localization.Translate(vc.Data.Type.ToString(), JSONMethods.DEFAULT_LANGUAGE).ToUpper().Colorize("f2a172"));
+                    spotted.TryAnnounce(spotter, Localization.Translate(vc.Data.Type.ToString(), L.DEFAULT).ToUpper().Colorize("f2a172"));
                 }
                 L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
                 spotted.Activate(spotter);

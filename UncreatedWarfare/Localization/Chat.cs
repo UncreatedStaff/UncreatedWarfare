@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿using SDG.Framework.Translations;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -255,6 +256,24 @@ public static class Chat
             L.LogError(ex);
         }
         Data.SendChatIndividual.Invoke(ENetReliability.Reliable, recipient.transportConnection, CSteamID.Nil, iconURL ?? string.Empty, mode, color, richText, text);
+    }
+    public static void SendString(this Player player, string message, Color color) => SendString(player.channel.owner, message, color);
+    public static void SendString(this UCPlayer player, string message, Color color) => SendString(player.SteamPlayer, message, color);
+    public static void SendString(this SteamPlayer player, string message, Color color)
+    {
+        SendSingleMessage(message, color, EChatMode.SAY, null, true, player);
+    }
+    public static void SendString(this Player player, string message, string hex) => SendString(player.channel.owner, message, hex);
+    public static void SendString(this UCPlayer player, string message, string hex) => SendString(player.SteamPlayer, message, hex);
+    public static void SendString(this SteamPlayer player, string message, string hex)
+    {
+        SendSingleMessage(message, hex.Hex(), EChatMode.SAY, null, true, player);
+    }
+    public static void SendString(this Player player, string message) => SendString(player.channel.owner, message);
+    public static void SendString(this UCPlayer player, string message) => SendString(player.SteamPlayer, message);
+    public static void SendString(this SteamPlayer player, string message)
+    {
+        SendSingleMessage(message, Palette.AMBIENT, EChatMode.SAY, null, true, player);
     }
     public static void SendChat(this Player player, Translation translation) => SendChat(UCPlayer.FromPlayer(player)!, translation);
     public static void SendChat(this SteamPlayer player, Translation translation) => SendChat(UCPlayer.FromSteamPlayer(player)!, translation);
@@ -645,7 +664,7 @@ public static class Chat
         if (translation is null) throw new ArgumentNullException(nameof(translation));
 
         if (Data.Languages is null || !Data.Languages.TryGetValue(player.Steam64, out lang))
-            lang = JSONMethods.DEFAULT_LANGUAGE;
+            lang = L.DEFAULT;
 
         value = translation.Translate(lang, out textColor);
     }

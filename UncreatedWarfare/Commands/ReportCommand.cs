@@ -149,7 +149,7 @@ public class ReportCommand : Command
                 NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, type, typename);
                 ctx.Reply("report_success_p1", targetNames.CharacterName, string.IsNullOrEmpty(message) ? "---" : message, typename);
                 ctx.Reply("report_success_p2");
-                L.Log(Localization.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
+                L.Log(Localization.Translate("report_console", L.DEFAULT,
                     ctx.Caller.Name.PlayerName, ctx.CallerID.ToString(Data.Locale),
                     targetNames.PlayerName, target.ToString(Data.Locale), report.Message!, typename), ConsoleColor.Cyan);
                 byte[] jpgData =
@@ -175,14 +175,14 @@ public class ReportCommand : Command
                         success2 && res.Parameters[1] is string messageUrl2)
                     {
                         L.Log(
-                            Localization.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
+                            Localization.Translate("report_console_record", L.DEFAULT,
                                 string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
                         ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl2, ctx.Caller);
                     }
                     else
                     {
                         L.Log(
-                            Localization.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
+                            Localization.Translate("report_console_record_failed", L.DEFAULT,
                                 string.Empty, "0"), ConsoleColor.Cyan);
                         ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
                     }
@@ -195,7 +195,7 @@ public class ReportCommand : Command
                     //await UCWarfare.ToUpdate();
                     //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
                     L.Log(
-                        Localization.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
+                        Localization.Translate("report_console_record", L.DEFAULT,
                             targetPl.playerID.playerName,
                             targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl),
                         ConsoleColor.Cyan);
@@ -204,7 +204,7 @@ public class ReportCommand : Command
                 else
                 {
                     L.Log(
-                        Localization.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
+                        Localization.Translate("report_console_record_failed", L.DEFAULT,
                             targetPl.playerID.playerName,
                             targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
                     ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);

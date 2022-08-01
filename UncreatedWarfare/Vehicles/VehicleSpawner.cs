@@ -712,7 +712,7 @@ public class VehicleSpawn
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
             if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
-                lang = JSONMethods.DEFAULT_LANGUAGE;
+                lang = L.DEFAULT;
             string val = Localization.TranslateVBS(spawn, data, lang);
             try
             {

@@ -81,7 +81,7 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
                     writer.WriteProperty(nameof(TimeBetweenMessages), 60f);
                     writer.WritePropertyName("Messages");
                     writer.WriteStartObject();
-                    writer.WritePropertyName(JSONMethods.DEFAULT_LANGUAGE);
+                    writer.WritePropertyName(L.DEFAULT);
                     writer.WriteStartObject();
                     foreach (KeyValuePair<string, string> message in DefaultMessages)
                     {
@@ -93,7 +93,7 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
                     writer.WriteEndObject();
                     writer.WriteEndObject();
                     writer.Dispose();
-                    Messages.Add(JSONMethods.DEFAULT_LANGUAGE, enUs);
+                    Messages.Add(L.DEFAULT, enUs);
                 }
                 return;
             }
@@ -106,7 +106,7 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
                     Dictionary<string, TranslationData> enUs = new Dictionary<string, TranslationData>(DefaultMessages.Count);
                     foreach (KeyValuePair<string, string> message in DefaultMessages)
                         enUs.Add(message.Key, new TranslationData(message.Value));
-                    Messages.Add(JSONMethods.DEFAULT_LANGUAGE, enUs);
+                    Messages.Add(L.DEFAULT, enUs);
                 }
                 else
                 {
@@ -179,7 +179,7 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
             Dictionary<string, TranslationData> enUs = new Dictionary<string, TranslationData>(DefaultMessages.Count);
             foreach (KeyValuePair<string, string> entry in DefaultMessages)
                 enUs.Add(entry.Key, new TranslationData(entry.Value));
-            Messages.Add(JSONMethods.DEFAULT_LANGUAGE, enUs);
+            Messages.Add(L.DEFAULT, enUs);
         }
     }
     private IEnumerator MessageLoop()
@@ -203,7 +203,7 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
     {
         if (
             (Messages.TryGetValue(language, out Dictionary<string, TranslationData> data) && data.TryGetValue(key, out TranslationData value)) ||
-            (Messages.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out data) && data.TryGetValue(key, out value)) ||
+            (Messages.TryGetValue(L.DEFAULT, out data) && data.TryGetValue(key, out value)) ||
             (Messages.Count > 0 && Messages.ElementAt(0).Value.TryGetValue(key, out value)))
         {
             return value;

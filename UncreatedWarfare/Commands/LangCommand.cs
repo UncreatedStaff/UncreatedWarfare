@@ -39,7 +39,7 @@ public class LangCommand : Command
             ctx.AssertRanByPlayer();
 
             if (!Data.Languages.TryGetValue(ctx.CallerID, out string langCode))
-                langCode = JSONMethods.DEFAULT_LANGUAGE;
+                langCode = L.DEFAULT;
             if (!Data.LanguageAliases.TryGetValue(langCode, out LanguageAliasSet set))
                 set = new LanguageAliasSet(langCode, langCode, Array.Empty<string>());
 
@@ -49,19 +49,19 @@ public class LangCommand : Command
         {
             ctx.AssertRanByPlayer();
 
-            if (!Data.LanguageAliases.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out LanguageAliasSet set))
-                set = new LanguageAliasSet(JSONMethods.DEFAULT_LANGUAGE, JSONMethods.DEFAULT_LANGUAGE, Array.Empty<string>());
+            if (!Data.LanguageAliases.TryGetValue(L.DEFAULT, out LanguageAliasSet set))
+                set = new LanguageAliasSet(L.DEFAULT, L.DEFAULT, Array.Empty<string>());
 
             if (Data.Languages.TryGetValue(ctx.CallerID, out string oldLang))
             {
                 if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
                     oldSet = new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
 
-                if (oldLang == JSONMethods.DEFAULT_LANGUAGE)
+                if (oldLang == L.DEFAULT)
                     throw ctx.Reply("reset_language_not_needed", set.display_name);
 
-                JSONMethods.SetLanguage(ctx.CallerID, JSONMethods.DEFAULT_LANGUAGE);
-                ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + JSONMethods.DEFAULT_LANGUAGE);
+                JSONMethods.SetLanguage(ctx.CallerID, L.DEFAULT);
+                ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + L.DEFAULT);
                 if (OnPlayerChangedLanguage != null)
                     OnPlayerChangedLanguage.Invoke(ctx.Caller, set, oldSet);
                 ctx.Reply("reset_language", set.display_name);
@@ -73,7 +73,7 @@ public class LangCommand : Command
             ctx.AssertRanByPlayer();
 
             if (!Data.Languages.TryGetValue(ctx.CallerID, out string oldLang))
-                oldLang = JSONMethods.DEFAULT_LANGUAGE;
+                oldLang = L.DEFAULT;
 
             if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
                 oldSet = new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());

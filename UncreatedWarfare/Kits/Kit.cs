@@ -114,7 +114,7 @@ public class Kit : ITranslationArgument
     public string GetDisplayName()
     {
         if (SignTexts is null) return Name;
-        if (SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out string val))
+        if (SignTexts.TryGetValue(L.DEFAULT, out string val))
             return val ?? Name;
         if (SignTexts.Count > 0)
             return SignTexts.FirstOrDefault().Value ?? Name;

@@ -509,7 +509,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         this.UnlockRequirements = unlockRequirements;
     }
     public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements) : 
-        this(order, new Dictionary<string, string>(1) { { JSONMethods.DEFAULT_LANGUAGE, name } }, new Dictionary<string, string>(1) { { JSONMethods.DEFAULT_LANGUAGE, abbreviation } },
+        this(order, new Dictionary<string, string>(1) { { L.DEFAULT, name } }, new Dictionary<string, string>(1) { { L.DEFAULT, abbreviation } },
             color, questID, unlockRequirements)
     { }
     public RankData(int order, string name, string abbreviation, string color, string questID, params string[] unlockRequirements) : 
@@ -525,16 +525,16 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
     {
         if (NameTranslations == null) return "L" + Order.ToString(Data.Locale);
         if (!Data.Languages.TryGetValue(player, out string lang))
-            lang = JSONMethods.DEFAULT_LANGUAGE;
-        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && NameTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+            lang = L.DEFAULT;
+        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && NameTranslations.TryGetValue(L.DEFAULT, out rtn)))
             return rtn;
         return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }
     public string GetName(string lang)
     {
         if (NameTranslations == null) return "L" + Order.ToString(Data.Locale);
-        if (lang == null) lang = JSONMethods.DEFAULT_LANGUAGE;
-        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && NameTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+        if (lang == null) lang = L.DEFAULT;
+        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && NameTranslations.TryGetValue(L.DEFAULT, out rtn)))
             return rtn;
         return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }
@@ -546,16 +546,16 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
     {
         if (AbbreviationTranslations == null) return "L" + Order.ToString(Data.Locale);
         if (!Data.Languages.TryGetValue(player, out string lang))
-            lang = JSONMethods.DEFAULT_LANGUAGE;
-        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+            lang = L.DEFAULT;
+        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(L.DEFAULT, out rtn)))
             return rtn;
         return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }
     public string GetAbbreviation(string lang)
     {
         if (AbbreviationTranslations == null) return "L" + Order.ToString(Data.Locale);
-        if (lang == null) lang = JSONMethods.DEFAULT_LANGUAGE;
-        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+        if (lang == null) lang = L.DEFAULT;
+        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(L.DEFAULT, out rtn)))
             return rtn;
         return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }

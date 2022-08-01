@@ -44,7 +44,7 @@ public class PermissionCommand : Command
                         PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, type);
                         string f = Localization.TranslateEnum(type, ctx.CallerID);
                         ctx.Reply("permissions_grant_success", f, name.PlayerName, steam64.ToString(Data.Locale));
-                        ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Localization.TranslateEnum(t, JSONMethods.DEFAULT_LANGUAGE)} >> {f}");
+                        ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Localization.TranslateEnum(t, L.DEFAULT)} >> {f}");
                     }
                 });
                 ctx.Defer();
@@ -64,7 +64,7 @@ public class PermissionCommand : Command
                 {
                     PermissionSaver.Instance.SetPlayerPermissionLevel(steam64, EAdminType.MEMBER);
                     ctx.Reply("permissions_revoke_success", name.CharacterName, steam64.ToString(Data.Locale));
-                    ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Localization.TranslateEnum(t, JSONMethods.DEFAULT_LANGUAGE)} >> {Localization.TranslateEnum(EAdminType.MEMBER, JSONMethods.DEFAULT_LANGUAGE)}");
+                    ctx.LogAction(EActionLogType.PERMISSION_LEVEL_CHANGED, $"{steam64} {Localization.TranslateEnum(t, L.DEFAULT)} >> {Localization.TranslateEnum(EAdminType.MEMBER, L.DEFAULT)}");
                 }
             });
             ctx.Defer();

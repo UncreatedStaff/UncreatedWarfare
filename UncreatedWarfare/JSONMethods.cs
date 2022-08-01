@@ -317,8 +317,6 @@ public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 }
 public static partial class JSONMethods
 {
-    public const string DEFAULT_LANGUAGE = "en-us";
-
     public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
     {
 #if DEBUG
@@ -433,7 +431,7 @@ public static partial class JSONMethods
 #endif
         string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
         Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
-        string defLang = Path.Combine(Data.Paths.LangStorage, DEFAULT_LANGUAGE);
+        string defLang = Path.Combine(Data.Paths.LangStorage, L.DEFAULT);
         F.CheckDir(defLang, out bool folderIsThere);
         if (folderIsThere)
         {
@@ -457,7 +455,7 @@ public static partial class JSONMethods
                     stream.Dispose();
                 }
 
-                languages.Add(DEFAULT_LANGUAGE, defaultLocal);
+                languages.Add(L.DEFAULT, defaultLocal);
             }
             foreach (string folder in langDirs)
             {
@@ -475,14 +473,14 @@ public static partial class JSONMethods
                             if (len > int.MaxValue)
                             {
                                 L.LogError(info.FullName + " is too long to read.");
-                                if (lang == DEFAULT_LANGUAGE && !languages.ContainsKey(DEFAULT_LANGUAGE))
+                                if (lang == L.DEFAULT && !languages.ContainsKey(L.DEFAULT))
                                 {
                                     Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
                                     foreach (KeyValuePair<string, string> translation in DefaultTranslations)
                                     {
                                         defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
                                     }
-                                    languages.Add(DEFAULT_LANGUAGE, defaultLocal);
+                                    languages.Add(L.DEFAULT, defaultLocal);
                                 }
                             }
                             else
@@ -522,7 +520,7 @@ public static partial class JSONMethods
                     }
                 }
             }
-            L.Log($"Loaded {languages.Count} languages, " + DEFAULT_LANGUAGE + $" having {(languages.TryGetValue(DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> d) ? d.Count.ToString(Data.Locale) : "0")} translations.");
+            L.Log($"Loaded {languages.Count} languages, " + L.DEFAULT + $" having {(languages.TryGetValue(L.DEFAULT, out Dictionary<string, TranslationData> d) ? d.Count.ToString(Data.Locale) : "0")} translations.");
         }
         else
         {
@@ -530,8 +528,8 @@ public static partial class JSONMethods
             Dictionary<string, TranslationData> rtn = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
             foreach (KeyValuePair<string, string> kvp in DefaultTranslations)
                 rtn.Add(kvp.Key, new TranslationData(kvp.Value));
-            if (!languages.ContainsKey(DEFAULT_LANGUAGE))
-                languages.Add(DEFAULT_LANGUAGE, rtn);
+            if (!languages.ContainsKey(L.DEFAULT))
+                languages.Add(L.DEFAULT, rtn);
             return languages;
         }
         return languages;
