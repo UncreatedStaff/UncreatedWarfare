@@ -10,6 +10,7 @@
     <Description>Main framework for the Uncreated Warfare Military Simulation server based off of the military game Squad.</Description>
     <PackageLicenseExpression>N/A</PackageLicenseExpression>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnablePreviewFeatures>true</EnablePreviewFeatures>
   </PropertyGroup>
   <PropertyGroup>
     <DoNotCopyLocalIfInGac>true</DoNotCopyLocalIfInGac>

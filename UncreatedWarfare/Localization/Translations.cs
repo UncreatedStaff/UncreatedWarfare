@@ -1,13 +1,13 @@
 ﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Windows.Input;
-using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Quests;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -22,6 +22,7 @@ public class Translation
     private TranslationValue DefaultData;
     private TranslationValue[]? Data;
     private TranslationDataAttribute? attr;
+    private bool _init = false;
     public string Key;
     public int Id;
     public TranslationFlags Flags => _flags;
@@ -46,27 +47,35 @@ public class Translation
                 Data[i] = new TranslationValue(in Data[i], Flags);
         }
     }
-    private void VerifyDefault(string def)
+    internal void Init()
+    {
+        if (_init) return;
+        _init = true;
+        VerifyOriginal(null, DefaultData.Original);
+    }
+    private void VerifyOriginal(string? lang, string def)
     {
         if ((_flags & TranslationFlags.SuppressWarnings) == TranslationFlags.SuppressWarnings) return;
+        if ((_flags & TranslationFlags.TMProSign) == TranslationFlags.TMProSign && def.IndexOf("<size", StringComparison.OrdinalIgnoreCase) != -1)
+            L.LogWarning("[" + (lang == null ? "DEFAULT" : lang.ToUpper()) + "] " + Key + " has a size tag, which shouldn't be on signs.", method: "TRANSLATIONS");
         int ct = this.GetType().GenericTypeArguments.Length;
-        int index = -1;
+        int index = -2;
         int flag = 0;
         int max = 0;
         while (true)
         {
-            index = def.IndexOf('{', index + 1);
+            index = def.IndexOf('{', index + 2);
             if (index == -1 || index >= def.Length - 2) break;
             char next = def[index + 1];
             if (next is >= '0' and <= '9')
             {
                 char next2 = def[index + 2];
                 int num;
-                if (next2 is not >= '0' and <= '9')
+                if (next2 is < '0' or > '9')
                     num = next - 48;
                 else
                     num = (next - 48) * 10 + (next2 - 48);
-                flag |= num;
+                flag |= (1 << num);
                 if (max < num) max = num;
             }
         }
@@ -75,16 +84,17 @@ public class Translation
         {
             if (((flag >> i) & 1) == 0)
             {
-                L.LogWarning("[TRANSLATIONS] " + Key + " parameter at index " + i + " is unused.");
+                L.LogWarning("[" + (lang == null ? "DEFAULT" : lang.ToUpper()) + "] " + Key + " parameter at index " + i + " is unused.", method: "TRANSLATIONS");
             }
         }
         if (ct == 0) return;
         --ct;
         if (max > ct)
-            L.LogWarning("[TRANSLATIONS] " + Key + " has " + (ct - max == 1 ? ("an extra paremeter: " + max) : $"{ct - max} extra parameters: {ct + 1} to {max}"));
+            L.LogError("[" + (lang == null ? "DEFAULT" : lang.ToUpper()) + "] " + Key + " has " + (ct - max == 1 ? ("an extra paremeter: " + max) : $"{max - ct} extra parameters: Should have: {ct}, has: {max}"), method: "TRANSLATIONS");
     }
     public void AddTranslation(string language, string value)
     {
+        VerifyOriginal(language, value);
         if (Data is null || Data.Length == 0)
             Data = new TranslationValue[1] { new TranslationValue(language, value, Flags) };
         else
@@ -170,6 +180,7 @@ public class Translation
         private static readonly Func<T, string, string>? toStringFunc2;
         private static readonly Func<T, IFormatProvider, string>? toStringFunc3;
         private static readonly Func<T, string>? toStringFunc4;
+        public static readonly Func<T, bool>? IsOne;
         private static readonly int type;
         public static string ToString(T value, string language, string? format, UCPlayer? target, IFormatProvider locale, TranslationFlags flags)
         {
@@ -177,36 +188,70 @@ public class Translation
                 return Null(flags);
 
             if (value is string str)
-                return CheckCase(str, format);
+                return CheckCase(Pluralize(str, flags), format);
 
-            if ((flags & TranslationFlags.Plural) == TranslationFlags.Plural && format is not null && format.EndsWith(Warfare.T.PLURAL, StringComparison.Ordinal))
-                format = format.Length == Warfare.T.PLURAL.Length ? null : format.Substring(0, format.Length - Warfare.T.PLURAL.Length);
             str = type switch
             {
                 1 => toStringFunc1!(value, format!, locale),
                 2 => toStringFunc2!(value, format!),
                 3 => toStringFunc3!(value, locale),
-                4 => (value as ITranslationArgument)!.Translate(language, format, target, ref flags),
-                5 => CheckCase((value as UnityEngine.Object)!.name, format),
+                4 => Pluralize((value as ITranslationArgument)!.Translate(language, format, target, ref flags), flags),
+                5 => CheckCase(Pluralize((value as UnityEngine.Object)!.name, flags), format),
                 6 => value is Color clr ? clr.Hex() : value.ToString(),
                 7 => value is CSteamID id ? id.m_SteamID.ToString(format, locale) : value.ToString(),
                 8 => PlayerToString((value as PlayerCaller)!.player, flags, format),
                 9 => PlayerToString((value as Player)!, flags, format),
                 10 => PlayerToString((value as SteamPlayer)!.player, flags, format),
                 11 => PlayerToString((value as SteamPlayerID)!, flags, format),
-                12 => CheckCase(value is Type t ? (t.IsEnum ? Localization.TranslateEnumName(t, language) : (t.IsArray ? (t.GetElementType().Name + " Array") : TypeToString(t))) : value.ToString(), format),
-                13 => CheckCase(Localization.TranslateEnum(value, language), format),
-                14 => CheckCase((value as Asset)?.FriendlyName ?? value.ToString(), format),
+                12 => CheckCase(Pluralize(value is Type t ? (t.IsEnum ? Localization.TranslateEnumName(t, language) : (t.IsArray ? (t.GetElementType().Name + " Array") : TypeToString(t))) : value.ToString(), flags), format),
+                13 => CheckCase(Pluralize(Localization.TranslateEnum(value, language), flags), format),
+                14 => CheckCase(AssetToString((value as Asset)!, format, flags), format),
                 15 => toStringFunc4!(value),
-                16 => CheckCase((value as BarricadeData)?.barricade?.asset?.itemName ?? value.ToString(), format),
-                17 => CheckCase((value as StructureData)?.structure?.asset?.itemName ?? value.ToString(), format),
+                16 => CheckCase((value as BarricadeData)?.barricade.asset.itemName ?? value.ToString(), format),
+                17 => CheckCase((value as StructureData)?.structure.asset.itemName ?? value.ToString(), format),
                 18 => value is Guid guid ? guid.ToString(format ?? "N", locale) : value.ToString(),
                 _ => value.ToString(),
             };
-            if ((flags & TranslationFlags.Plural) == TranslationFlags.Plural)
-                str = Pluralize(str, language, flags);
 
             return str;
+        }
+        private static string AssetToString(Asset asset, string? format, TranslationFlags flags)
+        {
+            if (asset is ItemAsset a)
+                return IAssetToString(a, format, flags);
+            else if (asset is VehicleAsset b)
+                return VAssetToString(b, format, flags);
+            else if (asset is QuestAsset c)
+                return QAssetToString(c, format, flags);
+
+            return asset.FriendlyName;
+        }
+        private static string QAssetToString(QuestAsset asset, string? format, TranslationFlags flags)
+        {
+            if (format is not null)
+            {
+                if (format.Equals(BaseQuestData.COLOR_QUEST_ASSET_FORMAT, StringComparison.Ordinal))
+                    return asset.questName;
+            }
+            return (flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText ? F.RemoveColorTag(asset.questName) : asset.questName;
+        }
+        private static string VAssetToString(VehicleAsset asset, string? format, TranslationFlags flags)
+        {
+            if (format is not null)
+            {
+                if (format.Equals(Warfare.T.RARITY_COLOR_FORMAT, StringComparison.Ordinal))
+                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(asset.vehicleName, flags), flags);
+            }
+            return asset.vehicleName;
+        }
+        private static string IAssetToString(ItemAsset asset, string? format, TranslationFlags flags)
+        {
+            if (format is not null)
+            {
+                if (format.Equals(Warfare.T.RARITY_COLOR_FORMAT, StringComparison.Ordinal))
+                    return Localization.Colorize(ItemTool.getRarityColorUI(asset.rarity).Hex(), Pluralize(asset.itemName, flags), flags);
+            }
+            return asset.itemName;
         }
         private static string CheckCase(string str, string? format)
         {
@@ -261,19 +306,19 @@ public class Translation
             {
                 if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return names.CharacterName;
-                else if (format.Equals(UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.CharacterName, flags);
                 else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return names.NickName;
-                else if (format.Equals(UCPlayer.COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.NickName, flags);
                 else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return names.PlayerName;
-                else if (format.Equals(UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), names.PlayerName, flags);
                 else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
                     return player.channel.owner.playerID.steamID.m_SteamID.ToString(Warfare.Data.Locale);
-                else if (format.Equals(UCPlayer.COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
                     return Localization.Colorize(Teams.TeamManager.GetTeamHexColor(player.GetTeam()), player.channel.owner.playerID.steamID.m_SteamID.ToString(Warfare.Data.Locale), flags);
             }
             return names.CharacterName;
@@ -286,22 +331,47 @@ public class Translation
 
             if (format is not null)
             {
-                if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLORIZED_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return player.characterName;
-                else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLORIZED_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return player.nickName;
-                else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLORIZED_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return player.playerName;
-                else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal)    || format.Equals(UCPlayer.COLORIZED_STEAM_64_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal)    || format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
                     return player.steamID.m_SteamID.ToString(Warfare.Data.Locale);
             }
             return player.characterName;
         }
         static ToStringHelperClass()
         {
+            Type t = typeof(T);
             DynamicMethod dm;
             ILGenerator il;
-            Type t = typeof(T);
+            if (typeof(IComparable<>).MakeGenericType(t).IsAssignableFrom(t))
+            {
+                if (t.IsPrimitive)
+                {
+                    dm = new DynamicMethod("IsOne",
+                        MethodAttributes.Static | MethodAttributes.Public,
+                        CallingConventions.Standard, typeof(bool), new Type[] { t }, t,
+                        true);
+                    dm.DefineParameter(1, ParameterAttributes.None, "value");
+                    il = dm.GetILGenerator();
+                    il.Emit(OpCodes.Ldarg_0);
+                    if (t == typeof(float))
+                        il.Emit(OpCodes.Ldc_R4, 1f);
+                    else if (t == typeof(double))
+                        il.Emit(OpCodes.Ldc_R8, 1d);
+                    else
+                        il.Emit(OpCodes.Ldc_I4_S, 1);
+                    il.Emit(OpCodes.Ceq);
+                    il.Emit(OpCodes.Ret);
+                    IsOne = (Func<T, bool>)dm.CreateDelegate(typeof(Func<T, bool>));
+                }
+                else if (t == typeof(decimal))
+                    IsOne = (v) => ((IComparable<decimal>)v!).CompareTo(1m) == 0;
+            }
+
             if (typeof(string).IsAssignableFrom(t))
             {
                 type = 0;
@@ -531,31 +601,46 @@ public class Translation
         }
         public TranslationValue(in TranslationValue value, TranslationFlags flags) : this (value.Language, value.Original, flags) { }
     }
-    protected static TranslationFlags CheckPlurality(string? format, TranslationFlags flags)
+    public static string Pluralize(string word, TranslationFlags flags)
     {
-        if (format is not null && format.EndsWith(T.PLURAL, StringComparison.Ordinal))
-            return flags | TranslationFlags.Plural;
-        return flags;
-    }
-    public static string Pluralize(string word, string language, TranslationFlags flags)
-    {
-        if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3)
+        if ((flags & TranslationFlags.NoPlural) == TranslationFlags.NoPlural || word.Length < 3 || (flags & TranslationFlags.Plural) == 0)
             return word;
-        bool isAllCaps = true;
+        string[] words = word.Split(' ');
+        bool hOthWrds = words.Length > 1;
+        string otherWords = string.Empty;
+        string str = (hOthWrds ? words[words.Length - 1] : word).ToLowerInvariant();
+        if (hOthWrds)
+            otherWords = string.Join(" ", words, 0, words.Length - 1);
         bool isPCaps = char.IsUpper(word[0]);
-        for (int i = word.Length - 1; i >= 0; --i)
-        {
-            if (char.IsLower(word[i]))
-            {
-                isAllCaps = false;
-                break;
-            }
-        }
-        string str = word.ToLowerInvariant();
+
+        if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
+            return word + "ren";
+        if (str.Equals("goose", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Geese" : "geese");
+        if (str.Equals("man", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Men" : "men");
+        if (str.Equals("woman", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Women" : "women");
+        if (str.Equals("tooth", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Teeth" : "teeth");
+        if (str.Equals("foot", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Feet" : "feet");
+        if (str.Equals("mouse", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Mice" : "mice");
+        if (str.Equals("die", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Dice" : "dice");
+        if (str.Equals("person", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "People" : "people");
+        if (str.Equals("axis", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Axes" : "axes");
+        if (str.Equals("ammo", StringComparison.OrdinalIgnoreCase))
+            return otherWords + (isPCaps ? "Ammo" : "ammo");
+
         char last = str[str.Length - 1];
         char slast = str[str.Length - 2];
+
         if (last is 's' or 'x' or 'z' || (last is 'h' && slast is 's' or 'c'))
-            return word + (isAllCaps ? "ES" : "es");
+            return word + "es";
 
         if (str.Equals("roof", StringComparison.OrdinalIgnoreCase) ||
             str.Equals("belief", StringComparison.OrdinalIgnoreCase) ||
@@ -564,16 +649,16 @@ public class Translation
             )
         goto s;
         if (last is 'f')
-            return word.Substring(0, str.Length - 1) + (isAllCaps ? "VES" : "ves");
+            return word.Substring(0, word.Length - 1) + "ves";
 
         if (last is 'e' && slast is 'f')
-            return word.Substring(0, str.Length - 2) + (isAllCaps ? "VES" : "ves");
+            return word.Substring(0, word.Length - 2) + "ves";
 
         if (last is 'y')
             if (!(slast is 'a' or 'e' or 'i' or 'o' or 'u'))
-                return word.Substring(0, str.Length - 1) + (isAllCaps ? "IES" : "ies");
+                return word.Substring(0, word.Length - 1) + "ies";
             else
-                return word + (isAllCaps ? "S" : "s");
+                return word + "s";
 
         if (str.Equals("photo", StringComparison.OrdinalIgnoreCase) ||
             str.Equals("piano", StringComparison.OrdinalIgnoreCase) ||
@@ -583,13 +668,13 @@ public class Translation
             goto s;
 
         if (last is 'o')
-            return word + (isAllCaps ? "ES" : "es");
+            return word + "es";
 
         if (last is 's' && slast is 'u')
-            return word.Substring(0, word.Length - 2) + (isAllCaps ? "I" : "i");
+            return word.Substring(0, word.Length - 2) + "i";
 
         if (last is 's' && slast is 'i')
-            return word.Substring(0, word.Length - 2) + (isAllCaps ? "ES" : "es");
+            return word.Substring(0, word.Length - 2) + "es";
 
         if (str.Equals("sheep", StringComparison.OrdinalIgnoreCase) ||
             str.Equals("series", StringComparison.OrdinalIgnoreCase) ||
@@ -604,29 +689,8 @@ public class Translation
             str.Equals("deer", StringComparison.OrdinalIgnoreCase))
             return word;
 
-        if (str.Equals("child", StringComparison.OrdinalIgnoreCase))
-            return word + (isAllCaps ? "REN" : "ren");
-        if (str.Equals("goose", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "GEESE" : isPCaps ? "Geese" : "geese";
-        if (str.Equals("man", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "MEN" : isPCaps ? "Men" : "men";
-        if (str.Equals("woman", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "WOMEN" : isPCaps ? "Women" : "women";
-        if (str.Equals("tooth", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "TEETH" : isPCaps ? "Teeth" : "teeth";
-        if (str.Equals("foot", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "FEET" : isPCaps ? "Feet" : "feet";
-        if (str.Equals("mouse", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "MICE" : isPCaps ? "Mice" : "mice";
-        if (str.Equals("die", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "DICE" : isPCaps ? "Dice" : "dice";
-        if (str.Equals("person", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "PEOPLE" : isPCaps ? "People" : "people";
-        if (str.Equals("axis", StringComparison.OrdinalIgnoreCase))
-            return isAllCaps ? "AXES" : isPCaps ? "Axes" : "axes";
-
-    s:
-        return word + (isAllCaps ? "S" : "s");
+        s:
+        return word + "s";
     }
     public static unsafe void ReplaceTMProRichText(ref string value, TranslationFlags flags)
     {
@@ -963,7 +1027,6 @@ public class Translation
     }
     private static void WriteTranslation(StreamWriter writer, Translation t, string val, ref string? lastSection)
     {
-        val = val.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t");
         if (string.IsNullOrEmpty(val)) return;
         string? sect = t.attr?.Section;
         if (sect != lastSection)
@@ -980,23 +1043,35 @@ public class Translation
             if (t.attr.Description is not null)
                 writer.WriteLine("# Description: " + t.attr.Description.RemoveMany(true, '\r', '\n'));
         }
-        Type[] gen = t.GetType().GetGenericArguments();
+
+        Type tt = t.GetType();
+        Type[] gen = tt.GetGenericArguments();
         if (gen.Length > 0)
             writer.WriteLine("# Formatting Arguments:");
         for (int i = 0; i < gen.Length; ++i)
         {
-            string fmt = "#  " + "{" + i + "} - [" + ToString(gen[i], JSONMethods.DEFAULT_LANGUAGE, null, null, TranslationFlags.NoColor) + "]";
+            string fmt = "#  " + "{" + i + "} - [" + ToString(gen[i], JSONMethods.DEFAULT_LANGUAGE, null, null, TranslationFlags.NoColor);
+
+            FieldInfo? info = tt.GetField("_arg" + i.ToString(Warfare.Data.Locale) + "Fmt", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (info != null && info.GetValue(t) is string fmt2) fmt += "|Fmt:\"" + fmt2 + "\"]";
+            else fmt += "]";
 
             if (t.attr is not null && t.attr.FormattingDescriptions is not null && i < t.attr.FormattingDescriptions.Length && !string.IsNullOrEmpty(t.attr.FormattingDescriptions[i]))
                 fmt += " " + t.attr.FormattingDescriptions[i].RemoveMany(true, '\r', '\n');
+
             writer.WriteLine(fmt);
         }
+        if (!val.Equals(t.DefaultData.Original))
+        {
+            writer.WriteLine("# Default Value: " + t.DefaultData.Original.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t"));
+        }
+        val = val.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t");
 
         writer.Write(t.Key);
         writer.Write(": ");
         if (val[0] == ' ')
             val = @"\" + val;
-        writer.Write(val);
+        writer.WriteLine(val);
     }
     public static Translation? FromLegacyId(string legacyId)
     {
@@ -1009,6 +1084,55 @@ public class Translation
 
         return null;
     }
+    public static Translation? FromSignId(string signId)
+    {
+        if (signId.StartsWith("sign_", StringComparison.Ordinal))
+            signId = signId.Substring(5);
+        
+        if (T.Signs.TryGetValue(signId, out Translation tr))
+            return tr;
+        
+        foreach (Translation tr2 in T.Signs.Values)
+        {
+            if (signId.Equals(tr2.AttributeData?.SignId, StringComparison.OrdinalIgnoreCase))
+                return tr2;
+        }
+        foreach (Translation tr2 in T.Signs.Values)
+        {
+            if (signId.Equals(tr2.Key, StringComparison.OrdinalIgnoreCase))
+                return tr2;
+        }
+        return null;
+    }
+    protected static void CheckPluralFormatting(ref short val, ref string? fmt)
+    {
+        if (!string.IsNullOrEmpty(fmt))
+        {
+            int ind1 = fmt!.IndexOf(T.PLURAL);
+            if (ind1 != -1)
+            {
+                if (fmt![fmt.Length - 1] == '}')
+                {
+                    int ind2 = fmt.LastIndexOf('{', fmt.Length - 2);
+                    if (ind2 < fmt.Length - 4 || ind2 > fmt.Length - 3)
+                        return;
+                    if (int.TryParse(fmt.Substring(ind2 + 1, ind2 + 4 - fmt.Length), NumberStyles.Number, Warfare.Data.Locale, out int num))
+                    {
+                        fmt = fmt.Substring(0, ind1);
+                        val = (short)num;
+                        return;
+                    }
+                }
+
+                fmt = fmt.Substring(0, ind1);
+                val = short.MaxValue;
+                return;
+            }
+        }
+
+        val = -1;
+    }
+    protected static bool IsOne<T>(T? value) => value is not null && ToStringHelperClass<T>.IsOne is not null && ToStringHelperClass<T>.IsOne(value);
 }
 
 [Flags]
@@ -1033,6 +1157,8 @@ public enum TranslationFlags
     NoColor = 32,
     /// <summary>Tells the translator to translate the messsage for each player when broadcasted.</summary>
     PerPlayerTranslation = 64,
+    /// <summary>Checks for any &lt;size&gt tags.</summary>
+    TMProSign = 128,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 1.</summary>
     Team1 = 256,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 2.</summary>
@@ -1048,11 +1174,13 @@ public enum TranslationFlags
     /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format, doesn't replace already existing TMPro tags.</summary>
     UnityUINoReplace = NoColor | TranslateWithUnityRichText,
     /// <summary>Tells the translator to format the term plurally, this will be automatically applied to individual arguments if the format is <see cref="T.PLURAL"/>.</summary>
-    Plural,
+    Plural = 4096,
     /// <summary>Tells the translator to not try to turn arguments plural.</summary>
-    NoPlural,
+    NoPlural = 8192,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent in chat.</summary>
-    ForChat
+    ForChat = 16384,
+    /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent in chat.</summary>
+    ForSign = 32768,
 }
 
 public interface ITranslationArgument
@@ -1062,22 +1190,21 @@ public interface ITranslationArgument
 public sealed class Translation<T> : Translation
 {
     private readonly string? _arg0Fmt;
+    private readonly short _arg0PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string arg1Fmt) : base(@default, flags)
+    public Translation(string @default, string arg0Fmt) : this(@default, default, arg0Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string arg0Fmt) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-    }
-    public Translation(string @default, string arg1Fmt) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
+        _arg0Fmt = arg0Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
     }
     public string Translate(string value, string language, T arg, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)));
+            return string.Format(value, ToString(arg, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags)));
         }
         catch (FormatException ex)
         {
@@ -1090,31 +1217,35 @@ public sealed class Translation<T> : Translation
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags)
+    {
+        return expectation == -1 ? flags : flags | TranslationFlags.Plural;
     }
 }
 public sealed class Translation<T1, T2> : Translation
 {
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2)));
         }
         catch (FormatException ex)
         {
@@ -1127,6 +1258,18 @@ public sealed class Translation<T1, T2> : Translation
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= expectation switch
+        {
+            0 => IsOne(arg1) ? TranslationFlags.NoPlural : TranslationFlags.Plural,
+            1 => IsOne(arg2) ? TranslationFlags.NoPlural : TranslationFlags.Plural,
+            _ => TranslationFlags.Plural
+        };
+        return flags;
     }
 }
 public sealed class Translation<T1, T2, T3> : Translation
@@ -1134,28 +1277,29 @@ public sealed class Translation<T1, T2, T3> : Translation
     private readonly string? _arg0Fmt;
     private readonly string? _arg1Fmt;
     private readonly string? _arg2Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
+    private readonly short _arg2PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        _arg2Fmt = arg2Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
+        CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3)));
         }
         catch (FormatException ex)
         {
@@ -1168,6 +1312,19 @@ public sealed class Translation<T1, T2, T3> : Translation
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
+        return expectation switch
+        {
+            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
+        };
     }
 }
 public sealed class Translation<T1, T2, T3, T4> : Translation
@@ -1176,31 +1333,33 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
     private readonly string? _arg1Fmt;
     private readonly string? _arg2Fmt;
     private readonly string? _arg3Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
+    private readonly short _arg2PluralExp;
+    private readonly short _arg3PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        _arg2Fmt = arg2Fmt;
+        _arg3Fmt = arg3Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
+        CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
+        CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4)));
         }
         catch (FormatException ex)
         {
@@ -1213,6 +1372,20 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
+        return expectation switch
+        {
+            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
+        };
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5> : Translation
@@ -1222,34 +1395,37 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
     private readonly string? _arg2Fmt;
     private readonly string? _arg3Fmt;
     private readonly string? _arg4Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
+    private readonly short _arg2PluralExp;
+    private readonly short _arg3PluralExp;
+    private readonly short _arg4PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        _arg2Fmt = arg2Fmt;
+        _arg3Fmt = arg3Fmt;
+        _arg4Fmt = arg4Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
+        CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
+        CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
+        CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5)));
         }
         catch (FormatException ex)
         {
@@ -1262,6 +1438,21 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
+        return expectation switch
+        {
+            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
+        };
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
@@ -1272,37 +1463,41 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
     private readonly string? _arg3Fmt;
     private readonly string? _arg4Fmt;
     private readonly string? _arg5Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
+    private readonly short _arg2PluralExp;
+    private readonly short _arg3PluralExp;
+    private readonly short _arg4PluralExp;
+    private readonly short _arg5PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        _arg2Fmt = arg2Fmt;
+        _arg3Fmt = arg3Fmt;
+        _arg4Fmt = arg4Fmt;
+        _arg5Fmt = arg5Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
+        CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
+        CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
+        CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
+        CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6)));
         }
         catch (FormatException ex)
         {
@@ -1315,6 +1510,22 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
+        return expectation switch
+        {
+            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
+        };
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
@@ -1326,40 +1537,45 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
     private readonly string? _arg4Fmt;
     private readonly string? _arg5Fmt;
     private readonly string? _arg6Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
+    private readonly short _arg2PluralExp;
+    private readonly short _arg3PluralExp;
+    private readonly short _arg4PluralExp;
+    private readonly short _arg5PluralExp;
+    private readonly short _arg6PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-        _arg6Fmt = arg7Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-        _arg6Fmt = arg7Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        _arg2Fmt = arg2Fmt;
+        _arg3Fmt = arg3Fmt;
+        _arg4Fmt = arg4Fmt;
+        _arg5Fmt = arg5Fmt;
+        _arg6Fmt = arg6Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
+        CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
+        CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
+        CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
+        CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
+        CheckPluralFormatting(ref _arg6PluralExp, ref _arg6Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)),
-                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)),
+                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7)));
         }
         catch (FormatException ex)
         {
@@ -1372,6 +1588,23 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
+        return expectation switch
+        {
+            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
+            6 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
+        };
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
@@ -1384,43 +1617,49 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
     private readonly string? _arg5Fmt;
     private readonly string? _arg6Fmt;
     private readonly string? _arg7Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
+    private readonly short _arg2PluralExp;
+    private readonly short _arg3PluralExp;
+    private readonly short _arg4PluralExp;
+    private readonly short _arg5PluralExp;
+    private readonly short _arg6PluralExp;
+    private readonly short _arg7PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : this(@default, default, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-        _arg6Fmt = arg7Fmt;
-        _arg7Fmt = arg8Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-        _arg6Fmt = arg7Fmt;
-        _arg7Fmt = arg8Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        _arg2Fmt = arg2Fmt;
+        _arg3Fmt = arg3Fmt;
+        _arg4Fmt = arg4Fmt;
+        _arg5Fmt = arg5Fmt;
+        _arg6Fmt = arg6Fmt;
+        _arg7Fmt = arg7Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
+        CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
+        CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
+        CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
+        CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
+        CheckPluralFormatting(ref _arg6PluralExp, ref _arg6Fmt);
+        CheckPluralFormatting(ref _arg7PluralExp, ref _arg7Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)),
-                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6Fmt, flags)),
-                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)),
+                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8)));
         }
         catch (FormatException ex)
         {
@@ -1433,6 +1672,24 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7, in T8 arg8)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
+        return expectation switch
+        {
+            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
+            6 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
+            7 => IsOne(arg8) ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
+        };
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
@@ -1446,46 +1703,53 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
     private readonly string? _arg6Fmt;
     private readonly string? _arg7Fmt;
     private readonly string? _arg8Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
+    private readonly short _arg2PluralExp;
+    private readonly short _arg3PluralExp;
+    private readonly short _arg4PluralExp;
+    private readonly short _arg5PluralExp;
+    private readonly short _arg6PluralExp;
+    private readonly short _arg7PluralExp;
+    private readonly short _arg8PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-        _arg6Fmt = arg7Fmt;
-        _arg7Fmt = arg8Fmt;
-        _arg8Fmt = arg9Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-        _arg6Fmt = arg7Fmt;
-        _arg7Fmt = arg8Fmt;
-        _arg8Fmt = arg9Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        _arg2Fmt = arg2Fmt;
+        _arg3Fmt = arg3Fmt;
+        _arg4Fmt = arg4Fmt;
+        _arg5Fmt = arg5Fmt;
+        _arg6Fmt = arg6Fmt;
+        _arg7Fmt = arg7Fmt;
+        _arg8Fmt = arg8Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
+        CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
+        CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
+        CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
+        CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
+        CheckPluralFormatting(ref _arg6PluralExp, ref _arg6Fmt);
+        CheckPluralFormatting(ref _arg7PluralExp, ref _arg7Fmt);
+        CheckPluralFormatting(ref _arg8PluralExp, ref _arg8Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)),
-                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6Fmt, flags)),
-                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7Fmt, flags)),
-                ToString(arg9, language, _arg8Fmt, target, CheckPlurality(_arg8Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)),
+                ToString(arg9, language, _arg8Fmt, target, CheckPlurality(_arg8PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9)));
         }
         catch (FormatException ex)
         {
@@ -1497,6 +1761,25 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
             L.LogError(ex);
             return InvalidValue;
         }
+    }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7, in T8 arg8, in T9 arg9)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
+        return expectation switch
+        {
+            0 => IsOne(arg1) ? flags | TranslationFlags.NoPlural : flags,
+            1 => IsOne(arg2) ? flags | TranslationFlags.NoPlural : flags,
+            2 => IsOne(arg3) ? flags | TranslationFlags.NoPlural : flags,
+            3 => IsOne(arg4) ? flags | TranslationFlags.NoPlural : flags,
+            4 => IsOne(arg5) ? flags | TranslationFlags.NoPlural : flags,
+            5 => IsOne(arg6) ? flags | TranslationFlags.NoPlural : flags,
+            6 => IsOne(arg7) ? flags | TranslationFlags.NoPlural : flags,
+            7 => IsOne(arg8) ? flags | TranslationFlags.NoPlural : flags,
+            8 => IsOne(arg9) ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
+        };
     }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Translation
@@ -1511,49 +1794,57 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
     private readonly string? _arg7Fmt;
     private readonly string? _arg8Fmt;
     private readonly string? _arg9Fmt;
+    private readonly short _arg0PluralExp;
+    private readonly short _arg1PluralExp;
+    private readonly short _arg2PluralExp;
+    private readonly short _arg3PluralExp;
+    private readonly short _arg4PluralExp;
+    private readonly short _arg5PluralExp;
+    private readonly short _arg6PluralExp;
+    private readonly short _arg7PluralExp;
+    private readonly short _arg8PluralExp;
+    private readonly short _arg9PluralExp;
     public Translation(string @default) : base(@default) { }
     public Translation(string @default, TranslationFlags flags) : base(@default, flags) { }
-    public Translation(string @default, TranslationFlags flags, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null, string? arg10Fmt = null) : base(@default, flags)
+    public Translation(string @default, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null) : this(@default, default, arg0Fmt, arg1Fmt, arg2Fmt, arg3Fmt, arg4Fmt, arg5Fmt, arg6Fmt, arg7Fmt, arg8Fmt, arg9Fmt) { }
+    public Translation(string @default, TranslationFlags flags, string? arg0Fmt = null, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null) : base(@default, flags)
     {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-        _arg6Fmt = arg7Fmt;
-        _arg7Fmt = arg8Fmt;
-        _arg8Fmt = arg9Fmt;
-        _arg9Fmt = arg10Fmt;
-    }
-    public Translation(string @default, string? arg1Fmt = null, string? arg2Fmt = null, string? arg3Fmt = null, string? arg4Fmt = null, string? arg5Fmt = null, string? arg6Fmt = null, string? arg7Fmt = null, string? arg8Fmt = null, string? arg9Fmt = null, string? arg10Fmt = null) : base(@default)
-    {
-        _arg0Fmt = arg1Fmt;
-        _arg1Fmt = arg2Fmt;
-        _arg2Fmt = arg3Fmt;
-        _arg3Fmt = arg4Fmt;
-        _arg4Fmt = arg5Fmt;
-        _arg5Fmt = arg6Fmt;
-        _arg6Fmt = arg7Fmt;
-        _arg7Fmt = arg8Fmt;
-        _arg8Fmt = arg9Fmt;
-        _arg9Fmt = arg10Fmt;
+        _arg0Fmt = arg0Fmt;
+        _arg1Fmt = arg1Fmt;
+        _arg2Fmt = arg2Fmt;
+        _arg3Fmt = arg3Fmt;
+        _arg4Fmt = arg4Fmt;
+        _arg5Fmt = arg5Fmt;
+        _arg6Fmt = arg6Fmt;
+        _arg7Fmt = arg7Fmt;
+        _arg8Fmt = arg8Fmt;
+        _arg9Fmt = arg9Fmt;
+        CheckPluralFormatting(ref _arg0PluralExp, ref _arg0Fmt);
+        CheckPluralFormatting(ref _arg1PluralExp, ref _arg1Fmt);
+        CheckPluralFormatting(ref _arg2PluralExp, ref _arg2Fmt);
+        CheckPluralFormatting(ref _arg3PluralExp, ref _arg3Fmt);
+        CheckPluralFormatting(ref _arg4PluralExp, ref _arg4Fmt);
+        CheckPluralFormatting(ref _arg5PluralExp, ref _arg5Fmt);
+        CheckPluralFormatting(ref _arg6PluralExp, ref _arg6Fmt);
+        CheckPluralFormatting(ref _arg7PluralExp, ref _arg7Fmt);
+        CheckPluralFormatting(ref _arg8PluralExp, ref _arg8Fmt);
+        CheckPluralFormatting(ref _arg9PluralExp, ref _arg9Fmt);
     }
     public string Translate(string value, string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, UCPlayer? target, ulong targetTeam, TranslationFlags flags)
     {
         flags |= GetFlags(targetTeam) | Flags;
         try
         {
-            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0Fmt, flags)),
-                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1Fmt, flags)),
-                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2Fmt, flags)),
-                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3Fmt, flags)),
-                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4Fmt, flags)),
-                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5Fmt, flags)),
-                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6Fmt, flags)),
-                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7Fmt, flags)),
-                ToString(arg9, language, _arg8Fmt, target, CheckPlurality(_arg8Fmt, flags)),
-                ToString(arg10, language, _arg9Fmt, target, CheckPlurality(_arg9Fmt, flags)));
+            return string.Format(value, ToString(arg1, language, _arg0Fmt, target, CheckPlurality(_arg0PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg2, language, _arg1Fmt, target, CheckPlurality(_arg1PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg3, language, _arg2Fmt, target, CheckPlurality(_arg2PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg4, language, _arg3Fmt, target, CheckPlurality(_arg3PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg5, language, _arg4Fmt, target, CheckPlurality(_arg4PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg6, language, _arg5Fmt, target, CheckPlurality(_arg5PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg7, language, _arg6Fmt, target, CheckPlurality(_arg6PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg8, language, _arg7Fmt, target, CheckPlurality(_arg7PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg9, language, _arg8Fmt, target, CheckPlurality(_arg8PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)),
+                ToString(arg10, language, _arg9Fmt, target, CheckPlurality(_arg9PluralExp, flags, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10)));
         }
         catch (FormatException ex)
         {
@@ -1567,12 +1858,32 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
             return InvalidValue;
         }
     }
+    private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags, in T1 arg1, in T2 arg2, in T3 arg3, in T4 arg4, in T5 arg5, in T6 arg6, in T7 arg7, in T8 arg8, in T9 arg9, in T10 arg10)
+    {
+        if (expectation == -1)
+            return flags;
+        flags |= TranslationFlags.Plural;
+        return expectation switch
+        {
+            0 => arg1  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            1 => arg2  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            2 => arg3  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            3 => arg4  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            4 => arg5  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            5 => arg6  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            6 => arg7  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            7 => arg8  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            8 => arg9  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            9 => arg10 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            _ => flags
+        };
+    }
 }
-
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 sealed class TranslationDataAttribute : Attribute
 {
     private string? _legacyTranslationID;
+    private string? _signId;
     private string? _description;
     private string? _section;
     private string[]? _formatArgs;
@@ -1581,6 +1892,7 @@ sealed class TranslationDataAttribute : Attribute
 
     }
     public string? LegacyTranslationId { get => _legacyTranslationID; set => _legacyTranslationID = value; }
+    public string? SignId { get => _signId; set => _signId = value; }
     public string? Description { get => _description; set => _description = value; }
     public string? Section { get => _section; set => _section = value; }
     public string[]? FormattingDescriptions { get => _formatArgs; set => _formatArgs = value; }

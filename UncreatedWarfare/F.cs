@@ -29,7 +29,7 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
-    private static readonly Regex RemoveRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:color=\\\"{0,1}[#a-z]{0,9}\\\"{0,1})|(?:color)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:#.{3,8})|(?:[isub])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
+    private static readonly Regex RemoveRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:color=\\\"{0,1}[#a-z]{0,9}\\\"{0,1})|(?:color)|(?:size=\\\"{0,1}\\d+\\\"{0,1})|(?:size)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:#.{3,8})|(?:[isub])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex RemoveTMProRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:noparse)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:[su])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex TimeRegex = new Regex(@"(\d+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     public static readonly char[] vowels = new char[] { 'a', 'e', 'i', 'o', 'u' };
@@ -1569,6 +1569,35 @@ public static class F
     public static bool MatchGuid<TAsset>(this JsonAssetReference<TAsset>? reference, JsonAssetReference<TAsset>? match) where TAsset : Asset
     {
         return reference.ValidReference(out Guid guid) && match.ValidReference(out Guid guid2) && guid == guid2;
+    }
+    public static string RemoveColorTag(string questName)
+    {
+        if (questName is null || questName.Length < 6) return questName!;
+
+        int ind;
+        if (questName[0] == '<')
+        {
+            if (questName[1] == '#')
+                ind = questName.IndexOf('>', 2);
+            else if (questName.Length > 8 && questName[1] == 'c' && questName[2] == 'o' && questName[3] == 'l' &&
+                     questName[4] == 'o' && questName[5] == 'r' && questName[6] == '=')
+            {
+                ind = questName.IndexOf('>', 7);
+            }
+            else return questName;
+
+            if (ind != -1)
+                questName = questName.Substring(ind + 1);
+            else return questName;
+        }
+        if (questName[questName.Length - 1] == '>')
+        {
+            ind = questName.LastIndexOf('<', questName.Length - 2);
+            if (ind != -1)
+                questName = questName.Substring(0, ind);
+        }
+
+        return questName;
     }
 }
 public delegate void InstanceSetter<T1, T2>(T1 owner, T2 value);

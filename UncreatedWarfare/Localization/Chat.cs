@@ -13,14 +13,19 @@ namespace Uncreated.Warfare;
 public static class Chat
 {
     const int MAX_CHAT_MESSAGE_SIZE = 2047;
+    [Obsolete("Use the new generics system instead.")]
     public static void SendChat(this UCPlayer player, string text, Color textColor, params string[] formatting) =>
         SendChat(player.Player.channel.owner, text, textColor, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static void SendChat(this UCPlayer player, string text, params string[] formatting) =>
         SendChat(player.Player.channel.owner, text, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static void SendChat(this Player player, string text, Color textColor, params string[] formatting) =>
         SendChat(player.channel.owner, text, textColor, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static void SendChat(this Player player, string text, params string[] formatting) =>
         SendChat(player.channel.owner, text, formatting);
+    [Obsolete("Use the new generics system instead.")]
     public static void SendChat(this SteamPlayer player, string text, Color textColor, params string[] formatting)
     {
 #if DEBUG
@@ -52,6 +57,7 @@ public static class Chat
                     + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     public static void SendChat(this SteamPlayer player, string text, params string[] formatting)
     {
 #if DEBUG
@@ -83,6 +89,7 @@ public static class Chat
                     + MAX_CHAT_MESSAGE_SIZE.ToString(Data.Locale) + " bytes in UTF-8. Arguments may be too long.");
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     public static void Broadcast(string text, params string[] formatting)
     {
 #if DEBUG
@@ -124,6 +131,7 @@ public static class Chat
             }
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     public static void Broadcast(LanguageSet set, string text, params string[] formatting)
     {
 #if DEBUG
@@ -162,6 +170,7 @@ public static class Chat
             SendSingleMessage(localizedString, textColor, EChatMode.SAY, null, isRich, set.Next.Player.channel.owner);
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     private static void BroadcastToPlayers(IEnumerable<LanguageSet> players, string text, params string[] formatting)
     {
 #if DEBUG
@@ -203,6 +212,7 @@ public static class Chat
             }
         }
     }
+    [Obsolete("Use the new generics system instead.")]
     public static void BroadcastToAllExcept(ulong[] excluded, string text, params string[] formatting)
     {
         BroadcastToPlayers(Localization.EnumerateLanguageSets(x =>
@@ -214,6 +224,7 @@ public static class Chat
             return true;
         }), text, formatting);
     }
+    [Obsolete("Use the new generics system instead.")]
     public static void BroadcastToAllExcept(ulong excluded, string text, params string[] formatting)
     {
         BroadcastToPlayers(Localization.EnumerateLanguageSets(x => excluded != x.Steam64), text, formatting);
@@ -429,6 +440,61 @@ public static class Chat
         CheckTranslationLength(lang, ref value, translation, ref textColor);
         while (set.MoveNext())
             SendTranslationChat(value, translation, textColor, set.Next);
+    }
+    public static void Broadcast(IEnumerable<LanguageSet> sets, Translation translation)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation);
+    }
+    public static void Broadcast<T>(IEnumerable<LanguageSet> sets, Translation<T> translation, T arg1)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1);
+    }
+    public static void Broadcast<T1, T2>(IEnumerable<LanguageSet> sets, Translation<T1, T2> translation, T1 arg1, T2 arg2)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2);
+    }
+    public static void Broadcast<T1, T2, T3>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2, arg3);
+    }
+    public static void Broadcast<T1, T2, T3, T4>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2, arg3, arg4);
+    }
+    public static void Broadcast<T1, T2, T3, T4, T5>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5);
+    }
+    public static void Broadcast<T1, T2, T3, T4, T5, T6>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6);
+    }
+    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+    }
+    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+    }
+    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+    }
+    public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(IEnumerable<LanguageSet> sets, Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    {
+        foreach (LanguageSet set in sets)
+            Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     }
     public static void Broadcast(Translation translation)
     {

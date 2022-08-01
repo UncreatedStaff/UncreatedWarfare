@@ -264,36 +264,36 @@ public class KitManager : BaseReloadSingleton
                     "SELECT @kitPk;",
                     hasPk ? new object[14]
                     {
-                    kit.Name,
-                    (int)kit.Class,
-                    (int)kit.Branch,
-                    kit.Team,
-                    kit.CreditCost,
-                    kit.UnlockLevel,
-                    kit.IsPremium,
-                    kit.PremiumCost,
-                    kit.IsLoadout,
-                    kit.TeamLimit,
-                    kit.Cooldown,
-                    kit.Disabled,
-                    kit.Weapons,
-                    kit.PrimaryKey
+                        kit.Name,
+                        (int)kit.Class,
+                        (int)kit.Branch,
+                        kit.Team,
+                        kit.CreditCost,
+                        kit.UnlockLevel,
+                        kit.IsPremium,
+                        kit.PremiumCost,
+                        kit.IsLoadout,
+                        kit.TeamLimit,
+                        kit.Cooldown,
+                        kit.Disabled,
+                        kit.Weapons,
+                        kit.PrimaryKey
                     }
                     : new object[13]
                     {
-                    kit.Name,
-                    (int)kit.Class,
-                    (int)kit.Branch,
-                    kit.Team,
-                    kit.CreditCost,
-                    kit.UnlockLevel,
-                    kit.IsPremium,
-                    kit.PremiumCost,
-                    kit.IsLoadout,
-                    kit.TeamLimit,
-                    kit.Cooldown,
-                    kit.Disabled,
-                    kit.Weapons
+                        kit.Name,
+                        (int)kit.Class,
+                        (int)kit.Branch,
+                        kit.Team,
+                        kit.CreditCost,
+                        kit.UnlockLevel,
+                        kit.IsPremium,
+                        kit.PremiumCost,
+                        kit.IsLoadout,
+                        kit.TeamLimit,
+                        kit.Cooldown,
+                        kit.Disabled,
+                        kit.Weapons
                     }, R =>
                     {
                         pk = R.GetInt32(0);

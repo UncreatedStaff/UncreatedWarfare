@@ -396,7 +396,7 @@ public record struct RankStatus(int Order, bool IsCompelete, bool[] Completions)
 {
     public override string ToString() => $"Rank {Order}, {(IsCompelete ? "COMPLETE" : "INCOMPLETE")}. Quests completed: {Completions.Count(x => x)}/{Completions.Length}.";
 }
-public readonly struct RankData : IComparable<RankData>
+public readonly struct RankData : IComparable<RankData>, ITranslationArgument
 {
     public static RankData Nil = new RankData(-1);
     public readonly Guid QuestID;
@@ -610,5 +610,36 @@ public readonly struct RankData : IComparable<RankData>
             }
             writer.WriteEndObject();
         }
+    }
+
+    public const string NAME_FORMAT = "n";
+    public const string COLOR_NAME_FORMAT = "cn";
+    public const string ABBREVIATION_FORMAT = "a";
+    public const string COLOR_ABBREVIATION_FORMAT = "ca";
+    public const string ORDER_FORMAT = "o";
+    public const string COLOR_ORDER_FORMAT = "co";
+    public const string L_ORDER_FORMAT = "lo";
+    public const string L_COLOR_ORDER_FORMAT = "lco";
+    public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        if (format is not null && !format.Equals(NAME_FORMAT, StringComparison.Ordinal))
+        {
+            if (format.Equals(COLOR_NAME_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(Color, GetName(language), flags);
+            else if (format.Equals(ABBREVIATION_FORMAT, StringComparison.Ordinal))
+                return GetAbbreviation(language);
+            else if (format.Equals(COLOR_ABBREVIATION_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(Color, GetAbbreviation(language), flags);
+            else if (format.Equals(ORDER_FORMAT, StringComparison.Ordinal))
+                return Order.ToString(Data.Locale);
+            else if (format.Equals(ORDER_FORMAT, StringComparison.Ordinal))
+                return Localization.Colorize(Color, Order.ToString(Data.Locale), flags);
+            else if (format.Equals(L_ORDER_FORMAT, StringComparison.Ordinal))
+                return "L " + Order.ToString(Data.Locale);
+            else if (format.Equals(L_COLOR_ORDER_FORMAT, StringComparison.Ordinal))
+                return "L " + Localization.Colorize(Color, Order.ToString(Data.Locale), flags);
+        }
+
+        return GetName(language);
     }
 }
