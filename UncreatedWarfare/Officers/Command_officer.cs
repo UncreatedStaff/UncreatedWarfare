@@ -18,8 +18,6 @@ public class OfficerCommand : Command
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotEnabled();
-
         ctx.AssertOnDuty();
 
         ctx.AssertArgs(1, SYNTAX + " - " + HELP);

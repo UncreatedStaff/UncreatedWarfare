@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -734,8 +735,6 @@ internal class _DebugCommand : Command
     }
     private void questdump(CommandInteraction ctx)
     {
-        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
-
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
 
         ctx.AssertRanByPlayer();
@@ -744,8 +743,6 @@ internal class _DebugCommand : Command
     }
     private void completequest(CommandInteraction ctx)
     {
-        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
-
         ctx.AssertPermissions(EAdminType.ADMIN);
 
         ctx.AssertRanByPlayer();
@@ -808,8 +805,6 @@ internal class _DebugCommand : Command
 #endif
     private void questtest(CommandInteraction ctx)
     {
-        if (!UCWarfare.Config.EnableQuests) throw ctx.SendNotImplemented();
-
         ctx.AssertRanByPlayer();
 
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -954,21 +949,81 @@ internal class _DebugCommand : Command
     private void translationtest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
-        ItemAsset asset = Assets.find<ItemAsset>(Guid.ParseExact("5c9b2fb5a600438daa34453a95576803", "N"));
-        ctx.Caller.SendChat(test, 3, asset);
-        ctx.Caller.SendChat(test, 1, asset);
-        const string dlr = "inch";
-        ctx.Caller.SendChat(test2, 3.64f, dlr);
-        ctx.Caller.SendChat(test2, 1f, dlr);
+        ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
     }
-    static readonly Translation<int, ItemAsset> test = new Translation<int, ItemAsset>("<#fda>You have {0} {1}.", arg1Fmt: T.RARITY_COLOR_FORMAT + T.PLURAL + "{0}")
+    private void quest(CommandInteraction ctx)
     {
-        Key = "test",
-        Id = -1
-    };
-    static readonly Translation<float, string> test2 = new Translation<float, string>("<#fda>Height: {0} {1}.", "F2", T.PLURAL + "{0}")
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.ADMIN);
+        if (ctx.MatchParameter(0, "add"))
+        {
+            if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
+            {
+                ctx.Caller.Player.quests.sendAddQuest(asset.id);
+                ctx.Reply("Added quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+            }
+            else ctx.Reply("Quest not found.");
+        }
+        else if (ctx.MatchParameter(0, "track"))
+        {
+            if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
+            {
+                ctx.Caller.Player.quests.sendTrackQuest(asset.id);
+                ctx.Reply("Tracked quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+            }
+            else ctx.Reply("Quest not found.");
+        }
+        else if (ctx.MatchParameter(0, "remove"))
+        {
+            if (ctx.TryGet(1, out QuestAsset asset, out _, true, -1, false))
+            {
+                ctx.Caller.Player.quests.sendRemoveQuest(asset.id);
+                ctx.Reply("Removed quest " + asset.questName + " <#ddd>(" + asset.id + ", " + asset.GUID.ToString("N") + ")</color>.");
+            }
+            else ctx.Reply("Quest not found.");
+        }
+        else ctx.Reply("Syntax: /test quest <add|track|remove> <id>");
+    }
+
+    private void flag(CommandInteraction ctx)
     {
-        Key = "test2",
-        Id = -2
-    };
+        ctx.AssertRanByPlayer();
+        ctx.AssertPermissions(EAdminType.ADMIN);
+
+        if (ctx.MatchParameter(0, "set"))
+        {
+            if (ctx.TryGet(2, out short value) && ctx.TryGet(1, out ushort flag))
+            {
+                bool f = ctx.Caller.Player.quests.getFlag(flag, out short old);
+                ctx.Caller.Player.quests.sendSetFlag(flag, value);
+                ctx.Reply("Set quest flag " + flag + " to " + value + " <#ddd>(from " +
+                          (f ? old.ToString() : "<b>not set</b>") + ")</color>.");
+                return;
+            }
+        }
+        else if (ctx.MatchParameter(0, "get"))
+        {
+            if (ctx.TryGet(1, out ushort flag))
+            {
+                bool f = ctx.Caller.Player.quests.getFlag(flag, out short val);
+                ctx.Reply("Quest flag " + flag + " is " + (f ? val.ToString() : "<b>not set</b>") + ")</color>.");
+                return;
+            }
+        }
+        else if (ctx.MatchParameter(0, "remove", "delete"))
+        {
+            if (ctx.TryGet(1, out ushort flag))
+            {
+                bool f = ctx.Caller.Player.quests.getFlag(flag, out short old);
+                if (f)
+                {
+                    ctx.Caller.Player.quests.sendRemoveFlag(flag);
+                    ctx.Reply("Quest flag " + flag + " was removed" + " <#ddd>(from " + old.ToString() + ")</color>.");
+                }
+                else ctx.Reply("Quest flag " + flag + " is not set.");
+                return;
+            }
+        }
+        ctx.Reply("Syntax: /test flag <set|get|remove> <flag> [value]");
+    }
 }

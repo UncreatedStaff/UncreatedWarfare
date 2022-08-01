@@ -15,7 +15,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
     public DynamicStringValue ItemDisplayName;
     public DynamicStringValue ItemKey;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("item_name", StringComparison.Ordinal))
@@ -61,7 +61,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
         private bool _hasReceivedKey;
         protected override bool CompletedCheck => _hasReceivedKey;
         public override short FlagValue => (short)(_hasReceivedKey ? 1 : 0);
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             ItemName = questState.ItemDisplayName.InsistValue();
             ItemKey = questState.ItemKey.InsistValue();
@@ -116,7 +116,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
                             if (key.Equals(preset._state.ItemKey.InsistValue(), StringComparison.Ordinal))
                             {
                                 State state2 = preset._state;
-                                Tracker tracker = new Tracker(null!, ref state2);
+                                Tracker tracker = new Tracker(quest, null!, in state2, preset);
                                 QuestManager.ReadProgress(player, tracker, preset.Team);
                                 tracker._hasReceivedKey = true;
                                 QuestManager.SaveProgress(player, tracker, preset.Team);
@@ -140,7 +140,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
 public class PlaceholderQuest : BaseQuestData<PlaceholderQuest.Tracker, PlaceholderQuest.State, PlaceholderQuest>
 {
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader) { }
     public struct State : IQuestState<Tracker, PlaceholderQuest>
     {
@@ -154,7 +154,7 @@ public class PlaceholderQuest : BaseQuestData<PlaceholderQuest.Tracker, Placehol
     {
         protected override bool CompletedCheck => false;
         public override short FlagValue => 0;
-        public Tracker(UCPlayer? target, ref State questState) : base(target) { }
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset) { }
         public override void OnReadProgressSaveProperty(string prop, ref Utf8JsonReader reader) { }
         public override void WriteQuestProgress(Utf8JsonWriter writer) { }
         public override void ResetToDefaults() { }

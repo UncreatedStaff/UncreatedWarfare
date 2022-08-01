@@ -651,6 +651,16 @@ public class CommandInteraction : BaseCommandInteraction
         }
         return byte.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
     }
+    public bool TryGet(int parameter, out short value)
+    {
+        parameter += offset;
+        if (parameter < 0 || parameter >= _ctx.ArgumentCount)
+        {
+            value = 0;
+            return false;
+        }
+        return short.TryParse(GetParamForParse(parameter), NumberStyles.Number, Warfare.Data.Locale, out value);
+    }
     public bool TryGet(int parameter, out sbyte value)
     {
         parameter += offset;

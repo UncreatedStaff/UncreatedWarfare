@@ -321,7 +321,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 L.LogError(ex);
             }
 
-            //Quests.QuestManager.OnGameTick();
+            Quests.QuestManager.OnGameTick();
 #if DEBUG
             profiler.Dispose();
             if (EveryXSeconds(150))

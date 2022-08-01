@@ -121,7 +121,9 @@ public static class L
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.OutputToConsoleMethod is null)
+        if (!UCWarfare.IsLoaded)
+            LogAsLibrary("[INFO]  " + info, color);
+        else if (Data.OutputToConsoleMethod is null)
         {
             CommandWindow.Log(info);
         }
@@ -133,9 +135,23 @@ public static class L
             inL = false;
         }
     }
+    private static void LogAsLibrary(string message, ConsoleColor color)
+    {
+        ConsoleColor clr = Console.ForegroundColor;
+        if (clr != color)
+        {
+            Console.ForegroundColor = color;
+            Console.WriteLine(message);
+            Console.ForegroundColor = clr;
+        }
+        else
+            Console.WriteLine(message);
+    }
     public static void LogWarning(string warning, ConsoleColor color = ConsoleColor.Yellow, [CallerMemberName] string method = "")
     {
-        if (Data.OutputToConsoleMethod is null)
+        if (!UCWarfare.IsLoaded)
+            LogAsLibrary("[WARN]  [" + method.ToUpper() + "] " + warning, color);
+        else if (Data.OutputToConsoleMethod is null)
         {
             CommandWindow.LogWarning(warning);
         }
@@ -149,7 +165,9 @@ public static class L
     }
     public static void LogError(string error, ConsoleColor color = ConsoleColor.Red, [CallerMemberName] string method = "")
     {
-        if (Data.OutputToConsoleMethod is null)
+        if (!UCWarfare.IsLoaded)
+            LogAsLibrary("[ERROR] [" + method.ToUpper() + "] " + error, color);
+        else if (Data.OutputToConsoleMethod is null)
         {
             CommandWindow.LogError(error);
         }
@@ -307,8 +325,9 @@ public static class L
 
         string err = _errorBuilder.ToString();
         _errorBuilder.Clear();
-
-        if (Data.OutputToConsoleMethod is null)
+        if (!UCWarfare.IsLoaded)
+            LogAsLibrary(err, color);
+        else if (Data.OutputToConsoleMethod is null)
         {
             CommandWindow.LogError(err);
         }

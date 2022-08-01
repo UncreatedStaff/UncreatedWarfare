@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -11,6 +12,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -129,6 +131,19 @@ public sealed class QuestDataAttribute : Attribute
         _type = type;
     }
 }
+[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
+public sealed class QuestRewardAttribute : Attribute
+{
+    public EQuestRewardType Type => _type;
+    public Type ReturnType => _returnType;
+    private readonly EQuestRewardType _type;
+    private readonly Type _returnType;
+    public QuestRewardAttribute(EQuestRewardType type, Type returnType)
+    {
+        _type = type;
+        _returnType = returnType;
+    }
+}
 
 public static class QuestJsonEx
 {
@@ -206,9 +221,12 @@ public static class QuestJsonEx
 
             if (isInclusive || str[0] == '$')
             {
-                if (str[1] == '(' && str[str.Length - 1] == ')') // read range
+                int endInd = str.IndexOf(')', 1);
+                bool hasRnd = str[str.Length - 1] == '}';
+                int stRndInd = endInd + 1;
+                if (str[1] == '(' && endInd != -1) // read range
                 {
-                    int sep = str.IndexOf(':');
+                    int sep = str.IndexOf(':', 3);
                     if (sep != -1)
                     {
                         int v1 = 0;
@@ -235,7 +253,7 @@ public static class QuestJsonEx
                         fixed (char* p = str)
                         {
                             int m = 1;
-                            for (int i = str.Length - 1; i > sep; i--)
+                            for (int i = endInd; i > sep; i--)
                             {
                                 char c = *(p + i);
                                 if (c >= '0' && c <= '9')
@@ -255,7 +273,14 @@ public static class QuestJsonEx
                         {
                             (v2, v1) = (v1, v2);
                         }
-                        value = new DynamicIntegerValue(new IntegralRange(v1, v2), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
+
+                        int round = 0;
+                        if (hasRnd)
+                        {
+                            int.TryParse(str.Substring(stRndInd + 1, str.Length - 1 - stRndInd),
+                                NumberStyles.Number, Data.Locale, out round);
+                        }
+                        value = new DynamicIntegerValue(new IntegralRange(v1, v2, round), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
                         return true;
                     }
                     else
@@ -339,7 +364,7 @@ public static class QuestJsonEx
                 {
                     value = new DynamicFloatValue(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                 }
-                else if (float.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out float v))
+                else if (float.TryParse(str, NumberStyles.Any, Data.Locale, out float v))
                 {
                     value = new DynamicFloatValue(v);
                 }
@@ -355,7 +380,10 @@ public static class QuestJsonEx
 
             if (isInclusive || str[0] == '$')
             {
-                if (str[1] == '(' && str[str.Length - 1] == ')') // read range
+                int endInd = str.IndexOf(')', 1);
+                bool hasRnd = str[str.Length - 1] == '}';
+                int stRndInd = endInd + 1;
+                if (str[1] == '(' && endInd != -1) // read range
                 {
                     int sep = str.IndexOf(':');
                     if (sep != -1)
@@ -393,7 +421,7 @@ public static class QuestJsonEx
                         {
                             int m = 1;
                             int decPlace = 1;
-                            for (int i = str.Length - 1; i > sep; i--)
+                            for (int i = endInd; i > sep; i--)
                             {
                                 char c = *(p + i);
                                 if (c >= '0' && c <= '9')
@@ -419,7 +447,14 @@ public static class QuestJsonEx
                             (v2f, v1f) = (v1f, v2f);
                         }
 
-                        value = new DynamicFloatValue(new FloatRange(v1f, v2f), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
+                        int round = 0;
+                        if (hasRnd)
+                        {
+                            int.TryParse(str.Substring(stRndInd + 1, str.Length - 1 - stRndInd),
+                                NumberStyles.Number, Data.Locale, out round);
+                        }
+
+                        value = new DynamicFloatValue(new FloatRange(v1f, v2f, round), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
                         return true;
                     }
                     else
@@ -853,6 +888,56 @@ public static class QuestJsonEx
         writer.WritePropertyName(property);
         choice.Write(writer);
     }
+    public static int RoundNumber(int min, int round, int value)
+    {
+        if (round > 0)
+        {
+            int val2 = value - min;
+            int mod = val2 % round;
+            if (mod == 0)
+                return value;
+            if (mod > round / 2f)
+                return value + (round - mod);
+            else
+                return value - mod;
+        }
+        return value;
+    }
+    public static float RoundNumber(float min, int round, float value)
+    {
+        if (round == 0) return value;
+        if (round > 0)
+        {
+            float val2 = value - min;
+            float mod = val2 % round;
+            if (mod == 0)
+                return value;
+            if (mod > round / 2f)
+                return value + (round - mod);
+            else
+                return value - mod;
+        }
+        else
+        {
+            int i = 0;
+            int val = -round;
+            while (val > 0)
+            {
+                val /= 10;
+                i++;
+            }
+            int t = (int)Mathf.Pow(10, ((val - 1) * 2) + 1);
+            float m = (-round % t) / (float)t;
+            float val2 = value - min;
+            float mod = val2 % m;
+            if (mod == 0)
+                return value;
+            if (mod > m / 2f)
+                return value + (m - mod);
+            else
+                return value - mod;
+        }
+    }
 }
 /// <summary>Datatype storing either a constant <see cref="int"/>, a <see cref="IntegralRange"/> or a <see cref="IntegralSet"/>.</summary>
 public readonly struct DynamicIntegerValue : IDynamicValue<int>
@@ -986,7 +1071,6 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
             writer.WriteNumberValue(constant);
         }
     }
-
     private struct Choice : IDynamicValue<int>.IChoice
     {
         private EChoiceBehavior _behavior;
@@ -1034,6 +1118,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                 if (_behavior == EChoiceBehavior.ALLOW_ONE)
                 {
                     _value = UnityEngine.Random.Range(value.range.Minimum, value.range.Maximum + 1);
+                    _value = QuestJsonEx.RoundNumber(value.range.Minimum, value.range.Round, _value);
                 }
                 else
                 {
@@ -1339,6 +1424,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
                 if (_behavior == EChoiceBehavior.ALLOW_ONE)
                 {
                     _value = UnityEngine.Random.Range(value.range.Minimum, value.range.Maximum);
+                    _value = QuestJsonEx.RoundNumber(value.range.Minimum, value.range.Round, _value);
                 }
                 else
                 {
@@ -2436,16 +2522,17 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             {
                 if (_behavior == EChoiceBehavior.ALLOW_ONE)
                 {
-                    int r1 = (int)(object)value.Range.Minimum;
-                    int r2 = (int)(object)value.Range.Maximum;
+                    
+                    int r1 = ((IConvertible)value.Range.Minimum).ToInt32(Data.Locale);
+                    int r2 = ((IConvertible)value.Range.Maximum).ToInt32(Data.Locale);
                     int r3 = UnityEngine.Random.Range(r1, r2 + 1);
-                    _value = (TEnum)(object)r3;
+                    _value = (TEnum)Enum.ToObject(typeof(TEnum), r3);
                 }
                 else
                 {
-                    _minValUnderlying = (int)(object)value.Range.Minimum;
+                    _minValUnderlying = ((IConvertible)value.Range.Minimum).ToInt32(Data.Locale);
                     _minVal = value.Range.Minimum;
-                    _maxValUnderlying = (int)(object)value.Range.Maximum;
+                    _maxValUnderlying = ((IConvertible)value.Range.Maximum).ToInt32(Data.Locale);
                     _maxVal = value.Range.Maximum;
                 }
             }
@@ -2651,30 +2738,36 @@ public enum EChoiceBehavior : byte
 public readonly struct IntegralRange : IDynamicValue<int>.IRange
 {
     private readonly int _min;
-    public int Minimum => _min;
+    private readonly int _round;
     private readonly int _max;
+    public int Minimum => _min;
     public int Maximum => _max;
-    public IntegralRange(int min, int max)
+    public int Round => _round;
+    public IntegralRange(int min, int max, int round)
     {
         _min = min;
         _max = max;
+        _round = round;
     }
-    public override readonly string ToString() => "$(" + _min.ToString(Data.Locale) + ":" + _max.ToString(Data.Locale) + ")";
+    public override readonly string ToString() => "$(" + _min.ToString(Data.Locale) + ":" + _max.ToString(Data.Locale) + ")" + (_round == 0 ? string.Empty : "{" + _round + "}");
 }
 /// <summary>Datatype storing a range of floats.
 /// <para>Formatted like this: </para><code>"$(3.2:182.1)"</code></summary>
 public readonly struct FloatRange : IDynamicValue<float>.IRange
 {
     private readonly float _min;
-    public float Minimum => _min;
     private readonly float _max;
+    private readonly int _round;
+    public float Minimum => _min;
     public float Maximum => _max;
-    public FloatRange(float min, float max)
+    public int Round => _round;
+    public FloatRange(float min, float max, int round)
     {
         _min = min;
         _max = max;
+        _round = round;
     }
-    public override readonly string ToString() => "$(" + _min.ToString(Data.Locale) + ":" + _max.ToString(Data.Locale) + ")";
+    public override readonly string ToString() => "$(" + _min.ToString(Data.Locale) + ":" + _max.ToString(Data.Locale) + ")" + (_round == 0 ? string.Empty : "{" + _round + "}");
 }
 /// <summary>Datatype storing a range of floats.
 /// <para>Formatted like this: </para><code>"$(3.2:182.1)"</code></summary>
@@ -2842,6 +2935,7 @@ public interface IQuestPreset
 {
     public Guid Key { get; }
     public IQuestState State { get; }
+    public IQuestReward[]? RewardOverrides { get; }
     public ulong Team { get; }
     public ushort Flag { get; }
 }

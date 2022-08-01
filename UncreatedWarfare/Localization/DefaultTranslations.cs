@@ -1113,7 +1113,14 @@ internal static class T
     [TranslationData(Section = ABANDON_SECTION, Description = "Credits toast for returning a vehicle soon after requesting it.", LegacyTranslationId = "abandon_compensation_toast")]
     public static readonly Translation AbandonCompensationToast = new Translation("RETURNED VEHICLE", TranslationFlags.UnityUI);
     #endregion
-
+    
+    #region DailyQuests
+    private const string DAILY_QUEST_SECTION = "Daily Quests";
+    [TranslationData(Section = DAILY_QUEST_SECTION, Description = "Sent when new daily quests are put into action.")]
+    public static readonly Translation<DateTime> DailyQuestsNewIndex = new Translation<DateTime>("<#66ccff>New daily quests have been generated! They will be active until <#cedcde>{0}</color> UTC.", "G");
+    [TranslationData(Section = DAILY_QUEST_SECTION, Description = "Sent 1 hour before new daily quests are put into action.")]
+    public static readonly Translation DailyQuestsOneHourRemaining = new Translation("<#66ccff>You have one hour until new daily quests will be generated!");
+    #endregion
     #region Tips
     public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationFlags.UnityUI);
     public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationFlags.UnityUI);

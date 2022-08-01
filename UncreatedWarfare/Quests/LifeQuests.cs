@@ -12,7 +12,7 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
 {
     public DynamicIntegerValue ReviveCount;
     public override int TickFrequencySeconds => 0;
-    protected override Tracker CreateQuestTracker(UCPlayer? player, ref State state) => new Tracker(player, ref state);
+    protected override Tracker CreateQuestTracker(UCPlayer? player, in State state, in IQuestPreset? preset) => new Tracker(this, player, in state, preset);
     public override void OnPropertyRead(string propertyname, ref Utf8JsonReader reader)
     {
         if (propertyname.Equals("revives_required", StringComparison.Ordinal))
@@ -47,7 +47,7 @@ public class RevivePlayersQuest : BaseQuestData<RevivePlayersQuest.Tracker, Revi
         public override short FlagValue => (short)_revives;
         protected override bool CompletedCheck => _revives >= ReviveCount;
 
-        public Tracker(UCPlayer? target, ref State questState) : base(target)
+        public Tracker(BaseQuestData data, UCPlayer? target, in State questState, in IQuestPreset? preset) : base(data, target, questState, in preset)
         {
             ReviveCount = questState.ReviveCount.InsistValue();
         }
