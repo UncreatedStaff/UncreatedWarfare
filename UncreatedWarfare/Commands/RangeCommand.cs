@@ -21,17 +21,17 @@ public class RangeCommand : Command
         if (!Data.Is<ISquads>())
         {
             int distance = Mathf.RoundToInt((ctx.Caller.Position - ctx.Caller.Player.quests.markerPosition).magnitude / 10) * 10;
-            throw ctx.Reply("range", distance.ToString(Data.Locale));
+            throw ctx.Reply(T.RangeOutput, distance);
         }
         if (ctx.Caller.Squad is not null)
         {
             if (ctx.Caller.Squad.Leader.Player.quests.isMarkerPlaced)
             {
                 int distance = Mathf.RoundToInt((ctx.Caller.Position - ctx.Caller.Squad.Leader.Player.quests.markerPosition).magnitude / 10) * 10;
-                ctx.Reply("range", distance.ToString(Data.Locale));
+                ctx.Reply(T.RangeOutput, distance);
             }
-            else throw ctx.Reply("range_nomarker");
+            else throw ctx.Reply(T.RangeNoMarker);
         }
-        else throw ctx.Reply("range_notinsquad");
+        else throw ctx.Reply(T.RangeNotInSquad);
     }
 }

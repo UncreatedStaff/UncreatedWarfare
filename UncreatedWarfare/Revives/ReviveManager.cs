@@ -256,7 +256,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             shouldAllow = false;
         }
     }
-    private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer? killer)
+    internal void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer? killer)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();

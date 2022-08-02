@@ -23,7 +23,7 @@ public delegate void KitChangedHandler(UCPlayer player, Kit kit, string oldKit);
 public class KitManager : BaseReloadSingleton
 {
     private static readonly byte[] GUID_BUFFER = new byte[16];
-    private readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 5);
+    internal readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 5);
     public static event KitChangedHandler OnKitChanged;
     public Dictionary<int, Kit> Kits = new Dictionary<int, Kit>(256);
     private static KitManager _singleton;
@@ -86,9 +86,9 @@ public class KitManager : BaseReloadSingleton
     public async Task ReloadKits()
     {
         SingletonEx.AssertLoaded<KitManager>(_isLoaded);
+        await _threadLocker.WaitAsync();
         try
         {
-            await _threadLocker.WaitAsync();
             Kits.Clear();
             await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_data`;", new object[0], R =>
             {

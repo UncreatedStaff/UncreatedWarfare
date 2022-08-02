@@ -23,6 +23,7 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using static SDG.Provider.SteamGetInventoryResponse;
 
 namespace Uncreated.Warfare.Gamemodes;
 
@@ -34,13 +35,13 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public static readonly WinToastUI WinToastUI = new WinToastUI();
     public static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
     public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
-    public static readonly Dictionary<string, Type> GAMEMODES = new Dictionary<string, Type>
+    public static readonly List<KeyValuePair<string, Type>> GAMEMODES = new List<KeyValuePair<string, Type>>
     {
-        { "TeamCTF", typeof(TeamCTF) },
-        { "Invasion", typeof(Invasion) },
-        { "TDM", typeof(TeamDeathmatch.TeamDeathmatch) },
-        { "Insurgency", typeof(Insurgency.Insurgency) },
-        { "Conquest", typeof(Flags.Conquest) }
+        new KeyValuePair<string, Type>("TeamCTF", typeof(TeamCTF)),
+        new KeyValuePair<string, Type>("Invasion", typeof(Invasion)),
+        new KeyValuePair<string, Type>("TDM", typeof(TeamDeathmatch.TeamDeathmatch)),
+        new KeyValuePair<string, Type>("Insurgency", typeof(Insurgency.Insurgency)),
+        new KeyValuePair<string, Type>("Conquest", typeof(Conquest))
     };
     public Whitelister Whitelister;
     public CooldownManager Cooldowns;
@@ -282,34 +283,24 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             IDisposable profiler = ProfilingUtils.StartTracking(Name + " Gamemode Event Loop");
 #endif
             DateTime start = DateTime.Now;
-            for (int i = 0; i < Provider.clients.Count; i++)
+            for (int i = PlayerManager.OnlinePlayers.Count - 1; i >= 0; i--)
             {
-                SteamPlayer sp = Provider.clients[i];
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 try
                 {
-                    if (sp.player.transform == null)
+                    if (pl.Player.transform == null)
                     {
-                        L.Log($"Kicking {F.GetPlayerOriginalNames(sp).PlayerName} ({sp.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                        Provider.kick(sp.playerID.steamID, Localization.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
+                        L.Log($"Kicking {F.GetPlayerOriginalNames(pl).PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
+                        Provider.kick(pl.CSteamID, Localization.Translate(T.NullTransformKickMessage, pl, UCWarfare.Config.DiscordInviteCode));
                         continue;
                     }
                 }
                 catch (NullReferenceException)
                 {
-                    L.Log($"Kicking {F.GetPlayerOriginalNames(sp).PlayerName} ({sp.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                    Provider.kick(sp.playerID.steamID, Localization.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
+                    L.Log($"Kicking {F.GetPlayerOriginalNames(pl).PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
+                    Provider.kick(pl.CSteamID, Localization.Translate(T.NullTransformKickMessage, pl, UCWarfare.Config.DiscordInviteCode));
                     continue;
                 }
-                /*
-                // TODO: Fix
-                if (Data.Is(out ITeams t) && t.UseTeamSelector && Teams.TeamManager.LobbyZone.IsInside(sp.player.transform.position) && sp.player.movement.getVehicle() == null &&
-                    UCPlayer.FromSteamPlayer(sp) is UCPlayer pl && pl.GetTeam() != 3 && !t.JoinManager.IsInLobby(pl))
-                {
-                    L.Log($"{pl.Steam64} was stuck in lobby and was auto-rejoined.");
-                    t.JoinManager.OnPlayerDisconnected(pl);
-                    t.JoinManager.CloseUI(pl);
-                    t.JoinManager.OnPlayerConnected(pl, true);
-                }*/
             }
             try
             {
@@ -321,7 +312,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 L.LogError(ex);
             }
 
-            Quests.QuestManager.OnGameTick();
+            QuestManager.OnGameTick();
 #if DEBUG
             profiler.Dispose();
             if (EveryXSeconds(150))
@@ -357,11 +348,10 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         QuestManager.OnGameOver(winner);
 
         ActionLogger.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
-        string c = TeamManager.GetTeamHexColor(winner);
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-        {
-            Chat.Broadcast(set, "team_win", TeamManager.TranslateName(winner, set.Language), c);
-        }
+
+        foreach (LanguageSet set in LanguageSet.All())
+            Chat.Broadcast(set, T.TeamWin, TeamManager.GetFaction(winner));
+
         foreach (SteamPlayer client in Provider.clients)
             client.player.movement.forceRemoveFromVehicle();
 
@@ -532,21 +522,28 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        try
+        for (int i = 0; i < GAMEMODES.Count; ++i)
         {
-            if (GAMEMODES.TryGetValue(name, out Type type))
+            if (GAMEMODES[i].Key.Equals(name, StringComparison.OrdinalIgnoreCase))
             {
+                Type type = GAMEMODES[i].Value;
                 if (type is null || !type.IsSubclassOf(typeof(Gamemode))) return null;
                 return type;
             }
-            else return null;
         }
-        catch (Exception ex)
+        if (name.Length > 2)
         {
-            L.LogWarning("Exception when finding gamemode: \"" + name + '\"');
-            L.LogError(ex, ConsoleColor.Yellow);
-            return null;
+            for (int i = 0; i < GAMEMODES.Count; ++i)
+            {
+                if (GAMEMODES[i].Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                {
+                    Type type = GAMEMODES[i].Value;
+                    if (type is null || !type.IsSubclassOf(typeof(Gamemode))) return null;
+                    return type;
+                }
+            }
         }
+        return null;
     }
     public virtual void Subscribe() { }
     public virtual void Unsubscribe() { }
@@ -586,7 +583,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public virtual void ShowStagingUI(UCPlayer player)
     {
         CTFUI.StagingUI.SendToPlayer(player.Connection);
-        CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate("phases_briefing", player));
+        CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate(T.PhaseBriefing, player));
     }
     public void ClearStagingUI(UCPlayer player)
     {
@@ -693,6 +690,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             L.LogError(ex);
         }
     }
+
     public static void ReadGamemodes()
     {
 #if DEBUG
@@ -704,6 +702,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(typeof(TeamCTF), 1.0f));
             return;
         }
+
         List<KeyValuePair<string?, float>> gms = new List<KeyValuePair<string?, float>>();
         using (IEnumerator<char> iter = UCWarfare.Config.GamemodeRotation.GetEnumerator())
         {
@@ -736,7 +735,8 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 {
                     if (c == ',')
                     {
-                        if (float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out weight))
+                        if (float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale,
+                                out weight))
                             gms.Add(new KeyValuePair<string?, float>(name, weight));
                         name = null;
                         current.Clear();
@@ -748,18 +748,22 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                     }
                 }
             }
-            if (name != null && float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out weight))
+
+            if (name != null && float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale,
+                    out weight))
                 gms.Add(new KeyValuePair<string?, float>(name, weight));
         }
-        using (IEnumerator<KeyValuePair<string?, float>> iter = gms.GetEnumerator())
+
+        for (int j = 0; j < gms.Count; ++j)
         {
-            while (iter.MoveNext())
+            for (int i = 0; i < GAMEMODES.Count; ++i)
             {
-                if (iter.Current.Key != null && GAMEMODES.TryGetValue(iter.Current.Key, out Type GamemodeType))
-                    GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(GamemodeType, iter.Current.Value));
+                if (GAMEMODES[i].Key.Equals(gms[j].Key, StringComparison.OrdinalIgnoreCase))
+                    GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(GAMEMODES[i].Value, gms[j].Value));
             }
         }
     }
+
     public static Type? GetNextGamemode()
     {
 #if DEBUG
@@ -785,6 +789,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             }
         }
         return null;
+    }
+
+    internal virtual string DumpState()
+    {
+        return "Mode: " + DisplayName;
     }
 }
 public enum EState : byte

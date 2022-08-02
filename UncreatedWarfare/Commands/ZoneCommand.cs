@@ -31,7 +31,7 @@ public class ZeCommand : Command
         if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             comp.EditCommand(ctx);
         else
-            ctx.Reply("zone_syntax");
+            ctx.SendUnknownError();
     }
 }
 
@@ -87,7 +87,7 @@ public class ZoneCommand : Command
                 ctx.Offset = 0;
             }
             else
-                throw ctx.Reply("zone_syntax");
+                throw ctx.SendUnknownError();
         }
         else if (ctx.MatchParameter(0, "create", "c"))
         {
@@ -102,7 +102,7 @@ public class ZoneCommand : Command
                 ctx.Offset = 0;
             }
             else
-                throw ctx.Reply("zone_syntax");
+                throw ctx.SendUnknownError();
         }
         else if (ctx.MatchParameter(0, "delete", "remove", "d"))
         {
@@ -117,7 +117,7 @@ public class ZoneCommand : Command
                 ctx.Offset = 0;
             }
             else
-                throw ctx.Reply("zone_syntax");
+                throw ctx.SendUnknownError();
         }
         else if (ctx.MatchParameter(0, "util", "u", "tools"))
         {
@@ -132,9 +132,9 @@ public class ZoneCommand : Command
                 ctx.Offset = 0;
             }
             else
-                throw ctx.Reply("zone_syntax");
+                throw ctx.SendUnknownError();
         }
-        else throw ctx.Reply("zone_syntax");
+        else throw ctx.SendCorrectUsage(SYNTAX);
     }
     private void Visualize(CommandInteraction ctx)
     {
@@ -148,7 +148,7 @@ public class ZoneCommand : Command
             zone = GetZone(plpos);
         }
 
-        if (zone == null) throw ctx.Reply("zone_visualize_no_results");
+        if (zone == null) throw ctx.Reply(T.ZoneNoResults);
 
         Vector2[] points = zone.GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center);
         CSteamID channel = ctx.Caller.Player.channel.owner.playerID.steamID;
@@ -177,7 +177,7 @@ public class ZoneCommand : Command
                 F.TriggerEffectReliable(ZonePlayerComponent._airdrop!.id, channel, pos);
         }
         ctx.Caller.Player.StartCoroutine(ClearPoints(ctx.Caller));
-        ctx.Reply("zone_visualize_success", (points.Length + corners.Length + 1).ToString(Data.Locale), zone.Name);
+        ctx.Reply(T.ZoneVisualizeSuccess, points.Length + corners.Length + 1, zone);
     }
     private IEnumerator<WaitForSeconds> ClearPoints(UCPlayer player)
     {
@@ -209,12 +209,12 @@ public class ZoneCommand : Command
             zone = GetZone(plpos);
         }
 
-        if (zone == null) throw ctx.Reply("zone_go_no_results");
+        if (zone == null) throw ctx.Reply(T.ZoneNoResultsName);
 
         if (Physics.Raycast(new Ray(new Vector3(zone.Center.x, Level.HEIGHT, zone.Center.y), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
         {
             ctx.Caller.Player.teleportToLocationUnsafe(hit.point, 0);
-            ctx.Reply("zone_go_success", zone.Name);
+            ctx.Reply(T.ZoneGoSuccess, zone);
             ctx.LogAction(EActionLogType.TELEPORT, zone.Name.ToUpper());
         }
     }

@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using SDG.Framework.Utilities;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -80,7 +81,7 @@ internal static class T
     private const string SECTION_FLAGS = "Flags";
         [TranslationData(Section = SECTION_FLAGS,
         Description = "The caller of a command isn't on team 1 or 2.", LegacyTranslationId = "gamemode_flag_not_on_cap_team")]
-    public static readonly Translation NotOnCaptureTeam = new Translation(ERROR_COLOR + "You're not on a team that can capture flags.");
+    public static readonly Translation NotOnCaptureTeam = new Translation(ERROR_COLOR + "You're not on a valid team.");
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent when the player enters the capture radius of an active flag.", LegacyTranslationId = "entered_cap_radius", FormattingDescriptions = new string[] { "Objective in question" })]
@@ -484,7 +485,7 @@ internal static class T
         [TranslationData(Section = SECTION_GROUP, Description = "Output from /group join <id> when the player is already in that group.", LegacyTranslationId = "joined_already_in_group")]
     public static readonly Translation AlreadyInGroup       = new Translation(ERROR_COLOR + "You are already in that group.");
         [TranslationData(Section = SECTION_GROUP, Description = "Output from /group join <id> when the group is not found.", LegacyTranslationId = "joined_group_not_found")]
-    public static readonly Translation<ulong> GroupNotFound = new Translation<ulong>(ERROR_COLOR + "Could not find group <#4785ff>{0}</color>.");
+    public static readonly Translation<string> GroupNotFound = new Translation<string>(ERROR_COLOR + "Could not find group <#4785ff>{0}</color>.");
     #endregion
 
     #region LangCommand
@@ -583,7 +584,7 @@ internal static class T
 
     #region Orders
     public static readonly Translation OrderUsageAll                = new Translation("<#9fa1a6>To give orders: <#9dbccf>/order <squad> <type></color>. Type <#d1bd90>/order actions</color> to see a list of actions.");
-    public static readonly Translation OrderUsageNoAction    = new Translation("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase><squad name></lowercase> <action></color>.", Squad.NAME_FORMAT);
+    public static readonly Translation OrderUsageNoAction    = new Translation("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase><squad name></lowercase> <action></color>.");
     public static readonly Translation<Squad> OrderUsageBadAction   = new Translation<Squad>("<#9fa1a6>Try typing: <#9dbccf>/order <lowercase>{0}</lowercase> <b><action></b></color>. Type <#d1bd90>/order actions</color> to see a list of actions.", Squad.NAME_FORMAT);
     public static readonly Translation<string> OrderActions         = new Translation<string>("<#9fa1a6>Order actions: <#9dbccf>{0}</color>.");
     public static readonly Translation<string> OrderSquadNoExist    = new Translation<string>(ERROR_COLOR + "There is no friendly <lowercase><#c$neutral$>{0}</color></lowercase> squad.");
@@ -604,7 +605,7 @@ internal static class T
     public static readonly Translation<IPlayer> OrderUICommander             = new Translation<IPlayer>("Orders from <#a7becf>{0}</color>:", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT);
     public static readonly Translation<Order> OrderUIMessage                 = new Translation<Order>("{0}", TranslationFlags.UnityUI, Order.MESSAGE_FORMAT);
     public static readonly Translation<TimeSpan> OrderUITimeLeft             = new Translation<TimeSpan>("- {0}m left", TranslationFlags.UnityUI, "%m");
-    public static readonly Translation<int> OrderUIReward                    = new Translation<int>("- Reward: {0} XP", TranslationFlags.UnityUI);
+    public static readonly Translation<string> OrderUIReward                 = new Translation<string>("- Reward: {0}", TranslationFlags.UnityUI);
     public static readonly Translation<IObjective> OrderUIAttackObjective    = new Translation<IObjective>("Attack your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
     public static readonly Translation<IObjective> OrderUIAttackFlag         = new Translation<IObjective>("Attack: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
     public static readonly Translation<IObjective> OrderUIDefendObjective    = new Translation<IObjective>("Defend your objective: {0}.", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
@@ -658,6 +659,7 @@ internal static class T
     public static readonly Translation BuildNotInRadius        = new Translation("<#ffab87>This can only be placed inside <#cedcde>FOB RADIUS</color>.");
     public static readonly Translation BuildTickNotInRadius    = new Translation("<#ffab87>There's no longer a friendly FOB nearby.");
     public static readonly Translation<float> BuildSmallRadius = new Translation<float>("<#ffab87>This can only be placed within {0}m of this FOB Radio right now. Expand this range by building a <#cedcde>FOB BUNKER</color>.", "N0");
+    public static readonly Translation BuildLegacyExplanation  = new Translation("<#ffab87>Hit the foundation with your Entrenching Tool to build it.");
     public static readonly Translation<float> BuildNoRadio     = new Translation<float>("<#ffab87>This can only be placed within {0}m of a friendly <#cedcde>FOB RADIO</color>.", "N0");
     public static readonly Translation<BuildableData> BuildStructureExists     = new Translation<BuildableData>("<#ffab87>This FOB can't have any more {0}.", PLURAL);
     public static readonly Translation<BuildableData> BuildTickStructureExists = new Translation<BuildableData>("<#ffab87>Too many {0} have already been built on this FOB.", PLURAL);
@@ -669,6 +671,7 @@ internal static class T
     public static readonly Translation BuildFOBTooCloseToMain  = new Translation("<#ffab87>You can't build a FOB this close to main base.");
     public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
     public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.COLORED_NAME_FORMAT, "F0", "F0");
+    public static readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({1}m away). You must be at least {2}m away to place a new radio.", "F0", "F0");
     public static readonly Translation<FOB, GridLocation, string> FOBUI    = new Translation<FOB, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.NAME_FORMAT);
     public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
     public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
@@ -679,6 +682,7 @@ internal static class T
 
     #region Deploy
     public static readonly Translation<IDeployable> DeploySuccess           = new Translation<IDeployable>("<#fae69c>You have arrived at {0}.", FOB.COLORED_NAME_FORMAT);
+    public static readonly Translation<IDeployable, int> DeployStandby      = new Translation<IDeployable, int>("<#fae69c>Now deploying to {0}. You will arrive in <#eee>{1} seconds</color>", FOB.COLORED_NAME_FORMAT);
     public static readonly Translation<IDeployable> DeployNotSpawnableTick  = new Translation<IDeployable>("<#ffa238>{0} is no longer active.", FOB.COLORED_NAME_FORMAT);
     public static readonly Translation<IDeployable> DeployNotSpawnable      = new Translation<IDeployable>("<#ffa238>{0} is not active.", FOB.COLORED_NAME_FORMAT);
     public static readonly Translation<IDeployable> DeployDestroyed         = new Translation<IDeployable>("<#ffa238>{0} was destroyed.", FOB.COLORED_NAME_FORMAT);
@@ -708,6 +712,7 @@ internal static class T
     public static readonly Translation AmmoNoKit                   = new Translation("<#b3a6a2>You don't have a kit yet. Go request one from the armory in your team's headquarters.");
     public static readonly Translation<Cooldown> AmmoCooldown      = new Translation<Cooldown>("<#b7bab1>More <#cedcde>AMMO</color> arriving in: <color=#de95a8>{0}</color>", Cooldown.SHORT_TIME_FORMAT);
     public static readonly Translation AmmoNotRifleman             = new Translation("<#b7bab1>You must be a <#cedcde>RIFLEMAN</color> in order to place this <#cedcde>AMMO BAG</color>.");
+    public static readonly Translation AmmoNotNearRepairStation    = new Translation("<#b3a6a2>Your vehicle must be next to a <#cedcde>REPAIR STATION</color> in order to rearm.");
     public static readonly Translation<VehicleData, int, int> AmmoResuppliedVehicle = new Translation<VehicleData, int, int>("<#d1bda7>Resupplied {0}. Consumed: <#d97568>{1} AMMO</color> <#948f8a>({2} left)</color>.", VehicleData.COLORED_NAME);
     public static readonly Translation<VehicleData, int> AmmoResuppliedVehicleMain  = new Translation<VehicleData, int>("<#d1bda7>Resupplied {0}. Consumed: <#d97568>{1} AMMO</color>.", VehicleData.COLORED_NAME);
     public static readonly Translation<VehicleData> AmmoVehicleCantRearm            = new Translation<VehicleData>("<#d1bda7>{0} can't be resupplied.", VehicleData.COLORED_NAME + PLURAL);
@@ -868,28 +873,31 @@ internal static class T
     #region Request
     public static readonly Translation<Kit> RequestSignSaved = new Translation<Kit>("<#a4baa9>Saved kit: <#ffebbd>{0}</color>.", Kit.ID_FORMAT);
     public static readonly Translation<Kit> RequestSignRemoved = new Translation<Kit>("<#a8918a>Removed kit sign: <#ffebbd>{0}</color>.", Kit.ID_FORMAT);
+    public static readonly Translation<EClass> RequestSignGiven = new Translation<EClass>("<#a8918a>You have been allocated a <#cedcde>{0}</color>.");
     public static readonly Translation RequestNoTarget = new Translation("<#a4baa9>You must be looking at a request sign or vehicle.");
     public static readonly Translation RequestSignAlreadySaved = new Translation("<#a4baa9>That sign is already saved.");
     public static readonly Translation RequestSignNotSaved = new Translation("<#a4baa9>That sign is not saved.");
     public static readonly Translation<int> RequestKitBought = new Translation<int>("<#c4a36a>Kit bought for <#c$credits$>C </color><#ffffff>{0}</color>. Request it with '<#b3b0ab>/request</color>'.");
     public static readonly Translation RequestKitNotRegistered = new Translation("<#a8918a>This kit has not been created yet.");
-    public static readonly Translation RequestKitAlreadyEquipped = new Translation("<#a8918a>You already have this kit.");
-    public static readonly Translation RequestMissingAccess = new Translation("<#a8918a>You already have this kit.");
-    public static readonly Translation<int> RequestNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#c$credits$>C </color><#ffffff>{0}</color>.");
+    public static readonly Translation RequestKitAlreadyOwned = new Translation("<#a8918a>You already have this kit.");
+    public static readonly Translation RequestKitMissingAccess = new Translation("<#a8918a>You don't have access to this kit.");
+    public static readonly Translation<int> RequestKitNotBought = new Translation<int>("<#99918d>Look at this sign and type '<#ffe2ab>/buy</color>' to unlock this kit permanently for <#c$credits$>C </color><#ffffff>{0}</color>.");
     public static readonly Translation<int, int> RequestKitCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to unlock this kit.");
     public static readonly Translation RequestNotBuyable = new Translation("<#a8918a>This kit cannot be purchased with credits.");
     public static readonly Translation<int> RequestKitLimited = new Translation<int>("<#a8918a>Your team already has a max of <#d9e882>{0}</color> players using this kit. Try again later.");
-    public static readonly Translation<RankData> RequestKitLowLevel = new Translation<RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to use this kit.", RankData.NAME_FORMAT);
+    public static readonly Translation<string> RequestKitLowLevel = new Translation<string>("<#b3ab9f>You must be <#ffc29c>{0}</color> to use this kit.", RankData.NAME_FORMAT);
+    public static readonly Translation<Ranks.RankData> RequestKitLowRank = new Translation<Ranks.RankData>("<#b3ab9f>You must be {0} to use this kit.", Ranks.RankData.COLOR_NAME_FORMAT);
     public static readonly Translation<QuestAsset> RequestKitQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this kit.", BaseQuestData.COLOR_QUEST_ASSET_FORMAT);
     public static readonly Translation RequestKitNotSquadleader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to get this kit.");
     public static readonly Translation RequestLoadoutNotOwned = new Translation("<#a8918a>You do not own this loadout.");
     public static readonly Translation<int, int> RequestVehicleCantAfford = new Translation<int, int>("<#a8918a>You are missing <#c$credits$>C </color><#ffffff>{0}</color> / <#c$credits$>C </color><#ffffff>{1}</color> needed to request this vehicle.");
     public static readonly Translation<Cooldown> RequestVehicleCooldown = new Translation<Cooldown>("<#b3ab9f>This vehicle can't be requested for another: <#ffe2ab>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
+    public static readonly Translation RequestVehicleNotSquadLeader = new Translation("<#b3ab9f>You must be a <#cedcde>SQUAD LEADER</color> in order to request this vehicle.");
     public static readonly Translation RequestVehicleNotInSquad = new Translation("<#b3ab9f>You must be <#cedcde>IN A SQUAD</color> in order to request this vehicle.");
     public static readonly Translation RequestVehicleNoKit = new Translation("<#a8918a>Get a kit before you request vehicles.");
     public static readonly Translation<FactionInfo> RequestVehicleOtherTeam = new Translation<FactionInfo>("<#a8918a>You must be on {0} to request this vehicle.", FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
     public static readonly Translation<EClass> RequestVehicleWrongClass = new Translation<EClass>("<#b3ab9f>You need a <#cedcde><uppercase>{0}</uppercase></color> kit in order to request this vehicle.");
-    public static readonly Translation<RankData> RequestVehicleMissingLevels = new Translation<RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.");
+    public static readonly Translation<string> RequestVehicleMissingLevels = new Translation<string>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.");
     public static readonly Translation<Ranks.RankData> RequestVehicleRankIncomplete = new Translation<Ranks.RankData>("<#b3ab9f>You must be <#ffc29c>{0}</color> to request this vehicle.", Ranks.RankData.COLOR_NAME_FORMAT);
     public static readonly Translation<QuestAsset> RequestVehicleQuestIncomplete = new Translation<QuestAsset>("<#b3ab9f>You have to complete {0} to request this vehicle.", BaseQuestData.COLOR_QUEST_ASSET_FORMAT);
     public static readonly Translation<IPlayer> RequestVehicleAlreadyRequested = new Translation<IPlayer>("<#a8918a>This vehicle was already requested by {0}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
@@ -919,21 +927,23 @@ internal static class T
     public static readonly Translation<Structures.Structure> StructureSaved = new Translation<Structures.Structure>("<#e6e3d5>Saved <#c6d4b8>{0}</color>.");
     public static readonly Translation<Structures.Structure> StructureAlreadySaved = new Translation<Structures.Structure>("<#e6e3d5><#c6d4b8>{0}</color> is already saved.");
     public static readonly Translation<Structures.Structure> StructureUnsaved = new Translation<Structures.Structure>("<#e6e3d5>Removed <#c6d4b8>{0}</color> save.");
-    public static readonly Translation<Structures.Structure> StructureAlreadyUnsaved = new Translation<Structures.Structure>("<#ff8c69><#c6d4b8>{0}</color> is not saved.");
-    public static readonly Translation<ItemAsset> StructureDestroyed = new Translation<ItemAsset>("<#e6e3d5>Destroyed <#c6d4b8>{0}</color>.");
+    public static readonly Translation<ItemAsset> StructureAlreadyUnsaved = new Translation<ItemAsset>("<#ff8c69><#c6d4b8>{0}</color> is not saved.");
+    public static readonly Translation<Asset> StructureDestroyed = new Translation<Asset>("<#e6e3d5>Destroyed <#c6d4b8>{0}</color>.");
     public static readonly Translation StructureNotDestroyable = new Translation("<#ff8c69>That object can not be destroyed.");
     public static readonly Translation StructureExamineNotExaminable = new Translation("<#ff8c69>That object can not be examined.");
     public static readonly Translation StructureExamineNotLocked = new Translation("<#ff8c69>This vehicle is not locked.");
-    public static readonly Translation<Asset, IPlayer, FactionInfo> StructureExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo>("Last owner of {0}: {1}, Team: {2}.", arg1Fmt: UCPlayer.PLAYER_NAME_FORMAT, arg2Fmt: FactionInfo.DISPLAY_NAME_FORMAT);
-    public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> StructureExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Last owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", RARITY_COLOR_FORMAT, arg1Fmt: UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: UCPlayer.STEAM_64_FORMAT, arg3Fmt: FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
+    public static readonly Translation<Asset, IPlayer, FactionInfo> StructureExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo>("Last owner of {0}: {1}, Team: {2}.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, arg1Fmt: UCPlayer.PLAYER_NAME_FORMAT, arg2Fmt: FactionInfo.DISPLAY_NAME_FORMAT);
+    public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> StructureExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Last owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, RARITY_COLOR_FORMAT, arg1Fmt: UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: UCPlayer.STEAM_64_FORMAT, arg3Fmt: FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
     #endregion
 
     #region Whitelist
     public static readonly Translation<ItemAsset> WhitelistAdded = new Translation<ItemAsset>("<#a0ad8e>Whitelisted item: {0}.", RARITY_COLOR_FORMAT);
+    public static readonly Translation<ItemAsset, int> WhitelistSetAmount = new Translation<ItemAsset, int>("<#a0ad8e>Amount for whitelisted item: {0} set to {1}.", RARITY_COLOR_FORMAT);
     public static readonly Translation<ItemAsset> WhitelistRemoved = new Translation<ItemAsset>("<#a0ad8e>Removed whitelist for: {0}.", RARITY_COLOR_FORMAT);
     public static readonly Translation<ItemAsset> WhitelistAlreadyAdded = new Translation<ItemAsset>("<#ff8c69>{0} is already whitelisted.", RARITY_COLOR_FORMAT);
     public static readonly Translation<ItemAsset> WhitelistAlreadyRemoved = new Translation<ItemAsset>("<#ff8c69>{0} is not whitelisted.", RARITY_COLOR_FORMAT);
     public static readonly Translation<string> WhitelistItemNotID = new Translation<string>("<#ff8c69><uppercase>{0}</uppercase> couldn't be read as an <#cedcde>ITEM ID</color>.");
+    public static readonly Translation<string> WhitelistMultipleResults = new Translation<string>("<#ff8c69><uppercase>{0}</uppercase> found multiple results, please narrow your search or use an <#cedcde>ITEM ID</color>.");
     public static readonly Translation<string> WhitelistInvalidAmount = new Translation<string>("<#ff8c69><uppercase>{0}</uppercase> couldn't be read as a <#cedcde>AMOUNT</color> (1-250).");
     public static readonly Translation<ItemAsset> WhitelistProhibitedPickup = new Translation<ItemAsset>("<#ff8c69>{0} can't be picked up.", RARITY_COLOR_FORMAT + PLURAL);
     public static readonly Translation<ItemAsset> WhitelistProhibitedSalvage = new Translation<ItemAsset>("<#ff8c69>{0} can't be salvaged.", RARITY_COLOR_FORMAT + PLURAL);
@@ -1151,14 +1161,15 @@ internal static class T
     public static readonly Translation<IPlayer> ReportDiscordNotLinked = new Translation<IPlayer>("<#9cffb3>Your account must be linked in our Discord server to use this command. Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", UCPlayer.COLOR_STEAM_64_FORMAT);
     public static readonly Translation ReportPlayerNotFound = new Translation("<#9cffb3>Unable to find a player with that name, you can use their <color=#ffffff>Steam64 ID</color> instead, as names are only stored until they've been offline for 20 minutes.");
     public static readonly Translation ReportUnknownError = new Translation("<#9cffb3>Unable to generate a report for an unknown reason, check your syntax again with <color=#ffffff>/report help</color>.");
-    public static readonly Translation<IPlayer, string, EReportType> ReportSuccessMessage1 = new Translation<IPlayer, string, EReportType>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report.", UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, string, string> ReportSuccessMessage1 = new Translation<IPlayer, string, string>("<#c480d9>Successfully reported {0} for <#fff>{1}</color> as a <#00ffff>{2}</color> report.", UCPlayer.CHARACTER_NAME_FORMAT);
     public static readonly Translation ReportSuccessMessage2 = new Translation("<#c480d9>If possible please post evidence in <#ffffff>#player-reports</color> in our <#7483c4>Discord</color> server.");
-    public static readonly Translation<IPlayer, IPlayer, string, EReportType> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, EReportType>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report.\nCheck <#c480d9>#player-reports</color> for more information.", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer, IPlayer, string, string> ReportNotifyAdmin = new Translation<IPlayer, IPlayer, string, string>("<#c480d9>{0} reported {1} for <#fff>{2}</color> as a <#00ffff>{3}</color> report.\nCheck <#c480d9>#player-reports</color> for more information.", TranslationFlags.UnityUI, UCPlayer.CHARACTER_NAME_FORMAT, UCPlayer.CHARACTER_NAME_FORMAT);
     public static readonly Translation<string> ReportNotifyViolatorToast = new Translation<string>("<#c480d9>You've been reported for <#00ffff>{0}</color>.\nCheck <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.", TranslationFlags.UnityUI);
-    public static readonly Translation<EReportType, string> ReportNotifyViolatorMessage1 = new Translation<EReportType, string>("<#c480d9>You've been reported for <#00ffff>{0} - {1}</color>.");
+    public static readonly Translation<string, string> ReportNotifyViolatorMessage1 = new Translation<string, string>("<#c480d9>You've been reported for <#00ffff>{0} - {1}</color>.");
     public static readonly Translation ReportNotifyViolatorMessage2 = new Translation("<#c480d9>Check <#fff>#player-reports</color> in our <#7483c4>Discord</color> (/discord) for more information and to defend yourself.");
     public static readonly Translation<IPlayer> ReportCooldown = new Translation<IPlayer>("<#9cffb3>You've already reported {0} in the past hour.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation<ulong, IPlayer> ReportConfirm = new Translation<ulong, IPlayer>("<#c480d9>Did you mean to report {1} <i><#444>{0}</color></i>? Type <#ff8c69>/confirm</color> to continue.", arg1Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation ReportCancelled = new Translation("<#ff8c69>You didn't confirm your report in time.");
     public static readonly Translation ReportNotConnected = new Translation("<#ff8c69>The report system is not available right now, please try again later.");
     #endregion
 

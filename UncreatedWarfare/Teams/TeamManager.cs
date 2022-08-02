@@ -345,6 +345,13 @@ public static class TeamManager
         if (team == 3) return AdminFaction;
         throw new ArgumentOutOfRangeException(nameof(team));
     }
+    public static FactionInfo? GetFactionSafe(ulong team)
+    {
+        if (team == 1) return Team1Faction;
+        if (team == 2) return Team2Faction;
+        if (team == 3) return AdminFaction;
+        return null;
+    }
     internal static void ResetLocations()
     {
         _t1main = null;

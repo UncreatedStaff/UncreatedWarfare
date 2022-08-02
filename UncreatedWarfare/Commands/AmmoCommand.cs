@@ -31,10 +31,10 @@ public class AmmoCommand : Command
             ctx.AssertGamemode<IVehicles>();
 
             if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
-                throw ctx.Reply("ammo_vehicle_cant_rearm");
+                throw ctx.Reply(T.AmmoVehicleCantRearm);
 
             if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
-                throw ctx.Reply("ammo_auto_resupply");
+                throw ctx.Reply(T.AmmoAutoSupply);
 
             bool isInMain = F.IsInMain(vehicle.transform.position);
             if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
@@ -46,19 +46,19 @@ public class AmmoCommand : Command
                 false).FirstOrDefault();
 
                 if (repairStation == null)
-                    throw ctx.Reply("ammo_not_near_repair_station");
+                    throw ctx.Reply(T.AmmoNotNearRepairStation);
             }
 
             FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
 
             if (fob == null && !isInMain)
-                throw ctx.Reply("ammo_not_near_fob");
+                throw ctx.Reply(T.AmmoNotNearFOB);
 
             if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
-                throw ctx.Reply("ammo_not_enough_stock", fob.Ammo.ToString(Data.Locale), vehicleData.RearmCost.ToString(Data.Locale));
+                throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, vehicleData.RearmCost);
 
             if (vehicleData.Items.Length == 0)
-                throw ctx.Reply("ammo_vehicle_full_already");
+                throw ctx.Reply(T.AmmoVehicleFullAlready);
 
             EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
 
@@ -69,12 +69,12 @@ public class AmmoCommand : Command
             if (!isInMain)
             {
                 fob!.ReduceAmmo(vehicleData.RearmCost);
-                ctx.Reply("ammo_success_vehicle", vehicleData.RearmCost.ToString(Data.Locale), fob.Ammo.ToString());
+                ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.Ammo);
                 ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE");
             }
             else
             {
-                ctx.Reply("ammo_success_vehicle_main", vehicleData.RearmCost.ToString(Data.Locale));
+                ctx.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
                 ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN");
             }
         }
@@ -83,10 +83,10 @@ public class AmmoCommand : Command
             ctx.AssertGamemode<IKitRequests>();
 
             if (!ctx.Caller.IsTeam1() && !ctx.Caller.IsTeam2())
-                throw ctx.Reply("ammo_not_in_team");
+                throw ctx.Reply(T.NotOnCaptureTeam);
 
             if (!KitManager.HasKit(ctx.Caller.Steam64, out Kit kit))
-                throw ctx.Reply("ammo_no_kit");
+                throw ctx.Reply(T.AmmoNoKit);
 
             int ammoCost = ctx.Caller.KitClass switch
             {
@@ -111,13 +111,13 @@ public class AmmoCommand : Command
                     if (F.IsInMain(barricade.model.transform.position))
                         isInMain = true;
                     else
-                        throw ctx.Reply("ammo_not_near_fob");
+                        throw ctx.Reply(T.AmmoNotNearFOB);
                 }
                 if (isInMain && FOBManager.Config.AmmoCommandCooldown > 0 && CooldownManager.HasCooldown(ctx.Caller, ECooldownType.AMMO, out Cooldown cooldown))
-                    throw ctx.Reply("ammo_cooldown", cooldown.ToString());
+                    throw ctx.Reply(T.AmmoCooldown, cooldown);
 
                 if (!isInMain && fob.Ammo < ammoCost)
-                    throw ctx.Reply("ammo_not_enough_stock", fob.Ammo.ToString(), ammoCost.ToString());
+                    throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, ammoCost);
 
                 WipeDroppedItems(ctx.CallerID);
                 KitManager.ResupplyKit(ctx.Caller, kit);
@@ -126,7 +126,7 @@ public class AmmoCommand : Command
 
                 if (isInMain)
                 {
-                    ctx.Reply("ammo_success_main", ammoCost.ToString());
+                    ctx.Reply(T.AmmoResuppliedKitMain, ammoCost);
                     ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR KIT IN MAIN");
 
                     if (FOBManager.Config.AmmoCommandCooldown > 0)
@@ -136,7 +136,7 @@ public class AmmoCommand : Command
                 {
                     fob.ReduceAmmo(1);
                     ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BOX");
-                    ctx.Reply("ammo_success", ammoCost.ToString(), fob.Ammo.ToString());
+                    ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.Ammo);
                 }
 
             }
@@ -145,7 +145,7 @@ public class AmmoCommand : Command
                 if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
                 {
                     if (ammobag.Ammo < ammoCost)
-                        throw ctx.Reply("ammo_not_enough_stock", ammobag.Ammo.ToString(), ammoCost.ToString());
+                        throw ctx.Reply(T.AmmoOutOfStock, ammobag.Ammo, ammoCost);
 
                     ammobag.ResupplyPlayer(ctx.Caller, kit, ammoCost);
 
@@ -153,14 +153,14 @@ public class AmmoCommand : Command
                     ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BAG");
 
                     WipeDroppedItems(ctx.CallerID);
-                    ctx.Reply("ammo_success", ammoCost.ToString(), ammobag.Ammo.ToString());
+                    ctx.Reply(T.AmmoResuppliedKit, ammoCost, ammobag.Ammo);
                 }
                 else
                     L.LogError("ERROR: Missing AmmoBagComponent on an ammo bag");
             }
-            else throw ctx.Reply("ammo_error_nocrate");
+            else throw ctx.Reply(T.AmmoNoTarget);
         }
-        else throw ctx.Reply("ammo_error_nocrate");
+        else throw ctx.Reply(T.AmmoNoTarget);
     }
     internal static void WipeDroppedItems(ulong player)
     {

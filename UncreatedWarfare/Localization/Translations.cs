@@ -381,7 +381,7 @@ public class Translation
             Type t = typeof(T);
             DynamicMethod dm;
             ILGenerator il;
-            if (typeof(IComparable<>).MakeGenericType(t).IsAssignableFrom(t))
+            if (t == typeof(decimal) || (t.IsPrimitive && t != typeof(char) && t != typeof(bool)))
             {
                 if (t.IsPrimitive)
                 {
@@ -396,6 +396,8 @@ public class Translation
                         il.Emit(OpCodes.Ldc_R4, 1f);
                     else if (t == typeof(double))
                         il.Emit(OpCodes.Ldc_R8, 1d);
+                    else if (t == typeof(long) || t == typeof(ulong))
+                        il.Emit(OpCodes.Ldc_I8, 1);
                     else
                         il.Emit(OpCodes.Ldc_I4_S, 1);
                     il.Emit(OpCodes.Ceq);
@@ -1198,7 +1200,10 @@ public class Translation
                 {
                     int ind2 = fmt.LastIndexOf('{', fmt.Length - 2);
                     if (ind2 < fmt.Length - 4 || ind2 > fmt.Length - 3)
+                    {
+                        val = short.MaxValue;
                         return;
+                    }
                     if (int.TryParse(fmt.Substring(ind2 + 1, ind2 + 4 - fmt.Length), NumberStyles.Number, Warfare.Data.Locale, out int num))
                     {
                         fmt = fmt.Substring(0, ind1);
@@ -1262,7 +1267,7 @@ public enum TranslationFlags
     NoPlural = 8192,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent in chat.</summary>
     ForChat = 16384,
-    /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent in chat.</summary>
+    /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent on a sign.</summary>
     ForSign = 32768,
 }
 

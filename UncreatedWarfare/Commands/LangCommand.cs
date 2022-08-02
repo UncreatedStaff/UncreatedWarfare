@@ -32,7 +32,7 @@ public class LangCommand : Command
                 LanguageAliasSet aliases = setData.Value;
                 sb.Append(" : ").Append(aliases.display_name);
             }
-            ctx.Reply("language_list", sb.ToString());
+            ctx.Reply(T.LanguageList, sb.ToString());
         }
         else if (ctx.MatchParameter(0, "current"))
         {
@@ -43,7 +43,7 @@ public class LangCommand : Command
             if (!Data.LanguageAliases.TryGetValue(langCode, out LanguageAliasSet set))
                 set = new LanguageAliasSet(langCode, langCode, Array.Empty<string>());
 
-            ctx.Reply("language_current", $"{set.display_name} : {set.key}");
+            ctx.Reply(T.LanguageCurrent, set);
         }
         else if (ctx.MatchParameter(0, "reset"))
         {
@@ -58,15 +58,15 @@ public class LangCommand : Command
                     oldSet = new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
 
                 if (oldLang == L.DEFAULT)
-                    throw ctx.Reply("reset_language_not_needed", set.display_name);
+                    throw ctx.Reply(T.LangAlreadySet, set);
 
                 JSONMethods.SetLanguage(ctx.CallerID, L.DEFAULT);
                 ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + L.DEFAULT);
                 if (OnPlayerChangedLanguage != null)
                     OnPlayerChangedLanguage.Invoke(ctx.Caller, set, oldSet);
-                ctx.Reply("reset_language", set.display_name);
+                ctx.Reply(T.ResetLanguage, set);
             }
-            else throw ctx.Reply("reset_language_not_needed", set.display_name);
+            else throw ctx.Reply(T.LangAlreadySet, set);
         }
         else if (ctx.TryGetRange(0, out string input) && !string.IsNullOrWhiteSpace(input))
         {
@@ -112,17 +112,17 @@ public class LangCommand : Command
             if (found)
             {
                 if (newSet.key.Equals(oldLang, StringComparison.OrdinalIgnoreCase))
-                    throw ctx.Reply("change_language_not_needed", oldSet.display_name);
+                    throw ctx.Reply(T.LangAlreadySet, oldSet);
 
                 JSONMethods.SetLanguage(ctx.CallerID, newSet.key);
                 ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + newSet.key);
                 if (OnPlayerChangedLanguage != null)
                     OnPlayerChangedLanguage.Invoke(ctx.Caller, newSet, oldSet);
-                ctx.Reply("changed_language", newSet.display_name);
+                ctx.Reply(T.ChangedLanguage, newSet);
             }
-            else throw ctx.Reply("dont_have_language", input);
+            else throw ctx.Reply(T.LanguageNotFound, input);
         }
-        else throw ctx.Reply("reset_language_how");
+        else throw ctx.Reply(T.ResetLanguageHow);
     }
 }
 public delegate void LanguageChanged(UCPlayer player, LanguageAliasSet newLanguage, LanguageAliasSet oldLanguage);

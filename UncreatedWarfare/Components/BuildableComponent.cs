@@ -60,7 +60,7 @@ public class BuildableComponent : MonoBehaviour
         FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL, Foundation.GetServersideData().group.GetTeam());
         if (fob == null && Buildable.Type != EBuildableType.RADIO && (builder.KitClass is not EClass.COMBAT_ENGINEER || Buildable.Type is not EBuildableType.FORTIFICATION))
         {
-            builder.SendChat("build_error_tick_notinradius");
+            builder.SendChat(T.BuildTickNotInRadius);
             return;
         }
         switch (Buildable.Type)
@@ -68,14 +68,14 @@ public class BuildableComponent : MonoBehaviour
             case EBuildableType.FOB_BUNKER:
                 if (fob!.Bunker != null)
                 {
-                    builder.SendChat("build_error_tick_structureexists", Localization.TranslateEnum(EBuildableType.FOB_BUNKER, builder));
+                    builder.SendChat(T.BuildTickStructureExists, Buildable);
                     return;
                 }
                 break;
             case EBuildableType.REPAIR_STATION:
                 if (fob!.RepairStation != null)
                 {
-                    builder.SendChat("build_error_tick_structureexists", Localization.TranslateEnum(EBuildableType.REPAIR_STATION, builder));
+                    builder.SendChat(T.BuildTickStructureExists, Buildable);
                     return;
                 }
                 break;
@@ -83,9 +83,7 @@ public class BuildableComponent : MonoBehaviour
                 if (Buildable.Emplacement == null ||
                     UCVehicleManager.CountNearbyVehicles(Buildable.Emplacement.EmplacementVehicle.Guid, fob!.Radius, fob!.Position) >= Buildable.Emplacement.MaxFobCapacity)
                 {
-                    builder.SendChat("build_error_tick_structureexists", 
-                        Buildable.Emplacement == null ? Localization.TranslateEnum(EBuildableType.EMPLACEMENT, builder) :
-                            (Buildable.Emplacement!.EmplacementVehicle.Asset?.vehicleName ?? Localization.TranslateEnum(EBuildableType.EMPLACEMENT, builder)));
+                    builder.SendChat(T.BuildTickStructureExists, Buildable);
                     return;
                 }
                 break;
@@ -259,39 +257,39 @@ public class BuildableComponent : MonoBehaviour
 
         Destroy(this);
     }
-    public static bool TryPlaceRadio(Barricade radio, UCPlayer placer, Vector3 point)
+    public static bool TryPlaceRadio(Barricade radio, UCPlayer? placer, Vector3 point)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = placer.GetTeam();
+        ulong team = placer == null ? 0 : placer.GetTeam();
         float radius = FOBManager.Config.FOBBuildPickupRadius;
 
         if (FOBManager.Config.RestrictFOBPlacement)
         {
             if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
             {
-                placer?.Message("no_placement_fobs_underwater");
+                placer?.SendChat(T.BuildFOBUnderwater);
                 return false;
             }
             else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.Config.FOBMaxHeightAboveTerrain)
             {
-                placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.Config.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                placer?.SendChat(T.BuildFOBTooHigh, FOBManager.Config.FOBMaxHeightAboveTerrain);
                 return false;
             }
             else if (Data.Gamemode is TeamGamemode && TeamManager.IsInAnyMainOrAMCOrLobby(point))
             {
-                placer?.Message("no_placement_fobs_too_near_base");
+                placer?.SendChat(T.BuildFOBTooCloseToMain);
                 return false;
             }
         }
         if (FOB.GetFOBs(team).Count >= FOBManager.Config.FobLimit)
         {
             // fob limit reached
-            placer?.Message("build_error_too_many_fobs");
+            placer?.SendChat(T.BuildMaxFOBsHit);
             return false;
         }
-        if (!placer.OnDuty())
+        if (placer == null || !placer.OnDuty())
         {
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             VehicleManager.getVehiclesInRadius(point, Mathf.Pow(30, 2), vehicles);
@@ -301,7 +299,7 @@ public class BuildableComponent : MonoBehaviour
             if (logis == 0)
             {
                 // no logis nearby
-                placer?.Message("fob_error_nologi");
+                placer?.SendChat(T.BuildNoLogisticsVehicle);
                 return false;
             }
         }
@@ -310,7 +308,7 @@ public class BuildableComponent : MonoBehaviour
         if (nearbyFOB != null)
         {
             // another FOB radio is too close
-            placer?.Message("fob_error_fobtooclose", Math.Round((nearbyFOB.Position - point).magnitude).ToString(), Math.Round(radius * 2).ToString());
+            placer?.SendChat(T.BuildFOBTooClose, nearbyFOB, (nearbyFOB.Position - point).magnitude, radius * 2f);
             return false;
         }
 
@@ -331,30 +329,30 @@ public class BuildableComponent : MonoBehaviour
             {
                 if (SDG.Framework.Water.WaterUtility.isPointUnderwater(point))
                 {
-                    placer?.Message("no_placement_fobs_underwater");
+                    placer?.SendChat(T.BuildFOBUnderwater);
                     return false;
                 }
                 else if (point.y > F.GetTerrainHeightAt2DPoint(point.x, point.z) + FOBManager.Config.FOBMaxHeightAboveTerrain)
                 {
-                    placer?.Message("no_placement_fobs_too_high", Mathf.RoundToInt(FOBManager.Config.FOBMaxHeightAboveTerrain).ToString(Data.Locale));
+                    placer?.SendChat(T.BuildFOBTooHigh, FOBManager.Config.FOBMaxHeightAboveTerrain);
                     return false;
                 }
                 else if (Data.Gamemode is ITeams && TeamManager.IsInAnyMainOrAMCOrLobby(point))
                 {
-                    placer?.Message("no_placement_fobs_too_near_base");
+                    placer?.SendChat(T.BuildFOBTooCloseToMain);
                     return false;
                 }
             }
             if (fob == null || (fob.Position - point).sqrMagnitude > Math.Pow(30, 2))
             {
                 // no radio nearby, radio must be within 30m
-                placer?.Message("build_error_noradio", "30");
+                placer?.SendChat(T.BuildNoRadio, 30);
                 return false;
             }
             if (fob.Bunker != null)
             {
                 // this fob already has a bunker
-                placer?.Message("build_error_structureexists", "a", "FOB Bunker");
+                placer?.SendChat(T.BuildStructureExists, buildable);
                 return false;
             }
         }
@@ -366,7 +364,7 @@ public class BuildableComponent : MonoBehaviour
             if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
             {
                 // buildable too close to enemy bunker
-                placer?.Message("build_error_tooclosetoenemybunker");
+                placer?.SendChat(T.BuildBunkerTooClose, (closeEnemyFOB.model.position - point).magnitude, 5f);
                 return false;
             }
 
@@ -375,13 +373,13 @@ public class BuildableComponent : MonoBehaviour
                 if (fob == null)
                 {
                     // no fob nearby
-                    placer?.Message("build_error_notinradius");
+                    placer?.SendChat(T.BuildNotInRadius);
                     return false;
                 }
                 else if ((fob.Position - point).sqrMagnitude > Math.Pow(fob.Radius, 2))
                 {
                     // radius is constrained because there is no bunker
-                    placer?.Message("build_error_radiustoosmall", "30");
+                    placer?.SendChat(T.BuildSmallRadius, fob.Radius);
                     return false;
                 }
             }
@@ -398,7 +396,7 @@ public class BuildableComponent : MonoBehaviour
                     if (existing >= 1)
                     {
                         // repair station already exists
-                        placer?.Message("build_error_structureexists", "a", "Repair Station");
+                        placer?.SendChat(T.BuildStructureExists, buildable);
                         return false;
                     }
                 }
@@ -408,7 +406,7 @@ public class BuildableComponent : MonoBehaviour
                     if (existing >= buildable.Emplacement.MaxFobCapacity)
                     {
                         // max emplacements of this type reached
-                        placer?.Message("build_error_structureexists", buildable.Emplacement.MaxFobCapacity.ToString(), foundation.asset.itemName + (buildable.Emplacement.MaxFobCapacity == 1 ? "" : "s"));
+                        placer?.SendChat(T.BuildStructureExists, buildable);
                         return false;
                     }
                 }
@@ -418,7 +416,7 @@ public class BuildableComponent : MonoBehaviour
         if (fob.Build < buildable.RequiredBuild)
         {
             // not enough build
-            placer?.Message("build_error_notenoughbuild", fob.Build.ToString(), buildable.RequiredBuild.ToString());
+            placer?.SendChat(T.BuildMissingSupplies, fob.Build, buildable.RequiredBuild);
             return false;
         }
 

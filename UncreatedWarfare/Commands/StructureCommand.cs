@@ -42,10 +42,10 @@ public class StructureCommand : Command
             if (ctx.TryGetTarget(out StructureDrop structure))
             {
                 if (StructureSaver.StructureExists(structure.instanceID, EStructType.STRUCTURE, out Structure str))
-                    throw ctx.Reply("structure_saved_already", structure.asset.itemName);
+                    throw ctx.Reply(T.StructureAlreadySaved, str);
                 if (StructureSaver.AddStructure(structure, structure.GetServersideData(), out str))
                 {
-                    ctx.Reply("structure_saved", structure.asset.itemName);
+                    ctx.Reply(T.StructureSaved, str);
                     ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
                         $"{str.type}: {structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {str.transform} ({str.instance_id})");
                 }
@@ -54,16 +54,16 @@ public class StructureCommand : Command
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
                 if (StructureSaver.StructureExists(barricade.instanceID, EStructType.BARRICADE, out Structure str))
-                    throw ctx.Reply("structure_saved_already", barricade.asset.itemName);
+                    throw ctx.Reply(T.StructureAlreadySaved, str);
                 if (StructureSaver.AddStructure(barricade, barricade.GetServersideData(), out str))
                 {
-                    ctx.Reply("structure_saved", barricade.asset.itemName);
+                    ctx.Reply(T.StructureSaved, str);
                     ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
                         $"{str.type}: {barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {str.transform} ({str.instance_id})");
                 }
                 else throw ctx.SendUnknownError();
             }
-            else throw ctx.Reply("structure_not_looking");
+            else throw ctx.Reply(T.StructureNoTarget);
         }
         else if (ctx.MatchParameter(0, "remove", "delete"))
         {
@@ -79,9 +79,9 @@ public class StructureCommand : Command
                     ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
                         $"{str.type}: {structure.asset.itemName} / {structure.asset.id} /" +
                         $" {structure.asset.GUID:N} at {str.transform} ({str.instance_id})");
-                    ctx.Reply("structure_unsaved", structure.asset.itemName);
+                    ctx.Reply(T.StructureUnsaved, str);
                 }
-                else throw ctx.Reply("structure_unsaved_already", structure.asset.itemName);
+                else throw ctx.Reply(T.StructureAlreadyUnsaved, structure.asset);
             }
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
@@ -91,11 +91,11 @@ public class StructureCommand : Command
                     ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
                         $"{str.type}: {barricade.asset.itemName} / {barricade.asset.id} /" +
                         $" {barricade.asset.GUID:N} at {str.transform} ({str.instance_id})");
-                    ctx.Reply("structure_unsaved", barricade.asset.itemName);
+                    ctx.Reply(T.StructureUnsaved, str);
                 }
-                else throw ctx.Reply("structure_unsaved_already", barricade.asset.itemName);
+                else throw ctx.Reply(T.StructureAlreadyUnsaved, barricade.asset);
             }
-            else throw ctx.Reply("structure_not_looking");
+            else throw ctx.Reply(T.StructureNoTarget);
         }
         else if (ctx.MatchParameter(0, "pop", "destroy"))
         {
@@ -108,7 +108,7 @@ public class StructureCommand : Command
                 ctx.LogAction(EActionLogType.POP_STRUCTURE,
                     $"VEHICLE: {vehicle.asset.vehicleName} / {vehicle.asset.id} /" +
                     $" {vehicle.asset.GUID:N} at {vehicle.transform.position:N2} ({vehicle.instanceID})");
-                ctx.Reply("structure_popped", vehicle.asset.vehicleName);
+                ctx.Reply(T.StructureDestroyed, vehicle.asset);
             }
             else if (ctx.TryGetTarget(out StructureDrop structure))
             {
@@ -116,7 +116,7 @@ public class StructureCommand : Command
                 ctx.LogAction(EActionLogType.POP_STRUCTURE,
                     $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
                     $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2")} ({structure.instanceID})");
-                ctx.Defer();
+                ctx.Reply(T.StructureDestroyed, structure.asset);
             }
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
@@ -124,7 +124,6 @@ public class StructureCommand : Command
                 ctx.LogAction(EActionLogType.POP_STRUCTURE,
                     $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
                     $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2")} ({barricade.instanceID})");
-                ctx.Defer();
             }
         }
         else if (ctx.MatchParameter(0, "examine", "exam", "wtf"))
@@ -144,7 +143,7 @@ public class StructureCommand : Command
                 ExamineBarricade(barricade, ctx.Caller, true);
                 ctx.Defer();
             }
-            else throw ctx.Reply("structure_examine_not_examinable");
+            else throw ctx.Reply(T.StructureExamineNotExaminable);
         }
     }
     private void DestroyBarricade(BarricadeDrop bdrop, Player player)
@@ -159,11 +158,11 @@ public class StructureCommand : Command
 
             BarricadeData data = bdrop.GetServersideData();
             BarricadeManager.destroyBarricade(bdrop, x, y, ushort.MaxValue);
-            player.SendChat("structure_popped", data.barricade.asset.itemName);
+            player.SendChat(T.StructureDestroyed, bdrop.asset);
         }
         else
         {
-            player.SendChat("structure_pop_not_poppable");
+            player.SendChat(T.StructureNotDestroyable);
         }
     }
     private void DestroyStructure(StructureDrop sdrop, Player player)
@@ -172,60 +171,34 @@ public class StructureCommand : Command
         {
             StructureData data = sdrop.GetServersideData();
             StructureManager.destroyStructure(sdrop, x, y, Vector3.down);
-            player.SendChat("structure_popped", data.structure.asset.itemName);
+            player.SendChat(T.StructureDestroyed, sdrop.asset);
         }
         else
         {
-            player.SendChat("structure_pop_not_poppable");
+            player.SendChat(T.StructureNotDestroyable);
         }
     }
     private void ExamineVehicle(InteractableVehicle vehicle, Player player, bool sendurl)
     {
         if (vehicle.lockedOwner == default || vehicle.lockedOwner == Steamworks.CSteamID.Nil)
         {
-            player.SendChat("structure_examine_not_locked");
+            player.SendChat(T.StructureExamineNotLocked);
         }
         else
         {
-            if (Data.Gamemode is ITeams)
+            ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
+            if (sendurl)
             {
-                ulong team = vehicle.lockedOwner.m_SteamID.GetTeamFromPlayerSteam64ID();
-                if (team == 0)
-                    team = vehicle.lockedGroup.m_SteamID.GetTeam();
-                string teamname = TeamManager.TranslateName(team, player);
-                if (sendurl)
-                {
-                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _,
-                        Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
-                        F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName, teamname), vehicle.lockedOwner.m_SteamID);
-                }
-                else
-                {
-                    string teamcolor = TeamManager.GetTeamHexColor(team);
-                    player.SendChat("structure_last_owner_chat",
-                        Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
-                        F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName,
-                        vehicle.lockedOwner.m_SteamID.ToString(Data.Locale), teamcolor, teamname, teamcolor);
-                }
-            } 
+                player.channel.owner.SendSteamURL(
+                    T.StructureExamineLastOwnerPrompt.Translate(Data.Languages.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out string lang) ? lang : L.DEFAULT, vehicle.asset,
+                    F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!), vehicle.lockedOwner.m_SteamID);
+            }
             else
             {
-                Player plr = PlayerTool.getPlayer(vehicle.lockedOwner);
-                ulong grp = plr == null ? vehicle.lockedGroup.m_SteamID : plr.quests.groupID.m_SteamID;
-                if (sendurl)
-                {
-                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _,
-                        Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
-                        F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName, grp.ToString()), vehicle.lockedOwner.m_SteamID);
-                }
-                else
-                {
-                    string clr = UCWarfare.GetColorHex("neutral");
-                    player.SendChat("structure_last_owner_chat",
-                        Assets.find(EAssetType.VEHICLE, vehicle.id) is VehicleAsset asset ? asset.vehicleName : vehicle.id.ToString(Data.Locale),
-                        F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID).CharacterName,
-                        vehicle.lockedOwner.m_SteamID.ToString(Data.Locale), clr, grp.ToString(), clr);
-                }
+                player.SendChat(T.StructureExamineLastOwnerChat,
+                    vehicle.asset,
+                    F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID),
+                    new OfflinePlayer(vehicle.lockedOwner.m_SteamID), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!);
             }
         }
     }
@@ -233,46 +206,30 @@ public class StructureCommand : Command
     {
         if (bdrop != null)
         {
-            SDG.Unturned.BarricadeData data = bdrop.GetServersideData();
-            if (data.owner == default || data.owner == 0)
+            BarricadeData data = bdrop.GetServersideData();
+            if (data.owner == 0)
             {
-                player.SendChat("structure_examine_not_examinable");
+                player.SendChat(T.StructureExamineNotExaminable);
                 return;
             }
 
-            if (Data.Gamemode is ITeams)
+            if (sendurl)
             {
-                string teamname = TeamManager.TranslateName(data.group, player);
-                if (sendurl)
-                {
-                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
-                }
-                else
-                {
-                    player.SendChat("structure_last_owner_chat", data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName,
-                        data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(data.owner.GetTeamFromPlayerSteam64ID()),
-                        teamname, TeamManager.GetTeamHexColor(data.@group.GetTeam()));
-                }
+                player.channel.owner.SendSteamURL(
+                    T.StructureExamineLastOwnerPrompt.Translate(Data.Languages.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out string lang) ? lang : L.DEFAULT, data.barricade.asset,
+                        F.GetPlayerOriginalNames(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else
             {
-                ulong grp = data.group;
-                if (sendurl)
-                {
-                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _, data.barricade.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
-                }
-                else
-                {
-                    string clr = UCWarfare.GetColorHex("neutral");
-                    player.SendChat("structure_last_owner_chat", data.barricade.asset.itemName,
-                        F.GetPlayerOriginalNames(data.owner).CharacterName,
-                        data.owner.ToString(Data.Locale), clr, grp.ToString(), clr);
-                }
+                player.SendChat(T.StructureExamineLastOwnerChat,
+                    data.barricade.asset,
+                    F.GetPlayerOriginalNames(data.owner),
+                    new OfflinePlayer(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
             }
         }
         else
         {
-            player.SendChat("structure_examine_not_examinable");
+            player.SendChat(T.StructureExamineNotExaminable);
         }
     }
     private void ExamineStructure(StructureDrop sdrop, Player player, bool sendurl)
@@ -280,44 +237,28 @@ public class StructureCommand : Command
         if (sdrop != null)
         {
             SDG.Unturned.StructureData data = sdrop.GetServersideData();
-            if (data.owner == default || data.owner == 0)
+            if (data.owner == default)
             {
-                player.SendChat("structure_examine_not_examinable");
+                player.SendChat(T.StructureExamineNotExaminable);
                 return;
             }
-            if (Data.Gamemode is ITeams)
+            if (sendurl)
             {
-                string teamname = TeamManager.TranslateName(data.group, player);
-                if (sendurl)
-                {
-                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, teamname), data.owner);
-                }
-                else
-                {
-                    player.SendChat("structure_last_owner_chat", data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName,
-                        data.owner.ToString(Data.Locale), TeamManager.GetTeamHexColor(data.owner.GetTeamFromPlayerSteam64ID()),
-                        teamname, TeamManager.GetTeamHexColor(data.@group.GetTeam()));
-                }
+                player.channel.owner.SendSteamURL(
+                    T.StructureExamineLastOwnerPrompt.Translate(Data.Languages.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out string lang) ? lang : L.DEFAULT, data.structure.asset,
+                        F.GetPlayerOriginalNames(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else
             {
-                ulong grp = data.group;
-                if (sendurl)
-                {
-                    player.channel.owner.SendSteamURL(Localization.Translate("structure_last_owner_web_prompt", player, out _, data.structure.asset.itemName, F.GetPlayerOriginalNames(data.owner).CharacterName, grp.ToString()), data.owner);
-                }
-                else
-                {
-                    string clr = UCWarfare.GetColorHex("neutral");
-                    player.SendChat("structure_last_owner_chat", data.structure.asset.itemName,
-                        F.GetPlayerOriginalNames(data.owner).CharacterName,
-                        data.owner.ToString(Data.Locale), clr, grp.ToString(), clr);
-                }
+                player.SendChat(T.StructureExamineLastOwnerChat,
+                    data.structure.asset,
+                    F.GetPlayerOriginalNames(data.owner),
+                    new OfflinePlayer(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!);
             }
         }
         else
         {
-            player.SendChat("structure_examine_not_examinable");
+            player.SendChat(T.StructureExamineNotExaminable);
         }
     }
 }

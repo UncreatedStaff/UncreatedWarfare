@@ -43,6 +43,7 @@ public class UCPlayer : IPlayer
     public volatile bool HasDownloadedKits;
     public volatile bool IsDownloadingKits;
     public TeamSelectorData? TeamSelectorData;
+    public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 5);
     public Player Player { get; internal set; }
     public bool IsTalking => !lastMuted && isTalking && IsOnline;
     public CSteamID CSteamID { get; internal set; }
@@ -68,17 +69,6 @@ public class UCPlayer : IPlayer
     public string? MuteReason;
     public EMuteType MuteType;
     private FPlayerName cachedName = FPlayerName.Nil;
-    /// <summary>[Unreliable]</summary>
-    private MedalData _medals = MedalData.Nil;
-    public MedalData Medals
-    {
-        get
-        {
-            if (_medals.IsNil)
-                RedownloadMedals();
-            return _medals;
-        }
-    }
     /// <summary><see langword="True"/> if rank order <see cref="OfficerStorage.OFFICER_RANK_ORDER"/> has been completed (Receiving officer pass from discord server).</summary>
     public bool IsOfficer => RankData != null && RankData.Length > OfficerStorage.OFFICER_RANK_ORDER && RankData[OfficerStorage.OFFICER_RANK_ORDER].IsCompelete;
     public int CachedCredits;
@@ -86,10 +76,7 @@ public class UCPlayer : IPlayer
     {
         get
         {
-            if (_rank is not null)
-                return _rank.Value.TotalXP;
-            else
-                return 0;
+            return Rank.TotalXP;
         }
         set
         {
@@ -101,19 +88,18 @@ public class UCPlayer : IPlayer
     {
         get
         {
-            if (_rank is null)
-                _rank = new RankData(CachedXP);
+            if (!_rank.HasValue)
+            {
+                ulong team = this.GetTeam();
+                if (team is 1 or 2)
+                    _rank = new RankData(Data.DatabaseManager.GetXP(Steam64, team).Result);
+                else return new RankData(0);
+            }
             return _rank.Value;
         }
     }
     public List<Kit>? AccessibleKits;
-
     internal List<Guid>? _completedQuests;
-    public void RedownloadMedals()
-    {
-        _medals.Update(Data.DatabaseManager.GetTeamwork(Steam64));
-    }
-    public void UpdateMedals(int newTW) => _medals.Update(newTW);
     public float LastSpoken = 0f;
 
     private bool _otherDonator;
@@ -130,18 +116,18 @@ public class UCPlayer : IPlayer
             {
                 if (Player.transform == null)
                 {
-                    L.LogWarning("ERROR: Player transform was null");
+                    L.LogError("ERROR: Player transform was null");
                     L.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
-                    Provider.kick(Player.channel.owner.playerID.steamID, Localization.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
+                    Provider.kick(Player.channel.owner.playerID.steamID, Localization.Translate(T.NullTransformKickMessage, this, UCWarfare.Config.DiscordInviteCode));
                     return Vector3.zero;
                 }
                 return Player.transform.position;
             }
             catch (NullReferenceException)
             {
-                L.LogWarning("ERROR: Player transform was null");
+                L.LogError("ERROR: Player transform was null");
                 L.Log($"Kicking {F.GetPlayerOriginalNames(Player).PlayerName} ({Steam64}) for null transform.", ConsoleColor.Cyan);
-                Provider.kick(Player.channel.owner.playerID.steamID, Localization.Translate("null_transform_kick_message", Player, UCWarfare.Config.DiscordInviteCode));
+                Provider.kick(Player.channel.owner.playerID.steamID, Localization.Translate(T.NullTransformKickMessage, this, UCWarfare.Config.DiscordInviteCode));
                 return Vector3.zero;
             }
         }
@@ -305,6 +291,7 @@ public class UCPlayer : IPlayer
     public ushort LastPingID { get; internal set; }
     public int SuppliesUnloaded;
     public SteamPlayer SteamPlayer => Player.channel.owner;
+    [Obsolete("Use the new generics system instead.")]
     public void Message(string text, params string[] formatting) => Player.SendChat(text, formatting);
     public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
     public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
@@ -586,6 +573,12 @@ public class UCPlayer : IPlayer
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.COSMETIC, state);
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.MYTHIC, state);
         Player.clothing.ServerSetVisualToggleState(EVisualToggleType.SKIN, state);
+    }
+
+    internal void UpdatePoints(uint xp, uint credits)
+    {
+        _rank = new RankData((int)xp);
+        CachedCredits = (int)credits;
     }
 }
 

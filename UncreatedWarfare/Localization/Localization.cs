@@ -2080,7 +2080,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
             return rtn;
         }
     }
-    public static IEnumerable<LanguageSet> OfPermission(EAdminType type)
+    public static IEnumerable<LanguageSet> OfPermission(EAdminType type, PermissionComparison comparison = PermissionComparison.AtLeast)
     {
         lock (languages)
         {
@@ -2089,7 +2089,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                if ((type & pl.PermissionLevel) < type) continue;
+                if (!pl.PermissionLevel.IsOfPermission(type, comparison)) continue;
                 if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
                     lang = L.DEFAULT;
                 bool found = false;

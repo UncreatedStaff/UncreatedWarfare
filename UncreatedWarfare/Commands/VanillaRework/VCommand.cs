@@ -29,7 +29,7 @@ public class VCommand : Command
         ctx.AssertRanByPlayer();
 
         if (!ctx.TryGet(0, out VehicleAsset asset, out bool mutiple, true, allowMultipleResults: true))
-            throw ctx.Reply("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + ctx.GetRange(0) + "</color>.</color>");
+            throw ctx.ReplyString("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + ctx.GetRange(0) + "</color>.</color>");
 
         Vector3 ppos = ctx.Caller.Position;
         Vector3 v = ctx.Caller.Player.look.aim.forward with { y = 0 };

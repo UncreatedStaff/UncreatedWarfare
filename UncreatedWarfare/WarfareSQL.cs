@@ -322,14 +322,14 @@ public class WarfareSQL : MySqlDatabase
         {
             await NonQueryAsync(
                 "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Experience` = @2;",
-                new object[3] { player, team, total });
+                new object[3] { player, team, total }).ConfigureAwait(false);
             return total;
         }
         else if (amount != 0)
         {
             await NonQueryAsync(
                 "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`) VALUES (@0, @1, 0) ON DUPLICATE KEY UPDATE `Experience` = 0;",
-                new object[2] { player, team });
+                new object[2] { player, team }).ConfigureAwait(false);
             return 0;
         }
         else return old;
@@ -342,14 +342,14 @@ public class WarfareSQL : MySqlDatabase
         {
             await NonQueryAsync(
                 "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Credits` = @2;",
-                new object[3] { player, team, ttl });
+                new object[3] { player, team, ttl }).ConfigureAwait(false);
             return ttl;
         }
         else if (amount != 0)
         {
             await NonQueryAsync(
                 "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, 0) ON DUPLICATE KEY UPDATE `Credits` = 0;",
-                new object[2] { player, team});
+                new object[2] { player, team}).ConfigureAwait(false);
             return 0;
         }
         else return old;

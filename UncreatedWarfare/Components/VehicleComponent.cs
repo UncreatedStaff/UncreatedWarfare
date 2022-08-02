@@ -345,12 +345,12 @@ public class VehicleComponent : MonoBehaviour
             TeamManager.GetFaction(Team).Ammo.ValidReference(out supplyAsset);
         else
         {
-            caller.Message("load_e_itemassetnotfound");
+            caller.SendChat(T.UnknownError);
             yield break;
         }
         if (supplyAsset == null)
         {
-            caller.Message("load_e_itemassetnotfound");
+            caller.SendChat(T.UnknownError);
             yield break;
         }
         int existingCount = 0;
@@ -431,7 +431,7 @@ public class VehicleComponent : MonoBehaviour
             }
         }
 
-        caller.Message(type is ESupplyType.BUILD ? "load_s_build" : "load_s_ammo", (addedBackCount + addedNewCount).ToString());
+        caller.SendChat(type is ESupplyType.BUILD ? T.LoadCompleteBuild : T.LoadCompleteAmmo, addedBackCount + addedNewCount);
 
         forceSupplyLoop = null;
     }

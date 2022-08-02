@@ -70,6 +70,8 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         if (Provider is null)
             throw new InvalidOperationException("You must set TicketManager." + nameof(Provider) + " before TicketManager loads.");
         Provider.Manager = this;
+        _t1Tickets = 0;
+        _t2Tickets = 0;
         Provider.Load();
         EventDispatcher.OnPlayerDied += OnPlayerDeath;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
@@ -93,14 +95,18 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     }
     public void SendUI(UCPlayer player)
     {
-        if (Provider == null || player is null || !player.IsOnline || player.HasUIHidden)
-            return;
-        L.Log("Sending UI to " + player.CharacterName);
-        TicketUI.SendToPlayer(player.Connection);
-        string? url = TeamManager.GetFaction(player.GetTeam())?.FlagImageURL;
-        if (url is not null)
-            TicketUI.Flag.SetImage(player.Connection, url);
-        Provider.UpdateUI(player);
+        ulong team = player.GetTeam();
+        if (team is 1 or 2)
+        {
+            if (Provider == null || player is null || !player.IsOnline || player.HasUIHidden)
+                return;
+            L.Log("Sending UI to " + player.CharacterName);
+            TicketUI.SendToPlayer(player.Connection);
+            string? url = TeamManager.GetFaction(team)?.FlagImageURL;
+            if (url is not null)
+                TicketUI.Flag.SetImage(player.Connection, url);
+            Provider.UpdateUI(player);
+        }
     }
     public void UpdateUI(UCPlayer player) => Provider.UpdateUI(player);
     public void UpdateUI(ulong team)

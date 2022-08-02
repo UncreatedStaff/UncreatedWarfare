@@ -134,10 +134,7 @@ public static class ConquestUI
 #endif
         if (flag.IsContested(out _))
         {
-            if (Mathf.Abs(flag.Points) < Flag.MAX_POINTS)
-                return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
-            else
-                return new CaptureUIParameters(team, flag.Owner == team ? EFlagStatus.SECURED : EFlagStatus.NOT_OWNED, flag);
+            return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
         }
 
         if (flag.Owner == 0)

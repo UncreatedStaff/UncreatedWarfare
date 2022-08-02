@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -140,16 +141,27 @@ public static class Points
         AwardCredits(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase);
     public static void AwardCredits<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false) =>
         AwardCredits(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase);
+    public static Task AwardCreditsAsync(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase);
+    public static Task AwardCreditsAsync<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase);
+    public static Task AwardCreditsAsync<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase);
     public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (amount == 0 || _xpconfig.Data.XPMultiplier == 0f) return;
-
-        amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
-        Task.Run(async () =>
+        _ = AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase).ConfigureAwait(false);
+    }
+    public static Task AwardCreditsAsync(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
+    {
+        return AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase);
+    }
+    private static async Task AwardCreditsAsyncIntl(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
+    {
+        try
         {
+            if (amount == 0 || _xpconfig.Data.XPMultiplier == 0f) return;
+            amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
+
             int currentAmount = await Data.DatabaseManager.AddCredits(player.Steam64, player.GetTeam(), amount);
             int oldamt = currentAmount - amount;
             await UCWarfare.ToUpdate();
@@ -183,7 +195,12 @@ public static class Points
 
                 UpdateCreditsUI(player);
             }
-        });
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Error giving credits to " + player.Name.PlayerName + " (" + player.Steam64 + ")", method: "AWARD CREDITS");
+            L.LogError(ex, method: "AWARD CREDITS");
+        }
     }
     public static void AwardXP(UCPlayer player, int amount, Translation message, bool awardCredits = true) =>
         AwardXP(player, amount, Localization.Translate(message, player), awardCredits);
@@ -433,35 +450,59 @@ public static class Points
         }
         TryAwardDriverAssist(e, XPConfig.EnemyKilledXP, 1);
     }
+
+    public static async Task UpdatePointsAsync(UCPlayer caller)
+    {
+        if (caller is null) throw new ArgumentNullException(nameof(caller));
+        ulong team = caller.GetTeam();
+        if (team is 1 or 2)
+        {
+            bool found = false;
+            uint cd = 1;
+            uint xp = 1;
+            await Data.DatabaseManager.QueryAsync(
+                "SELECT `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                new object[] { caller.Steam64, team },
+                R =>
+                {
+                    xp = R.GetUInt32(0);
+                    cd = R.GetUInt32(1);
+                    found = true;
+                });
+            if (!found)
+                return;
+            caller.UpdatePoints(xp, cd);
+        }
+    }
     /*
     public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
     {
-        string xpstr = Translation.Translate(KeyplayerTranslationKey, ucplayer.Steam64);
-        string sqstr = Translation.Translate(squadTranslationKey, ucplayer.Steam64);
-        Points.AwardXP(ucplayer.Player, xp, xpstr);
+       string xpstr = Translation.Translate(KeyplayerTranslationKey, ucplayer.Steam64);
+       string sqstr = Translation.Translate(squadTranslationKey, ucplayer.Steam64);
+       Points.AwardXP(ucplayer.Player, xp, xpstr);
 
-        if (ucplayer.Squad != null && ucplayer.Squad.Members.Count > 1)
-        {
-            if (ucplayer == ucplayer.Squad.Leader)
-                OfficerManager.AddOfficerPoints(ucplayer.Player, ofp, sqstr);
+       if (ucplayer.Squad != null && ucplayer.Squad.Members.Count > 1)
+       {
+           if (ucplayer == ucplayer.Squad.Leader)
+               OfficerManager.AddOfficerPoints(ucplayer.Player, ofp, sqstr);
 
-            int squadxp = (int)Math.Round(xp * squadMultiplier);
-            int squadofp = (int)Math.Round(ofp * squadMultiplier);
+           int squadxp = (int)Math.Round(xp * squadMultiplier);
+           int squadofp = (int)Math.Round(ofp * squadMultiplier);
 
-            if (squadxp > 0)
-            {
-                for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
-                {
-                    UCPlayer member = ucplayer.Squad.Members[i];
-                    if (member != ucplayer && ucplayer.IsNearOtherPlayer(member, range))
-                    {
-                        Points.AwardXP(member.Player, squadxp, sqstr);
-                        if (member.IsSquadLeader())
-                            OfficerManager.AddOfficerPoints(ucplayer.Player, squadofp, sqstr);
-                    }
-                }
-            }
-        }
+           if (squadxp > 0)
+           {
+               for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
+               {
+                   UCPlayer member = ucplayer.Squad.Members[i];
+                   if (member != ucplayer && ucplayer.IsNearOtherPlayer(member, range))
+                   {
+                       Points.AwardXP(member.Player, squadxp, sqstr);
+                       if (member.IsSquadLeader())
+                           OfficerManager.AddOfficerPoints(ucplayer.Player, squadofp, sqstr);
+                   }
+               }
+           }
+       }
     }
     */
 }

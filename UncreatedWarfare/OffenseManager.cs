@@ -887,50 +887,40 @@ public static class OffenseManager
             LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
 
             string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
-            ActionLogger.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur);
+            ActionLogger.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
 
-            if (muter == null)
+            if (admin == 0)
             {
                 if (duration == -1)
                 {
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets(target, admin))
-                    {
-                        string e = Localization.TranslateEnum(type, set.Language);
-                        Chat.Broadcast(set, "mute_broadcast_operator_permanent", names.CharacterName, e);
-                    }
-                    L.Log(Localization.Translate("mute_feedback", 0, out _, names.PlayerName, target.ToString(),
-                        dur, Localization.TranslateEnum(type, 0), reason));
+                    foreach (LanguageSet set in LanguageSet.AllBut(target))
+                        Chat.Broadcast(set, T.MutePermanentSuccessBroadcastOperator, names, names, type);
+
+                    L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by an operator.", ConsoleColor.Cyan);
                 }
                 else
                 {
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets(target, admin))
-                    {
-                        string e = Localization.TranslateEnum(type, set.Language);
-                        Chat.Broadcast(set, "mute_broadcast_operator", names.CharacterName, e, dur);
-                    }
-                    L.Log(Localization.Translate("mute_feedback_permanent", 0, out _, names.PlayerName, target.ToString(),
-                        Localization.TranslateEnum(type, 0), reason));
+                    foreach (LanguageSet set in LanguageSet.AllBut(target))
+                        Chat.Broadcast(set, T.MuteSuccessBroadcastOperator, names, names, dur, type);
+
+                    L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by an operator. Duration: {dur}.", ConsoleColor.Cyan);
                 }
             }
             else
             {
                 if (duration == -1)
                 {
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets(target, admin))
-                    {
-                        string e = Localization.TranslateEnum(type, set.Language);
-                        Chat.Broadcast(set, "mute_broadcast_permanent", names.CharacterName, names2.CharacterName, e);
-                    }
-                    muter.SendChat("mute_feedback_permanent", names.PlayerName, target.ToString(), Localization.TranslateEnum(type, admin));
+                    foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
+                        Chat.Broadcast(set, T.MutePermanentSuccessBroadcast, names, names, type, names2);
+
+                    L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by {names2.PlayerName} ({admin}).", ConsoleColor.Cyan);
                 }
                 else
                 {
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets(target, admin))
-                    {
-                        string e = Localization.TranslateEnum(type, set.Language);
-                        Chat.Broadcast(set, "mute_broadcast", names.CharacterName, names2.CharacterName, e, dur);
-                    }
-                    muter.SendChat("mute_feedback", names.PlayerName, target.ToString(), dur, Localization.TranslateEnum(type, admin));
+                    foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
+                        Chat.Broadcast(set, T.MuteSuccessBroadcast, names, names, dur, type, names2);
+
+                    L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by {names2.PlayerName} ({admin}). Duration: {dur}.", ConsoleColor.Cyan);
                 }
             }
             if (muted != null)
@@ -938,16 +928,16 @@ public static class OffenseManager
                 if (admin == 0)
                 {
                     if (duration == -1)
-                        muted.SendChat("mute_dm_operator_permanent", reason, Localization.TranslateEnum(type, muted));
+                        muted.SendChat(T.MuteSuccessDMPermanentOperator, reason, type);
                     else
-                        muted.SendChat("mute_dm_operator", reason, dur, Localization.TranslateEnum(type, muted));
+                        muted.SendChat(T.MuteSuccessDMOperator, reason, dur, type);
                 }
                 else
                 {
                     if (duration == -1)
-                        muted.SendChat("mute_dm_permanent", names2.CharacterName, reason, Localization.TranslateEnum(type, muted));
+                        muted.SendChat(T.MuteSuccessDMPermanent, names2, reason, type);
                     else
-                        muted.SendChat("mute_dm", names2.CharacterName, reason, dur, Localization.TranslateEnum(type, muted));
+                        muted.SendChat(T.MuteSuccessDM, names2, reason, dur, type);
                 }
             }
         }).ConfigureAwait(false);
@@ -968,14 +958,13 @@ public static class OffenseManager
                 if (rows == 0)
                 {
                     if (caller is not null)
-                        caller.SendChat("unmute_not_muted", names.CharacterName);
+                        caller.SendChat(T.UnmuteNotMuted, names);
                     else if (callerId == 0)
-                        L.Log(F.RemoveRichText(Localization.Translate("unmute_not_muted", 0, out Color color, names.CharacterName)), F.GetClosestConsoleColor(color));
+                        L.Log(F.RemoveRichText(T.UnmuteNotMuted.Translate(L.DEFAULT, names, out Color color)), F.GetClosestConsoleColor(color));
                 }
                 else
                 {
-                    if (onlinePlayer is null) // couldve joined in the last few ms
-                        onlinePlayer = UCPlayer.FromID(targetId);
+                    onlinePlayer ??= UCPlayer.FromID(targetId);
                     if (onlinePlayer is not null)
                     {
                         onlinePlayer.MuteReason = null;
@@ -983,32 +972,30 @@ public static class OffenseManager
                         onlinePlayer.TimeUnmuted = DateTime.MinValue;
                     }
                     LogUnmutePlayer(targetId, callerId, DateTime.Now);
-
+                    FPlayerName n2 = await F.GetPlayerOriginalNamesAsync(callerId);
+                    await UCWarfare.ToUpdate();
                     if (callerId == 0)
                     {
-                        Chat.BroadcastToAllExcept(targetId, "unmute_unmuted_broadcast_operator", names.CharacterName);
-                        onlinePlayer?.SendChat("unmute_unmuted_dm_operator");
+                        Chat.Broadcast(LanguageSet.AllBut(targetId), T.UnmuteSuccessBroadcastOperator, names);
+                        onlinePlayer?.SendChat(T.UnmuteSuccessDMOperator);
                     }
                     else
                     {
-                        FPlayerName n2 = await F.GetPlayerOriginalNamesAsync(callerId);
-                        Chat.BroadcastToAllExcept(targetId, "unmute_unmuted_broadcast", names.CharacterName, n2.CharacterName);
-                        onlinePlayer?.SendChat("unmute_unmuted_dm", n2.CharacterName);
+                        Chat.Broadcast(LanguageSet.AllBut(targetId, callerId), T.UnmuteSuccessBroadcast, names, n2);
+                        onlinePlayer?.SendChat(T.UnmuteSuccessDM, n2);
+                        caller?.SendChat(T.UnmuteSuccessFeedback, names);
                     }
                     ActionLogger.Add(EActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
-                    if (caller is not null)
-                        caller.SendChat("unmute_unmuted", names.CharacterName);
-                    else if (callerId == 0)
-                        L.Log(F.RemoveRichText(Localization.Translate("unmute_unmuted", 0, out Color color, names.CharacterName)), F.GetClosestConsoleColor(color));
+                    L.Log($"{names.PlayerName} ({targetId}) was unmuted by {(callerId == 0 ? "an operator" : (n2.PlayerName + "(" + callerId + ")"))}.");
                 }
             }
             else
             {
                 await UCWarfare.ToUpdate();
                 if (caller is not null)
-                    caller.SendChat("unmute_not_found");
+                    caller.SendChat(T.PlayerNotFound);
                 else if (callerId == 0)
-                    L.Log(F.RemoveRichText(Localization.Translate("unmute_not_found", 0, out Color color)), F.GetClosestConsoleColor(color));
+                    L.Log(F.RemoveRichText(T.PlayerNotFound.Translate(L.DEFAULT, out Color color)), F.GetClosestConsoleColor(color));
             }
         });
     }

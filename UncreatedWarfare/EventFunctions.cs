@@ -499,17 +499,9 @@ public static class EventFunctions
             PlayerManager.ApplyTo(ucplayer);
 
             ulong team = ucplayer.GetTeam();
-            FPlayerName names = F.GetPlayerOriginalNames(ucplayer);
-            if (Data.Is<ITeams>())
-            {
-                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", ucplayer,
-                    UCWarfare.GetColorHex("uncreated"), names.CharacterName, TeamManager.GetTeamHexColor(team)), EToastMessageSeverity.INFO));
-            }
-            else
-            {
-                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? "welcome_message_first_time" : "welcome_message", ucplayer,
-                    UCWarfare.GetColorHex("uncreated"), names.CharacterName, UCWarfare.GetColorHex("neutral")), EToastMessageSeverity.INFO));
-            }
+            FPlayerName names = ucplayer.Name;
+            ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? T.WelcomeMessage : T.WelcomeBackMessage, ucplayer, ucplayer), EToastMessageSeverity.INFO));
+
             if (Data.PlaytimeComponents.ContainsKey(ucplayer.Steam64))
             {
                 UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[ucplayer.Steam64]);
@@ -522,16 +514,23 @@ public static class EventFunctions
             Data.PlaytimeComponents.Add(ucplayer.Steam64, pt);
             Task.Run(async () =>
             {
-                Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
-                Task<int> t2 = Data.DatabaseManager.GetXP(ucplayer.Steam64, team);
-                Task<int> t3 = Data.DatabaseManager.GetCredits(ucplayer.Steam64, team);
-                Task t4 = ucplayer.DownloadKits();
-                await Data.DatabaseManager.RegisterLogin(ucplayer.Player);
-                await t1;
-                ucplayer.CachedXP = await t2;
-                ucplayer.CachedCredits = await t3;
-                await t4;
-                await OffenseManager.ApplyMuteSettings(ucplayer);
+                await ucplayer.PurchaseSync.WaitAsync();
+                try
+                {
+                    Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
+                    Task t2 = Points.UpdatePointsAsync(ucplayer);
+                    Task t3 = ucplayer.DownloadKits();
+                    Task t4 = OffenseManager.ApplyMuteSettings(ucplayer);
+                    await Data.DatabaseManager.RegisterLogin(ucplayer.Player);
+                    await t1;
+                    await t2;
+                    await t3;
+                    await t4;
+                }
+                finally
+                {
+                    ucplayer.PurchaseSync.Release();
+                }
                 await UCWarfare.ToUpdate();
                 RequestSigns.UpdateAllSigns(ucplayer.Player.channel.owner);
                 VehicleSpawner.UpdateSigns(ucplayer);
@@ -1334,9 +1333,9 @@ public static class EventFunctions
 
             EAdminType type = ucplayer.PermissionLevel;
             if ((type & EAdminType.ADMIN_ON_DUTY) == EAdminType.ADMIN_ON_DUTY)
-                Commands.DutyCommand.AdminOnToOff(ucplayer, names);
+                Commands.DutyCommand.AdminOnToOff(ucplayer);
             else if ((type & EAdminType.TRIAL_ADMIN_ON_DUTY) == EAdminType.TRIAL_ADMIN_ON_DUTY)
-                Commands.DutyCommand.InternOnToOff(ucplayer, names);
+                Commands.DutyCommand.InternOnToOff(ucplayer);
 
             try
             {

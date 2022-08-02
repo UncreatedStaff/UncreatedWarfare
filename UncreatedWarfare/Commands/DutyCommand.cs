@@ -24,9 +24,7 @@ public class DutyCommand : Command
         ctx.AssertRanByPlayer();
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
-
-        FPlayerName names = F.GetPlayerOriginalNames(ctx.Caller!);
-
+        
         EAdminType level = ctx.Caller.PermissionLevel;
 
         switch (level)
@@ -34,68 +32,68 @@ public class DutyCommand : Command
             default:
                 throw ctx.SendNoPermission();
             case EAdminType.ADMIN_OFF_DUTY:
-                AdminOffToOn(ctx.Caller, names);
+                AdminOffToOn(ctx.Caller);
                 throw ctx.Defer();
             case EAdminType.ADMIN_ON_DUTY:
-                AdminOnToOff(ctx.Caller, names);
+                AdminOnToOff(ctx.Caller);
                 throw ctx.Defer();
             case EAdminType.TRIAL_ADMIN_OFF_DUTY:
-                InternOffToOn(ctx.Caller, names);
+                InternOffToOn(ctx.Caller);
                 throw ctx.Defer();
             case EAdminType.TRIAL_ADMIN_ON_DUTY:
-                InternOnToOff(ctx.Caller, names);
+                InternOnToOff(ctx.Caller);
                 throw ctx.Defer();
         }
     }
-    public static void AdminOffToOn(UCPlayer player, FPlayerName names)
+    public static void AdminOffToOn(UCPlayer player)
     {
-        L.Log(Localization.Translate("duty_admin_on_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+        L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.Locale)}) went on duty.", ConsoleColor.Cyan);
         PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.ADMIN_ON_DUTY);
         player.Player.look.sendFreecamAllowed(true);
         player.Player.look.sendWorkzoneAllowed(true);
-        player.SendChat("duty_on_feedback");
-        Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
+        player.SendChat(T.DutyOnFeedback);
+        Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOnBroadcast, player);
         RequestSigns.UpdateAllSigns(player.Player.channel.owner);
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         ActionLogger.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
     }
-    public static void AdminOnToOff(UCPlayer player, FPlayerName names)
+    public static void AdminOnToOff(UCPlayer player)
     {
-        L.Log(Localization.Translate("duty_admin_off_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+        L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.Locale)}) went off duty.", ConsoleColor.Cyan);
         PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.ADMIN_OFF_DUTY);
-        Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_off_broadcast", names.CharacterName);
+        Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOffBroadcast, player);
         SetVanishMode(player, false);
         player.GodMode = false;
         if (player.Player != null && player.Player.look != null)
         {
             player.Player.look.sendFreecamAllowed(false);
             player.Player.look.sendWorkzoneAllowed(false);
-            player.SendChat("duty_off_feedback");
+            player.SendChat(T.DutyOffFeedback);
             RequestSigns.UpdateAllSigns(player.Player.channel.owner);
         }
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);
         ActionLogger.Add(EActionLogType.DUTY_CHANGED, "OFF DUTY", player.CSteamID.m_SteamID);
     }
-    public static void InternOffToOn(UCPlayer player, FPlayerName names)
+    public static void InternOffToOn(UCPlayer player)
     {
-        L.Log(Localization.Translate("duty_intern_on_console", 0, out _, names.PlayerName, player.CSteamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+        L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.Locale)}) went on duty.", ConsoleColor.Cyan);
         PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.TRIAL_ADMIN_ON_DUTY);
-        player.SendChat("duty_on_feedback");
-        Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_on_broadcast", names.CharacterName);
+        player.SendChat(T.DutyOnFeedback);
+        Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOnBroadcast, player);
         RequestSigns.UpdateAllSigns(player.Player.channel.owner);
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, true);
         ActionLogger.Add(EActionLogType.DUTY_CHANGED, "ON DUTY", player.CSteamID.m_SteamID);
     }
-    public static void InternOnToOff(UCPlayer player, FPlayerName names)
+    public static void InternOnToOff(UCPlayer player)
     {
-        L.Log(Localization.Translate("duty_intern_off_console", 0, out _, names.PlayerName, names.Steam64.ToString(Data.Locale)), ConsoleColor.Cyan);
+        L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.Locale)}) went off duty.", ConsoleColor.Cyan);
         PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.TRIAL_ADMIN_OFF_DUTY);
-        Chat.BroadcastToAllExcept(new ulong[1] { player.CSteamID.m_SteamID }, "duty_off_broadcast", names.CharacterName);
+        Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOffBroadcast, player);
         SetVanishMode(player, false);
         player.GodMode = false;
         if (player.Player != null)
         {
-            player.SendChat("duty_off_feedback");
+            player.SendChat(T.DutyOffFeedback);
             RequestSigns.UpdateAllSigns(player.Player.channel.owner);
         }
         PlayerManager.NetCalls.SendDutyChanged.NetInvoke(player.CSteamID.m_SteamID, false);

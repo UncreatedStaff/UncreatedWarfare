@@ -35,7 +35,7 @@ public abstract class BaseQuestData : ITranslationArgument
         }
         return rews;
     }
-    public string Translate(bool forAsset, string language, params object[] formatting)
+    public string Translate(bool forAsset, string language, params object[]? formatting)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();

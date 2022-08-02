@@ -524,8 +524,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation);
         }
     }
     public static void Broadcast<T>(Translation<T> translation, T arg)
@@ -537,8 +537,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg);
         }
     }
     public static void Broadcast<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
@@ -550,8 +550,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2);
         }
     }
     public static void Broadcast<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
@@ -563,8 +563,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2, arg3);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2, arg3);
         }
     }
     public static void Broadcast<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
@@ -576,8 +576,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2, arg3, arg4);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2, arg3, arg4);
         }
     }
     public static void Broadcast<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
@@ -589,8 +589,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2, arg3, arg4, arg5);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5);
         }
     }
     public static void Broadcast<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
@@ -602,8 +602,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2, arg3, arg4, arg5, arg6);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6);
         }
     }
     public static void Broadcast<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
@@ -615,8 +615,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         }
     }
     public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
@@ -628,8 +628,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         }
     }
     public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
@@ -641,8 +641,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         }
     }
     public static void Broadcast<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
@@ -654,8 +654,8 @@ public static class Chat
         }
         else
         {
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-                Broadcast(in set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            foreach (LanguageSet set in LanguageSet.All())
+                Broadcast(set, translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
         }
     }
     private static void GetTranslationData(UCPlayer player, Translation translation, out string value, out string lang, out Color textColor)

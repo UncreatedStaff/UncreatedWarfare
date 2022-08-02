@@ -184,7 +184,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
         player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
 
         player.HasUIHidden = true;
-        EffectManager.askEffectClearAll();
+        Data.SendEffectClearAll.Invoke(ENetReliability.Reliable, player.Connection);
 
         SendSelectionMenu(player);
 

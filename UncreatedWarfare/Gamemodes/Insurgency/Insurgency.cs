@@ -1,4 +1,5 @@
 ﻿using SDG.NetTransport;
+using SDG.Provider;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -102,6 +103,7 @@ public class Insurgency :
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _ticketManager);
+        _ticketManager.Provider = new InsurgencyTicketProvider();
         AddSingletonRequirement(ref _vehicleBay);
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _structureSaver);
@@ -921,7 +923,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     }
     public override int GetTeamBleed(ulong team)
     {
-        throw new NotImplementedException();
+        return 0;
     }
     public override void Load() { }
     public override void Unload() { }
@@ -934,12 +936,10 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
         if (ins.AttackingTeam == 1)
         {
             Manager.Team1Tickets = attack;
-            Manager.Team2Tickets = defence;
         }
         else if (ins.AttackingTeam == 2)
         {
             Manager.Team2Tickets = attack;
-            Manager.Team1Tickets = defence;
         }
     }
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
