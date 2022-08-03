@@ -1817,6 +1817,9 @@ public static class Localization
             }
         }
     }
+
+    internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.DEFAULT;
+
     [Obsolete]
     private class LanguageSetEnumerator : IEnumerable<LanguageSet>
     {

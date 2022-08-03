@@ -271,7 +271,7 @@ public static class EventFunctions
                 if (!perms && !CheckLandminePosition(point))
                 {
                     shouldAllow = false;
-                    player.SendChat("no_place_trap", asset.itemName, asset.itemName.An());
+                    player.SendChat(T.ProhibitedPlacement, asset);
                     return;
                 }
             }
@@ -283,7 +283,7 @@ public static class EventFunctions
                     if (!perms)
                     {
                         shouldAllow = false;
-                        player.SendChat("no_placement_on_vehicle", asset.itemName, asset.itemName.An());
+                        player.SendChat(T.NoPlacementOnVehicle, asset);
                         return;
                     }
                 }
@@ -296,7 +296,7 @@ public static class EventFunctions
                 if (!perms && player.KitClass != EClass.RIFLEMAN)
                 {
                     shouldAllow = false;
-                    player.SendChat("ammo_not_rifleman");
+                    player.SendChat(T.AmmoNotRifleman);
                     return;
                 }
             }
@@ -307,7 +307,7 @@ public static class EventFunctions
             if (!perms && TeamManager.IsInAnyMainOrAMCOrLobby(point))
             {
                 shouldAllow = false;
-                player.Message("whitelist_noplace");
+                player.SendChat(T.WhitelistProhibitedPlace, barricade.asset);
                 return;
             }
 
@@ -558,7 +558,8 @@ public static class EventFunctions
             }
             ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
             ActionLogger.Add(EActionLogType.CONNECT, $"Players online: {Provider.clients.Count}", ucplayer);
-            Chat.Broadcast("player_connected", names.CharacterName);
+            if (UCWarfare.Config.EnablePlayerJoinLeaveMessages)
+                Chat.Broadcast(T.PlayerConnected, ucplayer);
             Data.Reporter?.OnPlayerJoin(ucplayer.SteamPlayer);
             if (ucplayer != null)
             {
@@ -569,7 +570,7 @@ public static class EventFunctions
                     Steam64 = ucplayer.Steam64,
                     Team = ucplayer.Player.GetTeamByte()
                 });
-                Quests.DailyQuests.RegisterDailyTrackers(ucplayer);
+                DailyQuests.RegisterDailyTrackers(ucplayer);
                 //KitManager.OnPlayerJoinedQuestHandling(ucplayer);
                 //VehicleBay.OnPlayerJoinedQuestHandling(ucplayer);
                 //Ranks.RankManager.OnPlayerJoin(ucplayer);
@@ -700,8 +701,9 @@ public static class EventFunctions
 #endif
         FPlayerName names = F.GetPlayerOriginalNames(client.player);
         ulong team = client.GetTeam();
-        Chat.Broadcast("battleye_kick_broadcast", F.ColorizeName(names.CharacterName, team));
-        L.Log(Localization.Translate("battleye_kick_console", 0, out _, names.PlayerName, client.playerID.steamID.m_SteamID.ToString(), reason));
+        Chat.Broadcast(T.BattlEyeKickBroadcast, names);
+        L.Log($"{names.PlayerName} ({client.playerID.steamID.m_SteamID}) was kicked by BattlEye for \"{reason}\".");
+        ActionLogger.Add(EActionLogType.KICKED_BY_BATTLEYE, "REASON: \"" + reason + "\"", client.playerID.steamID.m_SteamID);
         if (UCWarfare.Config.ModerationSettings.BattleyeExclusions != null &&
             !UCWarfare.Config.ModerationSettings.BattleyeExclusions.Contains(reason))
         {
@@ -1015,11 +1017,8 @@ public static class EventFunctions
         Vector3 pos = parameters.player.transform.position;
         if (TeamManager.IsInAnyMainOrLobby(parameters.player))
         {
-            if (TeamManager.LobbyZone != null && TeamManager.LobbyZone.IsInside(pos))
-            {
-                shouldAllow = false;
-                return;
-            }
+            shouldAllow = false;
+            return;
         }
 
         UCPlayer? ucplayer = UCPlayer.FromPlayer(parameters.player);
@@ -1050,7 +1049,7 @@ public static class EventFunctions
                     parameters.limb, parameters.player.channel.owner.playerID.steamID, out _, true, ERagdollEffect.NONE, false, true);
                     if (!lastSentMessages.TryGetValue(parameters.player.channel.owner.playerID.steamID.m_SteamID, out long lasttime) || new TimeSpan(DateTime.Now.Ticks - lasttime).TotalSeconds > 5)
                     {
-                        killer.SendChat("amc_reverse_damage");
+                        killer.SendChat(T.AntiMainCampWarning);
                         if (lasttime == default)
                             lastSentMessages.Add(parameters.player.channel.owner.playerID.steamID.m_SteamID, DateTime.Now.Ticks);
                         else
@@ -1092,9 +1091,10 @@ public static class EventFunctions
 #endif
         if (player == null) return;
         UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
-        if (ucplayer == null || ucplayer.Squad == null)
+        if (ucplayer == null || ucplayer.Squad == null || !ucplayer.IsSquadLeader())
         {
             allowed = false;
+            ucplayer?.SendChat(T.MarkerNotInSquad);
             return;
         }
         if (!isBeingPlaced)
@@ -1102,15 +1102,9 @@ public static class EventFunctions
             ClearPlayerMarkerForSquad(ucplayer);
             return;
         }
-        if (!ucplayer.IsSquadLeader())
-        {
-            allowed = false;
-            ucplayer.Message("range_notsquadleader");
-            return;
-        }
         overrideText = ucplayer.Squad.Name.ToUpper();
-        //Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
-        //PlaceMarker(ucplayer, effectposition, false, false);
+        Vector3 effectposition = new Vector3(position.x, F.GetTerrainHeightAt2DPoint(position.x, position.z), position.z);
+        PlaceMarker(ucplayer, effectposition, true, false);
     }
     internal static void OnPlayerGestureRequested(Player player, EPlayerGesture gesture, ref bool allow)
     {
@@ -1122,24 +1116,32 @@ public static class EventFunctions
         {
             UCPlayer? ucplayer = UCPlayer.FromPlayer(player);
             if (ucplayer == null) return;
+            if (!ucplayer.IsSquadLeader())
+            {
+                ucplayer.SendChat(T.MarkerNotInSquad);
+                return;
+            }
             if (!Physics.Raycast(new Ray(player.look.aim.transform.position, player.look.aim.transform.forward), out RaycastHit hit, 8192f, RayMasks.BLOCK_COLLISION)) return;
             PlaceMarker(ucplayer, hit.point, true, true);
         }
     }
-    private static void PlaceMarker(UCPlayer ucplayer, Vector3 Point, bool sendNoSquadChat, bool placeMarkerOnMap)
+    private static void PlaceMarker(UCPlayer ucplayer, Vector3 Point, bool requireSquad, bool placeMarkerOnMap)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ThreadUtil.assertIsGameThread();
         if (placeMarkerOnMap)
-            ucplayer.Player.quests.ReceiveSetMarkerRequest(true, Point);
+            ucplayer.Player.quests.replicateSetMarker(true, Point);
         ushort markerid = ucplayer.GetMarkerID();
         ushort lastping = ucplayer.LastPingID == 0 ? markerid : ucplayer.LastPingID;
         if (ucplayer.Squad == null)
         {
-            if (sendNoSquadChat)
-                ucplayer.SendChat("marker_not_in_squad");
+            if (requireSquad)
+            {
+                ucplayer.SendChat(T.MarkerNotInSquad);
+                return;
+            }
             if (markerid == 0) return;
             EffectManager.askEffectClearByID(lastping, ucplayer.Player.channel.owner.transportConnection);
             EffectManager.sendEffectReliable(markerid, ucplayer.Player.channel.owner.transportConnection, Point);
@@ -1187,7 +1189,7 @@ public static class EventFunctions
         if (!Whitelister.IsWhitelisted(asset.GUID, out _))
         {
             allow = false;
-            player.SendChat("cant_store_this_item", asset.itemName);
+            player.SendChat(T.ProhibitedStoring, asset);
         }
     }
     internal static void StructureMovedInWorkzone(CSteamID instigator, byte x, byte y, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
@@ -1285,7 +1287,7 @@ public static class EventFunctions
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             allow = false;
-            theif.SendChat("cant_steal_batteries");
+            theif.SendChat(T.NoStealingBatteries);
         }
     }
     internal static void OnCalculateSpawnDuringRevive(PlayerLife sender, bool wantsToSpawnAtHome, ref Vector3 position, ref float yaw)
@@ -1349,7 +1351,8 @@ public static class EventFunctions
             UCPlayerData? c = ucplayer.Player.GetPlayerData(out bool gotptcomp);
             Data.OriginalNames.Remove(s64);
             ulong id = s64;
-            Chat.Broadcast("player_disconnected", names.CharacterName);
+            if (UCWarfare.Config.EnablePlayerJoinLeaveMessages)
+                Chat.Broadcast(T.PlayerDisconnected, ucplayer);
             if (c != null)
             {
                 ActionLogger.Add(EActionLogType.DISCONNECT, "PLAYED FOR " + ((uint)Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime)).GetTimeFromSeconds(0).ToUpper(), ucplayer.Steam64);
@@ -1425,7 +1428,8 @@ public static class EventFunctions
             if (kick)
             {
                 isValid = false;
-                explanation = Localization.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
+                explanation = T.NameFilterKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.DEFAULT,
+                    UCWarfare.Config.MinAlphanumericStringLength);
                 return;
             }
             else
@@ -1440,7 +1444,8 @@ public static class EventFunctions
             if (player.playerID.characterName.Length < 3 && player.playerID.nickName.Length < 3)
             {
                 isValid = false;
-                explanation = Localization.Translate("kick_autokick_namefilter", player.playerID.steamID.m_SteamID);
+                explanation = T.NameFilterKickMessage.Translate(Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang) ? lang : L.DEFAULT,
+                    UCWarfare.Config.MinAlphanumericStringLength);
                 return;
             }
             else if (player.playerID.characterName.Length < 3)
@@ -1569,206 +1574,6 @@ public static class EventFunctions
 #endif
             r.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
             r.ReviveManager.OnPlayerHealed(instigator, target);
-        }
-    }
-    private static void OnVehicleExploded(InteractableVehicle vehicle)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-
-        var spotted = vehicle.transform.GetComponent<SpottedComponent>();
-
-        if (vehicle.gameObject.TryGetComponent(out BuiltBuildableComponent comp))
-            UnityEngine.Object.Destroy(comp);
-
-        if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
-        {
-            ulong lteam = vehicle.lockedGroup.m_SteamID.GetTeam();
-
-            if (TicketManager.Loaded)
-            {
-                if (lteam == 1)
-                    TicketManager.Singleton.Team1Tickets -= data.TicketCost;
-                else if (lteam == 2)
-                    TicketManager.Singleton.Team2Tickets -= data.TicketCost;
-            }
-
-            if (vehicle.transform.gameObject.TryGetComponent(out VehicleComponent vc))
-            {
-                UCPlayer? owner = UCPlayer.FromID(vehicle.lockedOwner.m_SteamID);
-                if (Points.XPConfig.VehicleDestroyedXP.ContainsKey(data.Type))
-                {
-                    UCPlayer? player = UCPlayer.FromID(vc.LastInstigator);
-
-                    if (player == null)
-                        player = UCPlayer.FromID(vc.LastDriver);
-                    if (player == null)
-                        return;
-
-                    ulong dteam = player.GetTeam();
-                    bool vehicleWasEnemy = (dteam == 1 && lteam == 2) || (dteam == 2 && lteam == 1);
-                    bool vehicleWasFriendly = dteam == lteam;
-                    if (!vehicleWasFriendly)
-                        Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
-                    if (!Points.XPConfig.VehicleDestroyedXP.TryGetValue(data.Type, out int fullXP))
-                        fullXP = 0;
-                    string message = string.Empty;
-
-                    if (vc.IsAircraft)
-                        message = "xp_aircraft_destroyed";
-                    else
-                        message = "xp_vehicle_destroyed";
-
-
-                    float totalDamage = 0;
-                    foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
-                    {
-                        if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
-                            totalDamage += entry.Value.Key;
-                    }
-
-                    if (vehicleWasEnemy)
-                    {
-                        Asset asset = Assets.find(vc.LastItem);
-                        string reason = string.Empty;
-                        if (asset != null)
-                        {
-                            if (asset is ItemAsset item)
-                                reason = item.itemName;
-                            else if (asset is VehicleAsset v)
-                                reason = "suicide " + v.vehicleName;
-                        }
-
-                        int distance = Mathf.RoundToInt((player.Position - vehicle.transform.position).magnitude);
-
-                        if (reason.Length == 0)
-                            Chat.Broadcast("VEHICLE_DESTROYED_UNKNOWN", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
-                        else
-                            Chat.Broadcast("VEHICLE_DESTROYED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName, reason, distance.ToString());
-
-                        ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
-                                                                         $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
-
-                        QuestManager.OnVehicleDestroyed(owner, player, data, vc);
-
-                        float resMax = 0f;
-                        UCPlayer? resMaxPl = null;
-                        foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in vc.DamageTable)
-                        {
-                            if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
-                            {
-                                float responsibleness = entry.Value.Key / totalDamage;
-                                int reward = Mathf.RoundToInt(responsibleness * fullXP);
-
-                                UCPlayer? attacker = UCPlayer.FromID(entry.Key);
-                                if (attacker != null && attacker.GetTeam() != vehicle.lockedGroup.m_SteamID)
-                                {
-                                    if (attacker.CSteamID.m_SteamID == vc.LastInstigator)
-                                    {
-                                        Points.AwardXP(attacker, reward, Localization.Translate(message, player, data.Type.ToString()).ToUpper());
-                                        Points.TryAwardDriverAssist(player.Player, fullXP, data.TicketCost);
-
-                                        if (spotted != null)
-                                        {
-                                            spotted.OnTargetKilled(reward);
-                                            UnityEngine.Object.Destroy(spotted);
-                                        }
-                                    }
-                                    else if (responsibleness > 0.1F)
-                                        Points.AwardXP(attacker, reward, Localization.Translate("xp_vehicle_assist", attacker));
-                                    if (responsibleness > resMax)
-                                    {
-                                        resMax = responsibleness;
-                                        resMaxPl = attacker;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (resMaxPl != null && resMax > 0 && player.Steam64 != resMaxPl.Steam64)
-                        {
-                            QuestManager.OnVehicleDestroyed(owner, resMaxPl, data, vc);
-                        }
-
-                        Stats.StatsManager.ModifyStats(player.Steam64, s => s.VehiclesDestroyed++, false);
-                        Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesDestroyed++);
-                    }
-                    else if (vehicleWasFriendly)
-                    {
-                        Chat.Broadcast("VEHICLE_TEAMKILLED", F.ColorizeName(F.GetPlayerOriginalNames(player).CharacterName, player.GetTeam()), vehicle.asset.vehicleName);
-
-                        ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} ID: {vehicle.instanceID}" +
-                                                                         $" - Destroyed by {player.Steam64.ToString(Data.Locale)}", vehicle.lockedOwner.m_SteamID);
-
-                        if (message != string.Empty) message = "xp_friendly_" + message;
-                        Points.AwardCredits(player, Mathf.Clamp(data.CreditCost, 5, 1000), Localization.Translate(message, player.Steam64), true);
-                        OffenseManager.LogVehicleTeamkill(player.Steam64, vehicle.id, vehicle.asset.vehicleName, DateTime.Now);
-                    }
-                    /*
-                    float missingQuota = vc.Quota - vc.RequiredQuota;
-                    if (missingQuota < 0)
-                    {
-                        // give quota penalty
-                        if (vc.RequiredQuota != -1 && (vehicleWasEnemy || wasCrashed))
-                        {
-                            for (byte i = 0; i < vehicle.passengers.Length; i++)
-                            {
-                                Passenger passenger = vehicle.passengers[i];
-
-                                if (passenger.player is not null)
-                                {
-                                    vc.EvaluateUsage(passenger.player);
-                                }
-                            }
-
-                            double totalTime = 0;
-                            foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
-                                totalTime += entry.Value;
-
-                            foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
-                            {
-                                float responsibleness = (float)(entry.Value / totalTime);
-                                int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
-
-                                UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
-                                if (assetWaster != null)
-                                    Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
-                            }
-                        }
-                    }
-                    */
-
-                    if (Data.Reporter is not null)
-                    {
-                        if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out Vehicles.VehicleSpawn spawn))
-                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, spawn.SpawnPadInstanceID, vc.LastInstigator, vehicle.asset!.GUID, vc.LastItem, vc.LastDamageOrigin, vehicleWasFriendly);
-                        else
-                            Data.Reporter.OnVehicleDied(vehicle.lockedOwner.m_SteamID, uint.MaxValue, vc.LastInstigator, vehicle.asset!.GUID, vc.LastItem, vc.LastDamageOrigin, vehicleWasFriendly);
-                    }
-                }
-            }
-        }
-
-        if (spotted != null)
-            UnityEngine.Object.Destroy(spotted);
-    }
-    internal static void OnPluginKeyPressed(Player player, uint simulation, byte key, bool state)
-    {
-        if (!state || key != 2 || player == null) return;
-
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.Is(out IRevives r))
-        {
-            r.ReviveManager.GiveUp(player);
-        }
-
-        InteractableVehicle? vehicle = player.movement.getVehicle();
-        if (vehicle != null && player.movement.getSeat() == 0 && (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && vehicle.transform.TryGetComponent(out VehicleComponent component))
-        {
-            component.TrySpawnCountermeasures();
         }
     }
 }

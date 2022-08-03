@@ -815,10 +815,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         for (int i = 0; i < min; i++)
         {
             ListUI.FOBParents[i2].SetVisibility(connection, true);
-            ListUI.FOBNames[i2].SetText(connection, Localization.Translate("fob_ui", player.Steam64,
-                fobs[i].Name.Colorize(fobs[i].UIColor),
-                fobs[i].GridLocation.ToString(),
-                fobs[i].ClosestLocation));
+            ListUI.FOBNames[i2].SetText(connection, T.FOBUI.Translate(Localization.GetLang(player.Steam64), fobs[i], fobs[i].GridLocation, fobs[i].ClosestLocation));
             ListUI.FOBResources[i2].SetText(connection, fobs[i].UIResourceString);
             i2++;
         }
@@ -883,7 +880,7 @@ public class SpecialFOB : IFOB, IDeployable
         if (IsActive)
             return true;
         if (ctx is not null)
-            throw ctx.Reply("deploy_c_notactive");
+            throw ctx.Reply(T.DeployNotSpawnable, this);
         return false;
     }
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat)
@@ -891,14 +888,14 @@ public class SpecialFOB : IFOB, IDeployable
         if (IsActive)
             return true;
         if (chat)
-            player.SendChat("deploy_c_notactive");
+            player.SendChat(T.DeployNotSpawnableTick, this);
         return false;
     }
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
         ActionLogger.Add(EActionLogType.DEPLOY_TO_LOCATION, "SPECIAL FOB " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
         if (chat)
-            player.Message("deploy_s", UIColor, Name);
+            player.SendChat(T.DeploySuccess, this);
     }
 }
 [JsonSerializable(typeof(FOBConfigData))]

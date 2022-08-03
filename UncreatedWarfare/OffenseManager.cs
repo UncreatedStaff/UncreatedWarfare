@@ -1005,7 +1005,7 @@ public static class OffenseManager
         {
             Asset a = Assets.find(e.PrimaryAsset);
             string itemName = a?.FriendlyName ?? e.PrimaryAsset.ToString("N");
-            LogTeamkill(e.Killer, e.Player, e.Cause.ToString(), itemName, a == null ? (ushort)0 : a.id, e.KillDistance, DateTime.Now);
+            LogTeamkill(e.Killer.Steam64, e.Player.Steam64, e.Cause.ToString(), itemName, a == null ? (ushort)0 : a.id, e.KillDistance, DateTime.Now);
         }
     }
     private struct Ban

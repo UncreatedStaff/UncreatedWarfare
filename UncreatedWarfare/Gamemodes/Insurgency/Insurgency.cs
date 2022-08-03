@@ -925,8 +925,6 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     {
         return 0;
     }
-    public override void Load() { }
-    public override void Unload() { }
     public override void OnGameStarting(bool isOnLoaded)
     {
         if (!Data.Is(out Insurgency ins)) return;

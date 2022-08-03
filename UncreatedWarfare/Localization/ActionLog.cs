@@ -29,6 +29,9 @@ public class ActionLogger : MonoBehaviour
         CurrentLogSt = DateTime.Now;
         CurrentFileName = CurrentLogSt.ToString(DATE_HEADER_FORMAT, Data.Locale) + ".txt";
     }
+
+    public static void Add(EActionLogType type, string? data, UCPlayer player) =>
+        Add(type, data, player.Steam64);
     public static void Add(EActionLogType type, string? data = null, ulong player = 0)
     {
         Instance.items.Enqueue(new ActionLogItem(player, type, data, DateTime.Now));
@@ -308,5 +311,6 @@ public enum EActionLogType : byte
     SET_VEHICLE_DATA_PROPERTY,
     VEHICLE_BAY_FORCE_SPAWN,
     PERMISSION_LEVEL_CHANGED,
-    CHAT_FILTER_VIOLATION
+    CHAT_FILTER_VIOLATION,
+    KICKED_BY_BATTLEYE
 }

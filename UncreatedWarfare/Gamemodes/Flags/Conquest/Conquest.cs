@@ -420,8 +420,6 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
 {
     private int _t1Bleed;
     private int _t2Bleed;
-    public override void Load() { }
-    public override void Unload() { }
     public override void OnGameStarting(bool isOnLoaded)
     {
         Manager.Team1Tickets = Gamemode.Config.Conquest.StartingTickets;

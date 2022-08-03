@@ -504,7 +504,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     }
     public virtual void PlayerLeave(UCPlayer player)
     {
-        if (State is not EState.ACTIVE or EState.STAGING && PlayerSave.TryReadSaveFile(player, out PlayerSave save))
+        if (State is not EState.ACTIVE or EState.STAGING && PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave save))
         {
             save.ShouldRespawnOnJoin = true;
             PlayerSave.WriteToSaveFile(save);

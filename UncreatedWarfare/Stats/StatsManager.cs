@@ -503,14 +503,14 @@ public static class StatsManager
         {
             if (e.WasTeamkill)
             {
-                Task.Run(() => Data.DatabaseManager.AddTeamkill(e.Killer, e.KillerTeam));
-                ModifyStats(e.Killer, s => s.Teamkills++, false);
+                Task.Run(() => Data.DatabaseManager.AddTeamkill(e.Killer.Steam64, e.KillerTeam));
+                ModifyStats(e.Killer.Steam64, s => s.Teamkills++, false);
                 ModifyTeam(e.KillerTeam, t => t.Teamkills++, false);
             }
             else
             {
-                Task.Run(() => Data.DatabaseManager.AddKill(e.Killer, e.KillerTeam));
-                ModifyStats(e.Killer, s => s.Kills++, false);
+                Task.Run(() => Data.DatabaseManager.AddKill(e.Killer.Steam64, e.KillerTeam));
+                ModifyStats(e.Killer.Steam64, s => s.Kills++, false);
                 ModifyTeam(e.KillerTeam, t => t.Kills++, false);
                 if (e.TurretVehicleOwner != default && Assets.find(e.TurretVehicleOwner) is VehicleAsset vasset)
                     ModifyVehicle(vasset.id, v => v.KillsWithGunner++);
@@ -532,7 +532,7 @@ public static class StatsManager
                 }
                 if (KitManager.HasKit(e.Killer, out kit))
                 {
-                    ModifyStats(e.Killer, s =>
+                    ModifyStats(e.Killer.Steam64, s =>
                     {
                         s.Kills++;
                         WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == e.KillerTeam);
@@ -560,7 +560,7 @@ public static class StatsManager
                     }, false);
                 }
                 else
-                    ModifyStats(e.Killer, s =>
+                    ModifyStats(e.Killer.Steam64, s =>
                     {
                         s.Kills++;
                         if (atk) s.KillsWhileAttackingFlags++;
@@ -600,11 +600,11 @@ public static class StatsManager
             }
         }
 
-        Task.Run(() => Data.DatabaseManager.AddDeath(e.Player, e.DeadTeam));
+        Task.Run(() => Data.DatabaseManager.AddDeath(e.Player.Steam64, e.DeadTeam));
         ModifyTeam(e.DeadTeam, t => t.Deaths++, false);
         if (KitManager.HasKit(e.Player, out kit))
         {
-            ModifyStats(e.Player, s =>
+            ModifyStats(e.Player.Steam64, s =>
             {
                 s.Deaths++;
                 WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == e.DeadTeam);
@@ -627,7 +627,7 @@ public static class StatsManager
             ModifyKit(kit.Name, k => k.Deaths++, true);
         }
         else
-            ModifyStats(e.Player, s => s.Deaths++, false);
+            ModifyStats(e.Player.Steam64, s => s.Deaths++, false);
     }
 
     internal static void OnFlagCaptured(Gamemodes.Flags.Flag flag, ulong capturedTeam, ulong lostTeam)

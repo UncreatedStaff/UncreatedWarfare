@@ -2,6 +2,8 @@
 using System;
 using Uncreated.Encoding;
 using Uncreated.Warfare;
+using Uncreated.Warfare.Events;
+using UnityEngine;
 
 namespace Uncreated.Players;
 
@@ -127,4 +129,154 @@ public enum EToastMessageSeverity : byte
     BIG = 5,
     PROGRESS = 6,
     TIP = 7
+}
+
+public sealed class UCPlayerKeys
+{
+    private static readonly int KEY_COUNT = 9 + ControlsSettings.NUM_PLUGIN_KEYS;
+
+    private static readonly KeyDown?[] _downEvents = new KeyDown?[KEY_COUNT];
+    private static readonly KeyUp?[] _upEvents = new KeyUp?[KEY_COUNT];
+    private static readonly bool[] eventMask = new bool[KEY_COUNT];
+    private static bool anySubs = false;
+
+    public readonly UCPlayer Player;
+    private readonly bool[] lastKeys = new bool[KEY_COUNT];
+    private readonly float[] keyDownTimes = new float[KEY_COUNT];
+    private bool first = true;
+    public UCPlayerKeys(UCPlayer player)
+    {
+        Player = player;
+        if (Player.Player.input.keys.Length != KEY_COUNT)
+            throw new InvalidOperationException("Nelson changed the amount of keys in PlayerInput!");
+        float time = Time.realtimeSinceStartup;
+        for (int i = 0; i < KEY_COUNT; ++i)
+            keyDownTimes[i] = time;
+    }
+    public bool IsKeyDown(PlayerKey key)
+    {
+        CheckKey(key);
+        return Player.Player.input.keys[(int)key];
+    }
+    public static void SubscribeKeyUp(KeyUp action, PlayerKey key)
+    {
+        if (action == null) return;
+        anySubs = true;
+        CheckKey(key);
+        ref KeyUp? d = ref _upEvents[(int)key];
+        eventMask[(int)key] = true;
+        d += action;
+    }
+    public static void SubscribeKeyDown(KeyDown action, PlayerKey key)
+    {
+        if (action == null) return;
+        anySubs = true;
+        CheckKey(key);
+        ref KeyDown? d = ref _downEvents[(int)key];
+        eventMask[(int)key] = true;
+        d += action;
+    }
+#nullable disable
+    public static void UnsubscribeKeyUp(KeyUp action, PlayerKey key)
+    {
+        if (action == null) return;
+        CheckKey(key);
+        ref KeyUp d = ref _upEvents[(int)key];
+        if (d != null)
+            d -= action;
+        CheckAnySubs();
+    }
+    public static void UnsubscribeKeyDown(KeyDown action, PlayerKey key)
+    {
+        if (action == null) return;
+        CheckKey(key);
+        ref KeyDown d = ref _downEvents[(int)key];
+        if (d != null)
+            d -= action;
+        CheckAnySubs();
+    }
+#nullable restore
+    private static void CheckKey(PlayerKey key)
+    {
+#pragma warning disable CS0618
+        if (key == PlayerKey.Reserved || (int)key < 0 || (int)key >= KEY_COUNT)
+            throw new ArgumentOutOfRangeException(nameof(key), key.ToString() + " doesn't match a valid key.");
+#pragma warning restore CS0618
+    }
+    private static void CheckAnySubs()
+    {
+        anySubs = false;
+        for (int i = 0; i < KEY_COUNT; ++i)
+            eventMask[i] = false;
+        for (int i = 0; i < _upEvents.Length; ++i)
+        {
+            if (_upEvents[i] != null)
+            {
+                anySubs = true;
+                eventMask[i] = true;
+            }
+        }
+        for (int i = 0; i < _downEvents.Length; ++i)
+        {
+            if (_downEvents[i] != null)
+            {
+                anySubs = true;
+                eventMask[i] = true;
+            }
+        }
+    }
+    internal void Simulate()
+    {
+        bool[] keys = Player.Player.input.keys;
+        if (first || !anySubs)
+        {
+            for (int i = 0; i < KEY_COUNT; ++i)
+                this.lastKeys[i] = keys[i];
+            first = false;
+        }
+        else
+        {
+            for (int i = 0; i < KEY_COUNT; ++i)
+            {
+                bool st = keys[i];
+                if (eventMask[i])
+                {
+                    bool ost = this.lastKeys[i];
+                    if (st == ost) return;
+                    if (st)
+                    {
+                        EventDispatcher.OnKeyDown(Player, (PlayerKey)i, _downEvents[i]);
+                        keyDownTimes[i] = Time.realtimeSinceStartup;
+                    }
+                    else
+                    {
+                        EventDispatcher.OnKeyUp(Player, (PlayerKey)i, Time.realtimeSinceStartup - keyDownTimes[i], _upEvents[i]);
+                    }
+                }
+                this.lastKeys[i] = st;
+            }
+        }
+    }
+}
+
+public delegate void KeyDown(UCPlayer player, ref bool handled);
+public delegate void KeyUp(UCPlayer player, float timeDown, ref bool handled);
+
+public enum PlayerKey
+{
+    Jump = 0,
+    Primary = 1,
+    Secondary = 2,
+    Crouch = 3,
+    Prone = 4,
+    Sprint = 5,
+    LeanLeft = 6,
+    LeanRight = 7,
+    [Obsolete("This is not in use right now.")]
+    Reserved = 8,
+    PluginKey1 = 9,
+    PluginKey2 = 10,
+    PluginKey3 = 11,
+    PluginKey4 = 12,
+    PluginKey5 = 13
 }

@@ -295,12 +295,10 @@ public class VehicleComponent : MonoBehaviour
         }
         else
             L.LogDebug("     ERROR: Countermeasure asset not found");
-
-        
     }
     private IEnumerator<WaitForSeconds> ReloadCountermeasures()
     {
-        yield return new WaitForSeconds(15);    
+        yield return new WaitForSeconds(15);
 
         RemoveCountermeasures();
 

@@ -119,14 +119,14 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 #endif
         ITransportConnection c = player.Player.channel.owner.transportConnection;
         MenuUI.SendToPlayer(c);
-        MenuUI.Header.SetText(c, Localization.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
+        MenuUI.Header.SetText(c, T.SquadsUIHeaderPlayerCount.Translate(player, squad, squad.Members.Count, MenuUI.MemberParents.Length));
         MenuUI.Lock.SetVisibility(c, squad.IsLocked);
         int i = 0;
         int num = Math.Min(squad.Members.Count, MenuUI.MemberParents.Length);
         for (; i < num; i++)
         {
             MenuUI.MemberParents[i].SetVisibility(c, true);
-            MenuUI.MemberNames[i].SetText(c, Localization.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(squad.Members[i]).NickName));
+            MenuUI.MemberNames[i].SetText(c, squad.Members[i].Name.NickName);
             MenuUI.MemberIcons[i].SetText(c, new string(squad.Members[i].Icon, 1));
         }
         for (; i < MenuUI.MemberParents.Length; i++)
@@ -137,7 +137,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         {
             int s2 = 0;
             MenuUI.OtherSquad_0.SetVisibility(c, true);
-            MenuUI.OtherSquad_0_Text.SetText(c, Localization.Translate("squad_ui_expanded", player));
+            MenuUI.OtherSquad_0_Text.SetText(c, T.SquadUIExpanded.Translate(player));
             for (int s = 0; s < Squads.Count; s++)
             {
                 int sq;
@@ -145,7 +145,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                 if ((sq = s2 + 1) >= MenuUI.OtherSquadParents.Length) break;
 
                 MenuUI.OtherSquadParents[sq].SetVisibility(c, true);
-                MenuUI.OtherSquadTexts[sq].SetText(c, Localization.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
+                MenuUI.OtherSquadTexts[sq].SetText(c,
+                    (Squads[s].IsLocked ? T.SquadsUIPlayerCountSmallLocked : T.SquadsUIPlayerCountSmall).Translate(player, Squads[s].Members.Count, MenuUI.MemberParents.Length));
                 s2++;
             }
             for (; s2 < MenuUI.OtherSquadParents.Length - 1; s2++)
@@ -170,7 +171,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
             {
                 int s2 = 0;
                 MenuUI.OtherSquad_0.SetVisibility(c, true);
-                MenuUI.OtherSquad_0_Text.SetText(c, Localization.Translate("squad_ui_expanded", player));
+                MenuUI.OtherSquad_0_Text.SetText(c, T.SquadUIExpanded.Translate(player));
                 for (int s = 0; s < Squads.Count; s++)
                 {
                     int sq;
@@ -178,7 +179,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                     if ((sq = s2 + 1) >= MenuUI.OtherSquadParents.Length) break;
 
                     MenuUI.OtherSquadParents[sq].SetVisibility(c, true);
-                    MenuUI.OtherSquadTexts[sq].SetText(c, Localization.Translate(Squads[s].IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", player, Squads[s].Members.Count.ToString(Data.Locale)));
+                    MenuUI.OtherSquadTexts[sq].SetText(c,
+                        (Squads[s].IsLocked ? T.SquadsUIPlayerCountSmallLocked : T.SquadsUIPlayerCountSmall).Translate(player, Squads[s].Members.Count, MenuUI.MemberParents.Length));
                     s2++;
                 }
                 for (; s2 < MenuUI.OtherSquadParents.Length - 1; s2++)
@@ -195,8 +197,11 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                     if (s2 >= ListUI.Squads.Length) break;
                     Squad sq = Squads[s];
                     ListUI.Squads[s2].SetVisibility(c, true);
-                    ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? Localization.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Localization.Translate("squad_ui_leader_name", player, sq.Name));
-                    ListUI.SquadMemberCounts[s2].SetText(c, Localization.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : string.Empty, sq.Members.Count.ToString(Data.Locale)));
+                    ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? sq.Name.Colorize("5eff87") : sq.Name);
+                    ListUI.SquadMemberCounts[s2].SetText(player.Connection,
+                        sq.IsLocked ?
+                            T.SquadsUIPlayerCountListLocked.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UI.LockIcon) :
+                            T.SquadsUIPlayerCountList.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length));
                     s2++;
                 }
                 for (; s2 < ListUI.Squads.Length; s2++)
@@ -258,8 +263,11 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                 if (s2 == 0)
                     ListUI.Header.SetVisibility(c, true);
                 ListUI.Squads[s2].SetVisibility(c, true);
-                ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? Localization.Translate("squad_ui_leader_name", player, sq.Name).Colorize("5eff87") : Localization.Translate("squad_ui_leader_name", player, sq.Name));
-                ListUI.SquadMemberCounts[s2].SetText(c, Localization.Translate("squad_ui_player_count", player, sq.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", sq.Members.Count.ToString(Data.Locale)));
+                ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? sq.Name.Colorize(UCWarfare.GetColorHex("rally")) : sq.Name);
+                ListUI.SquadMemberCounts[s2].SetText(player.Connection,
+                    sq.IsLocked ?
+                        T.SquadsUIPlayerCountListLocked.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UI.LockIcon) :
+                        T.SquadsUIPlayerCountList.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length));
                 s2++;
             }
         }
@@ -296,7 +304,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                 if (player.Squad is null)
                 {
                     ListUI.SquadMemberCounts[index].SetText(player.Connection,
-                        Localization.Translate("squad_ui_player_count", player, squad.IsLocked ? Gamemode.Config.UI.LockIcon + "  " : "", squad.Members.Count.ToString(Data.Locale)));
+                        squad.IsLocked ? 
+                            T.SquadsUIPlayerCountListLocked.Translate(player, squad.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UI.LockIcon) :
+                            T.SquadsUIPlayerCountList.Translate(player, squad.Members.Count, MenuUI.MemberParents.Length));
                 }
             }
         }
@@ -316,7 +326,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
             for (int m = 0; m < s.Members.Count; ++m)
             {
                 UCPlayer pl = s.Members[m];
-                MenuUI.OtherSquadTexts[index].SetText(pl.Connection, Localization.Translate(squad.IsLocked ? "squad_ui_player_count_small_locked" : "squad_ui_player_count_small", pl, squad.Members.Count.ToString(Data.Locale)));
+                MenuUI.OtherSquadTexts[index].SetText(pl.Connection,
+                    (squad.IsLocked ? T.SquadsUIPlayerCountSmallLocked : T.SquadsUIPlayerCountSmall)
+                        .Translate(pl, squad.Members.Count, MenuUI.MemberParents.Length));
             }
         }
     }
@@ -356,14 +368,14 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         {
             UCPlayer player = squad.Members[m];
             ITransportConnection c = player.Player.channel.owner.transportConnection;
-            MenuUI.Header.SetText(c, Localization.Translate($"squad_ui_header_name", player, squad.Name, squad.Members.Count.ToString(Data.Locale)));
+            MenuUI.Header.SetText(c, T.SquadsUIHeaderPlayerCount.Translate(player, squad, squad.Members.Count, MenuUI.MemberParents.Length));
             int i = 0;
             int num = Math.Min(squad.Members.Count, MenuUI.MemberParents.Length);
             for (; i < num; i++)
             {
                 MenuUI.MemberParents[i].SetVisibility(c, true);
                 UCPlayer member = squad.Members[i];
-                MenuUI.MemberNames[i].SetText(c, Localization.Translate("squad_ui_player_name", player, F.GetPlayerOriginalNames(member).NickName));
+                MenuUI.MemberNames[i].SetText(c, member.Name.NickName);
                 MenuUI.MemberIcons[i].SetText(c, new string(member.Icon, 1));
             }
             for (; i < MenuUI.MemberParents.Length; i++)
@@ -444,9 +456,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         foreach (UCPlayer p in squad.Members)
         {
             if (p.Steam64 != player.Steam64)
-                p.Message("squad_player_joined", player.Player.channel.owner.playerID.nickName);
+                p.SendChat(T.SquadPlayerJoined, player);
             else
-                p.Message("squad_joined", squad.Name);
+                p.SendChat(T.SquadJoined, squad);
         }
 
         squad.Members.Add(player);
@@ -490,7 +502,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        player.Message("squad_left");
+        player.SendChat(T.SquadLeft, squad);
 
         bool willNeedNewLeader = squad.Leader == null || squad.Leader.CSteamID.m_SteamID == player.CSteamID.m_SteamID;
         player.Squad = null;
@@ -502,7 +514,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 
             if (squad.Leader != null)
             {
-                squad.Leader.Message("squad_disbanded");
+                squad.Leader.SendChat(T.SquadDisbanded, squad);
                 if (squad.Leader.KitClass == EClass.SQUADLEADER)
                     KitManager.TryGiveUnarmedKit(squad.Leader);
             }
@@ -537,15 +549,13 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         {
             squad.Leader = squad.Members[0]; // goes to the best officer, then the best xp
             squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
-            squad.Leader.Message("squad_squadleader", squad.Leader.SteamPlayer.playerID.nickName);
+            squad.Leader.SendChat(T.SquadPromoted, squad);
         }
         for (int i = 0; i < squad.Members.Count; i++)
         {
             UCPlayer p = squad.Members[i];
             if (p.Steam64 != player.Steam64)
-                p.Message("squad_player_left", player.Player.channel.owner.playerID.nickName);
-            else
-                p.Message("squad_left", squad.Name);
+                p.SendChat(T.SquadPlayerLeft, player);
         }
         UpdateMemberList(squad);
         UpdateUIMemberCount(squad.Team);
@@ -572,7 +582,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
             UCPlayer member = squad.Members[i];
             member.Squad = null;
 
-            member.Message("squad_disbanded");
+            member.SendChat(T.SquadDisbanded, squad);
             ClearMenu(member.Player);
         }
         SendSquadListToTeam(squad.Team);
@@ -598,14 +608,14 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
             return;
 
         if (squad.Members.Remove(player))
-            player.Message("squad_kicked", squad.Name);
+            player.SendChat(T.SquadKicked, squad);
 
         SortMembers(squad);
         for (int i = 0; i < squad.Members.Count; i++)
         {
             UCPlayer p = squad.Members[i];
             if (p.Steam64 != player.Steam64)
-                p.Message("squad_player_kicked", F.GetPlayerOriginalNames(player).NickName);
+                p.SendChat(T.SquadPlayerKicked, player);
         }
         UpdateMemberList(squad);
         player.Squad = null;
@@ -633,9 +643,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         {
             UCPlayer p = squad.Members[i];
             if (p.CSteamID != squad.Leader.CSteamID)
-                p.Message("squad_player_promoted", newLeader.Player.channel.owner.playerID.nickName);
+                p.SendChat(T.SquadPlayerPromoted, newLeader);
             else
-                p.Message("squad_promoted", squad.Leader.SteamPlayer.playerID.nickName);
+                p.SendChat(T.SquadPromoted, squad);
         }
 
         SortMembers(squad);

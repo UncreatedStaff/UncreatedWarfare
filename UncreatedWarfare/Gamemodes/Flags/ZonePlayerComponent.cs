@@ -1365,7 +1365,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private void SetUseCase(EZoneUseCase uc)
     {
         _currentBuilder!.UseCase = uc;
-        player.SendChat("edit_zone_use_case_success", Localization.TranslateEnum(uc, player));
+        player.SendChat("edit_zone_use_case_success", Localization.TranslateEnum(uc, player.Steam64));
     }
 
     private void SetName(string name)
@@ -1687,13 +1687,13 @@ internal class ZonePlayerComponent : MonoBehaviour
         {
             component.CheckType(New, transact: false);
             if (!Implicit)
-                component.player.SendChat("edit_zone_type_success", Localization.TranslateEnum(New, component.player));
+                component.player.SendChat("edit_zone_type_success", Localization.TranslateEnum(New, component.player.Steam64));
         }
         public override void Undo(ZonePlayerComponent component)
         {
             component.CheckType(Old, transact: false);
             if (!Implicit)
-                component.player.SendChat("edit_zone_type_success", Localization.TranslateEnum(Old, component.player));
+                component.player.SendChat("edit_zone_type_success", Localization.TranslateEnum(Old, component.player.Steam64));
         }
     }
 

@@ -1502,6 +1502,7 @@ partial class JSONMethods
         { "insurgency_cache_discovered_color", "555bcf" },
         { "neutral_color", "c2c2c2" },
         { "credits", "b8ffc1" },
+        { "rally", "5eff87" },
 
         // capture ui
         { "contested", "ffdc8a" },

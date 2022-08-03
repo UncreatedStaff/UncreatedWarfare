@@ -319,7 +319,7 @@ public class FOB : IFOB, IDeployable
                             tw *= 2;
                         }
 
-                        Points.AwardXP(creator, groupsUnloaded * xp, Localization.Translate("xp_supplies_unloaded", creator));
+                        Points.AwardXP(creator, groupsUnloaded * xp, T.XPToastSuppliesUnloaded);
                     }
                 }
 
@@ -413,7 +413,7 @@ public class FOB : IFOB, IDeployable
                                 component.Quota += 0.33F;
                             }
 
-                            Points.AwardXP(player, xp, Localization.Translate("xp_supplies_unloaded", player));
+                            Points.AwardXP(player, xp, T.XPToastSuppliesUnloaded);
 
                             player.SuppliesUnloaded = 0;
                         }
@@ -738,25 +738,19 @@ public class FOB : IFOB, IDeployable
         if (NearbyEnemies.Count != 0)
         {
             if (ctx is not null)
-                throw ctx.Reply("deploy_c_enemiesNearby");
+                throw ctx.Reply(T.DeployEnemiesNearby, this);
             return false;
         }
-        if (IsBleeding)
+        if (IsBleeding || !IsSpawnable)
         {
             if (ctx is not null)
-                throw ctx.Reply("deploy_c_bleeding");
+                throw ctx.Reply(T.DeployNotSpawnable, this);
             return false;
         }
         if (Bunker == null)
         {
             if (ctx is not null)
-                throw ctx.Reply("deploy_e_nobunker");
-            return false;
-        }
-        if (!IsSpawnable)
-        {
-            if (ctx is not null)
-                throw ctx.Reply("deploy_c_notspawnable");
+                throw ctx.Reply(T.DeployNoBunker, this);
             return false;
         }
 
@@ -767,25 +761,19 @@ public class FOB : IFOB, IDeployable
         if (NearbyEnemies.Count != 0)
         {
             if (chat)
-                player.SendChat("deploy_c_enemiesNearby");
+                player.SendChat(T.DeployEnemiesNearbyTick, this);
             return false;
         }
-        if (IsBleeding)
+        if (IsBleeding || !IsSpawnable)
         {
             if (chat)
-                player.SendChat("deploy_c_bleeding");
+                player.SendChat(T.DeployNotSpawnableTick, this);
             return false;
         }
         if (Bunker == null)
         {
             if (chat)
-                player.SendChat("deploy_e_nobunker");
-            return false;
-        }
-        if (!IsSpawnable)
-        {
-            if (chat)
-                player.SendChat("deploy_c_notspawnable");
+                player.SendChat(T.DeployNoBunker, this);
             return false;
         }
 
@@ -795,7 +783,7 @@ public class FOB : IFOB, IDeployable
     {
         ActionLogger.Add(EActionLogType.DEPLOY_TO_LOCATION, "FOB BUNKER " + Name + " TEAM " + TeamManager.TranslateName(Team, 0), player);
         if (chat)
-            player.Message("deploy_s", UIColor, Name);
+            player.SendChat(T.DeploySuccess, this);
     }
 }
 

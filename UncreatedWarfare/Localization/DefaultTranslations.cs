@@ -1,5 +1,4 @@
-﻿using SDG.Framework.Utilities;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +7,6 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -237,7 +235,7 @@ internal static class T
     public static readonly Translation<ItemAsset> ProhibitedStoring      = new Translation<ItemAsset>("<#fa9e9e>You are not allowed to store {0}.", RARITY_COLOR_FORMAT + PLURAL);
         [TranslationData(Section = SECTION_PLAYERS,
         Description = "Sent when a player tries to point or mark while not a squad leader.", LegacyTranslationId = "marker_not_in_squad", FormattingDescriptions = new string[] { "Item the player is trying to store (plural)." })]
-    public static readonly Translation MarkerNotInSquad                  = new Translation("<#fa9e9e>Only your squad can see markers, join a squad with <#cedcde>/squad join <name></color> or <color=#cedcde>/squad create <name></color> to use this feature.");
+    public static readonly Translation MarkerNotInSquad                  = new Translation("<#fa9e9e>Only your squad can see markers, you must be a squad leader to use this feature. Create a squad with <color=#cedcde>/squad create</color> to use this feature.");
         [TranslationData(Section = SECTION_PLAYERS,
         Description = "Sent on a SEVERE toast when the player enters enemy territory.", LegacyTranslationId = "entered_enemy_territory", FormattingDescriptions = new string[] { "Long time string." })]
     public static readonly Translation<string> EnteredEnemyTerritory     = new Translation<string>("Too close to enemy base! You will die in <#cedcde>{0}</color>!", TranslationFlags.UnityUI);
@@ -538,10 +536,10 @@ internal static class T
     public static readonly Translation<IPlayer, Kit> KitAlreadyMissingAccess  = new Translation<IPlayer, Kit>(ERROR_COLOR + "{0} doesn't have access to <#fff>{1}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, Kit.ID_FORMAT);
     public static readonly Translation<Cooldown> KitOnCooldown                = new Translation<Cooldown>(ERROR_COLOR + "You can request this kit again in: <#bafeff>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
     public static readonly Translation<Cooldown> KitOnGlobalCooldown          = new Translation<Cooldown>(ERROR_COLOR + "You can request another kit again in: <#bafeff>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
-    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessGiven         = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
-    public static readonly Translation<IPlayer, IPlayer, Kit> KitAccessRevoked       = new Translation<IPlayer, IPlayer, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, ulong, Kit> KitAccessGiven         = new Translation<IPlayer, ulong, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>) was given access to the kit: <#fff>{2}</color>.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
+    public static readonly Translation<IPlayer, ulong, Kit> KitAccessRevoked       = new Translation<IPlayer, ulong, Kit>("<#a0ad8e>{0} (<#aaa>{1}</color>)'s access to <#fff>{2}</color> was taken away.", UCPlayer.COLOR_PLAYER_NAME_FORMAT, UCPlayer.STEAM_64_FORMAT, Kit.ID_FORMAT);
     public static readonly Translation<string, Type, string> KitInvalidPropertyValue = new Translation<string, Type, string>(ERROR_COLOR + "<#fff>{2}</color> isn't a valid value for <#eee>{0}</color> (<#aaa>{1}</color>).");
-    public static readonly Translation<EClass, IPlayer, IPlayer, Kit> LoadoutCreated = new Translation<EClass, IPlayer, IPlayer, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT, arg2Fmt: UCPlayer.STEAM_64_FORMAT, arg3Fmt: Kit.ID_FORMAT);
+    public static readonly Translation<EClass, IPlayer, ulong, Kit> LoadoutCreated = new Translation<EClass, IPlayer, ulong, Kit>("<#a0ad8e>Created <#bbc>{0}</color> loadout for {1} (<#aaa>{2}</color>). Kit name: <#fff>{3}</color>.", arg1Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT, arg2Fmt: UCPlayer.STEAM_64_FORMAT, arg3Fmt: Kit.ID_FORMAT);
     public static readonly Translation<ItemAsset> KitProhibitedPickupAmt             = new Translation<ItemAsset>("<#ff8c69>Your kit does not allow you to have any more {0}.", RARITY_COLOR_FORMAT + PLURAL);
     #endregion
 
@@ -576,10 +574,12 @@ internal static class T
     public static readonly Translation SquadsDisabled               = new Translation("<#a89791>Squads are disabled in this gamemode.");
     public static readonly Translation<int> SquadsTooMany           = new Translation<int>("<#a89791>There can not be more than {0} squads on a team at once.");
 
-    public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount = new Translation<Squad, int, int>("<#bd6b5b>{0}</color {1}/{2}", TranslationFlags.UnityUI, Squad.NAME_FORMAT);
-    public static readonly Translation<int, int> SquadsUIPlayerCountSmall         = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
-    public static readonly Translation<int, int> SquadsUIPlayerCountSmallLocked   = new Translation<int, int>("<#969696>{0}/{1}</color>", TranslationFlags.UnityUI);
-    public static readonly Translation SquadUIExpanded                            = new Translation("...", TranslationFlags.UnityUI);
+    public static readonly Translation<Squad, int, int> SquadsUIHeaderPlayerCount    = new Translation<Squad, int, int>("<#bd6b5b>{0}</color> {1}/{2}", TranslationFlags.UnityUI, Squad.NAME_FORMAT);
+    public static readonly Translation<int, int> SquadsUIPlayerCountList             = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int, char> SquadsUIPlayerCountListLocked = new Translation<int, int, char>("{2} {0}/{1}", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int> SquadsUIPlayerCountSmall            = new Translation<int, int>("{0}/{1}", TranslationFlags.UnityUI);
+    public static readonly Translation<int, int> SquadsUIPlayerCountSmallLocked      = new Translation<int, int>("<#969696>{0}/{1}</color>", TranslationFlags.UnityUI);
+    public static readonly Translation SquadUIExpanded                               = new Translation("...", TranslationFlags.UnityUI);
     #endregion
 
     #region Orders
@@ -623,18 +623,21 @@ internal static class T
     #endregion
 
     #region Rallies
-    public static readonly Translation RallySuccess         = new Translation("<#959c8c>You have <#5eff87>rallied</color> with your squad.");
-    public static readonly Translation RallyActive          = new Translation("<#959c8c>Your squad has an active <#5eff87>RALLY POINT</color>. Do <#bfbfbf>/rally</color> to rally with your squad.");
-    public static readonly Translation<int> RallyWait       = new Translation<int>("<#959c8c>Standby for <#5eff87>RALLY</color> in: <#ffe4b5>{0}s</color>. Do <#a3b4c7>/rally cancel</color> to abort.");
+    public static readonly Translation RallySuccess         = new Translation("<#959c8c>You have <#c$rally$>rallied</color> with your squad.");
+    public static readonly Translation RallyActive          = new Translation("<#959c8c>Your squad has an active <#c$rally$>RALLY POINT</color>. Do <#bfbfbf>/rally</color> to rally with your squad.");
+    public static readonly Translation<int> RallyWait       = new Translation<int>("<#959c8c>Standby for <#c$rally$>RALLY</color> in: <#ffe4b5>{0}s</color>. Do <#a3b4c7>/rally cancel</color> to abort.");
     public static readonly Translation RallyAbort           = new Translation("<#a1a1a1>Cancelled rally deployment.");
     public static readonly Translation RallyObstructed      = new Translation("<#959c8c><#bfbfbf>RALLY</color> is no longer available - there are enemies nearby.");
     public static readonly Translation RallyNoSquadmates    = new Translation("<#99918d>You need more squad members to use a <#bfbfbf>rally point</color>.");
     public static readonly Translation RallyNotSquadleader  = new Translation("<#99918d>You must be a <color=#cedcde>SQUAD LEADER</color> in order to place this.");
-    public static readonly Translation RallyAlreadyQueued   = new Translation("<#99918d>You are already waiting on <#5eff87>rally</color> deployment. Do <#a3b4c7>/rally cancel</color> to abort.");
-    public static readonly Translation RallyNotQueued       = new Translation("<#959c8c>You aren't waiting on a <#5eff87>rally</color> deployment.");
-    public static readonly Translation RallyNotInSquad      = new Translation("<#959c8c>You must be in a squad to use <#5eff87>rallies</color>.");
+    public static readonly Translation RallyAlreadyQueued   = new Translation("<#99918d>You are already waiting on <#c$rally$>rally</color> deployment. Do <#a3b4c7>/rally cancel</color> to abort.");
+    public static readonly Translation RallyNotQueued       = new Translation("<#959c8c>You aren't waiting on a <#c$rally$>rally</color> deployment.");
+    public static readonly Translation RallyNotInSquad      = new Translation("<#959c8c>You must be in a squad to use <#c$rally$>rallies</color>.");
     public static readonly Translation RallyObstructedPlace = new Translation("<#959c8c>This rally point is obstructed, find a more open place to put it.");
-    public static readonly Translation<TimeSpan> RallyUI    = new Translation<TimeSpan>("<#5eff87>RALLY</color> {0}", TranslationFlags.UnityUI, "mm:ss");
+    public static readonly Translation RallyEnemiesNearby   = new Translation("<#959c8c>There are enemies near this <#c$rally$>rally</color>.");
+    public static readonly Translation RallyEnemiesNearbyTp = new Translation("<#959c8c>There are enemies near your pending <#c$rally$>rally</color>. Deployment cancelled.");
+    public static readonly Translation<string> RallyUI      = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationFlags.UnityUI);
+    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationFlags.UnityUI, "mm:ss");
     #endregion
 
     #region Time
@@ -671,7 +674,7 @@ internal static class T
     public static readonly Translation BuildFOBTooCloseToMain  = new Translation("<#ffab87>You can't build a FOB this close to main base.");
     public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
     public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.COLORED_NAME_FORMAT, "F0", "F0");
-    public static readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({1}m away). You must be at least {2}m away to place a new radio.", "F0", "F0");
+    public static readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({0}m away). You must be at least {1}m away to place a new radio.", "F0", "F0");
     public static readonly Translation<FOB, GridLocation, string> FOBUI    = new Translation<FOB, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.NAME_FORMAT);
     public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
     public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
@@ -987,18 +990,18 @@ internal static class T
     #endregion
 
     #region Vehicle Deaths
-    public static readonly Translation<IPlayer, VehicleAsset, ItemAsset, float> VehicleDestroyed = new Translation<IPlayer, VehicleAsset, ItemAsset, float>("<#c$death_background$>{0} took out a {1} with a {2} from {3}m away.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RARITY_COLOR_FORMAT, RARITY_COLOR_FORMAT, "F0");
+    public static readonly Translation<IPlayer, VehicleAsset, string, float> VehicleDestroyed = new Translation<IPlayer, VehicleAsset, string, float>("<#c$death_background$>{0} took out a {1} with a {2} from {3}m away.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RARITY_COLOR_FORMAT, "F0");
     public static readonly Translation<IPlayer, VehicleAsset> VehicleDestroyedUnknown = new Translation<IPlayer, VehicleAsset>("<#c$death_background$>{0} took out a {1}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RARITY_COLOR_FORMAT);
     public static readonly Translation<IPlayer, VehicleAsset> VehicleTeamkilled = new Translation<IPlayer, VehicleAsset>("<#c$death_background_teamkill$>{0} blew up a friendly {1}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RARITY_COLOR_FORMAT);
     #endregion
 
     #region Officers
-    public static readonly Translation<RankData, FactionInfo> OfficerPromoted = new Translation<RankData, FactionInfo>("<#9e9788>Congratulations, you have been <#e3b552>PROMOTED</color> to <#e05353>{0}</color> of {1}!", RankData.NAME_FORMAT, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
-    public static readonly Translation<RankData, FactionInfo> OfficerDemoted = new Translation<RankData, FactionInfo>("<#9e9788>You have been <#c47f5c>DEMOTED</color> to <#e05353>{0}</color> of {1}.", RankData.NAME_FORMAT, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
+    public static readonly Translation<Ranks.RankData, FactionInfo> OfficerPromoted = new Translation<Ranks.RankData, FactionInfo>("<#9e9788>Congratulations, you have been <#e3b552>PROMOTED</color> to <#e05353>{0}</color> of {1}!", RankData.NAME_FORMAT, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
+    public static readonly Translation<Ranks.RankData, FactionInfo> OfficerDemoted = new Translation<Ranks.RankData, FactionInfo>("<#9e9788>You have been <#c47f5c>DEMOTED</color> to <#e05353>{0}</color> of {1}.", RankData.NAME_FORMAT, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
     public static readonly Translation OfficerDischarged = new Translation("<#9e9788>You have been <color=#ab2e2e>DISCHARGED</color> from the officer ranks for unacceptable behaviour.");
-    public static readonly Translation<IPlayer, RankData, FactionInfo> OfficerPromotedBroadcast = new Translation<IPlayer, RankData, FactionInfo>("<#9e9788>{0} has been <#e3b552>PROMOTED</color> to <#e05353>{1}</color> of {2}!", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.NAME_FORMAT, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
-    public static readonly Translation<IPlayer, RankData, FactionInfo> OfficerDemotedBroadcast = new Translation<IPlayer, RankData, FactionInfo>("<#9e9788>{0} has been <#c47f5c>DEMOTED</color> to <#e05353>{1}</color> of {2}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.NAME_FORMAT, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
-    public static readonly Translation<IPlayer, RankData> OfficerDischargedBroadcast = new Translation<IPlayer, RankData>("<#9e9788>{0} has been <#ab2e2e>DISCHARGED</color> from the rank of <#e05353>{1}s</color> for unacceptable behaviour.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.NAME_FORMAT);
+    public static readonly Translation<IPlayer, Ranks.RankData, FactionInfo> OfficerPromotedBroadcast = new Translation<IPlayer, Ranks.RankData, FactionInfo>("<#9e9788>{0} has been <#e3b552>PROMOTED</color> to <#e05353>{1}</color> of {2}!", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.NAME_FORMAT, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
+    public static readonly Translation<IPlayer, Ranks.RankData, FactionInfo> OfficerDemotedBroadcast = new Translation<IPlayer, Ranks.RankData, FactionInfo>("<#9e9788>{0} has been <#c47f5c>DEMOTED</color> to <#e05353>{1}</color> of {2}.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.NAME_FORMAT, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
+    public static readonly Translation<IPlayer, Ranks.RankData> OfficerDischargedBroadcast = new Translation<IPlayer, Ranks.RankData>("<#9e9788>{0} has been <#ab2e2e>DISCHARGED</color> from the rank of <#e05353>{1}s</color> for unacceptable behaviour.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT, RankData.NAME_FORMAT);
     public static readonly Translation<int, int> OfficerInvalidRank = new Translation<int, int>("<#b08989><#ddd>{0}</color> is not a valid officer level. Try numbers <#ddd>1</color> - <#ddd>{1}</color>.");
     public static readonly Translation<IPlayer, int, int> OfficerChangedRankFeedback = new Translation<IPlayer, int, int>("<#c6d6c1>{0}'s officer rank was successfully changed to <#ddd>{1}</color> of <#ddd>{2}</color>.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation<IPlayer> OfficerDischargedFeedback = new Translation<IPlayer>("<#c6d6c1>{0} was successfully discharged.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
@@ -1118,6 +1121,8 @@ internal static class T
     public static readonly Translation XPToastFOBRepairedVehicle = new Translation("FOB REPAIRED VEHICLE", TranslationFlags.UnityUI);
     public static readonly Translation<EVehicleType> XPToastVehicleDestroyed = new Translation<EVehicleType>("{0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
     public static readonly Translation<EVehicleType> XPToastAircraftDestroyed = new Translation<EVehicleType>("{0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation<EVehicleType> XPToastFriendlyVehicleDestroyed = new Translation<EVehicleType>("FRIENDLY {0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
+    public static readonly Translation<EVehicleType> XPToastFriendlyAircraftDestroyed = new Translation<EVehicleType>("FRIENDLY {0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
     public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationFlags.UnityUI);
 
     public static readonly Translation XPToastFlagCaptured = new Translation("FLAG CAPTURED", TranslationFlags.UnityUI);

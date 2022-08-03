@@ -188,7 +188,7 @@ public class RequestCommand : Command
 
                         Task.Run(async () =>
                         {
-                            bool hasKit = kit.CreditCost == 0 || await KitManager.HasAccess(kit, caller2);
+                            bool hasKit = kit.CreditCost == 0 || await KitManager.HasAccess(kit, caller2.Steam64);
                             await UCWarfare.ToUpdate();
                             if (!hasKit)
                             {

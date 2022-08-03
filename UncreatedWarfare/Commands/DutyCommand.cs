@@ -48,7 +48,7 @@ public class DutyCommand : Command
     public static void AdminOffToOn(UCPlayer player)
     {
         L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.Locale)}) went on duty.", ConsoleColor.Cyan);
-        PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.ADMIN_ON_DUTY);
+        PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.ADMIN_ON_DUTY);
         player.Player.look.sendFreecamAllowed(true);
         player.Player.look.sendWorkzoneAllowed(true);
         player.SendChat(T.DutyOnFeedback);
@@ -60,7 +60,7 @@ public class DutyCommand : Command
     public static void AdminOnToOff(UCPlayer player)
     {
         L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.Locale)}) went off duty.", ConsoleColor.Cyan);
-        PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.ADMIN_OFF_DUTY);
+        PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.ADMIN_OFF_DUTY);
         Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOffBroadcast, player);
         SetVanishMode(player, false);
         player.GodMode = false;
@@ -77,7 +77,7 @@ public class DutyCommand : Command
     public static void InternOffToOn(UCPlayer player)
     {
         L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.Locale)}) went on duty.", ConsoleColor.Cyan);
-        PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.TRIAL_ADMIN_ON_DUTY);
+        PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.TRIAL_ADMIN_ON_DUTY);
         player.SendChat(T.DutyOnFeedback);
         Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOnBroadcast, player);
         RequestSigns.UpdateAllSigns(player.Player.channel.owner);
@@ -87,7 +87,7 @@ public class DutyCommand : Command
     public static void InternOnToOff(UCPlayer player)
     {
         L.Log($"{player.Name.PlayerName} ({player.Steam64.ToString(Data.Locale)}) went off duty.", ConsoleColor.Cyan);
-        PermissionSaver.Instance.SetPlayerPermissionLevel(player, EAdminType.TRIAL_ADMIN_OFF_DUTY);
+        PermissionSaver.Instance.SetPlayerPermissionLevel(player.Steam64, EAdminType.TRIAL_ADMIN_OFF_DUTY);
         Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.DutyOffBroadcast, player);
         SetVanishMode(player, false);
         player.GodMode = false;

@@ -244,6 +244,7 @@ public class Translation
                 16 => CheckCase((value as BarricadeData)?.barricade.asset.itemName ?? value.ToString(), format),
                 17 => CheckCase((value as StructureData)?.structure.asset.itemName ?? value.ToString(), format),
                 18 => value is Guid guid ? guid.ToString(format ?? "N", locale) : value.ToString(),
+                19 => value is char chr ? CheckCase(new string(chr, 1), format) : value.ToString(),
                 _ => value.ToString(),
             };
 
@@ -381,6 +382,11 @@ public class Translation
             Type t = typeof(T);
             DynamicMethod dm;
             ILGenerator il;
+            if (t == typeof(char))
+            {
+                type = 19;
+                return;
+            }
             if (t == typeof(decimal) || (t.IsPrimitive && t != typeof(char) && t != typeof(bool)))
             {
                 if (t.IsPrimitive)
@@ -845,7 +851,7 @@ public class Translation
             : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
                 ? NULL_CLR_2
                 : NULL_CLR_1);
-    public virtual string Translate(string? language)
+    public string Translate(string? language)
     {
         if (language is null)
             return DefaultData.Processed;
@@ -855,7 +861,10 @@ public class Translation
         ref TranslationValue data = ref this[language];
         return data.Processed;
     }
-    public virtual string Translate(string? language, out Color color)
+    public string Translate(IPlayer player) => Translate(Localization.GetLang(player.Steam64));
+    public string Translate(ulong player) => Translate(Localization.GetLang(player));
+    public string Translate(ulong player, out Color color) => Translate(Localization.GetLang(player), out color);
+    public string Translate(string? language, out Color color)
     {
         if (language is null)
         {
@@ -1306,6 +1315,7 @@ public sealed class Translation<T> : Translation
             return InvalidValue;
         }
     }
+
     private TranslationFlags CheckPlurality(short expectation, TranslationFlags flags)
     {
         return expectation == -1 ? flags : flags | TranslationFlags.Plural;
@@ -1314,6 +1324,17 @@ public sealed class Translation<T> : Translation
         Translate(Translate(language), language, arg, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T arg, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(UCPlayer player, T arg)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg, player, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T arg)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2> : Translation
 {
@@ -1367,6 +1388,17 @@ public sealed class Translation<T1, T2> : Translation
         Translate(Translate(language), language, arg1, arg2, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(UCPlayer player, T1 arg1, T2 arg2)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, player, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2, T3> : Translation
 {
@@ -1426,6 +1458,17 @@ public sealed class Translation<T1, T2, T3> : Translation
         Translate(Translate(language), language, arg1, arg2, arg3, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, arg3, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2, T3, T4> : Translation
 {
@@ -1491,6 +1534,17 @@ public sealed class Translation<T1, T2, T3, T4> : Translation
         Translate(Translate(language), language, arg1, arg2, arg3, arg4, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2, T3, T4, T5> : Translation
 {
@@ -1562,6 +1616,17 @@ public sealed class Translation<T1, T2, T3, T4, T5> : Translation
         Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
 {
@@ -1639,6 +1704,17 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6> : Translation
         Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
 {
@@ -1722,6 +1798,17 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7> : Translation
         Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
 {
@@ -1811,6 +1898,17 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8> : Translation
         Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translation
 {
@@ -1905,6 +2003,17 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> : Translatio
         Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Translation
 {
@@ -2006,6 +2115,17 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
         Translate(Translate(language), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
     public string Translate(string language, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, out Color color, UCPlayer? target = null, ulong team = 0) =>
         Translate(Translate(language, out color), language, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, target, team != 0 ? team : (target == null ? 0 : target.GetTeam()), Flags);
+    public string Translate(IPlayer player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    {
+        string lang = player is null ? L.DEFAULT : Localization.GetLang(player.Steam64);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, player as UCPlayer, player is null ? 0 : player.GetTeam(), Flags);
+    }
+    public string Translate(ulong player, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    {
+        UCPlayer? pl = UCPlayer.FromID(player);
+        string lang = Localization.GetLang(player);
+        return Translate(Translate(lang), lang, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, pl, pl is null ? 0 : pl.GetTeam(), Flags);
+    }
 }
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 sealed class TranslationDataAttribute : Attribute

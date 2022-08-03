@@ -24,8 +24,8 @@ public static class Orders
         order.Initialize(squad, commander, type, marker, message, formatting: formatting);
         orders.Add(order);
 
-        commander.Message("order_s_sent", squad.Name, Localization.TranslateUnsafe(message, commander, formatting));
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets(squad))
+        commander.SendChat(T.OrderSent, squad, order);
+        foreach (LanguageSet set in LanguageSet.InSquad(squad))
         {
             string msg = T.OrderReceived.Translate(set.Language, commander, order, team: squad.Team);
             while (set.MoveNext())

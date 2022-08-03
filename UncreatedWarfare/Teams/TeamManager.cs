@@ -494,8 +494,18 @@ public static class TeamManager
         if (team == 1) uncolorized = Team1Faction.Name;
         else if (team == 2) uncolorized = Team2Faction.Name;
         else if (team == 3) uncolorized = AdminFaction.Name;
-        else if (team == ZOMBIE_TEAM_ID) uncolorized = Localization.Translate("zombie", player);
-        else if (team == 0) uncolorized = Localization.Translate("neutral", player);
+        else if (team == 0) uncolorized = T.Neutral.Translate(player);
+        else uncolorized = team.ToString(Data.Locale);
+        if (!colorize) return uncolorized;
+        return F.ColorizeName(uncolorized, team);
+    }
+    public static string TranslateName(ulong team, IPlayer player, bool colorize = false)
+    {
+        string uncolorized;
+        if (team == 1) uncolorized = Team1Faction.Name;
+        else if (team == 2) uncolorized = Team2Faction.Name;
+        else if (team == 3) uncolorized = AdminFaction.Name;
+        else if (team == 0) uncolorized = T.Neutral.Translate(player);
         else uncolorized = team.ToString(Data.Locale);
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
@@ -506,8 +516,7 @@ public static class TeamManager
         if (team == 1) uncolorized = Team1Faction.Name;
         else if (team == 2) uncolorized = Team2Faction.Name;
         else if (team == 3) uncolorized = AdminFaction.Name;
-        else if (team == ZOMBIE_TEAM_ID) uncolorized = Localization.Translate("zombie", language);
-        else if (team == 0) uncolorized = Localization.Translate("neutral", language);
+        else if (team == 0) uncolorized = T.Neutral.Translate(language);
         else uncolorized = team.ToString(Data.Locale);
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
@@ -518,8 +527,18 @@ public static class TeamManager
         if (team == 1) uncolorized = Team1Faction.ShortName;
         else if (team == 2) uncolorized = Team2Faction.ShortName;
         else if (team == 3) uncolorized = AdminFaction.ShortName;
-        else if (team == ZOMBIE_TEAM_ID) uncolorized = Localization.Translate("zombie", player);
-        else if (team == 0) uncolorized = Localization.Translate("neutral", player);
+        else if (team == 0) uncolorized = T.Neutral.Translate(player);
+        else uncolorized = team.ToString(Data.Locale);
+        if (!colorize) return uncolorized;
+        return F.ColorizeName(uncolorized, team);
+    }
+    public static string TranslateShortName(ulong team, IPlayer player, bool colorize = false)
+    {
+        string uncolorized;
+        if (team == 1) uncolorized = Team1Faction.ShortName;
+        else if (team == 2) uncolorized = Team2Faction.ShortName;
+        else if (team == 3) uncolorized = AdminFaction.ShortName;
+        else if (team == 0) uncolorized = T.Neutral.Translate(player);
         else uncolorized = team.ToString(Data.Locale);
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
@@ -530,8 +549,7 @@ public static class TeamManager
         if (team == 1) uncolorized = Team1Faction.ShortName;
         else if (team == 2) uncolorized = Team2Faction.ShortName;
         else if (team == 3) uncolorized = AdminFaction.ShortName;
-        else if (team == ZOMBIE_TEAM_ID) uncolorized = Localization.Translate("zombie", language);
-        else if (team == 0) uncolorized = Localization.Translate("neutral", language);
+        else if (team == 0) uncolorized = T.Neutral.Translate(language);
         else uncolorized = team.ToString(Data.Locale);
         if (!colorize) return uncolorized;
         return F.ColorizeName(uncolorized, team);
@@ -550,7 +568,6 @@ public static class TeamManager
             1 => Team1ColorHex,
             2 => Team2ColorHex,
             3 => AdminColorHex,
-            ZOMBIE_TEAM_ID => UCWarfare.GetColorHex("death_zombie_name_color"),
             _ => NeutralColorHex,
         };
     }
@@ -561,7 +578,6 @@ public static class TeamManager
             1 => Team1Color,
             2 => Team2Color,
             3 => AdminColor,
-            ZOMBIE_TEAM_ID => UCWarfare.GetColor("death_zombie_name_color"),
             _ => NeutralColor,
         };
     }

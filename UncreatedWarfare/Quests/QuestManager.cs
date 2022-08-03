@@ -14,6 +14,7 @@ using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Ranks;
@@ -684,10 +685,10 @@ public static class QuestManager
         foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
             tracker.OnPlayerSpawnedAtBunker(bunker, fob, spawner);
     }
-    public static void OnVehicleDestroyed(UCPlayer? owner, UCPlayer destroyer, VehicleData data, Components.VehicleComponent component)
+    public static void OnVehicleDestroyed(VehicleDestroyed e)
     {
         foreach (INotifyVehicleDestroyed tracker in RegisteredTrackers.OfType<INotifyVehicleDestroyed>())
-            tracker.OnVehicleDestroyed(owner, destroyer, data, component);
+            tracker.OnVehicleDestroyed(e);
     }
     public static void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
     {

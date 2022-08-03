@@ -66,24 +66,24 @@ namespace Uncreated.Warfare.Squads
 
                         if (nearbyEnemiesCount > 0)
                         {
-                            player.Message("rally_e_enemies");
+                            player.SendChat(T.RallyEnemiesNearby);
                             shouldAllow = false;
                         }
                         else if (!F.CanStandAtLocation(new Vector3(point.x, point.y + TELEPORT_HEIGHT_OFFSET, point.z)))
                         {
-                            player.Message("rally_e_obstructed");
+                            player.SendChat(T.RallyObstructedPlace);
                             shouldAllow = false;
                         }
                     }
                     else
                     {
-                        player.Message("rally_e_nosquadmember");
+                        player.SendChat(T.RallyNoSquadmates);
                         shouldAllow = false;
                     }
                 }
                 else
                 {
-                    player.Message("rally_e_notsquadleader");
+                    player.SendChat(T.RallyNotSquadleader);
                     shouldAllow = false;
                 }
             }
@@ -158,7 +158,7 @@ namespace Uncreated.Warfare.Squads
                 rallypoints.Add(rallypoint);
 
                 foreach (UCPlayer member in rallypoint.squad.Members)
-                    member.Message("rally_active");
+                    member.SendChat(T.RallyActive);
 
                 rallypoint.ShowUIForSquad();
 
@@ -230,18 +230,16 @@ namespace Uncreated.Warfare.Squads
             if (!IsActive)
                 return;
             TimeSpan seconds = TimeSpan.FromSeconds(timer);
-            foreach (UCPlayer member in squad.Members)
+            for (int i = 0; i < squad.Members.Count; i++)
             {
+                UCPlayer member = squad.Members[i];
                 if (AwaitingPlayers.Contains(member))
-                {
-                    string line = Localization.Translate("rally_ui", member.Steam64, timer >= 0 ? Localization.ObjectTranslate("rally_time_value", member.Steam64, seconds) : string.Empty) + " " + nearestLocation;
-                    SquadManager.RallyUI.SendToPlayer(member.Connection, line);
-                }
+                    SquadManager.RallyUI.SendToPlayer(member.Connection, T.RallyUITimer.Translate(member, timer >= 0 ? seconds : TimeSpan.Zero, nearestLocation));
             }
         }
         public void ShowUIForPlayer(UCPlayer player)
         {
-            SquadManager.RallyUI.SendToPlayer(player.Connection, Localization.Translate("rally_ui", player.Steam64, $"({nearestLocation})"));
+            SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUI.Translate(player, nearestLocation));
         }
         public void ShowUIForSquad()
         {
@@ -266,7 +264,7 @@ namespace Uncreated.Warfare.Squads
 
             player.Player.teleportToLocation(new Vector3(structure.point.x, structure.point.y + RallyManager.TELEPORT_HEIGHT_OFFSET, structure.point.z), structure.angle_y);
 
-            player.Message("rally_success");
+            player.SendChat(T.RallySuccess);
 
             ShowUIForPlayer(player);
         }
@@ -329,7 +327,7 @@ namespace Uncreated.Warfare.Squads
                             RallyManager.TryDeleteRallyPoint(parent.structure.instanceID);
 
                             foreach (UCPlayer member in parent.squad.Members)
-                                member.Message("rally_cancelled");
+                                member.SendChat(T.RallyEnemiesNearbyTp);
 
 #if DEBUG
                             profiler.Dispose();

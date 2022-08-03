@@ -272,7 +272,7 @@ public static class F
         EAdminType perms = player.PermissionLevel;
         if (player.Player.channel.owner.isAdmin)
             perms |= EAdminType.VANILLA_ADMIN;
-        return perms | PermissionSaver.Instance.GetPlayerPermissionLevel(player);
+        return perms | PermissionSaver.Instance.GetPlayerPermissionLevel(player.Steam64);
     }
     public static unsafe string ToProperCase(this string input)
     {
@@ -412,6 +412,7 @@ public static class F
     public static ulong GetTeam(this UCPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
+    public static ulong GetTeam(this IPlayer player) => player is UCPlayer ucp ? ucp.GetTeam() : GetTeamFromPlayerSteam64ID(player.Steam64);
     public static ulong GetTeam(this ulong groupID)
     {
         if (!Data.Is<ITeams>(out _)) return groupID;

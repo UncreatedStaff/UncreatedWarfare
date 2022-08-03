@@ -1,4 +1,4 @@
-﻿#define LOG_OP_CODES
+﻿//#define LOG_OP_CODES
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

@@ -310,9 +310,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
             if (data.CreditCost > 0 && spawn.Component != null && spawn.Component.RequestTime != 0)
                 creditReward = data.CreditCost - Mathf.Min(data.CreditCost, Mathf.FloorToInt(data.AbandonValueLossSpeed * (Time.realtimeSinceStartup - spawn.Component.RequestTime)));
 
-            Points.AwardCredits(pl, creditReward,
-                T.AbandonCompensationToast.Translate(Data.Languages.TryGetValue(pl, out string lang) ? lang : L.DEFAULT),
-                false, false);
+            Points.AwardCredits(pl, creditReward, T.AbandonCompensationToast.Translate(pl), false, false);
         }
 
         VehicleBay.DeleteVehicle(vehicle);
@@ -480,7 +478,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
         {
             if (!FOBManager.Config.Buildables.Exists(v => v.Type == EBuildableType.EMPLACEMENT && v.Emplacement is not null && v.Emplacement.EmplacementVehicle is not null && v.Emplacement.EmplacementVehicle.Guid == e.Vehicle.asset.GUID))
             {
-                e.Player.SendChat("vehicle_too_high");
+                e.Player.SendChat(T.VehicleTooHigh);
                 e.Break();
             }
         }
@@ -492,14 +490,14 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 #endif
         if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
         {
-            e.Player.SendChat("vehiclebay_e_gamemode_not_active");
+            e.Player.SendChat(T.VehicleStaging);
             e.Break();
             return;
         }
         if (!e.Vehicle.asset.canBeLocked) return;
         if (!e.Player.OnDuty() && Data.Gamemode.State == EState.STAGING && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || e.Player.GetTeam() == atk.AttackingTeam))
         {
-            e.Player.SendChat("vehicle_staging");
+            e.Player.SendChat(T.VehicleStaging);
             e.Break();
             return;
         }
@@ -511,7 +509,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 
         if (!KitManager.HasKit(e.Player, out Kit kit))
         {
-            e.Player.SendChat("vehicle_no_kit");
+            e.Player.SendChat(T.VehicleNoKit);
             e.Break();
             return;
         }
@@ -531,7 +529,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
         {
             if (!KitManager.HasKit(e.Player, out Kit kit))
             {
-                e.Player.SendChat("vehicle_no_kit");
+                e.Player.SendChat(T.VehicleNoKit);
                 e.Break();
                 return;
             }
@@ -555,9 +553,9 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                         if (!canEnterDriverSeat)
                         {
                             if (owner is null || owner!.Squad is null)
-                                e.Player.Message("vehicle_wait_for_owner", owner?.CharacterName ?? F.GetPlayerOriginalNames(e.Vehicle.lockedOwner.m_SteamID).CharacterName);
+                                e.Player.SendChat(T.VehicleWaitForOwner, owner ?? new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID) as IPlayer);
                             else
-                                e.Player.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
+                                e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
                             e.Break();
                         }
                     }
@@ -567,12 +565,12 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                         {
                             if (e.Vehicle.passengers[0].player is null) // if they have no driver
                             {
-                                e.Player.Message("vehicle_need_driver");
+                                e.Player.SendChat(T.VehicleDriverNeeded);
                                 e.Break();
                             }
                             else if (e.Player.Steam64 == e.Vehicle.passengers[0].player.playerID.steamID.m_SteamID) // if they are the driver
                             {
-                                e.Player.Message("vehicle_cannot_abandon_driver");
+                                e.Player.SendChat(T.VehicleAbandoningDriver);
                                 e.Break();
                             }
                         }
@@ -580,7 +578,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                 }
                 else
                 {
-                    e.Player.Message("vehicle_not_valid_kit", vehicleData.RequiredClass.ToString().ToUpper());
+                    e.Player.SendChat(T.VehicleMissingKit, vehicleData.RequiredClass);
                     e.Break();
                 }
             }
@@ -593,9 +591,9 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                     if (!canEnterDriverSeat)
                     {
                         if (owner!.Squad == null)
-                            e.Player.Message("vehicle_wait_for_owner", owner.CharacterName);
+                            e.Player.SendChat(T.VehicleWaitForOwner, owner);
                         else
-                            e.Player.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
+                            e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
 
                         e.Break();
                     }

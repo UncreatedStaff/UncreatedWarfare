@@ -44,6 +44,9 @@ public class UCPlayer : IPlayer
     public volatile bool IsDownloadingKits;
     public TeamSelectorData? TeamSelectorData;
     public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 5);
+    public readonly UCPlayerKeys Keys;
+    private string? _lang;
+    public string Language => _lang ??= Localization.GetLang(Steam64);
     public Player Player { get; internal set; }
     public bool IsTalking => !lastMuted && isTalking && IsOnline;
     public CSteamID CSteamID { get; internal set; }
@@ -159,7 +162,7 @@ public class UCPlayer : IPlayer
     }
     public void DeactivateMarker(SpottedComponent marker) => CurrentMarkers.Remove(marker);
 
-    public static implicit operator ulong(UCPlayer player) => player.Steam64;
+    public static explicit operator ulong(UCPlayer player) => player.Steam64;
     public static implicit operator CSteamID(UCPlayer player) => player.Player.channel.owner.playerID.steamID;
     public static implicit operator Player(UCPlayer player) => player.Player;
     public static implicit operator SteamPlayer(UCPlayer player) => player.Player.channel.owner;
@@ -213,6 +216,7 @@ public class UCPlayer : IPlayer
         }
         return player;
     }
+    internal void OnLanguageChanged() => _lang = null;
     /// <summary>Slow, use rarely.</summary>
     public static UCPlayer? FromName(string name, ENameSearchType type)
     {
@@ -333,6 +337,7 @@ public class UCPlayer : IPlayer
                 Data.UseFastKits = false;
             }
         }
+        Keys = new UCPlayerKeys(this);
     }
     public char Icon
     {

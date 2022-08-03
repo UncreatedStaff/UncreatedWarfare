@@ -190,7 +190,7 @@ public class StructureCommand : Command
             if (sendurl)
             {
                 player.channel.owner.SendSteamURL(
-                    T.StructureExamineLastOwnerPrompt.Translate(Data.Languages.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out string lang) ? lang : L.DEFAULT, vehicle.asset,
+                    T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, vehicle.asset,
                     F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(team)! : null!), vehicle.lockedOwner.m_SteamID);
             }
             else
@@ -216,7 +216,7 @@ public class StructureCommand : Command
             if (sendurl)
             {
                 player.channel.owner.SendSteamURL(
-                    T.StructureExamineLastOwnerPrompt.Translate(Data.Languages.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out string lang) ? lang : L.DEFAULT, data.barricade.asset,
+                    T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, data.barricade.asset,
                         F.GetPlayerOriginalNames(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else
@@ -245,7 +245,7 @@ public class StructureCommand : Command
             if (sendurl)
             {
                 player.channel.owner.SendSteamURL(
-                    T.StructureExamineLastOwnerPrompt.Translate(Data.Languages.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out string lang) ? lang : L.DEFAULT, data.structure.asset,
+                    T.StructureExamineLastOwnerPrompt.Translate(player.channel.owner.playerID.steamID.m_SteamID, data.structure.asset,
                         F.GetPlayerOriginalNames(data.owner), Data.Gamemode is ITeams ? TeamManager.GetFactionSafe(data.owner.GetTeamFromPlayerSteam64ID())! : null!), data.owner);
             }
             else

@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
@@ -2991,7 +2992,7 @@ public interface INotifyBuildableBuilt : INotifyTracker
 }
 public interface INotifyVehicleDestroyed : INotifyTracker
 {
-    public void OnVehicleDestroyed(UCPlayer? owner, UCPlayer destroyer, VehicleData data, VehicleComponent component);
+    public void OnVehicleDestroyed(VehicleDestroyed e);
 }
 public interface INotifyVehicleDistanceUpdates : INotifyTracker
 {

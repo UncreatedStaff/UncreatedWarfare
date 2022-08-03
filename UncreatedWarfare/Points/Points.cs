@@ -8,11 +8,15 @@ using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using static Uncreated.Warfare.Components.SpottedComponent;
+using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Point;
@@ -34,6 +38,7 @@ public static class Points
     {
         Officers = new OfficerStorage();
         EventDispatcher.OnGroupChanged += OnGroupChanged;
+        EventDispatcher.OnVehicleDestroyed += OnVehicleDestoryed;
     }
     public static void ReloadConfig()
     {
@@ -505,6 +510,172 @@ public static class Points
        }
     }
     */
+    private static void OnVehicleDestoryed(VehicleDestroyed e)
+    {
+        if (e.Instigator is null || e.VehicleData == null || e.Component == null)
+            return;
+        if (XPConfig.VehicleDestroyedXP.ContainsKey(e.VehicleData.Type))
+        {
+            ulong dteam = e.Instigator.GetTeam();
+            bool vehicleWasEnemy = (dteam == 1 && e.Team == 2) || (dteam == 2 && e.Team == 1);
+            bool vehicleWasFriendly = dteam == e.Team;
+            if (!vehicleWasFriendly)
+                Stats.StatsManager.ModifyTeam(dteam, t => t.VehiclesDestroyed++, false);
+
+            if (!Points.XPConfig.VehicleDestroyedXP.TryGetValue(e.VehicleData.Type, out int fullXP))
+                fullXP = 0;
+
+
+            float totalDamage = 0;
+            int l = 0;
+            foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in e.Component.DamageTable)
+            {
+                if ((DateTime.Now - entry.Value.Value).TotalSeconds < 60)
+                {
+                    totalDamage += entry.Value.Key;
+                    ++l;
+                }
+            }
+
+            if (vehicleWasEnemy)
+            {
+                Translation<EVehicleType> message;
+
+                if (e.Component.IsAircraft)
+                    message = T.XPToastAircraftDestroyed;
+                else
+                    message = T.XPToastVehicleDestroyed;
+
+                Asset asset = Assets.find(e.Component.LastItem);
+                string reason = string.Empty;
+                if (asset != null)
+                {
+                    if (asset is ItemAsset item)
+                        reason = item.itemName;
+                    else if (asset is VehicleAsset v)
+                        reason = "suicide " + v.vehicleName;
+                }
+
+                int distance = Mathf.RoundToInt((e.Instigator.Position - e.Vehicle.transform.position).magnitude);
+
+                if (reason.Length == 0)
+                    Chat.Broadcast(T.VehicleDestroyedUnknown, e.Instigator, e.Vehicle.asset);
+                else
+                    Chat.Broadcast(T.VehicleDestroyed, e.Instigator, e.Vehicle.asset, reason, distance);
+
+                ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
+                                                                 $" - Destroyed by {e.Instigator.Steam64.ToString(Data.Locale)}", e.OwnerId);
+
+                QuestManager.OnVehicleDestroyed(e);
+
+                float resMax = 0f;
+                UCPlayer? resMaxPl = null;
+                DateTime now = DateTime.Now;
+                KeyValuePair<ulong, float>[] assists = new KeyValuePair<ulong, float>[l];
+                foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in e.Component.DamageTable)
+                {
+                    if ((now - entry.Value.Value).TotalSeconds < 60)
+                    {
+                        float responsibleness = entry.Value.Key / totalDamage;
+                        int reward = Mathf.RoundToInt(responsibleness * fullXP);
+                        if (l > 1)
+                            assists[--l] = new KeyValuePair<ulong, float>(entry.Key, responsibleness);
+                        UCPlayer? attacker = UCPlayer.FromID(entry.Key);
+                        if (attacker != null && attacker.GetTeam() != e.Team)
+                        {
+                            if (entry.Key == e.InstigatorId)
+                            {
+                                AwardXP(attacker, reward, message.Translate(Data.Languages.TryGetValue(e.InstigatorId, out string lang) ? lang : L.DEFAULT, e.VehicleData.Type).ToUpperInvariant());
+                                UCPlayer? pl = e.LastDriver ?? e.Owner;
+                                if (pl is not null && pl.Steam64 != e.InstigatorId)
+                                    TryAwardDriverAssist(pl, fullXP, e.VehicleData.TicketCost);
+
+                                if (e.Spotter != null)
+                                {
+                                    e.Spotter.OnTargetKilled(reward);
+                                    UnityEngine.Object.Destroy(e.Spotter);
+                                }
+                            }
+                            else if (responsibleness > 0.1F)
+                                AwardXP(attacker, reward, T.XPToastKillVehicleAssist);
+                            if (responsibleness > resMax)
+                            {
+                                resMax = responsibleness;
+                                resMaxPl = attacker;
+                            }
+                        }
+                    }
+                }
+
+                Array.Sort(assists, (a, b) => b.Value.CompareTo(a.Value));
+                e.Assists = assists.ToArray();
+                if (resMaxPl != null && resMax > 0.4f && e.InstigatorId != resMaxPl.Steam64)
+                    QuestManager.OnVehicleDestroyed(e);
+
+                if (e.InstigatorId != 0)
+                    Stats.StatsManager.ModifyStats(e.InstigatorId, s => s.VehiclesDestroyed++, false);
+                Stats.StatsManager.ModifyVehicle(e.Vehicle.id, v => v.TimesDestroyed++);
+            }
+            else if (vehicleWasFriendly)
+            {
+                Translation<EVehicleType> message;
+
+                if (e.Component.IsAircraft)
+                    message = T.XPToastFriendlyAircraftDestroyed;
+                else
+                    message = T.XPToastFriendlyVehicleDestroyed;
+                Chat.Broadcast(T.VehicleTeamkilled, e.Instigator, e.Vehicle.asset);
+
+                ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
+                                                                 $" - Destroyed by {e.InstigatorId}", e.OwnerId);
+                if (e.Instigator is not null)
+                    AwardCredits(e.Instigator, Mathf.Clamp(e.VehicleData.CreditCost, 5, 1000), message, e.VehicleData.Type, true);
+                OffenseManager.LogVehicleTeamkill(e.InstigatorId, e.Vehicle.id, e.Vehicle.asset.vehicleName, DateTime.Now);
+            }
+            /*
+            float missingQuota = vc.Quota - vc.RequiredQuota;
+            if (missingQuota < 0)
+            {
+                // give quota penalty
+                if (vc.RequiredQuota != -1 && (vehicleWasEnemy || wasCrashed))
+                {
+                    for (byte i = 0; i < vehicle.passengers.Length; i++)
+                    {
+                        Passenger passenger = vehicle.passengers[i];
+
+                        if (passenger.player is not null)
+                        {
+                            vc.EvaluateUsage(passenger.player);
+                        }
+                    }
+
+                    double totalTime = 0;
+                    foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
+                        totalTime += entry.Value;
+
+                    foreach (KeyValuePair<ulong, double> entry in vc.UsageTable)
+                    {
+                        float responsibleness = (float)(entry.Value / totalTime);
+                        int penalty = Mathf.RoundToInt(responsibleness * missingQuota * 60F);
+
+                        UCPlayer? assetWaster = UCPlayer.FromID(entry.Key);
+                        if (assetWaster != null)
+                            Points.AwardXP(assetWaster, penalty, Translation.Translate("xp_wasting_assets", assetWaster));
+                    }
+                }
+            }
+            */
+
+            if (Data.Reporter is not null)
+            {
+                Data.Reporter.OnVehicleDied(e.OwnerId,
+                    VehicleSpawner.HasLinkedSpawn(e.Vehicle.instanceID, out Vehicles.VehicleSpawn spawn)
+                        ? spawn.SpawnPadInstanceID
+                        : uint.MaxValue, e.InstigatorId, e.Vehicle.asset.GUID, e.Component.LastItem,
+                    e.Component.LastDamageOrigin, vehicleWasFriendly);
+            }
+        }
+    }
 }
 
 public class XPConfig : ConfigData

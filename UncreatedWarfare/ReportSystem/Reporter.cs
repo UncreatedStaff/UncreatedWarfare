@@ -224,7 +224,7 @@ public class Reporter : MonoBehaviour
     {
         if (e.WasTeamkill && e.Killer is not null)
         {
-            ulong k = e.Killer;
+            ulong k = e.Killer.Steam64;
             for (int i = 0; i < data.Count; ++i)
             {
                 if (data[i].Steam64 == k)
@@ -232,7 +232,7 @@ public class Reporter : MonoBehaviour
                     data[i].teamkills.Add(new Teamkill()
                     {
                         cause = e.Cause,
-                        dead = e.Player,
+                        dead = e.Player.Steam64,
                         time = Time.realtimeSinceStartup,
                         weapon = e.PrimaryAsset
                     });

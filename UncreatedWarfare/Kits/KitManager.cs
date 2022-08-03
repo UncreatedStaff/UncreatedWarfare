@@ -483,11 +483,11 @@ public class KitManager : BaseReloadSingleton
         bool res;
         if (kit.PrimaryKey != -1)
         {
-            res = await GiveAccess(kit.PrimaryKey, player, type);
+            res = await GiveAccess(kit.PrimaryKey, player.Steam64, type);
         }
         else
         {
-            res = await GiveAccess(kit.Name, player, type);
+            res = await GiveAccess(kit.Name, player.Steam64, type);
         }
         if (res)
         {
@@ -524,11 +524,11 @@ public class KitManager : BaseReloadSingleton
         bool res;
         if (kit.PrimaryKey != -1)
         {
-            res = await RemoveAccess(kit.PrimaryKey, player);
+            res = await RemoveAccess(kit.PrimaryKey, player.Steam64);
         }
         else
         {
-            res = await RemoveAccess(kit.Name, player);
+            res = await RemoveAccess(kit.Name, player.Steam64);
         }
         if (res)
         {
@@ -1389,11 +1389,12 @@ public static class KitEx
         return currentPlayers + 1 > allowedPlayers;
     }
     private static readonly FieldInfo[] fields = typeof(Kit).GetFields(BindingFlags.Instance | BindingFlags.Public);
-    public static ESetFieldResult SetProperty(Kit kit, string property, string value)
+    public static ESetFieldResult SetProperty(Kit kit, string property, string value, out FieldInfo? field)
     {
+        field = null;
         if (kit is null) return ESetFieldResult.OBJECT_NOT_FOUND;
         if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
-        FieldInfo? field = GetField(property, out ESetFieldResult reason);
+        field = GetField(property, out ESetFieldResult reason);
         if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
             if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
