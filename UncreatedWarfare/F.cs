@@ -786,7 +786,7 @@ public static class F
             }
         }
     }
-    public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => GetPlayerOriginalNames(player.Player);
+    public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => player.Name;
     public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
     public static FPlayerName GetPlayerOriginalNames(Player player)
     {

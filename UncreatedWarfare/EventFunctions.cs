@@ -1355,7 +1355,7 @@ public static class EventFunctions
                 Chat.Broadcast(T.PlayerDisconnected, ucplayer);
             if (c != null)
             {
-                ActionLogger.Add(EActionLogType.DISCONNECT, "PLAYED FOR " + ((uint)Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime)).GetTimeFromSeconds(0).ToUpper(), ucplayer.Steam64);
+                ActionLogger.Add(EActionLogType.DISCONNECT, "PLAYED FOR " + Mathf.RoundToInt(Time.realtimeSinceStartup - c.JoinTime).GetTimeFromSeconds(0).ToUpper(), ucplayer.Steam64);
                 UnityEngine.Object.Destroy(c);
                 Data.PlaytimeComponents.Remove(ucplayer.Steam64);
             }

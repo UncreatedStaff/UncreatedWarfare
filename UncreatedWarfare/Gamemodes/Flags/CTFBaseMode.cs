@@ -299,28 +299,28 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam1[j],
                             Points.XPConfig.FlagAttackXP,
-                            Localization.Translate("xp_flag_attack", flag.PlayersOnFlagTeam1[j]));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].channel.owner.playerID.steamID.m_SteamID));
                 }
                 else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                             Points.XPConfig.FlagAttackXP,
-                            Localization.Translate("xp_flag_attack", flag.PlayersOnFlagTeam2[j]));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].channel.owner.playerID.steamID.m_SteamID));
                 }
                 else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam1[j],
                             Points.XPConfig.FlagDefendXP,
-                            Localization.Translate("xp_flag_defend", flag.PlayersOnFlagTeam1[j]));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].channel.owner.playerID.steamID.m_SteamID));
                 }
                 else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                             Points.XPConfig.FlagDefendXP,
-                            Localization.Translate("xp_flag_defend", flag.PlayersOnFlagTeam2[j]));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].channel.owner.playerID.steamID.m_SteamID));
                 }
             }
         }
@@ -352,7 +352,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #endif
         ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
-        player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
+        player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
     protected override void PlayerLeftFlagRadius(Flag flag, Player player)
@@ -363,7 +363,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         ITransportConnection channel = player.channel.owner.transportConnection;
         ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
-        player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
+        player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(channel);
         UpdateFlag(flag);
     }
@@ -476,21 +476,14 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         UpdateFlag(flag);
         if (newOwner == 0)
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-            {
-                ulong team = player.GetTeam();
-                player.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"), flag.Name, flag.TeamSpecificHexColor);
-            }
+            Chat.Broadcast(LanguageSet.OnTeam(1), T.FlagNeutralized, flag);
+            Chat.Broadcast(LanguageSet.OnTeam(2), T.FlagNeutralized, flag);
         }
         else
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-            {
-                ulong team = player.GetTeam();
-                player.SendChat("team_capture", UCWarfare.GetColor("team_capture"), TeamManager.TranslateName(newOwner, player.Player),
-                    TeamManager.GetTeamHexColor(newOwner), flag.Discovered(team) ? flag.Name : Localization.Translate("undiscovered_flag", player),
-                    flag.TeamSpecificHexColor);
-            }
+            FactionInfo? info = TeamManager.GetFactionSafe(newOwner);
+            Chat.Broadcast(LanguageSet.OnTeam(1), T.TeamCaptured, info!, flag);
+            Chat.Broadcast(LanguageSet.OnTeam(2), T.TeamCaptured, info!, flag);
         }
     }
     protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)

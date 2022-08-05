@@ -25,7 +25,7 @@ internal static class Deployment
             if (data.CurrentTeleportRequest != null && delay > TICK_SPEED)
             {
                 if (ctx is not null)
-                    throw ctx.Reply("deploy_e_alreadydeploying");
+                    throw ctx.Reply(T.DeployAlreadyActive);
                 return false;
             }
             if (!location.CheckDeployable(player, ctx))
@@ -34,8 +34,7 @@ internal static class Deployment
             {
                 if (ctx is not null)
                 {
-                    TranslationFlags flags = TranslationFlags.None;
-                    ctx.Reply("deploy_standby", location.Translate(L.DEFAULT, FOB.COLORED_NAME_FORMAT, null, ref flags));
+                    ctx.Reply(T.DeployStandby, location, Mathf.CeilToInt(delay));
                 }
                 data.CurrentTeleportRequest = player.Player.StartCoroutine(DeployToCoroutine(player, location, delay, ctx is not null));
             }

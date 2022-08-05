@@ -845,7 +845,7 @@ public class Translation
         1 => Flags | TranslationFlags.Team1,
         _ => Flags
     };
-    private static string Null(TranslationFlags flags) => 
+    internal static string Null(TranslationFlags flags) => 
         ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
             ? NULL_NO_CLR
             : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
@@ -1278,6 +1278,8 @@ public enum TranslationFlags
     ForChat = 16384,
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent on a sign.</summary>
     ForSign = 32768,
+    /// <summary>Tells the translator to translate the messsage for each team when broadcasted.</summary>
+    PerTeamTranslation = 65536
 }
 
 public interface ITranslationArgument

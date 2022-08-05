@@ -83,8 +83,11 @@ public class ZoneCommand : Command
             if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
                 ctx.Offset = 1;
-                comp.EditCommand(ctx);
-                ctx.Offset = 0;
+                try
+                {
+                    comp.EditCommand(ctx);
+                }
+                finally { ctx.Offset = 0; }
             }
             else
                 throw ctx.SendUnknownError();
@@ -98,8 +101,11 @@ public class ZoneCommand : Command
             if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
                 ctx.Offset = 1;
-                comp.CreateCommand(ctx);
-                ctx.Offset = 0;
+                try
+                {
+                    comp.CreateCommand(ctx);
+                }
+                finally { ctx.Offset = 0; }
             }
             else
                 throw ctx.SendUnknownError();
@@ -113,8 +119,11 @@ public class ZoneCommand : Command
             if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
                 ctx.Offset = 1;
-                comp.DeleteCommand(ctx);
-                ctx.Offset = 0;
+                try
+                {
+                    comp.DeleteCommand(ctx);
+                }
+                finally { ctx.Offset = 0; }
             }
             else
                 throw ctx.SendUnknownError();
@@ -128,8 +137,11 @@ public class ZoneCommand : Command
             if (ctx.Caller.Player.TryGetComponent(out ZonePlayerComponent comp))
             {
                 ctx.Offset = 1;
-                comp.UtilCommand(ctx);
-                ctx.Offset = 0;
+                try
+                {
+                    comp.UtilCommand(ctx);
+                }
+                finally { ctx.Offset = 0; }
             }
             else
                 throw ctx.SendUnknownError();

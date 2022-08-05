@@ -522,6 +522,11 @@ public static class Chat
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation);
         }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation);
+            Broadcast(LanguageSet.OnTeam(2), translation);
+        }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
@@ -534,6 +539,11 @@ public static class Chat
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg);
+        }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg);
         }
         else
         {
@@ -548,6 +558,11 @@ public static class Chat
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2);
         }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2);
+        }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
@@ -560,6 +575,11 @@ public static class Chat
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3);
+        }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3);
         }
         else
         {
@@ -574,6 +594,11 @@ public static class Chat
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4);
         }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4);
+        }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
@@ -586,6 +611,11 @@ public static class Chat
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5);
+        }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5);
         }
         else
         {
@@ -600,6 +630,11 @@ public static class Chat
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6);
         }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6);
+        }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
@@ -612,6 +647,11 @@ public static class Chat
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
         }
         else
         {
@@ -626,6 +666,11 @@ public static class Chat
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
         }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+        }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
@@ -639,6 +684,11 @@ public static class Chat
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
         }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+        }
         else
         {
             foreach (LanguageSet set in LanguageSet.All())
@@ -651,6 +701,11 @@ public static class Chat
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 SendChat(PlayerManager.OnlinePlayers[i], translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+        }
+        else if ((translation.Flags & TranslationFlags.PerTeamTranslation) == TranslationFlags.PerTeamTranslation)
+        {
+            Broadcast(LanguageSet.OnTeam(1), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            Broadcast(LanguageSet.OnTeam(2), translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
         }
         else
         {

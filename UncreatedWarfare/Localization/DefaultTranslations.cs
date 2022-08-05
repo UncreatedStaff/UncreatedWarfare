@@ -87,7 +87,7 @@ internal static class T
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent when the player leaves the capture radius of an active flag.", LegacyTranslationId = "left_cap_radius", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> LeftCaptureRadius = new Translation<Flag>(SUCCESS_COLOR + "You have left the capture radius of {0}.", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<Flag> LeftCaptureRadius = new Translation<Flag>(ERROR_COLOR + "You have left the capture radius of {0}.", Flag.COLOR_NAME_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to all players on a flag that's being captured by their team (from neutral).", LegacyTranslationId = "capturing", FormattingDescriptions = new string[] { "Objective in question" })]
@@ -123,11 +123,11 @@ internal static class T
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Sent to all players when a flag gets neutralized.", LegacyTranslationId = "flag_neutralized", FormattingDescriptions = new string[] { "Objective in question" })]
-    public static readonly Translation<Flag> FlagNeutralized = new Translation<Flag>(SUCCESS_COLOR + "{0} has been neutralized!", Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> FlagNeutralized = new Translation<Flag>(SUCCESS_COLOR + "<#e6e3d5>{0} has been neutralized!", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Gets broadcasted when a team captures a flag.", LegacyTranslationId = "team_capture")]
-    public static readonly Translation<FactionInfo, Flag> TeamCaptured = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", FactionInfo.COLOR_DISPLAY_NAME_FORMAT, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<FactionInfo, Flag> TeamCaptured = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", TranslationFlags.PerTeamTranslation, FactionInfo.COLOR_DISPLAY_NAME_FORMAT, Flag.COLOR_NAME_DISCOVER_FORMAT);
 
     [TranslationData(Section = SECTION_FLAGS,
         Description = "Backup translation for team 0 name and short name.", LegacyTranslationId = "neutral")]
@@ -641,6 +641,7 @@ internal static class T
     #endregion
 
     #region Time
+    public static readonly Translation TimePermanent    = new Translation("permanent", TranslationFlags.UnityUINoReplace);
     public static readonly Translation TimeSecondSingle = new Translation("second", TranslationFlags.UnityUINoReplace);
     public static readonly Translation TimeSecondPlural = new Translation("seconds", TranslationFlags.UnityUINoReplace);
     public static readonly Translation TimeMinuteSingle = new Translation("minute", TranslationFlags.UnityUINoReplace);
@@ -652,9 +653,9 @@ internal static class T
     public static readonly Translation TimeWeekSingle   = new Translation("week", TranslationFlags.UnityUINoReplace);
     public static readonly Translation TimeWeekPlural   = new Translation("weeks", TranslationFlags.UnityUINoReplace);
     public static readonly Translation TimeMonthSingle  = new Translation("month", TranslationFlags.UnityUINoReplace);
-    public static readonly Translation TimeMonthsPlural = new Translation("months", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeMonthPlural  = new Translation("months", TranslationFlags.UnityUINoReplace);
     public static readonly Translation TimeYearSingle   = new Translation("year", TranslationFlags.UnityUINoReplace);
-    public static readonly Translation TimeYearsPlural  = new Translation("years", TranslationFlags.UnityUINoReplace);
+    public static readonly Translation TimeYearPlural   = new Translation("years", TranslationFlags.UnityUINoReplace);
     public static readonly Translation TimeAnd          = new Translation("and", TranslationFlags.UnityUINoReplace);
     #endregion
 
@@ -675,7 +676,7 @@ internal static class T
     public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
     public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.COLORED_NAME_FORMAT, "F0", "F0");
     public static readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({0}m away). You must be at least {1}m away to place a new radio.", "F0", "F0");
-    public static readonly Translation<FOB, GridLocation, string> FOBUI    = new Translation<FOB, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.NAME_FORMAT);
+    public static readonly Translation<IDeployable, GridLocation, string> FOBUI    = new Translation<IDeployable, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.NAME_FORMAT);
     public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
     public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
     public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <#e3c59a>{0}</color>", TranslationFlags.UnityUI, UPPERCASE);
@@ -915,8 +916,8 @@ internal static class T
     public static readonly Translation RequestVehicleCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this vehicle until you've <color=#94cfff>uncovered and lost</color> your next cache.");
     public static readonly Translation<int> RequestVehicleCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#94cfff>{0} more caches</color> to request this vehicle.");
     public static readonly Translation<int> RequestVehicleCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this vehicle until you've lost <#94cfff>{0} more caches</color>.");
-    public static readonly Translation<Flag> RequestVehicleFlagDelay1 = new Translation<Flag>("<#b3ab9f>Capture {0} to request this vehicle.", Flag.COLOR_NAME_DISCOVER_FORMAT);
-    public static readonly Translation<Flag> RequestVehicleLoseFlagDelay1 = new Translation<Flag>("<#b3ab9f>You can't request this vehicle until you lose {0}.", Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> RequestVehicleFlagDelay1 = new Translation<Flag>("<#b3ab9f>Capture {0} to request this vehicle.", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> RequestVehicleLoseFlagDelay1 = new Translation<Flag>("<#b3ab9f>You can't request this vehicle until you lose {0}.", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
     public static readonly Translation<int> RequestVehicleFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#94cfff>{0} more flags</color> to request this vehicle.");
     public static readonly Translation<int> RequestVehicleLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this vehicle until you lose <#94cfff>{0} more flags</color>.");
     public static readonly Translation RequestVehicleStagingDelay = new Translation("<#a6918a>This vehicle can only be requested after the game starts.");
@@ -1031,11 +1032,11 @@ internal static class T
     public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);
     public static readonly Translation<float> KitPremiumCost = new Translation<float>("$ {0}", TranslationFlags.NoColor, "N2");
     [TranslationData(FormattingDescriptions = new string[] { "Level", "Color depending on player's current level." })]
-    public static readonly Translation<float, Color> KitRequiredLevel = new Translation<float, Color>("<#{1}>{0}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#{1}>{0}</color>", TranslationFlags.NoColor);
     [TranslationData(FormattingDescriptions = new string[] { "Rank", "Color depending on player's current rank." })]
-    public static readonly Translation<float, Color> KitRequiredRank = new Translation<float, Color>("<#{1}>Rank: {0}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<Ranks.RankData, Color> KitRequiredRank = new Translation<Ranks.RankData, Color>("<#{1}>Rank: {0}</color>", TranslationFlags.NoColor);
     [TranslationData(FormattingDescriptions = new string[] { "Quest", "Color depending on whether the player has completed the quest." })]
-    public static readonly Translation<float, Color> KitRequiredQuest = new Translation<float, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationFlags.NoColor);
+    public static readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationFlags.NoColor);
     [TranslationData(FormattingDescriptions = new string[] { "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" })]
     public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>", TranslationFlags.NoColor);
     public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>", TranslationFlags.NoColor);
@@ -1059,8 +1060,8 @@ internal static class T
     public static readonly Translation VBSDelayStaging = new Translation("<#94cfff>Locked Until Start</color>", TranslationFlags.NoColor);
     [TranslationData(FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
     public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#94cfff>Locked: {0}:{1}</color>", TranslationFlags.NoColor);
-    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#94cfff>Capture {0}</color>", TranslationFlags.NoColor, Flag.SHORT_NAME_DISCOVER_FORMAT);
-    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#94cfff>Lose {0}</color>", TranslationFlags.NoColor, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#94cfff>Capture {0}</color>", TranslationFlags.NoColor | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#94cfff>Lose {0}</color>", TranslationFlags.NoColor | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
     public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#94cfff>Lose {0} more flags.</color>", TranslationFlags.NoColor);
     public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#94cfff>Capture {0} more flags.</color>", TranslationFlags.NoColor);
     public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#94cfff>Destroy {0}</color>", TranslationFlags.NoColor, FOB.CLOSEST_LOCATION_FORMAT);
@@ -1097,7 +1098,7 @@ internal static class T
     public static readonly Translation PhaseBriefing                      = new Translation("BRIEFING PHASE", TranslationFlags.UnityUI);
     public static readonly Translation PhasePreparation                   = new Translation("PREPARATION PHASE", TranslationFlags.UnityUI);
     public static readonly Translation PhaseBreifingInvasionAttack        = new Translation("BRIEFING PHASE", TranslationFlags.UnityUI);
-    public static readonly Translation<Flag> PhaseBreifingInvasionDefense = new Translation<Flag>("PREPARATION PHASE\nFORTIFY {0}", TranslationFlags.UnityUI);
+    public static readonly Translation<Flag> PhaseBreifingInvasionDefense = new Translation<Flag>("PREPARATION PHASE\nFORTIFY {0}", TranslationFlags.UnityUI, Flag.COLOR_SHORT_NAME_FORMAT);
     #endregion
 
     #region XP Toasts
@@ -1226,28 +1227,29 @@ internal static class T
     // Zone > Delete
     public static readonly Translation ZoneDeleteZoneNotInZone = new Translation("<#ff8c69>You must be standing in 1 zone (not 0 or multiple). Alternatively, provide a zone name as another argument.");
     public static readonly Translation<string> ZoneDeleteZoneNotFound = new Translation<string>("<#ff8c69>Failed to find a zone named \"{0}\".");
-    public static readonly Translation<Zone> ZoneDeleteZoneConfirm = new Translation<Zone>("Did you mean to delete <#666>{0}</color>? Type <#ff8c69>/confirm</color> to continue.", Flag.NAME_FORMAT);
+    public static readonly Translation<Zone> ZoneDeleteDidNotConfirm = new Translation<Zone>("<#ff8c69>{0} was not deleted, you did not <#ff8c69>confirm</color>.");
+    public static readonly Translation<Zone> ZoneDeleteZoneConfirm = new Translation<Zone>("<#a5c3d9>Did you mean to delete <#666>{0}</color>? Type <#ff8c69>/confirm</color> to continue.", Flag.NAME_FORMAT);
     public static readonly Translation<Zone> ZoneDeleteZoneSuccess = new Translation<Zone>("<#e6e3d5>Deleted <#666>{0}</color>.", Flag.NAME_FORMAT);
     public static readonly Translation ZoneDeleteEditingZoneDeleted = new Translation("<#ff8c69>Someone deleted the zone you're working on, saving this will create a new one.");
 
     // Zone > Create
-    public static readonly Translation<Zone, EZoneType> ZoneCreated = new Translation<Zone, EZoneType>("<#e6e3d5>Started zone builder for {0}, a {1} zone.", Flag.NAME_FORMAT);
+    public static readonly Translation<string, EZoneType> ZoneCreated = new Translation<string, EZoneType>("<#e6e3d5>Started zone builder for {0}, a {1} zone.", Flag.NAME_FORMAT);
     public static readonly Translation<string> ZoneCreateNameTaken = new Translation<string>("<#ff8c69>The name \"{0}\" is already in use by another zone.");
-    public static readonly Translation<string, IPlayer> ZoneCreateNameTakenEditing = new Translation<string, IPlayer>("<#ff8c69>The name \"{0}\" is already in use by another zone being created by {1}.");
+    public static readonly Translation<string, IPlayer> ZoneCreateNameTakenEditing = new Translation<string, IPlayer>("<#ff8c69>The name \"{0}\" is already in use by another zone being created by {1}.", arg1Fmt: UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     
     // Zone > Edit
     public static readonly Translation<int> ZoneEditPointNotDefined = new Translation<int>("<#ff8c69>Point <#ff9999>#{0}</color> is not defined.");
-    public static readonly Translation<int> ZoneEditPointNotNearby = new Translation<int>("<#ff8c69>There is no point near <#ff9999>{0}</color>.");
+    public static readonly Translation<Vector2> ZoneEditPointNotNearby = new Translation<Vector2>("<#ff8c69>There is no point near <#ff9999>{0}</color>.", "0.##");
 
     // Zone > Edit > Existing
     public static readonly Translation ZoneEditExistingInvalid = new Translation("<#ff8c69>Edit existing zone requires the zone name as a parameter. Alternatively stand in the zone (without overlapping another).");
     public static readonly Translation ZoneEditExistingInProgress = new Translation("<#ff8c69>Cancel or finalize the zone you're currently editing first.");
-    public static readonly Translation<Zone, EZoneType> ZoneEditExistingSuccess = new Translation<Zone, EZoneType>("<#e6e3d5>Started editing zone <#fff>{0}</color>, a <#ff9999>{1}</color> zone.");
+    public static readonly Translation<string, EZoneType> ZoneEditExistingSuccess = new Translation<string, EZoneType>("<#e6e3d5>Started editing zone <#fff>{0}</color>, a <#ff9999>{1}</color> zone.");
 
     // Zone > Edit > Finalize
     public static readonly Translation ZoneEditNotStarted = new Translation("<#ff8c69>Start creating a zone with <#fff>/zone create <polygon|rectangle|circle> <name></color>.");
     public static readonly Translation ZoneEditFinalizeExists = new Translation("<#ff8c69>There's already a zone saved with that id.");
-    public static readonly Translation<string> ZoneEditFinalizeSuccess = new Translation<string>("<#e6e3d5>Successfully finalized and saved {0}.");
+    public static readonly Translation<Zone> ZoneEditFinalizeSuccess = new Translation<Zone>("<#e6e3d5>Successfully finalized and saved {0}.", Flag.NAME_FORMAT);
     public static readonly Translation<string> ZoneEditFinalizeFailure = new Translation<string>("<#ff8c69>The provided zone data was invalid because: <#fff>{0}</color>.");
     public static readonly Translation ZoneEditFinalizeUseCaseUnset = new Translation("<#ff8c69>Before saving you must set a use case with /zone edit use case <type>: \"flag\", \"lobby\", \"t1_main\", \"t2_main\", \"t1_amc\", or \"t2_amc\".");
     public static readonly Translation<Zone> ZoneEditFinalizeOverwrote = new Translation<Zone>("<#e6e3d5>Successfully overwrote <#fff>{0}</color>.", Flag.NAME_FORMAT);
@@ -1278,7 +1280,7 @@ internal static class T
 
     // Zone > Edit > Set-Point
     public static readonly Translation ZoneEditSetPointInvalid = new Translation("<#ff8c69>Moving a point requires either: blank (move nearby closer), <nearby src x> <nearby src z> <dest x> <dest z>, <pt num> (destination is player position), <pt num> <dest x> <dest z>, or <nearby src x> <nearby src z> (destination is nearby player).");
-    public static readonly Translation<int, Vector2> ZoneEditSetPointSuccess = new Translation<int, Vector2>("<#e6e3d5>Removed point <#ff9999>#{0}</color> at <#ff9999>{1}</color>.", arg1Fmt: "0.##");
+    public static readonly Translation<int, Vector2, Vector2> ZoneEditSetPointSuccess = new Translation<int, Vector2, Vector2>("<#e6e3d5>Set position of point <#ff9999>#{0}</color> to <#ff9999>{2}</color> (from <#cdcedc>{2}</color>).", arg1Fmt: "0.##", arg2Fmt: "0.##");
 
     // Zone > Edit > Order-Point
     public static readonly Translation ZoneEditOrderPointInvalid = new Translation("<#ff8c69>Ordering a point requires either: <from-index> <to-index>, <to-index> (from is nearby player), or <src x> <src z> <to-index>.");
@@ -1304,6 +1306,7 @@ internal static class T
     // Zone > Edit > Center
     public static readonly Translation ZoneEditCenterInvalid = new Translation("<#ff8c69>To set center you must provide two decimal or whole numbers, or leave them blank to use the player's current position.");
     public static readonly Translation<Vector2> ZoneEditCenterSuccess = new Translation<Vector2>("<#e6e3d5>Set center position to <#ff9999>{0}</color>.", "0.##");
+    public static readonly Translation<Vector2, float> ZoneEditCenterSuccessRotation = new Translation<Vector2, float>("<#e6e3d5>Set center position to <#ff9999>{0}</color> and yaw to <#ff9999>{1}</color>°.", "0.##", "0.##");
 
     // Zone > Edit > Name
     public static readonly Translation ZoneEditNameInvalid = new Translation("<#ff8c69>Name requires one string argument. Quotation marks aren't required.");

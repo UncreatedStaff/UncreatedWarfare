@@ -79,7 +79,7 @@ public static class Localization
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
         }
@@ -92,7 +92,7 @@ public static class Localization
             catch (FormatException ex)
             {
                 L.LogError(ex);
-                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
         else if (language != L.DEFAULT)
@@ -105,7 +105,7 @@ public static class Localization
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             if (data.TryGetValue(key, out translation))
@@ -117,17 +117,17 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
             {
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
         else
         {
-            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
         }
     }
     [Obsolete("Use the new generics system instead.")]
@@ -139,13 +139,13 @@ public static class Localization
         if (key == null)
         {
             string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
-            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
+            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? string.Empty : ": ")}{args}");
             return args;
         }
 
         if (key.Length == 0)
         {
-            return formatting.Length > 0 ? string.Join(", ", formatting) : "";
+            return formatting.Length > 0 ? string.Join(", ", formatting) : string.Empty;
         }
 
         Translation? newTranslation = Translation.FromLegacyId(key);
@@ -177,17 +177,17 @@ public static class Localization
                         catch (FormatException ex)
                         {
                             L.LogError(ex);
-                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                         }
                     }
                     else
                     {
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
@@ -201,12 +201,12 @@ public static class Localization
                     catch (FormatException ex)
                     {
                         L.LogError(ex);
-                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
         }
@@ -245,17 +245,17 @@ public static class Localization
                         catch (FormatException ex)
                         {
                             L.LogError(ex);
-                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                         }
                     }
                     else
                     {
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else if (data.TryGetValue(key, out TranslationData translation))
@@ -267,12 +267,12 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
             {
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
     }
@@ -310,12 +310,12 @@ public static class Localization
         if (key == null)
         {
             string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
-            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
+            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? string.Empty : ": ")}{args}");
             return args;
         }
         if (key.Length == 0)
         {
-            return formatting.Length > 0 ? string.Join(", ", formatting) : "";
+            return formatting.Length > 0 ? string.Join(", ", formatting) : string.Empty;
         }
         Translation? newTranslation = Translation.FromLegacyId(key);
         if (player == 0)
@@ -346,17 +346,17 @@ public static class Localization
                         catch (FormatException ex)
                         {
                             L.LogError(ex);
-                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                         }
                     }
                     else
                     {
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
@@ -370,12 +370,12 @@ public static class Localization
                     catch (FormatException ex)
                     {
                         L.LogError(ex);
-                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
         }
@@ -413,17 +413,17 @@ public static class Localization
                         catch (FormatException ex)
                         {
                             L.LogError(ex);
-                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                         }
                     }
                     else
                     {
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else if (data.TryGetValue(key, out TranslationData translation))
@@ -435,12 +435,12 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
             {
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
     }
@@ -461,14 +461,14 @@ public static class Localization
         if (key == null)
         {
             string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
-            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? "" : ": ")}{args}");
+            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? string.Empty : ": ")}{args}");
             color = UCWarfare.GetColor("default");
             return args;
         }
         if (key.Length == 0)
         {
             color = UCWarfare.GetColor("default");
-            return formatting.Length > 0 ? string.Join(", ", formatting) : "";
+            return formatting.Length > 0 ? string.Join(", ", formatting) : string.Empty;
         }
         Translation? newTranslation = Translation.FromLegacyId(key);
         if (player == 0)
@@ -500,19 +500,19 @@ public static class Localization
                         catch (FormatException ex)
                         {
                             L.LogError(ex);
-                            return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                         }
                     }
                     else
                     {
                         color = UCWarfare.GetColor("default");
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
                     color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
@@ -527,13 +527,13 @@ public static class Localization
                     catch (FormatException ex)
                     {
                         L.LogError(ex);
-                        return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
                     color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
         }
@@ -572,19 +572,19 @@ public static class Localization
                         catch (FormatException ex)
                         {
                             L.LogError(ex);
-                            return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                            return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                         }
                     }
                     else
                     {
                         color = UCWarfare.GetColor("default");
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                     }
                 }
                 else
                 {
                     color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else if (data.TryGetValue(key, out TranslationData translation))
@@ -597,13 +597,13 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
             {
                 color = UCWarfare.GetColor("default");
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
     }
@@ -648,7 +648,7 @@ public static class Localization
                 else
                 {
                     color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
         }
@@ -662,7 +662,7 @@ public static class Localization
             catch (FormatException ex)
             {
                 L.LogError(ex);
-                return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
         else if (language != L.DEFAULT)
@@ -676,7 +676,7 @@ public static class Localization
                 else
                 {
                     color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             if (data.TryGetValue(key, out translation))
@@ -689,19 +689,19 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
             {
                 color = UCWarfare.GetColor("default");
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
         else
         {
             color = UCWarfare.GetColor("default");
-            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
         }
     }
     [Obsolete("Use the new generics system instead.")]
@@ -742,7 +742,7 @@ public static class Localization
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
         }
@@ -755,7 +755,7 @@ public static class Localization
             catch (FormatException ex)
             {
                 L.LogError(ex);
-                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
         else if (language != L.DEFAULT)
@@ -768,7 +768,7 @@ public static class Localization
                 }
                 else
                 {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             if (data.TryGetValue(key, out translation))
@@ -780,17 +780,17 @@ public static class Localization
                 catch (FormatException ex)
                 {
                     L.LogError(ex);
-                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
                 }
             }
             else
             {
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
             }
         }
         else
         {
-            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : "");
+            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
         }
     }
 
@@ -888,166 +888,127 @@ public static class Localization
     }
     public static string GetTimeFromSeconds(this int seconds, ulong player)
     {
-        if (seconds < 1) seconds = 1;
+        if (seconds < 0)
+            return T.TimePermanent.Translate(player);
+        if (seconds == 0)
+            seconds = 1;
         if (seconds < 60) // < 1 minute
-            return seconds.ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), player);
-        else if (seconds < 3600) // < 1 hour
+            return seconds.ToString(Data.Locale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player);
+        int val;
+        int overflow;
+        if (seconds < 3600) // < 1 hour
         {
-            int minutes = F.DivideRemainder(seconds, 60, out int secondOverflow);
-            return $"{minutes} {Translate(minutes == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural, player)}{(secondOverflow == 0 ? "" : $" {Translate(T.TimeAnd, player)} {secondOverflow} {Translate(secondOverflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural, player)}")}";
+            val = F.DivideRemainder(seconds, 60, out overflow);
+            return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
         }
-        else if (seconds < 86400) // < 1 day 
+        if (seconds < 86400) // < 1 day 
         {
-            int hours = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out int minutesOverflow);
-            return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
+            return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
         }
-        else if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
+        if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
-            int days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out int hoursOverflow);
-            return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
+            return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(player)}")}";
         }
-        else if (seconds < 31536000) // < 1 year
+        if (seconds < 31536000) // < 1 year
         {
-            int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out int daysOverflow);
-            return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
+            return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(player)}")}";
         }
-        else // > 1 year
-        {
-            int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
-            return $"{years} {Translate("time_year" + years.S(), player)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
-        }
+        // > 1 year
 
+        val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
+        return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(player)}" +
+               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(player)}")}";
     }
-    public static string GetTimeFromSeconds(this uint seconds, ulong player)
+    public static string GetTimeFromSeconds(this int seconds, IPlayer player)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
+        if (seconds < 0)
+            return T.TimePermanent.Translate(player);
+        if (seconds == 0)
+            seconds = 1;
         if (seconds < 60) // < 1 minute
+            return seconds.ToString(Data.Locale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player);
+        int val;
+        int overflow;
+        if (seconds < 3600) // < 1 hour
         {
-            return (seconds + 1).ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), player);
+            val = F.DivideRemainder(seconds, 60, out overflow);
+            return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
         }
-        else if (seconds < 3600) // < 1 hour
+        if (seconds < 86400) // < 1 day 
         {
-            int minutes = F.DivideRemainder(seconds, 60, out int secondOverflow);
-            return $"{minutes} {Translate("time_minute" + minutes.S(), player)}{(secondOverflow == 0 ? "" : $" {Translate("time_and", player)} {secondOverflow} {Translate("time_second" + secondOverflow.S(), player)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
+            return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
         }
-        else if (seconds < 86400) // < 1 day 
+        if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
-            int hours = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out int minutesOverflow);
-            return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
+            return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(player)}")}";
         }
-        else if (seconds < 2628000) // < 1 month (30.416 days) (365/12)
+        if (seconds < 31536000) // < 1 year
         {
-            int days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out int hoursOverflow);
-            return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
+            return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(player)}")}";
         }
-        else if (seconds < 31536000) // < 1 year
-        {
-            int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out int daysOverflow);
-            return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
-        }
-        else // > 1 year
-        {
-            int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
-            return $"{years} {Translate("time_year" + years.S(), player)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
-        }
+        // > 1 year
+
+        val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
+        return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(player)}" +
+               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(player)}")}";
     }
     public static string GetTimeFromSeconds(this int seconds, string language)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
+        if (seconds < 0)
+            return T.TimePermanent.Translate(language);
+        if (seconds == 0)
+            seconds = 1;
         if (seconds < 60) // < 1 minute
+            return seconds.ToString(Data.Locale) + ' ' + (seconds == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language);
+        int val;
+        int overflow;
+        if (seconds < 3600) // < 1 hour
         {
-            return (seconds + 1).ToString(Data.Locale) + ' ' + Translate("time_second" + seconds.S(), language);
+            val = F.DivideRemainder(seconds, 60, out overflow);
+            return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language)}")}";
         }
-        else if (seconds < 3600) // < 1 hour
+        if (seconds < 86400) // < 1 day 
         {
-            int minutes = F.DivideRemainder(seconds, 60, out int secondOverflow);
-            return $"{minutes} {Translate("time_minute" + minutes.S(), language)}{(secondOverflow == 0 ? "" : $" {Translate("time_and", language)} {secondOverflow} {Translate("time_second" + secondOverflow.S(), language)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
+            return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(language)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language)}")}";
         }
-        else if (seconds < 86400) // < 1 day 
+        if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
-            int hours = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out int minutesOverflow);
-            return $"{hours} {Translate("time_hour" + hours.S(), language)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", language)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), language)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
+            return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(language)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(language)}")}";
         }
-        else if (seconds < 2628000) // < 1 month (30.416 days) (365/12)
+        if (seconds < 31536000) // < 1 year
         {
-            int days = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out int hoursOverflow);
-            return $"{days} {Translate("time_day" + days.S(), language)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", language)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), language)}")}";
+            val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
+            return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(language)}" +
+                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(language)}")}";
         }
-        else if (seconds < 31536000) // < 1 year
-        {
-            int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out int daysOverflow);
-            return $"{months} {Translate("time_month" + months.S(), language)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", language)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), language)}")}";
-        }
-        else // > 1 year
-        {
-            int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
-            return $"{years} {Translate("time_year" + years.S(), language)}{years.S()}{(monthOverflow == 0 ? "" : $" {Translate("time_and", language)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), language)}")}";
-        }
+        // > 1 year
+
+        val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
+        return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(language)}" +
+               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(language)}")}";
     }
-    public static string GetTimeFromMinutes(this int minutes, ulong player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (minutes < 60) // < 1 hour
-        {
-            return minutes.ToString(Data.Locale) + ' ' + Translate("time_minute" + minutes.S(), player);
-        }
-        else if (minutes < 1440) // < 1 day 
-        {
-            int hours = F.DivideRemainder(minutes, 60, out int minutesOverflow);
-            return $"{hours} {Translate("time_hour" + hours.S(), player)}{(minutesOverflow == 0 ? string.Empty : $" {Translate("time_and", player)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), player)}")}";
-        }
-        else if (minutes < 43800) // < 1 month (30.416 days)
-        {
-            int days = F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out int hoursOverflow);
-            return $"{days} {Translate("time_day" + days.S(), player)}{(hoursOverflow == 0 ? string.Empty : $" {Translate("time_and", player)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), player)}")}";
-        }
-        else if (minutes < 525600) // < 1 year
-        {
-            int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out int daysOverflow);
-            return $"{months} {Translate("time_month" + months.S(), player)}{(daysOverflow == 0 ? string.Empty : $" {Translate("time_and", player)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), player)}")}";
-        }
-        else // > 1 year
-        {
-            int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
-            return $"{years} {Translate("time_year" + years.S(), player)}{(monthOverflow == 0 ? string.Empty : $" {Translate("time_and", player)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), player)}")}";
-        }
-    }
-    public static string GetTimeFromMinutes(this int minutes, string language)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (minutes < 60) // < 1 hour
-        {
-            return minutes.ToString(Data.Locale) + ' ' + Translate("time_minute" + minutes.S(), language);
-        }
-        else if (minutes < 1440) // < 1 day 
-        {
-            int hours = F.DivideRemainder(minutes, 60, out int minutesOverflow);
-            return $"{hours} {Translate("time_hour" + hours.S(), language)}{(minutesOverflow == 0 ? "" : $" {Translate("time_and", language)} {minutesOverflow} {Translate("time_minute" + minutesOverflow.S(), language)}")}";
-        }
-        else if (minutes < 43800) // < 1 month (30.416 days)
-        {
-            int days = F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out int hoursOverflow);
-            return $"{days} {Translate("time_day" + days.S(), language)}{(hoursOverflow == 0 ? "" : $" {Translate("time_and", language)} {hoursOverflow} {Translate("time_hour" + hoursOverflow.S(), language)}")}";
-        }
-        else if (minutes < 525600) // < 1 year
-        {
-            int months = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out int daysOverflow);
-            return $"{months} {Translate("time_month" + months.S(), language)}{(daysOverflow == 0 ? "" : $" {Translate("time_and", language)} {daysOverflow} {Translate("time_day" + daysOverflow.S(), language)}")}";
-        }
-        else // > 1 year
-        {
-            int years = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(minutes, 60, out _), 24, out _), 30.416m, out _), 12, out int monthOverflow);
-            return $"{years} {Translate("time_year" + years.S(), language)}{(monthOverflow == 0 ? "" : $" {Translate("time_and", language)} {monthOverflow} {Translate("time_month" + monthOverflow.S(), language)}")}";
-        }
-    }
+    public static string GetTimeFromMinutes(this int minutes, ulong player)    => GetTimeFromSeconds(minutes * 60, player);
+    public static string GetTimeFromMinutes(this int minutes, IPlayer player)  => GetTimeFromSeconds(minutes * 60, player);
+    public static string GetTimeFromMinutes(this int minutes, string language) => GetTimeFromSeconds(minutes * 60, language);
     public static string TranslateSign(string key, string language, UCPlayer ucplayer, bool important = false)
     {
 #if DEBUG
@@ -1262,12 +1223,12 @@ public static class Localization
         else return spawn.VehicleID.ToString("N");
         if (comp == null) return spawn.VehicleID.ToString("N");
 
-        string unlock = "";
+        string unlock = string.Empty;
         if (data.UnlockLevel > 0)
             unlock += RankData.GetRankAbbreviation(data.UnlockLevel).Colorize("f0b589");
         if (data.CreditCost > 0)
         {
-            if (unlock != "")
+            if (unlock != string.Empty)
                 unlock += "    ";
 
             unlock += $"<color=#b8ffc1>C</color> {data.CreditCost.ToString(Data.Locale)}";
@@ -1850,6 +1811,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         Players = new List<UCPlayer>(1) { player };
         index = -1;
         Next = null!;
+        Team = player.GetTeam();
     }
     public LanguageSet(string lang)
     {

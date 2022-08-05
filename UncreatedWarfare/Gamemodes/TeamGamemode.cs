@@ -65,40 +65,37 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         if (EnableAMC)
         {
-            IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
-            while (players.MoveNext())
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
             {
-                ulong team = players.Current.GetTeam();
-                UCPlayer? player = UCPlayer.FromSteamPlayer(players.Current);
-                if (player == null) continue;
+                UCPlayer cnt = PlayerManager.OnlinePlayers[i];
+                ulong team = cnt.GetTeam();
                 try
                 {
-                    if (!player.OnDutyOrAdmin() && !players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) ||
-                        (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
+                    if (!cnt.OnDutyOrAdmin() && !cnt.Player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(cnt.Player.transform.position)) ||
+                                                                            (team == 2 && TeamManager.Team1AMC.IsInside(cnt.Player.transform.position))))
                     {
-                        if (!InAMC.Contains(players.Current.playerID.steamID.m_SteamID))
+                        if (!InAMC.Contains(cnt.Steam64))
                         {
-                            InAMC.Add(players.Current.playerID.steamID.m_SteamID);
+                            InAMC.Add(cnt.Steam64);
                             int a = Mathf.RoundToInt(AMC_TIME);
-                            ToastMessage.QueueMessage(players.Current,
-                                new ToastMessage(Localization.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
-                                EToastMessageSeverity.WARNING));
-                            UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
+                            ToastMessage.QueueMessage(cnt,
+                                new ToastMessage(T.EnteredEnemyTerritory.Translate(cnt, a.GetTimeFromSeconds(cnt.Steam64)),
+                                    EToastMessageSeverity.WARNING));
+                            UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(cnt));
                         }
                     }
                     else
                     {
-                        InAMC.Remove(players.Current.playerID.steamID.m_SteamID);
+                        InAMC.Remove(cnt.Steam64);
                     }
                 }
                 catch (Exception ex)
                 {
-                    L.LogError("Error checking for duty players on player " + players.Current.playerID.playerName);
+                    L.LogError("Error checking for duty players on player " + cnt.Name.PlayerName + " (" + cnt.Steam64 + ").");
                     if (UCWarfare.Config.Debug)
                         L.LogError(ex);
                 }
             }
-            players.Dispose();
         }
     }
     public IEnumerator<WaitForSeconds> KillPlayerInEnemyTerritory(SteamPlayer player)

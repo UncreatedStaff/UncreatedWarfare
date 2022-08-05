@@ -470,7 +470,7 @@ public class RequestCommand : Command
         else if (delay.type == EDelayType.TIME)
         {
             float timeLeft = delay.value - Data.Gamemode.SecondsSinceStart;
-            ucplayer.SendChat(T.RequestVehicleTimeDelay, ((uint)Mathf.Round(timeLeft)).GetTimeFromSeconds(ucplayer.Steam64));
+            ucplayer.SendChat(T.RequestVehicleTimeDelay, Mathf.RoundToInt(timeLeft).GetTimeFromSeconds(ucplayer.Steam64));
         }
         else if (delay.type == EDelayType.FLAG || delay.type == EDelayType.FLAG_PERCENT)
         {

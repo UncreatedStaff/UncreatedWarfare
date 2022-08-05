@@ -232,8 +232,7 @@ public class Invasion :
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ulong team = player.GetTeam();
-        L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
-        player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
+        player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
     private void UpdateFlag(Flag flag)
@@ -277,8 +276,7 @@ public class Invasion :
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ulong team = player.GetTeam();
-        L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
-        player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
+        player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
         UpdateFlag(flag);
     }
@@ -368,23 +366,14 @@ public class Invasion :
         UpdateFlag(flag);
         if (NewOwner == 0)
         {
-            foreach (SteamPlayer client in Provider.clients)
-            {
-                ulong team = client.GetTeam();
-                client.SendChat("flag_neutralized", UCWarfare.GetColor("flag_neutralized"),
-                    flag.Discovered(team) ? flag.Name : Localization.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
-                    flag.TeamSpecificHexColor);
-            }
+            Chat.Broadcast(LanguageSet.OnTeam(1), T.FlagNeutralized, flag);
+            Chat.Broadcast(LanguageSet.OnTeam(2), T.FlagNeutralized, flag);
         }
         else
         {
-            foreach (SteamPlayer client in Provider.clients)
-            {
-                ulong team = client.GetTeam();
-                client.SendChat("team_capture", UCWarfare.GetColor("team_capture"), Teams.TeamManager.TranslateName(NewOwner, client.playerID.steamID.m_SteamID),
-                    TeamManager.GetTeamHexColor(NewOwner), flag.Discovered(team) ? flag.Name : Localization.Translate("undiscovered_flag", client.playerID.steamID.m_SteamID),
-                    flag.TeamSpecificHexColor);
-            }
+            FactionInfo info = TeamManager.GetFactionSafe(NewOwner)!;
+            Chat.Broadcast(LanguageSet.OnTeam(1), T.TeamCaptured, info, flag);
+            Chat.Broadcast(LanguageSet.OnTeam(2), T.TeamCaptured, info, flag);
         }
     }
     protected override void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag)
@@ -435,9 +424,9 @@ public class Invasion :
         ITransportConnection c = player.Connection;
         CTFUI.StagingUI.SendToPlayer(c);
         if (player.GetTeam() == AttackingTeam)
-            CTFUI.StagingUI.Top.SetText(c, Localization.Translate("phases_invasion_attack", player));
+            CTFUI.StagingUI.Top.SetText(c, T.PhaseBreifingInvasionAttack.Translate(player));
         else if (player.GetTeam() == DefendingTeam)
-            CTFUI.StagingUI.Top.SetText(c, Localization.Translate("phases_invasion_defense", player, obj.ShortName.ToUpper().Colorize(obj.ColorHex)));
+            CTFUI.StagingUI.Top.SetText(c, T.PhaseBreifingInvasionDefense.Translate(player, obj));
     }
     protected override void EndStagingPhase()
     {
