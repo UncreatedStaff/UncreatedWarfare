@@ -177,7 +177,7 @@ public static class CTFUI
             List<Flag> rotation = gm.Rotation;
             ListUI.SendToPlayer(c);
             ListUI.Header.SetVisibility(c, true);
-            ListUI.Header.SetText(c, Localization.Translate("flag_header", player));
+            ListUI.Header.SetText(c, T.FlagsHeader.Translate(player));
             if (team == 1 || team == 2)
             {
                 for (int i = 0; i < ListUI.Parents.Length; i++)

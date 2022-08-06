@@ -15,7 +15,7 @@ public abstract class ConventionalLeaderboard<Stats, StatTracker> : Leaderboard<
     public override void UpdateLeaderboardTimer()
     {
         int sl = Mathf.RoundToInt(secondsLeft);
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
+        foreach (LanguageSet set in LanguageSet.All())
             LeaderboardUI.UpdateTime(set, sl);
     }
     public abstract void SendLeaderboard(in LanguageSet set);
@@ -23,7 +23,7 @@ public abstract class ConventionalLeaderboard<Stats, StatTracker> : Leaderboard<
     {
         state1 = new bool[Math.Min(LeaderboardUI.Team1PlayerVCs.Length, statsT1!.Count - 1)];
         state2 = new bool[Math.Min(LeaderboardUI.Team2PlayerVCs.Length, statsT2!.Count - 1)];
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
+        foreach (LanguageSet set in LanguageSet.All())
         {
             while (set.MoveNext()) LeaderboardEx.ApplyLeaderboardModifiers(set.Next);
             set.Reset();

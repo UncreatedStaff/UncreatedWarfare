@@ -284,8 +284,7 @@ public sealed partial class Conquest :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-            Chat.Broadcast(set, "flag_neutralized", flag.Name, flag.TeamSpecificHexColor);
+        Chat.Broadcast(T.FlagNeutralized, flag);
         if (neutralizingTeam == 1)
             QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), neutralizingTeam);
         else if (neutralizingTeam == 2)
@@ -302,8 +301,7 @@ public sealed partial class Conquest :
         if (_gameStats != null)
             _gameStats.flagOwnerChanges++;
         string c2 = TeamManager.GetTeamHexColor(capturedTeam);
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-            Chat.Broadcast(set, "team_capture", TeamManager.TranslateName(capturedTeam, set.Language), c2, flag.Name, flag.TeamSpecificHexColor);
+        Chat.Broadcast(T.TeamCaptured, TeamManager.GetFactionSafe(capturedTeam)!, flag);
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         VehicleSigns.OnFlagCaptured();
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)

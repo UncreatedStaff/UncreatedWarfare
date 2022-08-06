@@ -222,13 +222,11 @@ public class UCAnnouncer : MonoBehaviour, IReloadableSingleton
             L.LogWarning($"Message to be broadcasted by announcer was empty.");
             return;
         }
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
+        foreach (LanguageSet set in LanguageSet.All())
         {
             TranslationData tdata = GetMessage(key, set.Language);
             while (set.MoveNext())
-            {
-                Chat.SendSingleMessage(tdata.Message, tdata.Color, EChatMode.SAY, null, tdata.Message.Contains("</"), set.Next.Player.channel.owner);
-            }
+                Chat.SendSingleMessage(tdata.Message, tdata.Color, EChatMode.SAY, null, true, set.Next.Player.channel.owner);
         }
     }
     void OnDisable()

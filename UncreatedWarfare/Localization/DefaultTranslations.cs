@@ -129,7 +129,7 @@ internal static class T
         Description = "Gets broadcasted when a team captures a flag.", LegacyTranslationId = "team_capture")]
     public static readonly Translation<FactionInfo, Flag> TeamCaptured = new Translation<FactionInfo, Flag>("<#a0ad8e>{0} captured {1}.", TranslationFlags.PerTeamTranslation, FactionInfo.COLOR_DISPLAY_NAME_FORMAT, Flag.COLOR_NAME_DISCOVER_FORMAT);
 
-    [TranslationData(Section = SECTION_FLAGS,
+        [TranslationData(Section = SECTION_FLAGS,
         Description = "Backup translation for team 0 name and short name.", LegacyTranslationId = "neutral")]
     public static readonly Translation Neutral = new Translation("Neutral",       TranslationFlags.UnityUI);
 
@@ -167,7 +167,7 @@ internal static class T
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Shows on the Capture UI when the objective they're on is owned by the other team and is locked from recapture.", LegacyTranslationId = "ui_locked")]
-    public static readonly Translation UILocked = new Translation("LOCKED",        TranslationFlags.UnityUI);
+    public static readonly Translation UILocked = new Translation("LOCKED",           TranslationFlags.UnityUI);
 
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Shows on the Capture UI when the player's in a vehicle on their objective.", LegacyTranslationId = "ui_invehicle")]
@@ -176,6 +176,9 @@ internal static class T
         [TranslationData(Section = SECTION_FLAGS,
         Description = "Shows above the flag list UI.", LegacyTranslationId = "ui_capturing")]
     public static readonly Translation FlagsHeader = new Translation("Flags",         TranslationFlags.UnityUI);
+
+        [TranslationData(Section = SECTION_FLAGS, Description = "Shows above the cache list UI.")]
+    public static readonly Translation CachesHeader = new Translation("Caches",       TranslationFlags.UnityUI);
     #endregion
 
     #region Teams
@@ -1411,7 +1414,7 @@ internal static class T
     #region Win UI
     public static readonly Translation<int> WinUIValueTickets = new Translation<int>("{0} Tickets", TranslationFlags.UnityUI);
     public static readonly Translation<int> WinUIValueCaches = new Translation<int>("{0} Caches Left", TranslationFlags.UnityUI);
-    public static readonly Translation<int> WinUIHeaderWinner = new Translation<int>("{0}\r\nhas won the battle!", TranslationFlags.UnityUI);
+    public static readonly Translation<FactionInfo> WinUIHeaderWinner = new Translation<FactionInfo>("{0}\r\nhas won the battle!", TranslationFlags.UnityUI, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
     #endregion
     
     private const string ERROR_COLOR = "<#ff8c69>";

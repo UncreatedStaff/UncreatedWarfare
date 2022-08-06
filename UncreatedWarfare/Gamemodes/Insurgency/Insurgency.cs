@@ -564,9 +564,9 @@ public class Insurgency :
             foreach (UCPlayer player in PlayerManager.OnlinePlayers)
             {
                 if (player.GetTeam() == AttackingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("cache_destroyed_attack", player), "", EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(T.CacheDestroyedAttack.Translate(player), string.Empty, EToastMessageSeverity.BIG));
                 else if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate("cache_destroyed_defense", player), "", EToastMessageSeverity.BIG));
+                    ToastMessage.QueueMessage(player, new ToastMessage(T.CacheDestroyedDefense.Translate(player), string.Empty, EToastMessageSeverity.BIG));
             }
 
             if (ActiveCachesCount == 0)
@@ -579,7 +579,7 @@ public class Insurgency :
         {
             if (destroyer.GetTeam() == AttackingTeam)
             {
-                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, Localization.Translate("xp_cache_killed", destroyer));
+                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, T.XPToastCacheDestroyed.Translate(destroyer));
                 StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
                 StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 if (_gameStats != null)
@@ -596,7 +596,7 @@ public class Insurgency :
             }
             else
             {
-                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheTeamkilled, Localization.Translate("xp_cache_teamkilled", destroyer));
+                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheTeamkilled, T.XPToastFriendlyCacheDestroyed.Translate(destroyer));
             }
         }
         for (int i = 0; i < Caches.Count; i++)
@@ -618,9 +618,9 @@ public class Insurgency :
 #endif
         CTFUI.StagingUI.SendToPlayer(player.Connection);
         if (player.GetTeam() == AttackingTeam)
-            CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate("phases_briefing", player));
+            CTFUI.StagingUI.Top.SetText(player.Connection, T.PhaseBriefing.Translate(player));
         else if (player.GetTeam() == DefendingTeam)
-            CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate("phases_preparation", player));
+            CTFUI.StagingUI.Top.SetText(player.Connection, T.PhasePreparation.Translate(player));
     }
     protected override void EndStagingPhase()
     {
