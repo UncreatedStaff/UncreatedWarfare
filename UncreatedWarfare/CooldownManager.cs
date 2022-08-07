@@ -100,7 +100,7 @@ public class CooldownConfig : ConfigData
         DeployFOBCooldown = 30;
         RequestKitCooldown = 120;
         RequestVehicleCooldown = 240;
-        ReviveXPCooldown = 300f;
+        ReviveXPCooldown = 150f;
     }
     public CooldownConfig() { }
 }
