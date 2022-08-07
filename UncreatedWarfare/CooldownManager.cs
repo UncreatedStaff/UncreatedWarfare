@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare;
@@ -85,11 +86,12 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
 public class CooldownConfig : ConfigData
 {
     public bool EnableCombatLogger;
-    public float CombatCooldown;
-    public float DeployMainCooldown;
-    public float DeployFOBCooldown;
-    public float RequestKitCooldown;
-    public float RequestVehicleCooldown;
+    public RotatableConfig<float> CombatCooldown;
+    public RotatableConfig<float> DeployMainCooldown;
+    public RotatableConfig<float> DeployFOBCooldown;
+    public RotatableConfig<float> RequestKitCooldown;
+    public RotatableConfig<float> RequestVehicleCooldown;
+    public RotatableConfig<float> ReviveXPCooldown;
     public override void SetDefaults()
     {
         EnableCombatLogger = true;
@@ -98,6 +100,7 @@ public class CooldownConfig : ConfigData
         DeployFOBCooldown = 30;
         RequestKitCooldown = 120;
         RequestVehicleCooldown = 240;
+        ReviveXPCooldown = 300f;
     }
     public CooldownConfig() { }
 }
@@ -178,5 +181,7 @@ public enum ECooldownType
     [Translatable("Team Change")]
     CHANGE_TEAMS,
     [Translatable("Report Player1")]
-    REPORT
+    REPORT,
+    [Translatable("Revive Player")]
+    REVIVE
 }

@@ -190,9 +190,25 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 UCPlayer? uctarget = UCPlayer.FromPlayer(target);
                 if (ucmedic != null)
                 {
-                    Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, T.XPToastHealedTeammate);
-                    if (uctarget != null)
-                        QuestManager.OnRevive(ucmedic, uctarget);
+                    if (CooldownManager.Config.ReviveXPCooldown <= 0 || (uctarget != null &&
+                      !(CooldownManager.HasCooldown(ucmedic, ECooldownType.REVIVE, out Cooldown cooldown) &&
+                        cooldown.data.Length > 0 &&
+                        cooldown.data[0] is ulong id &&
+                        id == uctarget.Steam64)))
+                    {
+                        Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, T.XPToastHealedTeammate);
+                        if (uctarget != null)
+                        {
+                            QuestManager.OnRevive(ucmedic, uctarget);
+                            CooldownManager.StartCooldown(ucmedic, ECooldownType.REVIVE, CooldownManager.Config.ReviveXPCooldown, uctarget.Steam64);
+                        }
+                    }
+                    else
+                    {
+                        ToastMessage.QueueMessage(ucmedic, new ToastMessage(
+                            T.XPToastGainXP.Translate(ucmedic, 0) + "\n" +
+                            T.XPToastHealedTeammate.Translate(ucmedic).Colorize("adadad"), EToastMessageSeverity.MINI));
+                    }
                 }
 
 
