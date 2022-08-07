@@ -136,10 +136,13 @@ public class Cooldown : ITranslationArgument
         return line;
     }
 
+    [FormatDisplay("Type (" + nameof(ECooldownType) + ")")]
     /// <summary>Translated <see cref="ECooldownType"/>.</summary>
     public const string NAME_FORMAT = "n";
+    [FormatDisplay("Long Time (3 hours and 4 minutes)")]
     /// <summary>3 hours and 4 minutes</summary>
     public const string LONG_TIME_FORMAT = "tl1";
+    [FormatDisplay("Short Time (3h 40m)")]
     /// <summary>3h 4m 20s</summary>
     public const string SHORT_TIME_FORMAT = "tl2";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)

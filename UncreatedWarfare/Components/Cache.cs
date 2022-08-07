@@ -61,8 +61,6 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
     public List<UCPlayer> NearbyDefenders { get; private set; }
     public List<UCPlayer> NearbyAttackers { get; private set; }
 
-    private Coroutine loop;
-
     private void Awake()
     {
         Structure = BarricadeManager.FindBarricadeByRootTransform(transform);
@@ -175,8 +173,6 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
         NearbyAttackers.Clear();
         NearbyDefenders.Clear();
 
-        StopCoroutine(loop);
-
         Destroy(gameObject, 2);
     }
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
@@ -197,13 +193,13 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
         if (NearbyAttackers.Count != 0)
         {
             if (ctx is not null)
-                throw ctx.Reply("deploy_c_enemiesNearby");
+                throw ctx.Reply(T.DeployEnemiesNearby, this);
             return false;
         }
         if (Structure == null || Structure.GetServersideData().barricade.isDead)
         {
             if (ctx is not null)
-                throw ctx.Reply("deploy_c_cachedead");
+                throw ctx.Reply(T.DeployDestroyed, this);
             return false;
         }
 
@@ -214,13 +210,13 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
         if (NearbyAttackers.Count != 0)
         {
             if (chat)
-                player.Message("deploy_c_enemiesNearby");
+                player.SendChat(T.DeployEnemiesNearbyTick, this);
             return false;
         }
         if (Structure == null || Structure.GetServersideData().barricade.isDead)
         {
             if (chat)
-                player.Message("deploy_c_cachedead");
+                player.SendChat(T.DeployDestroyed);
             return false;
         }
 
@@ -229,6 +225,6 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
     void IDeployable.OnDeploy(UCPlayer player, bool chat)
     {
         if (chat)
-            player.Message("deploy_s", UIColor, Name);
+            player.SendChat(T.DeploySuccess, this);
     }
 }

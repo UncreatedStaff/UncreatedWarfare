@@ -204,9 +204,9 @@ public static partial class Patches
                     caller.TimeUnmuted > DateTime.Now)
                 {
                     if (caller.TimeUnmuted == DateTime.MaxValue)
-                        caller.SendChat("text_chat_feedback_muted_permanent", caller.MuteReason ?? "unknown");
+                        caller.SendChat(T.MuteTextChatFeedbackPermanent, caller.MuteReason ?? "unknown");
                     else
-                        caller.SendChat("text_chat_feedback_muted", caller.TimeUnmuted.ToString("g") + " EST", caller.MuteReason ?? string.Empty);
+                        caller.SendChat(T.MuteTextChatFeedback, caller.TimeUnmuted, caller.MuteReason ?? "unknown");
                     return false;
                 }
                 if (!duty)
@@ -214,7 +214,7 @@ public static partial class Patches
                     Match match = Data.ChatFilter.Match(text);
                     if (match.Success && match.Length > 0)
                     {
-                        caller.SendChat("text_chat_feedback_chat_filter", match.Value);
+                        caller.SendChat(T.ChatFilterFeedback, match.Value);
                         ActionLogger.Add(EActionLogType.CHAT_FILTER_VIOLATION, mode switch { EChatMode.LOCAL => "AREA/SQUAD: ", EChatMode.GLOBAL => "GLOBAL: ", _ => "TEAM: " } + text, caller);
                         return false;
                     }
@@ -330,7 +330,7 @@ public static partial class Patches
 #endif
             UCPlayer? pl = UCPlayer.FromPlayer(player);
             if (pl == null || pl.OnDutyOrAdmin()) return true;
-            player.SendChat("cant_leave_group");
+            player.SendChat(T.NoLeavingGroup);
             return false;
         }
         // SDG.Unturned.PlayerClothing

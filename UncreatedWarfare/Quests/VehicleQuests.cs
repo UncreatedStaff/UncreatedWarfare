@@ -5,7 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -92,17 +94,39 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
             writer.WriteProperty("vehicles_destroyed", _vehDest);
         }
         public override void ResetToDefaults() => _vehDest = 0;
-        public void OnVehicleDestroyed(UCPlayer? owner, UCPlayer destroyer, VehicleData data, Components.VehicleComponent component)
+        public void OnVehicleDestroyed(VehicleDestroyed e)
         {
-            if (destroyer.Steam64 == _player.Steam64 && component.Team != _player.GetTeam() && VehicleType.IsMatch(data.Type)
-                && VehicleIDs.IsMatch(component.Vehicle.asset))
+            if (e.VehicleData != null && e.Team != _player.GetTeam() && VehicleType.IsMatch(e.VehicleData.Type) && VehicleIDs.IsMatch(e.Vehicle.asset))
             {
-                _vehDest++;
-                if (_vehDest >= VehicleCount)
-                    TellCompleted();
-                else
-                    TellUpdated();
-                return;
+                if (e.Instigator != null && e.Instigator.Steam64 == _player.Steam64)
+                {
+                    _vehDest++;
+                    if (_vehDest >= VehicleCount)
+                        TellCompleted();
+                    else
+                        TellUpdated();
+                    return;
+                }
+                if (e.Assists != null)
+                {
+                    for (int i = 0; i < e.Assists.Length; ++i)
+                    {
+                        if (e.Assists[i].Key == _player.Steam64)
+                        {
+                            if (e.Assists[i].Value >= 0.4f)
+                            {
+                                _vehDest++;
+                                if (_vehDest >= VehicleCount)
+                                    TellCompleted();
+                                else
+                                    TellUpdated();
+                                return;
+                            }
+
+                            break;
+                        }
+                    }
+                }
             }
         }
         protected override string Translate(bool forAsset)

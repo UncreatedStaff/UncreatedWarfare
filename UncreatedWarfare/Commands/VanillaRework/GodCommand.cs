@@ -31,11 +31,11 @@ public class GodCommand : Command
             ctx.Caller.Player.life.sendRevive();
             if (Data.Is(out IRevives rev))
                 rev.ReviveManager.RevivePlayer(ctx.Caller);
-            ctx.Reply("god_mode_enabled");
+            ctx.Reply(T.GodModeEnabled);
         }
         else
         {
-            ctx.Reply("god_mode_disabled");
+            ctx.Reply(T.GodModeDisabled);
         }
     }
 }

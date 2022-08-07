@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿#if false
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -596,3 +597,4 @@ public class JoinManagerOld : BaseSingletonComponent
         }
     }
 }
+#endif

@@ -259,18 +259,18 @@ public abstract class Zone : IDeployable
         {
             ActionLogger.Add(EActionLogType.DEPLOY_TO_LOCATION, "MAIN BASE " + TeamManager.TranslateName(Data.UseCase == EZoneUseCase.T1_MAIN ? 1ul : 2ul, 0), player);
             if (chat)
-                player.Message("deploy_s", "f0c28d", "MAIN");
+                player.SendChat(T.DeploySuccess, this);
         }
         else if (Data.UseCase is EZoneUseCase.LOBBY)
         {
             if (chat)
-                player.Message("deploy_s", "f0c28d", "LOBBY");
+                player.SendChat(T.DeploySuccess, this);
             ActionLogger.Add(EActionLogType.DEPLOY_TO_LOCATION, "LOBBY", player);
         }
         else
         {
             if (chat)
-                player.Message("deploy_s", "f0c28d", Name);
+                player.SendChat(T.DeploySuccess, this);
             ActionLogger.Add(EActionLogType.DEPLOY_TO_LOCATION, "ZONE " + Name, player);
         }
     }

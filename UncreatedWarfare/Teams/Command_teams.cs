@@ -31,13 +31,13 @@ public class TeamsCommand : Command
 
         if (!ctx.Caller.OnDuty() && CooldownManager.HasCooldown(ctx.Caller, ECooldownType.CHANGE_TEAMS, out Cooldown cooldown))
         {
-            ctx.Reply("teams_e_cooldown", cooldown.ToString());
+            ctx.Reply(T.TeamsCooldown, cooldown);
             return;
         }
         ulong team = ctx.Caller.GetTeam();
         if ((team is 1 or 2) && !ctx.Caller.Player.IsInMain())
         {
-            ctx.Reply("teams_e_notinmain");
+            ctx.Reply(T.NotInMain);
             return;
         }
         teamgm.TeamSelector!.JoinSelectionMenu(ctx.Caller);

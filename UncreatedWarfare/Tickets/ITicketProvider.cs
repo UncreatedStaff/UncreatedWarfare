@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Singletons;
 
@@ -24,8 +25,14 @@ public abstract class BaseTicketProvider : ITicketProvider, IPlayerDeathListener
 {
     public TicketManager Manager { get; set; }
     public abstract int GetTeamBleed(ulong team);
-    public abstract void Load();
-    public abstract void Unload();
+    public virtual void Load()
+    {
+        EventDispatcher.OnVehicleDestroyed += OnVehicleDestroyed;
+    }
+    public virtual void Unload()
+    {
+        EventDispatcher.OnVehicleDestroyed -= OnVehicleDestroyed;
+    }
     public abstract void OnGameStarting(bool isOnLoaded);
     public abstract void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI);
     public abstract void Tick();
@@ -59,5 +66,15 @@ public abstract class BaseTicketProvider : ITicketProvider, IPlayerDeathListener
             --Manager.Team1Tickets;
         else if (e.DeadTeam == 2)
             --Manager.Team2Tickets;
+    }
+    protected virtual void OnVehicleDestroyed(Events.Vehicles.VehicleDestroyed e)
+    {
+        if (e.VehicleData is not null)
+        {
+            if (e.Team == 1)
+                TicketManager.Singleton.Team1Tickets -= e.VehicleData.TicketCost;
+            else if (e.Team == 2)
+                TicketManager.Singleton.Team2Tickets -= e.VehicleData.TicketCost;
+        }
     }
 }

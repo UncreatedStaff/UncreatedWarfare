@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -70,6 +71,8 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        Data.ZoneProvider.Reload();
+        TeamManager.OnReloadFlags();
         _allFlags.Clear();
         _allFlags.Capacity = Data.ZoneProvider.Zones.Count;
         for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
@@ -161,4 +164,19 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected abstract void FlagPointsChanged(float NewPoints, float OldPoints, Flag flag);
     public abstract bool IsAttackSite(ulong team, Flag flag);
     public abstract bool IsDefenseSite(ulong team, Flag flag);
+    internal override string DumpState()
+    {
+        StringBuilder flags = new StringBuilder();
+        for (int f = 0; f < _rotation.Count; f++)
+        {
+            if (f == 0) flags.Append('\n');
+            Flag flag = _rotation[f];
+            flags.Append(flag.Name).Append("\nOwner: ").Append(flag.Owner).Append(" Players: \n1: ")
+                .Append(string.Join(",", flag.PlayersOnFlagTeam1.Select(x => F.GetPlayerOriginalNames(x).PlayerName))).Append("\n2: ")
+                .Append(string.Join(",", flag.PlayersOnFlagTeam2.Select(x => F.GetPlayerOriginalNames(x).PlayerName)))
+                .Append("\nPoints: ").Append(flag.Points).Append(" State: ").Append(flag.LastDeltaPoints).Append('\n');
+        }
+
+        return flags.ToString();
+    }
 }

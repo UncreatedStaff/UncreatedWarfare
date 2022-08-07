@@ -41,15 +41,15 @@ public class WhitelistCommand : Command
                     ctx.LogAction(EActionLogType.ADD_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
                     if (amount != 255)
                         ctx.LogAction(EActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
-                    ctx.Reply("whitelist_added", asset.itemName);
+                    ctx.Reply(T.WhitelistAdded, asset);
                 }
                 else
-                    throw ctx.Reply("whitelist_e_exist", ctx.Get(1)!);
+                    throw ctx.Reply(T.WhitelistAlreadyAdded, asset);
             }
             else if (multiple)
-                throw ctx.Reply("whitelist_e_multiple_results");
+                throw ctx.Reply(T.WhitelistMultipleResults, ctx.Get(1)!);
             else
-                throw ctx.Reply("whitelist_e_item_not_found");
+                throw ctx.Reply(T.WhitelistItemNotID, ctx.Get(1)!);
         }
         else if (ctx.MatchParameter(1, "remove", "delete", "rem"))
         {
@@ -58,12 +58,12 @@ public class WhitelistCommand : Command
             {
                 Whitelister.RemoveItem(asset.GUID);
                 ctx.LogAction(EActionLogType.REMOVE_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
-                ctx.Reply("whitelist_removed", ctx.Get(1)!);
+                ctx.Reply(T.WhitelistRemoved, asset);
             }
             else if (multiple)
-                throw ctx.Reply("whitelist_e_multiple_results");
+                throw ctx.Reply(T.WhitelistMultipleResults, ctx.Get(1)!);
             else
-                throw ctx.Reply("whitelist_e_noexist", ctx.Get(1)!);
+                throw ctx.Reply(T.WhitelistItemNotID, ctx.Get(1)!);
         }
         else if (ctx.MatchParameter(0, "set"))
         {
@@ -85,15 +85,21 @@ public class WhitelistCommand : Command
                         ctx.LogAction(EActionLogType.ADD_WHITELIST, $"{asset.itemName} / {asset.id} / {asset.GUID:N}");
                         if (amount != 255)
                             ctx.LogAction(EActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
-                        ctx.Reply("whitelist_added", asset.itemName);
+                        ctx.Reply(T.WhitelistAdded, asset);
+                        ctx.Reply(T.WhitelistSetAmount, asset, amount);
                     }
                     else
-                        throw ctx.Reply("whitelist_e_exist", ctx.Get(2)!);
+                    {
+                        if (amount != 255)
+                            ctx.LogAction(EActionLogType.SET_WHITELIST_MAX_AMOUNT, $"{asset.itemName} / {asset.id} / {asset.GUID:N} set to {amount}");
+                        Whitelister.SetAmount(asset.GUID, amount);
+                        ctx.Reply(T.WhitelistSetAmount, asset, amount);
+                    }
                 }
                 else if (multiple)
-                    throw ctx.Reply("whitelist_e_multiple_results");
+                    throw ctx.Reply(T.WhitelistMultipleResults, ctx.Get(1)!);
                 else
-                    throw ctx.Reply("whitelist_e_item_not_found");
+                    throw ctx.Reply(T.WhitelistItemNotID, ctx.Get(1)!);
             }
         }
         else throw ctx.SendCorrectUsage(SYNTAX);

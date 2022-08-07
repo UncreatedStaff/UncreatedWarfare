@@ -53,7 +53,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                     GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -2, out _, filename, false);
                 GenerateZoneOverlay(gamemode, img, player, newZones, ptsToTest, -1, out _, filename, false);
                 if (player != null)
-                    player.SendChat("Picture finished generating, check the Config/Maps/Flags folder menu.", UCWarfare.GetColor("default"));
+                    player.SendString("Picture finished generating, check the Config/Maps/Flags folder menu.");
                 else L.Log("Picture finished generating, check the Config/Maps/Flags folder menu");
             }
             else
@@ -98,7 +98,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                                 GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -2, out _, filename, false);
                             GenerateZoneOverlay(gamemode, img, player, newZones, PointsToTest, -1, out _, filename, false);
                             if (player != default)
-                                player.SendChat("Picture finished generating, check the Config/Maps/Flags folder menu.", UCWarfare.GetColor("default"));
+                                player.SendString("Picture finished generating, check the Config/Maps/Flags folder menu.");
                             overlayStep = 0;
                         }
                     }
@@ -106,7 +106,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 else
                 {
                     if (player != default)
-                        player.SendChat("A player is already running this procedure, try again in a few minutes.", UCWarfare.GetColor("default"));
+                        player.SendString("A player is already running this procedure, try again in a few minutes.");
                 }
             }
         }

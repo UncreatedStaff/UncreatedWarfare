@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
@@ -1891,11 +1892,11 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         private static string GetKitName(Kit kit, ulong player)
         {
             if (player == 0 || !Data.Languages.TryGetValue(player, out string language))
-                language = JSONMethods.DEFAULT_LANGUAGE;
+                language = L.DEFAULT;
             if (kit.SignTexts.TryGetValue(language, out string v))
                 return v;
-            else if (!language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) &&
-                     kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out v))
+            else if (!language.Equals(L.DEFAULT, StringComparison.Ordinal) &&
+                     kit.SignTexts.TryGetValue(L.DEFAULT, out v))
                 return v;
             else return kit.SignTexts.Values.FirstOrDefault();
         }
@@ -2991,7 +2992,7 @@ public interface INotifyBuildableBuilt : INotifyTracker
 }
 public interface INotifyVehicleDestroyed : INotifyTracker
 {
-    public void OnVehicleDestroyed(UCPlayer? owner, UCPlayer destroyer, VehicleData data, VehicleComponent component);
+    public void OnVehicleDestroyed(VehicleDestroyed e);
 }
 public interface INotifyVehicleDistanceUpdates : INotifyTracker
 {

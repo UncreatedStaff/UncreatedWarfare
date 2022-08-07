@@ -162,7 +162,7 @@ namespace Uncreated.Warfare
                         if (hasSign)
                         {
                             if (!Data.Languages.TryGetValue(client.playerID.steamID.m_SteamID, out lang))
-                                lang = JSONMethods.DEFAULT_LANGUAGE;
+                                lang = L.DEFAULT;
                         }
                         else lang = null;
                         Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
@@ -176,7 +176,7 @@ namespace Uncreated.Warfare
                             for (; index < count; ++index)
                             {
                                 BarricadeDrop drop = region.drops[index];
-                                SDG.Unturned.BarricadeData serversideData = drop.GetServersideData();
+                                BarricadeData serversideData = drop.GetServersideData();
                                 InteractableStorage? interactable = drop.interactable as InteractableStorage;
                                 writer.WriteGuid(drop.asset.GUID);
                                 if (interactable != null)
@@ -218,9 +218,9 @@ namespace Uncreated.Warfare
                                     }
                                     else
                                     {
-                                        if (newtext.StartsWith("sign_"))
+                                        if (newtext.StartsWith("sign_", StringComparison.OrdinalIgnoreCase))
                                         {
-                                            if (newtext.StartsWith("sign_vbs_"))
+                                            if (newtext.StartsWith("sign_vbs_", StringComparison.OrdinalIgnoreCase))
                                             {
                                                 if (VehicleSpawner.Loaded && VehicleBay.Loaded && VehicleSigns.Loaded)
                                                 {
@@ -228,13 +228,11 @@ namespace Uncreated.Warfare
                                                         VehicleSpawner.SpawnExists(vbsign.bay_instance_id, vbsign.bay_type, out Vehicles.VehicleSpawn spawn))
                                                     {
                                                         if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
-                                                            newtext = string.Format(Localization.TranslateVBS(spawn, data, lang), data.GetCostLine(pl));
+                                                            newtext = string.Format(Localization.TranslateVBS(spawn, data, lang, data.Team), data.GetCostLine(pl));
                                                     }
                                                 }
                                             }
-                                                newtext = Localization.TranslateSign(newtext, lang, pl, false);
-                                            // size is not allowed in signs.
-                                            newtext = newtext.Replace("<size=", "").Replace("</size>", "");
+                                            newtext = Localization.TranslateSign(newtext, lang, pl, false);
                                         }
                                         byte[] state = serversideData.barricade.state;
                                         byte[] textbytes = System.Text.Encoding.UTF8.GetBytes(newtext);

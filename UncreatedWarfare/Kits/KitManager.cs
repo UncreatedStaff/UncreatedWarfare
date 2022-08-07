@@ -23,7 +23,7 @@ public delegate void KitChangedHandler(UCPlayer player, Kit kit, string oldKit);
 public class KitManager : BaseReloadSingleton
 {
     private static readonly byte[] GUID_BUFFER = new byte[16];
-    private readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 5);
+    internal readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 5);
     public static event KitChangedHandler OnKitChanged;
     public Dictionary<int, Kit> Kits = new Dictionary<int, Kit>(256);
     private static KitManager _singleton;
@@ -86,9 +86,9 @@ public class KitManager : BaseReloadSingleton
     public async Task ReloadKits()
     {
         SingletonEx.AssertLoaded<KitManager>(_isLoaded);
+        await _threadLocker.WaitAsync();
         try
         {
-            await _threadLocker.WaitAsync();
             Kits.Clear();
             await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_data`;", new object[0], R =>
             {
@@ -483,11 +483,11 @@ public class KitManager : BaseReloadSingleton
         bool res;
         if (kit.PrimaryKey != -1)
         {
-            res = await GiveAccess(kit.PrimaryKey, player, type);
+            res = await GiveAccess(kit.PrimaryKey, player.Steam64, type);
         }
         else
         {
-            res = await GiveAccess(kit.Name, player, type);
+            res = await GiveAccess(kit.Name, player.Steam64, type);
         }
         if (res)
         {
@@ -524,11 +524,11 @@ public class KitManager : BaseReloadSingleton
         bool res;
         if (kit.PrimaryKey != -1)
         {
-            res = await RemoveAccess(kit.PrimaryKey, player);
+            res = await RemoveAccess(kit.PrimaryKey, player.Steam64);
         }
         else
         {
-            res = await RemoveAccess(kit.Name, player);
+            res = await RemoveAccess(kit.Name, player.Steam64);
         }
         if (res)
         {
@@ -1161,7 +1161,7 @@ public class KitManager : BaseReloadSingleton
     public static bool HasKit(SteamPlayer player, out Kit kit) => HasKit(player.playerID.steamID.m_SteamID, out kit);
     public static bool HasKit(Player player, out Kit kit) => HasKit(player.channel.owner.playerID.steamID.m_SteamID, out kit);
     public static bool HasKit(CSteamID player, out Kit kit) => HasKit(player.m_SteamID, out kit);
-    public static void UpdateText(Kit kit, string text, string language = JSONMethods.DEFAULT_LANGUAGE)
+    public static void UpdateText(Kit kit, string text, string language = L.DEFAULT)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1389,11 +1389,12 @@ public static class KitEx
         return currentPlayers + 1 > allowedPlayers;
     }
     private static readonly FieldInfo[] fields = typeof(Kit).GetFields(BindingFlags.Instance | BindingFlags.Public);
-    public static ESetFieldResult SetProperty(Kit kit, string property, string value)
+    public static ESetFieldResult SetProperty(Kit kit, string property, string value, out FieldInfo? field)
     {
+        field = null;
         if (kit is null) return ESetFieldResult.OBJECT_NOT_FOUND;
         if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
-        FieldInfo? field = GetField(property, out ESetFieldResult reason);
+        field = GetField(property, out ESetFieldResult reason);
         if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
             if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
@@ -1549,7 +1550,7 @@ public static class KitEx
         {
             if (KitManager.KitExists(kitID, out Kit kit))
             {
-                if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out string signtext))
+                if (!kit.SignTexts.TryGetValue(L.DEFAULT, out string signtext))
                     signtext = kit.SignTexts.Values.FirstOrDefault() ?? kit.Name;
 
                 context.Reply(SendKitClass, kitID, kit.Class, signtext);

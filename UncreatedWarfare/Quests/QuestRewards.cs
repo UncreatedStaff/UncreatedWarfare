@@ -61,7 +61,7 @@ public class XPReward : IQuestReward
             Localization.TranslateEnum(tracker.QuestData.QuestType,
                 Data.Languages.TryGetValue(player.Steam64, out string lang) 
                     ? lang 
-                    : JSONMethods.DEFAULT_LANGUAGE).ToUpper() + " REWARD");
+                    : L.DEFAULT).ToUpper() + " REWARD");
     }
     public void Init(object value)
     {
@@ -105,7 +105,7 @@ public class CreditsReward : IQuestReward
             Localization.TranslateEnum(tracker.QuestData.QuestType,
                 Data.Languages.TryGetValue(player.Steam64, out string lang) 
                     ? lang
-                    : JSONMethods.DEFAULT_LANGUAGE).ToUpper() + " REWARD", redmessage: false);
+                    : L.DEFAULT).ToUpper() + " REWARD", redmessage: false);
     }
     public void Init(object value)
     {
@@ -178,7 +178,7 @@ public class RankReward : IQuestReward
     public override string ToString()
     {
         ref Ranks.RankData d = ref Ranks.RankManager.GetRank(RankOrder, out bool success);
-        return "Reward: Unlock " + (success ? d.GetName(JSONMethods.DEFAULT_LANGUAGE) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
+        return "Reward: Unlock " + (success ? d.GetName(L.DEFAULT) : "UNKNOWN RANK") + " (Order #" + RankOrder + ")";
     }
 }
 [QuestReward(EQuestRewardType.KIT_ACCESS, typeof(string))]

@@ -8,6 +8,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -77,7 +78,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             return;
         }
 
-        if (KitManager.HasKit(player.CSteamID, out Kit kit))
+        if (KitManager.HasKit(player, out Kit kit))
         {
             int itemCount = UCInventoryManager.CountItems(player.Player, itemData.item.id);
 
@@ -92,12 +93,12 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 if (!isWhitelisted)
                 {
                     shouldAllow = false;
-                    player.Message("whitelist_notallowed");
+                    player.SendChat(T.WhitelistProhibitedPickup, a);
                 }
                 else if (itemCount >= whitelistedItem.Amount)
                 {
                     shouldAllow = false;
-                    player.Message("whitelist_maxamount");
+                    player.SendChat(T.WhitelistProhibitedPickupAmt, a);
                 }
             }
             else if (itemCount >= max)
@@ -105,19 +106,19 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 if (!isWhitelisted)
                 {
                     shouldAllow = false;
-                    player.Message("whitelist_kit_maxamount");
+                    player.SendChat(T.WhitelistProhibitedPickupAmt, a);
                 }
                 else if (itemCount >= max)
                 {
                     shouldAllow = false;
-                    player.Message("whitelist_maxamount");
+                    player.SendChat(T.WhitelistProhibitedPickupAmt, a);
                 }
             }
         }
         else
         {
             shouldAllow = false;
-            player.Message("whitelist_nokit");
+            player.SendChat(T.WhitelistNoKit);
         }
         if (EventFunctions.droppeditems.TryGetValue(P.channel.owner.playerID.steamID.m_SteamID, out List<uint> instances))
         {
@@ -144,7 +145,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         {
             if (!player.OnDuty() && (!IsWhitelisted(barricade.asset.GUID, out _) || isFOB))
             {
-                player.Message("whitelist_nosalvage");
+                player.SendChat(T.WhitelistProhibitedSalvage, barricade.asset);
                 shouldAllow = false;
                 return;
             }
@@ -166,7 +167,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         if (IsWhitelisted(data.structure.asset.GUID, out _))
             return;
 
-        player.Message("whitelist_nosalvage");
+        player.SendChat(T.WhitelistProhibitedSalvage, structure.asset);
         shouldAllow = false;
     }
     private void OnEditSignRequest(CSteamID steamID, InteractableSign sign, ref string text, ref bool shouldAllow)
@@ -178,7 +179,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
         if (player != null && !player.OnDuty())
         {
             shouldAllow = false;
-            player.Message("whitelist_noeditsign");
+            player.SendChat(T.ProhibitedSignEditing);
         }
     }
     internal void OnBarricadePlaceRequested(
@@ -203,7 +204,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             if (TeamManager.IsInAnyMain(point))
             {
                 shouldAllow = false;
-                player.Message("whitelist_noplace");
+                player.SendChat(T.WhitelistProhibitedPlace, asset);
                 return;
             }
             if (KitManager.HasKit(player.CSteamID, out Kit kit))
@@ -223,7 +224,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                         if (placedCount >= allowedCount)
                         {
                             shouldAllow = false;
-                            player.Message("whitelist_toomanyplaced", allowedCount.ToString());
+                            player.SendChat(T.WhitelistProhibitedPlaceAmt, allowedCount, asset);
                             return;
                         }
                         else
@@ -233,7 +234,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             }
 
             shouldAllow = false;
-            player.Message("whitelist_noplace");
+            player.SendChat(T.WhitelistProhibitedPlace, asset);
         }
         catch (Exception ex)
         {
@@ -263,7 +264,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             if (TeamManager.IsInAnyMainOrAMCOrLobby(point))
             {
                 shouldAllow = false;
-                player.Message("whitelist_noplace");
+                player.SendChat(T.WhitelistProhibitedPlace, asset);
                 return;
             }
             if (KitManager.HasKit(player.CSteamID, out Kit kit))
@@ -279,7 +280,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             }
 
             shouldAllow = false;
-            player.Message("whitelist_noplace");
+            player.SendChat(T.WhitelistProhibitedPlace, asset);
         }
         catch (Exception ex)
         {

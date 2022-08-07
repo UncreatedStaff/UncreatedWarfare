@@ -88,8 +88,13 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         TeamManager.SetupConfig();
 
+        /* LOAD LOCALIZATION ASSETS */
+        L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
+        Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+        Deaths.Localization.Reload();
+        Data.Languages = JSONMethods.LoadLanguagePreferences();
         Data.LanguageAliases = JSONMethods.LoadLangAliases();
-
+        Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
         Translation.ReadTranslations();
 
         /* PATCHES */
@@ -234,7 +239,6 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         UseableConsumeable.onConsumePerformed += EventFunctions.OnConsume;
         EventDispatcher.OnBarricadeDestroyed += EventFunctions.OnBarricadeDestroyed;
         Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
-        PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
         PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
     }
     private void UnsubscribeFromEvents()
@@ -280,7 +284,6 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         UseableConsumeable.onConsumePerformed -= EventFunctions.OnConsume;
         EventDispatcher.OnBarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
         Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
-        PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
         StatsManager.UnloadEvents();
         if (!InitialLoadEventSubscription)
@@ -301,6 +304,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        player.OnLanguageChanged();
         EventDispatcher.InvokeUIRefreshRequest(player);
         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
         foreach (BarricadeRegion region in BarricadeManager.regions)

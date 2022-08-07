@@ -17,55 +17,33 @@ public class UnbanCommand : Command
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         if (!ctx.HasArgs(1))
+            throw ctx.SendCorrectUsage(SYNTAX);
+
+        if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target))
+            throw ctx.Reply(T.PlayerNotFound);
+
+        FPlayerName targetNames = F.GetPlayerOriginalNames(targetId);
+        if (target is not null || !Provider.requestUnbanPlayer(ctx.CallerCSteamID, new CSteamID(targetId)))
         {
-            ctx.Reply("unban_syntax");
+            ctx.Reply(T.UnbanNotBanned, targetNames);
+            return;
         }
-        else if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target))
+
+        OffenseManager.LogUnbanPlayer(targetId, ctx.CallerID, DateTime.Now);
+
+        string tid = targetId.ToString(Data.Locale);
+        ActionLogger.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", ctx.CallerID);
+        if (ctx.IsConsole)
         {
-            ctx.Reply("unban_no_player_found", ctx.Parameters[0]);
+            L.Log($"{targetNames.PlayerName} ({tid.ToString(Data.Locale)}) was successfully unbanned.", ConsoleColor.Cyan);
+            Chat.Broadcast(T.UnbanSuccessBroadcastOperator, targetNames);
         }
         else
         {
-            FPlayerName targetNames = F.GetPlayerOriginalNames(targetId);
-            if (target is not null || !Provider.requestUnbanPlayer(ctx.CallerCSteamID, new CSteamID(targetId)))
-            {
-                ctx.Reply("unban_player_not_banned_console", ctx.IsConsole ? targetNames.PlayerName : targetNames.CharacterName);
-                return;
-            }
-
-            OffenseManager.LogUnbanPlayer(targetId, ctx.CallerID, DateTime.Now);
-
-            string tid = targetId.ToString(Data.Locale);
-            ActionLogger.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", ctx.CallerID);
-            if (ctx.IsConsole)
-            {
-                if (tid.Equals(targetNames.PlayerName, StringComparison.Ordinal))
-                {
-                    L.Log(Localization.Translate("unban_unbanned_console_id_operator", 0, out _, tid), ConsoleColor.Cyan);
-                    Chat.Broadcast("unban_unbanned_broadcast_id_operator", tid);
-                }
-                else
-                {
-                    L.Log(Localization.Translate("unban_unbanned_console_name_operator", 0, out _, targetNames.PlayerName, tid.ToString(Data.Locale)), ConsoleColor.Cyan);
-                    Chat.Broadcast("unban_unbanned_broadcast_name_operator", targetNames.CharacterName);
-                }
-            }
-            else
-            {
-                FPlayerName callerNames = F.GetPlayerOriginalNames(ctx.CallerID);
-                if (tid.Equals(targetNames.PlayerName, StringComparison.Ordinal))
-                {
-                    L.Log(Localization.Translate("unban_unbanned_console_id", 0, out _, tid, callerNames.PlayerName, ctx.CallerID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                    ctx.Reply("unban_unbanned_feedback_id", tid);
-                    Chat.BroadcastToAllExcept(ctx.CallerID, "unban_unbanned_broadcast_id", tid, callerNames.CharacterName);
-                }
-                else
-                {
-                    L.Log(Localization.Translate("unban_unbanned_console_name", 0, out _, targetNames.PlayerName, tid, callerNames.PlayerName, ctx.CallerID.ToString(Data.Locale)), ConsoleColor.Cyan);
-                    ctx.Reply("unban_unbanned_feedback_name", targetNames.CharacterName);
-                    Chat.BroadcastToAllExcept(ctx.CallerID, "unban_unbanned_broadcast_name", targetNames.CharacterName, callerNames.CharacterName);
-                }
-            }
+            FPlayerName callerNames = F.GetPlayerOriginalNames(ctx.CallerID);
+            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {callerNames.PlayerName} ({ctx.CallerID.ToString(Data.Locale)}).", ConsoleColor.Cyan);
+            ctx.Reply(T.UnbanSuccessFeedback, targetNames);
+            Chat.Broadcast(LanguageSet.AllBut(ctx.CallerID), T.UnbanSuccessBroadcast, targetNames, ctx.Caller);
         }
     }
 }

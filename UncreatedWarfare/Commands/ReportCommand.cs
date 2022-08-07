@@ -35,7 +35,7 @@ public class ReportCommand : Command
         ctx.AssertArgs(2, SYNTAX);
 
         if (!UCWarfare.CanUseNetCall || !UCWarfare.Config.EnableReporter)
-            throw ctx.Reply("report_not_connected");
+            throw ctx.Reply(T.ReportNotConnected);
 
         EReportType type;
         string message;
@@ -108,23 +108,32 @@ public class ReportCommand : Command
             {
                 await UCWarfare.ToUpdate();
                 if (!UCWarfare.CanUseNetCall)
-                    throw ctx.Reply("report_not_connected");
+                {
+                    ctx.Reply(T.ReportNotConnected);
+                    return;
+                }
                 FPlayerName targetNames = F.GetPlayerOriginalNames(target);
 
                 if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, ECooldownType.REPORT, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
-                    throw ctx.Reply("report_cooldown", targetNames.CharacterName);
+                {
+                    ctx.Reply(T.ReportCooldown, targetNames);
+                    return;
+                }
 
-                ctx.Reply("report_confirm", target.ToString(Data.Locale), targetNames.CharacterName);
+                ctx.Reply(T.ReportConfirm, target, targetNames);
                 ctx.LogAction(EActionLogType.START_REPORT, string.Join(", ", ctx.Parameters));
                 bool didConfirm = await CommandWaitTask.WaitForCommand(ctx.Caller, "confirm", 10000);
                 await UCWarfare.ToUpdate();
                 if (!didConfirm)
                 {
-                    ctx.Reply("report_cancelled", targetNames.CharacterName);
+                    ctx.Reply(T.ReportCancelled);
                     return;
                 }
                 if (!UCWarfare.CanUseNetCall)
-                    throw ctx.Reply("report_not_connected");
+                    {
+                    ctx.Reply(T.ReportNotConnected);
+                    return;
+                }
                 CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REPORT, 3600f, target);
                 Report? report;
                 report = type switch
@@ -140,73 +149,52 @@ public class ReportCommand : Command
                 };
                 if (report == null)
                 {
-                    ctx.Reply("report_unknown_error");
+                    ctx.SendUnknownError();
                     return;
                 }
+
                 SteamPlayer? targetPl = PlayerTool.getSteamPlayer(target);
                 Data.DatabaseManager.AddReport(report);
                 string typename = GetName(type);
-                NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, type, typename);
-                ctx.Reply("report_success_p1", targetNames.CharacterName, string.IsNullOrEmpty(message) ? "---" : message, typename);
-                ctx.Reply("report_success_p2");
-                L.Log(Localization.Translate("report_console", JSONMethods.DEFAULT_LANGUAGE,
-                    ctx.Caller.Name.PlayerName, ctx.CallerID.ToString(Data.Locale),
-                    targetNames.PlayerName, target.ToString(Data.Locale), report.Message!, typename), ConsoleColor.Cyan);
+                NotifyAdminsOfReport(targetNames, ctx.Caller.Name, report, typename);
+                ctx.Reply(T.ReportSuccessMessage1, targetNames, string.IsNullOrEmpty(message) ? "---" : message, typename);
+                ctx.Reply(T.ReportSuccessMessage2);
+                L.Log($"{ctx.Caller.Name.PlayerName} ({ctx.CallerID}) reported {targetNames.PlayerName} ({target}) for \"{report.Message}\" as a {typename} report.", ConsoleColor.Cyan);
                 byte[] jpgData =
                     targetPl == null || (type != EReportType.CUSTOM && type < EReportType.SOLOING_VEHICLE)
-                        ? new byte[0]
+                        ? Array.Empty<byte>()
                         : await SpyTask.RequestScreenshot(targetPl);
                 report.JpgData = jpgData;
-                L.Log(report.JpgData.Length.ToString());
                 if (!UCWarfare.CanUseNetCall)
-                    throw ctx.Reply("report_not_connected");
+                {
+                    ctx.Reply(T.ReportNotConnected);
+                    return;
+                }
                 RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(
                     Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient!, report, targetPl != null);
                 await UCWarfare.ToUpdate();
-                if (targetPl != null)
+                if (targetPl != null && targetPl.player != null)
                 {
-                    ToastMessage.QueueMessage(targetPl, new ToastMessage(Localization.Translate("report_notify_violator", targetPl, typename), EToastMessageSeverity.SEVERE));
-                    targetPl.SendChat("report_notify_violator_chat_p1", typename, message);
-                    targetPl.SendChat("report_notify_violator_chat_p2");
+                    if (!Data.Languages.TryGetValue(target, out string lang))
+                        lang = L.DEFAULT;
+                    ToastMessage.QueueMessage(targetPl, new ToastMessage(T.ReportNotifyViolatorToast.Translate(lang, typename, UCPlayer.FromID(target)), EToastMessageSeverity.SEVERE));
+                    targetPl.SendChat(T.ReportNotifyViolatorMessage1, typename, message);
+                    targetPl.SendChat(T.ReportNotifyViolatorMessage2);
                 }
-                else
-                {
-                    if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success2 &&
-                        success2 && res.Parameters[1] is string messageUrl2)
-                    {
-                        L.Log(
-                            Localization.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
-                                string.Empty, "0", messageUrl2), ConsoleColor.Cyan);
-                        ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl2, ctx.Caller);
-                    }
-                    else
-                    {
-                        L.Log(
-                            Localization.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
-                                string.Empty, "0"), ConsoleColor.Cyan);
-                        ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
-                    }
-                    return;
-                }
+
+                FPlayerName names = await F.GetPlayerOriginalNamesAsync(target);
 
                 if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success &&
                     success && res.Parameters[1] is string messageUrl)
                 {
                     //await UCWarfare.ToUpdate();
                     //F.SendURL(targetPl, Translation.Translate("report_popup", targetPl, typename), messageUrl);
-                    L.Log(
-                        Localization.Translate("report_console_record", JSONMethods.DEFAULT_LANGUAGE,
-                            targetPl.playerID.playerName,
-                            targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale), messageUrl),
-                        ConsoleColor.Cyan);
+                    L.Log($"Report against {names.PlayerName} ({target}) record: \"{messageUrl}\".", ConsoleColor.Cyan);
                     ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report URL: " + messageUrl, ctx.Caller);
                 }
                 else
                 {
-                    L.Log(
-                        Localization.Translate("report_console_record_failed", JSONMethods.DEFAULT_LANGUAGE,
-                            targetPl.playerID.playerName,
-                            targetPl.playerID.steamID.m_SteamID.ToString(Data.Locale)), ConsoleColor.Cyan);
+                    L.Log($"Report against {names.PlayerName} ({target}) failed to send to UCHB.", ConsoleColor.Cyan);
                     ActionLogger.Add(EActionLogType.CONFIRM_REPORT, report.ToString() + ", Report did not reach the discord bot.", ctx.Caller);
                 }
             }
@@ -218,13 +206,13 @@ public class ReportCommand : Command
         ctx.Defer();
         return;
     PlayerNotFound:
-        throw ctx.Reply("report_player_not_found", ctx.TryGet(0, out string pl) ? pl : "null");
+        throw ctx.Reply(T.PlayerNotFound);
     DiscordNotLinked:
-        throw ctx.Reply("report_discord_not_linked", ctx.CallerID.ToString(Data.Locale));
+        throw ctx.Reply(T.ReportDiscordNotLinked, ctx.Caller);
     Help:
-        ctx.Reply("report_syntax");
+        ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
     Types: // not returning here is intentional
-        throw ctx.Reply("report_reasons");
+        throw ctx.Reply(T.ReportReasons);
     }
 
     public KeyValuePair<string, EReportType>[] types = new KeyValuePair<string, EReportType>[]
@@ -304,11 +292,11 @@ public class ReportCommand : Command
         return EReportType.CUSTOM;
     }
     public bool CheckLinked(UCPlayer player) => Data.DatabaseManager.GetDiscordID(player.Steam64, out ulong discordID) && discordID != 0;
-    public void NotifyAdminsOfReport(FPlayerName violator, FPlayerName reporter, Report report, EReportType type, string typename)
+    public void NotifyAdminsOfReport(FPlayerName violator, FPlayerName reporter, Report report, string typename)
     {
-        foreach (LanguageSet set in Localization.EnumeratePermissions(EAdminType.MODERATOR))
+        foreach (LanguageSet set in LanguageSet.OfPermission(EAdminType.MODERATOR))
         {
-            string translation = Localization.Translate("report_notify_admin", set.Language, reporter.CharacterName, violator.CharacterName, report.Message!, typename);
+            string translation = T.ReportNotifyAdmin.Translate(set.Language, reporter, violator, report.Message!, typename);
             while (set.MoveNext())
             {
                 ToastMessage.QueueMessage(set.Next, new ToastMessage(translation, EToastMessageSeverity.INFO));

@@ -35,7 +35,7 @@ public abstract class BaseQuestData : ITranslationArgument
         }
         return rews;
     }
-    public string Translate(bool forAsset, string language, params object[] formatting)
+    public string Translate(bool forAsset, string language, params object[]? formatting)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -50,7 +50,7 @@ public abstract class BaseQuestData : ITranslationArgument
             L.LogWarning("No translations for " + QuestType.ToString() + " quest.");
             return QuestType.ToString() + " - " + string.Join("|", formatting);
         }
-        if (Translations.TryGetValue(language, out string v) || (!language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && Translations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out v)))
+        if (Translations.TryGetValue(language, out string v) || (!language.Equals(L.DEFAULT, StringComparison.Ordinal) && Translations.TryGetValue(L.DEFAULT, out v)))
         {
             try
             {
@@ -65,7 +65,7 @@ public abstract class BaseQuestData : ITranslationArgument
         return string.Join(", ", formatting);
     }
     public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) => 
-        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : JSONMethods.DEFAULT_LANGUAGE, formatting);
+        Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : L.DEFAULT, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);
     public abstract IQuestState GetState();
@@ -97,7 +97,10 @@ public abstract class BaseQuestData : ITranslationArgument
         }
     }
     public abstract IQuestPreset CreateRandomPreset(ushort flag = 0);
+    [FormatDisplay("Quest Type (" + nameof(EQuestType) + ")")]
     public const string TYPE_FORMAT = "t";
+
+    [FormatDisplay(typeof(QuestAsset), "Quest Name")]
     /// <summary>For <see cref="QuestAsset"/> formatting.</summary>
     public const string COLOR_QUEST_ASSET_FORMAT = "c";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)

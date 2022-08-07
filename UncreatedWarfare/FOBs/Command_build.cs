@@ -6,5 +6,5 @@ namespace Uncreated.Warfare.Commands;
 public class BuildCommand : Command
 {
     public BuildCommand() : base("build", EAdminType.MEMBER) { }
-    public override void Execute(CommandInteraction ctx) => ctx.Reply("Hit the foundation with your Entrenching Tool to build it.");
+    public override void Execute(CommandInteraction ctx) => ctx.Reply(T.BuildLegacyExplanation);
 }

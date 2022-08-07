@@ -296,7 +296,7 @@ public class UCPlayerData : MonoBehaviour
                 return true;
             }
             else
-                player.Message("deploy_e_alreadydeploying");
+                player.SendChat(T.DeployAlreadyActive);
         }
         return false;
     }
@@ -321,15 +321,12 @@ public class UCPlayerData : MonoBehaviour
         else if (isCache)
             cache = structure as Cache;
 
+        ulong team = player.GetTeam();
 
-        if (isFOB)
-            player.Message("deploy_fob_standby", fob!.UIColor, fob.Name, delay.ToString());
-        else if (isSpecialFOB)
-            player.Message("deploy_fob_standby", special!.UIColor, special.Name, delay.ToString());
-        else if (isCache)
-            player.Message("deploy_fob_standby", cache!.UIColor, cache.Name, delay.ToString());
-        else if (isMain)
-            player.Message("deploy_fob_standby", "f0c28d", "MAIN", delay.ToString());
+        if (isFOB || isSpecialFOB || isCache)
+            player.SendChat(T.DeployStandby, isFOB ? fob! : (isSpecialFOB ? special : cache)!, Mathf.RoundToInt(delay));
+        else if (isMain && team is 1 or 2)
+            player.SendChat(T.DeployStandby, team == 1 ? Teams.TeamManager.Team1Main : Teams.TeamManager.Team2Main, Mathf.RoundToInt(delay));
 
         int counter = 0;
 
@@ -346,14 +343,12 @@ public class UCPlayerData : MonoBehaviour
             {
                 if (player.Player.life.isDead)
                 {
-                    player.Message("deploy_c_dead");
-
                     CancelTeleport();
                     yield break;
                 }
                 if (shouldCancelOnMove && player.Position != originalPosition)
                 {
-                    player.Message("deploy_c_moved");
+                    player.SendChat(T.DeployMoved);
 
                     CancelTeleport();
                     yield break;
@@ -362,21 +357,21 @@ public class UCPlayerData : MonoBehaviour
                 {
                     if (fob!.NearbyEnemies.Count != 0)
                     {
-                        player.Message("deploy_c_enemiesNearby");
+                        player.SendChat(T.DeployEnemiesNearby, fob);
 
                         CancelTeleport();
                         yield break;
                     }
                     if (fob.IsBleeding)
                     {
-                        player.Message("deploy_c_bleeding");
+                        player.SendChat(T.DeployRadioDamaged, fob);
 
                         CancelTeleport();
                         yield break;
                     }
                     if (!fob.IsSpawnable)
                     {
-                        player.Message("deploy_c_notspawnable");
+                        player.SendChat(T.DeployNotSpawnable, fob);
 
                         CancelTeleport();
                         yield break;
@@ -386,14 +381,14 @@ public class UCPlayerData : MonoBehaviour
                 {
                     if (cache!.NearbyAttackers.Count != 0)
                     {
-                        player.Message("deploy_c_enemiesNearby");
+                        player.SendChat(T.DeployEnemiesNearby);
 
                         CancelTeleport();
                         yield break;
                     }
                     if (cache == null || cache.Structure.GetServersideData().barricade.isDead)
                     {
-                        player.Message("deploy_c_cachedead");
+                        player.SendChat(T.DeployDestroyed);
 
                         CancelTeleport();
                         yield break;
@@ -403,7 +398,7 @@ public class UCPlayerData : MonoBehaviour
                 {
                     if (special == null || !special.IsActive)
                     {
-                        player.Message("deploy_c_notactive");
+                        player.SendChat(T.DeployNotSpawnable);
 
                         CancelTeleport();
                         yield break;
@@ -458,20 +453,20 @@ public class UCPlayerData : MonoBehaviour
 
         if (isFOB)
         {
-            player.Message("deploy_s", fob!.UIColor, fob.Name);
+            player.SendChat(T.DeploySuccess, fob!);
 
-            Points.TryAwardFOBCreatorXP(fob, Points.XPConfig.FOBDeployedXP, "xp_fob_in_use");
+            Points.TryAwardFOBCreatorXP(fob!, Points.XPConfig.FOBDeployedXP, T.XPToastFOBUsed);
 
             if (fob!.Bunker!.model.TryGetComponent(out BuiltBuildableComponent comp))
                 Quests.QuestManager.OnPlayerSpawnedAtBunker(comp, fob!, player);
         }
         else if (isSpecialFOB)
-            player.Message("deploy_s", special!.UIColor, special.Name);
+            player.SendChat(T.DeploySuccess, special!);
         else if (isCache)
-            player.Message("deploy_s", cache!.UIColor, cache.Name);
-        else if (structure is Vector3)
+            player.SendChat(T.DeploySuccess, cache!);
+        else if (structure is Vector3 && team is 1 or 2)
         {
-            player.Message("deploy_s", "f0c28d", "MAIN");
+            player.SendChat(T.DeploySuccess, team == 1 ? Teams.TeamManager.Team1Main : Teams.TeamManager.Team2Main);
         }
 
         if (startCoolDown)

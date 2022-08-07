@@ -31,38 +31,37 @@ public class ClearCommand : Command
                 {
                     Kits.UCInventoryManager.ClearInventory(pl);
                     ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED INVENTORY OF " + pl.Steam64.ToString(Data.Locale));
-                    FPlayerName names = F.GetPlayerOriginalNames(pl);
-                    ctx.Reply("clear_inventory_others", ctx.IsConsole ? names.PlayerName : names.CharacterName);
+                    ctx.Reply(T.ClearInventoryOther, pl);
                 }
-                else throw ctx.Reply("clear_inventory_player_not_found");
+                else throw ctx.Reply(T.PlayerNotFound);
             }
             else if (ctx.IsConsole)
-                throw ctx.Reply("clear_inventory_console_identity");
+                throw ctx.Reply(T.ClearNoPlayerConsole);
             else
             {
                 Kits.UCInventoryManager.ClearInventory(ctx.Caller!);
                 ctx.LogAction(EActionLogType.CLEAR_INVENTORY, "CLEARED PERSONAL INVENTORY");
-                ctx.Reply("clear_inventory_self");
+                ctx.Reply(T.ClearInventorySelf);
             }
         }
         else if (ctx.MatchParameter(0, "items", "item", "i"))
         {
             ClearItems();
             ctx.LogAction(EActionLogType.CLEAR_ITEMS);
-            ctx.Reply("clear_items_cleared");
+            ctx.Reply(T.ClearItems);
         }
         else if (ctx.MatchParameter(0, "vehicles", "vehicle", "v"))
         {
             WipeVehiclesAndRespawn();
             ctx.LogAction(EActionLogType.CLEAR_VEHICLES);
-            ctx.Reply("clear_vehicles_cleared");
+            ctx.Reply(T.ClearVehicles);
         }
         else if (ctx.MatchParameter(0, "structures", "structure", "struct") ||
                  ctx.MatchParameter(0, "barricades", "barricade", "b") || ctx.MatchParameter(0, "s"))
         {
             Data.Gamemode.ReplaceBarricadesAndStructures();
             ctx.LogAction(EActionLogType.CLEAR_STRUCTURES);
-            ctx.Reply("clear_structures_cleared");
+            ctx.Reply(T.ClearStructures);
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }
