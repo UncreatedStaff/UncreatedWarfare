@@ -127,6 +127,8 @@ public class RequestCommand : Command
                             throw ctx.Reply(T.RequestKitAlreadyOwned);
                         if (kit.IsPremium && !KitManager.HasAccessFast(kit, caller2) && !UCWarfare.Config.OverrideKitRequirements)
                             throw ctx.Reply(T.RequestKitMissingAccess);
+                        if (kit.Team != 0 && kit.Team != team)
+                            throw ctx.Reply(T.RequestKitWrongTeam, TeamManager.GetFactionSafe(team)!);
                         if (caller2.Rank.Level < kit.UnlockLevel)
                             throw ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(kit.UnlockLevel));
                         if (!kit.IsPremium && kit.CreditCost > 0 && !KitManager.HasAccessFast(kit, caller2) && !UCWarfare.Config.OverrideKitRequirements)
@@ -536,8 +538,6 @@ public class RequestCommand : Command
             {
                 int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.value / 100f));
                 int ct2 = 0;
-                if (data.Team == 2)
-                    ucplayer.SendChat(T.RequestVehicleFlagDelayMultiple, ct);
                 for (int i = 0; i < rot.Rotation.Count; ++i)
                 {
                     if (data.Team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (data.Team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (data.Team == 2 ? rot.Rotation[i].HasBeenCapturedT2 : false)))

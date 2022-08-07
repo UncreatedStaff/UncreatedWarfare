@@ -97,7 +97,10 @@ public abstract class BaseQuestData : ITranslationArgument
         }
     }
     public abstract IQuestPreset CreateRandomPreset(ushort flag = 0);
+    [FormatDisplay("Quest Type (" + nameof(EQuestType) + ")")]
     public const string TYPE_FORMAT = "t";
+
+    [FormatDisplay(typeof(QuestAsset), "Quest Name")]
     /// <summary>For <see cref="QuestAsset"/> formatting.</summary>
     public const string COLOR_QUEST_ASSET_FORMAT = "c";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)

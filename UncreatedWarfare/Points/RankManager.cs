@@ -697,13 +697,21 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         }
     }
 
+    [FormatDisplay("Rank Name")]
     public const string NAME_FORMAT = "n";
+    [FormatDisplay("Colored Rank Name")]
     public const string COLOR_NAME_FORMAT = "cn";
+    [FormatDisplay("Rank Abbreviation")]
     public const string ABBREVIATION_FORMAT = "a";
+    [FormatDisplay("Colored Rank Abbreviation")]
     public const string COLOR_ABBREVIATION_FORMAT = "ca";
+    [FormatDisplay("Order")]
     public const string ORDER_FORMAT = "o";
+    [FormatDisplay("Colored Order")]
     public const string COLOR_ORDER_FORMAT = "co";
+    [FormatDisplay("Order with L-Prefix")]
     public const string L_ORDER_FORMAT = "lo";
+    [FormatDisplay("Colored Order with L-Prefix")]
     public const string L_COLOR_ORDER_FORMAT = "lco";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {

@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Xml;
+using System.Xml.Linq;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -26,20 +27,6 @@ public static class Localization
     public const string RICH_TEXT_COLOR_END = ">";
     public const string TMPRO_RICH_TEXT_COLOR_BASE = "<#";
     public const string RICH_TEXT_COLOR_CLOSE = "</color>";
-    [Obsolete("Use the new generics system instead.")]
-    public static class Common
-    {
-        public const string NOT_ENABLED = "not_enabled";
-        public const string NOT_IMPLEMENTED = "todo";
-        public const string CORRECT_USAGE = "correct_usage";
-        public const string CONSOLE_ONLY = "command_e_no_console";
-        public const string PLAYERS_ONLY = "command_e_no_player";
-        public const string PLAYER_NOT_FOUND = "command_e_player_not_found";
-        public const string UNKNOWN_ERROR = "command_e_unknown_error";
-        public const string GAMEMODE_ERROR = "command_e_gamemode";
-        public const string NO_PERMISSIONS = "no_permissions";
-        public const string NO_PERMISSIONS_ON_DUTY = "no_permissions_on_duty";
-    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Colorize(string hex, string inner, TranslationFlags flags)
@@ -48,752 +35,6 @@ public static class Localization
             ? (UNITY_RICH_TEXT_COLOR_BASE_START + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE)
             : (TMPRO_RICH_TEXT_COLOR_BASE + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE));
     }
-    [Obsolete("Use the new generics system instead.")]
-    public static string ObjectTranslate(string key, string language, params object[] formatting)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        Translation? newTranslation = Translation.FromLegacyId(key);
-
-        if (newTranslation is not null)
-        {
-            string s = newTranslation.Translate(language);
-            try
-            {
-                return string.Format(s, formatting);
-            }
-            catch (FormatException ex)
-            {
-                L.LogError(ex);
-            }
-        }
-
-        if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
-        {
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    data = Data.Localization.First().Value;
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-        }
-        if (data.TryGetValue(key, out TranslationData translation))
-        {
-            try
-            {
-                return string.Format(translation.Original, formatting);
-            }
-            catch (FormatException ex)
-            {
-                L.LogError(ex);
-                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-        else if (language != L.DEFAULT)
-        {
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    data = Data.Localization.First().Value;
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            if (data.TryGetValue(key, out translation))
-            {
-                try
-                {
-                    return string.Format(translation.Original, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-        else
-        {
-            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-        }
-    }
-    [Obsolete("Use the new generics system instead.")]
-    public static string ObjectTranslate(string key, ulong player, params object[] formatting)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (key == null)
-        {
-            string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
-            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? string.Empty : ": ")}{args}");
-            return args;
-        }
-
-        if (key.Length == 0)
-        {
-            return formatting.Length > 0 ? string.Join(", ", formatting) : string.Empty;
-        }
-
-        Translation? newTranslation = Translation.FromLegacyId(key);
-        if (player == 0)
-        {
-            if (newTranslation is not null)
-            {
-                string s = newTranslation.Translate(L.DEFAULT);
-                try
-                {
-                    return string.Format(s, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                }
-            }
-
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out Dictionary<string, TranslationData> data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
-                    {
-                        try
-                        {
-                            return string.Format(translation.Original, formatting);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                        }
-                    }
-                    else
-                    {
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                if (data.TryGetValue(key, out TranslationData translation))
-                {
-                    try
-                    {
-                        return string.Format(translation.Original, formatting);
-                    }
-                    catch (FormatException ex)
-                    {
-                        L.LogError(ex);
-                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-        }
-        else
-        {
-            if (Data.Languages.TryGetValue(player, out string lang))
-            {
-                if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
-                    lang = L.DEFAULT;
-            }
-            else lang = L.DEFAULT;
-
-            if (newTranslation is not null)
-            {
-                string s = newTranslation.Translate(lang);
-                try
-                {
-                    return string.Format(s, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                }
-            }
-
-            if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
-                    {
-                        try
-                        {
-                            return string.Format(translation.Original, formatting);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                        }
-                    }
-                    else
-                    {
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else if (data.TryGetValue(key, out TranslationData translation))
-            {
-                try
-                {
-                    return string.Format(translation.Original, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-    }
-    [Obsolete("Use the new generics system instead.")]
-    public static string Translate(string key, UCPlayer player, params string[] formatting) =>
-        Translate(key, player.Steam64, formatting);
-    [Obsolete("Use the new generics system instead.")]
-    public static string Translate(string key, UCPlayer player, out Color color, params string[] formatting) =>
-        Translate(key, player.Steam64, out color, formatting);
-    [Obsolete("Use the new generics system instead.")]
-    public static string Translate(string key, SteamPlayer player, params string[] formatting) =>
-        Translate(key, player.playerID.steamID.m_SteamID, formatting);
-    [Obsolete("Use the new generics system instead.")]
-    public static string Translate(string key, SteamPlayer player, out Color color, params string[] formatting) =>
-        Translate(key, player.playerID.steamID.m_SteamID, out color, formatting);
-    [Obsolete("Use the new generics system instead.")]
-    public static string Translate(string key, Player player, params string[] formatting) =>
-        Translate(key, player.channel.owner.playerID.steamID.m_SteamID, formatting);
-    [Obsolete("Use the new generics system instead.")]
-    public static string Translate(string key, Player player, out Color color, params string[] formatting) =>
-        Translate(key, player.channel.owner.playerID.steamID.m_SteamID, out color, formatting);
-    [Obsolete("Use the new generics system instead.")]
-    /// <summary>
-    /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the Original message (non-color removed)
-    /// </summary>
-    /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-    /// <param name="player">The player to check language on, pass 0 to use the <see cref="L.DEFAULT">Default Language</see>.</param>
-    /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-    /// <returns>A localized string based on the player's language.</returns>
-    public static string Translate(string key, ulong player, params string[] formatting)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (key == null)
-        {
-            string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
-            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? string.Empty : ": ")}{args}");
-            return args;
-        }
-        if (key.Length == 0)
-        {
-            return formatting.Length > 0 ? string.Join(", ", formatting) : string.Empty;
-        }
-        Translation? newTranslation = Translation.FromLegacyId(key);
-        if (player == 0)
-        {
-            if (newTranslation is not null)
-            {
-                string s = newTranslation.Translate(L.DEFAULT);
-                try
-                {
-                    return string.Format(s, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                }
-            }
-
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out Dictionary<string, TranslationData> data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
-                    {
-                        try
-                        {
-                            return string.Format(translation.Original, formatting);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                        }
-                    }
-                    else
-                    {
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                if (data.TryGetValue(key, out TranslationData translation))
-                {
-                    try
-                    {
-                        return string.Format(translation.Original, formatting);
-                    }
-                    catch (FormatException ex)
-                    {
-                        L.LogError(ex);
-                        return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-        }
-        else
-        {
-            if (Data.Languages.TryGetValue(player, out string lang))
-            {
-                if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
-                    lang = L.DEFAULT;
-            }
-            else lang = L.DEFAULT;
-            if (newTranslation is not null)
-            {
-                string s = newTranslation.Translate(lang);
-                try
-                {
-                    return string.Format(s, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                }
-            }
-
-            if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
-                    {
-                        try
-                        {
-                            return string.Format(translation.Original, formatting);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                        }
-                    }
-                    else
-                    {
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else if (data.TryGetValue(key, out TranslationData translation))
-            {
-                try
-                {
-                    return string.Format(translation.Original, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-    }
-    [Obsolete("Use the new generics system instead.")]
-    /// <summary>
-    /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the color-removed message along with the color.
-    /// </summary>
-    /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-    /// <param name="player">The player to check language on, pass 0 to use the <see cref="L.DEFAULT">Default Language</see>.</param>
-    /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-    /// <param name="color">Color of the message.</param>
-    /// <returns>A localized string based on the player's language.</returns>
-    public static string Translate(string key, ulong player, out Color color, params string[] formatting)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (key == null)
-        {
-            string args = formatting.Length == 0 ? string.Empty : string.Join(", ", formatting);
-            L.LogError($"Message to be sent to {player} was null{(formatting.Length == 0 ? string.Empty : ": ")}{args}");
-            color = UCWarfare.GetColor("default");
-            return args;
-        }
-        if (key.Length == 0)
-        {
-            color = UCWarfare.GetColor("default");
-            return formatting.Length > 0 ? string.Join(", ", formatting) : string.Empty;
-        }
-        Translation? newTranslation = Translation.FromLegacyId(key);
-        if (player == 0)
-        {
-            if (newTranslation is not null)
-            {
-                string s = newTranslation.Translate(L.DEFAULT, out color);
-                try
-                {
-                    return string.Format(s, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                }
-            }
-
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out Dictionary<string, TranslationData> data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
-                    {
-                        color = translation.Color;
-                        try
-                        {
-                            return string.Format(translation.Message, formatting);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                        }
-                    }
-                    else
-                    {
-                        color = UCWarfare.GetColor("default");
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                if (data.TryGetValue(key, out TranslationData translation))
-                {
-                    color = translation.Color;
-                    try
-                    {
-                        return string.Format(translation.Message, formatting);
-                    }
-                    catch (FormatException ex)
-                    {
-                        L.LogError(ex);
-                        return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-        }
-        else
-        {
-            if (Data.Languages.TryGetValue(player, out string lang))
-            {
-                if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data2) || !data2.ContainsKey(key))
-                    lang = L.DEFAULT;
-            }
-            else lang = L.DEFAULT;
-            if (newTranslation is not null)
-            {
-                string s = newTranslation.Translate(lang, out color);
-                try
-                {
-                    return string.Format(s, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                }
-            }
-
-            if (!Data.Localization.TryGetValue(lang, out Dictionary<string, TranslationData> data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    if (Data.Localization.ElementAt(0).Value.TryGetValue(key, out TranslationData translation))
-                    {
-                        color = translation.Color;
-                        try
-                        {
-                            return string.Format(translation.Message, formatting);
-                        }
-                        catch (FormatException ex)
-                        {
-                            L.LogError(ex);
-                            return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                        }
-                    }
-                    else
-                    {
-                        color = UCWarfare.GetColor("default");
-                        return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                    }
-                }
-                else
-                {
-                    color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else if (data.TryGetValue(key, out TranslationData translation))
-            {
-                color = translation.Color;
-                try
-                {
-                    return string.Format(translation.Message, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                    return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                color = UCWarfare.GetColor("default");
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-    }
-    [Obsolete("Use the new generics system instead.")]
-
-    /// <summary>
-    /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the color-removed message along with the color.
-    /// </summary>
-    /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-    /// <param name="language">The first language to translate with, pass null to use <see cref="L.DEFAULT">Default Language</see>.</param>
-    /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-    /// <param name="color">Color of the message.</param>
-    /// <returns>A localized string based on <paramref name="language"/>.</returns>
-    public static string Translate(string key, string language, out Color color, params string[] formatting)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        Translation? newTranslation = Translation.FromLegacyId(key);
-
-        if (newTranslation is not null)
-        {
-            string s = newTranslation.Translate(language, out color);
-            try
-            {
-                return string.Format(s, formatting);
-            }
-            catch (FormatException ex)
-            {
-                L.LogError(ex);
-            }
-        }
-
-        if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
-        {
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    data = Data.Localization.First().Value;
-                }
-                else
-                {
-                    color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-        }
-        if (data.TryGetValue(key, out TranslationData translation))
-        {
-            color = translation.Color;
-            try
-            {
-                return string.Format(translation.Message, formatting);
-            }
-            catch (FormatException ex)
-            {
-                L.LogError(ex);
-                return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-        else if (language != L.DEFAULT)
-        {
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    data = Data.Localization.First().Value;
-                }
-                else
-                {
-                    color = UCWarfare.GetColor("default");
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            if (data.TryGetValue(key, out translation))
-            {
-                color = translation.Color;
-                try
-                {
-                    return string.Format(translation.Message, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                    return translation.Message + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                color = UCWarfare.GetColor("default");
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-        else
-        {
-            color = UCWarfare.GetColor("default");
-            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-        }
-    }
-    [Obsolete("Use the new generics system instead.")]
-    /// <summary>
-    /// Tramslate an unlocalized string to a localized string using the Rocket translations file, provides the message with color still in it.
-    /// </summary>
-    /// <param name="key">The unlocalized string to match with the translation dictionary.</param>
-    /// <param name="language">The first language to translate with, pass null to use <see cref="L.DEFAULT">Default Language</see>.</param>
-    /// <param name="formatting">list of strings to replace the {n}s in the translations.</param>
-    /// <returns>A localized string based on <paramref name="language"/>.</returns>
-    public static string Translate(string key, string language, params string[] formatting)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        Translation? newTranslation = Translation.FromLegacyId(key);
-
-        if (newTranslation is not null)
-        {
-            string s = newTranslation.Translate(language);
-            try
-            {
-                return string.Format(s, formatting);
-            }
-            catch (FormatException ex)
-            {
-                L.LogError(ex);
-            }
-        }
-
-        if (language == null || !Data.Localization.TryGetValue(language, out Dictionary<string, TranslationData> data))
-        {
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    data = Data.Localization.First().Value;
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-        }
-        if (data.TryGetValue(key, out TranslationData translation))
-        {
-            try
-            {
-                return string.Format(translation.Original, formatting);
-            }
-            catch (FormatException ex)
-            {
-                L.LogError(ex);
-                return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-        else if (language != L.DEFAULT)
-        {
-            if (!Data.Localization.TryGetValue(L.DEFAULT, out data))
-            {
-                if (Data.Localization.Count > 0)
-                {
-                    data = Data.Localization.First().Value;
-                }
-                else
-                {
-                    return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            if (data.TryGetValue(key, out translation))
-            {
-                try
-                {
-                    return string.Format(translation.Original, formatting);
-                }
-                catch (FormatException ex)
-                {
-                    L.LogError(ex);
-                    return translation.Original + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-                }
-            }
-            else
-            {
-                return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-            }
-        }
-        else
-        {
-            return key + (formatting.Length > 0 ? (" - " + string.Join(", ", formatting)) : string.Empty);
-        }
-    }
-
     public static string Translate(Translation translation, UCPlayer? player) =>
         Translate(translation, player is null ? 0 : player.Steam64);
     public static string Translate(Translation translation, ulong player)
@@ -1033,7 +274,7 @@ public static class Localization
                 Translation? tr = Translation.FromSignId(key2);
                 if (tr != null) return tr.Translate(language);
 
-                return Translate(key, language);
+                return Translation.FromSignId(key)?.Translate(language) ?? key;
             }
         }
         catch (Exception ex)
@@ -1066,8 +307,9 @@ public static class Localization
                                     name = kit.SignTexts.First().Value;
                                 else
                                     name = kit.DisplayName ?? kit.Name;
-                        foreach (char @char in name)
+                        for (int i = 0; i < name.Length; i++)
                         {
+                            char @char = name[i];
                             if (@char == '\n')
                             {
                                 keepline = true;
@@ -1080,42 +322,51 @@ public static class Localization
                         name = kit.Name;
                         if (name.Length > 18 && ulong.TryParse(name.Substring(0, 17), System.Globalization.NumberStyles.Any, Data.Locale, out ulong id) && OffenseManager.IsValidSteam64ID(id) && id == ucplayer.Steam64)
                         {
-                            name = "PL #" + (name.Substring(17)[1] - 48).ToString(Data.Locale);
+                            name = "PL #" + loadoutid.ToString(Data.Locale);
                         }
                     }
-                    string cost = Translate("loadout_name_owned", language, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                    name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
+                    string cost = "<sub>" + T.LoadoutName.Translate(language, loadoutid) + "</sub>";
                     if (!keepline) cost = "\n" + cost;
 
                     string playercount = string.Empty;
 
                     if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
                     {
-                        playercount = Translate("kit_unlimited", language).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+                        playercount = T.KitUnlimited.Translate(language);
                     }
                     else if (kit.IsClassLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
                     {
-                        playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                            .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
+                        playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
                     }
                     else
                     {
-                        playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                            .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
+                        playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_available"), true);
                     }
-                    return Translate("sign_kit_request", language,
-                        name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")),
-                        cost,
-                        string.IsNullOrEmpty(kit.Weapons) ? " " : Translate("kit_weapons", language, kit.Weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list"))),
-                        playercount
-                        );
+
+                    string weapons = kit.Weapons ?? string.Empty;
+
+                    if (weapons.Length > 0)
+                    {
+                        weapons = weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true);
+                        return
+                            name + "\n" +
+                            cost + "\n" +
+                            weapons + "\n" +
+                            playercount;
+                    }
+
+                    return
+                        name + "\n\n" +
+                        cost + "\n" +
+                        playercount;
                 }
             }
-            return Translate("sign_kit_request", language,
-                Translate("loadout_name", language, loadoutid.ToString()).Colorize(UCWarfare.GetColorHex("kit_public_header")),
-                string.Empty,
-                ObjectTranslate("kit_price_dollars", language, UCWarfare.Config.LoadoutCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars")),
-                string.Empty
-            );
+
+            return
+                "<b>" + T.LoadoutName.Translate(language, loadoutid) + "</b>\n\n\n\n" +
+                T.KitPremiumCost.Translate(language, UCWarfare.Config.LoadoutCost)
+                    .ColorizeTMPro(UCWarfare.GetColorHex("kit_level_dollars"), true);
         }
         return key;
     }
@@ -1135,8 +386,10 @@ public static class Localization
                     else
                         name = kit.DisplayName ?? kit.Name;
 
-            foreach (char @char in name)
+
+            for (int i = 0; i < name.Length; i++)
             {
+                char @char = name[i];
                 if (@char == '\n')
                 {
                     keepline = true;
@@ -1148,21 +401,21 @@ public static class Localization
         {
             name = kit.Name;
         }
-        name = Translate("kit_name", language, name.ToUpper().Colorize(UCWarfare.GetColorHex("kit_public_header")));
+        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
         string weapons = kit.Weapons ?? string.Empty;
-        if (weapons != string.Empty)
-            weapons = Translate("kit_weapons", language, weapons.ToUpper().Colorize(UCWarfare.GetColorHex("kit_weapon_list")));
+        if (weapons.Length > 0)
+            weapons = "<b>" + weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true) + "</b>";
         string cost = string.Empty;
         string playercount;
         if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
         {
             if (ucplayer != null)
                 if (KitManager.HasAccessFast(kit, ucplayer))
-                    cost = ObjectTranslate("kit_premium_owned", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_owned"));
+                    cost = T.KitPremiumOwned.Translate(language);
                 else if (kit.PremiumCost == -1)
-                    cost = Translate("kit_premium_exclusive", language).Colorize(UCWarfare.GetColorHex("kit_level_dollars_exclusive"));
+                    cost = T.KitExclusive.Translate(language);
                 else
-                    cost = ObjectTranslate("kit_price_dollars", language, kit.PremiumCost).Colorize(UCWarfare.GetColorHex("kit_level_dollars"));
+                    cost = T.KitPremiumCost.Translate(language, kit.PremiumCost);
         }
         else if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
         {
@@ -1177,26 +430,39 @@ public static class Localization
         if (cost == string.Empty && kit.CreditCost > 0)
         {
             if (ucplayer != null)
+            {
                 if (!KitManager.HasAccessFast(kit, ucplayer))
-                    cost = ObjectTranslate("kit_cost", language, kit.CreditCost);
+                    cost = T.KitCreditCost.Translate(language, kit.CreditCost);
+                else
+                    cost = T.KitPremiumOwned.Translate(language);
+            }
         }
 
         if (!keepline) cost = "\n" + cost;
         if (kit.TeamLimit >= 1f || kit.TeamLimit <= 0f)
         {
-            playercount = Translate("kit_unlimited", language).Colorize(UCWarfare.GetColorHex("kit_unlimited_players"));
+            playercount = T.KitUnlimited.Translate(language);
         }
         else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
         {
-            playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                .Colorize(UCWarfare.GetColorHex("kit_player_counts_unavailable"));
+            playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
         }
         else
         {
-            playercount = Translate("kit_player_count", language, total.ToString(Data.Locale), allowed.ToString(Data.Locale))
-                .Colorize(UCWarfare.GetColorHex("kit_player_counts_available"));
+            playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_available"), true);
         }
-        return Translate("sign_kit_request", language, name, cost, weapons, playercount);
+        if (weapons.Length == 0)
+        {
+            return 
+                name + "\n\n" +
+                cost + "\n" +
+                playercount;
+        }
+        return
+            name + "\n" +
+            cost + "\n" +
+            weapons + "\n" +
+            playercount;
     }
     public static string TranslateSign(string key, UCPlayer player, bool important = true)
     {
@@ -1207,7 +473,7 @@ public static class Localization
     }
 
     private static readonly Guid F15 = new Guid("423d31c55cf84396914be9175ea70d0c");
-    public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, string language)
+    public static string TranslateVBS(Vehicles.VehicleSpawn spawn, VehicleData data, string language, ulong team)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1236,26 +502,28 @@ public static class Localization
 
         string finalformat =
             $"{(spawn.VehicleID == F15 ? "F15-E" : (Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N")))}\n" +
-            $"<color=#{UCWarfare.GetColorHex("vbs_branch")}>{TranslateEnum(data.Branch, language)}</color>\n" +
-            (data.TicketCost > 0 ? $"<color=#{UCWarfare.GetColorHex("vbs_ticket_number")}>{data.TicketCost.ToString(Data.Locale)}</color><color=#{UCWarfare.GetColorHex("vbs_ticket_label")}> {Translate("vbs_tickets_postfix", language)}</color>\n" : "\n") +
-            (unlock) +
-            $"{{0}}\n";
+            $"<#{UCWarfare.GetColorHex("vbs_branch")}>{TranslateEnum(data.Branch, language)}</color>\n" +
+            (data.TicketCost > 0 ? T.VBSTickets.Translate(language, data.TicketCost, null, team) : " ") + "\n" +
+            unlock +
+            $"{{0}}";
 
         finalformat = finalformat.Colorize("ffffff");
-
+        if (team is not 1 and not 2)
+            return finalformat;
+        finalformat += "\n";
         if (comp.State == EVehicleBayState.DEAD) // vehicle is dead
         {
             float rem = data.RespawnTime - comp.DeadTime;
-            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_dead")}>{Translate("vbs_state_dead", language, Mathf.FloorToInt(rem / 60f).ToString(), (Mathf.FloorToInt(rem) % 60).ToString("D2"))}</color>";
+            return finalformat + T.VBSStateDead.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, team);
         }
         else if (comp.State == EVehicleBayState.IN_USE)
         {
-            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_active")}>{Translate("vbs_state_active", language, comp.CurrentLocation)}</color>";
+            return finalformat + T.VBSStateActive.Translate(language, comp.CurrentLocation);
         }
         else if (comp.State == EVehicleBayState.IDLE)
         {
             float rem = data.RespawnTime - comp.IdleTime;
-            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_idle")}>{Translate("vbs_state_idle", language, Mathf.FloorToInt(rem / 60f).ToString(), (Mathf.FloorToInt(rem) % 60).ToString("D2"))}</color>";
+            return finalformat + T.VBSStateIdle.Translate(language, Mathf.FloorToInt(rem / 60f), Mathf.FloorToInt(rem) % 60, null, team);
         }
         else
         {
@@ -1263,12 +531,12 @@ public static class Localization
             {
                 if (delay.type == EDelayType.OUT_OF_STAGING)
                 {
-                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_staging", language)}</color>";
+                    return finalformat + T.VBSDelayStaging.Translate(language);
                 }
                 else if (delay.type == EDelayType.TIME)
                 {
                     float timeLeft = delay.value - Data.Gamemode.SecondsSinceStart;
-                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_time", language, Mathf.FloorToInt(timeLeft / 60f).ToString(), Mathf.FloorToInt(timeLeft % 60).ToString("D2"))}</color>";
+                    return finalformat + T.VBSDelayTime.Translate(language, Mathf.FloorToInt(timeLeft / 60f), Mathf.FloorToInt(timeLeft % 60), null, team);
                 }
                 else if (delay.type == EDelayType.FLAG || delay.type == EDelayType.FLAG_PERCENT)
                 {
@@ -1276,14 +544,14 @@ public static class Localization
                     {
                         int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.value / 100f));
                         int ct2;
-                        if (data.Team == 1)
+                        if (team == 1)
                         {
                             if (invasion.AttackingTeam == 1)
                                 ct2 = ct - invasion.ObjectiveT1Index;
                             else
                                 ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
                         }
-                        else if (data.Team == 2)
+                        else if (team == 2)
                         {
                             if (invasion.AttackingTeam == 2)
                                 ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
@@ -1295,40 +563,46 @@ public static class Localization
                         if (invasion.AttackingTeam == 2) ind = invasion.Rotation.Count - ind - 1;
                         if (ct2 == 1 && invasion.Rotation.Count > 0 && ind < invasion.Rotation.Count)
                         {
-                            if (data.Team == invasion.AttackingTeam)
-                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_1", language, invasion.Rotation[ind].ShortName)}</color>";
-                            else if (data.Team == invasion.DefendingTeam)
-                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_lose_1", language, invasion.Rotation[ind].ShortName)}</color>";
+                            if (team == invasion.DefendingTeam)
+                                return finalformat + T.VBSDelayLoseFlag.Translate(language, invasion.Rotation[ind], null, team);
                             else
-                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct2.ToString(Data.Locale))}</color>";
+                                return finalformat + T.VBSDelayCaptureFlag.Translate(language, invasion.Rotation[ind], null, team);
                         }
-                        else if (data.Team == invasion.DefendingTeam)
-                            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_lose_2+", language, ct2.ToString(Data.Locale))}</color>";
+                        else if (team == invasion.DefendingTeam)
+                            return finalformat + T.VBSDelayLoseFlagMultiple.Translate(language, ct2, null, team);
                         else
-                            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct2.ToString(Data.Locale))}</color>";
+                            return finalformat + T.VBSDelayCaptureFlagMultiple.Translate(language, ct2, null, team);
                     }
                     else if (Data.Is(out IFlagTeamObjectiveGamemode flags))
                     {
                         int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.value / 100f));
                         int ct2;
-                        if (data.Team == 1)
+                        if (team == 1)
                             ct2 = ct - flags.ObjectiveT1Index;
-                        else if (data.Team == 2)
+                        else if (team == 2)
                             ct2 = ct - (flags.Rotation.Count - flags.ObjectiveT2Index - 1);
                         else ct2 = ct;
                         int ind = ct - ct2;
-                        if (data.Team == 2) ind = flags.Rotation.Count - ind - 1;
+                        if (team == 2) ind = flags.Rotation.Count - ind - 1;
                         if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
-                        {
-                            if (data.Team == 1 || data.Team == 2)
-                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_1", language, flags.Rotation[ind].ShortName)}</color>";
-                            else
-                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct2.ToString(Data.Locale))}</color>";
-                        }
+                            return finalformat + T.VBSDelayCaptureFlag.Translate(language, flags.Rotation[ind], null, team);
                         else
+                            return finalformat + T.VBSDelayCaptureFlagMultiple.Translate(language, ct2, null, team);
+                    }
+                    else if (Data.Is(out IFlagRotation rot))
+                    {
+                        int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.value / 100f));
+                        int ct2 = 0;
+                        for (int i = 0; i < rot.Rotation.Count; ++i)
                         {
-                            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct2.ToString(Data.Locale))}</color>";
+                            if (team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (team == 2 ? rot.Rotation[i].HasBeenCapturedT2 : false)))
+                                ++ct2;
                         }
+                        int ind = ct - ct2;
+                        if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
+                            return finalformat + T.VBSDelayCaptureFlag.Translate(language, flags.Rotation[ind]);
+                        else
+                            return finalformat + T.VBSDelayCaptureFlagMultiple.Translate(language, ct2);
                     }
                     else if (Data.Is(out Insurgency ins))
                     {
@@ -1338,284 +612,30 @@ public static class Localization
                         int ind = ct - ct2;
                         if (ct2 == 1 && ins.Caches.Count > 0 && ind < ins.Caches.Count)
                         {
-                            if (data.Team == ins.AttackingTeam)
+                            if (team == ins.AttackingTeam)
                             {
                                 if (ins.Caches[ind].IsDiscovered)
-                                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_caches_atk_1", language, ins.Caches[ind].Cache.ClosestLocation)}</color>";
+                                    return finalformat + T.VBSDelayAttackCache.Translate(language, ins.Caches[ind].Cache, null, team);
                                 else
-                                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_caches_atk_undiscovered_1", language)}</color>";
+                                    return finalformat + T.VBSDelayAttackCacheUnknown.Translate(language);
                             }
-                            else if (data.Team == ins.DefendingTeam)
-                                if (ins.Caches[ind].IsActive)
-                                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_caches_def_1", language, ins.Caches[ind].Cache.ClosestLocation)}</color>";
-                                else
-                                    return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_caches_def_undiscovered_1", language)}</color>";
                             else
-                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_flags_2+", language, ct2.ToString(Data.Locale))}</color>";
+                                if (ins.Caches[ind].IsActive)
+                                    return finalformat + T.VBSDelayDefendCache.Translate(language, ins.Caches[ind].Cache, null, team);
+                                else
+                                    return finalformat + T.VBSDelayDefendCacheUnknown.Translate(language);
                         }
                         else
                         {
-                            if (data.Team == ins.AttackingTeam)
-                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_caches_atk_2+", language, ct2.ToString(Data.Locale))}</color>";
+                            if (team == ins.AttackingTeam)
+                                return finalformat + T.VBSDelayAttackCacheMultiple.Translate(language, ct2, null, team);
                             else
-                                return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_delay")}>{Translate("vbs_state_delay_caches_def_2+", language, ct2.ToString(Data.Locale))}</color>";
+                                return finalformat + T.VBSDelayDefendCacheMultiple.Translate(language, ct2, null, team);
                         }
                     }
                 }
             }
-            return finalformat + $"<color=#{UCWarfare.GetColorHex("vbs_ready")}>{Translate("vbs_state_ready", language)}</color>";
-        }
-    }
-    [Obsolete]
-    private static readonly List<LanguageSet> languages = new List<LanguageSet>(Data.Localization == null ? 3 : Data.Localization.Count);
-    [Obsolete]
-    public static IEnumerable<LanguageSet> EnumerateLanguageSets()
-    {
-        lock (languages)
-        {
-            if (languages.Count > 0)
-                languages.Clear();
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
-                bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
-                {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
-                    {
-                        languages[i2].Add(pl);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
-            }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
-            return rtn;
-        }
-    }
-    [Obsolete]
-    public static IEnumerable<LanguageSet> EnumerateLanguageSets(IEnumerator<SteamPlayer> players)
-    {
-        lock (languages)
-        {
-            if (languages.Count > 0)
-                languages.Clear();
-            while (players.MoveNext())
-            {
-                UCPlayer? pl = UCPlayer.FromSteamPlayer(players.Current);
-                if (pl == null) continue;
-                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
-                bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
-                {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
-                    {
-                        languages[i2].Add(pl);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
-            }
-            players.Dispose();
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
-            return rtn;
-        }
-    }
-    [Obsolete]
-    public static IEnumerable<LanguageSet> EnumerateLanguageSets(params ulong[] exclude)
-    {
-        lock (languages)
-        {
-            if (languages.Count > 0)
-                languages.Clear();
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                for (int j = 0; j < exclude.Length; j++)
-                    if (pl.Steam64 == exclude[j]) goto next;
-                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
-                bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
-                {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
-                    {
-                        languages[i2].Add(pl);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
-                next: ;
-            }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
-            return rtn;
-        }
-    }
-    [Obsolete]
-    public static IEnumerable<LanguageSet> EnumerateLanguageSetsExclude(ulong exclude)
-    {
-        lock (languages)
-        {
-            if (languages.Count > 0)
-                languages.Clear();
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                if (pl.Steam64 == exclude) continue;
-                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
-                bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
-                {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
-                    {
-                        languages[i2].Add(pl);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
-            }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
-            return rtn;
-        }
-    }
-    [Obsolete]
-    public static IEnumerable<LanguageSet> EnumeratePermissions(EAdminType type)
-    {
-        lock (languages)
-        {
-            if (languages.Count > 0)
-                languages.Clear();
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                if ((type & pl.PermissionLevel) < type) continue;
-                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
-                bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
-                {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
-                    {
-                        languages[i2].Add(pl);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
-            }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
-            return rtn;
-        }
-    }
-    [Obsolete]
-    public static IEnumerable<LanguageSet> EnumerateLanguageSets(ulong team)
-    {
-        lock (languages)
-        {
-            if (languages.Count > 0)
-                languages.Clear();
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                if (pl.GetTeam() != team) continue;
-                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
-                bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
-                {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
-                    {
-                        languages[i2].Add(pl);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    languages.Add(new LanguageSet(lang, pl) { Team = team });
-            }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
-            return rtn;
-        }
-    }
-    [Obsolete]
-    public static IEnumerable<LanguageSet> EnumerateLanguageSets(Squads.Squad squad)
-    {
-        lock (languages)
-        {
-            if (languages.Count > 0)
-                languages.Clear();
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                if (pl.Squad != squad) continue;
-                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
-                bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
-                {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
-                    {
-                        languages[i2].Add(pl);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    languages.Add(new LanguageSet(lang, pl) { Team = squad.Team });
-            }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
-            return rtn;
-        }
-    }
-    [Obsolete]
-    public static IEnumerable<LanguageSet> EnumerateLanguageSets(Predicate<UCPlayer> selector)
-    {
-        lock (languages)
-        {
-            if (languages.Count > 0)
-                languages.Clear();
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
-            {
-                UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                if (!selector(pl)) continue;
-                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
-                    lang = L.DEFAULT;
-                bool found = false;
-                for (int i2 = 0; i2 < languages.Count; i2++)
-                {
-                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
-                    {
-                        languages[i2].Add(pl);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                    languages.Add(new LanguageSet(lang, pl));
-            }
-            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
-            languages.Clear();
-            return rtn;
+            return finalformat + T.VBSStateReady.Translate(language);
         }
     }
     public static string TranslateEnum<TEnum>(TEnum value, string language)
@@ -1681,6 +701,7 @@ public static class Localization
         string def = Path.Combine(Data.Paths.LangStorage, L.DEFAULT) + Path.DirectorySeparatorChar;
         if (!Directory.Exists(def))
             Directory.CreateDirectory(def);
+        List<KeyValuePair<Type, List<string>>> defaultLangs = new List<KeyValuePair<Type, List<string>>>(32);
         DirectoryInfo info = new DirectoryInfo(Data.Paths.LangStorage);
         if (!info.Exists) info.Create();
         DirectoryInfo[] langDirs = info.GetDirectories("*", SearchOption.TopDirectoryOnly);
@@ -1696,7 +717,7 @@ public static class Localization
         foreach (KeyValuePair<Type, TranslatableAttribute> enumType in Assembly.GetExecutingAssembly()
                      .GetTypes()
                      .Where(x => x.IsEnum)
-                     .Select(x => new KeyValuePair<Type, TranslatableAttribute>(x, (Attribute.GetCustomAttribute(x, typeof(TranslatableAttribute)) as TranslatableAttribute)!))
+                     .SelectMany(x => Attribute.GetCustomAttributes(x, typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().Select(y => new KeyValuePair<Type, TranslatableAttribute>(x, y)))
                      .Where(t => t.Value != null)
                      .Concat(extEnumTypes
                          .Where(x => x.Key.IsEnum)
@@ -1707,41 +728,15 @@ public static class Localization
             enumTranslations.Add(enumType.Key, k);
             string fn = Path.Combine(def, ENUM_TRANSLATION_FILE_NAME, enumType.Key.FullName + ".json");
             FieldInfo[] fields = enumType.Key.GetFields(BindingFlags.Public | BindingFlags.Static);
-            string[] values = fields.Select(x => x.GetValue(null).ToString()).ToArray();
             if (!File.Exists(fn))
             {
-                Dictionary<string, string> k2 = new Dictionary<string, string>(values.Length + 1);
-                using (FileStream stream = new FileStream(fn, FileMode.Create, FileAccess.Write, FileShare.Read))
-                {
-                    Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
-                    string name;
-                    if (enumType.Value.Default != null)
-                    {
-                        name = enumType.Value.Default;
-                        writer.WriteStringValue(name);
-                    }
-                    else
-                    {
-                        name = enumType.Key.Name;
-                        if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
-                            name = name.Substring(1);
-                        writer.WriteStringValue(name.ToProperCase());
-                    }
-                    for (int i = 0; i < values.Length; ++i)
-                    {
-                        string k0 = values[i];
-                        string k1 = fields[i].GetCustomAttribute(typeof(TranslatableAttribute)) is TranslatableAttribute attr && attr.Default != null ? attr.Default : k0.ToProperCase();
-                        k2.Add(k0, k1);
-                        writer.WritePropertyName(k0);
-                        writer.WriteStringValue(k1);
-                    }
-                    writer.WriteEndObject();
-                    writer.Dispose();
-                }
-
+                Dictionary<string, string> k2 = new Dictionary<string, string>(fields.Length + 1);
+                WriteEnums(L.DEFAULT, fields, enumType.Key, enumType.Value, fn, k2, defaultLangs);
                 k.Add(L.DEFAULT, k2);
+            }
+            else
+            {
+                GetOtherLangList(defaultLangs, fields, enumType);
             }
             for (int i = 0; i < langDirs.Length; ++i)
             {
@@ -1749,8 +744,7 @@ public static class Localization
                 if (k.ContainsKey(dir.Name)) continue;
                 fn = Path.Combine(dir.FullName, ENUM_TRANSLATION_FILE_NAME, enumType.Key.FullName + ".json");
                 if (!File.Exists(fn)) continue;
-                Dictionary<string, string> k2 = new Dictionary<string, string>(values.Length + 1);
-                k.Add(dir.Name, k2);
+                Dictionary<string, string> k2 = new Dictionary<string, string>(fields.Length + 1);
                 using (FileStream stream = new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
                     if (stream.Length > int.MaxValue)
@@ -1775,10 +769,152 @@ public static class Localization
                         }
                     }
                 }
+                List<string>? list = defaultLangs.FirstOrDefault(x => x.Key == enumType.Key).Value;
+                if (list is not null)
+                {
+                    list.Remove(dir.Name);
+                    if (list.Count == 0)
+                        defaultLangs.RemoveAll(x => x.Key == enumType.Key);
+                }
+                k.Add(dir.Name, k2);
+            }
+        }
+        for (int i = 0; i < defaultLangs.Count; ++i)
+        {
+            KeyValuePair<Type, List<string>> v = defaultLangs[i];
+            if (enumTranslations.TryGetValue(v.Key, out Dictionary<string, Dictionary<string, string>> dict))
+            {
+                for (int j = 0; j < v.Value.Count; ++j)
+                {
+                    string lang = v.Value[j];
+                    if (lang.Equals(L.DEFAULT, StringComparison.Ordinal))
+                        continue;
+
+                    string p = Path.Combine(Data.Paths.LangStorage, lang, ENUM_TRANSLATION_FILE_NAME) + Path.DirectorySeparatorChar;
+                    if (!Directory.Exists(p))
+                        Directory.CreateDirectory(p);
+                    p = Path.Combine(p, v.Key.FullName + ".json");
+                    FieldInfo[] fields = v.Key.GetFields(BindingFlags.Public | BindingFlags.Static);
+                    if (!File.Exists(p))
+                    {
+                        Dictionary<string, string> k2 = new Dictionary<string, string>(fields.Length + 1);
+                        WriteEnums(lang, fields, v.Key, null, p, k2, null);
+                        if (!dict.TryGetValue(lang, out Dictionary<string, string> l2))
+                            dict.Add(lang, k2);
+                        else
+                        {
+                            foreach (KeyValuePair<string, string> pair in k2)
+                            {
+                                if (!l2.ContainsKey(pair.Key))
+                                    l2.Add(pair.Key, pair.Value);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+    private static void GetOtherLangList(List<KeyValuePair<Type, List<string>>> otherlangs, FieldInfo[] fields, KeyValuePair<Type, TranslatableAttribute> enumType)
+    {
+        for (int i = 0; i < fields.Length; ++i)
+        {
+            TranslatableAttribute[] tas = fields[i].GetCustomAttributes(typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().ToArray();
 
+            for (int j = 0; j < tas.Length; ++j)
+            {
+                TranslatableAttribute t = tas[j];
+                if (t.Language is null || t.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
+                    continue;
+                for (int k = 0; k < otherlangs.Count; ++k)
+                {
+                    KeyValuePair<Type, List<string>> kvp2 = otherlangs[k];
+                    if (kvp2.Key == enumType.Key)
+                        goto added;
+                }
+                otherlangs.Add(new KeyValuePair<Type, List<string>>(enumType.Key, new List<string>(1) { t.Language }));
+                added:;
+            }
+        }
+    }
+    private static void WriteEnums(string language, FieldInfo[] fields, Type type, TranslatableAttribute? attr1, string fn, Dictionary<string, string> k2, List<KeyValuePair<Type, List<string>>>? otherlangs)
+    {
+        bool isDeafult = L.DEFAULT.Equals(language, StringComparison.Ordinal);
+        using (FileStream stream = new FileStream(fn, FileMode.Create, FileAccess.Write, FileShare.Read))
+        {
+            Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
+            writer.WriteStartObject();
+            string name;
+            if (attr1 != null && attr1.Default != null && attr1.Language.Equals(language, StringComparison.Ordinal))
+            {
+                name = attr1.Default;
+                writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
+                writer.WriteStringValue(name);
+                k2.Add(ENUM_NAME_PLACEHOLDER, name);
+            }
+            else if (Attribute.GetCustomAttributes(type, typeof(TranslatableAttribute))
+                         .OfType<TranslatableAttribute>()
+                         .FirstOrDefault(x => x.Language.Equals(language, StringComparison.Ordinal)) is
+                     TranslatableAttribute attr2 && attr2.Default != null)
+            {
+                name = attr2.Default;
+                writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
+                writer.WriteStringValue(name);
+                k2.Add(ENUM_NAME_PLACEHOLDER, name);
+            }
+            else if (isDeafult)
+            {
+                name = type.Name;
+                if (name.Length > 1 && name[0] == 'E' && char.IsUpper(name[1]))
+                    name = name.Substring(1);
+                writer.WritePropertyName(ENUM_NAME_PLACEHOLDER);
+                writer.WriteStringValue(name);
+                k2.Add(ENUM_NAME_PLACEHOLDER, name);
+            }
+
+            for (int i = 0; i < fields.Length; ++i)
+            {
+                string k0 = fields[i].GetValue(null).ToString();
+                string? k1 = null;
+                TranslatableAttribute[] tas = fields[i].GetCustomAttributes(typeof(TranslatableAttribute)).OfType<TranslatableAttribute>().ToArray();
+                if (tas.Length == 0)
+                    k1 = isDeafult ? k0.ToProperCase() : null;
+                else
+                {
+                    for (int j = 0; j < tas.Length; ++j)
+                    {
+                        TranslatableAttribute t = tas[j];
+                        if (((t.Language is null && isDeafult) || (t.Language is not null && t.Language.Equals(language, StringComparison.Ordinal)) && (isDeafult || t.Default != null)))
+                            k1 = t.Default ?? k0.ToProperCase();
+                        else if (otherlangs is not null && t.Language != null)
+                        {
+                            for (int k = 0; k < otherlangs.Count; ++k)
+                            {
+                                KeyValuePair<Type, List<string>> kvp2 = otherlangs[k];
+                                if (kvp2.Key == type)
+                                {
+                                    if (!kvp2.Value.Contains(t.Language))
+                                        kvp2.Value.Add(t.Language);
+                                    goto added;
+                                }
+                            }
+                            otherlangs.Add(new KeyValuePair<Type, List<string>>(type, new List<string>(1) { t.Language }));
+                        }
+                    added:;
+                    }
+                    if (isDeafult)
+                        k1 ??= k0.ToProperCase();
+                }
+                if (k1 is not null)
+                {
+                    k2.Add(k0, k1);
+                    writer.WritePropertyName(k0);
+                    writer.WriteStringValue(k1);
+                }
+            }
+            writer.WriteEndObject();
+            writer.Dispose();
+        }
+    }
     internal static string GetLang(ulong player) => Data.Languages.TryGetValue(player, out string lang) ? lang : L.DEFAULT;
 
     [Obsolete]
@@ -1861,7 +997,7 @@ public struct LanguageSet : IEnumerator<UCPlayer>
         IEnumerator IEnumerable.GetEnumerator() => Sets.GetEnumerator();
     }
 
-    private static readonly List<LanguageSet> languages = new List<LanguageSet>(Data.Localization == null ? 3 : Data.Localization.Count);
+    private static readonly List<LanguageSet> languages = new List<LanguageSet>(JSONMethods.DefaultLanguageAliasSets.Count);
     public static IEnumerable<LanguageSet> All()
     {
         lock (languages)
@@ -2197,14 +1333,28 @@ public struct LanguageSet : IEnumerator<UCPlayer>
     }
 }
 
-[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Enum | AttributeTargets.Field, Inherited = false, AllowMultiple = true)]
 public sealed class TranslatableAttribute : Attribute
 {
     private readonly string? _default;
-    public TranslatableAttribute(string? @default = null)
+    private readonly string _language;
+
+    public TranslatableAttribute()
+    {
+        _default = null;
+        _language = L.DEFAULT;
+    }
+    public TranslatableAttribute(string? @default)
     {
         _default = @default;
+        _language = L.DEFAULT;
+    }
+    public TranslatableAttribute(string language, string value)
+    {
+        _default = value;
+        _language = language;
     }
 
+    public string Language => _language;
     public string? Default => _default;
 }

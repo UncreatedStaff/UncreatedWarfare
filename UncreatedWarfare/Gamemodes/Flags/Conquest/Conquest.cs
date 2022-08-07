@@ -345,7 +345,7 @@ public sealed partial class Conquest :
 #endif
         ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
-        player.SendChat("entered_cap_radius", UCWarfare.GetColor(team == 1 ? "entered_cap_radius_team_1" : (team == 2 ? "entered_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
+        player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
     protected override void PlayerLeftFlagRadius(Flag flag, Player player)
@@ -355,7 +355,7 @@ public sealed partial class Conquest :
 #endif
         ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
-        player.SendChat("left_cap_radius", UCWarfare.GetColor(team == 1 ? "left_cap_radius_team_1" : (team == 2 ? "left_cap_radius_team_2" : "default")), flag.Name, flag.ColorHex);
+        player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
         UpdateFlag(flag);
     }

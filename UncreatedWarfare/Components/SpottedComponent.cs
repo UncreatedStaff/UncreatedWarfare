@@ -1,13 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Point;
 using UnityEngine;
 
@@ -18,7 +12,7 @@ public class SpottedComponent : MonoBehaviour
     public Guid EffectGUID { get; private set; }
     public ESpotted Type { get; private set; }
     public ushort EffectID { get; private set; }
-    public Player? CurrentSpotter { get; private set; }
+    public UCPlayer? CurrentSpotter { get; private set; }
     public bool IsActive { get => _coroutine != null; }
     private float _frequency;
     private int _defaultTimer;
@@ -74,38 +68,40 @@ public class SpottedComponent : MonoBehaviour
         else
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
     }
-    public static void MarkTarget(Transform transform, Player spotter)
+    public static void MarkTarget(Transform transform, UCPlayer spotter)
     {
-        if (transform.TryGetComponent(out InteractableVehicle vehicle) && vehicle.lockedGroup.m_SteamID != spotter.GetTeam())
+        if (transform.gameObject.TryGetComponent(out SpottedComponent spotted))
         {
-            if (vehicle.transform.gameObject.TryGetComponent(out SpottedComponent spotted))
+            if (transform.TryGetComponent(out InteractableVehicle vehicle) && vehicle.lockedGroup.m_SteamID != spotter.GetTeam())
             {
                 if (vehicle.transform.TryGetComponent(out VehicleComponent vc))
-                {
-                    spotted.TryAnnounce(spotter, Localization.Translate(vc.Data.Type.ToString(), L.DEFAULT).ToUpper().Colorize("f2a172"));
-                }
+                    spotted.TryAnnounce(spotter, Localization.TranslateEnum(vc.Data.Type, L.DEFAULT));
+                else
+                    spotted.TryAnnounce(spotter, vehicle.asset.vehicleName);
+
                 L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
                 spotted.Activate(spotter);
             }
-        }
-        else if (transform.TryGetComponent(out Player player) && player.GetTeam() != spotter.GetTeam())
-        {
-            if (player.transform.gameObject.TryGetComponent(out SpottedComponent spotted))
+            else if (transform.TryGetComponent(out Player player) && player.GetTeam() != spotter.GetTeam())
             {
-                spotted.TryAnnounce(spotter, "contact");
+                spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(L.DEFAULT));
                 L.LogDebug("Spotting player " + player.name);
 
                 spotted.Activate(spotter);
             }
-        }
-        else
-        {
-            var drop = BarricadeManager.FindBarricadeByRootTransform(transform);
-            if (drop != null && drop.GetServersideData().group != spotter.GetTeam())
+            else if (transform.TryGetComponent(out Cache cache) && cache.Team != spotter.GetTeam())
             {
-                if (drop.model.gameObject.gameObject.TryGetComponent(out SpottedComponent spotted))
+                spotted.TryAnnounce(spotter, T.SpottedTargetCache.Translate(L.DEFAULT));
+                L.LogDebug("Spotting cache " + cache.Name);
+
+                spotted.Activate(spotter);
+            }
+            else
+            {
+                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(transform);
+                if (drop != null && drop.GetServersideData().group != spotter.GetTeam())
                 {
-                    spotted.TryAnnounce(spotter, "FOB".Colorize("ff7e5e"));
+                    spotted.TryAnnounce(spotter, T.SpottedTargetFOB.Translate(L.DEFAULT));
                     L.LogDebug("Spotting barricade " + drop.asset.itemName);
                     spotted.Activate(spotter);
                 }
@@ -117,7 +113,7 @@ public class SpottedComponent : MonoBehaviour
     {
         if (CurrentSpotter != null)
         {
-            Points.AwardXP(CurrentSpotter, assistXP, Localization.Translate("xp_spotted_assist", CurrentSpotter));
+            Points.AwardXP(CurrentSpotter, assistXP, T.XPToastSpotterAssist);
         }
     }
 
@@ -125,8 +121,8 @@ public class SpottedComponent : MonoBehaviour
     {
         Deactivate();
     }
-    public void Activate(Player spotter) => Activate(spotter, _defaultTimer);
-    public void Activate(Player spotter, int seconds)
+    public void Activate(UCPlayer spotter) => Activate(spotter, _defaultTimer);
+    public void Activate(UCPlayer spotter, int seconds)
     {
         if (_coroutine != null)
             StopCoroutine(_coroutine);
@@ -135,14 +131,14 @@ public class SpottedComponent : MonoBehaviour
 
         _coroutine = StartCoroutine(MarkerLoop(seconds));
         
-        UCPlayer.FromPlayer(spotter)!.ActivateMarker(this);
+        spotter.ActivateMarker(this);
 
         
     }
     public void Deactivate()
     {
         if (CurrentSpotter != null)
-            UCPlayer.FromPlayer(CurrentSpotter)!.DeactivateMarker(this);
+            CurrentSpotter.DeactivateMarker(this);
 
         if (_coroutine != null)
             StopCoroutine(_coroutine);
@@ -162,18 +158,22 @@ public class SpottedComponent : MonoBehaviour
                 EffectManager.sendEffect(EffectID, player.Connection, transform.position);
         }
     }
-    private void TryAnnounce(Player spotter, string targetName)
+    private void TryAnnounce(UCPlayer spotter, string targetName)
     {
         if (IsActive)
             return;
 
-        ToastMessage.QueueMessage(spotter, new ToastMessage(Localization.Translate("spotted", spotter), EToastMessageSeverity.MINI), true);
+        ToastMessage.QueueMessage(spotter, new ToastMessage(T.SpottedToast.Translate(spotter), EToastMessageSeverity.MINI), true);
 
-        foreach (var player in PlayerManager.OnlinePlayers)
+        ulong t = spotter.GetTeam();
+        Color t1 = Teams.TeamManager.GetTeamColor(t);
+        targetName = targetName.Colorize(Teams.TeamManager.GetTeamHexColor(Teams.TeamManager.Other(t)));
+
+        foreach (LanguageSet set in LanguageSet.OnTeam(t))
         {
-            if (player.GetTeam() == spotter.GetTeam())
-                ChatManager.serverSendMessage($"[T] <color=#{Teams.TeamManager.GetTeamHexColor(spotter.GetTeam())}>%SPEAKER%</color>: Enemy {targetName} spotted!",
-            Color.white, spotter.channel.owner, player, EChatMode.SAY, null, true);
+            string t2 = T.SpottedMessage.Translate(set.Language, t1, targetName);
+            while (set.MoveNext())
+                ChatManager.serverSendMessage(t2, Palette.AMBIENT, spotter.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
         }
     }
     private IEnumerator<WaitForSeconds> MarkerLoop(int seconds)

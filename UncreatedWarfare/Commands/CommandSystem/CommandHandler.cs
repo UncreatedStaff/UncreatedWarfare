@@ -511,16 +511,6 @@ public class CommandInteraction : BaseCommandInteraction
         _responded = true;
         return this;
     }
-
-    [Obsolete("Use the new generics system instead.")]
-    public Exception Reply(string key, params string[] formatting)
-    {
-        _responded = true;
-        _ctx.Reply(key, formatting);
-        return this;
-    }
-
-
     /// <summary>Zero based. Checks if the argument at index <paramref name="position"/> exists.</summary>
     public bool HasArg(int position)
     {
@@ -1221,22 +1211,6 @@ public class CommandInteraction : BaseCommandInteraction
         player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
         return player != null && player.IsOnline;
     }
-    [Obsolete("Use the new generics system instead.")]
-    public bool AssertOnDuty(string noPermissionMessageKey = Localization.Common.NO_PERMISSIONS)
-    {
-        bool perm = IsConsole || Caller is not null && Caller.OnDuty();
-        if (!perm)
-            Reply(noPermissionMessageKey);
-        return perm;
-    }
-    [Obsolete("Use the new generics system instead.")]
-    public bool OnDutyOrReply(string[] formatting, string noPermissionMessageKey = Localization.Common.NO_PERMISSIONS)
-    {
-        bool perm = IsConsole || Caller is not null && Caller.OnDuty();
-        if (!perm)
-            Reply(noPermissionMessageKey, formatting);
-        return perm;
-    }
     public void LogAction(EActionLogType type, string? data = null)
     {
         ActionLogger.Add(type, data, CallerID);
@@ -1326,6 +1300,8 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, color);
+        _responded = true;
+
         return this;
     }
     public Exception ReplyString(string message, ConsoleColor color)
@@ -1338,6 +1314,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, F.GetColor(color));
+        _responded = true;
         return this;
     }
     public Exception ReplyString(string message, string hex)
@@ -1351,6 +1328,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, hex);
+        _responded = true;
         return this;
     }
     public Exception ReplyString(string message)
@@ -1363,6 +1341,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message);
+        _responded = true;
         return this;
     }
     public Exception Reply(Translation translation)
@@ -1377,6 +1356,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation);
+        _responded = true;
         return this;
     }
     public Exception Reply<T>(Translation<T> translation, T arg)
@@ -1391,6 +1371,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
@@ -1405,6 +1386,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
@@ -1419,6 +1401,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
@@ -1433,6 +1416,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
@@ -1447,6 +1431,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
@@ -1461,6 +1446,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
@@ -1475,6 +1461,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
@@ -1489,6 +1476,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
@@ -1503,6 +1491,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+        _responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
@@ -1517,6 +1506,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+        _responded = true;
         return this;
     }
 
@@ -1547,23 +1537,6 @@ public class CommandInteraction : BaseCommandInteraction
                 IsConsole = false;
                 CallerID = caller.Steam64;
                 CallerCSteamID = caller.CSteamID;
-            }
-        }
-        [Obsolete("Use the new generics system instead.")]
-        public void Reply(string translationKey, params string[] formatting)
-        {
-            if (translationKey is null) throw new ArgumentNullException(nameof(translationKey));
-            if (formatting is null) formatting = Array.Empty<string>();
-            if (IsConsole || Caller is null)
-            {
-                string message = Localization.Translate(translationKey, L.DEFAULT, out Color color, formatting);
-                message = F.RemoveRichText(message);
-                ConsoleColor clr = F.GetClosestConsoleColor(color);
-                L.Log(message, clr);
-            }
-            else
-            {
-                Caller.SendChat(translationKey, formatting);
             }
         }
     }

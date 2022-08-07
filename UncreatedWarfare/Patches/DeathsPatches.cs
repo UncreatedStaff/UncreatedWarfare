@@ -52,18 +52,18 @@ public static partial class Patches
                                 List<ulong> warned = new List<ulong>();
                                 while (obj != null)
                                 {
-                                    IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
-                                    while (players.MoveNext())
+                                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                                     {
-                                        if (!warned.Contains(players.Current.playerID.steamID.m_SteamID) && players.Current.GetTeam() == team &&
-                                            (new Vector2(players.Current.player.transform.position.x, players.Current.player.transform.position.z) - dest2d).sqrMagnitude <
-                                            UCWarfare.Config.MortarWarningDistance * UCWarfare.Config.MortarWarningDistance)
+                                        UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                                        if (pl.GetTeam() == team && !warned.Contains(pl.Steam64) &&
+                                            (new Vector2(pl.Player.transform.position.x, pl.Player.transform.position.z) - dest2d).sqrMagnitude <
+                                            UCWarfare.Config.MortarWarningDistance * UCWarfare.Config.MortarWarningDistance
+                                            && pl.Player.TryGetPlayerData(out UCPlayerData data))
                                         {
-                                            ToastMessage.QueueMessage(players.Current, new ToastMessage(Localization.Translate("friendly_mortar_incoming", players.Current), EToastMessageSeverity.WARNING));
-                                            warned.Add(players.Current.playerID.steamID.m_SteamID);
+                                            data.QueueMessage(new ToastMessage(T.MortarStrikeWarning.Translate(pl, 20f), EToastMessageSeverity.WARNING), true);
+                                            warned.Add(pl.Steam64);
                                         }
                                     }
-                                    players.Dispose();
                                     yield return new WaitForSeconds(1f);
                                 }
                             }

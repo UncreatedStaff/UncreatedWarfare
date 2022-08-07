@@ -321,7 +321,9 @@ public class Order : MonoBehaviour, ITranslationArgument
         Destroy(this);
     }
 
+    [FormatDisplay("Message")]
     public const string MESSAGE_FORMAT = "m";
+    [FormatDisplay("Type (" + nameof(EOrder) + ")")]
     public const string TYPE_FORMAT = "t";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {

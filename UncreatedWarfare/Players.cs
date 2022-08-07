@@ -95,7 +95,7 @@ public struct ToastMessage
         this.Message3 = null;
         this.Severity = severity;
     }
-    public ToastMessage(string message1, string message2, EToastMessageSeverity severity = EToastMessageSeverity.INFO)
+    public ToastMessage(string message1, string message2, EToastMessageSeverity severity)
     {
         this.time = DateTime.Now.Ticks;
         this.Message1 = message1;
@@ -103,7 +103,7 @@ public struct ToastMessage
         this.Message3 = null;
         this.Severity = severity;
     }
-    public ToastMessage(string message1, string message2, string message3, EToastMessageSeverity severity = EToastMessageSeverity.INFO)
+    public ToastMessage(string message1, string message2, string message3, EToastMessageSeverity severity)
     {
         this.time = DateTime.Now.Ticks;
         this.Message1 = message1;

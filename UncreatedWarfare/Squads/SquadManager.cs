@@ -724,8 +724,9 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
             yield return players.Current.Player.channel.owner.transportConnection;
         players.Dispose();
     }
-
+    [FormatDisplay("Colored Squad Name")]
     public const string COLORED_NAME_FORMAT = "c";
+    [FormatDisplay("Squad Name")]
     public const string NAME_FORMAT = "n";
 
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) =>

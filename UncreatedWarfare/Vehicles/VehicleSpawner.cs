@@ -667,24 +667,24 @@ public class VehicleSpawn
         if (TeamManager.Team1Main.IsInside(LinkedSign.SignDrop.model.transform.position))
         {
             IEnumerator<SteamPlayer> t1Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 1);
-            UpdateSignInternal(t1Main, this);
+            UpdateSignInternal(t1Main, this, 1ul);
         }
         else if (TeamManager.Team2Main.IsInside(LinkedSign.SignDrop.model.transform.position))
         {
             IEnumerator<SteamPlayer> t2Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 2);
-            UpdateSignInternal(t2Main, this);
+            UpdateSignInternal(t2Main, this, 2ul);
         }
         else if (Regions.tryGetCoordinate(LinkedSign.SignDrop.model.transform.position, out byte x, out byte y))
         {
             IEnumerator<SteamPlayer> everyoneElse = F.EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
-            UpdateSignInternal(everyoneElse, this);
+            UpdateSignInternal(everyoneElse, this, 0);
         }
         else
         {
             L.LogWarning($"Vehicle sign not in main bases or any region!");
         }
     }
-    private static void UpdateSignInternal(IEnumerator<SteamPlayer> players, VehicleSpawn spawn)
+    private static void UpdateSignInternal(IEnumerator<SteamPlayer> players, VehicleSpawn spawn, ulong team)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -695,7 +695,7 @@ public class VehicleSpawn
                 return;
             foreach (LanguageSet set in LanguageSet.All(players))
             {
-                string val = Localization.TranslateVBS(spawn, data, set.Language);
+                string val = Localization.TranslateVBS(spawn, data, set.Language, team == 0 ? data.Team : team);
                 NetId id = spawn.LinkedSign.SignInteractable.GetNetId();
                 while (set.MoveNext())
                 {
@@ -725,7 +725,7 @@ public class VehicleSpawn
                 return;
             if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
                 lang = L.DEFAULT;
-            string val = Localization.TranslateVBS(spawn, data, lang);
+            string val = Localization.TranslateVBS(spawn, data, lang, player.GetTeam());
             try
             {
                 UCPlayer? pl = UCPlayer.FromSteamPlayer(player);

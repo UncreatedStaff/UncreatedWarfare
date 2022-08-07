@@ -236,7 +236,7 @@ public static class InvasionUI
                         }
                         CTFUI.ListUI.Names[i].SetText(c, flag.Discovered(team) ?
                             $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" :
-                            $"<color=#{UCWarfare.GetColorHex("undiscovered_flag")}>{Localization.Translate("undiscovered_flag", player)}</color>");
+                            T.UndiscoveredFlag.Translate(player));
                         CTFUI.ListUI.Icons[i].SetText(c, objective);
                     }
                 }

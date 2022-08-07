@@ -26,7 +26,7 @@ public class LangCommand : Command
             int i = -1;
             foreach (KeyValuePair<string, LanguageAliasSet> setData in Data.LanguageAliases)
             {
-                if (!Data.Localization.ContainsKey(setData.Key)) continue; // only show languages with translations
+                if (!T.AllLanguages.Contains(setData.Key)) continue; // only show languages with translations
                 if (++i != 0) sb.Append(", ");
                 sb.Append(setData.Key);
                 LanguageAliasSet aliases = setData.Value;

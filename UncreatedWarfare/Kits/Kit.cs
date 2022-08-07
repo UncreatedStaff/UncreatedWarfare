@@ -565,9 +565,11 @@ public class Kit : ITranslationArgument
         Array.Copy(old, index + 1, Skillsets, index, old.Length - index - 1);
         return true;
     }
-
+    [FormatDisplay("Kit Id")]
     public const string ID_FORMAT = "i";
+    [FormatDisplay("Display Name")]
     public const string DISPLAY_NAME_FORMAT = "d";
+    [FormatDisplay("Class (" + nameof(EClass) + ")")]
     public const string CLASS_FORMAT = "c";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
@@ -1135,27 +1137,98 @@ public enum EClothingType : byte
 [Translatable("Kit Class")]
 public enum EClass : byte
 {
-    NONE, //0
-    UNARMED, //1
+    NONE = 0, //0
+    [Translatable(LanguageAliasSet.RUSSIAN, "Безоружный")]
+    [Translatable(LanguageAliasSet.SPANISH, "Desarmado")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Neinarmat")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Desarmado")]
+    [Translatable(LanguageAliasSet.POLISH, "Nieuzbrojony")]
+    UNARMED = 1,
     [Translatable("Squad Leader")]
-    SQUADLEADER, //2
-    RIFLEMAN, //3
-    MEDIC, //4
-    BREACHER, //5
-    AUTOMATIC_RIFLEMAN, //6
-    GRENADIER, //7
-    MACHINE_GUNNER, //8
+    [Translatable(LanguageAliasSet.RUSSIAN, "Лидер отряда")]
+    [Translatable(LanguageAliasSet.SPANISH, "Líder De Escuadrón")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Lider de Echipa")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Líder de Esquadrão")]
+    [Translatable(LanguageAliasSet.POLISH, "Dowódca Oddziału")]
+    SQUADLEADER = 2,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Стрелок")]
+    [Translatable(LanguageAliasSet.SPANISH, "Fusilero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Puscas")]
+    [Translatable(LanguageAliasSet.POLISH, "Strzelec")]
+    RIFLEMAN = 3,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Медик")]
+    [Translatable(LanguageAliasSet.SPANISH, "Médico")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Medic")]
+    [Translatable(LanguageAliasSet.POLISH, "Medyk")]
+    MEDIC = 4,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Нарушитель")]
+    [Translatable(LanguageAliasSet.SPANISH, "Brechador")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Breacher")]
+    [Translatable(LanguageAliasSet.POLISH, "Wyłamywacz")]
+    BREACHER = 5,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Солдат с автоматом")]
+    [Translatable(LanguageAliasSet.SPANISH, "Fusilero Automático")]
+    [Translatable(LanguageAliasSet.SPANISH, "Puscas Automat")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Fuzileiro Automobilístico")]
+    [Translatable(LanguageAliasSet.POLISH, "Strzelec Automatyczny")]
+    AUTOMATIC_RIFLEMAN = 6,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Гренадёр")]
+    [Translatable(LanguageAliasSet.SPANISH, "Granadero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Grenadier")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Granadeiro")]
+    [Translatable(LanguageAliasSet.POLISH, "Grenadier")]
+    GRENADIER = 7,
+    [Translatable(LanguageAliasSet.ROMANIAN, "Mitralior")]
+    MACHINE_GUNNER = 8,
     [Translatable("LAT")]
-    LAT, //9
+    [Translatable(LanguageAliasSet.RUSSIAN, "Лёгкий противотанк")]
+    [Translatable(LanguageAliasSet.SPANISH, "Anti-Tanque Ligero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Anti-Tanc Usor")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Anti-Tanque Leve")]
+    [Translatable(LanguageAliasSet.POLISH, "Lekka Piechota Przeciwpancerna")]
+    LAT = 9,
     [Translatable("HAT")]
-    HAT, //10
-    MARKSMAN, //11
-    SNIPER, //12
+    HAT = 10,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Марксман")]
+    [Translatable(LanguageAliasSet.SPANISH, "Tirador Designado")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist-Usor")]
+    [Translatable(LanguageAliasSet.POLISH, "Zwiadowca")]
+    MARKSMAN = 11,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Снайпер")]
+    [Translatable(LanguageAliasSet.SPANISH, "Francotirador")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Lunetist")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Franco-Atirador")]
+    [Translatable(LanguageAliasSet.POLISH, "Snajper")]
+    SNIPER = 12,
     [Translatable("Anti-personnel Rifleman")]
-    AP_RIFLEMAN, //13
-    COMBAT_ENGINEER, //14
-    CREWMAN, //15
-    PILOT, //16
+    [Translatable(LanguageAliasSet.RUSSIAN, "Противопехотный")]
+    [Translatable(LanguageAliasSet.SPANISH, "Fusilero Anti-Personal")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Puscas Anti-Personal")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Antipessoal")]
+    [Translatable(LanguageAliasSet.POLISH, "Strzelec Przeciw-Piechotny")]
+    AP_RIFLEMAN = 13,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Инженер")]
+    [Translatable(LanguageAliasSet.SPANISH, "Ingeniero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Inginer")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Engenheiro")]
+    [Translatable(LanguageAliasSet.POLISH, "Inżynier")]
+    COMBAT_ENGINEER = 14,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Механик-водитель")]
+    [Translatable(LanguageAliasSet.SPANISH, "Tripulante")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Echipaj")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Tripulante")]
+    [Translatable(LanguageAliasSet.POLISH, "Załogant")]
+    CREWMAN = 15,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Пилот")]
+    [Translatable(LanguageAliasSet.SPANISH, "Piloto")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Pilot")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Piloto")]
+    [Translatable(LanguageAliasSet.POLISH, "Pilot")]
+    PILOT = 16,
     [Translatable("Special Ops")]
-    SPEC_OPS // 17
+    [Translatable(LanguageAliasSet.SPANISH, "Op. Esp.")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Trupe Speciale")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Op. Esp.")]
+    [Translatable(LanguageAliasSet.POLISH, "Specjalista")]
+    SPEC_OPS = 17
 }

@@ -88,8 +88,13 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         TeamManager.SetupConfig();
 
+        /* LOAD LOCALIZATION ASSETS */
+        L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
+        Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+        Deaths.Localization.Reload();
+        Data.Languages = JSONMethods.LoadLanguagePreferences();
         Data.LanguageAliases = JSONMethods.LoadLangAliases();
-
+        Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
         Translation.ReadTranslations();
 
         /* PATCHES */

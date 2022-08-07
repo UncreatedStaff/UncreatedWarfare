@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -254,6 +255,65 @@ public struct SerializableTransform : IJsonReadWrite
 }
 public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 {
+    public const string ENGLISH                     = "en-us";
+    public const string RUSSIAN                     = "ru-ru";
+    public const string SPANISH                     = "es-es";
+    public const string GERMAN                      = "de-de";
+    public const string ARABIC                      = "ar-sa";
+    public const string FRENCH                      = "fr-fr";
+    public const string POLISH                      = "pl-pl";
+    public const string PORTUGUESE                  = "pt-pt";
+    public const string FILIPINO                    = "fil";
+    public const string NORWEGIAN                   = "nb-no";
+    public const string ROMANIAN                    = "ro-ro";
+    public const string DUTCH                       = "nl-nl";
+    public const string CHINESE_SIMPLIFIED          = "zh-cn";
+    public const string CHINESE_TRADITIONAL         = "zh-tw";
+    public static readonly CultureInfo ENGLISH_C    = new CultureInfo("en-US");
+    public static readonly CultureInfo RUSSIAN_C    = new CultureInfo("ru-RU");
+    public static readonly CultureInfo SPANISH_C    = new CultureInfo("es-ES");
+    public static readonly CultureInfo GERMAN_C     = new CultureInfo("de-DE");
+    public static readonly CultureInfo ARABIC_C     = new CultureInfo("ar-SA");
+    public static readonly CultureInfo FRENCH_C     = new CultureInfo("fr-FR");
+    public static readonly CultureInfo POLISH_C     = new CultureInfo("pl-PL");
+    public static readonly CultureInfo PORTUGUESE_C = new CultureInfo("pt-PT");
+    public static readonly CultureInfo FILIPINO_C   = new CultureInfo("fil-PH");
+    public static readonly CultureInfo NORWEGIAN_C  = new CultureInfo("nb-NO");
+    public static readonly CultureInfo ROMANIAN_C   = new CultureInfo("ro-RO");
+    public static readonly CultureInfo DUTCH_C      = new CultureInfo("nl-NL");
+    public static readonly CultureInfo CHINESE_C    = new CultureInfo("zh-CN");
+
+    public static CultureInfo GetCultureInfo(string? language)
+    {
+        if (language is null)
+            return Data.Locale;
+        if (language.Equals(ENGLISH,    StringComparison.Ordinal))
+            return ENGLISH_C;
+        if (language.Equals(RUSSIAN,    StringComparison.Ordinal))
+            return RUSSIAN_C;
+        if (language.Equals(SPANISH,    StringComparison.Ordinal))
+            return SPANISH_C;
+        if (language.Equals(GERMAN,     StringComparison.Ordinal))
+            return GERMAN_C;
+        if (language.Equals(ARABIC,     StringComparison.Ordinal))
+            return ARABIC_C;
+        if (language.Equals(FRENCH,     StringComparison.Ordinal))
+            return FRENCH_C;
+        if (language.Equals(POLISH,     StringComparison.Ordinal))
+            return POLISH_C;
+        if (language.Equals(PORTUGUESE, StringComparison.Ordinal))
+            return PORTUGUESE_C;
+        if (language.Equals(NORWEGIAN,  StringComparison.Ordinal))
+            return NORWEGIAN_C;
+        if (language.Equals(ROMANIAN,   StringComparison.Ordinal))
+            return ROMANIAN_C;
+        if (language.Equals(DUTCH,      StringComparison.Ordinal))
+            return DUTCH_C;
+        if (language.Equals(CHINESE_SIMPLIFIED,  StringComparison.Ordinal) || 
+            language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
+            return CHINESE_C;
+        return Data.Locale;
+    }
     public string key;
     public string display_name;
     public string[] values;
@@ -293,7 +353,9 @@ public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
         }
     }
 
+    [FormatDisplay("Display Name")]
     public const string DISPLAY_NAME_FORMAT = "d";
+    [FormatDisplay("Key Code")]
     public const string KEY_FORMAT = "k";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {

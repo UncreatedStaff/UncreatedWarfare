@@ -146,15 +146,15 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
         data.SaveMetaData(vehicle);
         Singleton.AddObjectToSave(data);
     }
-    public new static ESetFieldResult SetProperty(VehicleData data, string property, string value)
+    public new static ESetFieldResult SetProperty(VehicleData data, ref string property, string value)
     {
         Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        return (Singleton as JSONSaver<VehicleData>).SetProperty(data, property, value);
+        return (Singleton as JSONSaver<VehicleData>).SetProperty(data, ref property, value);
     }
-    public static ESetFieldResult SetProperty(Guid vehicleGuid, string property, string value)
+    public static ESetFieldResult SetProperty(Guid vehicleGuid, ref string property, string value)
     {
         Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        return Singleton.SetProperty(x => x.VehicleID == vehicleGuid, property, value);
+        return Singleton.SetProperty(x => x.VehicleID == vehicleGuid, ref property, value);
     }
     public static void RemoveRequestableVehicle(Guid vehicleID)
     {
@@ -490,14 +490,14 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 #endif
         if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
         {
-            e.Player.SendChat(T.VehicleStaging);
+            e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
             e.Break();
             return;
         }
         if (!e.Vehicle.asset.canBeLocked) return;
         if (!e.Player.OnDuty() && Data.Gamemode.State == EState.STAGING && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || e.Player.GetTeam() == atk.AttackingTeam))
         {
-            e.Player.SendChat(T.VehicleStaging);
+            e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
             e.Break();
             return;
         }
@@ -1238,8 +1238,9 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         }
         return string.Empty;
     }
-
+    [FormatDisplay("Colored Vehicle Name")]
     public const string COLORED_NAME = "cn";
+    [FormatDisplay("Vehicle Name")]
     public const string NAME = "n";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
@@ -1437,22 +1438,65 @@ public enum EVehicleType
 {
     [Translatable("Unknown")]
     NONE,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Хамви")]
+    [Translatable(LanguageAliasSet.SPANISH, "Humvee")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Humvee")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Humvee")]
+    [Translatable(LanguageAliasSet.POLISH, "Humvee")]
     HUMVEE,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Транспорт")]
+    [Translatable(LanguageAliasSet.SPANISH, "Transporte")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Transport")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Transporte")]
+    [Translatable(LanguageAliasSet.POLISH, "Humvee")]
     [Translatable("Transport Truck")]
     TRANSPORT,
     SCOUT_CAR,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Логистический")]
+    [Translatable(LanguageAliasSet.SPANISH, "Logistico")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Camion")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Logística")]
+    [Translatable(LanguageAliasSet.POLISH, "Transport Logistyczny")]
     [Translatable("Logistics Truck")]
     LOGISTICS,
+    [Translatable(LanguageAliasSet.RUSSIAN, "БТР")]
+    [Translatable(LanguageAliasSet.SPANISH, "APC")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "TAB")]
+    [Translatable(LanguageAliasSet.POLISH, "APC")]
     [Translatable("APC")]
     APC,
+    [Translatable(LanguageAliasSet.RUSSIAN, "БМП")]
+    [Translatable(LanguageAliasSet.SPANISH, "IFV")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "MLI")]
+    [Translatable(LanguageAliasSet.POLISH, "BWP")]
     [Translatable("IFV")]
     IFV,
+    [Translatable(LanguageAliasSet.RUSSIAN, "ТАНК")]
+    [Translatable(LanguageAliasSet.SPANISH, "Tanque")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Tanc")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Tanque")]
+    [Translatable(LanguageAliasSet.POLISH, "Czołg")]
     [Translatable("Tank")]
     MBT,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
+    [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
+    [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
     [Translatable("Transport Heli")]
     HELI_TRANSPORT,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
+    [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
+    [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
     [Translatable("Attack Heli")]
     HELI_ATTACK,
     JET,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
+    [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
+    [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
     EMPLACEMENT,
 }

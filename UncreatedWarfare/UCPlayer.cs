@@ -295,8 +295,6 @@ public class UCPlayer : IPlayer
     public ushort LastPingID { get; internal set; }
     public int SuppliesUnloaded;
     public SteamPlayer SteamPlayer => Player.channel.owner;
-    [Obsolete("Use the new generics system instead.")]
-    public void Message(string text, params string[] formatting) => Player.SendChat(text, formatting);
     public bool IsTeam1() => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
     public bool IsTeam2() => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
 
@@ -524,13 +522,22 @@ public class UCPlayer : IPlayer
         isTalking = true;
     }
     public int CompareTo(object obj) => obj is UCPlayer player ? Steam64.CompareTo(player.Steam64) : -1;
+
+    [FormatDisplay(typeof(IPlayer), "Character Name")]
     public const string CHARACTER_NAME_FORMAT = "cn";
+    [FormatDisplay(typeof(IPlayer), "Nick Name")]
     public const string NICK_NAME_FORMAT = "nn";
+    [FormatDisplay(typeof(IPlayer), "Player Name")]
     public const string PLAYER_NAME_FORMAT = "pn";
+    [FormatDisplay(typeof(IPlayer), "Steam64 ID")]
     public const string STEAM_64_FORMAT = "64";
+    [FormatDisplay(typeof(IPlayer), "Colored Character Name")]
     public const string COLOR_CHARACTER_NAME_FORMAT = "ccn";
+    [FormatDisplay(typeof(IPlayer), "Colored Nick Name")]
     public const string COLOR_NICK_NAME_FORMAT = "cnn";
+    [FormatDisplay(typeof(IPlayer), "Colored Player Name")]
     public const string COLOR_PLAYER_NAME_FORMAT = "cpn";
+    [FormatDisplay(typeof(IPlayer), "Colored Steam64 ID")]
     public const string COLOR_STEAM_64_FORMAT = "c64";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {

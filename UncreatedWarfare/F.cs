@@ -896,6 +896,8 @@ public static class F
         return false;
     }
     public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
+
+    public static string ColorizeTMPro(this string inner, string colorhex, bool endTag = true) => endTag ? $"<#{colorhex}>{inner}</color>" : $"<#{colorhex}>{inner}";
     public static string ColorizeName(string innerText, ulong team)
     {
         if (!Data.Is<ITeams>(out _)) return innerText;

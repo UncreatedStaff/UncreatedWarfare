@@ -129,6 +129,8 @@ public class ReloadCommand : Command
     {
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
         Translation.OnColorsReloaded();
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            UCWarfare.I.UpdateLangs(PlayerManager.OnlinePlayers[i]);
     }
     public static void ReloadPermissions()
     {
@@ -172,7 +174,6 @@ public class ReloadCommand : Command
             Data.LanguageAliases = JSONMethods.LoadLangAliases();
             Data.Languages = JSONMethods.LoadLanguagePreferences();
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            Data.Localization = JSONMethods.LoadTranslations();
             Translation.ReadTranslations();
             Deaths.Localization.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);

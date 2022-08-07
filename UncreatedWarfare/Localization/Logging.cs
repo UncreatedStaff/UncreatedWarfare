@@ -19,7 +19,7 @@ namespace Uncreated.Warfare;
 public static class L
 {
     /// <summary>Default Language (previously <see cref="JSONMethods"/>.DEFAULT_LANGUAGE)</summary>
-    public const string DEFAULT = "en-us";
+    public const string DEFAULT = LanguageAliasSet.ENGLISH;
     //public const int MAX_LOGS = 1000;
     //internal static List<LogMessage> Logs;
     private static bool _init = false;

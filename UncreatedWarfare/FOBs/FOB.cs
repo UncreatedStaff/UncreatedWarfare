@@ -716,9 +716,13 @@ public class FOB : IFOB, IDeployable
         _ => 0
     };
 
+    [FormatDisplay(typeof(IDeployable), "Colored Name")]
     public const string COLORED_NAME_FORMAT = "cn";
+    [FormatDisplay(typeof(IDeployable), "Closest Location")]
     public const string CLOSEST_LOCATION_FORMAT = "l";
+    [FormatDisplay(typeof(IDeployable), "Grid Location")]
     public const string GRID_LOCATION_FORMAT = "g";
+    [FormatDisplay(typeof(IDeployable), "Name")]
     public const string NAME_FORMAT = "n";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {

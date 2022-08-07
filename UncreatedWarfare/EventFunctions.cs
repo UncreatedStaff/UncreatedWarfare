@@ -130,6 +130,7 @@ public static class EventFunctions
         const int RAY_MASK = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE | RayMasks.LARGE |
                              RayMasks.MEDIUM | RayMasks.GROUND | RayMasks.GROUND2;
         const int RAY_MASK_BACKUP = RayMasks.VEHICLE | RayMasks.PLAYER | RayMasks.BARRICADE;
+        UCPlayer? pl;
         if (gun.isAiming && gun.equippedGunAsset.GUID == SpottedComponent.LaserDesignatorGUID)
         {
             float grndDist = float.NaN;
@@ -143,7 +144,8 @@ public static class EventFunctions
                         grndDist = (projectile.transform.position - hit.transform.position).sqrMagnitude;
                     else
                     {
-                        SpottedComponent.MarkTarget(hit.transform, gun.player);
+                        if ((pl = UCPlayer.FromPlayer(gun.player)) is not null)
+                            SpottedComponent.MarkTarget(hit.transform, pl);
                         return;
                     }
                 }
@@ -163,7 +165,8 @@ public static class EventFunctions
             if (hits.Count == 0) return;
             if (hits.Count == 1)
             {
-                SpottedComponent.MarkTarget(hits[0].transform, gun.player);
+                if ((pl = UCPlayer.FromPlayer(gun.player)) is not null)
+                    SpottedComponent.MarkTarget(hits[0].transform, pl);
                 return;
             }
             hits.Sort((a, b) =>
@@ -175,7 +178,8 @@ public static class EventFunctions
                 return (ELayerMask)a.transform.gameObject.layer is ELayerMask.PLAYER ? -1 : 1;
             });
 
-            SpottedComponent.MarkTarget(hits[0].transform, gun.player);
+            if ((pl = UCPlayer.FromPlayer(gun.player)) is not null)
+                SpottedComponent.MarkTarget(hits[0].transform, pl);
             return;
         }
 
