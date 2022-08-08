@@ -32,38 +32,54 @@ public class BuyCommand : Command
         if (ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
             if (!RequestSigns.SignExists(sign, out RequestSign requestsign))
-                throw ctx.Reply("request_kit_e_kitnoexist");
+                throw ctx.Reply(T.RequestKitNotRegistered);
             if (requestsign.kit_name.StartsWith("loadout_"))
-                throw ctx.Reply("request_kit_e_notbuyablecredits");
+                throw ctx.Reply(T.RequestNotBuyable);
             if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
-                throw ctx.Reply("request_kit_e_kitnoexist");
+                throw ctx.Reply(T.KitNotFound, requestsign.kit_name);
             if (ctx.Caller.Rank.Level < kit.UnlockLevel)
-                throw ctx.Reply("request_kit_e_wronglevel", RankData.GetRankName(kit.UnlockLevel));
+                throw ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(kit.UnlockLevel));
             if (kit.IsPremium)
-                throw ctx.Reply("request_kit_e_notbuyablecredits");
+                throw ctx.Reply(T.RequestNotBuyable);
             if (kit.CreditCost == 0 || KitManager.HasAccessFast(kit, ctx.Caller))
-                throw ctx.Reply("request_kit_e_alreadyhaskit");
+                throw ctx.Reply(T.RequestKitAlreadyOwned);
             if (ctx.Caller.CachedCredits < kit.CreditCost)
-                throw ctx.Reply("request_kit_e_notenoughcredits", (kit.CreditCost - ctx.Caller.CachedCredits).ToString());
+                throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
 
             Task.Run(async () =>
             {
                 if (!ctx.Caller.HasDownloadedKits)
                     await ctx.Caller.DownloadKits();
 
+                await ctx.Caller.PurchaseSync.WaitAsync();
+                try
+                {
+                    await Points.UpdatePointsAsync(ctx.Caller);
+                    if (ctx.Caller.CachedCredits < kit.CreditCost)
+                    {
+                        ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                        return;
+                    }
+                    await Points.AwardCreditsAsync(ctx.Caller, -kit.CreditCost, isPurchase: true);
+                }
+                finally
+                {
+                    ctx.Caller.PurchaseSync.Release();
+                }
+
                 await KitManager.GiveAccess(kit, ctx.Caller, EKitAccessType.CREDITS);
 
                 await UCWarfare.ToUpdate();
 
                 KitManager.UpdateSigns(kit, ctx.Caller);
-                EffectManager.sendEffect(81, 7f, (requestsign.barricadetransform?.position).GetValueOrDefault());
-                ctx.Reply("request_kit_boughtcredits", kit.CreditCost.ToString());
-                Points.AwardCredits(ctx.Caller, -kit.CreditCost, isPurchase: true);
+                if (requestsign != null && requestsign.barricadetransform != null)
+                    EffectManager.sendEffect(81, 7f, requestsign.barricadetransform.position);
+                ctx.Reply(T.RequestKitBought, kit.CreditCost);
                 ctx.LogAction(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS");
-                L.Log(F.GetPlayerOriginalNames(ctx.Caller).PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Name);
+                L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Name);
             });
             ctx.Defer();
         }
-        else throw ctx.Reply("request_not_looking");
+        else throw ctx.Reply(T.RequestNoTarget);
     }
 }

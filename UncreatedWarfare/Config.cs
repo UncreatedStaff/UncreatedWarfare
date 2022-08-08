@@ -80,38 +80,44 @@ public class SystemConfigData : ConfigData
     public bool BlockLandmineFriendlyFire;
     [JsonPropertyName("disableDailyQuests")]
     public bool DisableDailyQuests;
-
+    [JsonPropertyName("playerJoinLeaveMessages")]
+    public bool EnablePlayerJoinLeaveMessages;
+    [JsonPropertyName("playerJoinLeaveTeamMessages")]
+    public bool EnablePlayerJoinLeaveTeamMessages;
+    
     public override void SetDefaults()
     {
-        this.ModerationSettings = new ModerationConfig();
-        this.TCPSettings = new TCPConfig();
-        this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
-        this.Debug = true;
-        this.AllowCosmetics = false;
-        this.ModifySkillLevels = true;
-        this.AllowBatteryStealing = false;
-        this.DiscordInviteCode = "ucn"; // https://discord.gg/code
-        this.InjuredLifeTimeSeconds = 90f;
-        this.InjuredDamageMultiplier = 0.1f;
-        this.EnableMortarWarning = true;
-        this.MortarWarningDistance = 75f;
-        this.StatsInterval = 1;
-        this.AfkCheckInterval = 450f;
-        this.AMCDamageMultiplier = 0.25f;
-        this.OverrideKitRequirements = false;
-        this.MaxTimeInStorages = 15f;
-        this.ClearItemsOnAmmoBoxUse = true;
-        this.RelayMicsDuringEndScreen = true;
-        this.EnableSquads = true;
-        this.LoadoutCost = 10;
-        this.MaxVehicleAbandonmentDistance = 300f;
-        this.MaxVehicleHeightToLeave = 50f;
-        this.GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0";
-        this.DisableNameFilter = false;
-        this.MinAlphanumericStringLength = 5;
-        this.EnableReporter = true;
-        this.BlockLandmineFriendlyFire = true;
-        this.DisableDailyQuests = false;
+        ModerationSettings = new ModerationConfig();
+        TCPSettings = new TCPConfig();
+        SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
+        Debug = true;
+        AllowCosmetics = false;
+        ModifySkillLevels = true;
+        AllowBatteryStealing = false;
+        DiscordInviteCode = "ucn"; // https://discord.gg/code
+        InjuredLifeTimeSeconds = 90f;
+        InjuredDamageMultiplier = 0.1f;
+        EnableMortarWarning = true;
+        MortarWarningDistance = 75f;
+        StatsInterval = 1;
+        AfkCheckInterval = 450f;
+        AMCDamageMultiplier = 0.25f;
+        OverrideKitRequirements = false;
+        MaxTimeInStorages = 15f;
+        ClearItemsOnAmmoBoxUse = true;
+        RelayMicsDuringEndScreen = true;
+        EnableSquads = true;
+        LoadoutCost = 10;
+        MaxVehicleAbandonmentDistance = 300f;
+        MaxVehicleHeightToLeave = 50f;
+        GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0, Conquest:1.0";
+        DisableNameFilter = false;
+        MinAlphanumericStringLength = 5;
+        EnableReporter = true;
+        BlockLandmineFriendlyFire = true;
+        DisableDailyQuests = false;
+        EnablePlayerJoinLeaveMessages = false;
+        EnablePlayerJoinLeaveTeamMessages = false;
     }
     public class ModerationConfig
     {

@@ -1,11 +1,9 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Networking;
@@ -20,6 +18,7 @@ internal class ZonePlayerComponent : MonoBehaviour
     private UCPlayer player = null!;
     private static EffectAsset? _edit = null!;
     private const short EDIT_KEY = 25432;
+    private const string ZONE_EDIT_USAGE = "/zone edit <existing|maxheight|minheight|finalize|cancel|use case|addpoint|delpoint|clearpoints|setpoint|orderpoint|radius|sizex|sizez|center|name|short name|type|> [value]";
     private ZoneBuilder? _currentBuilder;
     private bool _currentBuilderIsExisting = false;
     private List<Vector2>? _currentPoints;
@@ -97,25 +96,24 @@ internal class ZonePlayerComponent : MonoBehaviour
         ThreadUtil.assertIsGameThread();
         if (!ctx.HasArgs(1))
         {
-            player.SendChat("util_zone_syntax");
-            return;
+            throw ctx.SendCorrectUsage("/zone util <location>");
         }
         if (ctx.MatchParameter(0, "location", "position", "loc", "pos"))
         {
-            player.SendChat("util_zone_location",
-                player.Player.transform.position.x.ToString("F2", Data.Locale),
-                player.Player.transform.position.y.ToString("F2", Data.Locale),
-                player.Player.transform.position.z.ToString("F2", Data.Locale),
-                player.Player.transform.rotation.eulerAngles.y.ToString("F1", Data.Locale));
-            return;
+            Vector3 p = player.Player.transform.position;
+            throw ctx.Reply(T.ZoneUtilLocation,
+                p.x,
+                p.y,
+                p.z,
+                player.Player.transform.rotation.eulerAngles.y);
         }
     }
 
     internal void DeleteCommand(CommandInteraction ctx)
     {
         ThreadUtil.assertIsGameThread();
-        string zoneName;
-        if (ctx.HasArgs(1))
+        Zone zone;
+        if (!ctx.HasArgs(1))
         {
             Vector3 pos = player.Position;
             if (pos == default) return;
@@ -129,11 +127,11 @@ internal class ZonePlayerComponent : MonoBehaviour
             }
             if (t.Count == 1)
             {
-                zoneName = Data.ZoneProvider.Zones[t[0]].Name;
+                zone = Data.ZoneProvider.Zones[t[0]];
             }
             else
             {
-                ctx.Reply("delete_zone_badvalue_self");
+                ctx.Reply(T.ZoneDeleteZoneNotInZone);
                 return;
             }
         }
@@ -141,60 +139,59 @@ internal class ZonePlayerComponent : MonoBehaviour
         {
             if (!ctx.TryGetRange(0, out string name))
             {
-                ctx.Reply("delete_zone_badvalue", "null");
+                ctx.Reply(T.ZoneDeleteZoneNotFound, Translation.Null(T.ZoneDeleteZoneNotFound.Flags));
                 return;
             }
-            zoneName = null!;
+            zone = null!;
             if (int.TryParse(name, System.Globalization.NumberStyles.Any, Data.Locale, out int id) && id > -1)
             {
                 for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
                 {
                     if (Data.ZoneProvider.Zones[i].Id == id)
                     {
-                        zoneName = Data.ZoneProvider.Zones[i].Name;
+                        zone = Data.ZoneProvider.Zones[i];
                         break;
                     }
                 }
             }
-            if (zoneName is null)
+            if (zone is null)
             {
                 for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
                 {
                     if (Data.ZoneProvider.Zones[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
                     {
-                        zoneName = Data.ZoneProvider.Zones[i].Name;
+                        zone = Data.ZoneProvider.Zones[i];
                         break;
                     }
                 }
-                if (zoneName is null)
+                if (zone is null)
                 {
                     for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
                     {
                         if (Data.ZoneProvider.Zones[i].Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
                         {
-                            zoneName = Data.ZoneProvider.Zones[i].Name;
+                            zone = Data.ZoneProvider.Zones[i];
                             break;
                         }
                     }
                 }
             }
-            if (zoneName is null)
+            if (zone is null)
             {
-                ctx.Reply("delete_zone_badvalue", name);
+                ctx.Reply(T.ZoneDeleteZoneNotFound, name);
                 return;
             }
         }
-        ctx.Reply("delete_zone_confirm", zoneName);
+        ctx.Reply(T.ZoneDeleteZoneConfirm, zone);
         Task.Run(async () =>
         {
-            bool didConfirm = await CommandWaitTask.WaitForCommand(player, "confirm", 10000);
-            if (didConfirm)
+            if (await CommandWaitTask.WaitForCommand(player, "confirm", 10000))
             {
                 await UCWarfare.ToUpdate();
 
                 for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
                 {
-                    if (Data.ZoneProvider.Zones[i].Name.Equals(zoneName, StringComparison.Ordinal))
+                    if (Data.ZoneProvider.Zones[i].Name.Equals(zone.Name, StringComparison.Ordinal))
                     {
                         int id = Data.ZoneProvider.Zones[i].Id;
                         Data.ZoneProvider.Zones.RemoveAt(i);
@@ -205,20 +202,21 @@ internal class ZonePlayerComponent : MonoBehaviour
                             if (b._currentBuilder is not null && b._currentBuilderIsExisting && b._currentBuilder!.Id == id)
                                 b.OnDeleted();
                         }
-                        ctx.Reply("delete_zone_success", zoneName);
+                        ctx.Reply(T.ZoneDeleteZoneSuccess, zone);
                         return;
                     }
                 }
-                ctx.Reply("delete_zone_badvalue", zoneName);
-                return;
+                ctx.Reply(T.ZoneDeleteZoneNotFound, zone.Name);
             }
+            else
+                ctx.Reply(T.ZoneDeleteDidNotConfirm, zone);
         });
         ctx.Defer();
     }
 
     private void OnDeleted()
     {
-        player.SendChat("delete_zone_deleted_working_zone");
+        player.SendChat(T.ZoneDeleteEditingZoneDeleted);
         _currentBuilderIsExisting = false;
 
         int nextId = Data.ZoneProvider.NextFreeID();
@@ -242,10 +240,8 @@ internal class ZonePlayerComponent : MonoBehaviour
     {
         ThreadUtil.assertIsGameThread();
         if (ctx.HasArgs(2))
-        {
-            ctx.Reply("create_zone_syntax");
-            return;
-        }
+            throw ctx.SendCorrectUsage("/zone create <polygon|rectange|circle> <name>");
+
         EZoneType type = EZoneType.INVALID;
         if (ctx.MatchParameter(0, "rect", "rectangle", "square", "sqr"))
         {
@@ -260,20 +256,14 @@ internal class ZonePlayerComponent : MonoBehaviour
             type = EZoneType.POLYGON;
         }
         if (type == EZoneType.INVALID)
-        {
-            ctx.Reply("create_zone_syntax");
-            return;
-        }
+            throw ctx.SendCorrectUsage("Invalid Type - /zone create <polygon|rectange|circle> <name>");
 
         string name = ctx.GetRange(1)!;
+
         for (int i = 0; i < Data.ZoneProvider.Zones.Count; ++i)
-        {
             if (Data.ZoneProvider.Zones[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-            {
-                player.SendChat("create_zone_name_taken", Data.ZoneProvider.Zones[i].Name);
-                return;
-            }
-        }
+                throw ctx.Reply(T.ZoneCreateNameTaken, Data.ZoneProvider.Zones[i].Name);
+        
         for (int i = _builders.Count - 1; i >= 0; --i)
         {
             ZoneBuilder? zb = _builders[i]._currentBuilder;
@@ -283,10 +273,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 continue;
             }
             if (zb.Name != null && zb.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-            {
-                player.SendChat("create_zone_name_taken_2", zb.Name, _builders[i].player.Player.channel.owner.playerID.characterName);
-                return;
-            }
+                throw ctx.Reply(T.ZoneCreateNameTakenEditing, zb.Name, _builders[i].player);
         }
 
         int nextId = Data.ZoneProvider.NextFreeID();
@@ -338,9 +325,9 @@ internal class ZonePlayerComponent : MonoBehaviour
             player.HasUIHidden = true;
             EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Name", name);
             EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Type", text);
-            EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Header", Localization.Translate("edit_zone_ui_suggested_commands", player.Steam64));
+            EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Header", T.ZoneEditSuggestedCommandsHeader.Translate(player));
         }
-        ctx.Reply("create_zone_success", name, text);
+        ctx.Reply(T.ZoneCreated, name, type);
         CheckType(type, true, @implicit: false);
         RefreshPreview();
     }
@@ -432,20 +419,17 @@ internal class ZonePlayerComponent : MonoBehaviour
     {
         ThreadUtil.assertIsGameThread();
         if (!ctx.HasArgs(1))
-        {
-            ctx.Reply("edit_zone_syntax");
-            return;
-        }
+            throw ctx.SendCorrectUsage(ZONE_EDIT_USAGE);
+
         Vector3 pos = player.Position;
         if (pos == default)
             return;
+        ctx.Defer();
         if (ctx.MatchParameter(0, "existing", "open", "current"))
         {
             if (_currentBuilder != null)
-            {
-                ctx.Reply("edit_zone_existing_in_progress");
-                return;
-            }
+                throw ctx.Reply(T.ZoneEditExistingInProgress);
+
             Zone? zone = null;
             if (ctx.HasArgsExact(1))
             {
@@ -462,10 +446,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     zone = Data.ZoneProvider.Zones[t[0]];
                 }
                 else
-                {
-                    ctx.Reply("edit_zone_existing_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditExistingInvalid);
             }
             else
             {
@@ -504,11 +485,10 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                 }
             }
+
             if (zone == null)
-            {
-                ctx.Reply("edit_zone_existing_badvalue");
-                return;
-            }
+                throw ctx.Reply(T.ZoneEditExistingInvalid);
+
             _currentBuilderIsExisting = true;
             _currentBuilder = zone.Builder;
             _currentPoints?.Clear();
@@ -531,27 +511,24 @@ internal class ZonePlayerComponent : MonoBehaviour
                 player.HasUIHidden = true;
                 EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Name", _currentBuilder.Name);
                 EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Type", text);
-                EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Header", Localization.Translate("edit_zone_ui_suggested_commands", player!.Steam64));
+                EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Header", T.ZoneEditSuggestedCommandsHeader.Translate(player));
             }
-            ctx.Reply("edit_zone_existing_success", _currentBuilder.Name!, text);
+            ctx.Reply(T.ZoneEditExistingSuccess, _currentBuilder.Name!, _currentBuilder.ZoneType);
             CheckType(_currentBuilder.ZoneType, true, @implicit: false);
             RefreshPreview();
         }
         else
         {
             if (_currentBuilder == null)
-            {
-                ctx.Reply("edit_zone_not_started");
-                return;
-            }
-            else if (ctx.MatchParameter(0, "maxheight", "maxy", "max-y"))
+                throw ctx.Reply(T.ZoneEditNotStarted);
+            if (ctx.MatchParameter(0, "maxheight", "maxy", "max-y"))
             {
                 float mh;
                 if (ctx.HasArgsExact(2))
                 {
                     if (!ctx.TryGet(1, out mh))
                     {
-                        ctx.Reply("edit_zone_maxheight_badvalue");
+                        ctx.Reply(T.ZoneEditMaxHeightInvalid);
                         return;
                     }
                 }
@@ -562,12 +539,29 @@ internal class ZonePlayerComponent : MonoBehaviour
                 AddTransaction(new SetFloatTransaction(_currentBuilder.MaxHeight, mh, SetFloatTransaction.EFloatType.MAX_Y));
                 SetMaxHeight(mh);
             }
+            else if (ctx.MatchParameter(0, "minheight", "miny", "min-y"))
+            {
+                float mh;
+                if (ctx.HasArgsExact(2))
+                {
+                    if (!ctx.TryGet(1, out mh))
+                    {
+                        ctx.Reply(T.ZoneEditMinHeightInvalid);
+                        return;
+                    }
+                }
+                else
+                {
+                    mh = pos.y;
+                }
+                AddTransaction(new SetFloatTransaction(_currentBuilder.MinHeight, mh, SetFloatTransaction.EFloatType.MIN_Y));
+                SetMinHeight(mh);
+            }
             else if (ctx.MatchParameter(0, "type", "shape", "mode"))
             {
                 if (ctx.HasArgs(2))
                 {
                     EZoneType type = EZoneType.INVALID;
-                    string v = ctx.Get(1)!;
                     if (ctx.MatchParameter(1, "rect", "rectangle", "square"))
                     {
                         type = EZoneType.RECTANGLE;
@@ -588,40 +582,22 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     if (type == EZoneType.INVALID)
                     {
-                        ctx.Reply("edit_zone_type_badvalue");
+                        ctx.Reply(T.ZoneEditTypeInvlaid);
                         return;
                     }
                     if (type == _currentBuilder.ZoneType)
                     {
-                        ctx.Reply("edit_zone_type_already_set", type.ToString().ToLower());
+                        ctx.Reply(T.ZoneEditTypeAlreadySet, type);
                         return;
                     }
                     CheckType(type, @implicit: false, transact: true);
-                    ctx.Reply("edit_zone_type_success", type.ToString().ToLower());
+                    ctx.Reply(T.ZoneEditTypeSuccess, type);
                 }
                 else
                 {
-                    ctx.Reply("edit_zone_type_badvalue");
+                    ctx.Reply(T.ZoneEditTypeInvlaid);
                     return;
                 }
-            }
-            else if (ctx.MatchParameter(0, "minheight", "miny", "min-y"))
-            {
-                float mh;
-                if (ctx.HasArgsExact(2))
-                {
-                    if (!ctx.TryGet(1, out mh))
-                    {
-                        ctx.Reply("edit_zone_minheight_badvalue");
-                        return;
-                    }
-                }
-                else
-                {
-                    mh = pos.y;
-                }
-                AddTransaction(new SetFloatTransaction(_currentBuilder.MinHeight, mh, SetFloatTransaction.EFloatType.MIN_Y));
-                SetMinHeight(mh);
             }
             else if (ctx.MatchParameter(0, "finalize", "complete", "confirm", "save"))
             {
@@ -629,7 +605,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 {
                     if (_currentBuilder.UseCase == EZoneUseCase.OTHER || _currentBuilder.UseCase > EZoneUseCase.LOBBY)
                     {
-                        ctx.Reply("edit_zone_finalize_use_case");
+                        ctx.Reply(T.ZoneEditFinalizeUseCaseUnset);
                         return;
                     }
                     int replIndex = -1;
@@ -639,7 +615,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         {
                             if (!_currentBuilderIsExisting)
                             {
-                                ctx.Reply("edit_zone_finalize_exists", _currentBuilder.Name!);
+                                ctx.Reply(T.ZoneEditFinalizeExists);
                                 return;
                             }
                             else
@@ -658,12 +634,12 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     catch (ZoneAPIException ex1)
                     {
-                        ctx.Reply("edit_zone_finalize_failure", ex1.Message);
+                        ctx.Reply(T.ZoneEditFinalizeFailure, ex1.Message);
                         return;
                     }
                     catch (ZoneReadException ex2)
                     {
-                        ctx.Reply("edit_zone_finalize_failure", ex2.Message);
+                        ctx.Reply(T.ZoneEditFinalizeFailure, ex2.Message);
                         return;
                     }
                     Zone zone = mdl.GetZone();
@@ -681,7 +657,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     Data.ZoneProvider.Save();
                     _builders.Remove(this);
-                    ctx.Reply(@new ? "edit_zone_finalize_success" : "edit_zone_finalize_success_overwrite", _currentBuilder.Name!);
+                    ctx.Reply(@new ? T.ZoneEditFinalizeSuccess : T.ZoneEditFinalizeOverwrote, zone);
                     _currentPoints = null;
                     _currentBuilder = null;
                     UndoBuffer.Clear();
@@ -695,12 +671,12 @@ internal class ZonePlayerComponent : MonoBehaviour
                 }
                 catch (Exception ex)
                 {
-                    ctx.Reply("edit_zone_finalize_error", ex.Message);
+                    ctx.Reply(T.ZoneEditFinalizeFailure, ex.Message);
                 }
             }
             else if (ctx.MatchParameter(0, "cancel", "discard", "exit"))
             {
-                ctx.Reply("edit_zone_cancel_success", _currentBuilder.Name ?? "null");
+                ctx.Reply(T.ZoneEditCancelled, _currentBuilder.Name ?? Translation.Null(T.ZoneEditCancelled.Flags));
                 _currentBuilder = null;
                 _currentPoints = null;
                 UndoBuffer.Clear();
@@ -718,36 +694,27 @@ internal class ZonePlayerComponent : MonoBehaviour
                 float z;
                 int index = _currentPoints is null ? 0 : _currentPoints.Count;
                 if ((ctx.HasArgsExact(2) || ctx.HasArgsExact(4)) && !(ctx.TryGetRef(1, ref index) && index > -1)) // <insert index> [<x> <z>]
-                {
-                    ctx.Reply("edit_zone_addpoint_badvalues");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditAddPointInvalid);
+
                 if (ctx.HasArgsExact(3)) // <x> <z>
                 {
                     if (!ctx.TryGet(2, out z) || !ctx.TryGet(1, out x))
-                    {
-                        ctx.Reply("edit_zone_addpoint_badvalues");
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditAddPointInvalid);
                 }
                 else if (ctx.HasArgsExact(4)) // <insert index> <x> <z>
                 {
                     if (!ctx.TryGet(3, out z) || !ctx.TryGet(2, out x))
-                    {
-                        ctx.Reply("edit_zone_addpoint_badvalues");
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditAddPointInvalid);
                 }
                 else
                 {
                     x = pos.x;
                     z = pos.z;
                 }
+
                 if (index < 0 || (_currentPoints is not null && _currentPoints.Count < index))
-                {
-                    ctx.Reply("edit_zone_addpoint_badvalues");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditAddPointInvalid);
+
                 Vector2 v = new Vector2(x, z);
                 if (_currentPoints != null)
                     _currentPoints.Insert(index, v);
@@ -763,7 +730,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + (_currentPoints.Count - 1), true);
                     RefreshPreview();
                 }
-                ctx.Reply("edit_zone_addpoint_success", _currentPoints.Count.ToString(Data.Locale), FromV2(v));
+                ctx.Reply(T.ZoneEditAddPointSuccess, _currentPoints.Count, v);
                 AddTransaction(new AddDelPointTransaction(index, v, false));
             }
             else if (ctx.MatchParameter(0, "delpoint", "delpt", "deletepoint", "removepoint", "deletept", "removept"))
@@ -774,20 +741,15 @@ internal class ZonePlayerComponent : MonoBehaviour
                 if (ctx.HasArgsExact(3))
                 {
                     if (!ctx.TryGet(3, out z) || !ctx.TryGet(2, out x))
-                    {
-                        ctx.Reply("edit_zone_delpoint_badvalues");
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditDeletePointInvalid);
                 }
                 else if (ctx.HasArgsExact(2))
                 {
                     if (ctx.TryGet(1, out int index))
                     {
                         if (_currentPoints == null || _currentPoints.Count < index || index < 0)
-                        {
-                            ctx.Reply("edit_zone_point_number_not_point", index.ToString(Data.Locale));
-                            return;
-                        }
+                            throw ctx.Reply(T.ZoneEditPointNotDefined, index);
+
                         --index;
                         Vector2 pt = _currentPoints[index];
                         _currentPoints.RemoveAt(index);
@@ -801,15 +763,12 @@ internal class ZonePlayerComponent : MonoBehaviour
                             EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + _currentPoints.Count, false);
                             RefreshPreview();
                         }
-                        ctx.Reply("edit_zone_delpoint_success", (index + 1).ToString(Data.Locale), FromV2(pt));
+                        ctx.Reply(T.ZoneEditDeletePointSuccess, index + 1, pt);
                         AddTransaction(new AddDelPointTransaction(index, pt, true));
                         return;
                     }
                     else
-                    {
-                        ctx.Reply("edit_zone_delpoint_badvalues");
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditDeletePointInvalid);
                 }
                 else
                 {
@@ -818,10 +777,8 @@ internal class ZonePlayerComponent : MonoBehaviour
                 }
                 Vector2 v = new Vector2(x, z);
                 if (_currentPoints == null || _currentPoints.Count == 0)
-                {
-                    ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditPointNotNearby, v);
+
                 float min = 0f;
                 int ind = -1;
                 for (int i = 0; i < _currentPoints.Count; ++i)
@@ -834,10 +791,8 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                 }
                 if (ind == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
-                {
-                    ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditPointNotNearby, v);
+
                 Vector2 pt2 = _currentPoints[ind];
                 _currentPoints.RemoveAt(ind);
                 if (!CheckType(EZoneType.POLYGON))
@@ -850,9 +805,8 @@ internal class ZonePlayerComponent : MonoBehaviour
                     EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + _currentPoints.Count, false);
                     RefreshPreview();
                 }
-                ctx.Reply("edit_zone_delpoint_success", (ind + 1).ToString(Data.Locale), FromV2(pt2));
+                ctx.Reply(T.ZoneEditDeletePointSuccess, ind + 1, pt2);
                 AddTransaction(new AddDelPointTransaction(ind, pt2, true));
-                return;
             }
             else if (ctx.MatchParameter(0, "clearpoints", "clearpts", "clrpts", "clrpoints"))
             {
@@ -870,7 +824,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     RefreshPreview();
                 }
-                ctx.Reply("edit_zone_clearpoints_success");
+                ctx.Reply(T.ZoneEditClearSuccess);
                 RefreshPreview();
             }
             else if (ctx.MatchParameter(0, "setpoint", "movepoint", "setpt", "movept"))
@@ -879,164 +833,125 @@ internal class ZonePlayerComponent : MonoBehaviour
                 if (ctx.HasArgsExact(5)) // <nearby src x> <nearby src z> <dest x> <dest z>
                 {
                     if (!ctx.TryGet(1, out float srcX) || !ctx.TryGet(2, out float srcZ) || !ctx.TryGet(3, out float dstX) || !ctx.TryGet(4, out float dstZ))
-                    {
-                        ctx.Reply("edit_zone_setpoint_badvalues");
-                        return;
-                    }
-                    else
-                    {
+                        throw ctx.Reply(T.ZoneEditSetPointInvalid);
+
                         Vector2 v = new Vector2(srcX, srcZ);
-                        if (_currentPoints == null || _currentPoints.Count == 0)
+                    if (_currentPoints == null || _currentPoints.Count == 0)
+                        throw ctx.Reply(T.ZoneEditPointNotNearby, v);
+
+                    float min = 0f;
+                    int ind = -1;
+                    for (int i = 0; i < _currentPoints.Count; ++i)
+                    {
+                        float sqrdist = (v - _currentPoints[i]).sqrMagnitude;
+                        if (ind == -1 || sqrdist < min)
                         {
-                            ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
-                            return;
+                            min = sqrdist;
+                            ind = i;
                         }
-                        float min = 0f;
-                        int ind = -1;
-                        for (int i = 0; i < _currentPoints.Count; ++i)
-                        {
-                            float sqrdist = (v - _currentPoints[i]).sqrMagnitude;
-                            if (ind == -1 || sqrdist < min)
-                            {
-                                min = sqrdist;
-                                ind = i;
-                            }
-                        }
-                        if (ind == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
-                        {
-                            ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
-                            return;
-                        }
-                        Vector2 old = _currentPoints[ind];
-                        Vector2 @new = new Vector2(dstX, dstZ);
-                        _currentPoints[ind] = @new;
-                        tc = player.Player.channel.owner.transportConnection;
-                        if (!CheckType(EZoneType.POLYGON))
-                        {
-                            EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + ind, PointText(ind));
-                            EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + ind, true);
-                            RefreshPreview();
-                        }
-                        AddTransaction(new SetPointTransaction(ind, old, @new));
-                        ctx.Reply("edit_zone_setpoint_success", (ind + 1).ToString(Data.Locale), FromV2(old), FromV2(@new));
-                        return;
                     }
+                    if (ind == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
+                        throw ctx.Reply(T.ZoneEditPointNotNearby, v);
+
+                    Vector2 old = _currentPoints[ind];
+                    Vector2 @new = new Vector2(dstX, dstZ);
+                    _currentPoints[ind] = @new;
+                    tc = player.Player.channel.owner.transportConnection;
+                    if (!CheckType(EZoneType.POLYGON))
+                    {
+                        EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + ind, PointText(ind));
+                        EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + ind, true);
+                        RefreshPreview();
+                    }
+                    AddTransaction(new SetPointTransaction(ind, old, @new));
+                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, old, @new);
                 }
                 else if (ctx.HasArgsExact(4)) // <pt num> <dest x> <dest z>
                 {
                     if (!ctx.TryGet(1, out int index) || !ctx.TryGet(2, out float dstX) || !ctx.TryGet(3, out float dstZ))
-                    {
-                        ctx.Reply("edit_zone_setpoint_badvalues");
-                        return;
-                    }
-                    else
-                    {
-                        if (_currentPoints == null || _currentPoints.Count < index || index < 1)
-                        {
-                            ctx.Reply("edit_zone_point_number_not_point", index.ToString(Data.Locale));
-                            return;
-                        }
-                        --index;
-                        Vector2 old = _currentPoints[index];
-                        Vector2 @new = new Vector2(dstX, dstZ);
-                        _currentPoints[index] = @new;
-                        tc = player.Player.channel.owner.transportConnection;
-                        if (!CheckType(EZoneType.POLYGON))
-                        {
-                            EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + index, PointText(index));
-                            EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + index, true);
-                            RefreshPreview();
-                        }
-                        AddTransaction(new SetPointTransaction(index, old, @new));
-                        ctx.Reply("edit_zone_setpoint_success", (index + 1).ToString(Data.Locale), FromV2(old), FromV2(@new));
-                        return;
+                        throw ctx.Reply(T.ZoneEditSetPointInvalid);
 
+                    if (_currentPoints == null || _currentPoints.Count < index || index < 1)
+                        throw ctx.Reply(T.ZoneEditPointNotDefined, index);
+
+                    --index;
+                    Vector2 old = _currentPoints[index];
+                    Vector2 @new = new Vector2(dstX, dstZ);
+                    _currentPoints[index] = @new;
+                    tc = player.Player.channel.owner.transportConnection;
+                    if (!CheckType(EZoneType.POLYGON))
+                    {
+                        EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + index, PointText(index));
+                        EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + index, true);
+                        RefreshPreview();
                     }
+                    AddTransaction(new SetPointTransaction(index, old, @new));
+                    ctx.Reply(T.ZoneEditSetPointSuccess, index + 1, old, @new);
                 }
                 else if (ctx.HasArgsExact(3)) // <src x> <src z>
                 {
                     if (!ctx.TryGet(2, out float dstX) || !ctx.TryGet(3, out float dstZ))
+                        throw ctx.Reply(T.ZoneEditSetPointInvalid);
+
+                    Vector2 v = new Vector2(dstX, dstZ);
+                    if (_currentPoints == null || _currentPoints.Count == 0)
+                        throw ctx.Reply(T.ZoneEditPointNotNearby, v);
+
+                    float min = 0f;
+                    int ind = -1;
+                    for (int i = 0; i < _currentPoints.Count; ++i)
                     {
-                        ctx.Reply("edit_zone_setpoint_badvalues");
-                        return;
+                        float sqrdist = (v - _currentPoints[i]).sqrMagnitude;
+                        if (ind == -1 || sqrdist < min)
+                        {
+                            min = sqrdist;
+                            ind = i;
+                        }
                     }
-                    else
+                    if (ind == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
+                        throw ctx.Reply(T.ZoneEditPointNotNearby, v);
+
+                    Vector2 old = _currentPoints[ind];
+                    Vector2 @new = new Vector2(pos.x, pos.z);
+                    _currentPoints[ind] = @new;
+                    tc = player.Player.channel.owner.transportConnection;
+                    if (!CheckType(EZoneType.POLYGON))
                     {
-                        Vector2 v = new Vector2(dstX, dstZ);
-                        if (_currentPoints == null || _currentPoints.Count == 0)
-                        {
-                            ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
-                            return;
-                        }
-                        float min = 0f;
-                        int ind = -1;
-                        for (int i = 0; i < _currentPoints.Count; ++i)
-                        {
-                            float sqrdist = (v - _currentPoints[i]).sqrMagnitude;
-                            if (ind == -1 || sqrdist < min)
-                            {
-                                min = sqrdist;
-                                ind = i;
-                            }
-                        }
-                        if (ind == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
-                        {
-                            ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
-                            return;
-                        }
-                        Vector2 old = _currentPoints[ind];
-                        Vector2 @new = new Vector2(pos.x, pos.z);
-                        _currentPoints[ind] = @new;
-                        tc = player.Player.channel.owner.transportConnection;
-                        if (!CheckType(EZoneType.POLYGON))
-                        {
-                            EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + ind, PointText(ind));
-                            EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + ind, true);
-                            RefreshPreview();
-                        }
-                        AddTransaction(new SetPointTransaction(ind, old, @new));
-                        ctx.Reply("edit_zone_setpoint_success", (ind + 1).ToString(Data.Locale), FromV2(old), FromV2(@new));
-                        return;
+                        EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + ind, PointText(ind));
+                        EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + ind, true);
+                        RefreshPreview();
                     }
+                    AddTransaction(new SetPointTransaction(ind, old, @new));
+                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, old, @new);
                 }
                 else if (ctx.HasArgsExact(2)) // <pt num>
                 {
                     if (!ctx.TryGet(1, out int index))
+                        throw ctx.Reply(T.ZoneEditSetPointInvalid);
+
+                    if (_currentPoints == null || _currentPoints.Count < index || index < 1)
+                        throw ctx.Reply(T.ZoneEditPointNotDefined, index);
+
+                    --index;
+                    Vector2 old = _currentPoints[index];
+                    Vector2 @new = new Vector2(pos.x, pos.z);
+                    _currentPoints[index] = @new;
+                    tc = player.Player.channel.owner.transportConnection;
+                    if (!CheckType(EZoneType.POLYGON))
                     {
-                        ctx.Reply("edit_zone_setpoint_badvalues");
-                        return;
+                        EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + index, PointText(index));
+                        EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + index, true);
+                        RefreshPreview();
                     }
-                    else
-                    {
-                        if (_currentPoints == null || _currentPoints.Count < index || index < 1)
-                        {
-                            ctx.Reply("edit_zone_point_number_not_point", index.ToString(Data.Locale));
-                            return;
-                        }
-                        --index;
-                        Vector2 old = _currentPoints[index];
-                        Vector2 @new = new Vector2(pos.x, pos.z);
-                        _currentPoints[index] = @new;
-                        tc = player.Player.channel.owner.transportConnection;
-                        if (!CheckType(EZoneType.POLYGON))
-                        {
-                            EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Point_Value_" + index, PointText(index));
-                            EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + index, true);
-                            RefreshPreview();
-                        }
-                        AddTransaction(new SetPointTransaction(index, old, @new));
-                        ctx.Reply("edit_zone_setpoint_success", (index + 1).ToString(Data.Locale), FromV2(old), FromV2(@new));
-                        return;
-                    }
+                    AddTransaction(new SetPointTransaction(index, old, @new));
+                    ctx.Reply(T.ZoneEditSetPointSuccess, index + 1, old, @new);
                 }
                 else if (ctx.HasArgsExact(1))
                 {
                     Vector2 v = new Vector2(pos.x, pos.z);
                     if (_currentPoints == null || _currentPoints.Count == 0)
-                    {
-                        ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditPointNotNearby, v);
+
                     float min = 0f;
                     int ind = -1;
                     for (int i = 0; i < _currentPoints.Count; ++i)
@@ -1050,7 +965,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     if (ind == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
                     {
-                        ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
+                        ctx.Reply(T.ZoneEditPointNotNearby, v);
                         return;
                     }
                     Vector2 old = _currentPoints[ind];
@@ -1063,22 +978,16 @@ internal class ZonePlayerComponent : MonoBehaviour
                         RefreshPreview();
                     }
                     AddTransaction(new SetPointTransaction(ind, old, v));
-                    ctx.Reply("edit_zone_setpoint_success", (ind + 1).ToString(Data.Locale), FromV2(old), FromV2(v));
-                    return;
+                    ctx.Reply(T.ZoneEditSetPointSuccess, ind + 1, old, v);
                 }
                 else
-                {
-                    ctx.Reply("edit_zone_setpoint_badvalues");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditSetPointInvalid);
             }
             else if (ctx.MatchParameter(0, "orderpoint", "orderpt", "setindex", "ptindex"))
             {
                 if (_currentPoints == null || _currentPoints.Count == 0)
-                {
-                    ctx.Reply("edit_zone_point_number_not_point", FromV2(new Vector2(pos.x, pos.z)));
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditPointNotNearby, new Vector2(pos.x, pos.z));
+
                 int from;
                 int to;
                 if (ctx.HasArgsExact(2)) // <to-index>
@@ -1090,16 +999,11 @@ internal class ZonePlayerComponent : MonoBehaviour
                         else if (ctx.MatchParameter(1, "start", "first", "top"))
                             to = 1;
                         else
-                        {
-                            ctx.Reply("edit_zone_orderpoint_badvalue");
-                            return;
-                        }
+                            throw ctx.Reply(T.ZoneEditOrderPointInvalid);
                     }
                     if (_currentPoints.Count < to || to < 1)
-                    {
-                        ctx.Reply("edit_zone_point_number_not_point", to.ToString(Data.Locale));
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditPointNotDefined, to);
+
                     float min = 0f;
                     from = -1;
                     Vector2 v = new Vector2(pos.x, pos.z);
@@ -1114,7 +1018,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     if (from == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
                     {
-                        ctx.Reply("edit_zone_point_none_nearby", FromV2(v));
+                        ctx.Reply(T.ZoneEditPointNotNearby, v);
                         return;
                     }
                     --to;
@@ -1128,10 +1032,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                         else if (ctx.MatchParameter(1, "start", "first", "top"))
                             from = 1;
                         else
-                        {
-                            ctx.Reply("edit_zone_orderpoint_badvalue");
-                            return;
-                        }
+                            throw ctx.Reply(T.ZoneEditOrderPointInvalid);
                     }
                     if (!ctx.TryGet(2, out to))
                     {
@@ -1140,36 +1041,24 @@ internal class ZonePlayerComponent : MonoBehaviour
                         else if (ctx.MatchParameter(2, "start", "first", "top"))
                             to = 1;
                         else
-                        {
-                            ctx.Reply("edit_zone_orderpoint_badvalue");
-                            return;
-                        }
+                            throw ctx.Reply(T.ZoneEditOrderPointInvalid);
                     }
                     if (to == from)
-                    {
-                        ctx.Reply("edit_zone_orderpoint_badvalue");
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditOrderPointInvalid);
                     if (_currentPoints.Count < to || to < 1)
-                    {
-                        ctx.Reply("edit_zone_point_number_not_point", to.ToString(Data.Locale));
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditPointNotDefined, to);
+
                     if (_currentPoints.Count < from || from < 1)
-                    {
-                        ctx.Reply("edit_zone_point_number_not_point", from.ToString(Data.Locale));
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditPointNotDefined, from);
+
                     --to;
                     --from;
                 }
                 else if (ctx.HasArgsExact(4))
                 {
                     if (!ctx.TryGet(1, out float srcX) || !ctx.TryGet(2, out float srcZ))
-                    {
-                        ctx.Reply("edit_zone_orderpoint_badvalue");
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditOrderPointInvalid);
+
                     if (!ctx.TryGet(2, out to))
                     {
                         if (ctx.MatchParameter(2, "end", "bottom"))
@@ -1177,16 +1066,11 @@ internal class ZonePlayerComponent : MonoBehaviour
                         else if (ctx.MatchParameter(2, "start", "first", "top"))
                             to = 1;
                         else
-                        {
-                            ctx.Reply("edit_zone_orderpoint_badvalue");
-                            return;
-                        }
+                            throw ctx.Reply(T.ZoneEditOrderPointInvalid);
                     }
                     if (_currentPoints.Count < to || to < 1)
-                    {
-                        ctx.Reply("edit_zone_point_number_not_point", to.ToString(Data.Locale));
-                        return;
-                    }
+                        throw ctx.Reply(T.ZoneEditPointNotDefined, to);
+
                     --to;
                     float min = 0f;
                     from = -1;
@@ -1200,12 +1084,14 @@ internal class ZonePlayerComponent : MonoBehaviour
                             from = i;
                         }
                     }
+                    if (from == -1 || min > NEARBY_POINT_DISTANCE_SQR) // must be within 5 meters
+                        throw ctx.Reply(T.ZoneEditPointNotNearby, v);
+
+                    if (to == from)
+                        throw ctx.Reply(T.ZoneEditOrderPointInvalid);
                 }
                 else
-                {
-                    ctx.Reply("edit_zone_orderpoint_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditOrderPointInvalid);
                 Vector2 old = _currentPoints[from];
                 _currentPoints.RemoveAt(from);
                 _currentPoints.Insert(to, old);
@@ -1222,20 +1108,16 @@ internal class ZonePlayerComponent : MonoBehaviour
                 }
 
                 AddTransaction(new SwapPointsTransaction(from, to));
-                ctx.Reply("edit_zone_orderpoint_success", from.ToString(Data.Locale), to.ToString(Data.Locale));
+                ctx.Reply(T.ZoneEditOrderPointSuccess, from, to);
             }
             else if (ctx.MatchParameter(0, "radius"))
             {
                 float radius;
                 if (!ctx.HasArgs(2))
-                {
                     radius = (new Vector2(pos.x, pos.z) - new Vector2(_currentBuilder.X, _currentBuilder.Z)).magnitude;
-                }
                 else if (!ctx.TryGet(1, out radius))
-                {
-                    ctx.Reply("edit_zone_radius_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditRadiusInvalid);
+
                 AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.Radius, radius, SetFloatTransaction.EFloatType.RADIUS));
                 SetRadius(radius);
             }
@@ -1243,14 +1125,10 @@ internal class ZonePlayerComponent : MonoBehaviour
             {
                 float sizex;
                 if (!ctx.HasArgs(2))
-                {
                     sizex = Mathf.Abs(pos.x - _currentBuilder.X) * 2;
-                }
                 else if (!ctx.TryGet(1, out sizex))
-                {
-                    ctx.Reply("edit_zone_sizex_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditSizeXInvalid);
+
                 AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.SizeX, sizex, SetFloatTransaction.EFloatType.SIZE_X));
                 SetSizeX(sizex);
             }
@@ -1258,14 +1136,10 @@ internal class ZonePlayerComponent : MonoBehaviour
             {
                 float sizez;
                 if (!ctx.HasArgs(2))
-                {
                     sizez = Mathf.Abs(pos.z - _currentBuilder.Z) * 2;
-                }
                 else if (!ctx.TryGet(1, out sizez))
-                {
-                    ctx.Reply("edit_zone_sizez_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditSizeZInvalid);
+
                 AddTransaction(new SetFloatTransaction(_currentBuilder.ZoneData.SizeZ, sizez, SetFloatTransaction.EFloatType.SIZE_Z));
                 SetSizeZ(sizez);
             }
@@ -1279,20 +1153,15 @@ internal class ZonePlayerComponent : MonoBehaviour
                     z = pos.z;
                 }
                 else if (!ctx.TryGet(1, out x) || !ctx.TryGet(2, out z))
-                {
-                    ctx.Reply("edit_zone_center_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditCenterInvalid);
+
                 AddTransaction(new SetCenterTransaction(_currentBuilder.X, _currentBuilder.Z, x, z));
                 SetCenter(x, z);
             }
             else if (ctx.MatchParameter(0, "name", "title", "longname"))
             {
                 if (!ctx.HasArgs(2))
-                {
-                    ctx.Reply("edit_zone_name_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditNameInvalid);
 
                 string name = ctx.GetRange(1)!;
                 if (!string.IsNullOrEmpty(_currentBuilder.Name))
@@ -1302,41 +1171,30 @@ internal class ZonePlayerComponent : MonoBehaviour
             else if (ctx.MatchParameter(0, "use", "use-case", "usecase"))
             {
                 if (!ctx.HasArgs(2))
-                {
-                    ctx.Reply("edit_zone_use_case_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditUseCaseInvalid);
 
                 bool w2ic = ctx.MatchParameter(1, "case");
                 if (!ctx.HasArgsExact(3) && w2ic)
-                {
-                    ctx.Reply("edit_zone_use_case_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditUseCaseInvalid);
+
                 if (Enum.TryParse(ctx.GetRange(w2ic ? 2 : 1)!.Replace(' ', '_'), true, out EZoneUseCase uc))
                 {
                     AddTransaction(new SetUseTransaction(_currentBuilder!.UseCase, uc));
                     SetUseCase(uc);
                 }
                 else
-                {
-                    ctx.Reply("edit_zone_use_case_badvalue");
-                }
+                    throw ctx.Reply(T.ZoneEditUseCaseInvalid);
             }
             else if (ctx.MatchParameter(0, "shortname", "short", "abbreviation", "abbr"))
             {
                 if (!ctx.HasArgs(2))
-                {
-                    ctx.Reply("edit_zone_short_name_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditShortNameInvalid);
+
                 int st = ctx.MatchParameter(1, "name") ? 2 : 1;
                 string? name = ctx.GetRange(st);
                 if (name is null)
-                {
-                    ctx.Reply("edit_zone_short_name_badvalue");
-                    return;
-                }
+                    throw ctx.Reply(T.ZoneEditShortNameInvalid);
+
                 AddTransaction(new SetStringTransaction(_currentBuilder.ShortName!, name, SetStringTransaction.EFloatType.SHORT_NAME));
                 SetShortName(name);
             }
@@ -1345,18 +1203,18 @@ internal class ZonePlayerComponent : MonoBehaviour
                 if (UndoBuffer.Count > 0)
                     Undo();
                 else
-                    ctx.Reply("edit_zone_undo_failure");
+                    ctx.Reply(T.ZoneEditUndoEmpty);
             }
             else if (ctx.MatchParameter(0, "redo"))
             {
                 if (RedoBuffer.Count > 0)
                     Redo();
                 else
-                    ctx.Reply("edit_zone_redo_failure");
+                    ctx.Reply(T.ZoneEditRedoEmpty);
             }
             else
             {
-                ctx.Reply("edit_zone_syntax");
+                ctx.SendCorrectUsage(ZONE_EDIT_USAGE);
             }
         }
     }
@@ -1364,22 +1222,22 @@ internal class ZonePlayerComponent : MonoBehaviour
     private void SetUseCase(EZoneUseCase uc)
     {
         _currentBuilder!.UseCase = uc;
-        player.SendChat("edit_zone_use_case_success", Localization.TranslateEnum(uc, player));
+        player.SendChat(T.ZoneEditUseCaseSuccess, uc);
     }
 
     private void SetName(string name)
     {
         _currentBuilder!.Name = name;
         EffectManager.sendUIEffectText(EDIT_KEY, player.Player.channel.owner.transportConnection, true, "Name", name);
-        player.SendChat("edit_zone_name_success", name);
+        player.SendChat(T.ZoneEditNameSuccess, name);
     }
     private void SetShortName(string shortName)
     {
         _currentBuilder!.ShortName = shortName;
         if (!string.IsNullOrEmpty(shortName))
-            player.SendChat("edit_zone_short_name_success", shortName);
+            player.SendChat(T.ZoneEditShortNameSuccess, shortName);
         else
-            player.SendChat("edit_zone_short_name_removed");
+            player.SendChat(T.ZoneEditShortNameRemoved);
     }
 
     private void SetRadius(float radius)
@@ -1390,21 +1248,21 @@ internal class ZonePlayerComponent : MonoBehaviour
             EffectManager.sendUIEffectText(EDIT_KEY, player.Player.channel.owner.transportConnection, true, "Circle_Radius", _currentBuilder.ZoneData.Radius.ToString("F2", Data.Locale) + "m");
             RefreshPreview();
         }
-        player.SendChat("edit_zone_radius_success", radius.ToString("F2", Data.Locale));
+        player.SendChat(T.ZoneEditRadiusSuccess, radius);
     }
 
     private void SetMaxHeight(float mh)
     {
         _currentBuilder!.MaxHeight = mh;
         UpdateHeights();
-        player.SendChat("edit_zone_maxheight_success", mh.ToString("F2", Data.Locale));
+        player.SendChat(T.ZoneEditMaxHeightSuccess, mh);
     }
 
     private void SetMinHeight(float mh)
     {
         _currentBuilder!.MinHeight = mh;
         UpdateHeights();
-        player.SendChat("edit_zone_minheight_success", mh.ToString("F2", Data.Locale));
+        player.SendChat(T.ZoneEditMinHeightSuccess, mh);
         RefreshPreview();
     }
 
@@ -1422,7 +1280,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             EffectManager.sendUIEffectText(EDIT_KEY, player.Player.channel.owner.transportConnection, true, "Rect_SizeX", _currentBuilder.ZoneData.SizeX.ToString("F2", Data.Locale) + "m");
             RefreshPreview();
         }
-        player.SendChat("edit_zone_sizex_success", sizex.ToString("F2", Data.Locale));
+        player.SendChat(T.ZoneEditSizeXSuccess, sizex);
     }
     private void SetSizeZ(float sizez)
     {
@@ -1432,7 +1290,7 @@ internal class ZonePlayerComponent : MonoBehaviour
             EffectManager.sendUIEffectText(EDIT_KEY, player.Player.channel.owner.transportConnection, true, "Rect_SizeZ", _currentBuilder.ZoneData.SizeZ.ToString("F2", Data.Locale) + "m");
             RefreshPreview();
         }
-        player.SendChat("edit_zone_sizez_success", sizez.ToString("F2", Data.Locale));
+        player.SendChat(T.ZoneEditSizeZSuccess, sizez);
     }
     private void SetCenter(float x, float z)
     {
@@ -1451,7 +1309,37 @@ internal class ZonePlayerComponent : MonoBehaviour
                 EffectManager.sendUIEffectText(EDIT_KEY, tc, true, "Polygon_Position", FromV2(_currentBuilder.X, _currentBuilder.Z));
                 break;
         }
-        player.SendChat("edit_zone_center_success", FromV2(x, z));
+
+        float rot = player.Player.transform.rotation.eulerAngles.y;
+        for (int i = 1; i < 5; ++i)
+        {
+            if (rot > 90 * i - 5f && rot < 90 * i + 5f)
+                rot = 90 * i;
+        }
+        bool srot = false;
+        switch (_currentBuilder.UseCase)
+        {
+            case EZoneUseCase.T1_MAIN:
+                Teams.TeamManager.Config.Team1SpawnYaw.SetCurrentMapValue(rot);
+                Teams.TeamManager.SaveConfig();
+                srot = true;
+                break;
+            case EZoneUseCase.T2_MAIN:
+                Teams.TeamManager.Config.Team2SpawnYaw.SetCurrentMapValue(rot);
+                Teams.TeamManager.SaveConfig();
+                srot = true;
+                break;
+            case EZoneUseCase.LOBBY:
+                Teams.TeamManager.Config.LobbySpawnpointYaw.SetCurrentMapValue(rot);
+                Teams.TeamManager.SaveConfig();
+                srot = true;
+                break;
+        }
+
+        if (srot)
+            player.SendChat(T.ZoneEditCenterSuccessRotation, new Vector2(x, z), rot);
+        else
+            player.SendChat(T.ZoneEditCenterSuccess, new Vector2(x, z));
         RefreshPreview();
     }
 
@@ -1518,29 +1406,29 @@ internal class ZonePlayerComponent : MonoBehaviour
     {
         if (_currentBuilder == null) return;
         ThreadUtil.assertIsGameThread();
-        string[] cmds = new string[11];
+        Translation[] cmds = new Translation[11];
         int pos = -1;
-        cmds[++pos] = "edit_zone_ui_suggested_command_3";
-        cmds[++pos] = "edit_zone_ui_suggested_command_1";
-        cmds[++pos] = "edit_zone_ui_suggested_command_2";
+        cmds[++pos] = T.ZoneEditSuggestedCommand3;
+        cmds[++pos] = T.ZoneEditSuggestedCommand1;
+        cmds[++pos] = T.ZoneEditSuggestedCommand2;
         if (_currentBuilder.ZoneType == EZoneType.CIRCLE)
-            cmds[++pos] = "edit_zone_ui_suggested_command_9_c";
+            cmds[++pos] = T.ZoneEditSuggestedCommand9;
         else if (_currentBuilder.ZoneType == EZoneType.RECTANGLE)
         {
-            cmds[++pos] = "edit_zone_ui_suggested_command_10_r";
-            cmds[++pos] = "edit_zone_ui_suggested_command_11_r";
+            cmds[++pos] = T.ZoneEditSuggestedCommand10;
+            cmds[++pos] = T.ZoneEditSuggestedCommand11;
         }
         else if (_currentBuilder.ZoneType == EZoneType.POLYGON)
         {
-            cmds[++pos] = "edit_zone_ui_suggested_command_5_p";
-            cmds[++pos] = "edit_zone_ui_suggested_command_6_p";
-            cmds[++pos] = "edit_zone_ui_suggested_command_7_p";
-            cmds[++pos] = "edit_zone_ui_suggested_command_8_p";
-            cmds[++pos] = "edit_zone_ui_suggested_command_14_p";
+            cmds[++pos] = T.ZoneEditSuggestedCommand5;
+            cmds[++pos] = T.ZoneEditSuggestedCommand6;
+            cmds[++pos] = T.ZoneEditSuggestedCommand7;
+            cmds[++pos] = T.ZoneEditSuggestedCommand8;
+            cmds[++pos] = T.ZoneEditSuggestedCommand14;
         }
-        cmds[++pos] = "edit_zone_ui_suggested_command_4";
-        cmds[++pos] = "edit_zone_ui_suggested_command_13";
-        cmds[++pos] = "edit_zone_ui_suggested_command_12";
+        cmds[++pos] = T.ZoneEditSuggestedCommand4;
+        cmds[++pos] = T.ZoneEditSuggestedCommand13;
+        cmds[++pos] = T.ZoneEditSuggestedCommand12;
         ++pos;
         ITransportConnection tc = player.Player.channel.owner.transportConnection;
         for (int i = 0; i < HELP_ROWS; ++i)
@@ -1565,9 +1453,9 @@ internal class ZonePlayerComponent : MonoBehaviour
                     EZoneType.POLYGON => "Polygon_YLimit",
                     _ => string.Empty
                 },
-            Localization.Translate("edit_zone_ui_y_limits", player.Steam64,
-            float.IsNaN(_currentBuilder.MinHeight) ? Localization.Translate("edit_zone_ui_y_limits_infinity", player.Steam64) : _currentBuilder.MinHeight.ToString("F2", Data.Locale),
-            float.IsNaN(_currentBuilder.MaxHeight) ? Localization.Translate("edit_zone_ui_y_limits_infinity", player.Steam64) : _currentBuilder.MaxHeight.ToString("F2", Data.Locale)));
+                T.ZoneEditUIYLimits.Translate(player,
+            float.IsNaN(_currentBuilder.MinHeight) ? T.ZoneEditUIYLimitsInfinity.Translate(player) : _currentBuilder.MinHeight.ToString("0.##", Data.Locale),
+            float.IsNaN(_currentBuilder.MaxHeight) ? T.ZoneEditUIYLimitsInfinity.Translate(player) : _currentBuilder.MaxHeight.ToString("0.##", Data.Locale)));
         }
     }
     private void AddTransaction(Transaction t)
@@ -1664,13 +1552,13 @@ internal class ZonePlayerComponent : MonoBehaviour
         {
             component.CheckType(New, transact: false);
             if (!Implicit)
-                component.player.SendChat("edit_zone_type_success", Localization.TranslateEnum(New, component.player));
+                component.player.SendChat(T.ZoneEditTypeSuccess, New);
         }
         public override void Undo(ZonePlayerComponent component)
         {
             component.CheckType(Old, transact: false);
             if (!Implicit)
-                component.player.SendChat("edit_zone_type_success", Localization.TranslateEnum(Old, component.player));
+                component.player.SendChat(T.ZoneEditTypeSuccess, Old);
         }
     }
 
@@ -1803,7 +1691,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + (component._currentPoints.Count - 1), true);
                 component.RefreshPreview();
             }
-            component.player.SendChat("edit_zone_addpoint_success", component._currentPoints.Count.ToString(Data.Locale), FromV2(Position));
+            component.player.SendChat(T.ZoneEditAddPointSuccess, component._currentPoints.Count, Position);
         }
         private void Delete(ZonePlayerComponent component)
         {
@@ -1820,7 +1708,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + component._currentPoints.Count, false);
                 component.RefreshPreview();
             }
-            component.player.SendChat("edit_zone_delpoint_success", (Index + 1).ToString(Data.Locale), FromV2(pt2));
+            component.player.SendChat(T.ZoneEditDeletePointSuccess, Index + 1, pt2);
         }
         public override void Redo(ZonePlayerComponent component)
         {
@@ -1858,7 +1746,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 EffectManager.sendUIEffectVisibility(EDIT_KEY, tc, true, "Polygon_Point_Num_" + Index, true);
                 component.RefreshPreview();
             }
-            component.player.SendChat("edit_zone_setpoint_success", (Index + 1).ToString(Data.Locale), FromV2(old), FromV2(@new));
+            component.player.SendChat(T.ZoneEditSetPointSuccess, Index + 1, old, @new);
         }
         public override void Redo(ZonePlayerComponent component)
         {
@@ -1889,7 +1777,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 }
                 component.RefreshPreview();
             }
-            component.player.SendChat("edit_zone_clearpoints_success");
+            component.player.SendChat(T.ZoneEditClearSuccess);
         }
         public override void Undo(ZonePlayerComponent component)
         {
@@ -1906,10 +1794,10 @@ internal class ZonePlayerComponent : MonoBehaviour
                     }
                     component.RefreshPreview();
                 }
-                component.player.SendChat("edit_zone_clearpoints_uncleared", component._currentPoints.Count.ToString(Data.Locale), component._currentPoints.Count.S());
+                component.player.SendChat(T.ZoneEditUnclearedSuccess, component._currentPoints.Count, component._currentPoints.Count.S());
             }
             else
-                component.player.SendChat("edit_zone_clearpoints_uncleared", "0", string.Empty);
+                component.player.SendChat(T.ZoneEditUnclearedSuccess, 0, string.Empty);
         }
     }
     private class SwapPointsTransaction : Transaction
@@ -1937,7 +1825,7 @@ internal class ZonePlayerComponent : MonoBehaviour
                 }
                 component.RefreshPreview();
             }
-            component.player.SendChat("edit_zone_orderpoint_success", from.ToString(Data.Locale), to.ToString(Data.Locale));
+            component.player.SendChat(T.ZoneEditOrderPointSuccess, from, to);
         }
         public override void Redo(ZonePlayerComponent component)
         {

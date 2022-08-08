@@ -39,10 +39,7 @@ public class ReloadCommand : Command
             ctx.AssertOnDuty();
 
         if (!ctx.TryGet(0, out string module))
-        {
-            ctx.Reply("reload_syntax");
-            return;
-        }
+            throw ctx.SendCorrectUsage(SYNTAX);
 
         if (module.Equals("help", StringComparison.OrdinalIgnoreCase))
             throw ctx.SendNotImplemented();
@@ -50,7 +47,7 @@ public class ReloadCommand : Command
         if (module.Equals("translations", StringComparison.OrdinalIgnoreCase) || module.Equals("lang", StringComparison.OrdinalIgnoreCase))
         {
             ReloadTranslations();
-            ctx.Reply("reload_reloaded_translations");
+            ctx.Reply(T.ReloadedTranslations);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TRANSLATIONS");
         }
         else if (module.Equals("flags", StringComparison.OrdinalIgnoreCase))
@@ -58,39 +55,39 @@ public class ReloadCommand : Command
             if (Data.Is<IFlagRotation>())
             {
                 ReloadFlags();
-                ctx.Reply("reload_reloaded_flags");
+                ctx.Reply(T.ReloadedFlags);
                 ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "FLAGS");
             }
-            else ctx.Reply("reload_reloaded_flags_gm");
+            else ctx.Reply(T.ReloadFlagsInvalidGamemode);
         }
         else if (module.Equals("permissions", StringComparison.OrdinalIgnoreCase))
         {
             ReloadPermissions();
-            ctx.Reply("reload_reloaded_permissions");
+            ctx.Reply(T.ReloadedPermissions);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "PERMISSIONS");
         }
         else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
         {
             ReloadColors();
-            ctx.Reply("reload_reloaded_generic", "colors");
+            ctx.Reply(T.ReloadedGeneric, "colors");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "COLORS");
         }
         else if (module.Equals("tcp", StringComparison.OrdinalIgnoreCase))
         {
             ReloadTCPServer();
-            ctx.Reply("reload_reloaded_tcp");
+            ctx.Reply(T.ReloadedTCP);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TCP SERVER");
         }
         else if (module.Equals("sql", StringComparison.OrdinalIgnoreCase))
         {
             ReloadSQLServer();
-            ctx.Reply("reload_reloaded_sql");
+            ctx.Reply(T.ReloadedSQL);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "MYSQL CONNECTION");
         }
         else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase))
         {
             TeamManager.SetupConfig();
-            ctx.Reply("reload_reloaded_generic", "teams and factions");
+            ctx.Reply(T.ReloadedGeneric, "teams and factions");
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "TEAMS & FACTIONS");
         }
         else if (module.Equals("all", StringComparison.OrdinalIgnoreCase))
@@ -103,7 +100,7 @@ public class ReloadCommand : Command
             foreach (KeyValuePair<string, IConfiguration> config in ReloadableConfigs)
                 config.Value.Reload();
 
-            ctx.Reply("reload_reloaded_all");
+            ctx.Reply(T.ReloadedAll);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "ALL");
         }
         else
@@ -112,26 +109,28 @@ public class ReloadCommand : Command
             if (ReloadableConfigs.TryGetValue(module, out IConfiguration config))
             {
                 config.Reload();
-                ctx.Reply("reload_reloaded_generic", module.ToProperCase());
+                ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
                 ctx.LogAction(EActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
             }
             else
             {
                 IReloadableSingleton? reloadable = Data.Singletons.ReloadSingleton(module);
                 if (reloadable is null) goto notFound;
-                ctx.Reply("reload_reloaded_generic", module.ToProperCase());
+                ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
                 ctx.LogAction(EActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
             }
         }
         return;
     notFound:
-        ctx.Reply("reload_syntax");
+        ctx.SendCorrectUsage(SYNTAX);
     }
 
     private void ReloadColors()
     {
         Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
         Translation.OnColorsReloaded();
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            UCWarfare.I.UpdateLangs(PlayerManager.OnlinePlayers[i]);
     }
     public static void ReloadPermissions()
     {
@@ -145,26 +144,23 @@ public class ReloadCommand : Command
             if (old == @new) continue;
             if (@new is EAdminType.MEMBER or EAdminType.ADMIN_OFF_DUTY or EAdminType.TRIAL_ADMIN_OFF_DUTY)
             {
-                FPlayerName names = F.GetPlayerOriginalNames(pl);
                 switch (old)
                 {
                     case EAdminType.ADMIN_ON_DUTY:
-                        DutyCommand.AdminOnToOff(pl, names);
+                        DutyCommand.AdminOnToOff(pl);
                         break;
                     case EAdminType.TRIAL_ADMIN_ON_DUTY:
-                        DutyCommand.InternOnToOff(pl, names);
+                        DutyCommand.InternOnToOff(pl);
                         break;
                 }
             }
             else if (@new is EAdminType.TRIAL_ADMIN_ON_DUTY)
             {
-                FPlayerName names = F.GetPlayerOriginalNames(pl);
-                DutyCommand.InternOffToOn(pl, names);
+                DutyCommand.InternOffToOn(pl);
             }
             else if (@new is EAdminType.ADMIN_ON_DUTY)
             {
-                FPlayerName names = F.GetPlayerOriginalNames(pl);
-                DutyCommand.AdminOffToOn(pl, names);
+                DutyCommand.AdminOffToOn(pl);
             }
         }
     }
@@ -178,7 +174,6 @@ public class ReloadCommand : Command
             Data.LanguageAliases = JSONMethods.LoadLangAliases();
             Data.Languages = JSONMethods.LoadLanguagePreferences();
             Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
-            Data.Localization = JSONMethods.LoadTranslations();
             Translation.ReadTranslations();
             Deaths.Localization.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);

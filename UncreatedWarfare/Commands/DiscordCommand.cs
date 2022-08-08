@@ -15,6 +15,6 @@ public class DiscordCommand : Command
         if (ctx.Caller is not null)
             ctx.Caller.Player.channel.owner.SendURL("Join our Discord Server", "https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
         else
-            ctx.Reply("https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
+            ctx.ReplyString("https://discord.gg/" + UCWarfare.Config.DiscordInviteCode);
     }
 }

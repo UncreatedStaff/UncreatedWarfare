@@ -287,7 +287,7 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
                     if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH &&
                         (ls.LongestShot.Player == 0 || ls.LongestShot.Distance < e.KillDistance))
                     {
-                        ls.LongestShot = new LongestShot(e.Killer, e.KillDistance, e.PrimaryAsset, e.KillerTeam);
+                        ls.LongestShot = new LongestShot(e.Killer.Steam64, e.KillDistance, e.PrimaryAsset, e.KillerTeam);
                     }
                 }
             }

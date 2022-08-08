@@ -73,11 +73,16 @@ public static class Data
             _vehicleCache = null;
         }
     }
+
+    public static class Keys
+    {
+        public const PlayerKey GiveUp = PlayerKey.PluginKey3;
+        public const PlayerKey SpawnCountermeasures = PlayerKey.PluginKey3;
+    }
     public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/][il][gqb](?!h)\W{0,1}[gqb]{0,1}\W{0,1}[gqb]{0,1}\W{0,1}[ae]{0,1}\W{0,1}[r]{0,1}(?:ia){0,1})|(?:f\W{0,1}a\W{0,1}g{1,2}\W{0,1}o{0,1}\W{0,1}t{0,1})");
-    public static readonly CultureInfo Locale = new CultureInfo("en-US");
+    public static readonly CultureInfo Locale = LanguageAliasSet.ENGLISH_C;
     public static Dictionary<string, Color> Colors;
     public static Dictionary<string, string> ColorsHex;
-    public static Dictionary<string, Dictionary<string, TranslationData>> Localization;
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
     public static Dictionary<ulong, FPlayerName> OriginalNames = new Dictionary<ulong, FPlayerName>();
@@ -201,30 +206,6 @@ public static class Data
         F.CheckDir(Paths.OfficerStorage, out _, true);
 
         ZoneProvider = new JsonZoneProvider(new FileInfo(Path.Combine(Paths.FlagStorage, "zones.json")));
-
-        /* LOAD LOCALIZATION ASSETS */
-        L.Log("Loading JSON Data...", ConsoleColor.Magenta);
-        try
-        {
-            JSONMethods.CreateDefaultTranslations();
-        }
-        catch (TypeInitializationException ex)
-        {
-            DuplicateKeyError(ex);
-            return;
-        }
-        catch (ArgumentException ex)
-        {
-            DuplicateKeyError(ex);
-            return;
-        }
-
-        Colors = JSONMethods.LoadColors(out ColorsHex);
-        Localization = JSONMethods.LoadTranslations();
-        Deaths.Localization.Reload();
-        Languages = JSONMethods.LoadLanguagePreferences();
-
-        Warfare.Localization.ReadEnumTranslations(TranslatableEnumTypes);
 
         /* CONSTRUCT FRAMEWORK */
         L.Log("Instantiating Framework...", ConsoleColor.Magenta);

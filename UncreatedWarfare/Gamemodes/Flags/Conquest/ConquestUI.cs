@@ -24,7 +24,7 @@ public static class ConquestUI
             List<Flag> rotation = gm.Rotation;
             CTFUI.ListUI.SendToPlayer(c);
             CTFUI.ListUI.Header.SetVisibility(c, true);
-            CTFUI.ListUI.Header.SetText(c, Localization.Translate("flag_header", player));
+            CTFUI.ListUI.Header.SetText(c, T.FlagsHeader.Translate(player));
             if (team == 1 || team == 2)
             {
                 for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
@@ -134,10 +134,7 @@ public static class ConquestUI
 #endif
         if (flag.IsContested(out _))
         {
-            if (Mathf.Abs(flag.Points) < Flag.MAX_POINTS)
-                return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
-            else
-                return new CaptureUIParameters(team, flag.Owner == team ? EFlagStatus.SECURED : EFlagStatus.NOT_OWNED, flag);
+            return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
         }
 
         if (flag.Owner == 0)

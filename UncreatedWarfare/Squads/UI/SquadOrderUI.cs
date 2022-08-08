@@ -19,9 +19,9 @@ public class SquadOrderUI : UnturnedUI
     public void SetOrder(UCPlayer player, Order order)
     {
         ITransportConnection c = player.Connection;
-        OrderInfo.SetText(c, Localization.Translate("order_ui_commander", player, order.Commander.CharacterName));
-        OrderText.SetText(c, Localization.Translate("order_ui_text", player, order.Formatting is null ? order.Message : Localization.Translate(order.Message, player, order.Formatting)));
-        OrderText.SetText(c, Localization.Translate("order_ui_time", player, order.MinutesLeft));
-        OrderText.SetText(c, Localization.Translate("order_ui_reward", player, order.RewardLevel));
+        OrderInfo.SetText(c, Localization.Translate(T.OrderUICommander, player, order.Commander));
+        OrderText.SetText(c, Localization.Translate(T.OrderUIMessage, player, order));
+        OrderText.SetText(c, Localization.Translate(T.OrderUITimeLeft, player, TimeSpan.FromSeconds(order.TimeLeft)));
+        OrderText.SetText(c, Localization.Translate(T.OrderUIReward, player, order.RewardLevel));
     }
 }

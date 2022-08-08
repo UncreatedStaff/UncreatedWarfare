@@ -218,11 +218,10 @@ namespace Uncreated.Warfare.FOBs
                                     if (stationPlacer != null)
                                     {
                                         if (stationPlacer.CSteamID != nearby[i].lockedOwner)
-                                        {
-                                            Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, Localization.Translate("xp_repaired_vehicle", stationPlacer));
-                                        }
+                                            Points.AwardXP(stationPlacer, Points.XPConfig.RepairVehicleXP, T.XPToastRepairedVehicle);
+
                                         if (!(stationPlacer.Steam64 == fob.Creator || stationPlacer.Steam64 == fob.Placer))
-                                            Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), "xp_fob_repaired_vehicle");
+                                            Points.TryAwardFOBCreatorXP(fob, Mathf.RoundToInt(Points.XPConfig.RepairVehicleXP * 0.5F), T.XPToastFOBRepairedVehicle);
                                     }
                                 }
                             }

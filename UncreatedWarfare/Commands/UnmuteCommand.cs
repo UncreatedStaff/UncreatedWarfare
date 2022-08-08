@@ -26,7 +26,7 @@ public class UnmuteCommand : Command
 			{
 				if (onlinePlayer.MuteType == EMuteType.NONE || onlinePlayer.TimeUnmuted < DateTime.Now)
                 {
-                    ctx.Reply("unmute_not_muted", onlinePlayer.CharacterName);
+                    ctx.Reply(T.UnmuteNotMuted, onlinePlayer);
                     return;
                 }
 			}
@@ -34,6 +34,6 @@ public class UnmuteCommand : Command
             OffenseManager.UnmutePlayer(playerId, ctx.CallerID);
             ctx.Defer();
         }
-        else ctx.Reply("unmute_not_found");
+        else ctx.Reply(T.PlayerNotFound);
 	}
 }

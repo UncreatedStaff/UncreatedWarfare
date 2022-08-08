@@ -26,54 +26,54 @@ public class LangCommand : Command
             int i = -1;
             foreach (KeyValuePair<string, LanguageAliasSet> setData in Data.LanguageAliases)
             {
-                if (!Data.Localization.ContainsKey(setData.Key)) continue; // only show languages with translations
+                if (!T.AllLanguages.Contains(setData.Key)) continue; // only show languages with translations
                 if (++i != 0) sb.Append(", ");
                 sb.Append(setData.Key);
                 LanguageAliasSet aliases = setData.Value;
                 sb.Append(" : ").Append(aliases.display_name);
             }
-            ctx.Reply("language_list", sb.ToString());
+            ctx.Reply(T.LanguageList, sb.ToString());
         }
         else if (ctx.MatchParameter(0, "current"))
         {
             ctx.AssertRanByPlayer();
 
             if (!Data.Languages.TryGetValue(ctx.CallerID, out string langCode))
-                langCode = JSONMethods.DEFAULT_LANGUAGE;
+                langCode = L.DEFAULT;
             if (!Data.LanguageAliases.TryGetValue(langCode, out LanguageAliasSet set))
                 set = new LanguageAliasSet(langCode, langCode, Array.Empty<string>());
 
-            ctx.Reply("language_current", $"{set.display_name} : {set.key}");
+            ctx.Reply(T.LanguageCurrent, set);
         }
         else if (ctx.MatchParameter(0, "reset"))
         {
             ctx.AssertRanByPlayer();
 
-            if (!Data.LanguageAliases.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out LanguageAliasSet set))
-                set = new LanguageAliasSet(JSONMethods.DEFAULT_LANGUAGE, JSONMethods.DEFAULT_LANGUAGE, Array.Empty<string>());
+            if (!Data.LanguageAliases.TryGetValue(L.DEFAULT, out LanguageAliasSet set))
+                set = new LanguageAliasSet(L.DEFAULT, L.DEFAULT, Array.Empty<string>());
 
             if (Data.Languages.TryGetValue(ctx.CallerID, out string oldLang))
             {
                 if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
                     oldSet = new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
 
-                if (oldLang == JSONMethods.DEFAULT_LANGUAGE)
-                    throw ctx.Reply("reset_language_not_needed", set.display_name);
+                if (oldLang == L.DEFAULT)
+                    throw ctx.Reply(T.LangAlreadySet, set);
 
-                JSONMethods.SetLanguage(ctx.CallerID, JSONMethods.DEFAULT_LANGUAGE);
-                ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + JSONMethods.DEFAULT_LANGUAGE);
+                JSONMethods.SetLanguage(ctx.CallerID, L.DEFAULT);
+                ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + L.DEFAULT);
                 if (OnPlayerChangedLanguage != null)
                     OnPlayerChangedLanguage.Invoke(ctx.Caller, set, oldSet);
-                ctx.Reply("reset_language", set.display_name);
+                ctx.Reply(T.ResetLanguage, set);
             }
-            else throw ctx.Reply("reset_language_not_needed", set.display_name);
+            else throw ctx.Reply(T.LangAlreadySet, set);
         }
         else if (ctx.TryGetRange(0, out string input) && !string.IsNullOrWhiteSpace(input))
         {
             ctx.AssertRanByPlayer();
 
             if (!Data.Languages.TryGetValue(ctx.CallerID, out string oldLang))
-                oldLang = JSONMethods.DEFAULT_LANGUAGE;
+                oldLang = L.DEFAULT;
 
             if (!Data.LanguageAliases.TryGetValue(oldLang, out LanguageAliasSet oldSet))
                 oldSet = new LanguageAliasSet(oldLang, oldLang, Array.Empty<string>());
@@ -112,17 +112,17 @@ public class LangCommand : Command
             if (found)
             {
                 if (newSet.key.Equals(oldLang, StringComparison.OrdinalIgnoreCase))
-                    throw ctx.Reply("change_language_not_needed", oldSet.display_name);
+                    throw ctx.Reply(T.LangAlreadySet, oldSet);
 
                 JSONMethods.SetLanguage(ctx.CallerID, newSet.key);
                 ctx.LogAction(EActionLogType.CHANGE_LANGUAGE, oldLang + " >> " + newSet.key);
                 if (OnPlayerChangedLanguage != null)
                     OnPlayerChangedLanguage.Invoke(ctx.Caller, newSet, oldSet);
-                ctx.Reply("changed_language", newSet.display_name);
+                ctx.Reply(T.ChangedLanguage, newSet);
             }
-            else throw ctx.Reply("dont_have_language", input);
+            else throw ctx.Reply(T.LanguageNotFound, input);
         }
-        else throw ctx.Reply("reset_language_how");
+        else throw ctx.Reply(T.ResetLanguageHow);
     }
 }
 public delegate void LanguageChanged(UCPlayer player, LanguageAliasSet newLanguage, LanguageAliasSet oldLanguage);

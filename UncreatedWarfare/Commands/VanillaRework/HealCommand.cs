@@ -31,7 +31,7 @@ public class HealCommand : Command
             if (Data.Is(out IRevives rev))
                 rev.ReviveManager.RevivePlayer(ctx.Caller);
 
-            ctx.Reply("heal_player", onlinePlayer.CharacterName, Teams.TeamManager.GetTeamHexColor(onlinePlayer.GetTeam()));
+            ctx.Reply(T.HealPlayer, onlinePlayer);
         }
         else
         {
@@ -40,7 +40,7 @@ public class HealCommand : Command
             if (Data.Is(out IRevives rev))
                 rev.ReviveManager.RevivePlayer(ctx.Caller);
 
-            ctx.Reply("heal_self");
+            ctx.Reply(T.HealSelf);
         }
     }
 }

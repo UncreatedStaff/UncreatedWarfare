@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using SDG.Framework.Translations;
+using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -395,7 +396,7 @@ public static class CommandHandler
     internal static void OnLog(string message)
     {
         if (_activeVanillaCmd is not null)
-            _activeVanillaCmd.Reply("<color=#bfb9ac>" + message + "</color>");
+            _activeVanillaCmd.ReplyString("<color=#bfb9ac>" + message + "</color>");
     }
     private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
     {
@@ -416,7 +417,7 @@ public static class CommandHandler
 #endif
                 if (!interaction.Responded)
                 {
-                    interaction.Reply(Localization.Common.UNKNOWN_ERROR);
+                    interaction.Reply(T.UnknownError);
                     interaction.MarkComplete();
                 }
 
@@ -431,7 +432,7 @@ public static class CommandHandler
             }
             catch (Exception ex)
             {
-                interaction.Reply(Localization.Common.UNKNOWN_ERROR);
+                interaction.Reply(T.UnknownError);
                 interaction.MarkComplete();
                 L.LogError(ex);
             }
@@ -442,7 +443,7 @@ public static class CommandHandler
         }
         else
         {
-            interaction.Reply(Localization.Common.NO_PERMISSIONS);
+            interaction.Reply(T.UnknownError);
             interaction.MarkComplete();
         }
     }
@@ -510,16 +511,6 @@ public class CommandInteraction : BaseCommandInteraction
         _responded = true;
         return this;
     }
-
-    [Obsolete("Use the new generics system instead.")]
-    public Exception Reply(string key, params string[] formatting)
-    {
-        _responded = true;
-        _ctx.Reply(key, formatting);
-        return this;
-    }
-
-
     /// <summary>Zero based. Checks if the argument at index <paramref name="position"/> exists.</summary>
     public bool HasArg(int position)
     {
@@ -1220,22 +1211,6 @@ public class CommandInteraction : BaseCommandInteraction
         player = (info.player == null ? null : UCPlayer.FromPlayer(info.player))!;
         return player != null && player.IsOnline;
     }
-    [Obsolete("Use the new generics system instead.")]
-    public bool AssertOnDuty(string noPermissionMessageKey = Localization.Common.NO_PERMISSIONS)
-    {
-        bool perm = IsConsole || Caller is not null && Caller.OnDuty();
-        if (!perm)
-            Reply(noPermissionMessageKey);
-        return perm;
-    }
-    [Obsolete("Use the new generics system instead.")]
-    public bool OnDutyOrReply(string[] formatting, string noPermissionMessageKey = Localization.Common.NO_PERMISSIONS)
-    {
-        bool perm = IsConsole || Caller is not null && Caller.OnDuty();
-        if (!perm)
-            Reply(noPermissionMessageKey, formatting);
-        return perm;
-    }
     public void LogAction(EActionLogType type, string? data = null)
     {
         ActionLogger.Add(type, data, CallerID);
@@ -1277,45 +1252,25 @@ public class CommandInteraction : BaseCommandInteraction
     public void AssertArgs(int count, string usage)
     {
         if (!HasArgs(count))
-            throw JSONMethods.DefaultTranslations.ContainsKey(usage) ? Reply(usage) : SendCorrectUsage(usage);
-    }
-    [Obsolete("Use the new generics system instead.")]
-    /// <exception cref="CommandInteraction"/>
-    public void AssertArgs(int count, string usage, params string[] formatting)
-    {
-        if (!HasArgs(count))
-            throw Reply(usage, formatting);
-    }
-    [Obsolete("Use the new generics system instead.")]
-    /// <exception cref="CommandInteraction"/>
-    public void AssertArgsExact(int count, string usage, params string[] formatting)
-    {
-        if (!HasArgsExact(count))
-            throw Reply(usage, formatting);
+            throw SendCorrectUsage(usage);
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertArgsExact(int count, string usage)
     {
         if (!HasArgsExact(count))
-            throw JSONMethods.DefaultTranslations.ContainsKey(usage) ? Reply(usage) : SendCorrectUsage(usage);
+            throw SendCorrectUsage(usage);
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertOnDuty()
     {
         if (!IsConsole && !Caller.OnDuty())
-            throw Reply(Localization.Common.NO_PERMISSIONS_ON_DUTY);
-    }
-    /// <exception cref="CommandInteraction"/>
-    public void AssertOnDuty(string key, params string[] formatting)
-    {
-        if (!IsConsole && !Caller.OnDuty())
-            throw Reply(key, formatting);
+            throw Reply(T.NotOnDuty);
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertHelpCheck(int parameter, string helpMessage, params string[] formatting)
     {
         if (MatchParameter(parameter, "help"))
-            throw Reply(helpMessage);
+            throw ReplyString(helpMessage);
     }
     /// <exception cref="CommandInteraction"/>
     public void AssertHelpCheck(int parameter, string usage)
@@ -1324,18 +1279,237 @@ public class CommandInteraction : BaseCommandInteraction
             throw SendCorrectUsage(usage);
     }
     
-    public Exception SendNotImplemented()   => Reply(Localization.Common.NOT_IMPLEMENTED);
-    public Exception SendNotEnabled()       => Reply(Localization.Common.NOT_ENABLED);
-    public Exception SendGamemodeError()    => Reply(Localization.Common.GAMEMODE_ERROR);
-    public Exception SendPlayerOnlyError()  => Reply(Localization.Common.PLAYERS_ONLY);
-    public Exception SendConsoleOnlyError() => Reply(Localization.Common.CONSOLE_ONLY);
-    public Exception SendUnknownError()     => Reply(Localization.Common.UNKNOWN_ERROR);
-    public Exception SendNoPermission()     => Reply(Localization.Common.NO_PERMISSIONS);
+    public Exception SendNotImplemented()   => Reply(T.NotImplemented);
+    public Exception SendNotEnabled()       => Reply(T.NotEnabled);
+    public Exception SendGamemodeError()    => Reply(T.GamemodeError);
+    public Exception SendPlayerOnlyError()  => Reply(T.PlayersOnly);
+    public Exception SendConsoleOnlyError() => Reply(T.ConsoleOnly);
+    public Exception SendUnknownError()     => Reply(T.UnknownError);
+    public Exception SendNoPermission()     => Reply(T.NoPermissions);
+    public Exception SendPlayerNotFound()   => Reply(T.PlayerNotFound);
     public Exception SendCorrectUsage(string usage)
-                                            => Reply(Localization.Common.CORRECT_USAGE, usage);
-    public Exception SendPlayerNotFound()   => Reply(Localization.Common.PLAYER_NOT_FOUND);
+                                            => Reply(T.CorrectUsage, usage);
+    public Exception ReplyString(string message, Color color)
+    {
+        if (message is null) throw new ArgumentNullException(nameof(message));
+        if (IsConsole || Caller is null)
+        {
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendString(message, color);
+        _responded = true;
 
-    // this is a struct so it can be passed as a value type to asyc 
+        return this;
+    }
+    public Exception ReplyString(string message, ConsoleColor color)
+    {
+        if (message is null) throw new ArgumentNullException(nameof(message));
+        if (IsConsole || Caller is null)
+        {
+            message = F.RemoveRichText(message);
+            L.Log(message, color);
+        }
+        else
+            Caller.SendString(message, F.GetColor(color));
+        _responded = true;
+        return this;
+    }
+    public Exception ReplyString(string message, string hex)
+    {
+        if (message is null) throw new ArgumentNullException(nameof(message));
+        if (IsConsole || Caller is null)
+        {
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(hex.Hex());
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendString(message, hex);
+        _responded = true;
+        return this;
+    }
+    public Exception ReplyString(string message)
+    {
+        if (message is null) throw new ArgumentNullException(nameof(message));
+        if (IsConsole || Caller is null)
+        {
+            message = F.RemoveRichText(message);
+            L.Log(message, ConsoleColor.Gray);
+        }
+        else
+            Caller.SendString(message);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply(Translation translation)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T>(Translation<T> translation, T arg)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2, arg3);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2, arg3, arg4);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+        _responded = true;
+        return this;
+    }
+    public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
+    {
+        if (translation is null) throw new ArgumentNullException(nameof(translation));
+        if (IsConsole || Caller is null)
+        {
+            string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, out Color color);
+            message = F.RemoveRichText(message);
+            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            L.Log(message, clr);
+        }
+        else
+            Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+        _responded = true;
+        return this;
+    }
+
     public struct ContextData
     {
         public readonly UCPlayer Caller;
@@ -1363,23 +1537,6 @@ public class CommandInteraction : BaseCommandInteraction
                 IsConsole = false;
                 CallerID = caller.Steam64;
                 CallerCSteamID = caller.CSteamID;
-            }
-        }
-        [Obsolete("Use the new generics system instead.")]
-        public void Reply(string translationKey, params string[] formatting)
-        {
-            if (translationKey is null) throw new ArgumentNullException(nameof(translationKey));
-            if (formatting is null) formatting = Array.Empty<string>();
-            if (IsConsole || Caller is null)
-            {
-                string message = Localization.Translate(translationKey, JSONMethods.DEFAULT_LANGUAGE, out Color color, formatting);
-                message = F.RemoveRichText(message);
-                ConsoleColor clr = F.GetClosestConsoleColor(color);
-                L.Log(message, clr);
-            }
-            else
-            {
-                Caller.SendChat(translationKey, formatting);
             }
         }
     }

@@ -702,53 +702,51 @@ public static class OffenseManager
             {
                 if (callerId == 0)
                 {
-                    L.Log(Localization.Translate("ban_permanent_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
-                    Chat.Broadcast("ban_permanent_broadcast_operator", name.CharacterName);
+                    L.Log($"{name.PlayerName} ({targetId}) was permanently banned by an operator because {reason!}.", ConsoleColor.Cyan);
+                    Chat.Broadcast(T.BanPermanentSuccessBroadcastOperator, target as IPlayer ?? name);
                 }
                 else
                 {
-                    L.Log(Localization.Translate("ban_permanent_console", (ulong)0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
-                        callerId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
-                    Chat.BroadcastToAllExcept(callerId, "ban_permanent_broadcast", name.CharacterName, callerName.CharacterName);
-                    caller?.SendChat("ban_permanent_feedback", name.CharacterName);
+                    L.Log($"{name.PlayerName} ({targetId}) was permanenly banned by {callerName.PlayerName} ({callerId}) because {reason!}.", ConsoleColor.Cyan);
+                    Chat.Broadcast(LanguageSet.AllBut(callerId), T.BanPermanentSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName);
+                    caller?.SendChat(T.BanPermanentSuccessFeedback, target as IPlayer ?? name);
                 }
             }
             else
             {
-                string time = Localization.GetTimeFromSeconds(duration, JSONMethods.DEFAULT_LANGUAGE);
+                string time = Localization.GetTimeFromSeconds(duration, L.DEFAULT);
                 if (callerId == 0)
                 {
-                    L.Log(Localization.Translate("ban_console_operator", JSONMethods.DEFAULT_LANGUAGE, out _, name.PlayerName, targetId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
+                    L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by an operator because {reason!}.", ConsoleColor.Cyan);
                     bool f = false;
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets())
+                    foreach (LanguageSet set in LanguageSet.All())
                     {
-                        if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                        if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
                         {
                             time = Localization.GetTimeFromSeconds(duration, set.Language);
                             f = true;
                         }
-                        Chat.Broadcast(set, "ban_broadcast_operator", name.PlayerName, time);
+                        Chat.Broadcast(set, T.BanSuccessBroadcastOperator, target as IPlayer ?? name, time);
                     }
                 }
                 else
                 {
-                    L.Log(Localization.Translate("ban_console", (ulong)0, out _, name.PlayerName, targetId.ToString(Data.Locale), callerName.PlayerName,
-                        callerId.ToString(Data.Locale), reason!, time), ConsoleColor.Cyan);
+                    L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by {callerName.PlayerName} ({callerId}) because {reason!}.", ConsoleColor.Cyan);
                     bool f = false;
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSetsExclude(callerId))
+                    foreach (LanguageSet set in LanguageSet.AllBut(callerId))
                     {
-                        if (f || !set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                        if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
                         {
                             time = Localization.GetTimeFromSeconds(duration, set.Language);
                             f = true;
                         }
-                        Chat.Broadcast(set, "ban_broadcast", name.CharacterName, callerName.CharacterName, time);
+                        Chat.Broadcast(set, T.BanSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName, time);
                     }
                     if (f)
                         time = Localization.GetTimeFromSeconds(duration, callerId);
-                    else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+                    else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(L.DEFAULT, StringComparison.Ordinal))
                         time = Localization.GetTimeFromSeconds(duration, lang);
-                    caller?.SendChat("ban_feedback", name.CharacterName, time);
+                    caller?.SendChat(T.BanSuccessFeedback, target as IPlayer ?? name, time);
                 }
             }
         });
@@ -769,17 +767,16 @@ public static class OffenseManager
         ActionLogger.Add(EActionLogType.KICK_PLAYER, $"KICKED {target.ToString(Data.Locale)} FOR \"{reason}\"", caller);
         if (caller == 0)
         {
-            L.Log(Localization.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName, target.ToString(Data.Locale), reason), ConsoleColor.Cyan);
-            Chat.Broadcast("kick_kicked_broadcast_operator", names.CharacterName);
+            L.Log($"{names.PlayerName} ({target}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
+            Chat.Broadcast(T.KickSuccessBroadcastOperator, targetPlayer as IPlayer ?? names);
         }
         else
         {
-            FPlayerName callerNames = caller == 0 ? FPlayerName.Console : F.GetPlayerOriginalNames(caller);
-            L.Log(Localization.Translate("kick_kicked_console", 0, out _, names.PlayerName, target.ToString(Data.Locale),
-                callerNames.PlayerName, caller.ToString(Data.Locale), reason), ConsoleColor.Cyan);
-            Chat.BroadcastToAllExcept(caller, "kick_kicked_broadcast", names.CharacterName, callerNames.CharacterName);
+            FPlayerName callerNames = F.GetPlayerOriginalNames(caller);
+            L.Log($"{names.PlayerName} ({target}) was kicked by {callerNames.PlayerName} ({caller}) because {reason}.", ConsoleColor.Cyan);
             UCPlayer? callerPlayer = UCPlayer.FromID(caller);
-            callerPlayer?.SendChat("kick_kicked_feedback", names.CharacterName);
+            Chat.Broadcast(LanguageSet.AllBut(caller), T.KickSuccessBroadcast, targetPlayer as IPlayer ?? names, callerPlayer as IPlayer ?? callerNames);
+            callerPlayer?.SendChat(T.KickSuccessFeedback, targetPlayer as IPlayer ?? names);
         }
     }
     public static void UnbanPlayer(ulong targetId, ulong callerId)
@@ -800,33 +797,16 @@ public static class OffenseManager
         ActionLogger.Add(EActionLogType.UNBAN_PLAYER, $"UNBANNED {tid}", callerId);
         if (callerId == 0)
         {
-            if (tid.Equals(targetNames.PlayerName, StringComparison.Ordinal))
-            {
-                L.Log(Localization.Translate("unban_unbanned_console_id_operator", 0, out _, tid), ConsoleColor.Cyan);
-                Chat.Broadcast("unban_unbanned_broadcast_id_operator", tid);
-            }
-            else
-            {
-                L.Log(Localization.Translate("unban_unbanned_console_name_operator", 0, out _, targetNames.PlayerName, tid.ToString(Data.Locale)), ConsoleColor.Cyan);
-                Chat.Broadcast("unban_unbanned_broadcast_name_operator", targetNames.CharacterName);
-            }
+            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by an operator.", ConsoleColor.Cyan);
+            Chat.Broadcast(T.UnbanSuccessBroadcastOperator, targetNames);
         }
         else
         {
             FPlayerName callerNames = F.GetPlayerOriginalNames(callerId);
             UCPlayer? caller = UCPlayer.FromID(callerId);
-            if (tid.Equals(targetNames.PlayerName, StringComparison.Ordinal))
-            {
-                L.Log(Localization.Translate("unban_unbanned_console_id", 0, out _, tid, callerNames.PlayerName, callerId.ToString(Data.Locale)), ConsoleColor.Cyan);
-                caller?.SendChat("unban_unbanned_feedback_id", tid);
-                Chat.BroadcastToAllExcept(callerId, "unban_unbanned_broadcast_id", tid, callerNames.CharacterName);
-            }
-            else
-            {
-                L.Log(Localization.Translate("unban_unbanned_console_name", 0, out _, targetNames.PlayerName, tid, callerNames.PlayerName, callerId.ToString(Data.Locale)), ConsoleColor.Cyan);
-                caller?.SendChat("unban_unbanned_feedback_name", targetNames.CharacterName);
-                Chat.BroadcastToAllExcept(callerId, "unban_unbanned_broadcast_name", targetNames.CharacterName, callerNames.CharacterName);
-            }
+            L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {callerNames.PlayerName} ({callerId}).", ConsoleColor.Cyan);
+            caller?.SendChat(T.UnbanSuccessFeedback, targetNames);
+            Chat.Broadcast(LanguageSet.AllBut(callerId), T.UnbanSuccessBroadcast, targetNames, caller as IPlayer ?? callerNames);
         }
     }
     public static void WarnPlayer(ulong targetId, ulong callerId, string reason)
@@ -846,19 +826,28 @@ public static class OffenseManager
         ActionLogger.Add(EActionLogType.WARN_PLAYER, $"WARNED {tid} FOR \"{reason}\"", callerId);
         if (callerId == 0)
         {
-            L.Log(Localization.Translate("warn_warned_console_operator", 0, out _, targetNames.PlayerName, tid, reason!), ConsoleColor.Cyan);
-            Chat.BroadcastToAllExcept(targetId, "warn_warned_broadcast_operator", targetNames.CharacterName);
-            ToastMessage.QueueMessage(target, new ToastMessage(Localization.Translate("warn_warned_private_operator", target, out _, reason!), EToastMessageSeverity.WARNING));
-            target.SendChat("warn_warned_private_operator", reason!);
+            L.Log($"{targetNames.PlayerName} ({targetId}) was warned by an operator because {reason}.", ConsoleColor.Cyan);
+            Chat.Broadcast(LanguageSet.AllBut(targetId), T.WarnSuccessBroadcastOperator, target);
+
+            string lang = Localization.GetLang(target.Steam64);
+            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(T.WarnSuccessDMOperator.Translate(lang), 
+                lang, reason, target, target.GetTeam(), T.WarnSuccessDMOperator.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
+
+            target.SendChat(T.WarnSuccessDMOperator, reason!);
         }
         else
         {
             FPlayerName callerNames = F.GetPlayerOriginalNames(callerId);
-            L.Log(Localization.Translate("warn_warned_console", 0, out _, targetNames.PlayerName, tid, callerNames.PlayerName, callerId.ToString(Data.Locale), reason!), ConsoleColor.Cyan);
-            Chat.BroadcastToAllExcept(new ulong[2] { targetId, callerId }, "warn_warned_broadcast", targetNames.CharacterName, callerNames.CharacterName);
-            caller?.SendChat("warn_warned_feedback", targetNames.CharacterName);
-            ToastMessage.QueueMessage(target, new ToastMessage(Localization.Translate("warn_warned_private", target, out _, callerNames.CharacterName, reason!), EToastMessageSeverity.WARNING));
-            target.SendChat("warn_warned_private", callerNames.CharacterName, reason!);
+            L.Log($"{targetNames.PlayerName} ({targetId}) was warned by {callerNames.PlayerName} ({caller}) because {reason}.", ConsoleColor.Cyan);
+            IPlayer caller2 = caller as IPlayer ?? callerNames;
+            Chat.Broadcast(LanguageSet.AllBut(callerId, targetId), T.WarnSuccessBroadcast, target, caller2);
+            caller?.SendChat(T.WarnSuccessFeedback, target);
+
+            string lang = Localization.GetLang(target.Steam64);
+            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDM.Translate(T.WarnSuccessDM.Translate(lang),
+                lang, caller2, reason, target, target.GetTeam(), T.WarnSuccessDM.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
+
+            target.SendChat(T.WarnSuccessDM, caller2, reason!);
         }
     }
     public static void MutePlayer(ulong target, ulong admin, EMuteType type, int duration, string reason)
@@ -887,50 +876,40 @@ public static class OffenseManager
             LogMutePlayer(target, admin, type, duration, reason, DateTime.Now);
 
             string dur = duration == -1 ? "PERMANENT" : duration.GetTimeFromSeconds(0);
-            ActionLogger.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur);
+            ActionLogger.Add(EActionLogType.MUTE_PLAYER, $"MUTED {target} FOR \"{reason}\" DURATION: " + dur, admin);
 
-            if (muter == null)
+            if (admin == 0)
             {
                 if (duration == -1)
                 {
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets(target, admin))
-                    {
-                        string e = Localization.TranslateEnum(type, set.Language);
-                        Chat.Broadcast(set, "mute_broadcast_operator_permanent", names.CharacterName, e);
-                    }
-                    L.Log(Localization.Translate("mute_feedback", 0, out _, names.PlayerName, target.ToString(),
-                        dur, Localization.TranslateEnum(type, 0), reason));
+                    foreach (LanguageSet set in LanguageSet.AllBut(target))
+                        Chat.Broadcast(set, T.MutePermanentSuccessBroadcastOperator, names, names, type);
+
+                    L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by an operator.", ConsoleColor.Cyan);
                 }
                 else
                 {
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets(target, admin))
-                    {
-                        string e = Localization.TranslateEnum(type, set.Language);
-                        Chat.Broadcast(set, "mute_broadcast_operator", names.CharacterName, e, dur);
-                    }
-                    L.Log(Localization.Translate("mute_feedback_permanent", 0, out _, names.PlayerName, target.ToString(),
-                        Localization.TranslateEnum(type, 0), reason));
+                    foreach (LanguageSet set in LanguageSet.AllBut(target))
+                        Chat.Broadcast(set, T.MuteSuccessBroadcastOperator, names, names, dur, type);
+
+                    L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by an operator. Duration: {dur}.", ConsoleColor.Cyan);
                 }
             }
             else
             {
                 if (duration == -1)
                 {
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets(target, admin))
-                    {
-                        string e = Localization.TranslateEnum(type, set.Language);
-                        Chat.Broadcast(set, "mute_broadcast_permanent", names.CharacterName, names2.CharacterName, e);
-                    }
-                    muter.SendChat("mute_feedback_permanent", names.PlayerName, target.ToString(), Localization.TranslateEnum(type, admin));
+                    foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
+                        Chat.Broadcast(set, T.MutePermanentSuccessBroadcast, names, names, type, names2);
+
+                    L.Log($"{names.PlayerName} ({target}) was permanently {type} muted for {reason} by {names2.PlayerName} ({admin}).", ConsoleColor.Cyan);
                 }
                 else
                 {
-                    foreach (LanguageSet set in Localization.EnumerateLanguageSets(target, admin))
-                    {
-                        string e = Localization.TranslateEnum(type, set.Language);
-                        Chat.Broadcast(set, "mute_broadcast", names.CharacterName, names2.CharacterName, e, dur);
-                    }
-                    muter.SendChat("mute_feedback", names.PlayerName, target.ToString(), dur, Localization.TranslateEnum(type, admin));
+                    foreach (LanguageSet set in LanguageSet.AllBut(target, admin))
+                        Chat.Broadcast(set, T.MuteSuccessBroadcast, names, names, dur, type, names2);
+
+                    L.Log($"{names.PlayerName} ({target}) was {type} muted for {reason} by {names2.PlayerName} ({admin}). Duration: {dur}.", ConsoleColor.Cyan);
                 }
             }
             if (muted != null)
@@ -938,16 +917,16 @@ public static class OffenseManager
                 if (admin == 0)
                 {
                     if (duration == -1)
-                        muted.SendChat("mute_dm_operator_permanent", reason, Localization.TranslateEnum(type, muted));
+                        muted.SendChat(T.MuteSuccessDMPermanentOperator, reason, type);
                     else
-                        muted.SendChat("mute_dm_operator", reason, dur, Localization.TranslateEnum(type, muted));
+                        muted.SendChat(T.MuteSuccessDMOperator, reason, dur, type);
                 }
                 else
                 {
                     if (duration == -1)
-                        muted.SendChat("mute_dm_permanent", names2.CharacterName, reason, Localization.TranslateEnum(type, muted));
+                        muted.SendChat(T.MuteSuccessDMPermanent, names2, reason, type);
                     else
-                        muted.SendChat("mute_dm", names2.CharacterName, reason, dur, Localization.TranslateEnum(type, muted));
+                        muted.SendChat(T.MuteSuccessDM, names2, reason, dur, type);
                 }
             }
         }).ConfigureAwait(false);
@@ -968,14 +947,13 @@ public static class OffenseManager
                 if (rows == 0)
                 {
                     if (caller is not null)
-                        caller.SendChat("unmute_not_muted", names.CharacterName);
+                        caller.SendChat(T.UnmuteNotMuted, names);
                     else if (callerId == 0)
-                        L.Log(F.RemoveRichText(Localization.Translate("unmute_not_muted", 0, out Color color, names.CharacterName)), F.GetClosestConsoleColor(color));
+                        L.Log(F.RemoveRichText(T.UnmuteNotMuted.Translate(L.DEFAULT, names, out Color color)), F.GetClosestConsoleColor(color));
                 }
                 else
                 {
-                    if (onlinePlayer is null) // couldve joined in the last few ms
-                        onlinePlayer = UCPlayer.FromID(targetId);
+                    onlinePlayer ??= UCPlayer.FromID(targetId);
                     if (onlinePlayer is not null)
                     {
                         onlinePlayer.MuteReason = null;
@@ -983,32 +961,30 @@ public static class OffenseManager
                         onlinePlayer.TimeUnmuted = DateTime.MinValue;
                     }
                     LogUnmutePlayer(targetId, callerId, DateTime.Now);
-
+                    FPlayerName n2 = await F.GetPlayerOriginalNamesAsync(callerId);
+                    await UCWarfare.ToUpdate();
                     if (callerId == 0)
                     {
-                        Chat.BroadcastToAllExcept(targetId, "unmute_unmuted_broadcast_operator", names.CharacterName);
-                        onlinePlayer?.SendChat("unmute_unmuted_dm_operator");
+                        Chat.Broadcast(LanguageSet.AllBut(targetId), T.UnmuteSuccessBroadcastOperator, names);
+                        onlinePlayer?.SendChat(T.UnmuteSuccessDMOperator);
                     }
                     else
                     {
-                        FPlayerName n2 = await F.GetPlayerOriginalNamesAsync(callerId);
-                        Chat.BroadcastToAllExcept(targetId, "unmute_unmuted_broadcast", names.CharacterName, n2.CharacterName);
-                        onlinePlayer?.SendChat("unmute_unmuted_dm", n2.CharacterName);
+                        Chat.Broadcast(LanguageSet.AllBut(targetId, callerId), T.UnmuteSuccessBroadcast, names, n2);
+                        onlinePlayer?.SendChat(T.UnmuteSuccessDM, n2);
+                        caller?.SendChat(T.UnmuteSuccessFeedback, names);
                     }
                     ActionLogger.Add(EActionLogType.UNMUTE_PLAYER, targetId.ToString() + " unmuted.", callerId);
-                    if (caller is not null)
-                        caller.SendChat("unmute_unmuted", names.CharacterName);
-                    else if (callerId == 0)
-                        L.Log(F.RemoveRichText(Localization.Translate("unmute_unmuted", 0, out Color color, names.CharacterName)), F.GetClosestConsoleColor(color));
+                    L.Log($"{names.PlayerName} ({targetId}) was unmuted by {(callerId == 0 ? "an operator" : (n2.PlayerName + "(" + callerId + ")"))}.");
                 }
             }
             else
             {
                 await UCWarfare.ToUpdate();
                 if (caller is not null)
-                    caller.SendChat("unmute_not_found");
+                    caller.SendChat(T.PlayerNotFound);
                 else if (callerId == 0)
-                    L.Log(F.RemoveRichText(Localization.Translate("unmute_not_found", 0, out Color color)), F.GetClosestConsoleColor(color));
+                    L.Log(F.RemoveRichText(T.PlayerNotFound.Translate(L.DEFAULT, out Color color)), F.GetClosestConsoleColor(color));
             }
         });
     }
@@ -1018,7 +994,7 @@ public static class OffenseManager
         {
             Asset a = Assets.find(e.PrimaryAsset);
             string itemName = a?.FriendlyName ?? e.PrimaryAsset.ToString("N");
-            LogTeamkill(e.Killer, e.Player, e.Cause.ToString(), itemName, a == null ? (ushort)0 : a.id, e.KillDistance, DateTime.Now);
+            LogTeamkill(e.Killer.Steam64, e.Player.Steam64, e.Cause.ToString(), itemName, a == null ? (ushort)0 : a.id, e.KillDistance, DateTime.Now);
         }
     }
     private struct Ban

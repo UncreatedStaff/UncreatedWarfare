@@ -22,11 +22,11 @@ public class VanishCommand : Command
         DutyCommand.SetVanishMode(ctx.Caller.Player, v);
         if (v)
         {
-            ctx.Reply("vanish_mode_enabled");
+            ctx.Reply(T.VanishModeEnabled);
         }
         else
         {
-            ctx.Reply("vanish_mode_disabled");
+            ctx.Reply(T.VanishModeDisabled);
         }
     }
 }

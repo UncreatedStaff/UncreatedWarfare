@@ -90,6 +90,24 @@ public static class F
         if (color.b > 0.5f) i |= 1;
         return (ConsoleColor)i;
     }
+    public static Color GetColor(ConsoleColor color)
+    {
+        int c = (int)color;
+        float r = 0f, g = 0f, b = 0f;
+        if ((c & 8) == 8)
+        {
+            r += 0.5f;
+            g += 0.5f;
+            b += 0.5f;
+        }
+        if ((c & 4) == 4)
+            r += 0.25f;
+        if ((c & 2) == 2)
+            g += 0.25f;
+        if ((c & 1) == 1)
+            b += 0.25f;
+        return new Color(r, g, b);
+    }
     public static string RemoveRichText(string text)
     {
         return RemoveRichTextRegex.Replace(text, string.Empty);
@@ -254,7 +272,7 @@ public static class F
         EAdminType perms = player.PermissionLevel;
         if (player.Player.channel.owner.isAdmin)
             perms |= EAdminType.VANILLA_ADMIN;
-        return perms | PermissionSaver.Instance.GetPlayerPermissionLevel(player);
+        return perms | PermissionSaver.Instance.GetPlayerPermissionLevel(player.Steam64);
     }
     public static unsafe string ToProperCase(this string input)
     {
@@ -394,6 +412,7 @@ public static class F
     public static ulong GetTeam(this UCPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
+    public static ulong GetTeam(this IPlayer player) => player is UCPlayer ucp ? ucp.GetTeam() : GetTeamFromPlayerSteam64ID(player.Steam64);
     public static ulong GetTeam(this ulong groupID)
     {
         if (!Data.Is<ITeams>(out _)) return groupID;
@@ -767,7 +786,7 @@ public static class F
             }
         }
     }
-    public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => GetPlayerOriginalNames(player.Player);
+    public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => player.Name;
     public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
     public static FPlayerName GetPlayerOriginalNames(Player player)
     {
@@ -877,6 +896,8 @@ public static class F
         return false;
     }
     public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
+
+    public static string ColorizeTMPro(this string inner, string colorhex, bool endTag = true) => endTag ? $"<#{colorhex}>{inner}</color>" : $"<#{colorhex}>{inner}";
     public static string ColorizeName(string innerText, ulong team)
     {
         if (!Data.Is<ITeams>(out _)) return innerText;

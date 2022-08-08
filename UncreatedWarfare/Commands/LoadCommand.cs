@@ -33,7 +33,7 @@ public class LoadCommand : Command
                 if (ctx.TryGetTarget(out InteractableVehicle vehicle))
                 {
                     if (vehicle.lockedOwner == CSteamID.Nil || vehicle.lockedGroup == CSteamID.Nil)
-                        throw ctx.Reply("load_e_novehicle");
+                        throw ctx.Reply(T.LoadNoTarget);
 
                     if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data) && data.Type == EVehicleType.LOGISTICS)
                     {
@@ -50,7 +50,7 @@ public class LoadCommand : Command
                                 ESupplyType type = ESupplyType.BUILD;
                                 if (ctx.MatchParameter(0, "build")) type = ESupplyType.BUILD;
                                 else if (ctx.MatchParameter(0, "ammo")) type = ESupplyType.AMMO;
-                                else throw ctx.Reply("load_e_usage");
+                                else throw ctx.Reply(T.LoadUsage);
 
                                 if (c.forceSupplyLoop == null)
                                     c.StartForceLoadSupplies(ctx.Caller, type, amount);
@@ -58,16 +58,16 @@ public class LoadCommand : Command
                                 ctx.LogAction(EActionLogType.LOAD_SUPPLIES, type.ToString() + " x" + amount);
                                 ctx.Defer();
                             }
-                            else throw ctx.Reply("load_e_toofast");
+                            else throw ctx.Reply(T.LoadSpeed);
                         }
-                        else throw ctx.Reply("load_e_notinmain");
+                        else throw ctx.Reply(T.LoadNotInMain);
                     }
-                    else throw ctx.Reply("load_e_notlogi");
+                    else throw ctx.Reply(T.LoadNotLogisticsVehicle);
                 }
-                else throw ctx.Reply("load_e_novehicle");
+                else throw ctx.Reply(T.LoadNoTarget);
             }
-            else throw ctx.Reply("load_e_invalidamount");
+            else throw ctx.Reply(T.LoadInvalidAmount);
         }
-        else throw ctx.Reply("load_e_usage");
+        else throw ctx.Reply(T.LoadUsage);
     }
 }

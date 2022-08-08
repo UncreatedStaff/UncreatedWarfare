@@ -345,7 +345,7 @@ public static class DailyQuests
             L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.GetDisplayString() + "\"", ConsoleColor.Cyan);
         ToastMessage.QueueMessage(tracker.Player!, new ToastMessage("Daily Quest Completed!", tracker.GetDisplayString(), "good job man idk does this need filled?", EToastMessageSeverity.PROGRESS));
         // todo UI or something, xp reward?
-        tracker.Player?.SendChat("Daily Quest Completed!");
+        tracker.Player?.SendString("Daily Quest Completed!");
     }
 
     public static void OnDailyQuestUpdated(BaseQuestTracker tracker)
@@ -361,7 +361,7 @@ public static class DailyQuests
             L.LogWarning("Player " + tracker.Player.Steam64 + " is missing their entry in DailyTrackers dictionary!");
         if (tracker.Flag != 0)
             tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
-        tracker.Player.SendChat("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
+        tracker.Player.SendString("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>
     public static void CreateNewDailyQuests()

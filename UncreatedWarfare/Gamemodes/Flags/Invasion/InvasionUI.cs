@@ -205,7 +205,7 @@ public static class InvasionUI
             List<Flag> rotation = gm.Rotation;
             CTFUI.ListUI.SendToPlayer(c);
             CTFUI.ListUI.Header.SetVisibility(c, true);
-            CTFUI.ListUI.Header.SetText(c, Localization.Translate("flag_header", player));
+            CTFUI.ListUI.Header.SetText(c, T.FlagsHeader.Translate(player));
             if (team == 1 || team == 2)
             {
                 for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
@@ -236,7 +236,7 @@ public static class InvasionUI
                         }
                         CTFUI.ListUI.Names[i].SetText(c, flag.Discovered(team) ?
                             $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>" :
-                            $"<color=#{UCWarfare.GetColorHex("undiscovered_flag")}>{Localization.Translate("undiscovered_flag", player)}</color>");
+                            T.UndiscoveredFlag.Translate(player));
                         CTFUI.ListUI.Icons[i].SetText(c, objective);
                     }
                 }

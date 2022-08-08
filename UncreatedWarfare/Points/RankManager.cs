@@ -509,7 +509,7 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         this.UnlockRequirements = unlockRequirements;
     }
     public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements) : 
-        this(order, new Dictionary<string, string>(1) { { JSONMethods.DEFAULT_LANGUAGE, name } }, new Dictionary<string, string>(1) { { JSONMethods.DEFAULT_LANGUAGE, abbreviation } },
+        this(order, new Dictionary<string, string>(1) { { L.DEFAULT, name } }, new Dictionary<string, string>(1) { { L.DEFAULT, abbreviation } },
             color, questID, unlockRequirements)
     { }
     public RankData(int order, string name, string abbreviation, string color, string questID, params string[] unlockRequirements) : 
@@ -525,16 +525,16 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
     {
         if (NameTranslations == null) return "L" + Order.ToString(Data.Locale);
         if (!Data.Languages.TryGetValue(player, out string lang))
-            lang = JSONMethods.DEFAULT_LANGUAGE;
-        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && NameTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+            lang = L.DEFAULT;
+        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && NameTranslations.TryGetValue(L.DEFAULT, out rtn)))
             return rtn;
         return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }
     public string GetName(string lang)
     {
         if (NameTranslations == null) return "L" + Order.ToString(Data.Locale);
-        if (lang == null) lang = JSONMethods.DEFAULT_LANGUAGE;
-        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && NameTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+        if (lang == null) lang = L.DEFAULT;
+        if (NameTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && NameTranslations.TryGetValue(L.DEFAULT, out rtn)))
             return rtn;
         return NameTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }
@@ -546,16 +546,16 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
     {
         if (AbbreviationTranslations == null) return "L" + Order.ToString(Data.Locale);
         if (!Data.Languages.TryGetValue(player, out string lang))
-            lang = JSONMethods.DEFAULT_LANGUAGE;
-        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+            lang = L.DEFAULT;
+        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(L.DEFAULT, out rtn)))
             return rtn;
         return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }
     public string GetAbbreviation(string lang)
     {
         if (AbbreviationTranslations == null) return "L" + Order.ToString(Data.Locale);
-        if (lang == null) lang = JSONMethods.DEFAULT_LANGUAGE;
-        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out rtn)))
+        if (lang == null) lang = L.DEFAULT;
+        if (AbbreviationTranslations.TryGetValue(lang, out string rtn) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && AbbreviationTranslations.TryGetValue(L.DEFAULT, out rtn)))
             return rtn;
         return AbbreviationTranslations.Values.FirstOrDefault() ?? ("L" + Order.ToString(Data.Locale));
     }
@@ -697,13 +697,21 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         }
     }
 
+    [FormatDisplay("Rank Name")]
     public const string NAME_FORMAT = "n";
+    [FormatDisplay("Colored Rank Name")]
     public const string COLOR_NAME_FORMAT = "cn";
+    [FormatDisplay("Rank Abbreviation")]
     public const string ABBREVIATION_FORMAT = "a";
+    [FormatDisplay("Colored Rank Abbreviation")]
     public const string COLOR_ABBREVIATION_FORMAT = "ca";
+    [FormatDisplay("Order")]
     public const string ORDER_FORMAT = "o";
+    [FormatDisplay("Colored Order")]
     public const string COLOR_ORDER_FORMAT = "co";
+    [FormatDisplay("Order with L-Prefix")]
     public const string L_ORDER_FORMAT = "lo";
+    [FormatDisplay("Colored Order with L-Prefix")]
     public const string L_COLOR_ORDER_FORMAT = "lco";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {

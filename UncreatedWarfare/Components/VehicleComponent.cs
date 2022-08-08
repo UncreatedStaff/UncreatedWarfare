@@ -191,7 +191,8 @@ public class VehicleComponent : MonoBehaviour
                 {
                     int amount = (int)(Math.Floor(distance / 100) * 2) + 5;
 
-                    Points.AwardXP(e.Vehicle.passengers[0].player.player, amount, Localization.Translate("xp_transporting_players", e.Vehicle.passengers[0].player.player));
+                    Player player = e.Vehicle.passengers[0].player.player;
+                    Points.AwardXP(player, amount, T.XPToastTransportingPlayers.Translate(player.channel.owner.playerID.steamID.m_SteamID));
 
                     _quota += 0.5F;
 
@@ -295,12 +296,10 @@ public class VehicleComponent : MonoBehaviour
         }
         else
             L.LogDebug("     ERROR: Countermeasure asset not found");
-
-        
     }
     private IEnumerator<WaitForSeconds> ReloadCountermeasures()
     {
-        yield return new WaitForSeconds(15);    
+        yield return new WaitForSeconds(15);
 
         RemoveCountermeasures();
 
@@ -345,12 +344,12 @@ public class VehicleComponent : MonoBehaviour
             TeamManager.GetFaction(Team).Ammo.ValidReference(out supplyAsset);
         else
         {
-            caller.Message("load_e_itemassetnotfound");
+            caller.SendChat(T.UnknownError);
             yield break;
         }
         if (supplyAsset == null)
         {
-            caller.Message("load_e_itemassetnotfound");
+            caller.SendChat(T.UnknownError);
             yield break;
         }
         int existingCount = 0;
@@ -431,7 +430,7 @@ public class VehicleComponent : MonoBehaviour
             }
         }
 
-        caller.Message(type is ESupplyType.BUILD ? "load_s_build" : "load_s_ammo", (addedBackCount + addedNewCount).ToString());
+        caller.SendChat(type is ESupplyType.BUILD ? T.LoadCompleteBuild : T.LoadCompleteAmmo, addedBackCount + addedNewCount);
 
         forceSupplyLoop = null;
     }

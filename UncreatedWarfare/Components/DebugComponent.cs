@@ -148,7 +148,7 @@ internal class DebugComponent : MonoBehaviour
         for (int i = Lagging.Count - 1; i >= 0; --i)
         {
             UCPlayer pl = Lagging[i];
-            if (pl.Steam64 == player || !pl.IsOnline)
+            if (pl.Steam64 == player.Steam64 || !pl.IsOnline)
                 Lagging.RemoveAtFast(i);
         }
         L.LogWarning("Lag settled for " + player.CharacterName + ".", ConsoleColor.Yellow);

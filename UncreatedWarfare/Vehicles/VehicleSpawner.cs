@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
+using Uncreated.Players;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Singletons;
@@ -28,11 +30,13 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
     {
         TeamManager.OnPlayerEnteredMainBase += OnPlayerEnterMain;
         TeamManager.OnPlayerLeftMainBase += OnPlayerLeftMain;
+        UCPlayerKeys.SubscribeKeyUp(SpawnCountermeasuresPressed, Data.Keys.SpawnCountermeasures);
         Singleton = this;
     }
     public override void Unload()
     {
         Singleton = null!;
+        UCPlayerKeys.UnsubscribeKeyUp(SpawnCountermeasuresPressed, Data.Keys.SpawnCountermeasures);
         TeamManager.OnPlayerLeftMainBase -= OnPlayerLeftMain;
         TeamManager.OnPlayerEnteredMainBase -= OnPlayerEnterMain;
     }
@@ -44,6 +48,14 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
     void IGameStartListener.OnGameStarting(bool isOnLoad)
     {
         UpdateSigns();
+    }
+    private void SpawnCountermeasuresPressed(UCPlayer player, float timeDown, ref bool handled)
+    {
+        InteractableVehicle? vehicle = player.Player.movement.getVehicle();
+        if (vehicle != null && player.Player.movement.getSeat() == 0 && (vehicle.asset.engine == EEngine.HELICOPTER || vehicle.asset.engine == EEngine.PLANE) && vehicle.transform.TryGetComponent(out VehicleComponent component))
+        {
+            component.TrySpawnCountermeasures();
+        }
     }
     private void LoadSpawns()
     {
@@ -219,7 +231,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        player.SendChat("entered_main", TeamManager.TranslateName(team, player, true));
+        player.SendChat(T.EnteredMain, TeamManager.GetFaction(team));
         for (int i = 0; i < Count; i++)
         {
             VehicleSpawn spawn = this[i];
@@ -231,7 +243,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
     }
     private void OnPlayerLeftMain(SteamPlayer player, ulong team)
     {
-        player.SendChat("left_main", TeamManager.TranslateName(team, player, true));
+        player.SendChat(T.LeftMain, TeamManager.GetFaction(team));
     }
     public static void UpdateSigns(Guid vehicle)
     {
@@ -655,24 +667,24 @@ public class VehicleSpawn
         if (TeamManager.Team1Main.IsInside(LinkedSign.SignDrop.model.transform.position))
         {
             IEnumerator<SteamPlayer> t1Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 1);
-            UpdateSignInternal(t1Main, this);
+            UpdateSignInternal(t1Main, this, 1ul);
         }
         else if (TeamManager.Team2Main.IsInside(LinkedSign.SignDrop.model.transform.position))
         {
             IEnumerator<SteamPlayer> t2Main = BasesToPlayer(TeamManager.PlayerBaseStatus.GetEnumerator(), 2);
-            UpdateSignInternal(t2Main, this);
+            UpdateSignInternal(t2Main, this, 2ul);
         }
         else if (Regions.tryGetCoordinate(LinkedSign.SignDrop.model.transform.position, out byte x, out byte y))
         {
             IEnumerator<SteamPlayer> everyoneElse = F.EnumerateClients_Remote(x, y, BarricadeManager.BARRICADE_REGIONS).GetEnumerator();
-            UpdateSignInternal(everyoneElse, this);
+            UpdateSignInternal(everyoneElse, this, 0);
         }
         else
         {
             L.LogWarning($"Vehicle sign not in main bases or any region!");
         }
     }
-    private static void UpdateSignInternal(IEnumerator<SteamPlayer> players, VehicleSpawn spawn)
+    private static void UpdateSignInternal(IEnumerator<SteamPlayer> players, VehicleSpawn spawn, ulong team)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -681,9 +693,9 @@ public class VehicleSpawn
         {
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets(players))
+            foreach (LanguageSet set in LanguageSet.All(players))
             {
-                string val = Localization.TranslateVBS(spawn, data, set.Language);
+                string val = Localization.TranslateVBS(spawn, data, set.Language, team == 0 ? data.Team : team);
                 NetId id = spawn.LinkedSign.SignInteractable.GetNetId();
                 while (set.MoveNext())
                 {
@@ -712,8 +724,8 @@ public class VehicleSpawn
             if (!VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
                 return;
             if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
-                lang = JSONMethods.DEFAULT_LANGUAGE;
-            string val = Localization.TranslateVBS(spawn, data, lang);
+                lang = L.DEFAULT;
+            string val = Localization.TranslateVBS(spawn, data, lang, player.GetTeam());
             try
             {
                 UCPlayer? pl = UCPlayer.FromSteamPlayer(player);
