@@ -143,7 +143,7 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
                             OnDefenderEntered(pl);
                         }
                     }
-                    else if (NearbyDefenders.RemoveFast(pl))
+                    else if (NearbyDefenders.Remove(pl))
                         OnDefenderLeft(pl);
                 }
                 else if (team is > 0 and < 3)
@@ -156,7 +156,7 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
                             OnDefenderEntered(pl);
                         }
                     }
-                    else if (NearbyAttackers.RemoveFast(pl))
+                    else if (NearbyAttackers.Remove(pl))
                         OnDefenderLeft(pl);
                 }
             }
