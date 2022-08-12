@@ -350,7 +350,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         if (c)
@@ -370,7 +370,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         if (c)
@@ -390,7 +390,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         if (c)
@@ -410,7 +410,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         if (c)
@@ -430,7 +430,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         if (c)
@@ -450,7 +450,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         if (c)
@@ -470,7 +470,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         for (int i = _pendingUnmutes.Count - 1; i >= 0; --i)
@@ -484,7 +484,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         if (c)
@@ -510,7 +510,7 @@ public static class OffenseManager
             c = true;
             ++num;
             if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + ttl.ToString(Data.Locale));
+                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
         }
 
         if (c)
