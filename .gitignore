@@ -9,7 +9,7 @@
 *.user
 *.userosscache
 *.sln.docstates
-*UncreatedWarfare.csproj
+*.csproj
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
