@@ -1,5 +1,4 @@
-﻿using Microsoft.SqlServer.Server;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;

@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -307,17 +308,35 @@ public static class OffenseManager
     }
     internal static async Task OnConnected()
     {
-        int ttl = _pendingBans.Count + _pendingUnbans.Count + _pendingKicks.Count + _pendingWarnings.Count +
-                  _pendingMutes.Count + _pendingBattlEyeKicks.Count + _pendingTeamkills.Count +
-                  _pendingVehicleTeamkills.Count + _pendingUnmutes.Count;
-        if (ttl == 0)
+        ITimestampOffense[] stamps = _pendingBans
+            .Cast<ITimestampOffense>()
+            .Concat(_pendingUnbans
+                .Cast<ITimestampOffense>())
+            .Concat(_pendingKicks
+                .Cast<ITimestampOffense>())
+            .Concat(_pendingWarnings
+                .Cast<ITimestampOffense>())
+            .Concat(_pendingMutes
+                .Cast<ITimestampOffense>())
+            .Concat(_pendingBattlEyeKicks
+                .Cast<ITimestampOffense>())
+            .Concat(_pendingTeamkills
+                .Cast<ITimestampOffense>())
+            .Concat(_pendingVehicleTeamkills
+                .Cast<ITimestampOffense>())
+            .Concat(_pendingUnmutes
+                .Cast<ITimestampOffense>())
+            .OrderBy(x => x.Timestamp)
+            .ToArray();
+
+        if (stamps.Length == 0)
         {
             L.Log("No queued past offenses.", ConsoleColor.Magenta);
             return;
         }
 
-        L.Log("Sending past offenses, " + ttl.ToString(Data.Locale) + " queued.", ConsoleColor.Magenta);
-        int ct = Math.Max(1, ttl / 10);
+        L.Log("Sending past offenses, " + stamps.Length.ToString(Data.Locale) + " queued.", ConsoleColor.Magenta);
+        int ct = Math.Max(1, stamps.Length / 10);
         int num = 0;
         bool c = false;
         for (int i = _pendingBans.Count - 1; i >= 0; --i)
@@ -997,13 +1016,22 @@ public static class OffenseManager
             LogTeamkill(e.Killer.Steam64, e.Player.Steam64, e.Cause.ToString(), itemName, a == null ? (ushort)0 : a.id, e.KillDistance, DateTime.Now);
         }
     }
-    private struct Ban
+    private interface ITimestampOffense
+    {
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
+    }
+
+    private struct Ban : ITimestampOffense
     {
         public ulong Violator;
         public ulong Admin;
         public string Reason;
         public int Duration;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public Ban(ulong violator, ulong admin, string reason, int duration, DateTime timestamp)
         {
@@ -1014,11 +1042,13 @@ public static class OffenseManager
             Timestamp = timestamp;
         }
     }
-    private struct Unban
+    private struct Unban : ITimestampOffense
     {
         public ulong Violator;
         public ulong Admin;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public Unban(ulong violator, ulong admin, DateTime timestamp)
         {
@@ -1027,12 +1057,14 @@ public static class OffenseManager
             Timestamp = timestamp;
         }
     }
-    private struct Kick
+    private struct Kick : ITimestampOffense
     {
         public ulong Violator;
         public ulong Admin;
         public string Reason;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public Kick(ulong violator, ulong admin, string reason, DateTime timestamp)
         {
@@ -1042,12 +1074,14 @@ public static class OffenseManager
             Timestamp = timestamp;
         }
     }
-    private struct Warn
+    private struct Warn : ITimestampOffense
     {
         public ulong Violator;
         public ulong Admin;
         public string Reason;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public Warn(ulong violator, ulong admin, string reason, DateTime timestamp)
         {
@@ -1057,14 +1091,16 @@ public static class OffenseManager
             Timestamp = timestamp;
         }
     }
-    private struct Mute
+    private struct Mute : ITimestampOffense
     {
         public ulong Violator;
         public ulong Admin;
         public EMuteType MuteType;
         public int Duration;
         public string Reason;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public Mute(ulong violator, ulong admin, EMuteType muteType, int duration, string reason, DateTime timestamp)
         {
@@ -1076,11 +1112,13 @@ public static class OffenseManager
             Timestamp = timestamp;
         }
     }
-    private struct BattlEyeKick
+    private struct BattlEyeKick : ITimestampOffense
     {
         public ulong Violator;
         public string Reason;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public BattlEyeKick(ulong violator, string reason, DateTime timestamp)
         {
@@ -1089,13 +1127,15 @@ public static class OffenseManager
             Timestamp = timestamp;
         }
     }
-    private struct Teamkill
+    private struct Teamkill : ITimestampOffense
     {
         public ulong Violator;
         public ulong Dead;
         public string DeathCause;
         public string ItemName;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public Teamkill(ulong violator, ulong dead, string deathCause, string itemName, DateTime timestamp)
         {
@@ -1106,12 +1146,14 @@ public static class OffenseManager
             Timestamp = timestamp;
         }
     }
-    private struct VehicleTeamkill
+    private struct VehicleTeamkill : ITimestampOffense
     {
         public ulong Violator;
         public ushort VehicleID;
         public string VehicleName;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public VehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTime timestamp)
         {
@@ -1121,11 +1163,13 @@ public static class OffenseManager
             Timestamp = timestamp;
         }
     }
-    private struct Unmute
+    private struct Unmute : ITimestampOffense
     {
         public ulong Violator;
         public ulong Admin;
-        public DateTime Timestamp;
+        public DateTime Timestamp { get; set; }
+        public bool Sent { get; set; }
+        public bool Received { get; set; }
         [JsonConstructor]
         public Unmute(ulong violator, ulong admin, DateTime timestamp)
         {
