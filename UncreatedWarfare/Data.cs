@@ -60,6 +60,7 @@ public static class Data
         public static readonly string Logs             = Path.Combine(BaseDirectory, "Logs")      + Path.DirectorySeparatorChar;
         public static readonly string ActionLog        = Path.Combine(Logs,          "ActionLog") + Path.DirectorySeparatorChar;
         public static readonly string PendingOffenses  = Path.Combine(BaseDirectory, "Offenses")  + Path.DirectorySeparatorChar;
+        public static readonly string TraitDataStorage = Path.Combine(BaseDirectory, "traits.json");
 
         public static readonly string CurrentLog       = Path.Combine(Logs,          "current.txt");
         public static string FlagStorage        => _flagCache is null       ? (_flagCache       = Path.Combine(MapStorage, "Flags")      + Path.DirectorySeparatorChar) : _flagCache;

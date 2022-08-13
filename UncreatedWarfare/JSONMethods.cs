@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -253,6 +254,72 @@ public struct SerializableTransform : IJsonReadWrite
         }
     }
 }
+
+/// <summary>Wrapper for a <see cref="Dictionary{string, string}"/>, has custom JSON reading to take a string or dictionary of translations.<br/><see langword="null"/> = empty list.</summary>
+/// <remarks>Extension methods located in <see cref="T"/>.</remarks>
+[JsonConverter(typeof(TranslationListConverter))]
+public sealed class TranslationList : Dictionary<string, string>
+{
+    public TranslationList() { }
+    public TranslationList(int capacity) : base(capacity) { }
+    public TranslationList(string @default)
+    {
+        Add(L.DEFAULT, @default);
+    }
+    public TranslationList(int capacity, string @default) : base(capacity)
+    {
+        Add(L.DEFAULT, @default);
+    }
+}
+public sealed class TranslationListConverter : JsonConverter<TranslationList>
+{
+    public override TranslationList? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        JsonTokenType token = reader.TokenType;
+        switch (token)
+        {
+            case JsonTokenType.Null:
+                return new TranslationList();
+            case JsonTokenType.String:
+                return new TranslationList(reader.GetString()!);
+            case JsonTokenType.StartObject:
+                TranslationList list = new TranslationList(2);
+                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    string? key = reader.GetString();
+                    if (!string.IsNullOrWhiteSpace(key) && reader.Read() && reader.TokenType == JsonTokenType.String)
+                    {
+                        string? val = reader.GetString();
+                        if (val is not null)
+                            list.Add(key!, val);
+                    }
+                    else throw new JsonException("Invalid token type for TranslationList at key \"" + (key ?? "null") + "\".");
+                }
+                return list;
+            default:
+                throw new JsonException("Invalid token type for TranslationList.");
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, TranslationList value, JsonSerializerOptions options)
+    {
+        if (value == null || value.Count == 0)
+            writer.WriteNullValue();
+        else if (value.Count == 1 && value.TryGetValue(L.DEFAULT, out string v))
+            writer.WriteStringValue(v);
+        else
+        {
+            writer.WriteStartObject();
+            foreach (KeyValuePair<string, string> kvp in value)
+            {
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteStringValue(kvp.Value);
+            }
+            writer.WriteEndObject();
+        }
+    }
+}
+
 public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 {
     public const string ENGLISH                     = "en-us";

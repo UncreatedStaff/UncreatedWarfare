@@ -20,6 +20,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -102,6 +103,7 @@ public class UCPlayer : IPlayer
         }
     }
     public List<Kit>? AccessibleKits;
+    public List<Trait> ActiveTraits = new List<Trait>(4);
     internal List<Guid>? _completedQuests;
     public float LastSpoken = 0f;
 

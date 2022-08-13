@@ -112,6 +112,7 @@ public class UI_CONFIG
     public RotatableConfig<JsonAssetReference<EffectAsset>> JoinUIGUID;
     public RotatableConfig<JsonAssetReference<EffectAsset>> WinToastGUID;
     public RotatableConfig<JsonAssetReference<EffectAsset>> TicketUI;
+    public RotatableConfig<JsonAssetReference<EffectAsset>> TraitUI;
     public bool EnablePlayerCount;
     public bool ShowPointsOnUI;
     public string ProgressChars;
@@ -154,6 +155,7 @@ public class UI_CONFIG
         MarkerBuildable =       new JsonAssetReference<EffectAsset>("35ab4b71bfb74755b318ce62935f58c9");
         WinToastGUID =          new JsonAssetReference<EffectAsset>("1f3ce50c120042c390f5c42522bd0fcd");
         TicketUI =              new JsonAssetReference<EffectAsset>("aba88eedb84448e8a30bb803a53a7236");
+        TraitUI =               new JsonAssetReference<EffectAsset>("00000000000000000000000000000000");
         EnablePlayerCount = true;
         ShowPointsOnUI = false;
         ProgressChars = "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀ";

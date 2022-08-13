@@ -1560,4 +1560,34 @@ internal static class T
             }
         }
     }
+    public static string Translate(this TranslationList list, ulong player) => TryTranslate(list, player, out string local) ? local : string.Empty;
+    public static string Translate(this TranslationList list, UCPlayer player) => TryTranslate(list, player.Steam64, out string local) ? local : string.Empty;
+    public static string Translate(this TranslationList list, string language) => TryTranslate(list, language, out string local) ? local : string.Empty;
+    public static bool TryTranslate(this TranslationList list, UCPlayer player, out string local) => TryTranslate(list, player.Steam64, out local);
+    public static bool TryTranslate(this TranslationList list, ulong player, out string local)
+    {
+        if (list is null)
+        {
+            local = null!;
+            return false;
+        }
+        if (player == 0ul || !Data.Languages.TryGetValue(player, out string lang))
+            lang = L.DEFAULT;
+        if (list.TryGetValue(lang, out local) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && list.TryGetValue(L.DEFAULT, out local)))
+            return true;
+        return (local = list.Values.FirstOrDefault()) != null;
+    }
+    public static bool TryTranslate(this TranslationList list, string language, out string local)
+    {
+        if (list is null)
+        {
+            local = null!;
+            return false;
+        }
+        if (string.IsNullOrEmpty(language))
+            language = L.DEFAULT;
+        if (list.TryGetValue(language, out local) || (!language.Equals(L.DEFAULT, StringComparison.Ordinal) && list.TryGetValue(L.DEFAULT, out local)))
+            return true;
+        return (local = list.Values.FirstOrDefault()) != null;
+    }
 }
