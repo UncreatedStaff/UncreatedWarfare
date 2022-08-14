@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Uncreated.Framework;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
@@ -187,71 +186,74 @@ public class TraitData : ITranslationArgument
     }
 
     [JsonPropertyName("credit_cost")]
-    public int CreditCost { get; set; }
+    public int CreditCost;
 
     [JsonPropertyName("squad_distribute_effect")]
-    public bool EffectDistributedToSquad { get; set; }
+    public bool EffectDistributedToSquad;
 
     [JsonPropertyName("squad_distribute_items")]
-    public bool ItemsDistributedToSquad { get; set; }
+    public bool ItemsDistributedToSquad;
 
     [JsonPropertyName("squad_distributed_multiplier")]
-    public float SquadDistributedMultiplier { get; set; } = 1f;
+    public float SquadDistributedMultiplier = 1f;
 
     [JsonPropertyName("squad_distributed_multiplier_leader")]
-    public float SquadLeaderDistributedMultiplier { get; set; } = 1f;
+    public float SquadLeaderDistributedMultiplier = 1f;
+
     [JsonPropertyName("require_squad")]
-    public bool RequireSquad { get; set; }
+    public bool RequireSquad;
+
     [JsonPropertyName("require_squad_leader")]
-    public bool RequireSquadLeader { get; set; }
+    public bool RequireSquadLeader;
 
     [JsonPropertyName("gamemode_list_is_blacklist")]
-    public bool GamemodeListIsBlacklist { get; set; }
+    public bool GamemodeListIsBlacklist;
 
     [JsonPropertyName("gamemode_list")]
-    public string[] GamemodeList { get; set; }
+    public string[] GamemodeList;
 
     [JsonPropertyName("class_list_is_blacklist")]
-    public bool ClassListIsBlacklist { get; set; }
+    public bool ClassListIsBlacklist;
 
     [JsonPropertyName("class_list")]
-    public EClass[] ClassList { get; set; }
+    public EClass[] ClassList;
 
     [JsonPropertyName("lasts_until_death")]
-    public bool LastsUntilDeath { get; set; }
+    public bool LastsUntilDeath;
 
     [JsonPropertyName("team")]
-    public ulong Team { get; set; }
+    public ulong Team;
 
     [JsonPropertyName("unlock_requirements")]
     public BaseUnlockRequirement[] UnlockRequirements { get; set; }
 
     [JsonPropertyName("name")]
-    public TranslationList NameTranslations { get; set; }
+    public TranslationList NameTranslations;
 
     [JsonPropertyName("description")]
-    public TranslationList DescriptionTranslations { get; set; }
+    public TranslationList DescriptionTranslations;
 
     [JsonPropertyName("items_given")]
     public RotatableConfig<JsonAssetReference<ItemAsset>>[] ItemsGiven { get; set; }
 
     [JsonPropertyName("icon")]
-    public RotatableConfig<string> Icon { get; set; }
+    public RotatableConfig<string> Icon;
 
     [JsonPropertyName("request_cooldown")]
-    public RotatableConfig<float> Cooldown { get; set; }
+    public RotatableConfig<float> Cooldown;
 
     [JsonPropertyName("delays")]
-    public Delay[] Delays { get; set; }
+    public Delay[] Delays;
 
     [JsonPropertyName("effect_duration")]
-    public float EffectDuration { get; set; }
+    public float EffectDuration;
 
     [JsonPropertyName("tick_speed")]
-    public float TickSpeed { get; set; }
+    public float TickSpeed;
 
     [JsonPropertyName("data")]
-    public string Data { get; set; }
+    public string Data;
+
     [JsonConstructor]
     public TraitData()
     {
@@ -292,7 +294,6 @@ public class TraitData : ITranslationArgument
     public const string COLOR_DESCRIPTION = "cd";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        string v;
         if (format is not null && !format.Equals(NAME, StringComparison.Ordinal))
         {
             if (format.Equals(DESCRIPTION, StringComparison.Ordinal))
