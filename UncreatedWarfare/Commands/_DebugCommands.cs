@@ -97,7 +97,7 @@ internal class _DebugCommand : Command
                                 await Data.DatabaseManager.AddXP(player, team, amount);
                                 FPlayerName name = await Data.DatabaseManager.GetUsernamesAsync(player);
                                 await UCWarfare.ToUpdate();
-                                ctx.ReplyString($"Given {amount} XP to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
+                                ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                             });
                             ctx.Defer();
                         }
@@ -113,7 +113,7 @@ internal class _DebugCommand : Command
                         team = onlinePlayer.GetTeam();
                     Points.AwardXP(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
                     FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
-                    ctx.ReplyString($"Given {amount} XP to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
+                    ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
                 }
             }
             else
@@ -148,7 +148,7 @@ internal class _DebugCommand : Command
                                 await Data.DatabaseManager.AddCredits(player, team, amount);
                                 FPlayerName name = await Data.DatabaseManager.GetUsernamesAsync(player);
                                 await UCWarfare.ToUpdate();
-                                ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}C</color> {amount} to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
+                                ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                             });
                             ctx.Defer();
                         }
@@ -164,7 +164,7 @@ internal class _DebugCommand : Command
                         team = onlinePlayer.GetTeam();
                     Points.AwardCredits(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
                     FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
-                    ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}C</color> {amount} to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
+                    ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
                 }
             }
             else
@@ -993,5 +993,70 @@ internal class _DebugCommand : Command
             }
         }
         ctx.ReplyString("Syntax: /test flag <set|get|remove> <flag> [value]");
+    }
+
+    private void findasset(CommandInteraction ctx)
+    {
+        if (ctx.TryGet(0, out Guid guid))
+        {
+            ctx.ReplyString("Asset: " + (Assets.find(guid)?.FriendlyName ?? "null"));
+        }
+        else if (ctx.TryGet(0, out ushort us) && ctx.TryGet(1, out EAssetType type))
+        {
+            ctx.ReplyString("Asset: " + (Assets.find(type, us)?.FriendlyName ?? "null"));
+        }
+        else
+        {
+            ctx.ReplyString("Please use a <GUID> or <uhort, type>");
+        }
+    }
+    private void traits(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertGamemode<ITraits>();
+
+        ctx.AssertRanByPlayer();
+
+        L.Log("Traits: ");
+        using (IDisposable d = L.IndentLog(1))
+        {
+            for (int i = 0; i < ctx.Caller.ActiveTraits.Count; ++i)
+            {
+                Traits.Trait t = ctx.Caller.ActiveTraits[i];
+                L.Log(t.Data.TypeName + " (" + (Time.realtimeSinceStartup - t.StartTime) + " seconds active)");
+            }
+        }
+
+        L.Log("Buff UI:");
+        L.Log("[ " + (ctx.Caller.ActiveBuffs[0]?.Data.TypeName ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[1]?.Data.TypeName ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[2]?.Data.TypeName ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[3]?.Data.TypeName ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[4]?.Data.TypeName ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[5]?.Data.TypeName ?? "null") + " ]");
+    }
+
+    private void sendui(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        ctx.AssertRanByPlayer();
+
+        if (ctx.TryGet(0, out ushort id))
+        {
+            if (ctx.TryGet(1, out short key))
+            {
+                EffectManager.sendUIEffect(id, key, ctx.Caller.Connection, true);
+            }
+            else
+            {
+                EffectManager.sendUIEffect(id, unchecked((short)id), ctx.Caller.Connection, true);
+            }
+        }
+        else
+        {
+            ctx.ReplyString("Syntax: /test sendui <id> [key]");
+        }
     }
 }

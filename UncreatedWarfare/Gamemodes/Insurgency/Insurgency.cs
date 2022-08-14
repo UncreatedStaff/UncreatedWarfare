@@ -295,6 +295,8 @@ public class Insurgency :
 #endif
         CheckPlayersAMC();
         TeamManager.EvaluateBases();
+        if (State == EState.ACTIVE)
+            TicketManager.Provider.Tick();
     }
     public override void OnPlayerDeath(PlayerDied e)
     {

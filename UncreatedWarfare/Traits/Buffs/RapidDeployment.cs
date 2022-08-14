@@ -1,11 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Globalization;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 public class RapidDeployment : Buff
@@ -28,15 +22,21 @@ public class RapidDeployment : Buff
     };
 
     private float _multiplier;
-    protected override void ClearEffect()
-    {
-        throw new NotImplementedException();
-    }
-
     protected override void StartEffect()
     {
         if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
             _multiplier = 0.75f;
         base.StartEffect();
+    }
+    public static float GetDeployTime(UCPlayer player)
+    {
+        TraitData? d = TraitManager.GetData(typeof(RapidDeployment));
+        if (d != null)
+        {
+            if (TraitManager.IsAffectedSquad(d, player, out Trait trait) && trait is RapidDeployment dep)
+                return CooldownManager.Config.DeployFOBCooldown * dep._multiplier;
+        }
+
+        return CooldownManager.Config.DeployFOBCooldown;
     }
 }

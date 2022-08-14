@@ -57,6 +57,7 @@ public class BuyCommand : Command
                     await Points.UpdatePointsAsync(ctx.Caller);
                     if (ctx.Caller.CachedCredits < kit.CreditCost)
                     {
+                        await UCWarfare.ToUpdate();
                         ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
                         return;
                     }

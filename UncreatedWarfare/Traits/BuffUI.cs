@@ -32,8 +32,8 @@ public class BuffUI : UnturnedUI
     public UnturnedLabel BlinkingIcon6 = new UnturnedLabel("Buff6_Blinking");
 
     public UnturnedUIElement[] Parents;
-    public UnturnedLabel[] SolidIcons;
-    public UnturnedLabel[] BlinkingIcons;
+    public UnturnedLabel[]     SolidIcons;
+    public UnturnedLabel[]     BlinkingIcons;
     public BuffUI() : base(12013, Gamemode.Config.UI.BuffUI, true, false)
     {
         Parents = new UnturnedUIElement[MAX_BUFFS]
@@ -77,10 +77,7 @@ public class BuffUI : UnturnedUI
             {
                 if (player.ActiveBuffs[i] == buff)
                     return false; // already added
-            }
-            for (int i = 0; i < player.ActiveBuffs.Length; ++i)
-            {
-                if (player.ActiveBuffs[i] == null)
+                else if (player.ActiveBuffs[i] == null)
                 {
                     ind = i;
                     break;
@@ -128,6 +125,7 @@ public class BuffUI : UnturnedUI
                 if (i == MAX_BUFFS - 1)
                 {
                     Parents[i].SetVisibility(c, false);
+                    player.ActiveBuffs[i] = null;
                     break;
                 }
                 else
@@ -144,6 +142,7 @@ public class BuffUI : UnturnedUI
                     }
                     else
                     {
+                        player.ActiveBuffs[i] = null;
                         Parents[i].SetVisibility(c, false);
                         break;
                     }

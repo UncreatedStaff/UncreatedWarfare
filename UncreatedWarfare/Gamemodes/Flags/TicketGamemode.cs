@@ -26,7 +26,8 @@ public abstract class TicketGamemode<TProvider> : FlagGamemode, ITickets where T
     protected override void EventLoopAction()
     {
         base.EventLoopAction();
-        TicketManager.Provider.Tick();
+        if (State == EState.ACTIVE)
+            TicketManager.Provider.Tick();
     }
     public override void DeclareWin(ulong winner)
     {

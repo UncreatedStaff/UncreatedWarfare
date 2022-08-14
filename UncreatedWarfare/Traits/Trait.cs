@@ -21,8 +21,8 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     private UCPlayer _targetPlayer;
     private bool _inited = false;
     protected Coroutine? _coroutine;
-    protected float ActiveTime { get; private set; }
-    protected float StartTime { get; private set; }
+    public float ActiveTime { get; private set; }
+    public float StartTime { get; private set; }
 
     public TraitData Data
     {
@@ -238,6 +238,9 @@ public class TraitData : ITranslationArgument
     [JsonPropertyName("icon")]
     public RotatableConfig<string> Icon { get; set; }
 
+    [JsonPropertyName("request_cooldown")]
+    public RotatableConfig<float> Cooldown { get; set; }
+
     [JsonPropertyName("delays")]
     public Delay[] Delays { get; set; }
 
@@ -275,12 +278,16 @@ public class TraitData : ITranslationArgument
         return GamemodeListIsBlacklist;
     }
 
+    [FormatDisplay(typeof(Trait), "Name")]
     [FormatDisplay("Name")]
     public const string NAME = "n";
+    [FormatDisplay(typeof(Trait), "Description")]
     [FormatDisplay("Description")]
     public const string DESCRIPTION = "d";
+    [FormatDisplay(typeof(Trait), "Colored Name")]
     [FormatDisplay("Colored Name")]
     public const string COLOR_NAME = "cn";
+    [FormatDisplay(typeof(Trait), "Colored Description")]
     [FormatDisplay("Colored Description")]
     public const string COLOR_DESCRIPTION = "cd";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
@@ -289,20 +296,20 @@ public class TraitData : ITranslationArgument
         if (format is not null && !format.Equals(NAME, StringComparison.Ordinal))
         {
             if (format.Equals(DESCRIPTION, StringComparison.Ordinal))
-                return DescriptionTranslations != null && DescriptionTranslations.TryGetValue(language, out v)
-                    ? v
+                return DescriptionTranslations != null
+                    ? DescriptionTranslations.Translate(language).Replace('\n', ' ')
                     : Translation.Null(flags & TranslationFlags.NoRichText);
             if (format.Equals(COLOR_NAME, StringComparison.Ordinal))
-                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null && NameTranslations.TryGetValue(language, out v)
-                    ? v
+                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null
+                    ? NameTranslations.Translate(language).Replace('\n', ' ')
                     : TypeName, flags);
             else if (format.Equals(COLOR_DESCRIPTION, StringComparison.Ordinal))
-                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null && NameTranslations.TryGetValue(language, out v)
-                    ? v
+                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), DescriptionTranslations != null
+                    ? DescriptionTranslations.Translate(language).Replace('\n', ' ')
                     : Translation.Null(flags & TranslationFlags.NoRichText), flags);
         }
-        return NameTranslations != null && NameTranslations.TryGetValue(language, out v)
-            ? v
+        return NameTranslations != null
+            ? NameTranslations.Translate(language).Replace('\n', ' ')
             : TypeName;
     }
 }

@@ -1,16 +1,9 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Input;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
-using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 
 namespace Uncreated.Warfare;
 public static class Signs
@@ -32,25 +25,21 @@ public static class Signs
     }
     public static void SendSignUpdate(InteractableSign sign, UCPlayer player)
     {
-        if (sign == null) return;
-        BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
-        if (drop != null)
+        if (sign != null)
         {
-            string txt = GetClientText(sign.text, player, sign);
-            Data.SendChangeText.Invoke(drop.GetNetId(), ENetReliability.Unreliable, player.Connection, txt);
+            Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, GetClientText(sign.text, player, sign));
         }
     }
     public static void SendSignUpdate(BarricadeDrop drop, UCPlayer player)
     {
         if (drop != null && drop.interactable is InteractableSign sign)
         {
-            string txt = GetClientText(sign.text, player, sign);
-            Data.SendChangeText.Invoke(drop.GetNetId(), ENetReliability.Unreliable, player.Connection, txt);
+            Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, GetClientText(sign.text, player, sign));
         }
     }
     public static void BroadcastSign(string serverText, InteractableSign sign, byte x, byte y)
     {
-        if (serverText.Length <= PREFIX.Length)
+        if (serverText.Length <= PREFIX.Length || !serverText.StartsWith(PREFIX, StringComparison.OrdinalIgnoreCase))
         {
             BroadcastClientSign(serverText, sign, x, y);
             return;
@@ -71,7 +60,7 @@ public static class Signs
     }
     public static string GetClientText(string serverText, UCPlayer player, InteractableSign sign)
     {
-        if (serverText.Length <= PREFIX.Length)
+        if (serverText.Length <= PREFIX.Length || !serverText.StartsWith(PREFIX, StringComparison.OrdinalIgnoreCase))
             return GetClientTextSign(player, serverText);
 
         string key2 = serverText.Substring(PREFIX.Length);
@@ -136,11 +125,15 @@ public static class Signs
             return;
         }
         NetId id = sign.GetNetId();
-        foreach (LanguageSet set in LanguageSet.InRegions(x, y, BarricadeManager.BARRICADE_REGIONS))
+        bool t = d.Team is 1 or 2;
+        foreach (LanguageSet set in t
+                     ? LanguageSet.InRegions(x, y, BarricadeManager.BARRICADE_REGIONS)
+                     : LanguageSet.InRegionsByTeam(x, y, BarricadeManager.BARRICADE_REGIONS))
         {
-            string fmt = TraitSigns.TranslateTraitSign(d, set.Language);
+            ulong team = t ? d.Team : set.Team;
+            string fmt = TraitSigns.TranslateTraitSign(d, set.Language, team, out bool shouldFormat);
             while (set.MoveNext())
-                Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, TraitSigns.FormatTraitSign(d, fmt, set.Next));
+                Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, shouldFormat ? TraitSigns.FormatTraitSign(d, fmt, set.Next, team) : fmt);
         }
     }
     private static string GetClientTextTrait(UCPlayer player, string typeName, InteractableSign sign)
@@ -149,7 +142,9 @@ public static class Signs
         if (!TraitManager.Loaded || (d = TraitManager.GetData(typeName)) == null)
             return GetClientTextSign(player, typeName);
 
-        return TraitSigns.FormatTraitSign(d, TraitSigns.TranslateTraitSign(d, Localization.GetLang(player.Steam64)), player);
+        ulong team = d.Team is 1 or 2 ? d.Team : player.GetTeam();
+        string txt = TraitSigns.TranslateTraitSign(d, Localization.GetLang(player.Steam64), team, out bool fmt);
+        return fmt ? TraitSigns.FormatTraitSign(d, txt, player, team) : txt;
     }
     private static void BroadcastClientKitSign(string kitname, InteractableSign sign, byte x, byte y)
     {

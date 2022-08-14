@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -470,6 +471,6 @@ public class UCPlayerData : MonoBehaviour
         }
 
         if (startCoolDown)
-            CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.Config.DeployFOBCooldown);
+            CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, RapidDeployment.GetDeployTime(player));
     }
 }

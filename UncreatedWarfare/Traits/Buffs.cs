@@ -23,11 +23,11 @@ public abstract class Buff : Trait
         {
             if (_isActivated == value)
                 return;
+            _isActivated = value;
             if (value)
                 Reactivate();
             else
                 Deactivate();
-            _isActivated = value;
         }
     }
 
@@ -51,23 +51,23 @@ public abstract class Buff : Trait
         }
         else
             AddPlayer(TargetPlayer);
+        if (!IsActivated)
+            _isActivated = true;
     }
 
     protected virtual void ClearEffect()
     {
         if (IsActivated)
+            _isActivated = false;
+        Squad? sq;
+        if (Data.EffectDistributedToSquad && (sq = TargetPlayer.Squad) is not null)
         {
-            IsActivated = false;
-            Squad? sq;
-            if (Data.EffectDistributedToSquad && (sq = TargetPlayer.Squad) is not null)
-            {
-                for (int i = 0; i < sq.Members.Count; ++i)
-                    RemovePlayer(sq.Members[i]);
-            }
-            else
-            {
-                RemovePlayer(TargetPlayer);
-            }
+            for (int i = 0; i < sq.Members.Count; ++i)
+                RemovePlayer(sq.Members[i]);
+        }
+        else
+        {
+            RemovePlayer(TargetPlayer);
         }
     }
 

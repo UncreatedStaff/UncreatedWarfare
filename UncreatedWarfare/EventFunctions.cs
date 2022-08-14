@@ -25,6 +25,7 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -1254,6 +1255,7 @@ public static class EventFunctions
                     vbsign.sign_transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
                     VehicleSigns.SaveSingleton();
                 }
+                TraitSigns.OnBarricadeMoved(drop, sign);
             }
         }
     }

@@ -16,6 +16,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -184,8 +185,8 @@ public class RequestCommand : Command
                             else
                             {
                                 L.LogWarning("Unhandled kit requirement type: " + req.GetType().Name);
+                                throw ctx.SendUnknownError();
                             }
-                            return;
                         }
 
                         Task.Run(async () =>
@@ -241,6 +242,19 @@ public class RequestCommand : Command
                         ctx.Defer();
                     }
                     else throw ctx.Reply(T.RequestNoTarget);
+                }
+                else if (TraitManager.Loaded && sign.text.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX, StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.AssertGamemode<ITraits>();
+
+                    if (!TraitManager.Loaded)
+                        throw ctx.SendGamemodeError();
+
+                    TraitData? d = TraitManager.GetData(sign.text.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
+                    if (d == null)
+                        throw ctx.Reply(T.RequestNoTarget);
+
+                    TraitManager.RequestTrait(d, ctx);
                 }
                 else throw ctx.Reply(T.RequestNoTarget);
             }
@@ -346,7 +360,7 @@ public class RequestCommand : Command
         }
         if (data.IsDelayed(out Delay delay) && delay.type != EDelayType.NONE)
         {
-            RequestVehicleIsDelayed(ucplayer, ref delay, team, data);
+            Localization.SendDelayRequestText(in delay, ucplayer, team, Localization.EDelayMode.VEHICLE_BAYS);
             return;
         }
 
@@ -401,6 +415,7 @@ public class RequestCommand : Command
                         }
                         else
                         {
+                            await UCWarfare.ToUpdate();
                             ucplayer.SendChat(T.RequestVehicleCantAfford, data.CreditCost - ucplayer.CachedCredits, data.CreditCost);
                             return;
                         }
@@ -456,139 +471,6 @@ public class RequestCommand : Command
         else
         {
             ucplayer.SendChat(T.RequestVehicleAlreadyRequested);
-        }
-    }
-    private void RequestVehicleIsDelayed(UCPlayer ucplayer, ref Delay delay, ulong team, VehicleData data)
-    {
-        if (delay.type == EDelayType.OUT_OF_STAGING &&
-            (delay.gamemode is null || 
-            (Data.Is(out Insurgency ins1) && delay.gamemode == "Insurgency" && team == ins1.AttackingTeam) ||
-            (Data.Is(out Invasion inv2) && delay.gamemode == "Invasion" && team == inv2.AttackingTeam))
-            )
-        {
-            ucplayer.SendChat(T.RequestVehicleStagingDelay);
-            return;
-        }
-        else if (delay.type == EDelayType.TIME)
-        {
-            float timeLeft = delay.value - Data.Gamemode.SecondsSinceStart;
-            ucplayer.SendChat(T.RequestVehicleTimeDelay, Mathf.RoundToInt(timeLeft).GetTimeFromSeconds(ucplayer.Steam64));
-        }
-        else if (delay.type == EDelayType.FLAG || delay.type == EDelayType.FLAG_PERCENT)
-        {
-            if (Data.Is(out Invasion invasion))
-            {
-                int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(invasion.Rotation.Count * (delay.value / 100f));
-                int ct2;
-                if (data.Team == 1)
-                {
-                    if (invasion.AttackingTeam == 1)
-                        ct2 = ct - invasion.ObjectiveT1Index;
-                    else
-                        ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
-                }
-                else if (data.Team == 2)
-                {
-                    if (invasion.AttackingTeam == 2)
-                        ct2 = ct - (invasion.Rotation.Count - invasion.ObjectiveT2Index - 1);
-                    else
-                        ct2 = ct - invasion.ObjectiveT1Index;
-                }
-                else ct2 = ct;
-                int ind = ct - ct2;
-                if (invasion.AttackingTeam == 2) ind = invasion.Rotation.Count - ind - 1;
-                if (ct2 == 1 && invasion.Rotation.Count > 0 && ind < invasion.Rotation.Count)
-                {
-                    if (data.Team == invasion.AttackingTeam)
-                        ucplayer.SendChat(T.RequestVehicleFlagDelay1, invasion.Rotation[ind]);
-                    else if (data.Team == invasion.DefendingTeam)
-                        ucplayer.SendChat(T.RequestVehicleLoseFlagDelay1, invasion.Rotation[ind]);
-                    else
-                        ucplayer.SendChat(T.RequestVehicleFlagDelayMultiple, ct2);
-                }
-                else if (data.Team == invasion.DefendingTeam)
-                    ucplayer.SendChat(T.RequestVehicleLoseFlagDelayMultiple, ct2);
-                else
-                    ucplayer.SendChat(T.RequestVehicleFlagDelayMultiple, ct2);
-            }
-            else if (Data.Is(out IFlagTeamObjectiveGamemode flags))
-            {
-                int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.value / 100f));
-                int ct2;
-                if (data.Team == 1)
-                    ct2 = ct - flags.ObjectiveT1Index;
-                else if (data.Team == 2)
-                    ct2 = ct - (flags.Rotation.Count - flags.ObjectiveT2Index - 1);
-                else ct2 = ct;
-                int ind = ct - ct2;
-                if (data.Team == 2) ind = flags.Rotation.Count - ind - 1;
-                if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
-                {
-                    if (data.Team == 1 || data.Team == 2)
-                        ucplayer.SendChat(T.RequestVehicleFlagDelay1, flags.Rotation[ind]);
-                    else
-                        ucplayer.SendChat(T.RequestVehicleFlagDelayMultiple, ct2);
-                }
-                else
-                {
-                    ucplayer.SendChat(T.RequestVehicleFlagDelayMultiple, ct2);
-                }
-            }
-            else if (Data.Is(out IFlagRotation rot))
-            {
-                int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(flags.Rotation.Count * (delay.value / 100f));
-                int ct2 = 0;
-                for (int i = 0; i < rot.Rotation.Count; ++i)
-                {
-                    if (data.Team == 0 ? rot.Rotation[i].HasBeenCapturedT1 | rot.Rotation[i].HasBeenCapturedT2 : (data.Team == 1 ? rot.Rotation[i].HasBeenCapturedT1 : (data.Team == 2 ? rot.Rotation[i].HasBeenCapturedT2 : false)))
-                        ++ct2;
-                }
-                int ind = ct - ct2;
-                if (ct2 == 1 && flags.Rotation.Count > 0 && ind < flags.Rotation.Count)
-                {
-                    if (data.Team == 1 || data.Team == 2)
-                        ucplayer.SendChat(T.RequestVehicleFlagDelay1, flags.Rotation[ind]);
-                    else
-                        ucplayer.SendChat(T.RequestVehicleFlagDelayMultiple, ct2);
-                }
-                else
-                    ucplayer.SendChat(T.RequestVehicleFlagDelayMultiple, ct2);
-            }
-            else if (Data.Is(out Insurgency ins))
-            {
-                int ct = delay.type == EDelayType.FLAG ? Mathf.RoundToInt(delay.value) : Mathf.FloorToInt(ins.Caches.Count * (delay.value / 100f));
-                int ct2;
-                ct2 = ct - ins.CachesDestroyed;
-                int ind = ct - ct2;
-                if (ct2 == 1 && ins.Caches.Count > 0 && ind < ins.Caches.Count)
-                {
-                    if (data.Team == ins.AttackingTeam)
-                    {
-                        if (ins.Caches[ind].IsDiscovered)
-                            ucplayer.SendChat(T.RequestVehicleCacheDelayAtk1, ins.Caches[ind].Cache);
-                        else
-                            ucplayer.SendChat(T.RequestVehicleCacheDelayAtkUndiscovered1);
-                    }
-                    else if (data.Team == ins.DefendingTeam)
-                        if (ins.Caches[ind].IsActive)
-                            ucplayer.SendChat(T.RequestVehicleCacheDelayDef1, ins.Caches[ind].Cache);
-                        else
-                            ucplayer.SendChat(T.RequestVehicleCacheDelayDefUndiscovered1);
-                    else
-                        ucplayer.SendChat(T.RequestVehicleCacheDelayMultipleAtk, ct2);
-                }
-                else
-                {
-                    if (data.Team == ins.AttackingTeam)
-                        ucplayer.SendChat(T.RequestVehicleCacheDelayMultipleAtk, ct2);
-                    else
-                        ucplayer.SendChat(T.RequestVehicleCacheDelayMultipleDef, ct2);
-                }
-            }
-        }
-        else
-        {
-            ucplayer.SendChat(T.RequestVehicleUnknownDelay, delay.ToString());
         }
     }
 }

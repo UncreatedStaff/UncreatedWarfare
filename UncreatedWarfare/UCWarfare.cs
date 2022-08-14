@@ -316,16 +316,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             {
                 if (drop.interactable is InteractableSign sign)
                 {
-                    bool found = false;
                     if (VehicleSpawner.Loaded && VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn))
-                    {
                         spawn.UpdateSign(player);
-                        found = true;
-                    }
-                    if (!found && sign.text.StartsWith(Signs.PREFIX))
-                    {
+                    else if (sign.text.StartsWith(Signs.PREFIX))
                         Signs.BroadcastSignUpdate(drop);
-                    }
                 }
             }
         }

@@ -48,9 +48,20 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Singleton.cooldowns.RemoveAll(c => c.player == null || c.Timeleft.TotalSeconds <= 0);
-        cooldown = Singleton.cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && c.data.Equals(data));
+        cooldown = Singleton.cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && StatesEqual(data, c.data));
         return cooldown != null;
     }
+    private static bool StatesEqual(object[] state1, object[] state2)
+    {
+        if (state1.Length != state2.Length) return false;
+        for (int i = 0; i < state1.Length; ++i)
+        {
+            if (!state2[i].Equals(state1[i]))
+                return false;
+        }
+        return true;
+    }
+
     /// <exception cref="SingletonUnloadedException"/>
     public static bool HasCooldownNoStateCheck(UCPlayer player, ECooldownType type, out Cooldown cooldown)
     {
@@ -92,6 +103,8 @@ public class CooldownConfig : ConfigData
     public RotatableConfig<float> RequestKitCooldown;
     public RotatableConfig<float> RequestVehicleCooldown;
     public RotatableConfig<float> ReviveXPCooldown;
+    public RotatableConfig<float> GlobalTraitCooldown;
+    public RotatableConfig<float> IndividualTraitCooldown;
     public override void SetDefaults()
     {
         EnableCombatLogger = true;
@@ -101,6 +114,8 @@ public class CooldownConfig : ConfigData
         RequestKitCooldown = 120;
         RequestVehicleCooldown = 240;
         ReviveXPCooldown = 150f;
+        GlobalTraitCooldown = 120f;
+        IndividualTraitCooldown = 240f;
     }
     public CooldownConfig() { }
 }
@@ -183,5 +198,9 @@ public enum ECooldownType
     [Translatable("Report Player1")]
     REPORT,
     [Translatable("Revive Player")]
-    REVIVE
+    REVIVE,
+    [Translatable("Request Trait")]
+    REQUEST_TRAIT_GLOBAL,
+    [Translatable("Request Single Trait")]
+    REQUEST_TRAIT_SINGLE
 }

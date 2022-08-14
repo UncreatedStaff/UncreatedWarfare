@@ -13,6 +13,7 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Components.SpottedComponent;
@@ -267,6 +268,10 @@ public static class Points
                 {
                     RequestSigns.UpdateAllSigns(player);
                 }
+                if (TraitManager.Loaded)
+                {
+                    TraitSigns.SendAllTraitSigns(player);
+                }
             }
             else if (player.Rank.Level < oldRank.Level)
             {
@@ -280,6 +285,10 @@ public static class Points
                 if (RequestSigns.Loaded)
                 {
                     RequestSigns.UpdateAllSigns(player);
+                }
+                if (TraitManager.Loaded)
+                {
+                    TraitSigns.SendAllTraitSigns(player);
                 }
             }
         });
@@ -478,15 +487,15 @@ public static class Points
                 return;
             caller.UpdatePoints(xp, cd);
             await UCWarfare.ToUpdate();
-            for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
-            {
-                for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
-                {
-                    BarricadeRegion reg = BarricadeManager.regions[x, y];
-                    for (int i = 0; i < reg.drops.Count; ++i)
-                        Signs.SendSignUpdate(reg.drops[i], caller);
-                }
-            }
+
+            if (TraitManager.Loaded)
+                TraitSigns.SendAllTraitSigns(caller);
+
+            if (VehicleBay.Loaded && VehicleSpawner.Loaded && VehicleSigns.Loaded)
+                VehicleSpawner.UpdateSigns(caller);
+
+            if (RequestSigns.Loaded)
+                RequestSigns.UpdateAllSigns(caller);
         }
     }
     /*

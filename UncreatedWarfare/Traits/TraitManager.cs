@@ -1,14 +1,23 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Text.Json;
-using Uncreated.Warfare.Gamemodes.Interfaces;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
+using Uncreated.Warfare.Vehicles;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Traits;
-public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
+public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGameStartListener, ILevelStartListener
 {
     public List<Trait> ActiveTraits;
     public static TraitManager Singleton;
@@ -20,24 +29,6 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
     };
     public static bool Loaded => Singleton.IsLoaded<TraitManager, TraitData>();
     public TraitManager() : base("traits", Data.Paths.TraitDataStorage) { }
-    protected override void OnRead()
-    {
-        if (Loaded && BarricadeManager.regions != null)
-        {
-            for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
-            {
-                for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
-                {
-                    BarricadeRegion reg = BarricadeManager.regions[x, y];
-                    for (int i = 0; i < reg.drops.Count; ++i)
-                    {
-                        if (reg.drops[i].interactable is InteractableSign sign && sign.text.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX, StringComparison.OrdinalIgnoreCase))
-                            Signs.BroadcastSign(sign.text, sign, x, y);
-                    }
-                }
-            }
-        }
-    }
     protected override string LoadDefaults() => JsonSerializer.Serialize(DEFAULT_TRAITS, JsonEx.serializerSettings);
     public override void Load()
     {
@@ -53,9 +44,16 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
             if (player.GetTeam() is 1 or 2)
                 BuffUI.SendBuffs(player);
         }
+        
+        
+
+        KitManager.OnKitChanged += OnKitChagned;
+        EventDispatcher.OnGroupChanged += OnGroupChanged;
     }
     public override void Unload()
     {
+        EventDispatcher.OnGroupChanged -= OnGroupChanged;
+        KitManager.OnKitChanged -= OnKitChagned;
         if (ActiveTraits != null)
         {
             for (int j = ActiveTraits.Count - 1; j >= 0; --j)
@@ -71,27 +69,70 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
         BuffUI.ClearFromAllPlayers();
         Singleton = null!;
     }
+    public void OnLevelReady()
+    {
+        if (BarricadeManager.regions == null)
+            return;
+
+        for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                BarricadeRegion reg = BarricadeManager.regions[x, y];
+                for (int i = 0; i < reg.drops.Count; ++i)
+                {
+                    if (reg.drops[i].interactable is InteractableSign sign && sign.text.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX, StringComparison.OrdinalIgnoreCase))
+                    {
+                        TraitData? d = GetData(sign.text.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
+                        if (d != null)
+                            TraitSigns.InitTraitSign(d, reg.drops[i], sign);
+                    }
+                }
+            }
+        }
+    }
+    private void OnGroupChanged(GroupChanged e)
+    {
+        TraitSigns.SendAllTraitSigns(e.Player);
+        if (e.NewGroup is 1 or 2)
+            BuffUI.SendBuffs(e.Player);
+    }
+    private void OnKitChagned(UCPlayer player, Kit kit, string oldKit)
+    {
+        TraitSigns.SendAllTraitSigns(player);
+    }
     public void OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
         BuffUI.SendBuffs(player);
     }
-    public static bool TryCreate<T>(UCPlayer player, out Trait trait) where T : Trait
+    void IGameStartListener.OnGameStarting(bool isOnLoad)
+    {
+        TraitSigns.BroadcastAllTraitSigns();
+    }
+    public static bool TryCreate<T>(UCPlayer player, out T trait) where T : Trait
     {
         Singleton.AssertLoaded<TraitManager, TraitData>();
         Type type = typeof(T);
-        if (type.IsAbstract || !type.IsPublic || type.IsNested || type.IsGenericType)
-            throw new ArgumentException(nameof(T), "Invalid type argument: " + type.Name);
         for (int i = 0; i < Singleton.Count; ++i)
         {
             if (Singleton[i].Type == type)
             {
-                trait = player.Player.gameObject.AddComponent<T>();
-                trait.Init(Singleton[i], player);
-                return true;
+                if (TryCreate(Singleton[i], player, out Trait trait2))
+                {
+                    trait = (trait2 as T)!;
+                    return trait is not null;
+                }
+                trait = null!;
+                return false;
             }
         }
         trait = null!;
         return false;
+    }
+    public static bool TryCreate(TraitData data, UCPlayer player, out Trait trait)
+    {
+        (trait = (player.Player.gameObject.AddComponent(data.Type) as Trait)!)?.Init(data, player);
+        return trait is not null;
     }
     internal static void ActivateTrait(Trait trait)
     {
@@ -143,6 +184,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
                 buff.SquadLeaderPromoted();
             }
         }
+        TraitSigns.SendAllTraitSigns(player);
     }
     internal static void OnPlayerLeftSquad(UCPlayer player, Squad left)
     {
@@ -182,6 +224,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
                     }
                 }
         }
+        TraitSigns.SendAllTraitSigns(player);
     }
     internal static void OnPlayerJoinSquad(UCPlayer player, Squad joined)
     {
@@ -226,6 +269,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
                     }
                 }
         }
+        TraitSigns.SendAllTraitSigns(player);
     }
     /// <remarks>Run before <see cref="Squad.Members"/> is cleared.</remarks>
     internal static void OnSquadDisbanded(Squad squad)
@@ -255,6 +299,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
                     }
                 }
             }
+            TraitSigns.SendAllTraitSigns(member);
         }
     }
     internal static void DeactivateTrait(Trait trait)
@@ -262,24 +307,38 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
         Singleton.AssertLoaded<TraitManager, TraitData>();
         Singleton.ActiveTraits.Remove(trait);
         trait.TargetPlayer.ActiveTraits.Remove(trait);
+        if (trait is Buff buff)
+        {
+            BuffUI.RemoveBuff(buff.TargetPlayer, buff);
+        }
+
         L.LogDebug("Deactivated trait: " + trait.Data.Type.Name);
     }
-    public static bool IsAffectedOwner<T>(UCPlayer player) where T : Buff => IsAffectedOwner(typeof(T), player);
-    public static bool IsAffectedSquad<T>(UCPlayer player) where T : Buff => IsAffectedSquad(typeof(T), player);
-    public static bool IsAffectedOwner(Type type, UCPlayer player)
+    public static bool IsAffectedOwner<T>(UCPlayer player) where T : Buff => IsAffectedOwner(typeof(T), player, out _);
+    public static bool IsAffectedSquad<T>(UCPlayer player) where T : Buff => IsAffectedSquad(typeof(T), player, out _);
+    public static bool IsAffectedOwner(Type type, UCPlayer player, out Trait trait)
     {
-        if (player.ActiveTraits is null) return false;
+        if (player.ActiveTraits is null)
+        {
+            trait = null!;
+            return false;
+        }
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
         {
             Trait t = player.ActiveTraits[i];
             if (t.Data.Type == type && t.isActiveAndEnabled && t.Inited)
+            {
+                trait = t;
                 return true;
+            }
         }
+
+        trait = null!;
         return false;
     }
-    public static bool IsAffectedSquad(Type type, UCPlayer player)
+    public static bool IsAffectedSquad(Type type, UCPlayer player, out Trait trait)
     {
-        if (IsAffectedOwner(type, player)) return true;
+        if (IsAffectedOwner(type, player, out trait)) return true;
         if (player.Squad is null) return false;
         bool onlySl = false;
         if (Loaded)
@@ -294,14 +353,209 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener
             }
         }
         if (onlySl)
-            return player.Squad.Leader.Steam64 != player.Steam64 && IsAffectedOwner(type, player.Squad.Leader);
+            return player.Squad.Leader.Steam64 != player.Steam64 && IsAffectedOwner(type, player.Squad.Leader, out trait);
 
         for (int i = 0; i < player.Squad.Members.Count; ++i)
         {
             UCPlayer pl = player.Squad.Members[i];
             if (pl.Steam64 == player.Steam64) continue;
-            if (IsAffectedOwner(type, pl)) return true;
+            if (IsAffectedOwner(type, pl, out trait)) return true;
         }
+        trait = null!;
         return false;
+    }
+    public static bool IsAffectedSquad(TraitData data, UCPlayer player, out Trait trait)
+    {
+        if (IsAffectedOwner(data.Type, player, out trait)) return true;
+        if (player.Squad is null) return false;
+        if (data.RequireSquadLeader)
+            return player.Squad.Leader.Steam64 != player.Steam64 && IsAffectedOwner(data.Type, player.Squad.Leader, out trait);
+
+        for (int i = 0; i < player.Squad.Members.Count; ++i)
+        {
+            UCPlayer pl = player.Squad.Members[i];
+            if (pl.Steam64 == player.Steam64) continue;
+            if (IsAffectedOwner(data.Type, pl, out trait)) return true;
+        }
+
+        trait = null!;
+        return false;
+    }
+    /// <exception cref="CommandInteraction"/>
+    public static void RequestTrait(TraitData trait, CommandInteraction ctx)
+    {
+        Singleton.AssertLoaded<TraitManager, TraitData>();
+
+        ulong team = ctx.Caller.GetTeam();
+        if (trait.Team is 1 or 2 && trait.Team != team)
+            throw ctx.Reply(T.RequestTraitWrongTeam, trait, TeamManager.GetFactionSafe(trait.Team)!);
+
+        if (!trait.CanGamemodeUse())
+            throw ctx.Reply(T.RequestTraitGamemodeLocked, trait, Data.Gamemode);
+
+        if (trait.Delays != null && trait.Delays.Length > 0 && Delay.IsDelayed(trait.Delays, out Delay delay, team))
+        {
+            Localization.SendDelayRequestText(in delay, ctx.Caller, team, Localization.EDelayMode.TRAITS);
+            throw ctx.Defer();
+        }
+
+        for (int i = 0; i < ctx.Caller.ActiveTraits.Count; ++i)
+        {
+            if (ctx.Caller.ActiveTraits[i].Data.Type == trait.Type)
+                throw ctx.Reply(T.TraitAlreadyActive, trait);
+        }
+
+        if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, ECooldownType.REQUEST_TRAIT_GLOBAL, out Cooldown cooldown) && !ctx.Caller.OnDuty())
+            throw ctx.Reply(T.RequestTraitGlobalCooldown, cooldown);
+
+        if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_SINGLE, out cooldown, trait.TypeName) && !ctx.Caller.OnDuty())
+            throw ctx.Reply(T.RequestTraitSingleCooldown, trait, cooldown);
+
+        bool isBuff = typeof(Buff).IsAssignableFrom(trait.Type);
+        if (isBuff && GetBuffCount(ctx.Caller) > BuffUI.MAX_BUFFS)
+            throw ctx.Reply(T.RequestTraitTooManyBuffs);
+
+        for (int i = 0; i < trait.UnlockRequirements.Length; i++)
+        {
+            BaseUnlockRequirement req = trait.UnlockRequirements[i];
+            if (req.CanAccess(ctx.Caller))
+                continue;
+            if (req is LevelUnlockRequirement level)
+            {
+                RankData data = new RankData(Points.GetLevelXP(level.UnlockLevel));
+                throw ctx.Reply(T.RequestTraitLowLevel, trait, data);
+            }
+            else if (req is RankUnlockRequirement rank)
+            {
+                ref Ranks.RankData data = ref Ranks.RankManager.GetRank(rank.UnlockRank, out bool success);
+                if (!success)
+                    L.LogWarning("Invalid rank order in trait requirement: " + trait.TypeName + " :: " + rank.UnlockRank + ".");
+                throw ctx.Reply(T.RequestTraitLowRank, trait, data);
+            }
+            else if (req is QuestUnlockRequirement quest)
+            {
+                if (Assets.find(quest.QuestID) is QuestAsset asset)
+                {
+                    ctx.Caller.Player.quests.sendAddQuest(asset.id);
+                    throw ctx.Reply(T.RequestTraitQuestIncomplete, trait, asset);
+                }
+                else
+                {
+                    throw ctx.Reply(T.RequestTraitQuestIncomplete, trait, null!);
+                }
+            }
+            else
+            {
+                L.LogWarning("Unhandled trait requirement type: " + req.GetType().Name);
+                throw ctx.SendUnknownError();
+            }
+        }
+
+        if (ctx.Caller.Kit is null || ctx.Caller.KitClass <= EClass.UNARMED)
+            throw ctx.Reply(T.RequestTraitNoKit);
+
+        if (!trait.CanClassUse(ctx.Caller.KitClass))
+            throw ctx.Reply(T.RequestTraitClassLocked, trait, ctx.Caller.KitClass);
+
+        if (ctx.Caller.Squad is null)
+        {
+            if (trait.RequireSquadLeader)
+                throw ctx.Reply(T.RequestTraitNotSquadLeader, trait);
+            else if (trait.RequireSquad)
+                throw ctx.Reply(T.RequestTraitNoSquad, trait);
+        }
+        else if (trait.RequireSquadLeader && ctx.Caller.Squad.Leader.Steam64 != ctx.CallerID)
+            throw ctx.Reply(T.RequestTraitNotSquadLeader, trait);
+
+
+
+        Task.Run(async () =>
+        {
+            if (trait.CreditCost != 0)
+            {
+                await ctx.Caller.PurchaseSync.WaitAsync();
+                try
+                {
+                    await Points.UpdatePointsAsync(ctx.Caller);
+                    if (ctx.Caller.CachedCredits < trait.CreditCost)
+                    {
+                        await UCWarfare.ToUpdate();
+                        ctx.Reply(T.RequestKitCantAfford, trait.CreditCost - ctx.Caller.CachedCredits, trait.CreditCost);
+                        return;
+                    }
+                    await Points.AwardCreditsAsync(ctx.Caller, -trait.CreditCost, isPurchase: true);
+                }
+                finally
+                {
+                    ctx.Caller.PurchaseSync.Release();
+                }
+            }
+
+            await UCWarfare.ToUpdate();
+            if (ctx.Caller.Squad is null)
+            {
+                if (trait.RequireSquadLeader)
+                {
+                    ctx.Caller.SendChat(T.RequestTraitNotSquadLeader, trait);
+                    return;
+                }
+                else if (trait.RequireSquad)
+                {
+                    ctx.Caller.SendChat(T.RequestTraitNoSquad, trait);
+                    return;
+                }
+            }
+            else if (trait.RequireSquad && ctx.Caller.Squad.Leader.Steam64 != ctx.CallerID)
+            {
+                ctx.Caller.SendChat(T.RequestTraitNotSquadLeader, trait);
+                return;
+            }
+
+            if (isBuff && GetBuffCount(ctx.Caller) > BuffUI.MAX_BUFFS)
+            {
+                ctx.Caller.SendChat(T.RequestTraitTooManyBuffs);
+                return;
+            }
+            for (int i = 0; i < ctx.Caller.ActiveTraits.Count; ++i)
+            {
+                if (ctx.Caller.ActiveTraits[i].Data.Type == trait.Type)
+                {
+                    ctx.Caller.SendChat(T.TraitAlreadyActive, trait);
+                    return;
+                }
+            }
+
+            ctx.LogAction(EActionLogType.REQUEST_TRAIT, $"Trait {trait.TypeName}, Team {team}, Cost: {trait.CreditCost}");
+            CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_GLOBAL, CooldownManager.Config.GlobalTraitCooldown);
+            CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_SINGLE, CooldownManager.Config.IndividualTraitCooldown, trait);
+            GiveTrait(ctx.Caller, trait);
+        });
+        ctx.Defer();
+    }
+    private static int GetBuffCount(UCPlayer player)
+    {
+        if (player.ActiveBuffs is null) return 0;
+        for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+        {
+            if (player.ActiveBuffs[i] == null) return i;
+        }
+
+        return player.ActiveBuffs.Length;
+    }
+    public static void GiveTrait(UCPlayer player, TraitData data)
+    {
+        Singleton.AssertLoaded<TraitManager, TraitData>();
+
+        if (TryCreate(data, player, out Trait trait))
+        {
+            if (data.LastsUntilDeath)
+                player.SendChat(T.RequestTraitGivenUntilDeath, data);
+            else if (data.EffectDuration > 0)
+                player.SendChat(T.RequestTraitGivenTimer, data, Localization.GetTimeFromSeconds(Mathf.CeilToInt(data.EffectDuration), player));
+            else
+                player.SendChat(T.RequestTraitGiven, data);
+        }
+        else
+            player.SendChat(T.UnknownError);
     }
 }

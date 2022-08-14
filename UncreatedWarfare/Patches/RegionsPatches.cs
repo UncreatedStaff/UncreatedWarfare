@@ -59,6 +59,17 @@ namespace Uncreated.Warfare
                         structure.state = Convert.ToBase64String(newState);
                         StructureSaver.SaveSingleton();
                     }
+
+                    if (TraitManager.Loaded && trimmedText.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        TraitData? d = TraitManager.GetData(trimmedText.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
+                        if (d != null)
+                            TraitSigns.InitTraitSign(d, drop, sign);
+                        else
+                            TraitSigns.TryRemoveComponent(drop, sign);
+                    }
+                    else TraitSigns.TryRemoveComponent(drop, sign);
                     return false;
                 }
                 else
