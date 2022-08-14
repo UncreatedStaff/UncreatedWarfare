@@ -265,7 +265,7 @@ public static class Points
                 }
                 if (RequestSigns.Loaded)
                 {
-                    RequestSigns.UpdateAllSigns(player.SteamPlayer);
+                    RequestSigns.UpdateAllSigns(player);
                 }
             }
             else if (player.Rank.Level < oldRank.Level)
@@ -279,7 +279,7 @@ public static class Points
                 }
                 if (RequestSigns.Loaded)
                 {
-                    RequestSigns.UpdateAllSigns(player.SteamPlayer);
+                    RequestSigns.UpdateAllSigns(player);
                 }
             }
         });
@@ -331,12 +331,12 @@ public static class Points
             "Credits", "<color=#b8ffc1>C</color>  " + player.CachedCredits
         );
     }
-    public static string GetProgressBar(int currentPoints, int totalPoints, int barLength = 50)
+    public static string GetProgressBar(float currentPoints, int totalPoints, int barLength = 50)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        float ratio = currentPoints / (float)totalPoints;
+        float ratio = currentPoints / totalPoints;
 
         int progress = Mathf.RoundToInt(ratio * barLength);
         if (progress > barLength)
@@ -477,6 +477,16 @@ public static class Points
             if (!found)
                 return;
             caller.UpdatePoints(xp, cd);
+            await UCWarfare.ToUpdate();
+            for (byte x = 0; x < Regions.WORLD_SIZE; ++x)
+            {
+                for (byte y = 0; y < Regions.WORLD_SIZE; ++y)
+                {
+                    BarricadeRegion reg = BarricadeManager.regions[x, y];
+                    for (int i = 0; i < reg.drops.Count; ++i)
+                        Signs.SendSignUpdate(reg.drops[i], caller);
+                }
+            }
         }
     }
     /*

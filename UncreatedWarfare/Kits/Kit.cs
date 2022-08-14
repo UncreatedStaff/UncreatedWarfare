@@ -781,7 +781,7 @@ public readonly struct Skillset : IEquatable<Skillset>
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(ref b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(ref b, true);
 }
-
+[JsonConverter(typeof(UnlockRequirementConverter))]
 public abstract class BaseUnlockRequirement
 {
     private static bool hasReflected = false;
@@ -849,13 +849,25 @@ public abstract class BaseUnlockRequirement
     protected abstract void WriteProperties(Utf8JsonWriter writer);
     public abstract string GetSignText(UCPlayer player);
 }
+
+public class UnlockRequirementConverter : JsonConverter<BaseUnlockRequirement>
+{
+    public override BaseUnlockRequirement? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        => BaseUnlockRequirement.Read(ref reader);
+    public override void Write(Utf8JsonWriter writer, BaseUnlockRequirement value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        BaseUnlockRequirement.Write(writer, value);
+        writer.WriteEndObject();
+    }
+}
 [UnlockRequirement("unlock_level")]
 public class LevelUnlockRequirement : BaseUnlockRequirement
 {
     public int UnlockLevel = -1;
     public override bool CanAccess(UCPlayer player)
     {
-        return Point.Points.GetLevel(player.CachedXP) >= UnlockLevel;
+        return player.Rank.Level >= UnlockLevel;
     }
     public override string GetSignText(UCPlayer player)
     {
@@ -1134,6 +1146,7 @@ public enum EClothingType : byte
     BACKPACK,
     GLASSES
 }
+[JsonConverter(typeof(ClassConverter))]
 [Translatable("Kit Class")]
 public enum EClass : byte
 {
@@ -1231,4 +1244,34 @@ public enum EClass : byte
     [Translatable(LanguageAliasSet.PORTUGUESE, "Op. Esp.")]
     [Translatable(LanguageAliasSet.POLISH, "Specjalista")]
     SPEC_OPS = 17
+}
+
+public sealed class ClassConverter : JsonConverter<EClass>
+{
+    private const EClass MAX_CLASS = EClass.SPEC_OPS;
+    public override EClass Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Number)
+        {
+            if (reader.TryGetByte(out byte b))
+                return (EClass)b;
+            throw new JsonException("Invalid EClass value.");
+        }
+        else if (reader.TokenType == JsonTokenType.Null)
+            return EClass.NONE;
+        else if (reader.TokenType == JsonTokenType.String)
+        {
+            if (Enum.TryParse(reader.GetString()!, true, out EClass rtn))
+                return rtn;
+            throw new JsonException("Invalid EClass value.");
+        }
+        throw new JsonException("Invalid token for EClass parameter.");
+    }
+    public override void Write(Utf8JsonWriter writer, EClass value, JsonSerializerOptions options)
+    {
+        if (value >= EClass.NONE && value <= MAX_CLASS)
+            writer.WriteStringValue(value.ToString());
+        else
+            writer.WriteNumberValue((byte)value);
+    }
 }

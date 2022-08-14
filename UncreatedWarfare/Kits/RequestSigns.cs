@@ -84,9 +84,7 @@ public class RequestSigns : ListSingleton<RequestSign>
             if (Singleton[i].barricadetransform != default)
             {
                 BarricadeDrop bd = BarricadeManager.FindBarricadeByRootTransform(Singleton[i].barricadetransform);
-                if (bd.interactable is InteractableSign s &&
-                    Regions.tryGetCoordinate(bd.model.position, out byte x, out byte y))
-                    F.InvokeSignUpdateForAll(s, x, y, s.text);
+                Signs.BroadcastSignUpdate(bd);
             }
 
         }
@@ -134,7 +132,7 @@ public class RequestSigns : ListSingleton<RequestSign>
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
         return Singleton.ObjectExists(x => x.kit_name == kitName, out sign);
     }
-    public static void UpdateAllSigns(SteamPlayer? player = null)
+    public static void UpdateAllSigns(UCPlayer? player = null)
     {
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
 #if DEBUG
@@ -253,7 +251,7 @@ public class RequestSign : IJsonReadWrite
         this.barricadetransform = default;
         this.exists = false;
     }
-    public void InvokeUpdate(SteamPlayer player)
+    public void InvokeUpdate(UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -261,20 +259,20 @@ public class RequestSign : IJsonReadWrite
         if (barricadetransform != null)
         {
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
-            if (drop != null && drop.model.TryGetComponent(out InteractableSign sign))
+            if (drop != null)
             {
-                F.InvokeSignUpdateFor(player, sign, SignText);
+                Signs.SendSignUpdate(drop, player);
             }
             else L.LogError("Failed to find barricade from saved transform!");
         }
         else
         {
-            SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
+            BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
             if (data != null && drop != null)
             {
                 BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
                 if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign))
-                    F.InvokeSignUpdateFor(player, sign, true, SignText);
+                    Signs.SendSignUpdate(drop2, player);
                 else L.LogError("Failed to find barricade after respawning again!");
             }
             else L.LogError("Failed to find barricade after respawn!");
@@ -288,9 +286,9 @@ public class RequestSign : IJsonReadWrite
         if (barricadetransform != null)
         {
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadetransform);
-            if (drop != null && drop.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+            if (drop != null)
             {
-                F.InvokeSignUpdateForAll(sign, x, y, SignText);
+                Signs.BroadcastSignUpdate(drop);
             }
             else L.LogError("Failed to find barricade from saved transform!");
         }
@@ -300,8 +298,8 @@ public class RequestSign : IJsonReadWrite
             if (data != null && drop != null)
             {
                 BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(drop.model.transform);
-                if (drop2 != null && drop2.model.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-                    F.InvokeSignUpdateForAll(sign, x, y, SignText);
+                if (drop2 != null)
+                    Signs.BroadcastSignUpdate(drop2);
                 else L.LogError("Failed to find barricade after respawning again!");
             }
             else L.LogError("Failed to find barricade after respawn!");

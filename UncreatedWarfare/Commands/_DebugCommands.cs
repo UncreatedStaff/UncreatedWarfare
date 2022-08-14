@@ -760,8 +760,7 @@ internal class _DebugCommand : Command
                 str.state = Convert.ToBase64String(drop.GetServersideData().barricade.state);
                 StructureSaver.SaveSingleton();
             }
-            if (BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _) && plant == ushort.MaxValue)
-                F.InvokeSignUpdateForAll(sign, x, y, text);
+            Signs.BroadcastSignUpdate(drop);
         }
     }
 #if DEBUG

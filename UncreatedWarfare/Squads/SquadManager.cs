@@ -430,6 +430,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         Squads.Add(squad);
         SortSquadListABC();
         leader.Squad = squad;
+        Traits.TraitManager.OnPlayerJoinSquad(leader, squad);
 
         ClearList(leader.Player);
         SendSquadMenu(leader, squad);
@@ -461,6 +462,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                 p.SendChat(T.SquadJoined, squad);
         }
 
+        Traits.TraitManager.OnPlayerJoinSquad(player, squad);
         squad.Members.Add(player);
         SortMembers(squad);
 
@@ -508,6 +510,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         player.Squad = null;
         ClearMenu(player.Player);
         squad.Members.RemoveAll(p => p.Steam64 == player.Steam64);
+        Traits.TraitManager.OnPlayerLeftSquad(player, squad);
         if (squad.Members.Count == 0)
         {
             Squads.Remove(squad);
@@ -577,6 +580,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 
         ActionLogger.Add(EActionLogType.DISBANDED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0), squad.Leader);
 
+        Traits.TraitManager.OnSquadDisbanded(squad);
+
         for (int i = 0; i < squad.Members.Count; i++)
         {
             UCPlayer member = squad.Members[i];
@@ -610,6 +615,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         if (squad.Members.Remove(player))
             player.SendChat(T.SquadKicked, squad);
 
+        Traits.TraitManager.OnPlayerLeftSquad(player, squad);
+
         SortMembers(squad);
         for (int i = 0; i < squad.Members.Count; i++)
         {
@@ -636,6 +643,8 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
 #endif
         if (squad.Leader.KitClass == EClass.SQUADLEADER)
             KitManager.TryGiveUnarmedKit(squad.Leader);
+
+        Traits.TraitManager.OnPlayerPromotedSquadleader(newLeader, squad);
 
         squad.Leader = newLeader;
 

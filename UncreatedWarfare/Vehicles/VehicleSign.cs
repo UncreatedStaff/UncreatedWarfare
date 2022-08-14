@@ -102,8 +102,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
                             {
                                 spawn.LinkedSign = null;
                                 spawn.UpdateSign();
-                                if (Regions.tryGetCoordinate(sign.transform.position, out byte x, out byte y))
-                                    F.InvokeSignUpdateForAll(sign, x, y, sign.text);
+                                Signs.BroadcastSignUpdate(drop);
                             }
                         }
                     }

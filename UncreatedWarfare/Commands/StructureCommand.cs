@@ -116,7 +116,7 @@ public class StructureCommand : Command
                 ctx.LogAction(EActionLogType.POP_STRUCTURE,
                     $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
                     $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2")} ({structure.instanceID})");
-                ctx.Reply(T.StructureDestroyed, structure.asset);
+                ctx.Defer();
             }
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
@@ -124,6 +124,7 @@ public class StructureCommand : Command
                 ctx.LogAction(EActionLogType.POP_STRUCTURE,
                     $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
                     $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2")} ({barricade.instanceID})");
+                ctx.Defer();
             }
         }
         else if (ctx.MatchParameter(0, "examine", "exam", "wtf"))

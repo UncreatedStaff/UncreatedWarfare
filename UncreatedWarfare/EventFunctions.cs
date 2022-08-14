@@ -527,16 +527,16 @@ public static class EventFunctions
                     Task t4 = OffenseManager.ApplyMuteSettings(ucplayer);
                     await Data.DatabaseManager.RegisterLogin(ucplayer.Player);
                     await t1;
-                    await t2;
                     await t3;
                     await t4;
+                    await t2;
                 }
                 finally
                 {
                     ucplayer.PurchaseSync.Release();
                 }
                 await UCWarfare.ToUpdate();
-                RequestSigns.UpdateAllSigns(ucplayer.Player.channel.owner);
+                RequestSigns.UpdateAllSigns(ucplayer);
                 VehicleSpawner.UpdateSigns(ucplayer);
                 Points.UpdateCreditsUI(ucplayer);
                 Points.UpdateXPUI(ucplayer);

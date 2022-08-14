@@ -5,19 +5,30 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Framework;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Maps;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Traits;
-public abstract class Trait : MonoBehaviour
+public abstract class Trait : MonoBehaviour, ITranslationArgument
 {
     private TraitData _data;
     private UCPlayer _targetPlayer;
     private bool _inited = false;
     protected Coroutine? _coroutine;
-    public TraitData Data { get => _data; internal set => _data = value; }
+    protected float ActiveTime { get; private set; }
+    protected float StartTime { get; private set; }
+
+    public TraitData Data
+    {
+        get => _data;
+        internal set => _data = value;
+    }
     public UCPlayer TargetPlayer => _targetPlayer;
     public bool Inited => _inited;
     public virtual void Init(TraitData data, UCPlayer target)
@@ -34,13 +45,34 @@ public abstract class Trait : MonoBehaviour
 
         TraitManager.ActivateTrait(this);
         OnActivate();
-        if (Data.EffectDuration > 0f)
+        StartTime = Time.realtimeSinceStartup;
+        if (Data.LastsUntilDeath)
         {
-            _coroutine = StartCoroutine(EffectCoroutine());
+            EventDispatcher.OnPlayerDied += OnPlayerDied;
+            if (Data.TickSpeed > 0f)
+                _coroutine = StartCoroutine(EffectCoroutine());
         }
+        else if (Data.EffectDuration > 0f)
+            _coroutine = StartCoroutine(EffectCoroutine());
         else
             Destroy(this);
     }
+
+    private void OnPlayerDied(PlayerDied e)
+    {
+        if (e.Player.Steam64 != TargetPlayer.Steam64)
+            return;
+
+        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+        ActiveTime = Time.realtimeSinceStartup - StartTime;
+        if (_coroutine != null)
+        {
+            StopCoroutine(_coroutine);
+            _coroutine = null;
+        }
+        Destroy(this);
+    }
+
     private void OnDestroy()
     {
         if (!_inited)
@@ -55,13 +87,13 @@ public abstract class Trait : MonoBehaviour
     }
     protected virtual void OnDeactivate() { }
     /// <summary>Only called if <see cref="TraitData.TickSpeed"/> is > 0.</summary>
-    protected virtual void Tick(float activeTime) { }
+    protected virtual void Tick() { }
     private void GiveItems()
     {
         if (Data.ItemsGiven is null || Data.ItemsGiven.Length > 0)
             return;
 
-        if (!Data.DistributedToSquad || _targetPlayer.Squad is null || (Data.SquadLeaderRequired && _targetPlayer.Squad.Leader.Steam64 != _targetPlayer.Steam64))
+        if (!Data.ItemsDistributedToSquad || _targetPlayer.Squad is null || (Data.RequireSquadLeader && _targetPlayer.Squad.Leader.Steam64 != _targetPlayer.Steam64))
             GiveItems(_targetPlayer);
         else
         {
@@ -75,28 +107,64 @@ public abstract class Trait : MonoBehaviour
             if (Data.ItemsGiven[i].ValidReference(out ItemAsset asset))
                 player.Player.inventory.tryAddItem(new Item(asset.id, true), false, true);
     }
-    private IEnumerator EffectCoroutine()
+    private IEnumerator EffectCoroutine(float progressedTime = 0f)
     {
-        if (Data.TickSpeed > 0f)
+        float tl = Data.EffectDuration - progressedTime;
+        ActiveTime = progressedTime;
+        if (tl > 0 || Data.LastsUntilDeath)
         {
-            int ticks = Mathf.CeilToInt(Data.EffectDuration / Data.TickSpeed);
-            float seconds = 0f;
-            for (int i = 0; i < ticks; ++i)
+            if (Data.TickSpeed > 0f)
             {
-                yield return new WaitForSecondsRealtime(Data.TickSpeed);
-                seconds += Data.TickSpeed;
-                Tick(seconds);
+                int ticks = Mathf.CeilToInt(tl / Data.TickSpeed);
+                Buff? buff = this as Buff;
+                bool hasHitBlinkMrkr = buff == null;
+                for (int i = 0; i < ticks; ++i)
+                {
+                    yield return new WaitForSecondsRealtime(Data.TickSpeed);
+                    ActiveTime += Data.TickSpeed;
+                    if (!hasHitBlinkMrkr && Data.EffectDuration - ActiveTime <= Buff.BLINK_LEAD_TIME)
+                    {
+                        hasHitBlinkMrkr = true;
+                        buff!._shouldBlink = true;
+                        TraitManager.BuffUI.UpdateBuffTimeState(buff);
+                    }
+                    Tick();
+                }
+            }
+            else if (this is not Buff buff)
+            {
+                yield return new WaitForSecondsRealtime(tl);
+            }
+            else if (tl < Buff.BLINK_LEAD_TIME)
+            {
+                if (!buff._shouldBlink)
+                {
+                    buff._shouldBlink = true;
+                    TraitManager.BuffUI.UpdateBuffTimeState(buff);
+                }
+                yield return new WaitForSecondsRealtime(tl);
+            }
+            else
+            {
+                yield return new WaitForSecondsRealtime(tl - Buff.BLINK_LEAD_TIME);
+                ActiveTime = Data.EffectDuration - Buff.BLINK_LEAD_TIME;
+                buff._shouldBlink = true;
+                TraitManager.BuffUI.UpdateBuffTimeState(buff);
+                yield return new WaitForSecondsRealtime(Buff.BLINK_LEAD_TIME);
             }
         }
-        else
-            yield return new WaitForSecondsRealtime(Data.EffectDuration);
+        ActiveTime = Data.EffectDuration;
+        yield return null;
 
         _coroutine = null;
         Destroy(this);
     }
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => Data is null
+        ? Translation.Null(flags)
+        : (Data as ITranslationArgument).Translate(language, format, target, ref flags);
 }
 
-public class TraitData
+public class TraitData : ITranslationArgument
 {
     [JsonIgnore] private string _typeName;
     [JsonIgnore] public Type Type { get; private set; }
@@ -121,11 +189,21 @@ public class TraitData
     [JsonPropertyName("credit_cost")]
     public int CreditCost { get; set; }
 
-    [JsonPropertyName("squad_distribute")]
-    public bool DistributedToSquad { get; set; }
+    [JsonPropertyName("squad_distribute_effect")]
+    public bool EffectDistributedToSquad { get; set; }
 
-    [JsonPropertyName("squad_leader_required")]
-    public bool SquadLeaderRequired { get; set; }
+    [JsonPropertyName("squad_distribute_items")]
+    public bool ItemsDistributedToSquad { get; set; }
+
+    [JsonPropertyName("squad_distributed_multiplier")]
+    public float SquadDistributedMultiplier { get; set; } = 1f;
+
+    [JsonPropertyName("squad_distributed_multiplier_leader")]
+    public float SquadLeaderDistributedMultiplier { get; set; } = 1f;
+    [JsonPropertyName("require_squad")]
+    public bool RequireSquad { get; set; }
+    [JsonPropertyName("require_squad_leader")]
+    public bool RequireSquadLeader { get; set; }
 
     [JsonPropertyName("gamemode_list_is_blacklist")]
     public bool GamemodeListIsBlacklist { get; set; }
@@ -139,6 +217,12 @@ public class TraitData
     [JsonPropertyName("class_list")]
     public EClass[] ClassList { get; set; }
 
+    [JsonPropertyName("lasts_until_death")]
+    public bool LastsUntilDeath { get; set; }
+
+    [JsonPropertyName("team")]
+    public ulong Team { get; set; }
+
     [JsonPropertyName("unlock_requirements")]
     public BaseUnlockRequirement[] UnlockRequirements { get; set; }
 
@@ -148,7 +232,7 @@ public class TraitData
     [JsonPropertyName("description")]
     public TranslationList DescriptionTranslations { get; set; }
 
-    [JsonPropertyName("item_given")]
+    [JsonPropertyName("items_given")]
     public RotatableConfig<JsonAssetReference<ItemAsset>>[] ItemsGiven { get; set; }
 
     [JsonPropertyName("icon")]
@@ -163,6 +247,9 @@ public class TraitData
     [JsonPropertyName("tick_speed")]
     public float TickSpeed { get; set; }
 
+    [JsonPropertyName("data")]
+    public string Data { get; set; }
+    [JsonConstructor]
     public TraitData()
     {
 
@@ -179,12 +266,43 @@ public class TraitData
     /// <exception cref="InvalidOperationException">No gamemode is loaded.</exception>
     public bool CanGamemodeUse()
     {
-        string gm = Data.Gamemode is null ? throw new InvalidOperationException("There is not a loaded gamemode.") : Data.Gamemode.Name;
+        string gm = Warfare.Data.Gamemode is null ? throw new InvalidOperationException("There is not a loaded gamemode.") : Warfare.Data.Gamemode.Name;
         if (GamemodeList is null) return true;
         for (int i = 0; i < GamemodeList.Length; ++i)
         {
             if (GamemodeList[i].Equals(gm, StringComparison.OrdinalIgnoreCase)) return !GamemodeListIsBlacklist;
         }
         return GamemodeListIsBlacklist;
+    }
+
+    [FormatDisplay("Name")]
+    public const string NAME = "n";
+    [FormatDisplay("Description")]
+    public const string DESCRIPTION = "d";
+    [FormatDisplay("Colored Name")]
+    public const string COLOR_NAME = "cn";
+    [FormatDisplay("Colored Description")]
+    public const string COLOR_DESCRIPTION = "cd";
+    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    {
+        string v;
+        if (format is not null && !format.Equals(NAME, StringComparison.Ordinal))
+        {
+            if (format.Equals(DESCRIPTION, StringComparison.Ordinal))
+                return DescriptionTranslations != null && DescriptionTranslations.TryGetValue(language, out v)
+                    ? v
+                    : Translation.Null(flags & TranslationFlags.NoRichText);
+            if (format.Equals(COLOR_NAME, StringComparison.Ordinal))
+                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null && NameTranslations.TryGetValue(language, out v)
+                    ? v
+                    : TypeName, flags);
+            else if (format.Equals(COLOR_DESCRIPTION, StringComparison.Ordinal))
+                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null && NameTranslations.TryGetValue(language, out v)
+                    ? v
+                    : Translation.Null(flags & TranslationFlags.NoRichText), flags);
+        }
+        return NameTranslations != null && NameTranslations.TryGetValue(language, out v)
+            ? v
+            : TypeName;
     }
 }

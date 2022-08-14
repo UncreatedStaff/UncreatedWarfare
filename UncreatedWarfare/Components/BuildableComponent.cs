@@ -22,9 +22,9 @@ public class BuildableComponent : MonoBehaviour
     public BarricadeDrop Foundation { get; private set; }
     public BuildableData Buildable { get; private set; }
 
-    public int Hits { get; private set;}
+    public float Hits { get; private set;}
 
-    public Dictionary<ulong, int> PlayerHits { get; private set; }
+    public Dictionary<ulong, float> PlayerHits { get; private set; }
 
     public bool IsSalvaged;
 
@@ -34,7 +34,7 @@ public class BuildableComponent : MonoBehaviour
         Buildable = buildable;
         Hits = 0;
         IsSalvaged = false;
-        PlayerHits = new Dictionary<ulong, int>();
+        PlayerHits = new Dictionary<ulong, float>();
 
         SDG.Unturned.BarricadeData data = foundation.GetServersideData();
 
@@ -88,9 +88,9 @@ public class BuildableComponent : MonoBehaviour
                 }
                 break;
         }
-        int amount = 1;
-        if (builder.KitClass == EClass.COMBAT_ENGINEER)
-            amount = 2;
+        float amount = builder.KitClass == EClass.COMBAT_ENGINEER ? 2f : 1f;
+        
+        amount = Mathf.Max(builder.ShovelSpeedMultiplier, amount);
 
         Hits += amount;
 
@@ -215,21 +215,21 @@ public class BuildableComponent : MonoBehaviour
 
         EffectManager.sendEffect(29, EffectManager.MEDIUM, data.point);
 
-        foreach (KeyValuePair<ulong, int> entry in PlayerHits)
+        foreach (KeyValuePair<ulong, float> entry in PlayerHits)
         {
             UCPlayer? player = UCPlayer.FromID(entry.Key);
 
-            float contribution = (float)entry.Value / Buildable.RequiredHits;
+            float contribution = entry.Value / Buildable.RequiredHits;
 
             if (contribution >= 0.1F && player != null)
             {
-                int amount = 0;
+                float amount = 0;
                 if (Buildable.Type == EBuildableType.FOB_BUNKER)
                     amount = Mathf.RoundToInt(contribution * Points.XPConfig.BuiltFOBXP);
                 else
                     amount = entry.Value * Points.XPConfig.ShovelXP;
-
-                Points.AwardXP(player, amount, structureName.ToUpper() + " BUILT");
+                
+                Points.AwardXP(player, Mathf.CeilToInt(amount), structureName.ToUpper() + " BUILT");
                 ActionLogger.Add(EActionLogType.HELP_BUILD_BUILDABLE, $"{Foundation.asset.itemName} / {Foundation.asset.id} / {Foundation.asset.GUID:N} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.Locale)}%", player);
                 if (contribution > 0.3333f)
                     QuestManager.OnBuildableBuilt(player, Buildable);

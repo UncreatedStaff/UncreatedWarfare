@@ -54,7 +54,8 @@ internal class DebugComponent : MonoBehaviour
     public void Reset()
     {
         Lagging.RemoveAll(x => !x.IsOnline);
-        Dump();
+        if (updates > 0)
+            Dump();
         updates = 0;
         _startRt = Time.realtimeSinceStartup;
         _lastFixed = _startRt;

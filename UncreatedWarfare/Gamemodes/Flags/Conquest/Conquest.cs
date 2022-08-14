@@ -15,6 +15,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -31,7 +32,8 @@ public sealed partial class Conquest :
     IImplementsLeaderboard<ConquestStats, ConquestStatTracker>,
     IStructureSaving,
     IStagingPhase,
-    IGameStats
+    IGameStats,
+    ITraits
 {
     private VehicleSpawner _vehicleSpawner;
     private VehicleBay _vehicleBay;
@@ -44,6 +46,7 @@ public sealed partial class Conquest :
     private StructureSaver _structureSaver;
     private ConquestLeaderboard? _endScreen;
     private ConquestStatTracker _gameStats;
+    private TraitManager _traitManager;
     private bool _isScreenUp = false;
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
@@ -62,6 +65,7 @@ public sealed partial class Conquest :
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
+    public TraitManager TraitManager => _traitManager;
     Leaderboard<ConquestStats, ConquestStatTracker>? IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.Leaderboard => _endScreen;
     public bool IsScreenUp => _isScreenUp;
     public ConquestStatTracker WarstatsTracker => _gameStats;
@@ -80,6 +84,7 @@ public sealed partial class Conquest :
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _requestSigns);
+        AddSingletonRequirement(ref _traitManager);
         base.PreInit();
     }
     protected override void PostInit()

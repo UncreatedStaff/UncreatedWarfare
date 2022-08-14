@@ -25,6 +25,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -44,7 +45,8 @@ public class Insurgency :
     ITickets,
     IStagingPhase,
     IAttackDefense,
-    IGameStats
+    IGameStats,
+    ITraits
 {
     protected VehicleSpawner _vehicleSpawner;
     protected VehicleBay _vehicleBay;
@@ -57,6 +59,7 @@ public class Insurgency :
     protected StructureSaver _structureSaver;
     protected InsurgencyTracker _gameStats;
     protected InsurgencyLeaderboard _endScreen;
+    protected TraitManager _traitManager;
     private TicketManager _ticketManager;
     protected ulong _attackTeam;
     protected ulong _defendTeam;
@@ -83,6 +86,7 @@ public class Insurgency :
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
+    public TraitManager TraitManager => _traitManager;
     public ulong AttackingTeam => _attackTeam;
     public ulong DefendingTeam => _defendTeam;
     public int CachesLeft { get; private set; }
@@ -109,6 +113,7 @@ public class Insurgency :
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _requestSigns);
+        AddSingletonRequirement(ref _traitManager);
         base.PreInit();
     }
     protected override void PostInit()

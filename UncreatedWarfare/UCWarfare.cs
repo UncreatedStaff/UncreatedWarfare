@@ -16,6 +16,7 @@ using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -28,6 +29,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -320,9 +322,9 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
                         spawn.UpdateSign(player);
                         found = true;
                     }
-                    if (!found && sign.text.StartsWith("sign_"))
+                    if (!found && sign.text.StartsWith(Signs.PREFIX))
                     {
-                        F.InvokeSignUpdateFor(player, sign, false);
+                        Signs.BroadcastSignUpdate(drop);
                     }
                 }
             }
@@ -360,6 +362,12 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         {
             if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out ZonePlayerComponent comp))
                 comp.ReloadLang();
+        }
+
+        if (TraitManager.Loaded)
+        {
+            if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !(Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> lb) && lb.IsScreenUp))
+                TraitManager.BuffUI.SendBuffs(player);
         }
     }
     private void Update()

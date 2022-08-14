@@ -281,7 +281,7 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
             case JsonTokenType.Null:
                 return new TranslationList();
             case JsonTokenType.String:
-                return new TranslationList(reader.GetString()!);
+                return new TranslationList(reader.GetString()!.Replace("\\n", "\n"));
             case JsonTokenType.StartObject:
                 TranslationList list = new TranslationList(2);
                 while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
@@ -291,7 +291,7 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
                     {
                         string? val = reader.GetString();
                         if (val is not null)
-                            list.Add(key!, val);
+                            list.Add(key!, val.Replace("\\n", "\n"));
                     }
                     else throw new JsonException("Invalid token type for TranslationList at key \"" + (key ?? "null") + "\".");
                 }
@@ -306,14 +306,14 @@ public sealed class TranslationListConverter : JsonConverter<TranslationList>
         if (value == null || value.Count == 0)
             writer.WriteNullValue();
         else if (value.Count == 1 && value.TryGetValue(L.DEFAULT, out string v))
-            writer.WriteStringValue(v);
+            writer.WriteStringValue(v.Replace("\n", "\\n"));
         else
         {
             writer.WriteStartObject();
             foreach (KeyValuePair<string, string> kvp in value)
             {
                 writer.WritePropertyName(kvp.Key);
-                writer.WriteStringValue(kvp.Value);
+                writer.WriteStringValue(kvp.Value.Replace("\n", "\\n"));
             }
             writer.WriteEndObject();
         }
@@ -552,116 +552,6 @@ public static partial class JSONMethods
         }
         HexValues = DefaultColors;
         return NewDefaults;
-    }
-    public static Dictionary<string, Dictionary<string, TranslationData>> LoadTranslations()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
-        Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
-        string defLang = Path.Combine(Data.Paths.LangStorage, L.DEFAULT);
-        F.CheckDir(defLang, out bool folderIsThere);
-        if (folderIsThere)
-        {
-            string loc = Path.Combine(defLang, "localization.json");
-            if (!File.Exists(loc))
-            {
-                Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-                using (FileStream stream = new FileStream(loc, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
-                {
-                    Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                    writer.WriteStartObject();
-                    foreach (KeyValuePair<string, string> translation in DefaultTranslations)
-                    {
-                        writer.WritePropertyName(translation.Key);
-                        writer.WriteStringValue(translation.Value);
-                        defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
-                    }
-                    writer.WriteEndObject();
-                    writer.Dispose();
-                    stream.Close();
-                    stream.Dispose();
-                }
-
-                languages.Add(L.DEFAULT, defaultLocal);
-            }
-            foreach (string folder in langDirs)
-            {
-                DirectoryInfo directoryInfo = new DirectoryInfo(folder);
-                string lang = directoryInfo.Name;
-                FileInfo[] langFiles = directoryInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
-                foreach (FileInfo info in langFiles)
-                {
-                    if (info.Name == "localization.json")
-                    {
-                        if (languages.ContainsKey(lang)) continue;
-                        using (FileStream stream = new FileStream(info.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        {
-                            long len = stream.Length;
-                            if (len > int.MaxValue)
-                            {
-                                L.LogError(info.FullName + " is too long to read.");
-                                if (lang == L.DEFAULT && !languages.ContainsKey(L.DEFAULT))
-                                {
-                                    Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-                                    foreach (KeyValuePair<string, string> translation in DefaultTranslations)
-                                    {
-                                        defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
-                                    }
-                                    languages.Add(L.DEFAULT, defaultLocal);
-                                }
-                            }
-                            else
-                            {
-                                Dictionary<string, TranslationData> local = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-                                byte[] bytes = new byte[len];
-                                stream.Read(bytes, 0, (int)len);
-                                try
-                                {
-                                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                                    while (reader.Read())
-                                    {
-                                        if (reader.TokenType == JsonTokenType.StartObject) continue;
-                                        else if (reader.TokenType == JsonTokenType.EndObject) break;
-                                        else if (reader.TokenType == JsonTokenType.PropertyName)
-                                        {
-                                            string key = reader.GetString()!;
-                                            if (reader.Read() && reader.TokenType == JsonTokenType.String)
-                                            {
-                                                string value = reader.GetString()!;
-                                                if (local.ContainsKey(key))
-                                                    L.LogWarning("Duplicate key \"" + key + "\" in localization file for " + lang);
-                                                else
-                                                    local.Add(key, new TranslationData(value));
-                                            }
-                                        }
-                                    }
-                                    languages.Add(lang, local);
-                                }
-                                catch (Exception e)
-                                {
-                                    L.LogError("Failed to read " + lang + " translations.");
-                                    L.LogError(e);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            L.Log($"Loaded {languages.Count} languages, " + L.DEFAULT + $" having {(languages.TryGetValue(L.DEFAULT, out Dictionary<string, TranslationData> d) ? d.Count.ToString(Data.Locale) : "0")} translations.");
-        }
-        else
-        {
-            L.LogError("Failed to load translations, see above.");
-            Dictionary<string, TranslationData> rtn = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-            foreach (KeyValuePair<string, string> kvp in DefaultTranslations)
-                rtn.Add(kvp.Key, new TranslationData(kvp.Value));
-            if (!languages.ContainsKey(L.DEFAULT))
-                languages.Add(L.DEFAULT, rtn);
-            return languages;
-        }
-        return languages;
     }
     public static Dictionary<string, Vector3> LoadExtraPoints()
     {

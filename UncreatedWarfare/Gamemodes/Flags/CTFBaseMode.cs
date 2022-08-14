@@ -16,6 +16,7 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -36,7 +37,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     IImplementsLeaderboard<Stats, StatTracker>,
     IStructureSaving,
     IStagingPhase,
-    IGameStats
+    IGameStats,
+    ITraits
     where Leaderboard : BaseCTFLeaderboard<Stats, StatTracker>
     where Stats : BaseCTFStats
     where StatTracker : BaseCTFTracker<Stats>
@@ -54,6 +56,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     protected ReviveManager _reviveManager;
     protected SquadManager _squadManager;
     protected StructureSaver _structureSaver;
+    protected TraitManager _traitManager;
     protected Leaderboard? _endScreen;
     private StatTracker _gameStats;
     protected Transform? _blockerBarricadeT1 = null;
@@ -79,6 +82,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
+    public TraitManager TraitManager => _traitManager;
     Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
     public bool IsScreenUp => _isScreenUp;
     public StatTracker WarstatsTracker => _gameStats;
@@ -98,6 +102,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _requestSigns);
+        AddSingletonRequirement(ref _traitManager);
         base.PreInit();
     }
     protected override void PostInit()

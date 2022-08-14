@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
@@ -245,11 +246,8 @@ public class Structure : IJsonReadWrite, ITranslationArgument
                     bdrop = UCBarricadeManager.GetBarriadeBySerializedTransform(transform);
                     if (bdrop != null && bdrop.asset.GUID == id)
                     {
-                        if (bdrop.interactable is InteractableSign sign && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
-                        {
-                            F.InvokeSignUpdateForAll(sign, x, y, sign.text);
-                        }
-                        if (Vehicles.VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
+                        Signs.BroadcastSignUpdate(bdrop);
+                        if (VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
                         {
                             vbspawn.SpawnPadInstanceID = bdrop.instanceID;
                             VehicleSpawner.SaveSingleton();
@@ -276,10 +274,7 @@ public class Structure : IJsonReadWrite, ITranslationArgument
                 bdrop = BarricadeManager.FindBarricadeByRootTransform(newBarricade);
                 if (bdrop != null)
                 {
-                    if (newBarricade.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(newBarricade.position, out byte x, out byte y))
-                    {
-                        F.InvokeSignUpdateForAll(sign, x, y, sign.text);
-                    }
+                    Signs.BroadcastSignUpdate(bdrop);
                     if (VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
                     {
                         vbspawn.SpawnPadInstanceID = bdrop.instanceID;
