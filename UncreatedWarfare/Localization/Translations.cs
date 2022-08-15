@@ -15,38 +15,18 @@ namespace Uncreated.Warfare;
 
 public class Translation
 {
-    private static readonly MethodInfo[] TRANSLATE_METHODS = new MethodInfo[10]
+    private static readonly Type[] TRANSLATE_TYPES = new Type[10]
     {
-        typeof(Translation<>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 6),
-        typeof(Translation<,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 7),
-        typeof(Translation<,,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 8),
-        typeof(Translation<,,,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 9),
-        typeof(Translation<,,,,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 10),
-        typeof(Translation<,,,,,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 11),
-        typeof(Translation<,,,,,,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 12),
-        typeof(Translation<,,,,,,,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 13),
-        typeof(Translation<,,,,,,,,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 14),
+        typeof(Translation<>),
+        typeof(Translation<,>),
+        typeof(Translation<,,>),
+        typeof(Translation<,,,>),
+        typeof(Translation<,,,,>),
+        typeof(Translation<,,,,,>),
+        typeof(Translation<,,,,,,>),
+        typeof(Translation<,,,,,,,>),
+        typeof(Translation<,,,,,,,,>),
         typeof(Translation<,,,,,,,,,>)
-            .GetMethods(BindingFlags.Instance | BindingFlags.Public).FirstOrDefault(x =>
-                x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 15),
     };
     private static readonly Dictionary<string, List<KeyValuePair<Type, FormatDisplayAttribute>>> _formatDisplays 
         = new Dictionary<string, List<KeyValuePair<Type, FormatDisplayAttribute>>>(32);
@@ -915,11 +895,12 @@ public class Translation
         newCallArr[0] = val;
         newCallArr[1] = language;
         int ind = gens.Length + 2;
-        newCallArr[ind] = language;
-        newCallArr[ind + 1] = target!;
-        newCallArr[ind + 2] = targetTeam;
-        newCallArr[ind + 3] = this.Flags;
-        return (string)TRANSLATE_METHODS[gens.Length - 1].MakeGenericMethod(gens).Invoke(this, newCallArr);
+        newCallArr[ind] = target!;
+        newCallArr[ind + 1] = targetTeam;
+        newCallArr[ind + 2] = this.Flags;
+        return (string)this.GetType()
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+            .FirstOrDefault(x => x.Name.Equals("Translate", StringComparison.Ordinal) && x.GetParameters().Length == 5 + gens.Length).Invoke(this, newCallArr);
     }
     /// <exception cref="ArgumentException">Either not enough formatting arguments were supplied or </exception>
     internal string TranslateUnsafe(string language, object[] formatting, UCPlayer? target = null, ulong targetTeam = 0)
