@@ -66,9 +66,9 @@ public class UCPlayer : IPlayer
             if (cachedName == FPlayerName.Nil)
                 cachedName = F.GetPlayerOriginalNames(this.Player);
             return cachedName;
-        } 
+        }
     }
-    internal Action<byte, ItemJar> SendItemRemove; 
+    internal Action<byte, ItemJar> SendItemRemove;
     public DateTime TimeUnmuted;
     public string? MuteReason;
     public EMuteType MuteType;

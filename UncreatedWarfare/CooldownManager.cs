@@ -4,6 +4,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
+using UnityEngine;
 
 namespace Uncreated.Warfare;
 
@@ -36,7 +37,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (HasCooldown(player, type, out Cooldown existing))
-            existing.timeAdded = DateTime.Now;
+            existing.timeAdded = Time.realtimeSinceStartup;
         else
             Singleton.cooldowns.Add(new Cooldown(player, type, seconds, data));
     }
@@ -123,34 +124,42 @@ public class Cooldown : ITranslationArgument
 {
     public UCPlayer player;
     public ECooldownType type;
-    public DateTime timeAdded;
+    public double timeAdded;
     public float seconds;
     public object[] data;
-    public TimeSpan Timeleft
-    {
-        get => TimeSpan.FromSeconds((seconds - (DateTime.Now - timeAdded).TotalSeconds) >= 0 ? (seconds - (DateTime.Now - timeAdded).TotalSeconds) : 0);
-    }
+    public TimeSpan Timeleft => TimeSpan.FromSeconds(Math.Max(0d, seconds - (Time.realtimeSinceStartupAsDouble - timeAdded)));
 
     public Cooldown(UCPlayer player, ECooldownType type, float seconds, params object[] data)
     {
         this.player = player;
         this.type = type;
-        timeAdded = DateTime.Now;
+        timeAdded = Time.realtimeSinceStartupAsDouble;
         this.seconds = seconds;
         this.data = data;
     }
     public override string ToString()
     {
-        TimeSpan time = Timeleft;
-        if (time.TotalSeconds <= 1) return "1s";
+        double sec = seconds - (Time.realtimeSinceStartupAsDouble - timeAdded);
+
+        if (sec <= 1d) return "1s";
 
         string line = string.Empty;
-        if (time.Hours > 0)
-            line += time.Hours + "h ";
-        if (time.Minutes > 0)
-            line += time.Minutes + "m ";
-        if (time.Seconds > 0)
-            line += time.Seconds + "s";
+
+        int i1 = (int)sec / 3600;
+        if (i1 > 0)
+            line += i1.ToString(Data.Locale) + "h ";
+        sec -= i1 * 3600;
+
+        i1 = (int)sec / 60;
+        if (i1 > 0)
+            line += i1.ToString(Data.Locale) + "m ";
+        sec -= i1 * 60;
+
+        i1 = (int)sec;
+        if (i1 > 0)
+            return line + i1.ToString(Data.Locale) + "s";
+        if (line.Length == 0)
+            return sec.ToString("F0", Data.Locale) + "s";
         return line;
     }
 
@@ -165,12 +174,16 @@ public class Cooldown : ITranslationArgument
     public const string SHORT_TIME_FORMAT = "tl2";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is not null)
+        if (!string.IsNullOrEmpty(format))
         {
-            if (format.Equals(NAME_FORMAT, StringComparison.Ordinal))
+            if (format!.Equals(NAME_FORMAT, StringComparison.Ordinal))
                 return Localization.TranslateEnum(type, language);
             else if (format.Equals(LONG_TIME_FORMAT, StringComparison.Ordinal))
                 return Localization.GetTimeFromSeconds((int)Timeleft.TotalSeconds, language);
+            else if (format.Equals(SHORT_TIME_FORMAT, StringComparison.Ordinal))
+                return ToString();
+            else
+                return Timeleft.ToString(format);
         }
 
         return ToString();

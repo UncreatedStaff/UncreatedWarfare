@@ -304,28 +304,28 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam1[j],
                             Points.XPConfig.FlagAttackXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].channel.owner.playerID.steamID.m_SteamID));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].Steam64));
                 }
                 else if (flag.LastDeltaPoints < 0 && flag.Owner != 2)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                             Points.XPConfig.FlagAttackXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].channel.owner.playerID.steamID.m_SteamID));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].Steam64));
                 }
                 else if (flag.Owner == 1 && flag.IsObj(2) && flag.Team2TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam1.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam1[j],
                             Points.XPConfig.FlagDefendXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].channel.owner.playerID.steamID.m_SteamID));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam1[j].Steam64));
                 }
                 else if (flag.Owner == 2 && flag.IsObj(1) && flag.Team1TotalCappers == 0)
                 {
                     for (int j = 0; j < flag.PlayersOnFlagTeam2.Count; j++)
                         Points.AwardXP(flag.PlayersOnFlagTeam2[j],
                             Points.XPConfig.FlagDefendXP,
-                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].channel.owner.playerID.steamID.m_SteamID));
+                            T.XPToastFlagAttackTick.Translate(flag.PlayersOnFlagTeam2[j].Steam64));
                 }
             }
         }
@@ -339,14 +339,14 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-            .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
+            .Select(x => x.Steam64).ToArray());
     }
     protected virtual void InvokeOnFlagNeutralized(Flag flag, ulong capturedTeam, ulong lostTeam)
     {
         if (capturedTeam == 1)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.Steam64).ToArray(), capturedTeam);
         else if (capturedTeam == 2)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), capturedTeam);
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.Steam64).ToArray(), capturedTeam);
         if (TicketManager.Provider is IFlagNeutralizedListener fnl)
             fnl.OnFlagNeutralized(flag, capturedTeam, lostTeam);
     }
@@ -430,7 +430,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 InvokeOnFlagCaptured(flag, 1, lastOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam1[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }
@@ -452,7 +452,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 InvokeOnFlagCaptured(flag, 2, lastOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam2[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }

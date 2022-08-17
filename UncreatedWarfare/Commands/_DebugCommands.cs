@@ -180,7 +180,7 @@ internal class _DebugCommand : Command
         ctx.AssertRanByPlayer();
         ctx.AssertGamemode(out IFlagRotation fg);
 
-        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller.Player));
+        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller));
         if (flag == default)
         {
             ctx.Reply(T.ZoneNoResultsLocation);

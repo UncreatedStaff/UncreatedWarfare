@@ -1182,6 +1182,10 @@ internal static class T
     public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationFlags.NoColor);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait.")]
     public static readonly Translation<EClass> TraitSignClassBlacklisted = new Translation<EClass>("<#c$vbs_delay$>Locked for {0}</color>", TranslationFlags.NoColor, PLURAL);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait.")]
+    public static readonly Translation TraitSignAlreadyActive = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait.")]
+    public static readonly Translation<Cooldown> TraitSignGlobalCooldown = new Translation<Cooldown>("<#c$vbs_delay$>Locked {0}</color>", TranslationFlags.NoColor, "mm\\:ss");
     #endregion
 
     #endregion

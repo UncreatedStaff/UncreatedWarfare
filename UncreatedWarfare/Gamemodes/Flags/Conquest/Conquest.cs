@@ -16,6 +16,7 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -227,7 +228,7 @@ public sealed partial class Conquest :
             return false;
         }
         else if (flag.Team1TotalCappers == flag.Team2TotalCappers)
-            winner = 0;
+            winner = Intimidation.CheckSquadsForContestBoost(flag);
         else if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers > 0)
             winner = 2;
         else if (flag.Team2TotalCappers == 0 && flag.Team1TotalCappers > 0)
@@ -237,14 +238,14 @@ public sealed partial class Conquest :
             if (flag.Team1TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team2TotalCappers)
                 winner = 1;
             else
-                winner = 0;
+                winner = Intimidation.CheckSquadsForContestBoost(flag);
         }
         else
         {
             if (flag.Team2TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team1TotalCappers)
                 winner = 2;
             else
-                winner = 0;
+                winner = Intimidation.CheckSquadsForContestBoost(flag);
         }
 
         return winner == 0;
@@ -260,7 +261,7 @@ public sealed partial class Conquest :
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(1, 0));
             for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
             {
-                if (flag.PlayersOnFlagTeam1[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                     fg.AddCapture();
             }
         }
@@ -269,7 +270,7 @@ public sealed partial class Conquest :
             ActionLogger.Add(EActionLogType.TEAM_CAPTURED_OBJECTIVE, TeamManager.TranslateName(2, 0));
             for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
             {
-                if (flag.PlayersOnFlagTeam2[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                     fg.AddCapture();
             }
         }
@@ -291,9 +292,9 @@ public sealed partial class Conquest :
 #endif
         Chat.Broadcast(T.FlagNeutralized, flag);
         if (neutralizingTeam == 1)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), neutralizingTeam);
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam1.Select(x => x.Steam64).ToArray(), neutralizingTeam);
         else if (neutralizingTeam == 2)
-            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray(), neutralizingTeam);
+            QuestManager.OnFlagNeutralized(flag.PlayersOnFlagTeam2.Select(x => x.Steam64).ToArray(), neutralizingTeam);
         if (TicketManager.Provider is IFlagNeutralizedListener fnl)
             fnl.OnFlagNeutralized(flag, neutralizingTeam, lostTeam);
     }
@@ -310,7 +311,7 @@ public sealed partial class Conquest :
         StatsManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
         VehicleSigns.OnFlagCaptured();
         QuestManager.OnObjectiveCaptured((capturedTeam == 1 ? flag.PlayersOnFlagTeam1 : flag.PlayersOnFlagTeam2)
-            .Select(x => x.channel.owner.playerID.steamID.m_SteamID).ToArray());
+            .Select(x => x.Steam64).ToArray());
         TicketManager.OnFlagCaptured(flag, capturedTeam, lostTeam);
     }
     private void UpdateFlag(Flag flag)

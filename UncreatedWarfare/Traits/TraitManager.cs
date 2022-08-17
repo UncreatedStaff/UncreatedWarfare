@@ -25,7 +25,9 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
     private static readonly TraitData[] DEFAULT_TRAITS = new TraitData[]
     {
         Motivated.DEFAULT_DATA,
-        RapidDeployment.DEFAULT_DATA
+        RapidDeployment.DEFAULT_DATA,
+        Intimidation.DEFAULT_DATA,
+
     };
     public static bool Loaded => Singleton.IsLoaded<TraitManager, TraitData>();
     public TraitManager() : base("traits", Data.Paths.TraitDataStorage) { }
@@ -326,7 +328,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
         for (int i = 0; i < player.ActiveTraits.Count; ++i)
         {
             Trait t = player.ActiveTraits[i];
-            if (t.Data.Type == type && t.isActiveAndEnabled && t.Inited)
+            if (t.Data.Type == type && t.isActiveAndEnabled && t.Inited && (t is not Buff b || b.IsActivated))
             {
                 trait = t;
                 return true;
@@ -347,6 +349,8 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
             {
                 if (Singleton[i].Type == type)
                 {
+                    if (!Singleton[i].EffectDistributedToSquad)
+                        return false;
                     onlySl = Singleton[i].RequireSquadLeader;
                     break;
                 }
@@ -364,10 +368,10 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
         trait = null!;
         return false;
     }
-    public static bool IsAffectedSquad(TraitData data, UCPlayer player, out Trait trait)
+    public static bool IsAffected(TraitData data, UCPlayer player, out Trait trait)
     {
         if (IsAffectedOwner(data.Type, player, out trait)) return true;
-        if (player.Squad is null) return false;
+        if (player.Squad is null || !data.EffectDistributedToSquad) return false;
         if (data.RequireSquadLeader)
             return player.Squad.Leader.Steam64 != player.Steam64 && IsAffectedOwner(data.Type, player.Squad.Leader, out trait);
 

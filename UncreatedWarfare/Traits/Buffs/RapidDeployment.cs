@@ -8,7 +8,7 @@ public class RapidDeployment : Buff
     {
         TypeName = nameof(RapidDeployment),
         NameTranslations = new TranslationList("Rapid Deployment"),
-        DescriptionTranslations = new TranslationList("You and your squad have a 25% shorter FOB deployment cooldown."),
+        DescriptionTranslations = new TranslationList("Squad-wide -25% deployment cooldown"),
         CreditCost = 200,
         SquadDistributedMultiplier = 1f,
         SquadLeaderDistributedMultiplier = 1f,
@@ -33,8 +33,15 @@ public class RapidDeployment : Buff
         TraitData? d = TraitManager.GetData(typeof(RapidDeployment));
         if (d != null)
         {
-            if (TraitManager.IsAffectedSquad(d, player, out Trait trait) && trait is RapidDeployment dep)
-                return CooldownManager.Config.DeployFOBCooldown * dep._multiplier;
+            if (TraitManager.IsAffected(d, player, out Trait trait) && trait is RapidDeployment dep)
+            {
+                if (player.Steam64 == dep.TargetPlayer.Steam64)
+                    return CooldownManager.Config.DeployFOBCooldown * dep._multiplier;
+                else if (dep.TargetPlayer.IsSquadLeader())
+                    return CooldownManager.Config.DeployFOBCooldown * dep._multiplier * dep.Data.SquadLeaderDistributedMultiplier;
+                else
+                    return CooldownManager.Config.DeployFOBCooldown * dep._multiplier * dep.Data.SquadDistributedMultiplier;
+            }
         }
 
         return CooldownManager.Config.DeployFOBCooldown;

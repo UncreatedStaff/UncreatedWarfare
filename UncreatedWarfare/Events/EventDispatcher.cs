@@ -413,7 +413,7 @@ public static class EventDispatcher
     }
     private static void ProjectileOnProjectileSpawned(UseableGun gun, GameObject projectile)
     {
-        foreach (SDG.Unturned.Rocket rocket in projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true))
+        foreach (Rocket rocket in projectile.GetComponentsInChildren<Rocket>(true))
         {
             ProjectileComponent c = rocket.gameObject.AddComponent<ProjectileComponent>();
 

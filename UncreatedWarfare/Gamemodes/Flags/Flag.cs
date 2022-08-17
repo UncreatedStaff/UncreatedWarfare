@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -27,12 +28,12 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     private float _z;
     private string _color;
     private ulong _owner = 0;
-    public List<Player> PlayersOnFlagTeam1;
+    public List<UCPlayer> PlayersOnFlagTeam1;
     public int Team1TotalPlayers;
     public EvaluatePointsDelegate? EvaluatePointsOverride = null;
     public IsContestedDelegate? IsContestedOverride = null;
     public int Team1TotalCappers;
-    public List<Player> PlayersOnFlagTeam2;
+    public List<UCPlayer> PlayersOnFlagTeam2;
     public int Team2TotalPlayers;
     public int Team2TotalCappers;
     private float _points;
@@ -54,7 +55,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     public event EventHandler OnDisposed;
     public event EventHandler OnReset;
 
-    public List<Player> PlayersOnFlag { get; private set; }
+    public List<UCPlayer> PlayersOnFlag { get; private set; }
     public Zone ZoneData { get; protected set; }
     public IFlagRotation Manager { get; protected set; }
     public int ObjectivePlayerCount
@@ -231,26 +232,26 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         PlayersOnFlag.Clear();
         PlayersOnFlagTeam1.Clear();
         PlayersOnFlagTeam2.Clear();
-        for (int i = 0; i < Provider.clients.Count; i++)
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            SteamPlayer p = Provider.clients[i];
-            if (p.player.life.isDead) continue;
-            if (PlayerInRange(p.player.transform.position))
+            UCPlayer p = PlayerManager.OnlinePlayers[i];
+            if (p.Player.life.isDead) continue;
+            if (PlayerInRange(p.Player.transform.position))
             {
-                PlayersOnFlag.Add(p.player);
+                PlayersOnFlag.Add(p);
                 ulong team = p.GetTeam();
                 if (team == 1)
                 {
-                    PlayersOnFlagTeam1.Add(p.player);
+                    PlayersOnFlagTeam1.Add(p);
                     Team1TotalPlayers++;
-                    if (Manager.AllowPassengersToCapture || p.player.movement.getVehicle() == null)
+                    if (Manager.AllowPassengersToCapture || p.Player.movement.getVehicle() == null)
                         Team1TotalCappers++;
                 }
                 else if (team == 2)
                 {
-                    PlayersOnFlagTeam2.Add(p.player);
+                    PlayersOnFlagTeam2.Add(p);
                     Team2TotalPlayers++;
-                    if (Manager.AllowPassengersToCapture || p.player.movement.getVehicle() == null)
+                    if (Manager.AllowPassengersToCapture || p.Player.movement.getVehicle() == null)
                         Team2TotalCappers++;
                 }
             }
@@ -263,24 +264,24 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Player[] OldPlayers = PlayersOnFlag.ToArray();
+        UCPlayer[] _prevPlayers = PlayersOnFlag.ToArray();
         RecalcCappers();
         newPlayers = new List<Player>(2);
         departedPlayers = new List<Player>(2);
         for (int i = 0; i < PlayersOnFlag.Count; i++)
         {
-            Player player = PlayersOnFlag[i];
-            for (int j = 0; j < OldPlayers.Length; j++)
-                if (player.channel.owner.playerID.steamID.m_SteamID == OldPlayers[j].channel.owner.playerID.steamID.m_SteamID)
+            UCPlayer player = PlayersOnFlag[i];
+            for (int j = 0; j < _prevPlayers.Length; j++)
+                if (player.Steam64 == _prevPlayers[j].Steam64)
                     goto done;
             newPlayers.Add(player);
             done: ;
         }
-        for (int i = 0; i < OldPlayers.Length; i++)
+        for (int i = 0; i < _prevPlayers.Length; i++)
         {
-            Player player = OldPlayers[i];
+            UCPlayer player = _prevPlayers[i];
             for (int j = 0; j < PlayersOnFlag.Count; j++)
-                if (player.channel.owner.playerID.steamID.m_SteamID == PlayersOnFlag[j].channel.owner.playerID.steamID.m_SteamID)
+                if (player.Steam64 == PlayersOnFlag[j].Steam64)
                     goto done;
             departedPlayers.Add(player);
             done: ;
@@ -316,9 +317,9 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             this._shortName = zone.ShortName!;
         this._color = UCWarfare.GetColorHex("default");
         this._owner = 0;
-        PlayersOnFlag = new List<Player>(48);
-        PlayersOnFlagTeam1 = new List<Player>(24);
-        PlayersOnFlagTeam2 = new List<Player>(24);
+        PlayersOnFlag = new List<UCPlayer>(48);
+        PlayersOnFlagTeam1 = new List<UCPlayer>(24);
+        PlayersOnFlagTeam2 = new List<UCPlayer>(24);
         this.ZoneData = zone;
         this.Adjacencies = zone.Data.Adjacencies;
     }
@@ -450,7 +451,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             }
             else if (Team1TotalCappers == Team2TotalCappers)
             {
-                winner = 0;
+                winner = Intimidation.CheckSquadsForContestBoost(this);
             }
             else if (Team1TotalCappers == 0 && Team2TotalCappers > 0)
             {
@@ -468,7 +469,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
                 }
                 else
                 {
-                    winner = 0;
+                    winner = Intimidation.CheckSquadsForContestBoost(this);
                 }
             }
             else
@@ -479,10 +480,11 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
                 }
                 else
                 {
-                    winner = 0;
+                    winner = Intimidation.CheckSquadsForContestBoost(this);
                 }
             }
-            return winner == 0;
+
+            return winner == 0ul;
         }
         else
         {
