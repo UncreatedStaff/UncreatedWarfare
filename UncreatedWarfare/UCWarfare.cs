@@ -36,7 +36,7 @@ using UnityEngine;
 namespace Uncreated.Warfare;
 
 public delegate void VoidDelegate();
-public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
+public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version      = new Version(2, 6, 0, 2);
@@ -51,6 +51,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     internal DebugComponent Debugger;
     public event EventHandler UCWarfareLoaded;
     public event EventHandler UCWarfareUnloading;
+    internal Projectiles.ProjectileSolver Solver;
     public bool CoroutineTiming = false;
     private bool InitialLoadEventSubscription;
     private DateTime NextRestartTime;
@@ -183,6 +184,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         Data.ZoneProvider.Reload();
         Data.ZoneProvider.Save();
+
+        Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
 
         Announcer = Data.Singletons.LoadSingleton<UCAnnouncer>();
         Data.ExtraPoints = JSONMethods.LoadExtraPoints();
@@ -415,7 +418,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
                 if (Announcer != null)
                     Data.Singletons.UnloadSingleton(ref Announcer);
             }
-
+            if (Solver != null)
+            {
+                Destroy(Solver);
+            }
             if (Maps.MapScheduler.Instance != null)
             {
                 Destroy(Maps.MapScheduler.Instance);

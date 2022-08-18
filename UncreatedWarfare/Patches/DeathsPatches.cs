@@ -8,6 +8,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Projectiles;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -19,6 +20,7 @@ public static partial class Patches
     {
         internal static GameObject lastProjected;
         // SDG.Unturned.UseableGun
+
         /// <summary>
         /// Postfix of <see cref="UseableGun.project(Vector3, Vector3, ItemBarrelAsset, ItemMagazineAsset)"/> to predict mortar hits.
         /// </summary>
@@ -31,6 +33,10 @@ public static partial class Patches
 #endif
             if (lastProjected != null && lastProjected.activeInHierarchy)
             {
+                EffectManager.askEffectClearByID(36120, Provider.clients[0].transportConnection);
+                EffectManager.askEffectClearByID(36130, Provider.clients[0].transportConnection);
+                EffectManager.askEffectClearByID(36100, Provider.clients[0].transportConnection);
+                UCWarfare.I.Solver.GetLandingPoint(lastProjected, origin, direction, __instance, OnLandingPointFound);
                 if (FOBManager.Loaded && 
                     FOBManager.Config.Buildables.Any(x => x.Emplacement is not null && x.Emplacement.ShouldWarnFriendliesIncoming && x.Emplacement.EmplacementVehicle.Exists &&
                                                           x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(x => x.itemID == __instance.equippedGunAsset.id)))
@@ -73,6 +79,14 @@ public static partial class Patches
                 }
             }
         }
+
+        private static void OnLandingPointFound(Vector3 pos, float seconds)
+        {
+            EffectManager.sendEffect(36120, Level.size * 2, pos);
+            L.Log(pos.ToString("F0"));
+            L.Log(seconds.ToString("F1"));
+        }
+
         // SDG.Unturned.Bumper
         /// <summary>Adds the id of the vehicle that hit the player to their pt component.</summary>
         [HarmonyPatch(typeof(Bumper), "OnTriggerEnter")]
