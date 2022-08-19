@@ -1187,7 +1187,9 @@ internal static class T
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait.")]
     public static readonly Translation<Cooldown> TraitSignGlobalCooldown = new Translation<Cooldown>("<#c$vbs_delay$>Locked {0}</color>", TranslationFlags.NoColor, "mm\\:ss");
     #endregion
-
+    #region Trait Interactions
+    public static readonly Translation<float> BadOmenMortarWarning = new Translation<float>("Mortar incoming in <color=#c$points$>{0}</color> seconds.", "F0");
+    #endregion
     #endregion
 
     #region Request Signs

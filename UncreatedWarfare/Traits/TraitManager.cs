@@ -27,7 +27,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
         Motivated.DEFAULT_DATA,
         RapidDeployment.DEFAULT_DATA,
         Intimidation.DEFAULT_DATA,
-
+        BadOmen.DEFAULT_DATA
     };
     public static bool Loaded => Singleton.IsLoaded<TraitManager, TraitData>();
     public TraitManager() : base("traits", Data.Paths.TraitDataStorage) { }

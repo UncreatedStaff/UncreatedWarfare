@@ -364,6 +364,7 @@ partial class JSONMethods
         { "neutral_color", "c2c2c2" },
         { "credits", "b8ffc1" },
         { "rally", "5eff87" },
+        { "points", "f0a31c" },
 
         // capture ui
         { "contested", "ffdc8a" },

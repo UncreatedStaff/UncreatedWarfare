@@ -83,6 +83,8 @@ public struct ToastMessage
     public const float FULL_TOAST_TIME = 12f;
     public const float MINI_TOAST_TIME = 4f;
     public const float BIG_TOAST_TIME = 5.5f;
+    public readonly uint InstanceID;
+    private static uint _lastInstId;
     public static bool operator ==(ToastMessage left, ToastMessage right) => left.time == right.time && left.Message1 == right.Message1;
     public static bool operator !=(ToastMessage left, ToastMessage right) => left.time != right.time || left.Message1 != right.Message1;
     public override int GetHashCode() => time.GetHashCode() / 2 + Message1.GetHashCode() / 2;
@@ -94,22 +96,15 @@ public struct ToastMessage
         this.Message2 = null;
         this.Message3 = null;
         this.Severity = severity;
+        InstanceID = ++_lastInstId;
     }
-    public ToastMessage(string message1, string message2, EToastMessageSeverity severity)
+    public ToastMessage(string message1, string message2, EToastMessageSeverity severity) : this(message1, severity)
     {
-        this.time = DateTime.Now.Ticks;
-        this.Message1 = message1;
         this.Message2 = message2;
-        this.Message3 = null;
-        this.Severity = severity;
     }
-    public ToastMessage(string message1, string message2, string message3, EToastMessageSeverity severity)
+    public ToastMessage(string message1, string message2, string message3, EToastMessageSeverity severity) : this(message1, message2, severity)
     {
-        this.time = DateTime.Now.Ticks;
-        this.Message1 = message1;
-        this.Message2 = message2;
         this.Message3 = message3;
-        this.Severity = severity;
     }
     public static void QueueMessage(UCPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.Player, message, priority);
     public static void QueueMessage(SteamPlayer player, ToastMessage message, bool priority = false) => QueueMessage(player.player, message, priority);

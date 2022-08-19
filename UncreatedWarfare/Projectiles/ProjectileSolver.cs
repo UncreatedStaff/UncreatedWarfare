@@ -6,8 +6,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using Uncreated.Warfare.Components;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 
 namespace Uncreated.Warfare.Projectiles;
 internal class ProjectileSolver : MonoBehaviour
@@ -50,12 +52,20 @@ internal class ProjectileSolver : MonoBehaviour
         {
             for (int y = 0; y < Regions.WORLD_SIZE; ++y)
             {
-                foreach (LevelObject obj2 in LevelObjects.objects[x, y].Where(x => x.asset != null && x.asset.type == EObjectType.LARGE))
+                foreach (LevelObject obj2 in LevelObjects.objects[x, y].Where(x => x.asset != null && x.asset.type != EObjectType.SMALL && !getIsDecal(x)))
                 {
-                    GameObject obj = Instantiate(obj2.transform.gameObject, obj2.transform.position, obj2.transform.rotation);
+                    GameObject? orig = obj2.asset.modelGameObject.getOrLoad();
+                    if (orig != null)
+                    {
+                        GameObject obj = Instantiate(orig, obj2.transform.position, obj2.transform.rotation);
+                        if (obj2.asset.useScale)
+                            obj.transform.localScale = obj2.transform.localScale;
+                        Rigidbody rigidbody = this.transform.GetComponent<Rigidbody>();
+                        if (rigidbody != null)
+                            Destroy(rigidbody);
 
-                    SceneManager.MoveGameObjectToScene(obj, _simScene);
-                    //L.LogDebug("Adding " + obj2.asset.objectName + " object to scene.");
+                        SceneManager.MoveGameObjectToScene(obj, _simScene);
+                    }
                 }
             }
         }
@@ -69,7 +79,9 @@ internal class ProjectileSolver : MonoBehaviour
         }
     }
 
-    private static readonly FieldInfo? attachmentField = typeof(UseableGun).GetField("thirdAttachments");
+    private static readonly InstanceGetter<UseableGun, Attachments> getAttachments = F.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments", BindingFlags.NonPublic);
+    private static readonly InstanceGetter<LevelObject, bool> getIsDecal = F.GenerateInstanceGetter<LevelObject, bool>("isDecal", BindingFlags.NonPublic);
+    private static readonly InstanceGetter<Rocket, bool> getIsExploded = F.GenerateInstanceGetter<Rocket, bool>("isExploded", BindingFlags.NonPublic);
     private IEnumerator Simulate()
     {
         ProjectileData data = _current;
@@ -77,29 +89,27 @@ internal class ProjectileSolver : MonoBehaviour
         SceneManager.MoveGameObjectToScene(transform.gameObject, _simScene);
 
         transform.name = "Projectile_SimClone";
-        float magazineForceMultiplier = 1f;
-        if (attachmentField?.GetValue(data.gun) is Attachments attachments)
-            magazineForceMultiplier *= attachments.magazineAsset.projectileLaunchForceMultiplier;
         Destroy(transform.gameObject, data.gun.equippedGunAsset.projectileLifespan);
         if (transform.TryGetComponent(out Rigidbody body))
         {
-            body.AddForce(data.direction * data.gun.equippedGunAsset.ballisticForce * magazineForceMultiplier);
+            body.AddForce(data.direction * data.gun.equippedGunAsset.ballisticForce * data.magazineForceMultiplier);
             body.collisionDetectionMode = CollisionDetectionMode.Continuous;
         }
         DetectComponent c = transform.gameObject.AddComponent<DetectComponent>();
-        if (data.obj.TryGetComponent(out Rocket rocket))
-        {
-            c.ignoreTransform = rocket.ignoreTransform;
-            c.OriginalRocketData = rocket;
-        }
+
+        if (!data.obj.TryGetComponent(out Rocket rocket))
+            yield break;
+
+        c.ignoreTransform = rocket.ignoreTransform;
+        c.OriginalRocketData = rocket;
 
         Stopwatch st = new Stopwatch();
         st.Start();
         int i = 0;
         float lastSent = 0f;
         int iter = Mathf.CeilToInt(MAX_TIME / Time.fixedDeltaTime);
-        int skip = Mathf.CeilToInt(16f / Time.fixedDeltaTime);
-        float seconds;
+        int skip = Mathf.CeilToInt(1f / Time.fixedDeltaTime);
+        float seconds = 0f;
         for (; !c.isExploded && i < iter; ++i)
         {
             seconds = i * Time.fixedDeltaTime;
@@ -111,15 +121,24 @@ internal class ProjectileSolver : MonoBehaviour
             _physxScene.Simulate(Time.fixedDeltaTime);
 
             if (i % skip == 0)
+            {
                 yield return null;
+                if (getIsExploded(rocket))
+                    yield break;
+            }
         }
         st.Stop();
 
-        L.LogDebug("Simmed " + (seconds = i * Time.fixedDeltaTime).ToString("F2") + " seconds in " + st.ElapsedMilliseconds.ToString("F5", Data.Locale) + "ms.");
         Vector3 pos = transform.gameObject.transform.position;
+        float landTime = data.launchTime + seconds;
+        if (data.obj != null && data.obj.TryGetComponent(out ProjectileComponent comp))
+        {
+            comp.PredictedLandingPosition = pos;
+            comp.PredictedImpactTime = landTime;
+        }
         Destroy(transform.gameObject);
         _current = default;
-        data.callback(pos, seconds);
+        data.callback?.Invoke(!data.gun.player.isActiveAndEnabled ? null : data.gun.player, pos, landTime, data.gunAsset, data.ammunitionType);
     }
     private void FixedUpdate()
     {
@@ -127,15 +146,16 @@ internal class ProjectileSolver : MonoBehaviour
     }
 
     private const float MAX_TIME = 30f;
-    internal void GetLandingPoint(GameObject obj, Vector3 origin, Vector3 direction, UseableGun gun, Action<Vector3, float> callback)
+    internal void GetLandingPoint(GameObject obj, Vector3 origin, Vector3 direction, UseableGun gun, ProjectileLandingPointCalculated callback)
     {
+        ItemMagazineAsset? ammo = gun.player.TryGetPlayerData(out UCPlayerData data) ? data.LastProjectedAmmoType : null;
         if (_current.gun is null)
         {
-            _current = new ProjectileData(obj, origin, direction, gun, callback);
+            _current = new ProjectileData(obj, origin, direction, gun, ammo, Time.realtimeSinceStartup, callback);
             StartCoroutine(Simulate());
         }
         else
-            _queue.Enqueue(new ProjectileData(obj, origin, direction, gun, callback));
+            _queue.Enqueue(new ProjectileData(obj, origin, direction, gun, ammo, Time.realtimeSinceStartup, callback));
     }
     private void OnDestroy()
     {
@@ -143,7 +163,6 @@ internal class ProjectileSolver : MonoBehaviour
         _simScene = default;
         _physxScene = default;
         Physics.autoSimulation = true;
-
     }
     private struct ProjectileData
     {
@@ -151,14 +170,25 @@ internal class ProjectileSolver : MonoBehaviour
         public readonly Vector3 origin;
         public readonly Vector3 direction;
         public readonly UseableGun gun;
-        public readonly Action<Vector3, float> callback;
-        public ProjectileData(GameObject obj, Vector3 origin, Vector3 direction, UseableGun gun, Action<Vector3, float> callback)
+        public readonly ProjectileLandingPointCalculated callback;
+        public readonly ItemMagazineAsset? ammunitionType;
+        public readonly ItemGunAsset gunAsset;
+        public readonly float magazineForceMultiplier;
+        public readonly float launchTime;
+        public ProjectileData(GameObject obj, Vector3 origin, Vector3 direction, UseableGun gun, ItemMagazineAsset? ammunitionType, float launchTime, ProjectileLandingPointCalculated callback)
         {
             this.obj = obj;
             this.origin = origin;
             this.direction = direction;
             this.gun = gun;
             this.callback = callback;
+            this.launchTime = launchTime;
+            this.gunAsset = gun.equippedGunAsset;
+            this.ammunitionType = ammunitionType;
+            if (ammunitionType != null)
+                this.magazineForceMultiplier = ammunitionType.projectileLaunchForceMultiplier;
+            else
+                this.magazineForceMultiplier = 1f;
         }
     }
 
@@ -194,3 +224,5 @@ internal class ProjectileSolver : MonoBehaviour
         }
     }
 }
+
+public delegate void ProjectileLandingPointCalculated(Player? owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType);

@@ -59,6 +59,7 @@ public class UCPlayerData : MonoBehaviour
     internal ThrowableComponent? TriggeringThrowable;
     public Guid lastExplodedVehicle;
     public Guid LastVehicleHitBy;
+    public ItemMagazineAsset LastProjectedAmmoType;
     public Coroutine? CurrentTeleportRequest;
     public Vehicles.VehicleSpawn? currentlylinking;
     public DeathMessageArgs LastBleedingArgs;
@@ -74,7 +75,7 @@ public class UCPlayerData : MonoBehaviour
     public int PingBufferIndex = -1;
     public float LastAvgPingDifference;
     #region TOASTS
-    private struct ToastMessageInfo
+    public struct ToastMessageInfo
     {
         public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);
         public byte channel;
@@ -118,7 +119,7 @@ public class UCPlayerData : MonoBehaviour
         i = ref TOASTS[7];
         Gamemode.Config.UI.TipToast.ValidReference(out i.guid);
     }
-    private static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
+    public static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
     {
         new ToastMessageInfo(EToastMessageSeverity.INFO,        Gamemode.Config.UI.InfoToast.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f), // info
         new ToastMessageInfo(EToastMessageSeverity.WARNING,     Gamemode.Config.UI.WarningToast.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),   // warning
@@ -129,7 +130,7 @@ public class UCPlayerData : MonoBehaviour
         new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    Gamemode.Config.UI.ProgressToast.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f), // progress
         new ToastMessageInfo(EToastMessageSeverity.TIP,         Gamemode.Config.UI.TipToast.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f),        // tip
     };
-    private struct ToastChannel
+    public struct ToastChannel
     {
         public byte channel;
         public ToastMessageInfo info;
@@ -163,7 +164,7 @@ public class UCPlayerData : MonoBehaviour
             return false;
         }
     }
-    private ToastChannel[] channels;
+    public ToastChannel[] channels;
     public void QueueMessage(ToastMessage message, bool priority = false)
     {
 #if DEBUG

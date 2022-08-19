@@ -212,7 +212,7 @@ internal class DebugComponent : MonoBehaviour
     }
     private static void ReceiveClientMessagePostfix(ITransportConnection transportConnection, byte[] packet, int offset, int size)
     {
-        if (UCWarfare.I.Debugger != null)
+        if (UCWarfare.I != null && UCWarfare.I.Debugger != null)
         {
             UCWarfare.I.Debugger.OnMessageReceived(transportConnection, packet, offset, size);
         }

@@ -1195,7 +1195,8 @@ public class FOBConfigData : ConfigData
                     Ammo = "66f4c76a119e4d6ca9d0b1a866c4d901",
                     AmmoCount = 3,
                     MaxFobCapacity = 2,
-                    ShouldWarnFriendliesIncoming = true
+                    ShouldWarnFriendlies = true,
+                    ShouldWarnEnemies = true
                 }
             },
         };
@@ -1287,7 +1288,9 @@ public class EmplacementData
     [JsonPropertyName("allowedPerFob")]
     public int MaxFobCapacity;
     [JsonPropertyName("warnFriendlyProjectiles")]
-    public bool ShouldWarnFriendliesIncoming = false;
+    public bool ShouldWarnFriendlies = false;
+    [JsonPropertyName("warnEnemyProjectiles")]
+    public bool ShouldWarnEnemies = false;
 }
 
 [Translatable("Buildable Type")]
