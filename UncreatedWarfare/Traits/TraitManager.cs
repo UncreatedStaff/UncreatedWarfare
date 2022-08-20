@@ -29,7 +29,12 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
         RapidDeployment.DEFAULT_DATA,
         Intimidation.DEFAULT_DATA,
         BadOmen.DEFAULT_DATA,
-        AceArmor.DEFAULT_DATA
+        AceArmor.DEFAULT_DATA,
+        Ghost.DEFAULT_DATA,
+        GuidedByGod.DEFAULT_DATA,
+        SelfRevive.DEFAULT_DATA,
+        StrengthInNumbers.DEFAULT_DATA,
+        Superheated.DEFAULT_DATA
     };
     public static bool Loaded => Singleton.IsLoaded<TraitManager, TraitData>();
     public TraitManager() : base("traits", Data.Paths.TraitDataStorage) { }
