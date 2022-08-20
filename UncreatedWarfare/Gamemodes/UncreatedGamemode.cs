@@ -644,8 +644,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                             for (int i = barricadeRegion.drops.Count - 1; i >= 0; i--)
                             {
                                 BarricadeDrop drop = barricadeRegion.drops[i];
-                                uint instid = drop.instanceID;
-                                if (!(isStruct && (StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) || RequestSigns.SignExists(instid, out _))))
+                                if (!(isStruct && ((StructureSaver.Loaded && StructureSaver.SaveExists(drop, out _)) || (RequestSigns.Loaded && RequestSigns.SignExists(drop.instanceID, out _)))))
                                 {
                                     if (drop.model.TryGetComponent(out FOBComponent fob))
                                     {
@@ -664,8 +663,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                             for (int i = structureRegion.drops.Count - 1; i >= 0; i--)
                             {
                                 StructureDrop drop = structureRegion.drops[i];
-                                uint instid = drop.instanceID;
-                                if (!(isStruct && StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _)))
+                                if (!(isStruct && StructureSaver.Loaded && StructureSaver.SaveExists(drop, out _)))
                                     StructureManager.destroyStructure(drop, x, y, Vector3.zero);
                             }
                         }
@@ -680,8 +678,10 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                     }
                 }
             }
-            RequestSigns.DropAllSigns();
-            StructureSaver.DropAllStructures();
+            if (RequestSigns.Loaded)
+                RequestSigns.DropAllSigns();
+            if (StructureSaver.Loaded)
+                StructureSaver.Singleton.CheckAll();
             IconManager.OnLevelLoaded();
         }
         catch (Exception ex)

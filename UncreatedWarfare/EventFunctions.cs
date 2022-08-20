@@ -23,6 +23,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
@@ -815,11 +816,13 @@ public static class EventFunctions
                 shouldAllow = false;
             }
 
-            if (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.BARRICADE, out Structures.Structure s) && s.transform == barricadeTransform)
+            if (Structures.StructureSaver.SaveExists(drop, out Structures.SavedStructure s))
             {
                 shouldAllow = false;
+                return;
             }
-            else if (instigatorSteamID != CSteamID.Nil && instigatorSteamID != Provider.server)
+
+            if (instigatorSteamID != CSteamID.Nil && instigatorSteamID != Provider.server)
             {
                 Guid weapon;
                 SteamPlayer? pl = PlayerTool.getSteamPlayer(instigatorSteamID);
@@ -911,11 +914,13 @@ public static class EventFunctions
             }
             StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
             if (drop == null) return;
-            if (Structures.StructureSaver.StructureExists(drop.instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure s) && s.transform == structureTransform)
+            if (StructureSaver.SaveExists(drop, out SavedStructure s))
             {
                 shouldAllow = false;
+                return;
             }
-            else if (instigatorSteamID != CSteamID.Nil && instigatorSteamID != Provider.server)
+
+            if (instigatorSteamID != CSteamID.Nil && instigatorSteamID != Provider.server)
             {
                 Guid weapon;
                 SteamPlayer pl = PlayerTool.getSteamPlayer(instigatorSteamID);
@@ -1207,18 +1212,19 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.STRUCTURE, out Structures.Structure found))
+        if (StructureSaver.SaveExists(instanceID, EStructType.STRUCTURE, out SavedStructure found))
         {
-            found.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
-            Structures.StructureSaver.SaveSingleton();
-            if (VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, Structures.EStructType.STRUCTURE))
+            found.Position = point;
+            found.Rotation = new Vector3(angle_x * 2f, angle_y * 2f, angle_z * 2f);
+            StructureSaver.SaveSingleton();
+            if (VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, EStructType.STRUCTURE))
             {
                 IEnumerable<VehicleSign> linked = VehicleSigns.GetLinkedSigns(spawn);
                 int i = 0;
                 foreach (VehicleSign sign in linked)
                 {
                     i++;
-                    sign.bay_transform = found.transform;
+                    sign.bay_transform = new SerializableTransform(found.Position, found.Rotation);
                 }
                 if (i > 0) VehicleSigns.SaveSingleton();
             }
@@ -1229,18 +1235,19 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Structures.StructureSaver.StructureExists(instanceID, Structures.EStructType.BARRICADE, out Structures.Structure found))
+        if (StructureSaver.SaveExists(instanceID, EStructType.BARRICADE, out SavedStructure found))
         {
-            found.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
-            Structures.StructureSaver.SaveSingleton();
-            if (VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, Structures.EStructType.BARRICADE))
+            found.Position = point;
+            found.Rotation = new Vector3(angle_x * 2f, angle_y * 2f, angle_z * 2f);
+            StructureSaver.SaveSingleton();
+            if (VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, EStructType.BARRICADE))
             {
                 IEnumerable<VehicleSign> linked = VehicleSigns.GetLinkedSigns(spawn);
                 int i = 0;
                 foreach (VehicleSign sign in linked)
                 {
                     i++;
-                    sign.bay_transform = found.transform;
+                    sign.bay_transform = new SerializableTransform(found.Position, found.Rotation);
                 }
                 if (i > 0) VehicleSigns.SaveSingleton();
             }
@@ -1252,12 +1259,12 @@ public static class EventFunctions
             {
                 if (RequestSigns.SignExists(sign, out RequestSign rsign))
                 {
-                    rsign.transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
+                    rsign.transform = new SerializableTransform(found.Position, found.Rotation);
                     RequestSigns.SaveSingleton();
                 }
                 else if (VehicleSigns.SignExists(sign, out VehicleSign vbsign))
                 {
-                    vbsign.sign_transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
+                    vbsign.sign_transform = new SerializableTransform(found.Position, found.Rotation);
                     VehicleSigns.SaveSingleton();
                 }
                 TraitSigns.OnBarricadeMoved(drop, sign);

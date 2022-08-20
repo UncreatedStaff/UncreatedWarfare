@@ -562,7 +562,6 @@ public static class DailyQuests
                                                                                         if (v != null && Enum.TryParse(v, true, out EQuestType type))
                                                                                         {
                                                                                             preset.Type = type;
-                                                                                            L.Log("Reading a " + type.ToString() + " preset");
                                                                                             BaseQuestData? data = QuestManager.Quests.Find(x => x.QuestType == type);
                                                                                             if (data != null)
                                                                                             {
@@ -573,7 +572,6 @@ public static class DailyQuests
                                                                                                     BaseQuestTracker? tempTracker = data.GetTracker(null, preset.PresetObj);
                                                                                                     if (tempTracker != null)
                                                                                                     {
-                                                                                                        L.Log("Made a temp tracker");
                                                                                                         cond.FlagValue = checked((short)preset.PresetObj.State.FlagValue.InsistValue());
                                                                                                         cond.Translation = tempTracker.GetDisplayString(true);
                                                                                                         cond.Key = preset.PresetObj.Key;
@@ -591,8 +589,6 @@ public static class DailyQuests
                                                                                                         L.LogWarning("Unable to create tracker for " + preset.PresetObj.State.FlagValue + " (" + type.ToString() + ")");
                                                                                                     }
                                                                                                 }
-                                                                                                else
-                                                                                                    L.Log("Already sent");
                                                                                             }
                                                                                             else
                                                                                             {
@@ -601,7 +597,7 @@ public static class DailyQuests
                                                                                         }
                                                                                         else
                                                                                         {
-                                                                                            L.Log("Unknown quest type: " + v);
+                                                                                            L.LogWarning("Unknown quest type: " + v);
                                                                                         }
                                                                                         break;
                                                                                 }

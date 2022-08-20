@@ -117,7 +117,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
             spawn.SpawnVehicle();
         }
     }
-    public static void CreateSpawn(BarricadeDrop drop, SDG.Unturned.BarricadeData data, Guid vehicleID)
+    public static void CreateSpawn(BarricadeDrop drop, BarricadeData data, Guid vehicleID)
     {
         Singleton.AssertLoaded<VehicleSpawner, VehicleSpawn>();
 #if DEBUG
@@ -126,10 +126,10 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.BARRICADE, new SerializableTransform(drop.model));
         spawn.Initialize();
         Singleton.AddObjectToSave(spawn);
-        StructureSaver.AddStructure(drop, data, out _);
+        StructureSaver.AddBarricade(drop, out _);
         spawn.SpawnVehicle();
     }
-    public static void CreateSpawn(StructureDrop drop, SDG.Unturned.StructureData data, Guid vehicleID)
+    public static void CreateSpawn(StructureDrop drop, StructureData data, Guid vehicleID)
     {
         Singleton.AssertLoaded<VehicleSpawner, VehicleSpawn>();
 #if DEBUG
@@ -138,7 +138,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.STRUCTURE, new SerializableTransform(drop.model));
         spawn.Initialize();
         Singleton.AddObjectToSave(spawn);
-        StructureSaver.AddStructure(drop, data, out _);
+        StructureSaver.AddStructure(drop, out _);
         spawn.SpawnVehicle();
     }
     public static void DeleteSpawn(uint barricadeInstanceID, EStructType type)
@@ -166,8 +166,8 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
             }
         }
         Singleton.RemoveWhere(s => s.SpawnPadInstanceID == barricadeInstanceID && s.type == type);
-        if (StructureSaver.StructureExists(barricadeInstanceID, type, out Structures.Structure structure))
-            StructureSaver.RemoveStructure(structure);
+        if (StructureSaver.SaveExists(barricadeInstanceID, type, out SavedStructure structure))
+            StructureSaver.RemoveSave(structure);
     }
     public static bool IsRegistered(uint barricadeInstanceID, out VehicleSpawn spawn, EStructType type)
     {
@@ -398,19 +398,14 @@ public class VehicleSpawn
                 if (!initialized)
                 {
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding BarricadeDrop could not be found, attempting to replace the barricade.");
-                    if (!StructureSaver.StructureExists(SpawnPadInstanceID, EStructType.BARRICADE, out Structures.Structure? structure))
+                    if (!StructureSaver.SaveExists(SpawnPadInstanceID, EStructType.BARRICADE, out SavedStructure structure))
                     {
-                        if (SpawnpadLocation != default(SerializableTransform))
-                            structure = StructureSaver.FindStructure(x => x.transform == SpawnpadLocation && x.type == EStructType.BARRICADE);
-                        if (structure == null)
-                        {
-                            L.LogError("VEHICLE SPAWNER ERROR: barricade save not found.");
-                            initialized = false;
-                            IsActive = false;
-                            return;
-                        }
+                        L.LogError("VEHICLE SPAWNER ERROR: barricade save not found.");
+                        initialized = false;
+                        IsActive = false;
+                        return;
                     }
-                    if (Assets.find(structure.id) is not ItemBarricadeAsset asset)
+                    if (Assets.find(structure.ItemGuid) is not ItemBarricadeAsset asset)
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: barricade asset not found.");
                         initialized = false;
@@ -419,7 +414,7 @@ public class VehicleSpawn
                     }
                     Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
                         new Barricade(asset, asset.health, structure.Metadata),
-                        structure.transform.position.Vector3, structure.transform.Rotation, structure.owner, structure.group);
+                        structure.Position, Quaternion.Euler(structure.Rotation), structure.Owner, structure.Group);
                     if (newBarricade == null)
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: barricade could not be spawned.");
@@ -432,7 +427,7 @@ public class VehicleSpawn
                     {
                         BarricadeDrop = newdrop;
                         BarricadeData = newdrop.GetServersideData();
-                        structure.instance_id = newdrop.instanceID;
+                        structure.InstanceID = newdrop.instanceID;
                         SpawnPadInstanceID = newdrop.instanceID;
                         SpawnpadLocation = new SerializableTransform(newdrop.model);
                         VehicleSpawner.SaveSingleton();
@@ -469,34 +464,28 @@ public class VehicleSpawn
                 if (!initialized)
                 {
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding StructureDrop could not be found, attempting to replace the structure.");
-                    if (!StructureSaver.StructureExists(SpawnPadInstanceID, EStructType.STRUCTURE, out Structures.Structure? structure))
+                    if (!StructureSaver.SaveExists(SpawnPadInstanceID, EStructType.STRUCTURE, out SavedStructure structure))
                     {
-                        if (SpawnpadLocation != default(SerializableTransform))
-                            structure = StructureSaver.FindStructure(x => x.transform == SpawnpadLocation && x.type == EStructType.STRUCTURE);
-                        if (structure == null)
-                        {
-                            L.LogError("VEHICLE SPAWNER ERROR: structure save not found.");
-                            initialized = false;
-                            IsActive = false;
-                            return;
-                        }
+                        L.LogError("VEHICLE SPAWNER ERROR: structure save not found.");
+                        initialized = false;
+                        IsActive = false;
+                        return;
                     }
-                    if (!(Assets.find(structure.id) is ItemStructureAsset asset))
+                    if (Assets.find(structure.ItemGuid) is not ItemStructureAsset asset)
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: structure asset not found.");
                         initialized = false;
                         IsActive = false;
                         return;
                     }
-                    if (!StructureManager.dropStructure(
+                    if (!StructureManager.dropReplicatedStructure(
                         new SDG.Unturned.Structure(asset, ushort.MaxValue),
-                        structure.transform.position.Vector3, structure.transform.euler_angles.x, structure.transform.euler_angles.y,
-                        structure.transform.euler_angles.z, structure.owner, structure.group))
+                        structure.Position, Quaternion.Euler(structure.Rotation), structure.Owner, structure.Group))
                     {
                         L.LogWarning("VEHICLE SPAWNER ERROR: Structure could not be replaced");
                         initialized = false;
                     }
-                    else if (Regions.tryGetCoordinate(structure.transform.position.Vector3, out byte x, out byte y))
+                    else if (Regions.tryGetCoordinate(structure.Position, out byte x, out byte y))
                     {
                         StructureDrop newdrop = StructureManager.regions[x, y].drops.LastOrDefault();
                         if (newdrop == null)
@@ -508,7 +497,7 @@ public class VehicleSpawn
                         {
                             StructureData = newdrop.GetServersideData();
                             StructureDrop = newdrop;
-                            structure.instance_id = newdrop.instanceID;
+                            structure.InstanceID = newdrop.instanceID;
                             SpawnPadInstanceID = newdrop.instanceID;
                             VehicleSpawner.SaveSingleton();
                             StructureSaver.SaveSingleton();

@@ -15,6 +15,7 @@ using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
@@ -1025,9 +1026,9 @@ internal static class T
 
     #region Strutures
     public static readonly Translation StructureNoTarget = new Translation("<#ff8c69>You must be looking at a barricade, structure, or vehicle.");
-    public static readonly Translation<Structures.Structure> StructureSaved = new Translation<Structures.Structure>("<#e6e3d5>Saved <#c6d4b8>{0}</color>.");
-    public static readonly Translation<Structures.Structure> StructureAlreadySaved = new Translation<Structures.Structure>("<#e6e3d5><#c6d4b8>{0}</color> is already saved.");
-    public static readonly Translation<Structures.Structure> StructureUnsaved = new Translation<Structures.Structure>("<#e6e3d5>Removed <#c6d4b8>{0}</color> save.");
+    public static readonly Translation<SavedStructure> StructureSaved = new Translation<SavedStructure>("<#e6e3d5>Saved <#c6d4b8>{0}</color>.");
+    public static readonly Translation<SavedStructure> StructureAlreadySaved = new Translation<SavedStructure>("<#e6e3d5><#c6d4b8>{0}</color> is already saved.");
+    public static readonly Translation<SavedStructure> StructureUnsaved = new Translation<SavedStructure>("<#e6e3d5>Removed <#c6d4b8>{0}</color> save.");
     public static readonly Translation<ItemAsset> StructureAlreadyUnsaved = new Translation<ItemAsset>("<#ff8c69><#c6d4b8>{0}</color> is not saved.");
     public static readonly Translation<Asset> StructureDestroyed = new Translation<Asset>("<#e6e3d5>Destroyed <#c6d4b8>{0}</color>.");
     public static readonly Translation StructureNotDestroyable = new Translation("<#ff8c69>That object can not be destroyed.");
@@ -1035,6 +1036,11 @@ internal static class T
     public static readonly Translation StructureExamineNotLocked = new Translation("<#ff8c69>This vehicle is not locked.");
     public static readonly Translation<Asset, IPlayer, FactionInfo> StructureExamineLastOwnerPrompt = new Translation<Asset, IPlayer, FactionInfo>("Last owner of {0}: {1}, Team: {2}.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, arg1Fmt: UCPlayer.PLAYER_NAME_FORMAT, arg2Fmt: FactionInfo.DISPLAY_NAME_FORMAT);
     public static readonly Translation<Asset, IPlayer, IPlayer, FactionInfo> StructureExamineLastOwnerChat = new Translation<Asset, IPlayer, IPlayer, FactionInfo>("<#c6d4b8>Last owner of <#e6e3d5>{0}</color>: {1} <i>({2})</i>, Team: {3}.", TranslationFlags.TMProUI | TranslationFlags.NoRichText, RARITY_COLOR_FORMAT, arg1Fmt: UCPlayer.COLOR_PLAYER_NAME_FORMAT, arg2Fmt: UCPlayer.STEAM_64_FORMAT, arg3Fmt: FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
+    public static readonly Translation<string> StructureSaveInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a structure property. Try putting 'owner' or 'group'.");
+    public static readonly Translation<string, string> StructureSaveInvalidSetValue = new Translation<string, string>("<#ff8c69><#ddd>{0}</color> isn't a valid value for structure property: <#a0ad8e>{1}</color>.");
+    public static readonly Translation<string> StructureSaveNotJsonSettable = new Translation<string>("<#ff8c69><#a0ad8e>{0}</color> is not marked as settable.");
+    public static readonly Translation<string, ItemAsset, string> StructureSaveSetProperty = 
+        new Translation<string, ItemAsset, string>("<#a0ad8e>Set <#8ce4ff>{0}</color> for {1} save to: <#ffffff>{2}</color>.", arg1Fmt: RARITY_COLOR_FORMAT);
     #endregion
 
     #region Whitelist

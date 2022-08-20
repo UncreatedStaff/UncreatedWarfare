@@ -153,7 +153,7 @@ public class RequestSigns : ListSingleton<RequestSign>
             }
         }
     }
-    public static void SetSignTextSneaky(InteractableSign sign, string text)
+    public static byte[] SetSignTextSneaky(InteractableSign sign, string text)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -171,8 +171,9 @@ public class RequestSigns : ListSingleton<RequestSign>
         numArray1[16] = (byte)bytes.Length;
         if (bytes.Length != 0)
             Buffer.BlockCopy(bytes, 0, numArray1, 17, bytes.Length);
-        barricadeByRootFast.GetServersideData().barricade.state = numArray1;
+        BarricadeManager.updateState(barricadeByRootFast.model, numArray1, numArray1.Length);
         sign.updateState(barricadeByRootFast.asset, numArray1);
+        return numArray1;
     }
 }
 public class RequestSign : IJsonReadWrite

@@ -755,11 +755,6 @@ internal class _DebugCommand : Command
                 sign2.SignText = text;
                 RequestSigns.SaveSingleton();
             }
-            if (StructureSaver.Loaded && StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structures.Structure str))
-            {
-                str.state = Convert.ToBase64String(drop.GetServersideData().barricade.state);
-                StructureSaver.SaveSingleton();
-            }
             Signs.BroadcastSignUpdate(drop);
         }
     }

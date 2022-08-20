@@ -45,7 +45,6 @@ namespace Uncreated.Warfare
                     BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
                     if (drop == null)
                         return false;
-                    Signs.BroadcastSign(trimmedText, sign, x, y);
                     byte[] bytes = System.Text.Encoding.UTF8.GetBytes(trimmedText);
                     byte[] newState = new byte[sizeof(ulong) * 2 + 1 + bytes.Length];
                     Buffer.BlockCopy(BitConverter.GetBytes(drop.GetServersideData().owner), 0, newState, 0, sizeof(ulong));
@@ -53,10 +52,12 @@ namespace Uncreated.Warfare
                     newState[sizeof(ulong) * 2] = (byte)bytes.Length;
                     if (bytes.Length != 0)
                         Buffer.BlockCopy(bytes, 0, newState, sizeof(ulong) * 2 + 1, bytes.Length);
-                    drop.ReceiveUpdateState(newState);
-                    if (StructureSaver.Loaded && StructureSaver.StructureExists(drop.instanceID, EStructType.BARRICADE, out Structures.Structure structure))
+                    BarricadeManager.updateState(drop.model, newState, newState.Length);
+                    sign.updateState(drop.asset, newState);
+                    Signs.BroadcastSign(trimmedText, sign, x, y);
+                    if (StructureSaver.Loaded && StructureSaver.SaveExists(drop, out SavedStructure structure))
                     {
-                        structure.state = Convert.ToBase64String(newState);
+                        structure.Metadata = F.CloneBytes(newState);
                         StructureSaver.SaveSingleton();
                     }
 

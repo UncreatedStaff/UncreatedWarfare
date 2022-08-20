@@ -47,7 +47,9 @@ internal class ProjectileSolver : MonoBehaviour
             L.LogDebug("Adding " + t.name + " clip to scene.");
         }
 
-
+#if DEBUG
+        List<BoxCollider> bcs = new List<BoxCollider>(8);
+#endif
         for (int x = 0; x < Regions.WORLD_SIZE; ++x)
         {
             for (int y = 0; y < Regions.WORLD_SIZE; ++y)
@@ -65,6 +67,22 @@ internal class ProjectileSolver : MonoBehaviour
                             Destroy(rigidbody);
 
                         SceneManager.MoveGameObjectToScene(obj, _simScene);
+#if DEBUG
+                        obj.GetComponentsInChildren(bcs);
+                        for (int i = 0; i < bcs.Count; ++i)
+                        {
+                            BoxCollider c = bcs[i];
+                            if (c.transform.localScale.x < 0 || c.transform.localScale.y < 0 || c.transform.localScale.z < 0 ||
+                                c.size.x < 0 || c.size.y < 0 || c.size.z < 0)
+                            {
+                                L.LogWarning(obj2.asset.objectName + " (" + obj2.asset.id + ", " +
+                                             obj2.asset.GUID.ToString("N") +
+                                             "): Negative scale or size detected, recommended to fix.");
+                            }
+                        }
+
+                        bcs.Clear();
+#endif
                     }
                 }
             }

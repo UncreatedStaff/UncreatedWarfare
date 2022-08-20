@@ -430,14 +430,14 @@ public static class JsonEx
         WriteIndented = true, 
         IncludeFields = true, 
         AllowTrailingCommas = true,
-        Encoder = jsEncoder,
+        Encoder = jsEncoder
     };
     public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true, Encoder = jsEncoder };
     public static readonly JsonWriterOptions condensedWriterOptions = new JsonWriterOptions() { Indented = false, Encoder = jsEncoder };
     public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };
     static JsonEx()
     {
-
+        serializerSettings.Converters.Add(new Vector3JsonConverter());
     }
     public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, bool value)
     {

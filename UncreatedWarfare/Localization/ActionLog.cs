@@ -315,5 +315,6 @@ public enum EActionLogType : byte
     KICKED_BY_BATTLEYE,
     TEAMKILL,
     KILL,
-    REQUEST_TRAIT
+    REQUEST_TRAIT,
+    SET_SAVED_STRUCTURE_PROPERTY
 }
