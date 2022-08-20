@@ -2,8 +2,13 @@
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Traits.Buffs;
+
+/// <summary>
+/// Decrease those affected's deployment cooldown by 25% (* by .75).
+/// </summary>
 public class RapidDeployment : Buff
 {
+    private static TraitData? DATA;
     public static TraitData DEFAULT_DATA = new TraitData()
     {
         TypeName = nameof(RapidDeployment),
@@ -30,7 +35,7 @@ public class RapidDeployment : Buff
     }
     public static float GetDeployTime(UCPlayer player)
     {
-        TraitData? d = TraitManager.GetData(typeof(RapidDeployment));
+        TraitData? d = DATA ??= TraitManager.GetData(typeof(RapidDeployment));
         if (d != null)
         {
             if (TraitManager.IsAffected(d, player, out Trait trait) && trait is RapidDeployment dep)

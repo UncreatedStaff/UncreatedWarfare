@@ -122,7 +122,7 @@ public class UCPlayer : IPlayer
         }
     }
     public List<Kit>? AccessibleKits;
-    public Buff?[] ActiveBuffs = new Buff?[6];
+    public IBuff?[] ActiveBuffs = new IBuff?[6];
     public List<Trait> ActiveTraits = new List<Trait>(8);
     internal List<Guid>? _completedQuests;
     public float LastSpoken = 0f;

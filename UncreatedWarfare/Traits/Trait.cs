@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -16,6 +17,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Traits;
 public abstract class Trait : MonoBehaviour, ITranslationArgument
 {
+    protected static readonly char[] dataSplitChars = new char[] { ',' };
     private TraitData _data;
     private UCPlayer _targetPlayer;
     private bool _inited = false;
@@ -37,6 +39,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         _inited = true;
     }
 
+    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
     private void Start()
     {
         if (!_inited)
@@ -72,6 +75,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         Destroy(this);
     }
 
+    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
     private void OnDestroy()
     {
         if (!_inited)

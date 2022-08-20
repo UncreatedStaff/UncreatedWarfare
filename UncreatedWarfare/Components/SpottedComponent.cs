@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Uncreated.Players;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -82,7 +83,7 @@ public class SpottedComponent : MonoBehaviour
                 L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
                 spotted.Activate(spotter);
             }
-            else if (transform.TryGetComponent(out Player player) && player.GetTeam() != spotter.GetTeam())
+            else if (transform.TryGetComponent(out Player player) && player.GetTeam() != spotter.GetTeam() && !Ghost.IsHidden(UCPlayer.FromPlayer(player)!))
             {
                 spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(L.DEFAULT));
                 L.LogDebug("Spotting player " + player.name);

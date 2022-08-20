@@ -8,8 +8,12 @@ using Uncreated.Warfare.Kits;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Traits.Buffs;
+/// <summary>
+/// If there are more players with <see cref="Intimidation"/> on one team than the other when a <see cref="Flag"/> would've been contested, that team still captures.
+/// </summary>
 public class Intimidation : Buff
 {
+    private static TraitData? DATA;
     public static TraitData DEFAULT_DATA = new TraitData()
     {
         TypeName = nameof(Intimidation),
@@ -28,7 +32,7 @@ public class Intimidation : Buff
     };
     public static bool IsContestBoosted(UCPlayer player)
     {
-        TraitData? d = TraitManager.GetData(typeof(Intimidation));
+        TraitData? d = DATA ??= TraitManager.GetData(typeof(Intimidation));
         return d != null && TraitManager.IsAffected(d, player, out _);
     }
 

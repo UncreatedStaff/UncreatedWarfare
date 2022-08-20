@@ -802,7 +802,7 @@ internal class _DebugCommand : Command
         ctx.ReplyString("Permission: " + ctx.Caller.GetPermissions());
     }
 #if DEBUG
-    private static InstanceSetter<InteractableVehicle, bool> SetEngineOn = F.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly InstanceSetter<InteractableVehicle, bool> SetEngineOn = F.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
     private void drivetest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -1029,12 +1029,12 @@ internal class _DebugCommand : Command
         }
 
         L.Log("Buff UI:");
-        L.Log("[ " + (ctx.Caller.ActiveBuffs[0]?.Data.TypeName ?? "null") +
-              ", " + (ctx.Caller.ActiveBuffs[1]?.Data.TypeName ?? "null") +
-              ", " + (ctx.Caller.ActiveBuffs[2]?.Data.TypeName ?? "null") +
-              ", " + (ctx.Caller.ActiveBuffs[3]?.Data.TypeName ?? "null") +
-              ", " + (ctx.Caller.ActiveBuffs[4]?.Data.TypeName ?? "null") +
-              ", " + (ctx.Caller.ActiveBuffs[5]?.Data.TypeName ?? "null") + " ]");
+        L.Log("[ " + (ctx.Caller.ActiveBuffs[0]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[1]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[2]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[3]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[4]?.GetType().Name ?? "null") +
+              ", " + (ctx.Caller.ActiveBuffs[5]?.GetType().Name ?? "null") + " ]");
     }
 
     private void sendui(CommandInteraction ctx)

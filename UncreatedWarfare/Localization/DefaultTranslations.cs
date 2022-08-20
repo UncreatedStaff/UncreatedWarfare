@@ -17,6 +17,7 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -1132,6 +1133,8 @@ internal static class T
     public static readonly Translation<Trait> TraitDisabledSquadLeaderDemoted = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until it expires or you become <#cedcde>SQUAD LEADER</color> again.", TraitData.NAME);
     [TranslationData(TRAITS_SECTION, "Sent when the player leaves a squad while under the effect of a trait requiring a squad.", "The trait requiring a squad")]
     public static readonly Translation<Trait> TraitDisabledSquadLeft = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you join a <#cedcde>SQUAD</color> again.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player equips a kit that's not supported by the trait.", "The trait requiring a kit")]
+    public static readonly Translation<Trait> TraitDisabledKitNotSupported = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you switch to a supported kit type.", TraitData.NAME);
     [TranslationData(TRAITS_SECTION, "Sent when the player performs an action that allows their trait to be reactivated.", "The trait being reactivated")]
     public static readonly Translation<Trait> TraitReactivated = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> has reactivated.", TraitData.NAME);
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait which is locked by the current gamemode.", "The locked trait", "Current gamemode")]
@@ -1188,7 +1191,13 @@ internal static class T
     public static readonly Translation<Cooldown> TraitSignGlobalCooldown = new Translation<Cooldown>("<#c$vbs_delay$>Locked {0}</color>", TranslationFlags.NoColor, "mm\\:ss");
     #endregion
     #region Trait Interactions
-    public static readonly Translation<float> BadOmenMortarWarning = new Translation<float>("Mortar incoming in <color=#c$points$>{0}</color> seconds.", "F0");
+    private const string TRAITS_INTERACTIONS_SECTION = "Traits / Interactions";
+    [TranslationData(TRAITS_INTERACTIONS_SECTION, "Sent to players with Bad Omen when there's an enemy mortar incoming on a toast.", "Seconds out")]
+    public static readonly Translation<float> BadOmenMortarWarning = new Translation<float>("Mortar incoming in <color=#c$points$>{0}</color> seconds.", TranslationFlags.UnityUI, "F0");
+    [TranslationData(TRAITS_INTERACTIONS_SECTION, "Sent when the player consumes their self-revive.", "Self-revive trait data.")]
+    public static readonly Translation<TraitData> TraitUsedSelfRevive = new Translation<TraitData>("<#c$trait$>{0}</color> <#d97568>consumed</color>.", TraitData.NAME);
+    [TranslationData(TRAITS_INTERACTIONS_SECTION, "Sent when the player tries to use their self-revive on cooldown.", "Self-revive trait data.", "Time string")]
+    public static readonly Translation<TraitData, string> TraitSelfReviveCooldown = new Translation<TraitData, string>("<#c$trait$>{0}</color> can not be used for another {1}.", TraitData.NAME);
     #endregion
     #endregion
 
@@ -1290,6 +1299,7 @@ internal static class T
     public static readonly Translation<EVehicleType> XPToastFriendlyVehicleDestroyed = new Translation<EVehicleType>("FRIENDLY {0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
     public static readonly Translation<EVehicleType> XPToastFriendlyAircraftDestroyed = new Translation<EVehicleType>("FRIENDLY {0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
     public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastAceArmorRefund = new Translation("ACE ARMOR SHARE", TranslationFlags.UnityUI);
 
     public static readonly Translation XPToastFlagCaptured = new Translation("FLAG CAPTURED", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFlagNeutralized = new Translation("FLAG NEUTRALIZED", TranslationFlags.UnityUI);

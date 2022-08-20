@@ -9,8 +9,12 @@ using Uncreated.Warfare.Kits;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Traits.Buffs;
+/// <summary>
+/// Incoming enemy mortars near a player under this effect will trigger a notification.
+/// </summary>
 public class BadOmen : Buff
 {
+    private static TraitData? DATA;
     public static TraitData DEFAULT_DATA = new TraitData()
     {
         TypeName = nameof(BadOmen),
@@ -40,7 +44,7 @@ public class BadOmen : Buff
     }
     internal override void SquadLeaderDemoted()
     {
-        if (!Data.EffectDistributedToSquad || TargetPlayer.Squad is null)
+        if (!Data.EffectDistributedToSquad)
             return;
         _squadMaxNotice = _maxNotice * Data.SquadDistributedMultiplier;
     }
@@ -52,7 +56,7 @@ public class BadOmen : Buff
     }
     public static bool CanSeeIncomingMortars(UCPlayer player)
     {
-        TraitData? d = TraitManager.GetData(typeof(BadOmen));
+        TraitData? d = DATA ??= TraitManager.GetData(typeof(BadOmen));
         return d != null && TraitManager.IsAffected(d, player, out _);
     }
     public static void WarnEnemies(UCPlayer owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType)

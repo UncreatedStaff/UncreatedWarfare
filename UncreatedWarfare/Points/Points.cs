@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -16,8 +15,6 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using static Uncreated.Warfare.Components.SpottedComponent;
-using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Point;
@@ -220,7 +217,20 @@ public static class Points
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
+        float multiplier = -1f;
+        if (TraitManager.Loaded)
+        {
+            for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+                if (player.ActiveBuffs[i] is IXPBoostBuff buff)
+                {
+                    if (buff.Multiplier > multiplier)
+                        multiplier = buff.Multiplier;
+                }
+        }
+
+        if (multiplier < 0f)
+            multiplier = 1f;
+        amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier * multiplier);
         Task.Run(async () =>
         {
             RankData oldRank = player.Rank;
@@ -290,6 +300,12 @@ public static class Points
                 {
                     TraitSigns.SendAllTraitSigns(player);
                 }
+            }
+            if (TraitManager.Loaded)
+            {
+                for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+                    if (player.ActiveBuffs[i] is IXPBoostBuff buff)
+                        buff.OnXPBoostUsed(amount, awardCredits);
             }
         });
     }
@@ -685,14 +701,11 @@ public static class Points
             }
             */
 
-            if (Data.Reporter is not null)
-            {
-                Data.Reporter.OnVehicleDied(e.OwnerId,
+            Data.Reporter?.OnVehicleDied(e.OwnerId,
                     VehicleSpawner.HasLinkedSpawn(e.Vehicle.instanceID, out Vehicles.VehicleSpawn spawn)
                         ? spawn.SpawnPadInstanceID
                         : uint.MaxValue, e.InstigatorId, e.Vehicle.asset.GUID, e.Component.LastItem,
                     e.Component.LastDamageOrigin, vehicleWasFriendly);
-            }
         }
     }
 }

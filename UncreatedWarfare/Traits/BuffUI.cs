@@ -9,7 +9,7 @@ namespace Uncreated.Warfare.Traits;
 public class BuffUI : UnturnedUI
 {
     public const int MAX_BUFFS = 6;
-    private const string DEFAULT_BUFF_ICON = "±";
+    public const string DEFAULT_BUFF_ICON = "±";
     public UnturnedUIElement Buff1 = new UnturnedUIElement("Buff1");
     public UnturnedUIElement Buff2 = new UnturnedUIElement("Buff2");
     public UnturnedUIElement Buff3 = new UnturnedUIElement("Buff3");
@@ -56,10 +56,10 @@ public class BuffUI : UnturnedUI
         SendToPlayer(c);
         for (int i = 0; i < MAX_BUFFS; ++i)
         {
-            Buff? buff = player.ActiveBuffs[i];
+            IBuff? buff = player.ActiveBuffs[i];
             if (buff != null)
             {
-                string icon = buff.Data.Icon.HasValue ? buff.Data.Icon.Value : DEFAULT_BUFF_ICON;
+                string icon = buff.Icon;
                 SolidIcons[i].SetText(c, icon);
                 SolidIcons[i].SetVisibility(c, !buff.IsBlinking);
                 BlinkingIcons[i].SetVisibility(c, buff.IsBlinking);
@@ -68,7 +68,7 @@ public class BuffUI : UnturnedUI
             else break;
         }
     }
-    public bool AddBuff(UCPlayer player, Buff buff)
+    public bool AddBuff(UCPlayer player, IBuff buff)
     {
         lock (player.ActiveBuffs)
         {
@@ -85,7 +85,7 @@ public class BuffUI : UnturnedUI
             }
             if (ind == -1)
                 return false; // no room
-            string icon = buff.Data.Icon.HasValue ? buff.Data.Icon.Value : DEFAULT_BUFF_ICON;
+            string icon = buff.Icon;
             ITransportConnection c = player.Connection;
 
             SolidIcons[ind].SetText(c, icon);
@@ -97,7 +97,7 @@ public class BuffUI : UnturnedUI
         return true;
     }
 
-    public bool RemoveBuff(UCPlayer player, Buff buff)
+    public bool RemoveBuff(UCPlayer player, IBuff buff)
     {
         lock (player.ActiveBuffs)
         {
@@ -118,7 +118,7 @@ public class BuffUI : UnturnedUI
 
             for (int i = ind; i < MAX_BUFFS; ++i)
             {
-                Buff? b = player.ActiveBuffs[i];
+                IBuff? b = player.ActiveBuffs[i];
                 if (b == null)
                     break;
 
@@ -130,10 +130,10 @@ public class BuffUI : UnturnedUI
                 }
                 else
                 {
-                    Buff? next = player.ActiveBuffs[i + 1];
+                    IBuff? next = player.ActiveBuffs[i + 1];
                     if (next != null)
                     {
-                        string icon = next.Data.Icon.HasValue ? next.Data.Icon.Value : DEFAULT_BUFF_ICON;
+                        string icon = next.Icon;
                         SolidIcons[i].SetText(c, icon);
                         SolidIcons[ind].SetVisibility(c, !buff.IsBlinking);
                         BlinkingIcons[ind].SetVisibility(c, buff.IsBlinking);
@@ -151,28 +151,29 @@ public class BuffUI : UnturnedUI
         }
         return true;
     }
-    internal void UpdateBuffTimeState(Buff buff)
+    internal void UpdateBuffTimeState(IBuff buff)
     {
         bool blink = buff.IsBlinking;
-        Squad? sq = buff.TargetPlayer.Squad;
-        if (buff.Data.EffectDistributedToSquad && sq is not null)
+        if (buff is Buff b2)
         {
-            for (int i = 0; i < sq.Members.Count; ++i)
-                UpdateBuffTimeState(buff, sq.Members[i], blink);
+            Squad? sq = b2.TargetPlayer.Squad;
+            if (b2.Data.EffectDistributedToSquad && sq is not null)
+            {
+                for (int i = 0; i < sq.Members.Count; ++i)
+                    UpdateBuffTimeState(b2, sq.Members[i], blink);
+                return;
+            }
         }
-        else
-        {
-            UpdateBuffTimeState(buff, buff.TargetPlayer, blink);
-        }
+        UpdateBuffTimeState(buff, buff.Player, blink);
     }
-    private void UpdateBuffTimeState(Buff buff, UCPlayer player, bool isBlinking)
+    private void UpdateBuffTimeState(IBuff buff, UCPlayer player, bool isBlinking)
     {
         for (int i = 0; i < MAX_BUFFS; ++i)
         {
             if (player.ActiveBuffs[i] == buff)
             {
                 ITransportConnection c = player.Connection;
-                (isBlinking ? BlinkingIcons : SolidIcons)[i].SetText(c, buff.Data.Icon.HasValue ? buff.Data.Icon.Value : DEFAULT_BUFF_ICON);
+                (isBlinking ? BlinkingIcons : SolidIcons)[i].SetText(c, buff.Icon);
                 SolidIcons[i].SetVisibility(c, !isBlinking);
                 BlinkingIcons[i].SetVisibility(c, isBlinking);
                 return;

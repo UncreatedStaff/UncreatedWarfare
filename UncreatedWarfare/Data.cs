@@ -78,6 +78,7 @@ public static class Data
     public static class Keys
     {
         public const PlayerKey GiveUp = PlayerKey.PluginKey3;
+        public const PlayerKey SelfRevive = PlayerKey.PluginKey2;
         public const PlayerKey SpawnCountermeasures = PlayerKey.PluginKey3;
     }
 

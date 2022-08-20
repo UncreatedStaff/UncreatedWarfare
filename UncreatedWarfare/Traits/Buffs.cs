@@ -10,12 +10,14 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits;
-public abstract class Buff : Trait
+public abstract class Buff : Trait, IBuff
 {
     public const float BLINK_LEAD_TIME = 10f;
     internal bool _shouldBlink = false;
-    public virtual bool IsBlinking => _shouldBlink;
     private bool _isActivated = true;
+    public virtual bool IsBlinking => _shouldBlink;
+    UCPlayer IBuff.Player => TargetPlayer;
+    string IBuff.Icon => Data.Icon.HasValue ? Data.Icon.Value : BuffUI.DEFAULT_BUFF_ICON;
     public bool IsActivated
     {
         get => _isActivated;
@@ -30,7 +32,6 @@ public abstract class Buff : Trait
                 Deactivate();
         }
     }
-
     protected virtual void Reactivate()
     {
         StartEffect();
@@ -106,4 +107,15 @@ public abstract class Buff : Trait
         base.OnDeactivate();
         ClearEffect();
     }
+}
+public interface IBuff
+{
+    bool IsBlinking { get; }
+    string Icon { get; }
+    UCPlayer Player { get; }
+}
+public interface IXPBoostBuff
+{
+    float Multiplier { get; }
+    void OnXPBoostUsed(float amount, bool awardCredits = true);
 }

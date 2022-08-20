@@ -26,6 +26,7 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -1063,8 +1064,12 @@ public static class EventFunctions
                 }
             }
         }
-        next:
-        if (shouldAllow && Data.Is(out IRevives rev))
+    next:
+        if (!shouldAllow) return;
+
+        StrengthInNumbers.OnPlayerDamageRequested(ref parameters);
+
+        if (Data.Is(out IRevives rev))
             rev.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
         if (shouldAllow)
         {

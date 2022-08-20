@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -27,7 +28,8 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
         Motivated.DEFAULT_DATA,
         RapidDeployment.DEFAULT_DATA,
         Intimidation.DEFAULT_DATA,
-        BadOmen.DEFAULT_DATA
+        BadOmen.DEFAULT_DATA,
+        AceArmor.DEFAULT_DATA
     };
     public static bool Loaded => Singleton.IsLoaded<TraitManager, TraitData>();
     public TraitManager() : base("traits", Data.Paths.TraitDataStorage) { }
@@ -67,7 +69,13 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
             ActiveTraits.Clear();
         }
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-            PlayerManager.OnlinePlayers[i].ShovelSpeedMultipliers.Clear();
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            pl.ShovelSpeedMultipliers.Clear();
+            for (int j = 0; j < pl.ActiveBuffs.Length; ++j)
+                pl.ActiveBuffs[j] = null;
+            pl.ActiveTraits.Clear();
+        }
         BuffUI.ClearFromAllPlayers();
         Singleton = null!;
     }
@@ -93,6 +101,20 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
             }
         }
     }
+    protected override void OnRead()
+    {
+        for (int i = 0; i < Count; ++i)
+        {
+            Type type = this[i].Type;
+            if (type != null)
+            {
+                FieldInfo? info = type.GetField("DATA", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                if (info != null && info.FieldType.IsAssignableFrom(typeof(TraitData)))
+                    info.SetValue(null, this[i]);
+            }
+        }
+        base.OnRead();
+    }
     private void OnGroupChanged(GroupChanged e)
     {
         TraitSigns.SendAllTraitSigns(e.Player);
@@ -102,6 +124,42 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
     private void OnKitChagned(UCPlayer player, Kit kit, string oldKit)
     {
         TraitSigns.SendAllTraitSigns(player);
+        for (int i = 0; i < player.ActiveTraits.Count; ++i)
+        {
+            if (player.ActiveTraits[i] is Buff buff)
+            {
+                if (buff.IsActivated)
+                {
+                    if (!buff.Data.CanClassUse(kit.Class))
+                    {
+                        buff.IsActivated = false;
+                        player.SendChat(T.TraitDisabledKitNotSupported, buff);
+                        // unsure if this should stay in, but could possibly be nice if a player switches kit then has to watch their timer run out while waiting on a cooldown.
+                        CooldownManager.RemoveCooldown(player, ECooldownType.REQUEST_KIT);
+                    }
+                }
+                else if (CheckReactivateValid(buff))
+                {
+                    buff.IsActivated = true;
+                    player.SendChat(T.TraitReactivated, buff);
+                }
+            }
+        }
+    }
+    private static bool CheckReactivateValid(Trait trait)
+    {
+        if (!trait.Data.CanClassUse(trait.TargetPlayer.KitClass))
+            return false;
+        if (!trait.Data.CanGamemodeUse())
+            return false;
+        if (trait.Data.RequireSquad || trait.Data.RequireSquadLeader)
+        {
+            Squad? sq = trait.TargetPlayer.Squad;
+            if (sq is null || (trait.Data.RequireSquadLeader && sq.Leader.Steam64 != trait.TargetPlayer.Steam64))
+                return false;
+        }
+
+        return true;
     }
     public void OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
@@ -210,7 +268,6 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
                     player.SendChat(buff.Data.RequireSquadLeader ? T.TraitDisabledSquadLeaderDemoted : T.TraitDisabledSquadLeft, buff);
                 }
             }
-            
         }
 
         // remove other squadmates' buffs from leaving player
@@ -235,16 +292,10 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
         {
             if (player.ActiveTraits[i] is Buff buff)
             {
-                if (!buff.IsActivated)
+                if (!buff.IsActivated && CheckReactivateValid(buff))
                 {
-                    if ((buff.Data.RequireSquad || buff.Data.RequireSquadLeader) && player.Squad is not null)
-                    {
-                        if (!buff.Data.RequireSquadLeader || joined.Leader.Steam64 == player.Steam64)
-                        {
-                            buff.IsActivated = true;
-                            player.SendChat(T.TraitReactivated, buff);
-                        }
-                    }
+                    buff.IsActivated = true;
+                    player.SendChat(T.TraitReactivated, buff);
                 }
                 if (buff.IsActivated && buff.Data.EffectDistributedToSquad)
                 {

@@ -521,7 +521,7 @@ public static class F
             height = LevelGround.getHeight(point);
             if (!float.IsNaN(minHeight))
                 return Mathf.Max(height, minHeight);
-            else return height;
+            return height;
         }
     }
     public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)

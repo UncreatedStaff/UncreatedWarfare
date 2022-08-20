@@ -4,7 +4,9 @@ using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 
-/// <summary>Shovel as fast as a combat engineer</summary>
+/// <summary>
+/// Shovel buildables at 2x speed. Does not stack with squadmates or with combat engineer (you can not have this while having a <see cref="EClass.COMBAT_ENGINEER"/> kit).
+/// </summary>
 public sealed class Motivated : Buff
 {
     public static TraitData DEFAULT_DATA = new TraitData()
@@ -37,10 +39,11 @@ public sealed class Motivated : Buff
     }
     internal override void SquadLeaderDemoted()
     {
-        if (!Data.EffectDistributedToSquad || TargetPlayer.Squad is null)
+        if (!Data.EffectDistributedToSquad)
             return;
-        Squad sq = TargetPlayer.Squad;
+        Squad? sq = TargetPlayer.Squad;
         _squadMultiplier = (_multiplier - 1) * Data.SquadDistributedMultiplier + 1;
+        if (sq is null) return;
         for (int i = 0; i < sq.Members.Count; ++i)
         {
             UCPlayer m = sq.Members[i];
