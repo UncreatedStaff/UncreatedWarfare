@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
@@ -144,7 +145,7 @@ public class Structure : IJsonReadWrite, ITranslationArgument
         get
         {
             if (_metadata != default) return _metadata;
-            if (state == default) return new byte[0];
+            if (state == default) return Array.Empty<byte>();
             _metadata = Convert.FromBase64String(state);
             return _metadata;
         }
@@ -167,18 +168,10 @@ public class Structure : IJsonReadWrite, ITranslationArgument
     public bool exists;
     [JsonIgnore]
     private bool inited = false;
-    [JsonConstructor]
-    public Structure(Guid id, string state, SerializableTransform transform, uint instance_id, ulong owner, ulong group, EStructType type)
+
+    public Structure()
     {
-        this.id = id;
-        this.state = state;
-        this.type = type;
-        this.instance_id = instance_id;
-        this.owner = owner;
-        this.group = group;
-        this.transform = transform;
         this.exists = false;
-        if (Level.isLoaded) Init();
     }
     public bool Init()
     {
@@ -213,25 +206,16 @@ public class Structure : IJsonReadWrite, ITranslationArgument
         inited = true;
         return exists;
     }
-    public Structure()
-    {
-        this.id = Guid.Empty;
-        this.state = string.Empty;
-        this.type = EStructType.BARRICADE;
-        this.instance_id = 0;
-        this.owner = 0;
-        this.group = 0;
-        this.exists = false;
-    }
     /// <summary>Spawns the structure if it is not already placed.</summary>
     public void SpawnCheck()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!inited) Init();
         if (type == EStructType.BARRICADE)
         {
-            SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? bdrop);
+            BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? bdrop);
             if (data == default)
             {
                 if (Asset is not ItemBarricadeAsset asset)
@@ -245,11 +229,8 @@ public class Structure : IJsonReadWrite, ITranslationArgument
                     bdrop = UCBarricadeManager.GetBarriadeBySerializedTransform(transform);
                     if (bdrop != null && bdrop.asset.GUID == id)
                     {
-                        if (bdrop.interactable is InteractableSign sign && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
-                        {
-                            F.InvokeSignUpdateForAll(sign, x, y, sign.text);
-                        }
-                        if (Vehicles.VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
+                        Signs.BroadcastSignUpdate(bdrop);
+                        if (VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
                         {
                             vbspawn.SpawnPadInstanceID = bdrop.instanceID;
                             VehicleSpawner.SaveSingleton();
@@ -276,10 +257,7 @@ public class Structure : IJsonReadWrite, ITranslationArgument
                 bdrop = BarricadeManager.FindBarricadeByRootTransform(newBarricade);
                 if (bdrop != null)
                 {
-                    if (newBarricade.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(newBarricade.position, out byte x, out byte y))
-                    {
-                        F.InvokeSignUpdateForAll(sign, x, y, sign.text);
-                    }
+                    Signs.BroadcastSignUpdate(bdrop);
                     if (VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
                     {
                         vbspawn.SpawnPadInstanceID = bdrop.instanceID;

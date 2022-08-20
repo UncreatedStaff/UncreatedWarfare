@@ -15,16 +15,21 @@ namespace Uncreated.Warfare.Components
         internal ulong Owner;
         internal Guid GunID;
         internal int UnityInstanceID;
-        internal SDG.Unturned.Rocket RocketComponent;
+        internal Rocket RocketComponent;
         private bool _isExploded;
+        public float LaunchTime;
         public bool IgnoreArmor { get; private set; }
         private void Awake()
         {
             UnityInstanceID = gameObject.GetInstanceID();
-            RocketComponent = GetComponent<SDG.Unturned.Rocket>();
+            RocketComponent = GetComponent<Rocket>();
             _isExploded = false;
 
             IgnoreArmor = transform.Find("IgnoreArmor") != null;
+        }
+        private void Start()
+        {
+            LaunchTime = Time.realtimeSinceStartup;
         }
         internal void OnCollided(Collider other)
         {
@@ -36,6 +41,22 @@ namespace Uncreated.Warfare.Components
 
             EventDispatcher.InvokeOnProjectileExploded(this, other);
 
+            L.LogDebug("Collided with " + other.gameObject.name + " at " + gameObject.transform.position.ToString("F1") + " after " + (Time.realtimeSinceStartup - LaunchTime) + " seconds. (Predicted: " + (PredictedImpactTime - LaunchTime) + " seconds)");
+        }
+
+        private float lastSpawn = 0f;
+        internal float PredictedImpactTime;
+        internal Vector3 PredictedLandingPosition;
+
+        void Update()
+        {
+            float time = Time.time;
+
+            if (time - lastSpawn > 0.25f)
+            {
+                EffectManager.sendEffect(36100, Level.size * 2, this.transform.position);
+                lastSpawn = time;
+            }
         }
     }
 }

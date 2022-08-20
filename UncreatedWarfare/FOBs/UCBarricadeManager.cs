@@ -9,7 +9,7 @@ namespace Uncreated.Warfare;
 
 public static class UCBarricadeManager
 {
-    private static readonly List<RegionCoordinate> regionBuffer = new List<RegionCoordinate>(48);
+    internal static readonly List<RegionCoordinate> regionBuffer = new List<RegionCoordinate>(48);
     [Obsolete]
     public static void TryAddItemToStorage(BarricadeDrop drop, ushort itemID)
     {

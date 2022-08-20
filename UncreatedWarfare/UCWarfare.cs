@@ -16,6 +16,7 @@ using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -28,13 +29,14 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
 
 public delegate void VoidDelegate();
-public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
+public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version      = new Version(2, 6, 0, 2);
@@ -49,6 +51,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     internal DebugComponent Debugger;
     public event EventHandler UCWarfareLoaded;
     public event EventHandler UCWarfareUnloading;
+    internal Projectiles.ProjectileSolver Solver;
     public bool CoroutineTiming = false;
     private bool InitialLoadEventSubscription;
     private DateTime NextRestartTime;
@@ -182,6 +185,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Data.ZoneProvider.Reload();
         Data.ZoneProvider.Save();
 
+        Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
+
         Announcer = Data.Singletons.LoadSingleton<UCAnnouncer>();
         Data.ExtraPoints = JSONMethods.LoadExtraPoints();
         //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
@@ -314,16 +319,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             {
                 if (drop.interactable is InteractableSign sign)
                 {
-                    bool found = false;
                     if (VehicleSpawner.Loaded && VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn))
-                    {
                         spawn.UpdateSign(player);
-                        found = true;
-                    }
-                    if (!found && sign.text.StartsWith("sign_"))
-                    {
-                        F.InvokeSignUpdateFor(player, sign, false);
-                    }
+                    else if (sign.text.StartsWith(Signs.PREFIX))
+                        Signs.BroadcastSignUpdate(drop);
                 }
             }
         }
@@ -360,6 +359,12 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         {
             if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out ZonePlayerComponent comp))
                 comp.ReloadLang();
+        }
+
+        if (TraitManager.Loaded)
+        {
+            if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !(Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> lb) && lb.IsScreenUp))
+                TraitManager.BuffUI.SendBuffs(player);
         }
     }
     private void Update()
@@ -413,7 +418,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
                 if (Announcer != null)
                     Data.Singletons.UnloadSingleton(ref Announcer);
             }
-
+            if (Solver != null)
+            {
+                Destroy(Solver);
+            }
             if (Maps.MapScheduler.Instance != null)
             {
                 Destroy(Maps.MapScheduler.Instance);

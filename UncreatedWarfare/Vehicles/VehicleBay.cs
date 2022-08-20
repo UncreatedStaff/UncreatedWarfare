@@ -612,6 +612,7 @@ public enum EDelayType
     FLAG_PERCENT = 3,
     OUT_OF_STAGING  = 4
 }
+[JsonConverter(typeof(DelayConverter))]
 public struct Delay : IJsonReadWrite
 {
     public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
@@ -660,7 +661,274 @@ public struct Delay : IJsonReadWrite
             }
         }
     }
+
+    public static void AddDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+    {
+        int index = -1;
+        for (int i = 0; i < delays.Length; i++)
+        {
+            ref Delay del = ref delays[i];
+            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1)
+        {
+            Delay del = new Delay(type, value, gamemode);
+            Delay[] old = delays;
+            delays = new Delay[old.Length + 1];
+            if (old.Length > 0)
+            {
+                Array.Copy(old, 0, delays, 0, old.Length);
+                delays[delays.Length - 1] = del;
+            }
+            else
+            {
+                delays[0] = del;
+            }
+        }
+    }
+    public static bool RemoveDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+    {
+        if (delays.Length == 0) return false;
+        int index = -1;
+        for (int i = 0; i < delays.Length; i++)
+        {
+            ref Delay del = ref delays[i];
+            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) return false;
+        Delay[] old = delays;
+        delays = new Delay[old.Length - 1];
+        if (old.Length == 1) return true;
+        if (index != 0)
+            Array.Copy(old, 0, delays, 0, index);
+        Array.Copy(old, index + 1, delays, index, old.Length - index - 1);
+        return true;
+    }
+    public static bool HasDelayType(Delay[] delays, EDelayType type)
+    {
+        string gm = Data.Gamemode.Name;
+        for (int i = 0; i < delays.Length; i++)
+        {
+            ref Delay del = ref delays[i];
+            if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+            if (del.type == type) return true;
+        }
+        return false;
+    }
+    public static bool IsDelayedType(Delay[] delays, EDelayType type, ulong team)
+    {
+        string gm = Data.Gamemode.Name;
+        for (int i = 0; i < delays.Length; i++)
+        {
+            ref Delay del = ref delays[i];
+            if (!string.IsNullOrEmpty(del.gamemode))
+            {
+                string gamemode = del.gamemode!;
+                bool blacklist = false;
+                if (gamemode[0] == '!')
+                {
+                    blacklist = true;
+                    gamemode = gamemode.Substring(1);
+                }
+
+                if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (blacklist) continue;
+                }
+                else if (!blacklist) continue;
+            }
+            if (del.type == type)
+            {
+                switch (type)
+                {
+                    case EDelayType.NONE:
+                        return false;
+                    case EDelayType.TIME:
+                        if (TimeDelayed(ref del))
+                            return true;
+                        break;
+                    case EDelayType.FLAG:
+                        if (FlagDelayed(ref del, team))
+                            return true;
+                        break;
+                    case EDelayType.FLAG_PERCENT:
+                        if (FlagPercentDelayed(ref del, team))
+                            return true;
+                        break;
+                    case EDelayType.OUT_OF_STAGING:
+                        if (StagingDelayed(ref del))
+                            return true;
+                        break;
+                }
+            }
+        }
+        return false;
+    }
+    // TODO: gamemode blacklist not working
+    public static bool IsDelayed(Delay[] delays, out Delay delay, ulong team)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        delay = Delay.Nil;
+        string? gm = Data.Gamemode?.Name;
+        if (delays == null || delays.Length == 0) return false;
+        bool anyVal = false;
+        bool isNoneYet = false;
+        for (int i = delays.Length - 1; i >= 0; i--)
+        {
+            ref Delay del = ref delays[i];
+            bool universal = string.IsNullOrEmpty(del.gamemode);
+            if (!universal)
+            {
+                string gamemode = del.gamemode!; // !TeamCTF
+                bool blacklist = false;
+                if (gamemode[0] == '!') // true
+                {
+                    blacklist = true;
+                    gamemode = gamemode.Substring(1); // TeamCTF
+                }
+
+                if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
+                {
+                    if (blacklist) continue;
+                }
+                else if (!blacklist) continue; // false
+                universal = true;
+            }
+            if (universal && anyVal) continue;
+            switch (del.type)
+            {
+                case EDelayType.NONE:
+                    if (!universal)
+                    {
+                        delay = del;
+                        isNoneYet = true;
+                    }
+                    break;
+                case EDelayType.TIME:
+                    if ((!universal || !isNoneYet) && TimeDelayed(ref del))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
+                case EDelayType.FLAG:
+                    if ((!universal || !isNoneYet) && FlagDelayed(ref del, team))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
+                case EDelayType.FLAG_PERCENT:
+                    if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del, team))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
+                case EDelayType.OUT_OF_STAGING:
+                    if ((!universal || !isNoneYet) && StagingDelayed(ref del))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
+            }
+        }
+        return anyVal;
+    }
+    private static bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.value > Data.Gamemode.SecondsSinceStart;
+    private static bool FlagDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, false, team);
+    private static bool FlagPercentDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, true, team);
+    private static bool FlagDelayed(ref Delay delay, bool percent, ulong team)
+    {
+        if (Data.Is(out Invasion inv))
+        {
+            int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            if (team == 1)
+            {
+                if (inv.AttackingTeam == 1)
+                    return inv.ObjectiveT1Index < ct;
+                else
+                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
+            }
+            else if (team == 2)
+            {
+                if (inv.AttackingTeam == 2)
+                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
+                else
+                    return inv.ObjectiveT1Index < ct;
+            }
+            return false;
+        }
+        else if (Data.Is(out IFlagTeamObjectiveGamemode fr))
+        {
+            int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            int i2 = GetHighestObjectiveIndex(team, fr);
+            return (team == 1 && i2 < ct) ||
+                   (team == 2 && fr.Rotation.Count - i2 - 1 < ct);
+        }
+        else if (Data.Is(out Insurgency ins))
+        {
+            int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            return ins.Caches != null && ins.CachesDestroyed < ct;
+        }
+        return false;
+    }
+    private static bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
+    private static int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
+    {
+        if (team == 1)
+        {
+            for (int i = 0; i < gm.Rotation.Count; i++)
+            {
+                if (!gm.Rotation[i].HasBeenCapturedT1)
+                    return i;
+            }
+            return 0;
+        }
+        else if (team == 2)
+        {
+            for (int i = gm.Rotation.Count - 1; i >= 0; i--)
+            {
+                if (!gm.Rotation[i].HasBeenCapturedT2)
+                    return i;
+            }
+            return gm.Rotation.Count - 1;
+        }
+        return -1;
+    }
 }
+public sealed class DelayConverter : JsonConverter<Delay>
+{
+    public override Delay Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        Delay delay = new Delay();
+        delay.ReadJson(ref reader);
+        return delay;
+    }
+
+    public override void Write(Utf8JsonWriter writer, Delay value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        value.WriteJson(writer);
+        writer.WriteEndObject();
+    }
+}
+
 public class VehicleData : IJsonReadWrite, ITranslationArgument
 {
     [JsonSettable]
@@ -749,255 +1017,8 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         Metadata = null;
         Delays = new Delay[0];
     }
-    public void AddDelay(EDelayType type, float value, string? gamemode = null)
-    {
-        int index = -1;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            Delay del = new Delay(type, value, gamemode);
-            Delay[] old = Delays;
-            Delays = new Delay[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, Delays, 0, old.Length);
-                Delays[Delays.Length - 1] = del;
-            }
-            else
-            {
-                Delays[0] = del;
-            }
-        }
-    }
-    public bool RemoveDelay(EDelayType type, float value, string? gamemode = null)
-    {
-        if (Delays.Length == 0) return false;
-        int index = -1;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) return false;
-        Delay[] old = Delays;
-        Delays = new Delay[old.Length - 1];
-        if (old.Length == 1) return true;
-        if (index != 0)
-            Array.Copy(old, 0, Delays, 0, index);
-        Array.Copy(old, index + 1, Delays, index, old.Length - index - 1);
-        return true;
-    }
-    public bool HasDelayType(EDelayType type)
-    {
-        string gm = Data.Gamemode.Name;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
-            if (del.type == type) return true;
-        }
-        return false;
-    }
-    public bool IsDelayedType(EDelayType type)
-    {
-        string gm = Data.Gamemode.Name;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode))
-            {
-                string gamemode = del.gamemode!;
-                bool blacklist = false;
-                if (gamemode[0] == '!')
-                {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1);
-                }
-
-                if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue;
-            }
-            if (del.type == type)
-            {
-                switch (type)
-                {
-                    case EDelayType.NONE:
-                        return false;
-                    case EDelayType.TIME:
-                        if (TimeDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.FLAG:
-                        if (FlagDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.FLAG_PERCENT:
-                        if (FlagPercentDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.OUT_OF_STAGING:
-                        if (StagingDelayed(ref del))
-                            return true;
-                        break;
-                }
-            }
-        }
-        return false;
-    }
-    // TODO: gamemode blacklist not working
-    public bool IsDelayed(out Delay delay)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        delay = Delay.Nil;
-        string? gm = Data.Gamemode?.Name;
-        if (Delays == null || Delays.Length == 0) return false;
-        bool anyVal = false;
-        bool isNoneYet = false;
-        for (int i = Delays.Length - 1; i >= 0; i--)
-        {
-            ref Delay del = ref Delays[i];
-            bool universal = string.IsNullOrEmpty(del.gamemode);
-            if (!universal)
-            {
-                string gamemode = del.gamemode!; // !TeamCTF
-                bool blacklist = false;
-                if (gamemode[0] == '!') // true
-                {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1); // TeamCTF
-                }
-
-                if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue; // false
-                universal = true;
-            }
-            if (universal && anyVal) continue;
-            switch (del.type)
-            {
-                case EDelayType.NONE:
-                    if (!universal)
-                    {
-                        delay = del;
-                        isNoneYet = true;
-                    }
-                    break;
-                case EDelayType.TIME:
-                    if ((!universal || !isNoneYet) && TimeDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.FLAG:
-                    if ((!universal || !isNoneYet) && FlagDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.FLAG_PERCENT:
-                    if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.OUT_OF_STAGING:
-                    if ((!universal || !isNoneYet) && StagingDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-            }
-        }
-        return anyVal;
-    }
-    private bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.value > Data.Gamemode.SecondsSinceStart;
-    private bool FlagDelayed(ref Delay delay) => FlagDelayed(ref delay, false);
-    private bool FlagPercentDelayed(ref Delay delay) => FlagDelayed(ref delay, true);
-    private bool FlagDelayed(ref Delay delay, bool percent)
-    {
-        if (Data.Is(out Invasion inv))
-        {
-            int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            if (Team == 1)
-            {
-                if (inv.AttackingTeam == 1)
-                    return inv.ObjectiveT1Index < ct;
-                else
-                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
-            }
-            else if (Team == 2)
-            {
-                if (inv.AttackingTeam == 2)
-                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
-                else
-                    return inv.ObjectiveT1Index < ct;
-            }
-            return false;
-        }
-        else if (Data.Is(out IFlagTeamObjectiveGamemode fr))
-        {
-            int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            int i2 = GetHighestObjectiveIndex(Team, fr);
-            return (Team == 1 && i2 < ct) ||
-                   (Team == 2 && fr.Rotation.Count - i2 - 1 < ct);
-        }
-        else if (Data.Is(out Insurgency ins))
-        {
-            int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            return ins.Caches != null && ins.CachesDestroyed < ct;
-        }
-        return false;
-    }
-    private bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
-    private int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
-    {
-        if (team == 1)
-        {
-            for (int i = 0; i < gm.Rotation.Count; i++)
-            {
-                if (!gm.Rotation[i].HasBeenCapturedT1)
-                    return i;
-            }
-            return 0;
-        }
-        else if (team == 2)
-        {
-            for (int i = gm.Rotation.Count - 1; i >= 0; i--)
-            {
-                if (!gm.Rotation[i].HasBeenCapturedT2)
-                    return i;
-            }
-            return gm.Rotation.Count - 1;
-        }
-        return -1;
-    }
+    public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
+    public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
     public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleID == VehicleID);
     public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
     public void SaveMetaData(InteractableVehicle vehicle)

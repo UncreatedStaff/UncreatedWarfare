@@ -7,6 +7,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -15,6 +16,8 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Cache = Uncreated.Warfare.Components.Cache;
@@ -753,7 +756,7 @@ internal static class T
     public static readonly Translation BuildNoLogisticsVehicle = new Translation("<#ffab87>You must be near a friendly <#cedcde>LOGISTICS VEHICLE</color> to place a FOB radio.");
     public static readonly Translation<FOB, float, float> BuildFOBTooClose = new Translation<FOB, float, float>("<#ffa238>You are too close to an existing FOB Radio ({0}: {1}m away). You must be at least {2}m away to place a new radio.", FOB.COLORED_NAME_FORMAT, "F0", "F0");
     public static readonly Translation<float, float> BuildBunkerTooClose = new Translation<float, float>("<#ffa238>You are too close to an existing FOB Bunker ({0}m away). You must be at least {1}m away to place a new radio.", "F0", "F0");
-    public static readonly Translation<IDeployable, GridLocation, string> FOBUI    = new Translation<IDeployable, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.NAME_FORMAT);
+    public static readonly Translation<IDeployable, GridLocation, string> FOBUI    = new Translation<IDeployable, GridLocation, string>("{0}  <#d6d2c7>{1}</color>  {2}", TranslationFlags.UnityUI, FOB.COLORED_NAME_FORMAT);
     public static readonly Translation CacheDestroyedAttack    = new Translation("<#e8d1a7>WEAPONS CACHE HAS BEEN ELIMINATED", TranslationFlags.UnityUI);
     public static readonly Translation CacheDestroyedDefense   = new Translation("<#deadad>WEAPONS CACHE HAS BEEN DESTROYED", TranslationFlags.UnityUI);
     public static readonly Translation<string> CacheDiscoveredAttack = new Translation<string>("<#e8d1a7>NEW WEAPONS CACHE DISCOVERED NEAR <#e3c59a>{0}</color>", TranslationFlags.UnityUI, UPPERCASE);
@@ -1002,6 +1005,22 @@ internal static class T
     public static readonly Translation<string> RequestVehicleUnknownDelay = new Translation<string>("<#b3ab9f>This vehicle is delayed because: <#c$vbs_delay$>{0}</color>.");
     #endregion
 
+    #region Trait Request Delays
+    public static readonly Translation<string> RequestTraitTimeDelay = new Translation<string>("<#b3ab9f>This trait is delayed for another: <#c$vbs_delay$>{0}</color>.");
+    public static readonly Translation<Cache> RequestTraitCacheDelayAtk1 = new Translation<Cache>("<#b3ab9f>Destroy <color=#c$vbs_delay$>{0}</color> to request this trait.", FOB.NAME_FORMAT);
+    public static readonly Translation<Cache> RequestTraitCacheDelayDef1 = new Translation<Cache>("<#b3ab9f>You can't request this trait until you lose <color=#c$vbs_delay$>{0}</color>.", FOB.NAME_FORMAT);
+    public static readonly Translation RequestTraitCacheDelayAtkUndiscovered1 = new Translation("<#b3ab9f><color=#c$vbs_delay$>Discover and Destroy</color> the next cache to request this trait.");
+    public static readonly Translation RequestTraitCacheDelayDefUndiscovered1 = new Translation("<#b3ab9f>You can't request this trait until you've <color=#c$vbs_delay$>uncovered and lost</color> your next cache.");
+    public static readonly Translation<int> RequestTraitCacheDelayMultipleAtk = new Translation<int>("<#b3ab9f>Destroy <#c$vbs_delay$>{0} more caches</color> to request this trait.");
+    public static readonly Translation<int> RequestTraitCacheDelayMultipleDef = new Translation<int>("<#b3ab9f>You can't request this trait until you've lost <#c$vbs_delay$>{0} more caches</color>.");
+    public static readonly Translation<Flag> RequestTraitFlagDelay1 = new Translation<Flag>("<#b3ab9f>Capture {0} to request this trait.", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> RequestTraitLoseFlagDelay1 = new Translation<Flag>("<#b3ab9f>You can't request this trait until you lose {0}.", TranslationFlags.PerTeamTranslation, Flag.COLOR_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<int> RequestTraitFlagDelayMultiple = new Translation<int>("<#b3ab9f>Capture <#c$vbs_delay$>{0} more flags</color> to request this trait.");
+    public static readonly Translation<int> RequestTraitLoseFlagDelayMultiple = new Translation<int>("<#b3ab9f>You can't request this trait until you lose <#c$vbs_delay$>{0} more flags</color>.");
+    public static readonly Translation RequestTraitStagingDelay = new Translation("<#a6918a>This trait can only be requested after the game starts.");
+    public static readonly Translation<string> RequestTraitUnknownDelay = new Translation<string>("<#b3ab9f>This trait is delayed because: <#c$vbs_delay$>{0}</color>.");
+    #endregion
+
     #endregion
 
     #region Strutures
@@ -1107,13 +1126,88 @@ internal static class T
     public static readonly Translation<string> ShutdownBroadcastReminder = new Translation<string>("<#00ffff>A shutdown is scheduled to occur after this game because: \"<#6699ff>{0}</color>\".");
     #endregion
 
+    #region Traits
+
+    private const string TRAITS_SECTION = "Traits";
+    [TranslationData(TRAITS_SECTION, "Sent when the player leaves their post as squad leader while under the effect of a trait requiring squad leader.", "The trait requiring squad leader")]
+    public static readonly Translation<Trait> TraitDisabledSquadLeaderDemoted = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until it expires or you become <#cedcde>SQUAD LEADER</color> again.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player leaves a squad while under the effect of a trait requiring a squad.", "The trait requiring a squad")]
+    public static readonly Translation<Trait> TraitDisabledSquadLeft = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you join a <#cedcde>SQUAD</color> again.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player equips a kit that's not supported by the trait.", "The trait requiring a kit")]
+    public static readonly Translation<Trait> TraitDisabledKitNotSupported = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you switch to a supported kit type.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player performs an action that allows their trait to be reactivated.", "The trait being reactivated")]
+    public static readonly Translation<Trait> TraitReactivated = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> has reactivated.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait which is locked by the current gamemode.", "The locked trait", "Current gamemode")]
+    public static readonly Translation<TraitData, Gamemode> RequestTraitGamemodeLocked = new Translation<TraitData, Gamemode>("<#ff8c69><#c$trait$>{0}</color> is <#c$locked$>locked</color> during <#cedcde><uppercase>{1}</uppercase></color> games.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while they already have it.", "The existing trait")]
+    public static readonly Translation<TraitData> TraitAlreadyActive = new Translation<TraitData>("<#ff8c69>You are already under <#c$trait$>{0}</color>'s effects.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait meant for another team.", "The trait", "Trait's intended team")]
+    public static readonly Translation<TraitData, FactionInfo> RequestTraitWrongTeam = new Translation<TraitData, FactionInfo>("<#ff8c69>You can only use <#c$trait$>{0}</color> on {1}.", TraitData.NAME, FactionInfo.COLOR_SHORT_NAME_FORMAT);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait without a kit.")]
+    public static readonly Translation RequestTraitNoKit = new Translation("<#ff8c69>Request a kit before trying to request traits.");
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait with a kit class the trait doesn't allow.", "The trait", "Invalid class")]
+    public static readonly Translation<TraitData, EClass> RequestTraitClassLocked = new Translation<TraitData, EClass>("<#ff8c69>You can't use <#c$trait$>{0}</color> while a <#cedcde><uppercase>{1}</uppercase></color> kit is equipped.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while under the global trait cooldown.", "Global cooldown shared between all traits")]
+    public static readonly Translation<Cooldown> RequestTraitGlobalCooldown = new Translation<Cooldown>("<#ff8c69>You can request a trait again in <#cedcde>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while under the individual trait cooldown.", "Trait on cooldown", "Individual cooldown for this trait")]
+    public static readonly Translation<TraitData, Cooldown> RequestTraitSingleCooldown = new Translation<TraitData, Cooldown>("<#ff8c69>You can request <#c$trait$>{0}</color> again in <#cedcde>{0}</color>.", TraitData.NAME, Cooldown.SHORT_TIME_FORMAT);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a buff when they already have the max amount (6).")]
+    public static readonly Translation RequestTraitTooManyBuffs = new Translation("<#ff8c69>You can't have more than <#cedcde>six</color> buffs active at once.");
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait which requires squad leader while not being squad leader or in a squad.", "Trait being requested")]
+    public static readonly Translation<TraitData> RequestTraitNotSquadLeader = new Translation<TraitData>("<#ff8c69>You have to be a <#cedcde>SQUAD LEADER</color> to request <#c$trait$>{0}</color>.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait which requires squad leader while not in a squad.", "Trait being requested")]
+    public static readonly Translation<TraitData> RequestTraitNoSquad = new Translation<TraitData>("<#ff8c69>You have to be in a <#cedcde>SQUAD</color> to request <#c$trait$>{0}</color>.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while too low of a level.", "Trait being requested", "Required Level")]
+    public static readonly Translation<TraitData, RankData> RequestTraitLowLevel = new Translation<TraitData, RankData>("<#ff8c69>You must be at least <#cedcde>{1}</color> to request <#c$trait$>{0}</color>.", TraitData.NAME, RankData.NAME_FORMAT);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while too low of a rank.", "Trait being requested", "Required Rank")]
+    public static readonly Translation<TraitData, Ranks.RankData> RequestTraitLowRank = new Translation<TraitData, Ranks.RankData>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", TraitData.NAME, Ranks.RankData.COLOR_NAME_FORMAT);
+    [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while missing a completed quest.", "Trait being requested", "Required Rank")]
+    public static readonly Translation<TraitData, QuestAsset> RequestTraitQuestIncomplete = new Translation<TraitData, QuestAsset>("<#ff8c69>You must be at least {1} to request <#c$trait$>{0}</color>.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player successfully requests a trait.", "Trait being requested")]
+    public static readonly Translation<TraitData> RequestTraitGiven = new Translation<TraitData>("<#a8918a>Your <#c$trait$>{0}</color> has been activated.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player successfully requests a trait with a timer.", "Trait being requested", "Time left")]
+    public static readonly Translation<TraitData, string> RequestTraitGivenTimer = new Translation<TraitData, string>("<#a8918a>Your <#c$trait$>{0}</color> has been activated. It will expire in <#cedcde>{1}</color>.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player successfully requests a trait that expires on death.", "Trait being requested")]
+    public static readonly Translation<TraitData> RequestTraitGivenUntilDeath = new Translation<TraitData>("<#a8918a>Your <#c$trait$>{0}</color> has been activated. It will last until you die.", TraitData.NAME);
+    #region Trait Signs
+    private const string TRAITS_SIGN_SECTION = "Traits / Sign";
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows instead of the credits when Credit Cost is 0.")]
+    public static readonly Translation TraitSignFree = new Translation("<#c$kit_level_dollars_owned$>FREE</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows instead of the unlock requirements when a trait is unlocked.")]
+    public static readonly Translation TraitSignUnlocked = new Translation("<#99ff99>Unlocked</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you're not in a squad and it's required.")]
+    public static readonly Translation TraitSignRequiresSquad = new Translation("<#c$vbs_delay$>Join a Squad</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you're not in a squad or not a squad leader and it's required.")]
+    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#c$vbs_delay$>Squad Leaders Only</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you dont have a kit or have an unarmed kit.")]
+    public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when the trait is locked in the current gamemode.")]
+    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait.")]
+    public static readonly Translation<EClass> TraitSignClassBlacklisted = new Translation<EClass>("<#c$vbs_delay$>Locked for {0}</color>", TranslationFlags.NoColor, PLURAL);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait.")]
+    public static readonly Translation TraitSignAlreadyActive = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait.")]
+    public static readonly Translation<Cooldown> TraitSignGlobalCooldown = new Translation<Cooldown>("<#c$vbs_delay$>Locked {0}</color>", TranslationFlags.NoColor, "mm\\:ss");
+    #endregion
+    #region Trait Interactions
+    private const string TRAITS_INTERACTIONS_SECTION = "Traits / Interactions";
+    [TranslationData(TRAITS_INTERACTIONS_SECTION, "Sent to players with Bad Omen when there's an enemy mortar incoming on a toast.", "Seconds out")]
+    public static readonly Translation<float> BadOmenMortarWarning = new Translation<float>("Mortar incoming in <color=#c$points$>{0}</color> seconds.", TranslationFlags.UnityUI, "F0");
+    [TranslationData(TRAITS_INTERACTIONS_SECTION, "Sent when the player consumes their self-revive.", "Self-revive trait data.")]
+    public static readonly Translation<TraitData> TraitUsedSelfRevive = new Translation<TraitData>("<#c$trait$>{0}</color> <#d97568>consumed</color>.", TraitData.NAME);
+    [TranslationData(TRAITS_INTERACTIONS_SECTION, "Sent when the player tries to use their self-revive on cooldown.", "Self-revive trait data.", "Time string")]
+    public static readonly Translation<TraitData, string> TraitSelfReviveCooldown = new Translation<TraitData, string>("<#c$trait$>{0}</color> can not be used for another {1}.", TraitData.NAME);
+    #endregion
+    #endregion
+
     #region Request Signs
     public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>", TranslationFlags.NoColor);
     public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);
     public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);
     public static readonly Translation<float> KitPremiumCost = new Translation<float>("<#c$kit_level_dollars$>$ {0}</color>", TranslationFlags.NoColor, "N2");
     [TranslationData(FormattingDescriptions = new string[] { "Level", "Color depending on player's current level." })]
-    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#{1}>{0}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>", TranslationFlags.NoColor);
     [TranslationData(FormattingDescriptions = new string[] { "Rank", "Color depending on player's current rank." })]
     public static readonly Translation<Ranks.RankData, Color> KitRequiredRank = new Translation<Ranks.RankData, Color>("<#{1}>Rank: {0}</color>", TranslationFlags.NoColor);
     [TranslationData(FormattingDescriptions = new string[] { "Quest", "Color depending on whether the player has completed the quest." })]
@@ -1205,6 +1299,7 @@ internal static class T
     public static readonly Translation<EVehicleType> XPToastFriendlyVehicleDestroyed = new Translation<EVehicleType>("FRIENDLY {0} DESTROYED", TranslationFlags.UnityUI, UPPERCASE);
     public static readonly Translation<EVehicleType> XPToastFriendlyAircraftDestroyed = new Translation<EVehicleType>("FRIENDLY {0} SHOT DOWN", TranslationFlags.UnityUI, UPPERCASE);
     public static readonly Translation XPToastTransportingPlayers = new Translation("TRANSPORTING PLAYERS", TranslationFlags.UnityUI);
+    public static readonly Translation XPToastAceArmorRefund = new Translation("ACE ARMOR SHARE", TranslationFlags.UnityUI);
 
     public static readonly Translation XPToastFlagCaptured = new Translation("FLAG CAPTURED", TranslationFlags.UnityUI);
     public static readonly Translation XPToastFlagNeutralized = new Translation("FLAG NEUTRALIZED", TranslationFlags.UnityUI);
@@ -1559,5 +1654,35 @@ internal static class T
                     Signs.Add(tr.AttributeData.SignId!, tr);
             }
         }
+    }
+    public static string Translate(this TranslationList list, ulong player) => TryTranslate(list, player, out string local) ? local : string.Empty;
+    public static string Translate(this TranslationList list, UCPlayer player) => TryTranslate(list, player.Steam64, out string local) ? local : string.Empty;
+    public static string Translate(this TranslationList list, string language) => TryTranslate(list, language, out string local) ? local : string.Empty;
+    public static bool TryTranslate(this TranslationList list, UCPlayer player, out string local) => TryTranslate(list, player.Steam64, out local);
+    public static bool TryTranslate(this TranslationList list, ulong player, out string local)
+    {
+        if (list is null)
+        {
+            local = null!;
+            return false;
+        }
+        if (player == 0ul || !Data.Languages.TryGetValue(player, out string lang))
+            lang = L.DEFAULT;
+        if (list.TryGetValue(lang, out local) || (!lang.Equals(L.DEFAULT, StringComparison.Ordinal) && list.TryGetValue(L.DEFAULT, out local)))
+            return true;
+        return (local = list.Values.FirstOrDefault()) != null;
+    }
+    public static bool TryTranslate(this TranslationList list, string language, out string local)
+    {
+        if (list is null)
+        {
+            local = null!;
+            return false;
+        }
+        if (string.IsNullOrEmpty(language))
+            language = L.DEFAULT;
+        if (list.TryGetValue(language, out local) || (!language.Equals(L.DEFAULT, StringComparison.Ordinal) && list.TryGetValue(L.DEFAULT, out local)))
+            return true;
+        return (local = list.Values.FirstOrDefault()) != null;
     }
 }

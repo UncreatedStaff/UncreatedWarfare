@@ -60,6 +60,7 @@ public static class Data
         public static readonly string Logs             = Path.Combine(BaseDirectory, "Logs")      + Path.DirectorySeparatorChar;
         public static readonly string ActionLog        = Path.Combine(Logs,          "ActionLog") + Path.DirectorySeparatorChar;
         public static readonly string PendingOffenses  = Path.Combine(BaseDirectory, "Offenses")  + Path.DirectorySeparatorChar;
+        public static readonly string TraitDataStorage = Path.Combine(BaseDirectory, "traits.json");
 
         public static readonly string CurrentLog       = Path.Combine(Logs,          "current.txt");
         public static string FlagStorage        => _flagCache is null       ? (_flagCache       = Path.Combine(MapStorage, "Flags")      + Path.DirectorySeparatorChar) : _flagCache;
@@ -77,8 +78,12 @@ public static class Data
     public static class Keys
     {
         public const PlayerKey GiveUp = PlayerKey.PluginKey3;
+        public const PlayerKey SelfRevive = PlayerKey.PluginKey2;
         public const PlayerKey SpawnCountermeasures = PlayerKey.PluginKey3;
     }
+
+    public const string SUPPRESS_CATEGORY = "Microsoft.Performance";
+    public const string SUPPRESS_ID = "IDE0051";
     public static readonly Regex ChatFilter = new Regex(@"(?:[nV\|\\\/][il][gqb](?!h)\W{0,1}[gqb]{0,1}\W{0,1}[gqb]{0,1}\W{0,1}[ae]{0,1}\W{0,1}[r]{0,1}(?:ia){0,1})|(?:f\W{0,1}a\W{0,1}g{1,2}\W{0,1}o{0,1}\W{0,1}t{0,1})");
     public static readonly CultureInfo Locale = LanguageAliasSet.ENGLISH_C;
     public static Dictionary<string, Color> Colors;

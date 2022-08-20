@@ -11,6 +11,7 @@ using UnityEngine;
 using Uncreated.Warfare.Events.Players;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Traits.Buffs;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion;
 
@@ -184,7 +185,7 @@ public class Invasion :
             }
             else if (flag.Team1TotalCappers == flag.Team2TotalCappers)
             {
-                winner = 0;
+                winner = Intimidation.CheckSquadsForContestBoost(flag);
             }
             else if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers > 0)
             {
@@ -202,7 +203,7 @@ public class Invasion :
                 }
                 else
                 {
-                    winner = 0;
+                    winner = Intimidation.CheckSquadsForContestBoost(flag);
                 }
             }
             else
@@ -213,7 +214,7 @@ public class Invasion :
                 }
                 else
                 {
-                    winner = 0;
+                    winner = Intimidation.CheckSquadsForContestBoost(flag);
                 }
             }
             return winner == 0;
@@ -301,7 +302,7 @@ public class Invasion :
                 InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam1.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam1[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam1[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }
@@ -326,7 +327,7 @@ public class Invasion :
                 InvokeOnFlagCaptured(flag, NewOwner, OldOwner);
                 for (int i = 0; i < flag.PlayersOnFlagTeam2.Count; i++)
                 {
-                    if (flag.PlayersOnFlagTeam2[i].TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
+                    if (flag.PlayersOnFlagTeam2[i].Player.TryGetPlayerData(out Components.UCPlayerData c) && c.stats is IFlagStats fg)
                         fg.AddCapture();
                 }
             }

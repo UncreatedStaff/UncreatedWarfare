@@ -54,7 +54,8 @@ internal class DebugComponent : MonoBehaviour
     public void Reset()
     {
         Lagging.RemoveAll(x => !x.IsOnline);
-        Dump();
+        if (updates > 0)
+            Dump();
         updates = 0;
         _startRt = Time.realtimeSinceStartup;
         _lastFixed = _startRt;
@@ -211,7 +212,7 @@ internal class DebugComponent : MonoBehaviour
     }
     private static void ReceiveClientMessagePostfix(ITransportConnection transportConnection, byte[] packet, int offset, int size)
     {
-        if (UCWarfare.I.Debugger != null)
+        if (UCWarfare.I != null && UCWarfare.I.Debugger != null)
         {
             UCWarfare.I.Debugger.OnMessageReceived(transportConnection, packet, offset, size);
         }

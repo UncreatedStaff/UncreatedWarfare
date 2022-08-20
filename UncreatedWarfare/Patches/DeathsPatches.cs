@@ -1,13 +1,19 @@
 ﻿using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Projectiles;
+using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -19,65 +25,62 @@ public static partial class Patches
     {
         internal static GameObject lastProjected;
         // SDG.Unturned.UseableGun
+
         /// <summary>
         /// Postfix of <see cref="UseableGun.project(Vector3, Vector3, ItemBarrelAsset, ItemMagazineAsset)"/> to predict mortar hits.
         /// </summary>
+        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
         [HarmonyPatch(typeof(UseableGun), "project")]
         [HarmonyPostfix]
-        static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
+        private static void OnPostProjected(Vector3 origin, Vector3 direction, ItemBarrelAsset barrelAsset, ItemMagazineAsset magazineAsset, UseableGun __instance)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (lastProjected != null && lastProjected.activeInHierarchy)
+            if (lastProjected != null && lastProjected.activeInHierarchy && __instance.equippedGunAsset.isTurret && FOBManager.Loaded)
             {
-                if (FOBManager.Loaded && 
-                    FOBManager.Config.Buildables.Any(x => x.Emplacement is not null && x.Emplacement.ShouldWarnFriendliesIncoming && x.Emplacement.EmplacementVehicle.Exists &&
-                                                          x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(x => x.itemID == __instance.equippedGunAsset.id)))
+                BuildableData? data = FOBManager.Config.Buildables.Find(x =>
+                    x.Emplacement is not null && (x.Emplacement.ShouldWarnFriendlies || x.Emplacement.ShouldWarnEnemies) &&
+                    x.Emplacement.EmplacementVehicle.Exists &&
+                    x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(y =>
+                        y.itemID == __instance.equippedGunAsset.id));
+                if (data != null)
                 {
-                    Vector3 yaw = new Vector3(direction.x, 0, direction.z).normalized;
-                    float dp = direction.x * yaw.x + direction.y * yaw.y + direction.z * yaw.z;
-                    float angle = Mathf.Acos(dp / (direction.magnitude * yaw.magnitude)) - (Mathf.PI / 4);
-                    float range = Mathf.Sin(2f * angle - Mathf.PI / 2f) / -(9.81f / (133.3f * 133.3f));
-                    Vector3 dest = origin + yaw * range;
-                    // dest.y = F.GetTerrainHeightAt2DPoint(new Vector2(dest.x, dest.z)); (not needed)
-                    Vector2 dest2d = new Vector2(dest.x, dest.z);
-                    if (dest != Vector3.zero)
-                    {
-                        ulong team = __instance.channel.owner.GetTeam();
-                        if (team == 1 || team == 2)
-                        {
-                            IEnumerator<WaitForSeconds> coroutine(GameObject obj)
-                            {
-                                List<ulong> warned = new List<ulong>();
-                                while (obj != null)
-                                {
-                                    for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-                                    {
-                                        UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                                        if (pl.GetTeam() == team && !warned.Contains(pl.Steam64) &&
-                                            (new Vector2(pl.Player.transform.position.x, pl.Player.transform.position.z) - dest2d).sqrMagnitude <
-                                            UCWarfare.Config.MortarWarningDistance * UCWarfare.Config.MortarWarningDistance
-                                            && pl.Player.TryGetPlayerData(out UCPlayerData data))
-                                        {
-                                            data.QueueMessage(new ToastMessage(T.MortarStrikeWarning.Translate(pl, 20f), EToastMessageSeverity.WARNING), true);
-                                            warned.Add(pl.Steam64);
-                                        }
-                                    }
-                                    yield return new WaitForSeconds(1f);
-                                }
-                            }
-                            UCWarfare.I.StartCoroutine(coroutine(lastProjected));
-                        }
-                    }
+                    UCWarfare.I.Solver.GetLandingPoint(lastProjected, origin, direction, __instance, OnMortarLandingPointFound);
                 }
             }
         }
+        
+        private static void OnMortarLandingPointFound(Player? owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType)
+        {
+            if (owner == null || ammoType == null)
+                return;
+            BuildableData? data = !FOBManager.Loaded ? null : FOBManager.Config.Buildables.Find(x =>
+                x.Emplacement is not null && (x.Emplacement.ShouldWarnFriendlies || x.Emplacement.ShouldWarnEnemies) &&
+                x.Emplacement.EmplacementVehicle.Exists &&
+                x.Emplacement.EmplacementVehicle.Asset!.turrets.Any(y =>
+                    y.itemID == gun.id));
+
+            if (data == null) return;
+
+            UCPlayer? player = UCPlayer.FromPlayer(owner!);
+            if (player != null)
+            {
+                if (data.Emplacement!.ShouldWarnEnemies)
+                    BadOmen.WarnEnemies(player, position, impactTime, gun, ammoType);
+
+                if (data.Emplacement!.ShouldWarnFriendlies)
+                    BadOmen.WarnFreindlies(player, position, impactTime, gun, ammoType);
+            }
+                
+        }
+
         // SDG.Unturned.Bumper
         /// <summary>Adds the id of the vehicle that hit the player to their pt component.</summary>
+        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
         [HarmonyPatch(typeof(Bumper), "OnTriggerEnter")]
         [HarmonyPrefix]
-        static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
+        private static bool TriggerEnterBumper(Collider other, InteractableVehicle ___vehicle)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -105,6 +108,37 @@ public static partial class Patches
                 }
             }
             return true;
+        }
+
+        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+        private static void OnPreProject(UseableGun gun, ItemMagazineAsset magazine)
+        {
+            if (gun.player.TryGetPlayerData(out UCPlayerData data))
+            {
+                data.LastProjectedAmmoType = magazine;
+            }
+        }
+
+        [HarmonyPatch(typeof(UseableGun))]
+        [HarmonyPatch("fire")]
+        internal static class ProjectTranspiler
+        {
+            private readonly static MethodInfo info = typeof(DeathsPatches).GetMethod("OnPreProject", BindingFlags.Static | BindingFlags.NonPublic);
+
+            [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+            {
+                foreach (CodeInstruction instruction in instructions)
+                {
+                    yield return instruction;
+                    if (instruction.IsStloc() && instruction.operand is LocalBuilder builder && builder.LocalType == typeof(ItemMagazineAsset))
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldarg_0);
+                        yield return new CodeInstruction(OpCodes.Ldloc, builder);
+                        yield return new CodeInstruction(OpCodes.Call, info);
+                    }
+                }
+            }
         }
     }
 }

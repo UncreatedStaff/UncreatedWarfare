@@ -815,7 +815,7 @@ public class KitManager : BaseReloadSingleton
         {
             singleton._threadLocker.Release();
         }
-        RequestSigns.UpdateAllSigns(player.Player.channel.owner);
+        RequestSigns.UpdateAllSigns(player);
     }
     public static bool OnQuestCompleted(UCPlayer player, Guid presetKey)
     {
@@ -1227,7 +1227,7 @@ public class KitManager : BaseReloadSingleton
             {
                 for (int i = 0; i < RequestSigns.Singleton.Count; i++)
                 {
-                    RequestSigns.Singleton[i].InvokeUpdate(player.SteamPlayer);
+                    RequestSigns.Singleton[i].InvokeUpdate(player);
                 }
             }
         }
@@ -1251,7 +1251,7 @@ public class KitManager : BaseReloadSingleton
                     for (int i = 0; i < RequestSigns.Singleton.Count; i++)
                     {
                         if (RequestSigns.Singleton[i].kit_name.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
-                            RequestSigns.Singleton[i].InvokeUpdate(player.SteamPlayer);
+                            RequestSigns.Singleton[i].InvokeUpdate(player);
                     }
                 }
             }
@@ -1278,7 +1278,7 @@ public class KitManager : BaseReloadSingleton
                 for (int i = 0; i < RequestSigns.Singleton.Count; i++)
                 {
                     if (RequestSigns.Singleton[i].kit_name.StartsWith(kitId, StringComparison.Ordinal))
-                        RequestSigns.Singleton[i].InvokeUpdate(player.SteamPlayer);
+                        RequestSigns.Singleton[i].InvokeUpdate(player);
                 }
             }
         }

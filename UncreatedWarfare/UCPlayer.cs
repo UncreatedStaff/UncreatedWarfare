@@ -20,6 +20,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -65,9 +66,9 @@ public class UCPlayer : IPlayer
             if (cachedName == FPlayerName.Nil)
                 cachedName = F.GetPlayerOriginalNames(this.Player);
             return cachedName;
-        } 
+        }
     }
-    internal Action<byte, ItemJar> SendItemRemove; 
+    internal Action<byte, ItemJar> SendItemRemove;
     public DateTime TimeUnmuted;
     public string? MuteReason;
     public EMuteType MuteType;
@@ -86,22 +87,43 @@ public class UCPlayer : IPlayer
             _rank = new RankData(value);
         }
     }
+
+    public Dictionary<Buff, float> ShovelSpeedMultipliers { get; } = new Dictionary<Buff, float>(6);
+    
+    private static readonly InstanceGetter<Dictionary<Buff, float>, int> _versionGetter = 
+        F.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
+
+    private int multVersion = -1;
+    private float _multCache = 1f;
+    public float ShovelSpeedMultiplier
+    {
+        get
+        {
+            int version = _versionGetter(ShovelSpeedMultipliers);
+            if (version == multVersion)
+                return _multCache;
+            float max = 0f;
+            foreach (float fl in ShovelSpeedMultipliers.Values)
+                if (fl > max) max = fl;
+            if (max <= 0f)
+                max = 1f;
+            multVersion = version;
+            return _multCache = max;
+        }
+    }
     private RankData? _rank;
     public RankData Rank
     {
         get
         {
             if (!_rank.HasValue)
-            {
-                ulong team = this.GetTeam();
-                if (team is 1 or 2)
-                    _rank = new RankData(Data.DatabaseManager.GetXP(Steam64, team).Result);
-                else return new RankData(0);
-            }
+                return default;
             return _rank.Value;
         }
     }
     public List<Kit>? AccessibleKits;
+    public IBuff?[] ActiveBuffs = new IBuff?[6];
+    public List<Trait> ActiveTraits = new List<Trait>(8);
     internal List<Guid>? _completedQuests;
     public float LastSpoken = 0f;
 
@@ -341,11 +363,18 @@ public class UCPlayer : IPlayer
     {
         get
         {
-            if (SquadManager.Config.Classes.TryGetValue(KitClass, out ClassConfig config))
-                return config.Icon;
-            else if (SquadManager.Config.Classes.TryGetValue(EClass.NONE, out config))
-                return config.Icon;
-            else return '±';
+            if (SquadManager.Config.Classes == null || SquadManager.Config.Classes.Length == 0)
+                return '±';
+            for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
+            {
+                ref ClassConfig c = ref SquadManager.Config.Classes[i];
+                if (c.Class == KitClass)
+                {
+                    return c.Icon;
+                }
+            }
+
+            return SquadManager.Config.Classes[0].Icon;
         }
     }
 
@@ -353,22 +382,46 @@ public class UCPlayer : IPlayer
     {
         get
         {
-            if (SquadManager.Config.Classes.TryGetValue(KitClass, out ClassConfig config))
-                return config.MarkerEffect;
-            else if (SquadManager.Config.Classes.TryGetValue(EClass.NONE, out config))
-                return config.MarkerEffect;
-            else return 0;
+            EffectAsset asset;
+            if (SquadManager.Config.Classes == null || SquadManager.Config.Classes.Length == 0)
+                return 36101;
+            for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
+            {
+                ref ClassConfig c = ref SquadManager.Config.Classes[i];
+                if (c.Class == KitClass)
+                {
+                    if (c.MarkerEffect.ValidReference(out asset))
+                        return asset.id;
+                    else break;
+                }
+            }
+
+            if (SquadManager.Config.Classes[0].MarkerEffect.ValidReference(out asset))
+                return asset.id;
+            return 36101;
         }
     }
     public ushort SquadLeaderMarkerID
     {
         get
         {
-            if (SquadManager.Config.Classes.TryGetValue(KitClass, out ClassConfig config))
-                return config.SquadLeaderMarkerEffect;
-            else if (SquadManager.Config.Classes.TryGetValue(EClass.NONE, out config))
-                return config.SquadLeaderMarkerEffect;
-            else return 0;
+            EffectAsset asset;
+            if (SquadManager.Config.Classes == null || SquadManager.Config.Classes.Length == 0)
+                return 36131;
+            for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
+            {
+                ref ClassConfig c = ref SquadManager.Config.Classes[i];
+                if (c.Class == KitClass)
+                {
+                    if (c.SquadLeaderMarkerEffect.ValidReference(out asset))
+                        return asset.id;
+                    else break;
+                }
+            }
+
+            if (SquadManager.Config.Classes[0].SquadLeaderMarkerEffect.ValidReference(out asset))
+                return asset.id;
+            return 36131;
         }
     }
 

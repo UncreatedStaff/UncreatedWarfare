@@ -9,7 +9,6 @@ namespace Uncreated.Warfare;
 
 partial class JSONMethods
 {
-    public static Dictionary<string, string> DefaultTranslations;
     public static readonly List<ZoneModel> DefaultZones;
     static JSONMethods()
     {
@@ -365,6 +364,7 @@ partial class JSONMethods
         { "neutral_color", "c2c2c2" },
         { "credits", "b8ffc1" },
         { "rally", "5eff87" },
+        { "points", "f0a31c" },
 
         // capture ui
         { "contested", "ffdc8a" },
@@ -381,6 +381,10 @@ partial class JSONMethods
         // Deaths
         { "death_background", "ffffff" },
         { "death_background_teamkill", "ff9999" },
+
+        // Traits
+        { "trait", "99ff99" },
+        { "trait_desc", "cccccc" },
 
         // Request
         { "kit_public_header", "ffffff" },

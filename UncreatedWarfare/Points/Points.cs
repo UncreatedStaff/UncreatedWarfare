@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -13,10 +12,9 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using static Uncreated.Warfare.Components.SpottedComponent;
-using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Point;
@@ -219,7 +217,20 @@ public static class Points
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
+        float multiplier = -1f;
+        if (TraitManager.Loaded)
+        {
+            for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+                if (player.ActiveBuffs[i] is IXPBoostBuff buff)
+                {
+                    if (buff.Multiplier > multiplier)
+                        multiplier = buff.Multiplier;
+                }
+        }
+
+        if (multiplier < 0f)
+            multiplier = 1f;
+        amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier * multiplier);
         Task.Run(async () =>
         {
             RankData oldRank = player.Rank;
@@ -265,7 +276,11 @@ public static class Points
                 }
                 if (RequestSigns.Loaded)
                 {
-                    RequestSigns.UpdateAllSigns(player.SteamPlayer);
+                    RequestSigns.UpdateAllSigns(player);
+                }
+                if (TraitManager.Loaded)
+                {
+                    TraitSigns.SendAllTraitSigns(player);
                 }
             }
             else if (player.Rank.Level < oldRank.Level)
@@ -279,8 +294,18 @@ public static class Points
                 }
                 if (RequestSigns.Loaded)
                 {
-                    RequestSigns.UpdateAllSigns(player.SteamPlayer);
+                    RequestSigns.UpdateAllSigns(player);
                 }
+                if (TraitManager.Loaded)
+                {
+                    TraitSigns.SendAllTraitSigns(player);
+                }
+            }
+            if (TraitManager.Loaded)
+            {
+                for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+                    if (player.ActiveBuffs[i] is IXPBoostBuff buff)
+                        buff.OnXPBoostUsed(amount, awardCredits);
             }
         });
     }
@@ -331,12 +356,12 @@ public static class Points
             "Credits", "<color=#b8ffc1>C</color>  " + player.CachedCredits
         );
     }
-    public static string GetProgressBar(int currentPoints, int totalPoints, int barLength = 50)
+    public static string GetProgressBar(float currentPoints, int totalPoints, int barLength = 50)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        float ratio = currentPoints / (float)totalPoints;
+        float ratio = currentPoints / totalPoints;
 
         int progress = Mathf.RoundToInt(ratio * barLength);
         if (progress > barLength)
@@ -477,6 +502,16 @@ public static class Points
             if (!found)
                 return;
             caller.UpdatePoints(xp, cd);
+            await UCWarfare.ToUpdate();
+
+            if (TraitManager.Loaded)
+                TraitSigns.SendAllTraitSigns(caller);
+
+            if (VehicleBay.Loaded && VehicleSpawner.Loaded && VehicleSigns.Loaded)
+                VehicleSpawner.UpdateSigns(caller);
+
+            if (RequestSigns.Loaded)
+                RequestSigns.UpdateAllSigns(caller);
         }
     }
     /*
@@ -666,14 +701,11 @@ public static class Points
             }
             */
 
-            if (Data.Reporter is not null)
-            {
-                Data.Reporter.OnVehicleDied(e.OwnerId,
+            Data.Reporter?.OnVehicleDied(e.OwnerId,
                     VehicleSpawner.HasLinkedSpawn(e.Vehicle.instanceID, out Vehicles.VehicleSpawn spawn)
                         ? spawn.SpawnPadInstanceID
                         : uint.MaxValue, e.InstigatorId, e.Vehicle.asset.GUID, e.Component.LastItem,
                     e.Component.LastDamageOrigin, vehicleWasFriendly);
-            }
         }
     }
 }

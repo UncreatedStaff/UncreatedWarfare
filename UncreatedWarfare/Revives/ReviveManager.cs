@@ -3,6 +3,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -15,6 +16,8 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Revives;
@@ -52,9 +55,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         Singleton = this;
         Updater = UCWarfare.I.StartCoroutine(UpdatePositions());
         UCPlayerKeys.SubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
+        UCPlayerKeys.SubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
     }
     public override void Unload()
     {
+        UCPlayerKeys.UnsubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
         UCPlayerKeys.UnsubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
         Singleton = null!;
         UseableConsumeable.onPerformingAid -= OnHealPlayer;
@@ -81,6 +86,28 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             player.Player.life.askDamage(byte.MaxValue, Vector3.down, p.parameters.cause, p.parameters.limb, p.parameters.killer, out _,
                 p.parameters.trackKill, p.parameters.ragdollEffect, false, true);
             handled = true;
+        }
+    }
+    private void SelfRevivePressed(UCPlayer player, float timeDown, ref bool handled)
+    {
+        if (DownedPlayers.TryGetValue(player.Steam64, out DownedPlayerData data) && 
+            TraitManager.Loaded && 
+            SelfRevive.HasSelfRevive(player, out SelfRevive sr))
+        {
+            float tl = Time.realtimeSinceStartup - data.start;
+            if (tl >= sr.Cooldown)
+            {
+                if (player.Player.TryGetComponent(out Reviver r))
+                {
+                    sr.Consume();
+                    r.SelfRevive();
+                }
+                else player.SendChat(T.UnknownError);
+            }
+            else
+            {
+                player.SendChat(T.TraitSelfReviveCooldown, sr.Data, Localization.GetTimeFromSeconds(Mathf.CeilToInt(tl), player));
+            }
         }
     }
     void IPlayerConnectListener.OnPlayerConnecting(UCPlayer player)
@@ -269,7 +296,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 InjurePlayer(ref shouldAllow, ref parameters, killer);
             }
         }
-        else if ((DateTime.Now - p.start).TotalSeconds >= 0.4)
+        else if (Time.realtimeSinceStartup - p.start >= 0.4f)
         {
             float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
             parameters = p.parameters;
@@ -583,6 +610,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     private class Reviver : MonoBehaviour
     {
         public UCPlayer Player;
+
+        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
         void Start()
         {
             Player = UCPlayer.FromPlayer(gameObject.GetComponent<Player>())!;
@@ -707,6 +736,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 }
             }
         }
+        public void SelfRevive()
+        {
+            RevivePlayer();
+            Player.Player.stance.checkStance(EPlayerStance.CROUCH);
+        }
         public void FinishKillingPlayer(bool isDead = false)
         {
 #if DEBUG
@@ -731,11 +765,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     public struct DownedPlayerData
     {
         public DamagePlayerParameters parameters;
-        public DateTime start;
+        public float start;
         public DownedPlayerData(DamagePlayerParameters parameters)
         {
             this.parameters = parameters;
-            start = DateTime.Now;
+            start = Time.realtimeSinceStartup;
         }
     }
 }

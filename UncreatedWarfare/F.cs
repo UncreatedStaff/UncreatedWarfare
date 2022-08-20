@@ -492,38 +492,6 @@ public static class F
         else if (team == 2) return TeamManager.Team2SpawnAngle;
         else return TeamManager.LobbySpawnAngle;
     }
-    public static void InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, string text)
-    {
-        string newtext = text;
-        if (text.StartsWith("sign_"))
-        {
-            UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
-            if (pl != null)
-                newtext = Localization.TranslateSign(text, pl, false);
-        }
-        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
-    }
-    /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
-    public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text, bool translate = true)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (text == null) return;
-        if (!translate || text.StartsWith("sign_"))
-        {
-            for (int i = 0; i < Provider.clients.Count; i++)
-            {
-                SteamPlayer pl = Provider.clients[i];
-                if (Regions.checkArea(x, y, pl.player.movement.region_x, pl.player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
-                {
-                    UCPlayer? pl2 = UCPlayer.FromSteamPlayer(pl);
-                    if (pl2 != null)
-                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, translate ? Localization.TranslateSign(text, pl2, false) : text);
-                }
-            }
-        }
-    }
     public static IEnumerable<SteamPlayer> EnumerateClients_Remote(byte x, byte y, byte distance)
     {
         for (int i = 0; i < Provider.clients.Count; i++)
@@ -532,24 +500,6 @@ public static class F
             if (client.player != null && Regions.checkArea(x, y, client.player.movement.region_x, client.player.movement.region_y, distance))
                 yield return client;
         }
-    }
-    public static void InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, bool changeText = false, string text = "")
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (text == default || client == default) return;
-        string newtext;
-        if (!changeText)
-            newtext = sign.text;
-        else newtext = text;
-        if (newtext.StartsWith("sign_"))
-        {
-            UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
-            if (pl != null)
-                newtext = Localization.TranslateSign(newtext, pl, false);
-        }
-        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
     }
     public static float GetTerrainHeightAt2DPoint(float x, float z, float above = 0)
     {
@@ -571,7 +521,7 @@ public static class F
             height = LevelGround.getHeight(point);
             if (!float.IsNaN(minHeight))
                 return Mathf.Max(height, minHeight);
-            else return height;
+            return height;
         }
     }
     public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)

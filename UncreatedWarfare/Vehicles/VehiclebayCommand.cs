@@ -173,7 +173,7 @@ public class VehicleBayCommand : Command
                 {
                     ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "ADDED DELAY " + type.ToString() + " VALUE: " + val.ToString()
                         + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
-                    data.AddDelay(type, val, gamemode);
+                    Delay.AddDelay(ref data.Delays, type, val, gamemode);
                     VehicleBay.SaveSingleton();
                     if (VehicleSigns.Loaded)
                         VehicleSpawner.UpdateSigns(data.VehicleID);
@@ -187,7 +187,7 @@ public class VehicleBayCommand : Command
                 else
                 {
                     int rem = 0;
-                    while (data.RemoveDelay(type, val, gamemode)) rem++;
+                    while (Delay.RemoveDelay(ref data.Delays, type, val, gamemode)) rem++;
                     if (rem > 0)
                     {
                         if (VehicleSigns.Loaded)

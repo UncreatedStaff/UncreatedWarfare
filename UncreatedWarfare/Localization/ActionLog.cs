@@ -314,5 +314,6 @@ public enum EActionLogType : byte
     CHAT_FILTER_VIOLATION,
     KICKED_BY_BATTLEYE,
     TEAMKILL,
-    KILL
+    KILL,
+    REQUEST_TRAIT
 }

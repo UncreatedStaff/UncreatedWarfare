@@ -23,6 +23,11 @@ public interface ISquads : ITeams
 {
     Squads.SquadManager SquadManager { get; }
 }
+public interface ITraits : IGamemode
+{
+    Traits.TraitManager TraitManager { get; }
+}
+
 public interface ITeams : IGamemode, IJoinedTeamListener
 {
     bool UseTeamSelector { get; }

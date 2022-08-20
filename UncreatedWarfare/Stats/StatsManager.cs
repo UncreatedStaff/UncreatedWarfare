@@ -639,7 +639,7 @@ public static class StatsManager
         {
             for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
             {
-                ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                ModifyStats(flag.PlayersOnFlagTeam1[p].Steam64, s => s.FlagsCaptured++, false);
                 if (KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
                 {
                     ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
@@ -648,16 +648,16 @@ public static class StatsManager
             }
             if (flag.IsObj(2))
                 for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
-                    ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+                    ModifyStats(flag.PlayersOnFlagTeam2[p].Steam64, s => s.FlagsLost++, false);
         }
         else if (capturedTeam == 2)
         {
             if (flag.IsObj(1))
                 for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
-                    ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+                    ModifyStats(flag.PlayersOnFlagTeam1[p].Steam64, s => s.FlagsLost++, false);
             for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
             {
-                ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                ModifyStats(flag.PlayersOnFlagTeam2[p].Steam64, s => s.FlagsCaptured++, false);
                 if (KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
                 {
                     ModifyKit(kit.Name, k => k.FlagsCaptured++, true);

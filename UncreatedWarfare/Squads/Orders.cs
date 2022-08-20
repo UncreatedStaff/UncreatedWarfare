@@ -62,11 +62,11 @@ public static class Orders
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        foreach (KeyValuePair<ulong, int> pair in buildable.PlayerHits)
+        foreach (KeyValuePair<ulong, float> pair in buildable.PlayerHits)
         {
             UCPlayer? player = UCPlayer.FromID(pair.Key);
             if (player != null &&
-                (float)pair.Value / buildable.Buildable.RequiredHits >= 0.1F &&
+                pair.Value / buildable.Buildable.RequiredHits >= 0.1f &&
                 HasOrder(player.Squad, out Order order) &&
                 order.Type == EOrder.BUILDFOB &&
                 (fob.Position - order.Marker).sqrMagnitude <= Math.Pow(80, 2)

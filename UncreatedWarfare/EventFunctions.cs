@@ -25,6 +25,8 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -527,16 +529,16 @@ public static class EventFunctions
                     Task t4 = OffenseManager.ApplyMuteSettings(ucplayer);
                     await Data.DatabaseManager.RegisterLogin(ucplayer.Player);
                     await t1;
-                    await t2;
                     await t3;
                     await t4;
+                    await t2;
                 }
                 finally
                 {
                     ucplayer.PurchaseSync.Release();
                 }
                 await UCWarfare.ToUpdate();
-                RequestSigns.UpdateAllSigns(ucplayer.Player.channel.owner);
+                RequestSigns.UpdateAllSigns(ucplayer);
                 VehicleSpawner.UpdateSigns(ucplayer);
                 Points.UpdateCreditsUI(ucplayer);
                 Points.UpdateXPUI(ucplayer);
@@ -1062,8 +1064,12 @@ public static class EventFunctions
                 }
             }
         }
-        next:
-        if (shouldAllow && Data.Is(out IRevives rev))
+    next:
+        if (!shouldAllow) return;
+
+        StrengthInNumbers.OnPlayerDamageRequested(ref parameters);
+
+        if (Data.Is(out IRevives rev))
             rev.ReviveManager.OnPlayerDamagedRequested(ref parameters, ref shouldAllow);
         if (shouldAllow)
         {
@@ -1254,6 +1260,7 @@ public static class EventFunctions
                     vbsign.sign_transform = new SerializableTransform(new SerializableVector3(point), new SerializableVector3(angle_x * 2f, angle_y * 2f, angle_z * 2f));
                     VehicleSigns.SaveSingleton();
                 }
+                TraitSigns.OnBarricadeMoved(drop, sign);
             }
         }
     }
