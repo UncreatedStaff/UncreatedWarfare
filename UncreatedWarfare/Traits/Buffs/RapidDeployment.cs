@@ -20,6 +20,7 @@ public class RapidDeployment : Buff
         RequireSquadLeader = true,
         RequireSquad = true,
         Icon = "¦",
+        Cooldown = 420,
         EffectDuration = 300,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 3 } },
         EffectDistributedToSquad = true,
@@ -27,11 +28,11 @@ public class RapidDeployment : Buff
     };
 
     private float _multiplier;
-    protected override void StartEffect()
+    protected override void StartEffect(bool onStart)
     {
-        if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
+        if (onStart && (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier)))
             _multiplier = 0.75f;
-        base.StartEffect();
+        base.StartEffect(onStart);
     }
     public static float GetDeployTime(UCPlayer player)
     {

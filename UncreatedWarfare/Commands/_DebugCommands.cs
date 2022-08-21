@@ -1054,4 +1054,29 @@ internal class _DebugCommand : Command
             ctx.ReplyString("Syntax: /test sendui <id> [key]");
         }
     }
+
+    private void advancedelays(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+
+        if (ctx.TryGet(0, out float seconds))
+        {
+            Data.Gamemode.AdvanceDelays(seconds);
+            ctx.ReplyString("Advanced delays by " + seconds.ToString("0.##", Data.Locale) + " seconds.");
+        }
+        else
+            ctx.SendCorrectUsage("/test advancedelays <seconds>.");
+    }
+
+    private void listcooldowns(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
+        L.Log("Cooldowns for " + ctx.Caller.Name.PlayerName + ":");
+        using IDisposable d = L.IndentLog(1);
+        foreach (Cooldown cooldown in CooldownManager.Singleton.cooldowns.Where(x => x.player.Steam64 == ctx.Caller.Steam64))
+        {
+            L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
+        }
+    }
 }

@@ -21,9 +21,11 @@ using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static SDG.Provider.SteamGetInventoryResponse;
+using Action = System.Action;
 
 namespace Uncreated.Warfare.Gamemodes;
 
@@ -48,6 +50,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public Tips Tips;
     public Coroutine EventLoopCoroutine;
     public bool isPendingCancel;
+    public event Action? StagingPhaseOver;
     internal string shutdownMessage = string.Empty;
     internal bool shutdownAfterGame = false;
     internal ulong shutdownPlayer = 0;
@@ -63,6 +66,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     private List<IUncreatedSingleton> _singletons;
     private bool wasLevelLoadedOnStart;
     private bool _hasOnReadyRan = false;
+    private bool _hasTimeSynced = false;
     public EState State => _state;
     public float StartTime => _startTime;
     public int StagingSeconds => _stagingSeconds;
@@ -96,6 +100,12 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     {
         this._eventLoopSpeed = NewSpeed;
         this.useEventLoop = NewSpeed > 0;
+    }
+    public void AdvanceDelays(float seconds)
+    {
+        _startTime -= seconds;
+        VehicleSpawner.UpdateSigns();
+        TraitSigns.BroadcastAllTraitSigns();
     }
     public override void Load()
     {
@@ -243,6 +253,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             PostOnReady();
             _hasOnReadyRan = true;
         }
+        _hasTimeSynced = false;
     }
 
     private void InternalSubscribe()
@@ -266,6 +277,18 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     }
     public static void OnStagingComplete()
     {
+        if (Data.Gamemode.StagingPhaseOver != null)
+        {
+            try
+            {
+                Data.Gamemode.StagingPhaseOver.Invoke();
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error invoking void StagingPhaseOver():");
+                L.LogError(ex);
+            }
+        }
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -312,6 +335,12 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 L.LogError(ex);
             }
 
+            if (!_hasTimeSynced)
+            {
+                _hasTimeSynced = true;
+                TimeSync();
+            }
+
             QuestManager.OnGameTick();
 #if DEBUG
             profiler.Dispose();
@@ -324,6 +353,13 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 L.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
         }
     }
+
+    private void TimeSync()
+    {
+        TraitSigns.TimeSync();
+        VehicleSigns.TimeSync();
+    }
+
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)
     {

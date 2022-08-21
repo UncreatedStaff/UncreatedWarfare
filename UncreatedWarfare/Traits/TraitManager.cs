@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -15,10 +14,9 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Traits;
-public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGameStartListener, ILevelStartListener
+public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGameStartListener, ILevelStartListener, IPlayerAsyncInitListener
 {
     public List<Trait> ActiveTraits;
     public static TraitManager Singleton;
@@ -164,7 +162,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
                 return false;
         }
 
-        return true;
+        return trait is not Buff b || b.CanEnable;
     }
     public void OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
@@ -465,11 +463,14 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
                 throw ctx.Reply(T.TraitAlreadyActive, trait);
         }
 
-        if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, ECooldownType.REQUEST_TRAIT_GLOBAL, out Cooldown cooldown) && !ctx.Caller.OnDuty())
-            throw ctx.Reply(T.RequestTraitGlobalCooldown, cooldown);
+        if (!ctx.Caller.OnDuty())
+        {
+            if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, ECooldownType.REQUEST_TRAIT_GLOBAL, out Cooldown cooldown))
+                throw ctx.Reply(T.RequestTraitGlobalCooldown, cooldown);
 
-        if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_SINGLE, out cooldown, trait.TypeName) && !ctx.Caller.OnDuty())
-            throw ctx.Reply(T.RequestTraitSingleCooldown, trait, cooldown);
+            if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_SINGLE, out cooldown, trait.TypeName))
+                throw ctx.Reply(T.RequestTraitSingleCooldown, trait, cooldown);
+        }
 
         bool isBuff = typeof(Buff).IsAssignableFrom(trait.Type);
         if (isBuff && GetBuffCount(ctx.Caller) > BuffUI.MAX_BUFFS)
@@ -586,8 +587,11 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
             }
 
             ctx.LogAction(EActionLogType.REQUEST_TRAIT, $"Trait {trait.TypeName}, Team {team}, Cost: {trait.CreditCost}");
-            CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_GLOBAL, CooldownManager.Config.GlobalTraitCooldown);
-            CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_SINGLE, CooldownManager.Config.IndividualTraitCooldown, trait);
+            if (CooldownManager.Config.GlobalTraitCooldown != null && CooldownManager.Config.GlobalTraitCooldown.HasValue && CooldownManager.Config.GlobalTraitCooldown.Value >= 0)
+                CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_GLOBAL, CooldownManager.Config.GlobalTraitCooldown.Value);
+            if (trait.Cooldown is not null && trait.Cooldown.HasValue && trait.Cooldown.Value >= 0f)
+                CooldownManager.StartCooldown(ctx.Caller, ECooldownType.REQUEST_TRAIT_SINGLE, trait.Cooldown.Value, trait.TypeName);
+            TraitSigns.SendAllTraitSigns(ctx.Caller);
             GiveTrait(ctx.Caller, trait);
         });
         ctx.Defer();
@@ -606,16 +610,35 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
     {
         Singleton.AssertLoaded<TraitManager, TraitData>();
 
-        if (TryCreate(data, player, out Trait trait))
-        {
-            if (data.LastsUntilDeath)
-                player.SendChat(T.RequestTraitGivenUntilDeath, data);
-            else if (data.EffectDuration > 0)
-                player.SendChat(T.RequestTraitGivenTimer, data, Localization.GetTimeFromSeconds(Mathf.CeilToInt(data.EffectDuration), player));
-            else
-                player.SendChat(T.RequestTraitGiven, data);
-        }
-        else
+        if (!TryCreate(data, player, out _))
             player.SendChat(T.UnknownError);
+    }
+
+    public void OnAsyncInitComplete(UCPlayer player)
+    {
+        TraitSigns.SendAllTraitSigns(player);
+    }
+
+    internal static TraitData? FindTrait(string trait)
+    {
+        Singleton.AssertLoaded<TraitManager, TraitData>();
+
+        for (int i = 0; i < Singleton.Count; ++i)
+        {
+            if (Singleton[i].TypeName.Equals(trait, StringComparison.OrdinalIgnoreCase))
+                return Singleton[i];
+        }
+        for (int i = 0; i < Singleton.Count; ++i)
+        {
+            if (Singleton[i].TypeName.IndexOf(trait, StringComparison.OrdinalIgnoreCase) != -1)
+                return Singleton[i];
+        }
+        for (int i = 0; i < Singleton.Count; ++i)
+        {
+            if (Singleton[i].NameTranslations.Translate(L.DEFAULT).IndexOf(trait, StringComparison.OrdinalIgnoreCase) != -1)
+                return Singleton[i];
+        }
+
+        return null;
     }
 }

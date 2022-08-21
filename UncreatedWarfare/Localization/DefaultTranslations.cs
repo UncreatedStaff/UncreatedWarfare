@@ -1142,7 +1142,11 @@ internal static class T
     [TranslationData(TRAITS_SECTION, "Sent when the player equips a kit that's not supported by the trait.", "The trait requiring a kit")]
     public static readonly Translation<Trait> TraitDisabledKitNotSupported = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> is disabled until you switch to a supported kit type.", TraitData.NAME);
     [TranslationData(TRAITS_SECTION, "Sent when the player performs an action that allows their trait to be reactivated.", "The trait being reactivated")]
-    public static readonly Translation<Trait> TraitReactivated = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> has reactivated.", TraitData.NAME);
+    public static readonly Translation<Trait> TraitReactivated = new Translation<Trait>("<#e86868><#c$trait$>{0}</color> has been reactivated.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when one of a player's traits expires through time.", "The trait that expired")]
+    public static readonly Translation<TraitData> TraitExpiredTime = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> has expired and is no longer active.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when one of a player's traits expires through death.", "The trait that expired")]
+    public static readonly Translation<TraitData> TraitExpiredDeath = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> has expired after your death and is no longer active.", TraitData.NAME);
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait which is locked by the current gamemode.", "The locked trait", "Current gamemode")]
     public static readonly Translation<TraitData, Gamemode> RequestTraitGamemodeLocked = new Translation<TraitData, Gamemode>("<#ff8c69><#c$trait$>{0}</color> is <#c$locked$>locked</color> during <#cedcde><uppercase>{1}</uppercase></color> games.", TraitData.NAME);
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while they already have it.", "The existing trait")]
@@ -1156,7 +1160,7 @@ internal static class T
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while under the global trait cooldown.", "Global cooldown shared between all traits")]
     public static readonly Translation<Cooldown> RequestTraitGlobalCooldown = new Translation<Cooldown>("<#ff8c69>You can request a trait again in <#cedcde>{0}</color>.", Cooldown.SHORT_TIME_FORMAT);
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait while under the individual trait cooldown.", "Trait on cooldown", "Individual cooldown for this trait")]
-    public static readonly Translation<TraitData, Cooldown> RequestTraitSingleCooldown = new Translation<TraitData, Cooldown>("<#ff8c69>You can request <#c$trait$>{0}</color> again in <#cedcde>{0}</color>.", TraitData.NAME, Cooldown.SHORT_TIME_FORMAT);
+    public static readonly Translation<TraitData, Cooldown> RequestTraitSingleCooldown = new Translation<TraitData, Cooldown>("<#ff8c69>You can request <#c$trait$>{0}</color> again in <#cedcde>{1}</color>.", TraitData.NAME, Cooldown.SHORT_TIME_FORMAT);
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a buff when they already have the max amount (6).")]
     public static readonly Translation RequestTraitTooManyBuffs = new Translation("<#ff8c69>You can't have more than <#cedcde>six</color> buffs active at once.");
     [TranslationData(TRAITS_SECTION, "Sent when the player tries to request a trait which requires squad leader while not being squad leader or in a squad.", "Trait being requested")]
@@ -1175,6 +1179,29 @@ internal static class T
     public static readonly Translation<TraitData, string> RequestTraitGivenTimer = new Translation<TraitData, string>("<#a8918a>Your <#c$trait$>{0}</color> has been activated. It will expire in <#cedcde>{1}</color>.", TraitData.NAME);
     [TranslationData(TRAITS_SECTION, "Sent when the player successfully requests a trait that expires on death.", "Trait being requested")]
     public static readonly Translation<TraitData> RequestTraitGivenUntilDeath = new Translation<TraitData>("<#a8918a>Your <#c$trait$>{0}</color> has been activated. It will last until you die.", TraitData.NAME);
+    [TranslationData(TRAITS_SECTION, "Sent when the player successfully requests a trait but it's still staging phase.", "Trait being requested")]
+    public static readonly Translation<TraitData> TraitAwaitingStagingPhase = new Translation<TraitData>("<#a8918a><#c$trait$>{0}</color> will be activated once <#cedcde>STAGING PHASE</color> is over.", TraitData.NAME);
+    #region Trait Command
+    private const string TRAIT_COMMAND_SECTION = "Trait Command";
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when a trait name is not able to be matched up with a TraitData.", "Inputted search")]
+    public static readonly Translation<string> TraitNotFound = new Translation<string>("<#66ffcc>Unable to find a trait named <#fff>{0}</color>.");
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when a trait is removed.", "Trait that got removed.")]
+    public static readonly Translation<TraitData> TraitRemoved = new Translation<TraitData>("<#66ffcc>Removed <#c$trait$>{0}</color>.", TraitData.NAME);
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when someone tries to remove a trait which they don't have.", "Trait the player tried to remove")]
+    public static readonly Translation<TraitData> TraitNotActive = new Translation<TraitData>("<#ff8c69>You're not under <#c$trait$>{0}</color>'s effects.", TraitData.NAME);
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when someone tries to clear their traits with no traits.")]
+    public static readonly Translation NoTraitsToClear = new Translation("<#ff8c69>You have no active traits.");
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when someone clears their traits.", "Number of traits removed.")]
+    public static readonly Translation<int> TraitsCleared = new Translation<int>("<#66ffcc>Removed {0} trait(s).");
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when someone clears their traits.", "Target trait", "Property name", "Value")]
+    public static readonly Translation<TraitData, string, string> TraitSetProperty = new Translation<TraitData, string, string>("<#66ffcc>Set <#c$trait$>{0}</color> / <#fff>{1}</color> to <uppercase><#cedcde>{2}</color></uppercase>.", TraitData.TYPE_NAME);
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when someone enteres an invalid property name to /trait set.", "Input text")]
+    public static readonly Translation<string> TraitInvalidProperty = new Translation<string>("<#ff8c69><uppercase><#cedcde>{0}</color></uppercase> is not a valid property name for traits.");
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when someone enteres an invalid property name to /trait set.", "Value", "Property name")]
+    public static readonly Translation<string, string> TraitInvalidSetValue = new Translation<string, string>("<#ff8c69><uppercase><#cedcde>{0}</color></uppercase> is not a valid value for <#fff>{1}</color>.");
+    [TranslationData(TRAIT_COMMAND_SECTION, "Shown when someone enteres an invalid property name to /trait set.", "Property name")]
+    public static readonly Translation<string> TraitNotJsonSettable = new Translation<string>("<#ff8c69><#fff>{0}</color> is not a property that can be changed in-game.");
+    #endregion
     #region Trait Signs
     private const string TRAITS_SIGN_SECTION = "Traits / Sign";
     [TranslationData(TRAITS_SIGN_SECTION, "Shows instead of the credits when Credit Cost is 0.")]
@@ -1189,12 +1216,18 @@ internal static class T
     public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>", TranslationFlags.NoColor);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the trait is locked in the current gamemode.")]
     public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationFlags.NoColor);
-    [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait.")]
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait.", "Class name")]
     public static readonly Translation<EClass> TraitSignClassBlacklisted = new Translation<EClass>("<#c$vbs_delay$>Locked for {0}</color>", TranslationFlags.NoColor, PLURAL);
-    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait.")]
-    public static readonly Translation TraitSignAlreadyActive = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColor);
-    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait.")]
-    public static readonly Translation<Cooldown> TraitSignGlobalCooldown = new Translation<Cooldown>("<#c$vbs_delay$>Locked {0}</color>", TranslationFlags.NoColor, "mm\\:ss");
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 1 class.", "Class name")]
+    public static readonly Translation<EClass> TraitSignClassWhitelisted1 = new Translation<EClass>("<#c$vbs_delay$>{0} Required</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 2 classes.", "Class name")]
+    public static readonly Translation<EClass, EClass> TraitSignClassWhitelisted2 = new Translation<EClass, EClass>("<#c$vbs_delay$>{0} or {1} Required</color>", TranslationFlags.NoColor);
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait and it expires in time.", "Minutes", "Seconds")]
+    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait and it expires on death.")]
+    public static readonly Translation<int, int> TraitSignAlreadyActiveDeath = new Translation<int, int>("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
+    [TranslationData(TRAITS_SIGN_SECTION, "Shows when you are on either global or individual cooldown (whichever is longer).", "Minutes", "Seconds")]
+    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
     #endregion
     #region Trait Interactions
     private const string TRAITS_INTERACTIONS_SECTION = "Traits / Interactions";
@@ -1204,6 +1237,8 @@ internal static class T
     public static readonly Translation<TraitData> TraitUsedSelfRevive = new Translation<TraitData>("<#c$trait$>{0}</color> <#d97568>consumed</color>.", TraitData.NAME);
     [TranslationData(TRAITS_INTERACTIONS_SECTION, "Sent when the player tries to use their self-revive on cooldown.", "Self-revive trait data.", "Time string")]
     public static readonly Translation<TraitData, string> TraitSelfReviveCooldown = new Translation<TraitData, string>("<#c$trait$>{0}</color> can not be used for another {1}.", TraitData.NAME);
+    [TranslationData(TRAITS_INTERACTIONS_SECTION, "Sent when the player isn't in a vehicle with Ace Armor.", "Ace armor trait data.")]
+    public static readonly Translation<TraitData> AceArmorDisabledNotInVehicle = new Translation<TraitData>("<#e86868><#c$trait$>{0}</color> is disabled until you are driving an <#cedcde>ARMORED</color> vehicle.", TraitData.NAME);
     #endregion
     #endregion
 

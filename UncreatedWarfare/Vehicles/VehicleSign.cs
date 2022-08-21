@@ -163,6 +163,19 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         }
         return false;
     }
+
+    internal static void TimeSync()
+    {
+        if (VehicleSpawner.Loaded)
+        {
+            for (int i = 0; i < VehicleSpawner.Singleton.Count; ++i)
+            {
+                VehicleSpawn spawn = VehicleSpawner.Singleton[i];
+                if (spawn.Component != null)
+                    spawn.Component.TimeSync();
+            }
+        }
+    }
 }
 [JsonSerializable(typeof(VehicleSign))]
 public class VehicleSign

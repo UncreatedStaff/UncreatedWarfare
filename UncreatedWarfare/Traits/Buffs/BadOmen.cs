@@ -23,24 +23,28 @@ public class BadOmen : Buff
         CreditCost = 350,
         Icon = "¯",
         EffectDuration = 600,
+        Cooldown = 1200,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 6 } },
         EffectDistributedToSquad = false,
         Data = "15" // max notice given in seconds
     };
     private float _maxNotice;
     private float _squadMaxNotice;
-    protected override void StartEffect()
+    protected override void StartEffect(bool onStart)
     {
-        if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _maxNotice))
-            _maxNotice = 15f;
+        if (onStart)
+        {
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _maxNotice))
+                _maxNotice = 15f;
 
-        _squadMaxNotice = Data.EffectDistributedToSquad
-            ? _maxNotice *
-              (TargetPlayer.IsSquadLeader()
-                ? Data.SquadLeaderDistributedMultiplier
-                : Data.SquadDistributedMultiplier)
-            : 0f;
-        base.StartEffect();
+            _squadMaxNotice = Data.EffectDistributedToSquad
+                ? _maxNotice *
+                  (TargetPlayer.IsSquadLeader()
+                      ? Data.SquadLeaderDistributedMultiplier
+                      : Data.SquadDistributedMultiplier)
+                : 0f;
+        }
+        base.StartEffect(onStart);
     }
     internal override void SquadLeaderDemoted()
     {
@@ -81,31 +85,32 @@ public class BadOmen : Buff
             for (int j = 0; j < PlayerManager.OnlinePlayers.Count; ++j)
             {
                 UCPlayer target = PlayerManager.OnlinePlayers[j];
+                if (team == target.GetTeam())
+                    continue;
                 if ((target.Position - position).sqrMagnitude < blastRadius)
                 {
                     L.LogDebug("[BAD OMEN] Checking " + target.Name.PlayerName);
-                    if (team != target.GetTeam())
-                        continue;
-                    for (int k = 0; k < warned.Count; ++k)
-                        if (warned[k] == target.Steam64)
-                            goto next;
-
-                    float warnTime = GetBadOmenWarn(target);
-                    if (warnTime > 0f && secsLeft <= warnTime)
+                    if (!warned.Contains(target.Steam64))
                     {
-                        WarnPlayer(target, secsLeft);
-                        warned.Add(target.Steam64);
+                        float warnTime = GetBadOmenWarn(target);
+                        L.LogDebug("[BAD OMEN] warning " + target.Name.PlayerName + ", warn time: " + warnTime);
+                        if (warnTime > 0f && secsLeft <= warnTime)
+                        {
+                            WarnPlayer(target, secsLeft);
+                            warned.Add(target.Steam64);
+                        }
                     }
                 }
-                next: ;
             }
             yield return new WaitForSecondsRealtime(1f);
+            secsLeft = impactTime - Time.realtimeSinceStartup;
         }
     }
     private static void WarnPlayer(UCPlayer player, float timeLeft)
     {
         ToastMessage msg = new ToastMessage(T.BadOmenMortarWarning.Translate(player, timeLeft), EToastMessageSeverity.SEVERE);
         ToastMessage.QueueMessage(player, msg, true);
+        L.Log("Warning " + player.Name.PlayerName + " for incoming mortar " + timeLeft + " seconds out.");
         player.Player.StartCoroutine(WarnTimer(player, timeLeft, msg));
     }
     private static IEnumerator WarnTimer(UCPlayer player, float timeLeft, ToastMessage msg)

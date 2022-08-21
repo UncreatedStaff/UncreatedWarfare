@@ -1,17 +1,19 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 /// <summary>
-/// Any players that enter a vehicle driven by a player under this effect will get a (by default 5 minute) xp boost.
+/// Any crewmen that enter a vehicle driven by a player under this effect will get a xp boost until they leave.
 /// </summary>
 public class AceArmor : Buff
 {
@@ -19,110 +21,191 @@ public class AceArmor : Buff
     {
         TypeName = nameof(AceArmor),
         NameTranslations = new TranslationList("Ace Armor"),
-        DescriptionTranslations = new TranslationList("Give temporary XP boost to passengers."),
+        DescriptionTranslations = new TranslationList("Give an XP boost to crewmen."),
         CreditCost = 200,
-        ClassList = new EClass[] { EClass.PILOT, EClass.CREWMAN },
+        ClassList = new EClass[] { EClass.CREWMAN },
         ClassListIsBlacklist = false,
         Icon = "§",
-        TickSpeed = 1f,
+        Cooldown = 330,
         EffectDuration = 300,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 1 } },
+        Delays = new Delay[] { new Delay(EDelayType.TIME, 540f) }, // same delay as lowest armor vehicle
         EffectDistributedToSquad = false,
-        Data = "0.45,0,300.1,¼" // xp boost multiplier, xp refund multiplier, xp boost length, xp boost icon
+        Data = "0.45,0,¼" // xp boost multiplier, xp refund multiplier, xp boost icon
     };
     private float _multiplier = -1;
     private float _refundMultiplier = -1;
-    private float _effectLength = -1;
     private string _icon = null!;
     private readonly List<AceBoost> _boosts = new List<AceBoost>(6);
-    protected override void StartEffect()
+    protected override void StartEffect(bool onStart)
     {
-        string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(dataSplitChars, StringSplitOptions.RemoveEmptyEntries);
-        if (datas.Length > 0)
+        if (onStart)
         {
-            float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.Locale, out _multiplier);
-            if (datas.Length > 1)
+            string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(dataSplitChars, StringSplitOptions.RemoveEmptyEntries);
+            if (datas.Length > 0)
             {
-                float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.Locale, out _refundMultiplier);
-                if (datas.Length > 2)
+                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.Locale, out _multiplier);
+                if (datas.Length > 1)
                 {
-                    float.TryParse(datas[2], NumberStyles.Number, Warfare.Data.Locale, out _effectLength);
-                    if (datas.Length > 3)
-                        _icon = datas[3];
+                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.Locale, out _refundMultiplier);
+                    if (datas.Length > 2)
+                        _icon = datas[2];
+                }
+            }
+            if (_multiplier == -1f)
+                _multiplier = 0.45f;
+            if (_refundMultiplier == -1f)
+                _refundMultiplier = 0.1f;
+            if (string.IsNullOrEmpty(_icon))
+                _icon = Data.Icon;
+            EventDispatcher.OnEnterVehicle += OnEnterVehicle;
+            EventDispatcher.OnExitVehicle += OnExitVehicle;
+            EventDispatcher.OnVehicleSwapSeat += OnSwapSeats;
+        }
+
+        base.StartEffect(onStart);
+        InteractableVehicle vehicle = TargetPlayer.Player.movement.getVehicle();
+        if (vehicle != null && TargetPlayer.Player.movement.getSeat() == 0)
+        {
+            for (int i = 1; i < vehicle.passengers.Length; ++i)
+            {
+                Passenger p = vehicle.passengers[i];
+                if (p.player != null && p.player.playerID.steamID.m_SteamID != TargetPlayer.Steam64)
+                {
+                    UCPlayer? pl = UCPlayer.FromSteamPlayer(p.player);
+                    if (pl is not null)
+                        BoostPlayer(pl);
                 }
             }
         }
-        if (_multiplier == -1f)
-            _multiplier = 0.45f;
-        if (_refundMultiplier == -1f)
-            _refundMultiplier = 0.1f;
-        if (string.IsNullOrEmpty(_icon))
-            _icon = Data.Icon;
-        if (_effectLength == -1f)
-            _effectLength = Data.EffectDuration;
-        EventDispatcher.OnEnterVehicle += OnEnterVehicle;
-        base.StartEffect();
     }
-
     private void OnEnterVehicle(EnterVehicle e)
     {
-        if (e.Player.Steam64 != TargetPlayer.Steam64 
-            && e.PassengerIndex != 0 
-            && e.Vehicle.passengers[0].player != null 
-            && e.Vehicle.passengers[0].player.playerID.steamID.m_SteamID == TargetPlayer.Steam64 
-            && TargetPlayer.GetTeam() == e.Player.GetTeam()
-            && e.Player.ActiveBuffs[e.Player.ActiveBuffs.Length - 1] == null)
+        if (IsActivated)
         {
-            AceBoost boost = new AceBoost(_icon, _multiplier, _refundMultiplier, e.Player, this);
-            _boosts.Add(boost);
-            TraitManager.BuffUI.AddBuff(e.Player, boost);
-        }
-    }
-    protected override void Tick()
-    {
-        InteractableVehicle? vehicle = TargetPlayer.Player.movement.getVehicle();
-        if (vehicle == null
-            || TargetPlayer.Player.movement.getSeat() != 0
-            || !VehicleBay.Loaded
-            || !VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data)
-            || data.RequiredClass is not EClass.CREWMAN and not EClass.PILOT
-            ) return;
-        float time = Time.realtimeSinceStartup;
-        for (int i = 0; i < vehicle.passengers.Length; ++i)
-        {
-            if (vehicle.passengers[i].player != null)
+            if (
+                   e.Player.Steam64 != TargetPlayer.Steam64
+                && e.PassengerIndex != 0
+                && e.Vehicle.passengers[0].player != null
+                && e.Vehicle.passengers[0].player.playerID.steamID.m_SteamID == TargetPlayer.Steam64
+                && TargetPlayer.GetTeam() == e.Player.GetTeam()
+                && e.Player.ActiveBuffs[e.Player.ActiveBuffs.Length - 1] == null
+                && Data.CanClassUse(e.Player.KitClass))
             {
-                UCPlayer? pl = UCPlayer.FromSteamPlayer(vehicle.passengers[i].player);
-                if (pl is null) continue;
-                for (int k = 0; k < pl.ActiveBuffs.Length; ++k)
+                BoostPlayer(e.Player);
+            }
+            else if (e.PassengerIndex == 0 && e.Player.Steam64 == TargetPlayer.Steam64)
+            {
+                for (int i = 1; i < e.Vehicle.passengers.Length; ++i)
                 {
-                    if (pl.ActiveBuffs[k] is AceBoost boost && boost.Trait == this)
+                    Passenger p = e.Vehicle.passengers[i];
+                    if (p.player != null)
                     {
-                        boost.StartTime = time;
+                        UCPlayer? pl = UCPlayer.FromSteamPlayer(p.player);
+                        if (pl is not null)
+                            BoostPlayer(pl);
                     }
                 }
             }
         }
-        for (int i = 0; i < _boosts.Count; ++i)
+    }
+    private void BoostPlayer(UCPlayer player)
+    {
+        for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+            if (player.ActiveBuffs[i] is AceBoost) return;
+
+        AceBoost boost = new AceBoost(_icon, _multiplier, _refundMultiplier, player, this);
+        _boosts.Add(boost);
+        TraitManager.BuffUI.AddBuff(player, boost);
+    }
+    private void RemoveBoost(AceBoost boost)
+    {
+        TraitManager.BuffUI.RemoveBuff(boost.Player, boost);
+        _boosts.Remove(boost);
+        boost.Trait = null!;
+    }
+    private void OnExitVehicle(ExitVehicle e)
+    {
+        for (int i = e.Player.ActiveBuffs.Length - 1; i >= 0; --i)
         {
-            AceBoost boost = _boosts[i];
-            if ((boost.Player is null || !boost.Player.IsOnline))
+            if (e.Player.ActiveBuffs[i] is AceBoost ab)
+                RemoveBoost(ab);
+        }
+        if (IsActivated && e.Player.Steam64 == TargetPlayer.Steam64)
+        {
+            for (int i = 0; i < e.Vehicle.passengers.Length; ++i)
             {
-                if (boost.StartTime + _effectLength < time || boost.Trait == null)
-                    TraitManager.BuffUI.RemoveBuff(boost.Player!, boost);
-                else if (boost.StartTime + _effectLength < time - BLINK_LEAD_TIME)
+                Passenger p = e.Vehicle.passengers[i];
+                if (p.player != null)
                 {
-                    boost.IsBlinking = true;
-                    TraitManager.BuffUI.UpdateBuffTimeState(boost);
+                    UCPlayer? pl = UCPlayer.FromSteamPlayer(p.player);
+                    if (pl is not null)
+                    {
+                        for (int b = pl.ActiveBuffs.Length - 1; b >= 0; --b)
+                        {
+                            if (pl.ActiveBuffs[b] is AceBoost ab && ab.Trait == this)
+                                RemoveBoost(ab);
+                        }
+                    }
                 }
             }
         }
-
-        base.Tick();
     }
-    protected override void ClearEffect()
+    private void OnSwapSeats(VehicleSwapSeat e)
     {
-        EventDispatcher.OnEnterVehicle -= OnEnterVehicle;
+        if (IsActivated && e.Player.Steam64 == TargetPlayer.Steam64)
+        {
+            if (e.NewSeat == 0)
+            {
+                for (int i = 1; i < e.Vehicle.passengers.Length; ++i)
+                {
+                    Passenger p = e.Vehicle.passengers[i];
+                    if (p.player != null)
+                    {
+                        UCPlayer? pl = UCPlayer.FromSteamPlayer(p.player);
+                        if (pl is not null)
+                            BoostPlayer(pl);
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < e.Vehicle.passengers.Length; ++i)
+                {
+                    Passenger p = e.Vehicle.passengers[i];
+                    if (p.player != null && p.player.playerID.steamID.m_SteamID != TargetPlayer.Steam64)
+                    {
+                        UCPlayer? pl = UCPlayer.FromSteamPlayer(p.player);
+                        if (pl is not null)
+                        {
+                            for (int b = pl.ActiveBuffs.Length - 1; b >= 0; --b)
+                            {
+                                if (pl.ActiveBuffs[b] is AceBoost ab && ab.Trait == this)
+                                    RemoveBoost(ab);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    internal override void OnBlinkingUpdated()
+    {
+        base.OnBlinkingUpdated();
+        for (int i = 0; i < _boosts.Count; ++i)
+        {
+            _boosts[i].IsBlinking = true;
+            TraitManager.BuffUI.UpdateBuffTimeState(_boosts[i]);
+        }
+    }
+    protected override void ClearEffect(bool onDestroy)
+    {
+        if (onDestroy)
+        {
+            EventDispatcher.OnVehicleSwapSeat -= OnSwapSeats;
+            EventDispatcher.OnExitVehicle -= OnExitVehicle;
+            EventDispatcher.OnEnterVehicle -= OnEnterVehicle;
+        }
         for (int i = _boosts.Count - 1; i >= 0; --i)
         {
             AceBoost boost = _boosts[i];
@@ -131,9 +214,9 @@ public class AceArmor : Buff
         }
 
         _boosts.Clear();
-        base.ClearEffect();
+        base.ClearEffect(_shouldBlink);
     }
-    public sealed class AceBoost : NonTraitBuff, IXPBoostBuff
+    private sealed class AceBoost : NonTraitBuff, IXPBoostBuff
     {
         private readonly float multiplier;
         private readonly float refundMultiplier;
@@ -144,10 +227,10 @@ public class AceArmor : Buff
             this.refundMultiplier = refundMultiplier;
             Trait = owner;
         }
-        float IXPBoostBuff.Multiplier => multiplier;
+        float IXPBoostBuff.Multiplier => Trait != null && Trait.IsActivated ? multiplier : 1f;
         void IXPBoostBuff.OnXPBoostUsed(float amount, bool awardCredits)
         {
-            if (Trait is null) return;
+            if (Trait is null || !Trait.IsActivated) return;
             UCPlayer? pl = Trait.TargetPlayer;
             if (pl is null)
                 return;

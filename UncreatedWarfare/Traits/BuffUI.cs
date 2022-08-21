@@ -133,16 +133,18 @@ public class BuffUI : UnturnedUI
                     IBuff? next = player.ActiveBuffs[i + 1];
                     if (next != null)
                     {
-                        string icon = next.Icon;
-                        SolidIcons[i].SetText(c, icon);
-                        SolidIcons[ind].SetVisibility(c, !buff.IsBlinking);
-                        BlinkingIcons[ind].SetVisibility(c, buff.IsBlinking);
+                        SolidIcons[i].SetText(c, next.Icon);
+                        SolidIcons[i].SetVisibility(c, !next.IsBlinking);
+                        BlinkingIcons[i].SetVisibility(c, next.IsBlinking);
                         Parents[i].SetVisibility(c, true);
                         player.ActiveBuffs[i] = next;
                     }
                     else
                     {
                         player.ActiveBuffs[i] = null;
+                        SolidIcons[i].SetText(c, buff.Icon);
+                        SolidIcons[i].SetVisibility(c, true);
+                        BlinkingIcons[i].SetVisibility(c, false);
                         Parents[i].SetVisibility(c, false);
                         break;
                     }

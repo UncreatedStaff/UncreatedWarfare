@@ -351,7 +351,7 @@ public class RequestCommand : Command
                         if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 &&
                             (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
                         {
-                            ucplayer.SendChat(T.RequestVehicleAlreadyOwned);
+                            ucplayer.SendChat(T.RequestVehicleAlreadyOwned, data);
                             return;
                         }
                     }

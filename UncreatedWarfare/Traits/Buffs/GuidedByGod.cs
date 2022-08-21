@@ -25,6 +25,7 @@ public class GuidedByGod : Buff
         ClassList = new EClass[] { EClass.PILOT },
         ClassListIsBlacklist = true,
         Icon = "£",
+        Cooldown = 1200,
         EffectDuration = 600,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
         EffectDistributedToSquad = false,
@@ -33,18 +34,21 @@ public class GuidedByGod : Buff
 
     private float _multiplier = -1f;
     private float _squadMultiplier = -1f;
-    protected override void StartEffect()
+    protected override void StartEffect(bool onStart)
     {
-        if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
-            _multiplier = 0.15f;
+        if (onStart)
+        {
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
+                _multiplier = 0.15f;
 
-        _squadMultiplier = Data.EffectDistributedToSquad
-            ? _multiplier *
-              (TargetPlayer.IsSquadLeader()
-                  ? Data.SquadLeaderDistributedMultiplier
-                  : Data.SquadDistributedMultiplier)
-            : 0f;
-        base.StartEffect();
+            _squadMultiplier = Data.EffectDistributedToSquad
+                ? _multiplier *
+                  (TargetPlayer.IsSquadLeader()
+                      ? Data.SquadLeaderDistributedMultiplier
+                      : Data.SquadDistributedMultiplier)
+                : 0f;
+        }
+        base.StartEffect(onStart);
     }
     public static float GetMultiplier(UCPlayer player)
     {

@@ -21,9 +21,10 @@ public class StrengthInNumbers : Buff
         CreditCost = 300,
         SquadDistributedMultiplier = 0.75f,
         SquadLeaderDistributedMultiplier = 1f,
-        RequireSquadLeader = false,
+        RequireSquadLeader = true,
         RequireSquad = true,
         Icon = "¦",
+        Cooldown = 330,
         EffectDuration = 300,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 2 } },
         EffectDistributedToSquad = true,
@@ -120,21 +121,24 @@ public class StrengthInNumbers : Buff
         return ct;
     }
 
-    protected override void StartEffect()
+    protected override void StartEffect(bool onStart)
     {
-        string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(dataSplitChars, StringSplitOptions.RemoveEmptyEntries);
-        if (datas.Length > 0)
+        if (onStart)
         {
-            float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.Locale, out _distance);
-            if (datas.Length > 1)
-                float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.Locale, out _armorMultiplier);
-        }
+            string[] datas = Data.Data is null ? Array.Empty<string>() : Data.Data.Split(dataSplitChars, StringSplitOptions.RemoveEmptyEntries);
+            if (datas.Length > 0)
+            {
+                float.TryParse(datas[0], NumberStyles.Number, Warfare.Data.Locale, out _distance);
+                if (datas.Length > 1)
+                    float.TryParse(datas[1], NumberStyles.Number, Warfare.Data.Locale, out _armorMultiplier);
+            }
 
-        if (_distance == -1f)
-            _distance = 250f;
-        if (_armorMultiplier == -1f)
-            _armorMultiplier = 0.1f;
-        _squadArmorMultiplier = _armorMultiplier * (TargetPlayer.IsSquadLeader() ? Data.SquadLeaderDistributedMultiplier : Data.SquadDistributedMultiplier);
-        base.StartEffect();
+            if (_distance == -1f)
+                _distance = 250f;
+            if (_armorMultiplier == -1f)
+                _armorMultiplier = 0.1f;
+            _squadArmorMultiplier = _armorMultiplier * (TargetPlayer.IsSquadLeader() ? Data.SquadLeaderDistributedMultiplier : Data.SquadDistributedMultiplier);
+        }
+        base.StartEffect(onStart);
     }
 }

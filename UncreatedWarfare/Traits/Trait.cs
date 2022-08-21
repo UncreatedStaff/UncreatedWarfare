@@ -3,9 +3,11 @@ using System;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Framework;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
@@ -13,6 +15,7 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 
 namespace Uncreated.Warfare.Traits;
 public abstract class Trait : MonoBehaviour, ITranslationArgument
@@ -32,6 +35,8 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     }
     public UCPlayer TargetPlayer => _targetPlayer;
     public bool Inited => _inited;
+    public bool IsAwaitingStagingPhase { get; private set; }
+    public bool _hasStarted = false;
     public virtual void Init(TraitData data, UCPlayer target)
     {
         _data = data;
@@ -44,8 +49,36 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
     {
         if (!_inited)
             throw new InvalidOperationException("Trait " + this.GetType().Name + " was not initialized. You must run Trait.Init(...) within the same frame of creating it.");
-
         TraitManager.ActivateTrait(this);
+        if (Warfare.Data.Gamemode.State == Gamemodes.EState.STAGING)
+        {
+            Warfare.Data.Gamemode.StagingPhaseOver += InternalStart;
+            IsAwaitingStagingPhase = true;
+            TargetPlayer.SendChat(T.TraitAwaitingStagingPhase, Data);
+            StartTime = Time.realtimeSinceStartup + Warfare.Data.Gamemode.StagingSeconds;
+            TraitSigns.SendAllTraitSigns(TargetPlayer, Data);
+        }
+        else
+        {
+            InternalStart();
+        }
+    }
+
+    private void InternalStart()
+    {
+        if (IsAwaitingStagingPhase)
+        {
+            Warfare.Data.Gamemode.StagingPhaseOver -= InternalStart;
+            IsAwaitingStagingPhase = false;
+        }
+        if (this == null)
+            return;
+        if (Data.LastsUntilDeath)
+            TargetPlayer.SendChat(T.RequestTraitGivenUntilDeath, Data);
+        else if (Data.EffectDuration > 0)
+            TargetPlayer.SendChat(T.RequestTraitGivenTimer, Data, Localization.GetTimeFromSeconds(Mathf.CeilToInt(Data.EffectDuration), TargetPlayer));
+        else
+            TargetPlayer.SendChat(T.RequestTraitGiven, Data);
         OnActivate();
         StartTime = Time.realtimeSinceStartup;
         if (Data.LastsUntilDeath)
@@ -72,6 +105,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
             StopCoroutine(_coroutine);
             _coroutine = null;
         }
+        TargetPlayer.SendChat(T.TraitExpiredDeath, Data);
         Destroy(this);
     }
 
@@ -83,10 +117,12 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
 
         TraitManager.DeactivateTrait(this);
         OnDeactivate();
+        TraitSigns.SendAllTraitSigns(TargetPlayer, Data);
     }
     protected virtual void OnActivate()
     {
         GiveItems();
+        TraitSigns.SendAllTraitSigns(TargetPlayer, Data);
     }
     protected virtual void OnDeactivate() { }
     /// <summary>Only called if <see cref="TraitData.TickSpeed"/> is > 0.</summary>
@@ -143,7 +179,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
                 if (!buff._shouldBlink)
                 {
                     buff._shouldBlink = true;
-                    TraitManager.BuffUI.UpdateBuffTimeState(buff);
+                    buff.OnBlinkingUpdated();
                 }
                 yield return new WaitForSecondsRealtime(tl);
             }
@@ -152,13 +188,14 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
                 yield return new WaitForSecondsRealtime(tl - Buff.BLINK_LEAD_TIME);
                 ActiveTime = Data.EffectDuration - Buff.BLINK_LEAD_TIME;
                 buff._shouldBlink = true;
-                TraitManager.BuffUI.UpdateBuffTimeState(buff);
+                buff.OnBlinkingUpdated();
                 yield return new WaitForSecondsRealtime(Buff.BLINK_LEAD_TIME);
             }
         }
         ActiveTime = Data.EffectDuration;
         yield return null;
-
+        if (!Data.LastsUntilDeath)
+            TargetPlayer.SendChat(T.TraitExpiredTime, Data);
         _coroutine = null;
         Destroy(this);
     }
@@ -189,6 +226,7 @@ public class TraitData : ITranslationArgument
         }
     }
 
+    [JsonSettable]
     [JsonPropertyName("credit_cost")]
     public int CreditCost;
 
@@ -287,6 +325,12 @@ public class TraitData : ITranslationArgument
     [FormatDisplay(typeof(Trait), "Name")]
     [FormatDisplay("Name")]
     public const string NAME = "n";
+    [FormatDisplay(typeof(Trait), "Type Name")]
+    [FormatDisplay("Type Name")]
+    public const string TYPE_NAME = "t";
+    [FormatDisplay(typeof(Trait), "Colored Type Name")]
+    [FormatDisplay("Colored Type Name")]
+    public const string COLOR_TYPE_NAME = "ct";
     [FormatDisplay(typeof(Trait), "Description")]
     [FormatDisplay("Description")]
     public const string DESCRIPTION = "d";
@@ -300,15 +344,19 @@ public class TraitData : ITranslationArgument
     {
         if (format is not null && !format.Equals(NAME, StringComparison.Ordinal))
         {
+            if (format.Equals(TYPE_NAME, StringComparison.Ordinal))
+                return TypeName;
             if (format.Equals(DESCRIPTION, StringComparison.Ordinal))
                 return DescriptionTranslations != null
                     ? DescriptionTranslations.Translate(language).Replace('\n', ' ')
                     : Translation.Null(flags & TranslationFlags.NoRichText);
+            if (format.Equals(COLOR_TYPE_NAME, StringComparison.Ordinal))
+                return Localization.Colorize(TeamManager.GetTeamHexColor(Team), TypeName, flags);
             if (format.Equals(COLOR_NAME, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), NameTranslations != null
                     ? NameTranslations.Translate(language).Replace('\n', ' ')
                     : TypeName, flags);
-            else if (format.Equals(COLOR_DESCRIPTION, StringComparison.Ordinal))
+            if (format.Equals(COLOR_DESCRIPTION, StringComparison.Ordinal))
                 return Localization.Colorize(TeamManager.GetTeamHexColor(Team), DescriptionTranslations != null
                     ? DescriptionTranslations.Translate(language).Replace('\n', ' ')
                     : Translation.Null(flags & TranslationFlags.NoRichText), flags);

@@ -72,7 +72,7 @@ public class ShutdownCommand : Command
         {
             int secs = F.ParseTime(time);
             if (secs == 0)
-                throw ctx.Reply(T.InvalidTime);
+                throw ctx.Reply(T.InvalidTime, time);
             ShutdownIn(secs, reason, ctx.CallerID);
             ctx.Defer();
         }

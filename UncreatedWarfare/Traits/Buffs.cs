@@ -20,7 +20,7 @@ public abstract class Buff : Trait, IBuff
     string IBuff.Icon => Data.Icon.HasValue ? Data.Icon.Value : BuffUI.DEFAULT_BUFF_ICON;
     public bool IsActivated
     {
-        get => _isActivated;
+        get => _isActivated && !IsAwaitingStagingPhase;
         set
         {
             if (_isActivated == value)
@@ -32,17 +32,18 @@ public abstract class Buff : Trait, IBuff
                 Deactivate();
         }
     }
+    public virtual bool CanEnable => true;
     protected virtual void Reactivate()
     {
-        StartEffect();
+        StartEffect(false);
         L.LogDebug("Buff reactivated: " + this.Data.TypeName);
     }
     protected virtual void Deactivate()
     {
-        ClearEffect();
+        ClearEffect(false);
         L.LogDebug("Buff deactivated: " + this.Data.TypeName);
     }
-    protected virtual void StartEffect()
+    protected virtual void StartEffect(bool onStart)
     {
         Squad? sq;
         if (Data.EffectDistributedToSquad && (sq = TargetPlayer.Squad) is not null)
@@ -55,8 +56,11 @@ public abstract class Buff : Trait, IBuff
         if (!IsActivated)
             _isActivated = true;
     }
-
-    protected virtual void ClearEffect()
+    internal virtual void OnBlinkingUpdated()
+    {
+        TraitManager.BuffUI.UpdateBuffTimeState(this);
+    }
+    protected virtual void ClearEffect(bool onDestroy)
     {
         if (IsActivated)
             _isActivated = false;
@@ -100,12 +104,12 @@ public abstract class Buff : Trait, IBuff
     protected override void OnActivate()
     {
         base.OnActivate();
-        StartEffect();
+        StartEffect(true);
     }
     protected override void OnDeactivate()
     {
         base.OnDeactivate();
-        ClearEffect();
+        ClearEffect(true);
     }
 }
 public interface IBuff

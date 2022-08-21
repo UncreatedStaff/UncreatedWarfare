@@ -98,9 +98,9 @@ public class Translation
 
         for (int i = 0; i < ct; ++i)
         {
-            if (((flag >> i) & 1) == 0)
+            if (((flag >> i) & 1) == 0 && lang == null)
             {
-                L.LogWarning("[" + (lang == null ? "DEFAULT" : lang.ToUpper()) + "] " + Key + " parameter at index " + i + " is unused.", method: "TRANSLATIONS");
+                L.LogWarning("[DEFAULT] " + Key + " parameter at index " + i + " is unused.", method: "TRANSLATIONS");
             }
         }
         --ct;

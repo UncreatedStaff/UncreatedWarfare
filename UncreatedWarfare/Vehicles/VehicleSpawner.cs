@@ -910,4 +910,13 @@ public sealed class VehicleBayComponent : MonoBehaviour
         UpdateSign();
     }
     private void UpdateSign() => spawnData.UpdateSign();
+
+    internal void TimeSync()
+    {
+        checkTime = true;
+        lastIdleCheck = 0f;
+        lastSignUpdate = 0f;
+        lastLocCheck = 0f;
+        lastDelayCheck = 0f;
+    }
 }

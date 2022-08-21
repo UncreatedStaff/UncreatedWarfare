@@ -20,6 +20,7 @@ public sealed class Motivated : Buff
         SquadDistributedMultiplier = 0.25f,
         SquadLeaderDistributedMultiplier = 0.5f,
         Icon = "ª",
+        Cooldown = 900,
         EffectDuration = 300,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 4 } },
         EffectDistributedToSquad = true,
@@ -73,15 +74,18 @@ public sealed class Motivated : Buff
         }
         base.SquadLeaderPromoted();
     }
-    protected override void StartEffect()
+    protected override void StartEffect(bool onStart)
     {
-        if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
-            _multiplier = 2f;
+        if (onStart)
+        {
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
+                _multiplier = 2f;
 
-        _squadMultiplier = (_multiplier - 1) * (TargetPlayer.IsSquadLeader() ? Data.SquadLeaderDistributedMultiplier : Data.SquadDistributedMultiplier) + 1;
+            _squadMultiplier = (_multiplier - 1) * (TargetPlayer.IsSquadLeader() ? Data.SquadLeaderDistributedMultiplier : Data.SquadDistributedMultiplier) + 1;
 
-        if (_squadMultiplier < 0f)
-            _squadMultiplier = 1f;
-        base.StartEffect();
+            if (_squadMultiplier < 0f)
+                _squadMultiplier = 1f;
+        }
+        base.StartEffect(onStart);
     }
 }

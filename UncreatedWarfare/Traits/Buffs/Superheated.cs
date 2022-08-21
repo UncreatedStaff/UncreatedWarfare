@@ -25,6 +25,7 @@ public class Superheated : Buff
         ClassList = new EClass[] { EClass.PILOT },
         ClassListIsBlacklist = false,
         Icon = "£",
+        Cooldown = 900,
         EffectDuration = 600,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 7 } },
         EffectDistributedToSquad = false,
@@ -33,18 +34,21 @@ public class Superheated : Buff
 
     private float _multiplier = -1f;
     private float _squadMultiplier = -1f;
-    protected override void StartEffect()
+    protected override void StartEffect(bool onStart)
     {
-        if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
-            _multiplier = 0.2f;
+        if (onStart)
+        {
+            if (Data.Data is null || !float.TryParse(Data.Data, NumberStyles.Number, Warfare.Data.Locale, out _multiplier))
+                _multiplier = 0.2f;
 
-        _squadMultiplier = Data.EffectDistributedToSquad
-            ? _multiplier *
-              (TargetPlayer.IsSquadLeader()
-                  ? Data.SquadLeaderDistributedMultiplier
-                  : Data.SquadDistributedMultiplier)
-            : 0f;
-        base.StartEffect();
+            _squadMultiplier = Data.EffectDistributedToSquad
+                ? _multiplier *
+                  (TargetPlayer.IsSquadLeader()
+                      ? Data.SquadLeaderDistributedMultiplier
+                      : Data.SquadDistributedMultiplier)
+                : 0f;
+        }
+        base.StartEffect(onStart);
     }
     internal override void SquadLeaderDemoted()
     {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.Permissions;
@@ -10,9 +11,9 @@ namespace Uncreated.Warfare;
 
 public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownConfig>
 {
-    private static CooldownManager Singleton;
+    public static CooldownManager Singleton;
     public static new CooldownConfig Config => Singleton.IsLoaded() ? Singleton.ConfigurationFile.Data : null!;
-    private List<Cooldown> cooldowns;
+    internal List<Cooldown> cooldowns;
     public CooldownManager() : base ("cooldowns", Data.Paths.CooldownStorage, "config.json") { }
     public override void Load()
     {
@@ -32,11 +33,12 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     /// <exception cref="SingletonUnloadedException"/>
     public static void StartCooldown(UCPlayer player, ECooldownType type, float seconds, params object[] data)
     {
+        if (seconds <= 0f) return;
         Singleton.AssertLoaded();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (HasCooldown(player, type, out Cooldown existing))
+        if (HasCooldown(player, type, out Cooldown existing, data))
             existing.timeAdded = Time.realtimeSinceStartup;
         else
             Singleton.cooldowns.Add(new Cooldown(player, type, seconds, data));
@@ -48,16 +50,22 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Singleton.cooldowns.RemoveAll(c => c.player == null || c.Timeleft.TotalSeconds <= 0);
-        cooldown = Singleton.cooldowns.Find(c => c.player.CSteamID == player.CSteamID && c.type == type && StatesEqual(data, c.data));
+        Singleton.cooldowns.RemoveAll(c => c.player == null || c.SecondsLeft <= 0f);
+        cooldown = Singleton.cooldowns.Find(c => c.type == type && c.player.Steam64 == player.Steam64 && StatesEqual(data, c.data));
         return cooldown != null;
     }
     private static bool StatesEqual(object[] state1, object[] state2)
     {
+        if (state1 is null && state2 is null) return true;
+        if (state1 is null) return state2.Length == 0;
+        if (state2 is null) return state1.Length == 0;
+        if (state1.Length == 0 && state2.Length == 0) return true;
+
         if (state1.Length != state2.Length) return false;
+
         for (int i = 0; i < state1.Length; ++i)
         {
-            if (!state2[i].Equals(state1[i]))
+            if (Comparer.Default.Compare(state1[i], state2[i]) != 0)
                 return false;
         }
         return true;
@@ -71,7 +79,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         Singleton.cooldowns.RemoveAll(c => c.player == null || c.Timeleft.TotalSeconds <= 0);
-        cooldown = Singleton.cooldowns.Find(c => c.player.CSteamID == player.CSteamID);
+        cooldown = Singleton.cooldowns.Find(c => c.type == type && c.player.CSteamID == player.CSteamID);
         return cooldown != null;
     }
     public static void RemoveCooldown(UCPlayer player, ECooldownType type)
@@ -105,7 +113,6 @@ public class CooldownConfig : ConfigData
     public RotatableConfig<float> RequestVehicleCooldown;
     public RotatableConfig<float> ReviveXPCooldown;
     public RotatableConfig<float> GlobalTraitCooldown;
-    public RotatableConfig<float> IndividualTraitCooldown;
     public override void SetDefaults()
     {
         EnableCombatLogger = true;
@@ -115,8 +122,7 @@ public class CooldownConfig : ConfigData
         RequestKitCooldown = 120;
         RequestVehicleCooldown = 240;
         ReviveXPCooldown = 150f;
-        GlobalTraitCooldown = 120f;
-        IndividualTraitCooldown = 240f;
+        GlobalTraitCooldown = 0f;
     }
     public CooldownConfig() { }
 }
@@ -128,6 +134,7 @@ public class Cooldown : ITranslationArgument
     public float seconds;
     public object[] data;
     public TimeSpan Timeleft => TimeSpan.FromSeconds(Math.Max(0d, seconds - (Time.realtimeSinceStartupAsDouble - timeAdded)));
+    public float SecondsLeft => Mathf.Max(0f, seconds - (Time.realtimeSinceStartup - (float)timeAdded));
 
     public Cooldown(UCPlayer player, ECooldownType type, float seconds, params object[] data)
     {

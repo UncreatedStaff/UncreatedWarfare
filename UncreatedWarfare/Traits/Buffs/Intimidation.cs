@@ -25,6 +25,7 @@ public class Intimidation : Buff
         RequireSquadLeader = false,
         RequireSquad = true,
         Icon = "µ",
+        Cooldown = 900,
         EffectDuration = 450,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 6 } },
         EffectDistributedToSquad = true,

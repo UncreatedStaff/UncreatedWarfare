@@ -21,6 +21,7 @@ public class Ghost : Buff
         ClassList = new EClass[] { EClass.PILOT, EClass.CREWMAN },
         ClassListIsBlacklist = true,
         Icon = "£",
+        Cooldown = 900,
         EffectDuration = 600,
         UnlockRequirements = new BaseUnlockRequirement[] { new LevelUnlockRequirement() { UnlockLevel = 5 } },
         EffectDistributedToSquad = false,
