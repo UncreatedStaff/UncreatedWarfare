@@ -47,9 +47,11 @@ public class UCPlayer : IPlayer
     public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 5);
     public readonly UCPlayerKeys Keys;
     private string? _lang;
+    internal bool _isLeaving;
     public string Language => _lang ??= Localization.GetLang(Steam64);
     public Player Player { get; internal set; }
     public bool IsTalking => !lastMuted && isTalking && IsOnline;
+    public bool IsLeaving => _isLeaving;
     public CSteamID CSteamID { get; internal set; }
     public string CharacterName;
     public string NickName;

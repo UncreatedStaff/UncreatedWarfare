@@ -246,6 +246,7 @@ public static class EventDispatcher
         if (OnPlayerLeaving == null) return;
         UCPlayer? player = UCPlayer.FromCSteamID(steamID);
         if (player is null) return;
+        player._isLeaving = true;
         PlayerEvent args = new PlayerEvent(player);
         foreach (EventDelegate<PlayerEvent> inv in OnPlayerLeaving.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
         {

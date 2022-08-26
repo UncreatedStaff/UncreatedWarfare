@@ -8,7 +8,8 @@ using Uncreated.Warfare.Squads;
 namespace Uncreated.Warfare.Traits;
 public class BuffUI : UnturnedUI
 {
-    public const int MAX_BUFFS = 6;
+    public const int MAX_BUFFS = 8;
+    public const int RESERVED_BUFFS = 2;
     public const string DEFAULT_BUFF_ICON = "±";
     public UnturnedUIElement Buff1 = new UnturnedUIElement("Buff1");
     public UnturnedUIElement Buff2 = new UnturnedUIElement("Buff2");
@@ -16,6 +17,8 @@ public class BuffUI : UnturnedUI
     public UnturnedUIElement Buff4 = new UnturnedUIElement("Buff4");
     public UnturnedUIElement Buff5 = new UnturnedUIElement("Buff5");
     public UnturnedUIElement Buff6 = new UnturnedUIElement("Buff6");
+    public UnturnedUIElement Buff7 = new UnturnedUIElement("Buff7");
+    public UnturnedUIElement Buff8 = new UnturnedUIElement("Buff8");
 
     public UnturnedLabel SolidIcon1 = new UnturnedLabel("Buff1_Solid");
     public UnturnedLabel SolidIcon2 = new UnturnedLabel("Buff2_Solid");
@@ -23,6 +26,8 @@ public class BuffUI : UnturnedUI
     public UnturnedLabel SolidIcon4 = new UnturnedLabel("Buff4_Solid");
     public UnturnedLabel SolidIcon5 = new UnturnedLabel("Buff5_Solid");
     public UnturnedLabel SolidIcon6 = new UnturnedLabel("Buff6_Solid");
+    public UnturnedLabel SolidIcon7 = new UnturnedLabel("Buff7_Solid");
+    public UnturnedLabel SolidIcon8 = new UnturnedLabel("Buff8_Solid");
 
     public UnturnedLabel BlinkingIcon1 = new UnturnedLabel("Buff1_Blinking");
     public UnturnedLabel BlinkingIcon2 = new UnturnedLabel("Buff2_Blinking");
@@ -30,6 +35,8 @@ public class BuffUI : UnturnedUI
     public UnturnedLabel BlinkingIcon4 = new UnturnedLabel("Buff4_Blinking");
     public UnturnedLabel BlinkingIcon5 = new UnturnedLabel("Buff5_Blinking");
     public UnturnedLabel BlinkingIcon6 = new UnturnedLabel("Buff6_Blinking");
+    public UnturnedLabel BlinkingIcon7 = new UnturnedLabel("Buff7_Blinking");
+    public UnturnedLabel BlinkingIcon8 = new UnturnedLabel("Buff8_Blinking");
 
     public UnturnedUIElement[] Parents;
     public UnturnedLabel[]     SolidIcons;
@@ -38,15 +45,15 @@ public class BuffUI : UnturnedUI
     {
         Parents = new UnturnedUIElement[MAX_BUFFS]
         {
-            Buff1, Buff2, Buff3, Buff4, Buff5, Buff6
+            Buff1, Buff2, Buff3, Buff4, Buff5, Buff6, Buff7, Buff8
         };
         SolidIcons = new UnturnedLabel[MAX_BUFFS]
         {
-            SolidIcon1, SolidIcon2, SolidIcon3, SolidIcon4, SolidIcon5, SolidIcon6
+            SolidIcon1, SolidIcon2, SolidIcon3, SolidIcon4, SolidIcon5, SolidIcon6, SolidIcon7, SolidIcon8
         };
         BlinkingIcons = new UnturnedLabel[MAX_BUFFS]
         {
-            BlinkingIcon1, BlinkingIcon2, BlinkingIcon3, BlinkingIcon4, BlinkingIcon5, BlinkingIcon6
+            BlinkingIcon1, BlinkingIcon2, BlinkingIcon3, BlinkingIcon4, BlinkingIcon5, BlinkingIcon6, BlinkingIcon7, BlinkingIcon8
         };
     }
 
@@ -70,6 +77,7 @@ public class BuffUI : UnturnedUI
     }
     public bool AddBuff(UCPlayer player, IBuff buff)
     {
+        bool res = buff.Reserved;
         lock (player.ActiveBuffs)
         {
             int ind = -1;
@@ -83,18 +91,35 @@ public class BuffUI : UnturnedUI
                     break;
                 }
             }
-            if (ind == -1)
+            if (ind == -1 || !res && ind < MAX_BUFFS - RESERVED_BUFFS - 1)
                 return false; // no room
+            
             string icon = buff.Icon;
             ITransportConnection c = player.Connection;
 
-            SolidIcons[ind].SetText(c, icon);
+            (buff.IsBlinking ? BlinkingIcons[ind] : SolidIcons[ind]).SetText(c, icon);
             SolidIcons[ind].SetVisibility(c, !buff.IsBlinking);
             BlinkingIcons[ind].SetVisibility(c, buff.IsBlinking);
             Parents[ind].SetVisibility(c, true);
             player.ActiveBuffs[ind] = buff;
         }
         return true;
+    }
+    public static bool HasBuffRoom(UCPlayer player, bool reserved)
+    {
+        lock (player.ActiveBuffs)
+        {
+            for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+            {
+                IBuff? buff = player.ActiveBuffs[i];
+                if (buff == null)
+                {
+                    if (reserved || i < MAX_BUFFS - RESERVED_BUFFS)
+                        return true;
+                }
+            }
+        }
+        return false;
     }
 
     public bool RemoveBuff(UCPlayer player, IBuff buff)
@@ -133,7 +158,7 @@ public class BuffUI : UnturnedUI
                     IBuff? next = player.ActiveBuffs[i + 1];
                     if (next != null)
                     {
-                        SolidIcons[i].SetText(c, next.Icon);
+                        (next.IsBlinking ? BlinkingIcons[i] : SolidIcons[i]).SetText(c, next.Icon);
                         SolidIcons[i].SetVisibility(c, !next.IsBlinking);
                         BlinkingIcons[i].SetVisibility(c, next.IsBlinking);
                         Parents[i].SetVisibility(c, true);
@@ -166,7 +191,8 @@ public class BuffUI : UnturnedUI
                 return;
             }
         }
-        UpdateBuffTimeState(buff, buff.Player, blink);
+        if (buff.Player.IsOnline)
+            UpdateBuffTimeState(buff, buff.Player, blink);
     }
     private void UpdateBuffTimeState(IBuff buff, UCPlayer player, bool isBlinking)
     {

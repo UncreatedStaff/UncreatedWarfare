@@ -110,10 +110,11 @@ public static class PlayerManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         player.IsOnline = false;
+        
 
         OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
         _dict.Remove(player.Steam64);
-        SquadManager.OnPlayerDisconnected(player);
+        player.Player = null!;
     }
     public static IEnumerable<UCPlayer> GetNearbyPlayers(float range, Vector3 point)
     {

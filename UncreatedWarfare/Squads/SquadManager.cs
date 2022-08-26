@@ -11,11 +11,12 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Squads.UI;
 
 namespace Uncreated.Warfare.Squads;
 
-public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
+public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDeclareWinListener
 {
     public SquadManager() : base("squad") { }
 
@@ -38,13 +39,16 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         "HOTEL"
     };
     public static bool Loaded => _singleton.IsLoaded();
-
+    public static SquadManager Singleton => _singleton;
+    public Commanders Commanders;
     public override void Load()
     {
         base.Load();
         Squads.Clear();
         KitManager.OnKitChanged += OnKitChanged;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
+        EventDispatcher.OnPlayerLeaving += OnPlayerLeaving;
+        Commanders = new Commanders();
         _singleton = this;
     }
     public override void Reload()
@@ -57,8 +61,10 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
         _singleton = null!;
         base.Unload();
         ClearSquads();
+        EventDispatcher.OnPlayerLeaving -= OnPlayerLeaving;
         EventDispatcher.OnGroupChanged -= OnGroupChanged;
         KitManager.OnKitChanged -= OnKitChanged;
+        Commanders = null!;
     }
     private void ClearSquads()
     {
@@ -77,6 +83,34 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
     {
         _singleton.IsLoaded();
         ReplicateKitChange(player);
+        ulong team = player.GetTeam();
+        UCPlayer? cmd = _singleton.Commanders.GetCommander(team);
+        if (cmd != null && cmd.Steam64 == player.Steam64 && kit.SquadLevel != ESquadLevel.COMMANDER)
+        {
+            if (team == 1ul)
+                _singleton.Commanders.ActiveCommanderTeam1 = null;
+            else if (team == 2ul)
+                _singleton.Commanders.ActiveCommanderTeam2 = null;
+        }
+    }
+    private void OnPlayerLeaving(PlayerEvent e)
+    {
+        ulong team = e.Player.GetTeam();
+        UCPlayer? cmd = _singleton.Commanders.GetCommander(team);
+        if (cmd != null && cmd.Steam64 == e.Steam64)
+        {
+            if (team == 1ul)
+                _singleton.Commanders.ActiveCommanderTeam1 = null;
+            else if (team == 2ul)
+                _singleton.Commanders.ActiveCommanderTeam2 = null;
+        }
+        if (e.Player.Squad != null)
+            LeaveSquad(e.Player, e.Player.Squad);
+    }
+    void IDeclareWinListener.OnWinnerDeclared(ulong winner)
+    {
+        _singleton.Commanders.ActiveCommanderTeam1 = null;
+        _singleton.Commanders.ActiveCommanderTeam2 = null;
     }
     private void OnGroupChanged(GroupChanged e)
     {
@@ -383,15 +417,6 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>
                 MenuUI.MemberParents[i].SetVisibility(c, false);
             }
         }
-    }
-    public static void OnPlayerDisconnected(UCPlayer player)
-    {
-        _singleton.IsLoaded();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (player.Squad != null)
-            LeaveSquad(player, player.Squad);
     }
 
     public static string FindUnusedSquadName(ulong team)
@@ -710,6 +735,21 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     public bool IsLocked;
     public UCPlayer Leader;
     public List<UCPlayer> Members;
+    /// <summary><see langword="true"/> if this <see cref="Squad"/>'s <seealso cref="Leader"/> is a commander.</summary>
+    public bool IsCommandingSquad
+    {
+        get
+        {
+            if (Leader is not null && Leader.IsOnline && SquadManager.Loaded)
+            {
+                UCPlayer? cmd = SquadManager.Singleton.Commanders.GetCommander(Team);
+                if (cmd is not null && cmd.Steam64 == Leader.Steam64)
+                    return true;
+            }
+            return false;
+        }
+    }
+
     public Squad(string name, UCPlayer leader, ulong team, EBranch branch)
     {
         Name = name;

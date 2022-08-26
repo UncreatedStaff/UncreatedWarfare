@@ -1225,7 +1225,7 @@ internal static class T
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait and it expires in time.", "Minutes", "Seconds")]
     public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait and it expires on death.")]
-    public static readonly Translation<int, int> TraitSignAlreadyActiveDeath = new Translation<int, int>("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
+    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColor);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you are on either global or individual cooldown (whichever is longer).", "Minutes", "Seconds")]
     public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
     #endregion
@@ -1257,6 +1257,8 @@ internal static class T
     public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>", TranslationFlags.NoColor);
     public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>", TranslationFlags.NoColor);
     public static readonly Translation KitPremiumOwned = new Translation("<#c$kit_level_dollars_owned$>OWNED</color>", TranslationFlags.NoColor);
+    public static readonly Translation KitCommanderTakenByViewer = new Translation("<#c$kit_level_dollars_owned$>You are the <#cedcde>COMMANDER</color>.</color>", TranslationFlags.NoColor);
+    public static readonly Translation<IPlayer> KitCommanderTaken = new Translation<IPlayer>("<#f0a31c>Taken by <#fff>{0}</color></color>", TranslationFlags.NoColor, UCPlayer.NICK_NAME_FORMAT);
     public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>", TranslationFlags.NoColor);
     public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>", TranslationFlags.NoColor);
     public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}", TranslationFlags.NoColor);
@@ -1634,7 +1636,23 @@ internal static class T
     public static readonly Translation<int> WinUIValueCaches = new Translation<int>("{0} Caches Left", TranslationFlags.UnityUI);
     public static readonly Translation<FactionInfo> WinUIHeaderWinner = new Translation<FactionInfo>("{0}\r\nhas won the battle!", TranslationFlags.UnityUI, FactionInfo.COLOR_DISPLAY_NAME_FORMAT);
     #endregion
-    
+
+    #region UAV
+    private const string UAV_SECTION = "UAVs";
+    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a UAV when it's destroyed as an event of their death.")]
+    public static readonly Translation UAVDestroyedDeath = new Translation("<#e86868>Your <#cc99ff>UAV</color> was destroyed because you died.");
+    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a UAV when it's destroyed as an event of their death.")]
+    public static readonly Translation UAVDestroyedTimer = new Translation("<#e86868>Your <#cc99ff>UAV</color> is no longer active.");
+    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a newly deployed UAV when a marker isn't placed.")]
+    public static readonly Translation UAVDeployedSelf = new Translation("<#33cccc>A <#cc99ff>UAV</color> has been activated at your location.");
+    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a newly deployed UAV if the timer in game config is set when a marker isn't placed.")]
+    public static readonly Translation<float> UAVDeployedTimeSelf = new Translation<float>("<#33cccc>A <#cc99ff>UAV</color> has been dispatched to your location. It will arrive in {0} seconds.", "F0");
+    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a newly deployed UAV when a marker is placed.")]
+    public static readonly Translation<GridLocation> UAVDeployedMarker = new Translation<GridLocation>("<#33cccc>A <#cc99ff>UAV</color> has been activated at <#fff>{0}</color>.");
+    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a newly deployed UAV if the timer in game config is set when a marker is placed.")]
+    public static readonly Translation<GridLocation, float> UAVDeployedTimeMarker = new Translation<GridLocation, float>("<#33cccc>A <#cc99ff>UAV</color> has been dispatched to <#fff>{0}</color>. It will arrive in {1} seconds.", arg1Fmt: "F0");
+    #endregion
+
     internal const string PLURAL = "$plural$";
     [FormatDisplay(typeof(object), "Uppercase")]
     internal const string UPPERCASE = "upper";

@@ -388,6 +388,7 @@ partial class JSONMethods
 
         // Request
         { "kit_public_header", "ffffff" },
+        { "kit_public_commander_header", "f0a31c" },
         { "kit_level_available", "ff974d" },
         { "kit_level_unavailable", "917663" },
         { "kit_level_dollars", "7878ff" },

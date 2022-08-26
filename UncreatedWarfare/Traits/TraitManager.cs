@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
@@ -473,7 +474,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
         }
 
         bool isBuff = typeof(Buff).IsAssignableFrom(trait.Type);
-        if (isBuff && GetBuffCount(ctx.Caller) > BuffUI.MAX_BUFFS)
+        if (isBuff && BuffUI.HasBuffRoom(ctx.Caller, false))
             throw ctx.Reply(T.RequestTraitTooManyBuffs);
 
         for (int i = 0; i < trait.UnlockRequirements.Length; i++)
@@ -598,13 +599,25 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
     }
     private static int GetBuffCount(UCPlayer player)
     {
-        if (player.ActiveBuffs is null) return 0;
-        for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+        int ct = 0;
+        if (player.ActiveBuffs is not null)
         {
-            if (player.ActiveBuffs[i] == null) return i;
+            for (int i = 0; i < player.ActiveBuffs.Length; ++i)
+            {
+                if (player.ActiveBuffs[i] != null)
+                    ++ct;
+            }
         }
 
-        return player.ActiveBuffs.Length;
+        if (Data.Gamemode.State == EState.STAGING)
+        {
+            for (int i = 0; i < player.ActiveTraits.Count; ++i)
+            {
+                if (player.ActiveTraits[i] is Buff b && b.IsAwaitingStagingPhase)
+                    ++ct;
+            }
+        }
+        return ct;
     }
     public static void GiveTrait(UCPlayer player, TraitData data)
     {

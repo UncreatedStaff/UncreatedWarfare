@@ -14,6 +14,7 @@ public abstract class NonTraitBuff : IBuff
     public string Icon => _icon;
     public UCPlayer Player => _player;
     public bool IsBlinking { get; set; }
+    bool IBuff.Reserved => false;
     public NonTraitBuff(string icon, UCPlayer player)
     {
         this._icon = icon;

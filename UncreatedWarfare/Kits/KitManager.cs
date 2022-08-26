@@ -112,6 +112,7 @@ public class KitManager : BaseReloadSingleton
                 kit.SignTexts = new Dictionary<string, string>(1);
                 kit.UnlockRequirements = new BaseUnlockRequirement[0];
                 kit.Skillsets = new Skillset[0];
+                kit.SquadLevel = (ESquadLevel)R.GetByte(14);
                 Kits.Add(kit.PrimaryKey, kit);
             });
             await Data.DatabaseManager.QueryAsync("SELECT * FROM `kit_items`;", new object[0], R =>
@@ -251,10 +252,10 @@ public class KitManager : BaseReloadSingleton
                 await Data.DatabaseManager.QueryAsync(
                     "INSERT INTO `kit_data` (`InternalName`, `Class`, `Branch`, `Team`, `CreditCost`, " +
                     "`UnlockLevel`, `IsPremium`, `PremiumCost`, `IsLoadout`, `TeamLimit`, `Cooldown`, `Disabled`, `WeaponText`" + (hasPk ? ", `pk`" : string.Empty) + ") VALUES " +
-                    "(@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12" + (hasPk ? ", @13" : string.Empty) + ")" +
+                    "(@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12, @13" + (hasPk ? ", @14" : string.Empty) + ")" +
                     "ON DUPLICATE KEY UPDATE " +
                     "`InternalName` = @0, `Class` = @1, `Branch` = @2, `Team` = @3, `CreditCost` = @4, `UnlockLevel` = @5, `IsPremium` = @6, `PremiumCost` = @7, `IsLoadout` = @8, " +
-                    "`TeamLimit` = @9, `Cooldown` = @10, `Disabled` = @11, `WeaponText` = @12, `pk` = LAST_INSERT_ID(`pk`); " +
+                    "`TeamLimit` = @9, `Cooldown` = @10, `Disabled` = @11, `WeaponText` = @12, `SquadLevel` = @13, `pk` = LAST_INSERT_ID(`pk`); " +
                     "SET @kitPk := (SELECT LAST_INSERT_ID() AS `pk`); " +
                     "DELETE FROM `kit_lang` WHERE `Kit` = @kitPk; " +
                     "DELETE FROM `kit_items` WHERE `Kit` = @kitPk; " +
@@ -262,7 +263,7 @@ public class KitManager : BaseReloadSingleton
                     "DELETE FROM `kit_skillsets` WHERE `Kit` = @kitPk; " +
                     "DELETE FROM `kit_unlock_requirements` WHERE `Kit` = @kitPk; " +
                     "SELECT @kitPk;",
-                    hasPk ? new object[14]
+                    hasPk ? new object[15]
                     {
                         kit.Name,
                         (int)kit.Class,
@@ -277,9 +278,10 @@ public class KitManager : BaseReloadSingleton
                         kit.Cooldown,
                         kit.Disabled,
                         kit.Weapons,
+                        (byte)kit.SquadLevel,
                         kit.PrimaryKey
                     }
-                    : new object[13]
+                    : new object[14]
                     {
                         kit.Name,
                         (int)kit.Class,
@@ -293,6 +295,7 @@ public class KitManager : BaseReloadSingleton
                         kit.TeamLimit,
                         kit.Cooldown,
                         kit.Disabled,
+                        (byte)kit.SquadLevel,
                         kit.Weapons
                     }, R =>
                     {
@@ -868,7 +871,7 @@ public class KitManager : BaseReloadSingleton
                     for (int j = 0; j < Skillset.DEFAULT_SKILLSETS.Length; j++)
                     {
                         ref Skillset skillset2 = ref Skillset.DEFAULT_SKILLSETS[j];
-                        if (skillset2.TypeEquals(ref skillset))
+                        if (skillset2.TypeEquals(in skillset))
                         {
                             for (int k = 0; k < kit.Skillsets.Length; k++)
                             {

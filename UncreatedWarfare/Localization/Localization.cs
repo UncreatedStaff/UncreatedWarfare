@@ -16,6 +16,7 @@ using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -306,7 +307,7 @@ public static class Localization
                                 if (kit.SignTexts.Count > 0)
                                     name = kit.SignTexts.First().Value;
                                 else
-                                    name = kit.DisplayName ?? kit.Name;
+                                    name = kit.Name;
                         for (int i = 0; i < name.Length; i++)
                         {
                             char @char = name[i];
@@ -372,10 +373,8 @@ public static class Localization
     }
     public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
     {
-        ulong playerteam = 0;
-        ref Ranks.RankData playerrank = ref Ranks.RankManager.GetRank(ucplayer, out bool success);
-
         bool keepline = false;
+        ulong team = ucplayer.GetTeam();
         string name;
         if (!ucplayer.OnDuty() && kit.SignTexts != null)
         {
@@ -384,7 +383,7 @@ public static class Localization
                     if (kit.SignTexts.Count > 0)
                         name = kit.SignTexts.First().Value;
                     else
-                        name = kit.DisplayName ?? kit.Name;
+                        name = kit.Name;
 
 
             for (int i = 0; i < name.Length; i++)
@@ -401,12 +400,24 @@ public static class Localization
         {
             name = kit.Name;
         }
-        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_public_header"), true) + "</b>";
+        name = "<b>" + name.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex(kit.SquadLevel == ESquadLevel.COMMANDER ? "kit_public_commander_header" : "kit_public_header"), true) + "</b>";
         string weapons = kit.Weapons ?? string.Empty;
         if (weapons.Length > 0)
             weapons = "<b>" + weapons.ToUpper().ColorizeTMPro(UCWarfare.GetColorHex("kit_weapon_list"), true) + "</b>";
         string cost = string.Empty;
         string playercount;
+        if (kit.SquadLevel == ESquadLevel.COMMANDER && SquadManager.Loaded)
+        {
+            UCPlayer? c = SquadManager.Singleton.Commanders.GetCommander(team);
+            if (c != null)
+            {
+                if (c.Steam64 != ucplayer.Steam64)
+                    cost = T.KitCommanderTaken.Translate(language, c);
+                else
+                    cost = T.KitCommanderTakenByViewer.Translate(language);
+                goto n;
+            }
+        }
         if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
         {
             if (ucplayer != null)
@@ -427,6 +438,7 @@ public static class Localization
                 break;
             }
         }
+    n:
         if (cost == string.Empty && kit.CreditCost > 0)
         {
             if (ucplayer != null)
@@ -443,7 +455,7 @@ public static class Localization
         {
             playercount = T.KitUnlimited.Translate(language);
         }
-        else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : playerteam, true))
+        else if (kit.IsLimited(out int total, out int allowed, kit.Team > 0 && kit.Team < 3 ? kit.Team : team, true))
         {
             playercount = T.KitPlayerCount.Translate(language, total, allowed).ColorizeTMPro(UCWarfare.GetColorHex("kit_player_counts_unavailable"), true);
         }

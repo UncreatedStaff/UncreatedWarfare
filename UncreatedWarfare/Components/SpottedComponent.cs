@@ -2,7 +2,11 @@
 using System;
 using System.Collections.Generic;
 using Uncreated.Players;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
@@ -13,18 +17,30 @@ public class SpottedComponent : MonoBehaviour
     public Guid EffectGUID { get; private set; }
     public ESpotted Type { get; private set; }
     public ushort EffectID { get; private set; }
+    // CAN BE OFFLINE
     public UCPlayer? CurrentSpotter { get; private set; }
+    public ulong Team => team;
     public bool IsActive { get => _coroutine != null; }
     private float _frequency;
-    private int _defaultTimer;
+    private float _defaultTimer;
     private Coroutine? _coroutine;
     public static readonly Guid LaserDesignatorGUID = new Guid("3879d9014aca4a17b3ed749cf7a9283e");
+    public float toBeUnspottedNonUAV = 0f;
+    public float endTime = 0f;
+    public bool UAVMode = false;
+    public UCPlayer? LastNonUAVSpotter = null;
+    private ulong team;
 
     public static readonly HashSet<SpottedComponent> ActiveMarkers = new HashSet<SpottedComponent>();
-
-
+    private static bool statInit = false;
     public void Initialize(ESpotted type)
     {
+        if (!statInit)
+        {
+            EventDispatcher.OnEnterVehicle += OnEnterVehicle;
+            EventDispatcher.OnExitVehicle += OnExitVehicle;
+            statInit = true;
+        }
         Type = type;
         CurrentSpotter = null;
 
@@ -69,7 +85,31 @@ public class SpottedComponent : MonoBehaviour
         else
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
     }
-    public static void MarkTarget(Transform transform, UCPlayer spotter)
+
+    private static void OnExitVehicle(ExitVehicle e)
+    {
+        if (e.Vehicle.TryGetComponent(out SpottedComponent comp))
+        {
+            if (comp.IsActive)
+            {
+                if (e.Player.Player.TryGetComponent(out SpottedComponent pcomp) && pcomp.IsActive)
+                    StartOrUpdateBuff(e.Player, false);
+                else
+                    RemoveBuff(e.Player);
+            }
+        }
+    }
+
+    private static void OnEnterVehicle(EnterVehicle e)
+    {
+        if (e.Vehicle.TryGetComponent(out SpottedComponent comp))
+        {
+            if (comp.IsActive)
+                StartOrUpdateBuff(e.Player, true);
+        }
+    }
+
+    public static void MarkTarget(Transform transform, UCPlayer spotter, bool isUav = false)
     {
         if (transform.gameObject.TryGetComponent(out SpottedComponent spotted))
         {
@@ -81,21 +121,21 @@ public class SpottedComponent : MonoBehaviour
                     spotted.TryAnnounce(spotter, vehicle.asset.vehicleName);
 
                 L.LogDebug("Spotting vehicle " + vehicle.asset.vehicleName);
-                spotted.Activate(spotter);
+                spotted.Activate(spotter, isUav);
             }
             else if (transform.TryGetComponent(out Player player) && player.GetTeam() != spotter.GetTeam() && !Ghost.IsHidden(UCPlayer.FromPlayer(player)!))
             {
                 spotted.TryAnnounce(spotter, T.SpottedTargetPlayer.Translate(L.DEFAULT));
                 L.LogDebug("Spotting player " + player.name);
 
-                spotted.Activate(spotter);
+                spotted.Activate(spotter, isUav);
             }
             else if (transform.TryGetComponent(out Cache cache) && cache.Team != spotter.GetTeam())
             {
                 spotted.TryAnnounce(spotter, T.SpottedTargetCache.Translate(L.DEFAULT));
                 L.LogDebug("Spotting cache " + cache.Name);
 
-                spotted.Activate(spotter);
+                spotted.Activate(spotter, isUav);
             }
             else
             {
@@ -104,7 +144,7 @@ public class SpottedComponent : MonoBehaviour
                 {
                     spotted.TryAnnounce(spotter, T.SpottedTargetFOB.Translate(L.DEFAULT));
                     L.LogDebug("Spotting barricade " + drop.asset.itemName);
-                    spotted.Activate(spotter);
+                    spotted.Activate(spotter, isUav);
                 }
             }
         }
@@ -112,7 +152,7 @@ public class SpottedComponent : MonoBehaviour
 
     public void OnTargetKilled(int assistXP)
     {
-        if (CurrentSpotter != null)
+        if (CurrentSpotter != null && CurrentSpotter.IsOnline)
         {
             Points.AwardXP(CurrentSpotter, assistXP, T.XPToastSpotterAssist);
         }
@@ -122,23 +162,93 @@ public class SpottedComponent : MonoBehaviour
     {
         Deactivate();
     }
-    public void Activate(UCPlayer spotter) => Activate(spotter, _defaultTimer);
-    public void Activate(UCPlayer spotter, int seconds)
+    public void Activate(UCPlayer spotter, bool isUav) => Activate(spotter, _defaultTimer, isUav);
+    public void Activate(UCPlayer spotter, float seconds, bool isUav)
     {
+        endTime = Time.realtimeSinceStartup + seconds;
+        if (!isUav)
+            toBeUnspottedNonUAV = endTime;
+        UAVMode = isUav;
         if (_coroutine != null)
             StopCoroutine(_coroutine);
 
         CurrentSpotter = spotter;
+        team = spotter.GetTeam();
 
-        _coroutine = StartCoroutine(MarkerLoop(seconds));
+        _coroutine = StartCoroutine(MarkerLoop());
         
         spotter.ActivateMarker(this);
-
-        
+        if (Type is ESpotted.INFANTRY or ESpotted.LIGHT_VEHICLE or ESpotted.ARMOR or ESpotted.AIRCRAFT or ESpotted.EMPLACEMENT)
+        {
+            if (Type == ESpotted.INFANTRY)
+            {
+                UCPlayer? target = UCPlayer.FromPlayer(GetComponent<Player>());
+                if (target != null)
+                    StartOrUpdateBuff(target, false);
+            }
+            else if (TryGetComponent(out InteractableVehicle vehicle) && vehicle.passengers.Length > 0)
+            {
+                for (int i = 0; i < vehicle.passengers.Length; ++i)
+                {
+                    UCPlayer? target = UCPlayer.FromSteamPlayer(vehicle.passengers[i].player);
+                    if (target != null)
+                        StartOrUpdateBuff(target, true);
+                }
+            }
+        }
     }
+    internal void OnUAVLeft()
+    {
+        if (IsActive)
+        {
+            if (LastNonUAVSpotter != null && LastNonUAVSpotter.IsOnline && LastNonUAVSpotter.GetTeam() == Team)
+            {
+                endTime = toBeUnspottedNonUAV;
+                CurrentSpotter = LastNonUAVSpotter;
+                UAVMode = false;
+            }
+            else Deactivate();
+        }
+    }
+
+    private static void StartOrUpdateBuff(UCPlayer target, bool isVehicle)
+    {
+        if (!isVehicle)
+        {
+            InteractableVehicle? veh = target.Player.movement.getVehicle();
+            if (veh != null && veh.TryGetComponent(out SpottedComponent c) && c.IsActive)
+                isVehicle = true;
+        }
+        for (int i = 0; i < target.ActiveBuffs.Length; ++i)
+        {
+            if (target.ActiveBuffs[i] is SpottedBuff b)
+            {
+                if (b.IsVehicle != isVehicle)
+                {
+                    b.IsVehicle = isVehicle;
+                    TraitManager.BuffUI.UpdateBuffTimeState(b);
+                }
+                return;
+            }
+        }
+
+        TraitManager.BuffUI.AddBuff(target, new SpottedBuff(target) { IsVehicle = isVehicle });
+    }
+    private static void RemoveBuff(UCPlayer target)
+    {
+        for (int i = 0; i < target.ActiveBuffs.Length; ++i)
+        {
+            if (target.ActiveBuffs[i] is SpottedBuff b)
+            {
+                TraitManager.BuffUI.RemoveBuff(target, b);
+                break;
+            }
+        }
+    }
+
     public void Deactivate()
     {
-        if (CurrentSpotter != null)
+        if (CurrentSpotter != null && CurrentSpotter.IsOnline)
             CurrentSpotter.DeactivateMarker(this);
 
         if (_coroutine != null)
@@ -147,15 +257,34 @@ public class SpottedComponent : MonoBehaviour
         _coroutine = null;
         CurrentSpotter = null;
 
+        if (Type is ESpotted.INFANTRY or ESpotted.LIGHT_VEHICLE or ESpotted.ARMOR or ESpotted.AIRCRAFT or ESpotted.EMPLACEMENT)
+        {
+            if (Type == ESpotted.INFANTRY)
+            {
+                UCPlayer? target = UCPlayer.FromPlayer(GetComponent<Player>());
+                if (target != null)
+                    RemoveBuff(target);
+            }
+            else if (TryGetComponent(out InteractableVehicle vehicle) && vehicle.passengers.Length > 0)
+            {
+                for (int i = 0; i < vehicle.passengers.Length; ++i)
+                {
+                    UCPlayer? target = UCPlayer.FromSteamPlayer(vehicle.passengers[i].player);
+                    if (target != null)
+                        RemoveBuff(target);
+                }
+            }
+        }
         ActiveMarkers.Remove(this);
+        UAVMode = false;
     }
-    private void SendMarkers()
+    internal void SendMarkers()
     {
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            var player = PlayerManager.OnlinePlayers[i];
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
 
-            if (player.GetTeam() == CurrentSpotter!.GetTeam() && (player.Position - transform.position).sqrMagnitude < Math.Pow(650, 2))
+            if (player.GetTeam() == team && (player.Position - transform.position).sqrMagnitude < Math.Pow(650, 2))
                 EffectManager.sendEffect(EffectID, player.Connection, transform.position);
         }
     }
@@ -177,17 +306,15 @@ public class SpottedComponent : MonoBehaviour
                 ChatManager.serverSendMessage(t2, Palette.AMBIENT, spotter.SteamPlayer, set.Next.SteamPlayer, EChatMode.SAY, null, true);
         }
     }
-    private IEnumerator<WaitForSeconds> MarkerLoop(int seconds)
+    private IEnumerator<WaitForSeconds> MarkerLoop()
     {
         ActiveMarkers.Add(this);
 
-        int counter = 0;
-
-        while (counter < seconds * (1 / _frequency))
+        while (UAVMode || Time.realtimeSinceStartup < endTime)
         {
-            SendMarkers();
+            if (!UAVMode)
+                SendMarkers();
 
-            counter++;
             yield return new WaitForSeconds(_frequency);
         }
 
@@ -201,5 +328,20 @@ public class SpottedComponent : MonoBehaviour
         AIRCRAFT,
         EMPLACEMENT,
         FOB
+    }
+
+    private sealed class SpottedBuff : IBuff
+    {
+        public readonly UCPlayer Player;
+        public bool IsVehicle = false;
+        bool IBuff.IsBlinking => true;
+        bool IBuff.Reserved => true;
+        string IBuff.Icon => IsVehicle ? Gamemode.Config.UI.VehicleSpottedIcon : Gamemode.Config.UI.SpottedIcon;
+        UCPlayer IBuff.Player => Player;
+
+        public SpottedBuff(UCPlayer player)
+        {
+            Player = player;
+        }
     }
 }

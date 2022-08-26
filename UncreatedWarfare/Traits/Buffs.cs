@@ -16,6 +16,7 @@ public abstract class Buff : Trait, IBuff
     internal bool _shouldBlink = false;
     private bool _isActivated = true;
     public virtual bool IsBlinking => _shouldBlink;
+    bool IBuff.Reserved => false;
     UCPlayer IBuff.Player => TargetPlayer;
     string IBuff.Icon => Data.Icon.HasValue ? Data.Icon.Value : BuffUI.DEFAULT_BUFF_ICON;
     public bool IsActivated
@@ -115,6 +116,7 @@ public abstract class Buff : Trait, IBuff
 public interface IBuff
 {
     bool IsBlinking { get; }
+    bool Reserved { get; }
     string Icon { get; }
     UCPlayer Player { get; }
 }

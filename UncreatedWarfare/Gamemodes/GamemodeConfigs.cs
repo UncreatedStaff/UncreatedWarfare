@@ -69,11 +69,19 @@ public class GENERAL_GM_CONFIG
     public RotatableConfig<float> AMCKillTime;
     public RotatableConfig<float> LeaderboardDelay;
     public RotatableConfig<float> LeaderboardTime;
+    public RotatableConfig<float> UAVStartDelay;
+    public RotatableConfig<float> UAVRadius;
+    public RotatableConfig<float> UAVScanSpeed;
+    public RotatableConfig<float> UAVAliveTime;
     public void SetDefaults()
     {
         AMCKillTime = 10f;
         LeaderboardDelay = 8f;
         LeaderboardTime = 30f;
+        UAVStartDelay = 15f;
+        UAVRadius = 350f;
+        UAVScanSpeed = 1f;
+        UAVAliveTime = 60f;
     }
 }
 
@@ -116,6 +124,9 @@ public class UI_CONFIG
     public bool EnablePlayerCount;
     public bool ShowPointsOnUI;
     public string ProgressChars;
+    public string SpottedIcon;
+    public string VehicleSpottedIcon;
+    public string UAVIcon;
     public char PlayerIcon;
     public char AttackIcon;
     public char DefendIcon;
@@ -163,6 +174,9 @@ public class UI_CONFIG
         AttackIcon = 'µ';
         DefendIcon = '´';
         LockIcon = '²';
+        UAVIcon = "ŀ";
+        SpottedIcon = "£";
+        VehicleSpottedIcon = "£";
     }
 }
 

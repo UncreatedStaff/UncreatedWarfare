@@ -19,6 +19,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Structures;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -1078,5 +1079,15 @@ internal class _DebugCommand : Command
         {
             L.Log($"{cooldown.type}: {cooldown.Timeleft:hh\\:mm\\:ss}, {(cooldown.data is null || cooldown.data.Length == 0 ? "NO DATA" : string.Join(";", cooldown.data))}");
         }
+    }
+
+
+    private void giveuav(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
+
+        UAV.SpawnUAV(ctx.Caller, ctx.Caller, true);
+        ctx.Defer();
     }
 }
