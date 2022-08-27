@@ -1428,6 +1428,7 @@ internal static class T
     #endregion
 
     #region Tips
+    public static readonly Translation<IPlayer> TipUAVRequest = new Translation<IPlayer>("<#d9c69a>{0} Requested a UAV!", TranslationFlags.UnityUI, UCPlayer.COLOR_NICK_NAME_FORMAT);
     public static readonly Translation TipPlaceRadio = new Translation("Place a <#ababab>FOB RADIO</color>.", TranslationFlags.UnityUI);
     public static readonly Translation TipPlaceBunker = new Translation("Build a <#a5c3d9>FOB BUNKER</color> so that your team can spawn.", TranslationFlags.UnityUI);
     public static readonly Translation TipUnloadSupplies = new Translation("<#d9c69a>DROP SUPPLIES</color> onto the FOB.", TranslationFlags.UnityUI);
@@ -1639,18 +1640,53 @@ internal static class T
 
     #region UAV
     private const string UAV_SECTION = "UAVs";
-    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a UAV when it's destroyed as an event of their death.")]
+    [TranslationData(UAV_SECTION, "Sent to the owner of a UAV when it's destroyed as an event of their death.")]
     public static readonly Translation UAVDestroyedDeath = new Translation("<#e86868>Your <#cc99ff>UAV</color> was destroyed because you died.");
-    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a UAV when it's destroyed as an event of their death.")]
+    [TranslationData(UAV_SECTION, "Sent to the owner of a UAV when it's destroyed as an event of their death.")]
     public static readonly Translation UAVDestroyedTimer = new Translation("<#e86868>Your <#cc99ff>UAV</color> is no longer active.");
-    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a newly deployed UAV when a marker isn't placed.")]
+    [TranslationData(UAV_SECTION, "Sent to the owner of a newly deployed UAV when a marker isn't placed.")]
     public static readonly Translation UAVDeployedSelf = new Translation("<#33cccc>A <#cc99ff>UAV</color> has been activated at your location.");
-    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a newly deployed UAV if the timer in game config is set when a marker isn't placed.")]
+    [TranslationData(UAV_SECTION, "Sent to the owner of a newly deployed UAV if the timer in game config is set when a marker isn't placed.")]
     public static readonly Translation<float> UAVDeployedTimeSelf = new Translation<float>("<#33cccc>A <#cc99ff>UAV</color> has been dispatched to your location. It will arrive in {0} seconds.", "F0");
-    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a newly deployed UAV when a marker is placed.")]
+    [TranslationData(UAV_SECTION, "Sent to the owner of a newly deployed UAV when a marker is placed.")]
     public static readonly Translation<GridLocation> UAVDeployedMarker = new Translation<GridLocation>("<#33cccc>A <#cc99ff>UAV</color> has been activated at <#fff>{0}</color>.");
-    [TranslationData(UAV_SECTION, Description = "Sent to the owner of a newly deployed UAV if the timer in game config is set when a marker is placed.")]
+    [TranslationData(UAV_SECTION, "Sent to the owner of a newly deployed UAV if the timer in game config is set when a marker is placed.")]
     public static readonly Translation<GridLocation, float> UAVDeployedTimeMarker = new Translation<GridLocation, float>("<#33cccc>A <#cc99ff>UAV</color> has been dispatched to <#fff>{0}</color>. It will arrive in {1} seconds.", arg1Fmt: "F0");
+    [TranslationData(UAV_SECTION, "Sent to the commander of a newly deployed UAV when a marker isn't placed.")]
+    public static readonly Translation<GridLocation, IPlayer> UAVDeployedSelfCommander = new Translation<GridLocation, IPlayer>("<#33cccc>A <#cc99ff>UAV</color> has been activated at {1}'s location (<#fff>{0}</color>).", arg1Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the commander of a newly deployed UAV if the timer in game config is set when a marker isn't placed.")]
+    public static readonly Translation<float, GridLocation, IPlayer> UAVDeployedTimeSelfCommander = new Translation<float, GridLocation, IPlayer>("<#33cccc>A <#cc99ff>UAV</color> has been dispatched to {2}'s location (<#fff>{1}</color>). It will arrive in {0} seconds.", "F0", arg2Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the commander of a newly deployed UAV when a marker is placed.")]
+    public static readonly Translation<GridLocation, IPlayer> UAVDeployedMarkerCommander = new Translation<GridLocation, IPlayer>("<#33cccc>A <#cc99ff>UAV</color> has been activated at <#fff>{0}</color> for {1}.", arg1Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the commander of a newly deployed UAV if the timer in game config is set when a marker is placed.")]
+    public static readonly Translation<GridLocation, float, IPlayer> UAVDeployedTimeMarkerCommander = new Translation<GridLocation, float, IPlayer>("<#33cccc>A <#cc99ff>UAV</color> has been dispatched to <#fff>{0}</color> for {2}. It will arrive in {1} seconds.", arg1Fmt: "F0", arg2Fmt: UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent when the player tries to request a UAV without a kit.")]
+    public static readonly Translation RequestUAVNoKit = new Translation("<#e86868>Request a <#cedcde>SQUAD LEADER</color> kit before trying to requet a <#cc99ff>UAV</color>.");
+    [TranslationData(UAV_SECTION, "Sent when the player tries to request a UAV while not a Squadleader.")]
+    public static readonly Translation RequestUAVNotSquadleader = new Translation("<#e86868>You have to be a squad leader and have a <#cedcde>SQUAD LEADER</color> kit to request a <#cc99ff>UAV</color>.");
+    [TranslationData(UAV_SECTION, "Sent when the player requests a UAV from someone other than themselves as feedback.", "The active commander.")]
+    public static readonly Translation<IPlayer> RequestUAVSent = new Translation<IPlayer>("<#33cccc>A request was sent to <#c$commander$>{0}</color> for a <#cc99ff>UAV</color>.", UCPlayer.NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent when the player requests a UAV from someone other than themselves to the commander.", "The requester of the UAV.", "The requester's squad.", "Location of request.")]
+    public static readonly Translation<IPlayer, Squad, GridLocation> RequestUAVTell = new Translation<IPlayer, Squad, GridLocation>("<#33cccc>{0} from squad <#cedcde><uppercase>{1}</uppercase></color> wants to deploy a <#cc99ff>UAV</color> at <#fff>{2}</color>.\n<#cedcde>Type /confirm or /deny in the next 15 seconds.", UCPlayer.COLOR_NICK_NAME_FORMAT, Squad.NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent when the player tries to request a UAV while no one on their team has a commander kit.")]
+    public static readonly Translation RequestUAVNoActiveCommander = new Translation("<#e86868>There's currently no players with the <#c$commander$>commander</color> kit on your team. <#cc99ff>UAV</color>s must be requested from a <#c$commander$>commander</color>.");
+    [TranslationData(UAV_SECTION, "Sent to the commander if the requester disconnected before the commander confirmed.", "The requester.")]
+    public static readonly Translation<IPlayer> RequestUAVRequesterLeft = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} disconnected.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the requested if the commander disconnected before they confirmed.", "The commander.")]
+    public static readonly Translation<IPlayer> RequestUAVCommanderLeft = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because <#c$commander$>{0}</color> disconnected.", UCPlayer.NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the commander if the requester changes teams before the commander confirmed.", "The requester.")]
+    public static readonly Translation<IPlayer> RequestUAVRequesterChangedTeams = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} changed teams.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the requested if the commander changes team before they confirmed.", "The commander.")]
+    public static readonly Translation<IPlayer> RequestUAVCommanderChangedTeams = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because <#c$commander$>{0}</color> changed teams.", UCPlayer.NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the commander if the requester changes classes to a non-SL class, leaves their squad, or promotes someone else before the commander confirmed.", "The requester.")]
+    public static readonly Translation<IPlayer> RequestUAVRequesterNotSquadLeader = new Translation<IPlayer>("<#e86868>The <#cc99ff>UAV</color> request was cancelled because {0} changed teams.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the requested if the commander stops being commander before they confirmed.", "The commander.")]
+    public static readonly Translation<IPlayer> RequestUAVCommanderNoLongerCommander = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was cancelled because {0} is no longer the <#c$commander$>commander</color>.", UCPlayer.COLOR_NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the requested if the commander denies their UAV request.", "The commander.")]
+    public static readonly Translation<IPlayer> RequestUAVDenied = new Translation<IPlayer>("<#e86868>Your <#cc99ff>UAV</color> request was denied by <#c$commander$>{0}</color>.", UCPlayer.NICK_NAME_FORMAT);
+    [TranslationData(UAV_SECTION, "Sent to the requested if someone else is already requesting a UAV.")]
+    public static readonly Translation RequestAlreadyActive = new Translation("<#e86868>Someone else on your team is already requesting a <#cc99ff>UAV</color>.");
+
     #endregion
 
     internal const string PLURAL = "$plural$";

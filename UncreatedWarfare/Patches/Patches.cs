@@ -7,6 +7,7 @@ using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Squads;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -223,8 +224,11 @@ public static partial class Patches
 
             if (callingPlayer.isAdmin || duty)
                 text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
+            else if (caller != null && SquadManager.Loaded && SquadManager.Singleton.Commanders.IsCommander(caller))
+                text = "<color=#" + UCWarfare.GetColorHex("commander") + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
             else
-                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", "");
+                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(team) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
+
             if (mode == EChatMode.GROUP)
                 text = "[T] " + text;
 

@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿#define ENABLE_SPOTTED_BUFF
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Players;
@@ -19,7 +20,8 @@ public class SpottedComponent : MonoBehaviour
     public ushort EffectID { get; private set; }
     // CAN BE OFFLINE
     public UCPlayer? CurrentSpotter { get; private set; }
-    public ulong Team => team;
+    public ulong SpottingTeam => team;
+    public ulong OwnerTeam { get => ownerTeam; set => ownerTeam = value; }
     public bool IsActive { get => _coroutine != null; }
     private float _frequency;
     private float _defaultTimer;
@@ -30,17 +32,25 @@ public class SpottedComponent : MonoBehaviour
     public bool UAVMode = false;
     public UCPlayer? LastNonUAVSpotter = null;
     private ulong team;
+    private ulong ownerTeam;
+    public Vector3 UAVLastKnown { get; internal set; }
 
     public static readonly HashSet<SpottedComponent> ActiveMarkers = new HashSet<SpottedComponent>();
+    public static readonly List<SpottedComponent> AllMarkers = new List<SpottedComponent>(128);
+#if ENABLE_SPOTTED_BUFF
     private static bool statInit = false;
-    public void Initialize(ESpotted type)
+#endif
+    public void Initialize(ESpotted type, ulong ownerTeam)
     {
+        this.ownerTeam = ownerTeam;
+#if ENABLE_SPOTTED_BUFF
         if (!statInit)
         {
             EventDispatcher.OnEnterVehicle += OnEnterVehicle;
             EventDispatcher.OnExitVehicle += OnExitVehicle;
             statInit = true;
         }
+#endif
         Type = type;
         CurrentSpotter = null;
 
@@ -84,8 +94,10 @@ public class SpottedComponent : MonoBehaviour
         }
         else
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
-    }
 
+        AllMarkers.Add(this);
+    }
+#if ENABLE_SPOTTED_BUFF
     private static void OnExitVehicle(ExitVehicle e)
     {
         if (e.Vehicle.TryGetComponent(out SpottedComponent comp))
@@ -108,7 +120,7 @@ public class SpottedComponent : MonoBehaviour
                 StartOrUpdateBuff(e.Player, true);
         }
     }
-
+#endif
     public static void MarkTarget(Transform transform, UCPlayer spotter, bool isUav = false)
     {
         if (transform.gameObject.TryGetComponent(out SpottedComponent spotted))
@@ -161,6 +173,7 @@ public class SpottedComponent : MonoBehaviour
     private void OnDestroy()
     {
         Deactivate();
+        AllMarkers.Remove(this);
     }
     public void Activate(UCPlayer spotter, bool isUav) => Activate(spotter, _defaultTimer, isUav);
     public void Activate(UCPlayer spotter, float seconds, bool isUav)
@@ -177,7 +190,9 @@ public class SpottedComponent : MonoBehaviour
 
         _coroutine = StartCoroutine(MarkerLoop());
         
-        spotter.ActivateMarker(this);
+        if (!isUav)
+            spotter.ActivateMarker(this);
+#if ENABLE_SPOTTED_BUFF
         if (Type is ESpotted.INFANTRY or ESpotted.LIGHT_VEHICLE or ESpotted.ARMOR or ESpotted.AIRCRAFT or ESpotted.EMPLACEMENT)
         {
             if (Type == ESpotted.INFANTRY)
@@ -196,12 +211,14 @@ public class SpottedComponent : MonoBehaviour
                 }
             }
         }
+#endif
+        L.LogDebug("New Spotter activated: " + this);
     }
     internal void OnUAVLeft()
     {
         if (IsActive)
         {
-            if (LastNonUAVSpotter != null && LastNonUAVSpotter.IsOnline && LastNonUAVSpotter.GetTeam() == Team)
+            if (LastNonUAVSpotter != null && LastNonUAVSpotter.IsOnline && LastNonUAVSpotter.GetTeam() != OwnerTeam)
             {
                 endTime = toBeUnspottedNonUAV;
                 CurrentSpotter = LastNonUAVSpotter;
@@ -210,7 +227,7 @@ public class SpottedComponent : MonoBehaviour
             else Deactivate();
         }
     }
-
+#if ENABLE_SPOTTED_BUFF
     private static void StartOrUpdateBuff(UCPlayer target, bool isVehicle)
     {
         if (!isVehicle)
@@ -245,9 +262,11 @@ public class SpottedComponent : MonoBehaviour
             }
         }
     }
+#endif
 
     public void Deactivate()
     {
+        L.LogDebug("New Spotter deactivated: " + this);
         if (CurrentSpotter != null && CurrentSpotter.IsOnline)
             CurrentSpotter.DeactivateMarker(this);
 
@@ -256,7 +275,7 @@ public class SpottedComponent : MonoBehaviour
 
         _coroutine = null;
         CurrentSpotter = null;
-
+#if ENABLE_SPOTTED_BUFF
         if (Type is ESpotted.INFANTRY or ESpotted.LIGHT_VEHICLE or ESpotted.ARMOR or ESpotted.AIRCRAFT or ESpotted.EMPLACEMENT)
         {
             if (Type == ESpotted.INFANTRY)
@@ -275,6 +294,7 @@ public class SpottedComponent : MonoBehaviour
                 }
             }
         }
+#endif
         ActiveMarkers.Remove(this);
         UAVMode = false;
     }
@@ -283,9 +303,9 @@ public class SpottedComponent : MonoBehaviour
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer player = PlayerManager.OnlinePlayers[i];
-
-            if (player.GetTeam() == team && (player.Position - transform.position).sqrMagnitude < Math.Pow(650, 2))
-                EffectManager.sendEffect(EffectID, player.Connection, transform.position);
+            Vector3 pos = UAVMode ? UAVLastKnown : transform.position;
+            if (player.GetTeam() == team && (player.Position - pos).sqrMagnitude < Math.Pow(650, 2))
+                EffectManager.sendEffect(EffectID, player.Connection, pos);
         }
     }
     private void TryAnnounce(UCPlayer spotter, string targetName)
@@ -312,13 +332,16 @@ public class SpottedComponent : MonoBehaviour
 
         while (UAVMode || Time.realtimeSinceStartup < endTime)
         {
-            if (!UAVMode)
-                SendMarkers();
+            SendMarkers();
 
             yield return new WaitForSeconds(_frequency);
         }
 
         Deactivate();
+    }
+    public override string ToString()
+    {
+        return $"Spotter ({GetInstanceID()}) for {Type}: {(IsActive ? "Spotted" : "Not Spotted")}, CurrentSpotter: {(CurrentSpotter == null ? "null" : CurrentSpotter.Name.PlayerName)}. Under UAV: {(UAVMode ? "Yes" : "No")}, Spotting team: {SpottingTeam}, Owner Team: {OwnerTeam}";
     }
     public enum ESpotted
     {

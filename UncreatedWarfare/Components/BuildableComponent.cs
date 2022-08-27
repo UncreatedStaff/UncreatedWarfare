@@ -153,7 +153,7 @@ public class BuildableComponent : MonoBehaviour
                 FOB? fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
                 if (fob != null)
                 {
-                    transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.FOB);
+                    transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.FOB, data.group.GetTeam());
 
                     fob.UpdateBunker(structure);
                     FOBManager.SendFOBListToTeam(fob.Team);

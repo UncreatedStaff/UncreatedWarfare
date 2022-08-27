@@ -514,7 +514,7 @@ public static class EventFunctions
                 UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[ucplayer.Steam64]);
                 Data.PlaytimeComponents.Remove(ucplayer.Steam64);
             }
-            ucplayer.Player.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.INFANTRY);
+            ucplayer.Player.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.INFANTRY, team);
             if (e.Steam64 == 76561198267927009) ucplayer.Player.channel.owner.isAdmin = true;
             UCPlayerData pt = ucplayer.Player.transform.gameObject.AddComponent<UCPlayerData>();
             pt.StartTracking(ucplayer.Player);

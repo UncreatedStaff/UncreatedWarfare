@@ -23,7 +23,7 @@ public class Tips : BaseSingleton
         _tips.Clear();
         _tips = null!;
     }
-    public static void TryGiveTip(UCPlayer player, ETip type, params string[] translationArgs)
+    public static void TryGiveTip(UCPlayer player, ETip type, params object[] translationArgs)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -33,7 +33,8 @@ public class Tips : BaseSingleton
         if (tip is null)
         {
             tip = new Tip(player.Steam64, type, translationArgs);
-            _singleton._tips.Add(tip);
+            if (tip.Cooldown > 0)
+                _singleton._tips.Add(tip);
             GiveTip(player, tip);
         }
         else if ((DateTime.Now - tip.LastSent).TotalSeconds > tip.Cooldown)
@@ -75,6 +76,7 @@ public class Tip
         TranslationArgs = translationArgs;
         switch (Type)
         {
+            case ETip.UAV_REQUEST:      Cooldown = 0;   TranslationKey = T.TipUAVRequest;                   break;
             case ETip.PLACE_RADIO:      Cooldown = 300; TranslationKey = T.TipPlaceRadio;                   break;
             case ETip.PLACE_BUNKER:     Cooldown = 3;   TranslationKey = T.TipPlaceBunker;                  break;
             case ETip.UNLOAD_SUPPLIES:  Cooldown = 120; TranslationKey = T.TipUnloadSupplies;               break;
@@ -89,5 +91,6 @@ public enum ETip
     PLACE_BUNKER,
     UNLOAD_SUPPLIES,
     HELP_BUILD,
-    LOGI_RESUPPLIED
+    LOGI_RESUPPLIED,
+    UAV_REQUEST
 }

@@ -93,19 +93,21 @@ public class VehicleComponent : MonoBehaviour
         _quota = 0;
         _requiredQuota = -1;
 
+        ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
         if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
         {
+            if (data.Team is 1 or 2)
+                team = data.Team;
             Data = data;
             isInVehiclebay = true;
         }
         lastPos = this.transform.position;
 
         countermeasures = new List<Transform>();
-
-        if (IsArmor) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.ARMOR);
-        else if (IsLightVehlice) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.LIGHT_VEHICLE);
-        else if (IsAircraft) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.AIRCRAFT);
-        else if (IsEmplacement) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.EMPLACEMENT);
+        if (IsArmor) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.ARMOR, team);
+        else if (IsLightVehlice) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.LIGHT_VEHICLE, team);
+        else if (IsAircraft) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.AIRCRAFT, team);
+        else if (IsEmplacement) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.EMPLACEMENT, team);
     }
     private void OnDestroy()
     {
@@ -403,6 +405,8 @@ public class VehicleComponent : MonoBehaviour
         {
             for (int i = 0; i < amount - existingCount; i++)
             {
+                if (!TeamManager.IsInAnyMain(Vehicle.transform.position))
+                    break;
                 if (Vehicle.trunkItems.tryAddItem(new Item(supplyAsset.id, true)))
                 {
                     addedNewCount++;

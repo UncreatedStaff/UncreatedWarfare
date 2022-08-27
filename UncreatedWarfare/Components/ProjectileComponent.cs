@@ -44,10 +44,10 @@ namespace Uncreated.Warfare.Components
             L.LogDebug("Collided with " + other.gameObject.name + " at " + gameObject.transform.position.ToString("F1") + " after " + (Time.realtimeSinceStartup - LaunchTime) + " seconds. (Predicted: " + (PredictedImpactTime - LaunchTime) + " seconds)");
         }
 
-        private float lastSpawn = 0f;
         internal float PredictedImpactTime;
         internal Vector3 PredictedLandingPosition;
-
+#if DEBUG
+        private float lastSpawn = 0f;
         void Update()
         {
             float time = Time.time;
@@ -58,5 +58,6 @@ namespace Uncreated.Warfare.Components
                 lastSpawn = time;
             }
         }
+#endif
     }
 }

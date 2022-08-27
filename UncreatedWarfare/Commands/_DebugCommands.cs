@@ -20,7 +20,6 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Squads.Commander;
-using Uncreated.Warfare.Structures;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -1086,8 +1085,19 @@ internal class _DebugCommand : Command
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
+        bool isMarker = ctx.Caller.Player.quests.isMarkerPlaced;
+        Vector3 pos = isMarker ? ctx.Caller.Player.quests.markerPosition : ctx.Caller.Player.transform.position;
+        pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + UAV.GROUND_HEIGHT_OFFSET) };
+        UAV.GiveUAV(ctx.Caller.GetTeam(), ctx.Caller, ctx.Caller, isMarker, pos);
+        ctx.Defer();
+    }
 
-        UAV.SpawnUAV(ctx.Caller, ctx.Caller, true);
+    private void requestuav(CommandInteraction ctx)
+    {
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
+
+        UAV.RequestUAV(ctx.Caller);
         ctx.Defer();
     }
 }

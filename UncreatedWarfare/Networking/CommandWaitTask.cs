@@ -1,82 +1,188 @@
-﻿using SDG.Unturned;
-using Steamworks;
-using System;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands.CommandSystem;
+using UnityEngine;
+using Action = System.Action;
 
-namespace Uncreated.Warfare.Networking;
+namespace Uncreated.Warfare;
 
-public sealed class CommandWaitTask
+public class CommandWaiter : CustomYieldInstruction
 {
-    public static List<CommandWaitTask> awaiters = new List<CommandWaitTask>(1);
-    private readonly CommandWaitTaskAwaiter _awaiter;
+    public static readonly List<CommandWaiter> ActiveWaiters = new List<CommandWaiter>(8);
     private readonly UCPlayer player;
-    private readonly string command;
+    private readonly string? command;
+    private readonly Type? commandType;
+    private readonly float timeout;
+    private Coroutine? timeoutCoroutine;
+    public Action? OnExpire;
+    private bool _wait;
+    private bool _responded;
+    public bool Responded => _responded;
+    public override bool keepWaiting => _wait;
+    public static CommandWaitTask WaitAsync(UCPlayer player, string commandName, int timeoutMs)
+        => new CommandWaitTask(player, commandName, timeoutMs);
+    public static CommandWaitTask WaitAsync(UCPlayer player, Type commandType, int timeoutMs)
+        => new CommandWaitTask(player, commandType, timeoutMs);
+    public CommandWaiter(UCPlayer player, string commandName, float timeout) : this(player, timeout)
+    {
+        this.command = commandName;
+    }
+    public CommandWaiter(UCPlayer player, Type commandType, float timeout) : this(player, timeout)
+    {
+        this.commandType = commandType;
+    }
+    private CommandWaiter(UCPlayer player, float timeout)
+    {
+        _wait = true;
+        this.player = player;
+        this.timeout = timeout;
+        timeoutCoroutine = UCWarfare.I.StartCoroutine(TimeoutExpired());
+    }
+    private IEnumerator TimeoutExpired()
+    {
+        yield return new WaitForSeconds(timeout);
+        _wait = false;
+        timeoutCoroutine = null;
+        Receive(false);
+    }
+    public void Cancel()
+    {
+        Receive(false);
+    }
+    private void Receive(bool responded)
+    {
+        _wait = false;
+        _responded = responded;
+        ActiveWaiters.Remove(this);
+        if (timeoutCoroutine != null)
+            UCWarfare.I.StopCoroutine(timeoutCoroutine);
+    }
     internal static void OnCommandExecuted(UCPlayer player, IExecutableCommand command)
     {
-        for (int i = 0; i < awaiters.Count; ++i)
+        for (int i = 0; i < ActiveWaiters.Count; ++i)
         {
-            if (awaiters[i].command.Equals(command.CommandName, StringComparison.OrdinalIgnoreCase) && player.Steam64 == awaiters[i].player.Steam64)
+            CommandWaiter aw = ActiveWaiters[i];
+            if (aw.command != null)
             {
-                awaiters[i]._awaiter.TellRanCommand();
+                if (player.Steam64 == aw.player.Steam64 && aw.timeoutCoroutine != null && aw.command.Equals(command.CommandName, StringComparison.OrdinalIgnoreCase))
+                {
+                    aw.Receive(true);
+                    return;
+                }
+            }
+            else if (aw.commandType is not null)
+            {
+                if (player.Steam64 == aw.player.Steam64 && aw.timeoutCoroutine != null && aw.commandType.IsAssignableFrom(command.GetType()))
+                {
+                    aw.Receive(true);
+                    return;
+                }
             }
         }
-    }
 
-    public CommandWaitTask(UCPlayer player, string command, int delayMs)
-    {
-        this.player = player;
-        this.command = command;
-        _awaiter = new CommandWaitTaskAwaiter(this);
-        awaiters.Add(this);
-        Task.Run(async () =>
-        {
-            await Task.Delay(delayMs);
-            if (!_awaiter.IsCompleted)
-                _awaiter.TellTimeout();
-        }).ConfigureAwait(false);
+        CommandWaitTask.OnCommandExecuted(player, command);
     }
-    public static CommandWaitTask WaitForCommand(UCPlayer player, string command, int delayMs)
+    public sealed class CommandWaitTask
     {
-        return new CommandWaitTask(player, command, delayMs);
-    }
-    public CommandWaitTaskAwaiter GetAwaiter() => _awaiter;
-    public sealed class CommandWaitTaskAwaiter : INotifyCompletion
-    {
-        public System.Action continuation;
-        private readonly CommandWaitTask _task;
-        public byte[] rtn;
-        public bool IsCompleted => _isCompleted;
-        private bool _isTimeout;
-        private bool _isCompleted;
-        public CommandWaitTaskAwaiter(CommandWaitTask task)
+        public static List<CommandWaitTask> awaiters = new List<CommandWaitTask>(1);
+        private readonly CommandWaitTaskAwaiter _awaiter;
+        private readonly UCPlayer player;
+        private readonly string? command;
+        private readonly Type? commandType;
+        private readonly CancellationTokenSource cancel;
+        public static void OnCommandExecuted(UCPlayer player, IExecutableCommand command)
         {
-            _task = task;
+            for (int i = 0; i < awaiters.Count; ++i)
+            {
+                CommandWaitTask aw = awaiters[i];
+                if (aw.command != null)
+                {
+                    if (player.Steam64 == aw.player.Steam64 && aw.command.Equals(command.CommandName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        aw._awaiter.TellRanCommand();
+                        break;
+                    }
+                }
+                else if (aw.commandType != null)
+                {
+                    if (player.Steam64 == aw.player.Steam64 && aw.commandType.IsAssignableFrom(command.GetType()))
+                    {
+                        aw._awaiter.TellRanCommand();
+                        break;
+                    }
+                }
+            }
         }
-        public void TellRanCommand()
+        public CommandWaitTask(UCPlayer player, string command, int delayMs)
         {
-            _isCompleted = true;
-            _isTimeout = false;
-            awaiters.Remove(_task);
-            continuation.Invoke();
+            this.player = player;
+            this.command = command;
+            this.cancel = new CancellationTokenSource(delayMs);
+            _awaiter = new CommandWaitTaskAwaiter(this);
+            awaiters.Add(this);
+            Task.Run(async () =>
+            {
+                await Task.Delay(delayMs);
+                if (!_awaiter.IsCompleted)
+                    _awaiter.TellTimeout();
+            }, cancel.Token).ConfigureAwait(false);
         }
-        public void TellTimeout()
+        public CommandWaitTask(UCPlayer player, Type type, int delayMs)
         {
-            _isTimeout = true;
-            awaiters.Remove(_task);
-            continuation.Invoke();
+            this.player = player;
+            this.commandType = type;
+            this.cancel = new CancellationTokenSource(delayMs);
+            _awaiter = new CommandWaitTaskAwaiter(this);
+            awaiters.Add(this);
+            Task.Run(async () =>
+            {
+                await Task.Delay(delayMs);
+                if (!_awaiter.IsCompleted)
+                    _awaiter.TellTimeout();
+            }, cancel.Token).ConfigureAwait(false);
         }
-        public void OnCompleted(System.Action continuation)
+
+        public CommandWaitTaskAwaiter GetAwaiter() => _awaiter;
+        public sealed class CommandWaitTaskAwaiter : INotifyCompletion
         {
-            this.continuation = continuation;
-        }
-        public bool GetResult()
-        {
-            return _isCompleted && !_isTimeout;
+            public System.Action continuation;
+            private readonly CommandWaitTask _task;
+            public byte[] rtn;
+            public bool IsCompleted => _isCompleted;
+            private bool _isTimeout;
+            private bool _isCompleted;
+            public CommandWaitTaskAwaiter(CommandWaitTask task)
+            {
+                _task = task;
+            }
+            public void TellRanCommand()
+            {
+                _isCompleted = true;
+                _isTimeout = false;
+                awaiters.Remove(_task);
+                continuation.Invoke();
+                _task.cancel.Cancel();
+                _task.cancel.Dispose();
+            }
+            public void TellTimeout()
+            {
+                _isTimeout = true;
+                awaiters.Remove(_task);
+                continuation.Invoke();
+                _task.cancel.Dispose();
+            }
+            public void OnCompleted(System.Action continuation)
+            {
+                this.continuation = continuation;
+            }
+            public bool GetResult()
+            {
+                return _isCompleted && !_isTimeout;
+            }
         }
     }
 }

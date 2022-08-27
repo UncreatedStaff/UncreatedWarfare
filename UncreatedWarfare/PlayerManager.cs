@@ -6,6 +6,7 @@ using System.Reflection;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -103,6 +104,8 @@ public static class PlayerManager
     {
         ApplyTo(e.Player);
         NetCalls.SendTeamChanged.NetInvoke(e.Steam64, F.GetTeamByte(e.NewGroup));
+        if (e.Player.Player.TryGetComponent(out SpottedComponent spot))
+            spot.OwnerTeam = e.NewTeam;
     }
     private static void OnPlayerDisconnected(UCPlayer player)
     {

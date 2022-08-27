@@ -175,11 +175,14 @@ public class UCPlayer : IPlayer
     {
         CurrentMarkers.Remove(marker);
 
-        if (CurrentMarkers.Count == 3)
+        if (CurrentMarkers.Count(x => !x.UAVMode) == 3)
         {
-            var oldest = CurrentMarkers.Last();
-            oldest.Deactivate();
-            CurrentMarkers.Remove(oldest);
+            var oldest = CurrentMarkers.LastOrDefault(x => !x.UAVMode);
+            if (oldest != null)
+            {
+                oldest.Deactivate();
+                CurrentMarkers.Remove(oldest);
+            }
         }
 
         CurrentMarkers.Insert(0, marker);

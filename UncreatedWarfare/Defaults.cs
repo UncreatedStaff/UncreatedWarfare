@@ -365,6 +365,7 @@ partial class JSONMethods
         { "credits", "b8ffc1" },
         { "rally", "5eff87" },
         { "points", "f0a31c" },
+        { "commander", "f0a31c" },
 
         // capture ui
         { "contested", "ffdc8a" },

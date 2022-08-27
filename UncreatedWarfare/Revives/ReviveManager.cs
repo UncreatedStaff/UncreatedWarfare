@@ -632,7 +632,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #pragma warning disable IDE0051
         void OnDestroy()
         {
-            if (Player is not null)
+            if (Player is not null && Player.Player != null)
             {
                 Player.Player.stance.onStanceUpdated -= StanceUpdatedLocal;
                 Player.Player.equipment.onEquipRequested -= OnEquipRequested;

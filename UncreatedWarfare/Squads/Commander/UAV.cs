@@ -3,22 +3,20 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Squads.Commander;
 public class UAV : MonoBehaviour, IBuff
 {
+    public const float GROUND_HEIGHT_OFFSET = 75f;
     private bool inited = false;
     private UCPlayer requester;
     private UCPlayer approver;
@@ -38,7 +36,18 @@ public class UAV : MonoBehaviour, IBuff
     private bool isBlinking = true;
     private bool active;
     private bool buffAdded;
+    private int activeIndex;
     private ulong team;
+    private static bool isRequestActiveT1;
+    private static bool isRequestActiveT2;
+    private static UAV? team1UAV;
+    private static UAV? team2UAV;
+    private BarricadeDrop? drop;
+    private bool didDropExist;
+    private Transform? modelAnimTransform;
+#if DEBUG
+    private float lastPing;
+#endif
     public bool IsMarker => isMarker;
     public Vector3 Position => deployPosition;
     public GridLocation GridLocation => deployGl;
@@ -53,6 +62,12 @@ public class UAV : MonoBehaviour, IBuff
     bool IBuff.Reserved => true;
     public static void RequestUAV(UCPlayer requester)
     {
+        ulong team = requester.GetTeam();
+        if ((team == 1 && isRequestActiveT1) || (team == 2 && isRequestActiveT2))
+        {
+            requester.SendChat(T.RequestAlreadyActive);
+            return;
+        }
         if (!KitManager.Loaded || !SquadManager.Loaded)
         {
             requester.SendChat(T.GamemodeError);
@@ -66,44 +81,134 @@ public class UAV : MonoBehaviour, IBuff
 
         if (kit.Class != EClass.SQUADLEADER || !requester.IsSquadLeader())
             requester.SendChat(T.RequestUAVNotSquadleader);
-
-        if (SquadManager.Singleton.Commanders.ActiveCommander != null)
+        UCPlayer? activeCommander = SquadManager.Singleton.Commanders.GetCommander(team);
+        if (activeCommander != null)
         {
-
+            bool isMarker = requester.Player.quests.isMarkerPlaced;
+            Vector3 pos = isMarker ? requester.Player.quests.markerPosition : requester.Player.transform.position;
+            pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + GROUND_HEIGHT_OFFSET) };
+            if (activeCommander.Steam64 != requester.Steam64)
+            {
+                if (team == 1) isRequestActiveT1 = true;
+                else if (team == 2) isRequestActiveT2 = true;
+                requester.SendChat(T.RequestUAVSent, activeCommander);
+                activeCommander.SendChat(T.RequestUAVTell, requester, requester.Squad!, new GridLocation(pos));
+                Tips.TryGiveTip(activeCommander, ETip.UAV_REQUEST, requester);
+                UCWarfare.I.StartCoroutine(RequestUAVCoroutine(team, requester, activeCommander, isMarker, pos));
+            }
+            else
+            {
+                GiveUAV(team, requester, activeCommander, isMarker, pos);
+            }
         }
+        else
+            requester.SendChat(T.RequestUAVNoActiveCommander);
     }
-    public static UAV GiveUAV(UCPlayer requester, UCPlayer approver)
+    private static IEnumerator RequestUAVCoroutine(ulong team, UCPlayer requester, UCPlayer activeCommander, bool isMarker, Vector3 pos)
     {
-        bool isMarker = requester.Player.quests.isMarkerPlaced;
-        Vector3 pos = isMarker ? requester.Player.quests.markerPosition : requester.Player.transform.position;
-        pos = pos with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(pos, 0f) + 75f) };
+        CommandWaiter confirmTask = new CommandWaiter(activeCommander, typeof(ConfirmCommand), 15000);
+        CommandWaiter denyTask = new CommandWaiter(activeCommander, typeof(DenyCommand), 15000);
+        while (confirmTask.keepWaiting && denyTask.keepWaiting)
+        {
+            yield return null;
+            if (!requester.IsOnline)
+            {
+                activeCommander.SendChat(T.RequestUAVRequesterLeft, requester);
+                goto cancel;
+            }
+            if (!activeCommander.IsOnline)
+            {
+                requester.SendChat(T.RequestUAVCommanderLeft, activeCommander);
+                goto cancel;
+            }
+            ulong rt = requester.GetTeam();
+            ulong ct = activeCommander.GetTeam();
+            if (rt != team)
+            {
+                activeCommander.SendChat(T.RequestUAVRequesterChangedTeams, requester);
+                goto cancel;
+            }
+            if (ct != team)
+            {
+                requester.SendChat(T.RequestUAVCommanderChangedTeams, activeCommander);
+                goto cancel;
+            }
+            if (!requester.IsSquadLeader() || requester.KitClass != EClass.SQUADLEADER)
+            {
+                activeCommander.SendChat(T.RequestUAVRequesterNotSquadLeader, requester);
+                goto cancel;
+            }
+            if (SquadManager.Singleton.Commanders.GetCommander(ct) == activeCommander)
+            {
+                requester.SendChat(T.RequestUAVCommanderNoLongerCommander, activeCommander);
+                goto cancel;
+            }
+        }
+        if (!confirmTask.Responded)
+        {
+            requester.SendChat(T.RequestUAVDenied, activeCommander);
+            goto cancel;
+        }
+
+        GiveUAV(team, requester, activeCommander, isMarker, pos);
+    cancel:
+        confirmTask.Cancel();
+        denyTask.Cancel();
+        if (team == 1)
+            isRequestActiveT1 = false;
+        else if (team == 2)
+            isRequestActiveT2 = false;
+        yield break;
+    }
+    public static UAV GiveUAV(ulong team, UCPlayer requester, UCPlayer approver, bool isMarker, Vector3 pos)
+    {
         if (isMarker)
         {
+            GridLocation loc = new GridLocation(pos);
             if (Gamemode.Config.GeneralConfig.UAVStartDelay > 0f)
-                requester.SendChat(T.UAVDeployedTimeMarker, new GridLocation(pos), Gamemode.Config.GeneralConfig.UAVStartDelay);
+            {
+                if (approver.Steam64 != requester.Steam64 && approver.IsOnline)
+                    approver.SendChat(T.UAVDeployedTimeMarkerCommander, loc, Gamemode.Config.GeneralConfig.UAVStartDelay, requester);
+                if (requester.IsOnline)
+                    requester.SendChat(T.UAVDeployedTimeMarker, loc, Gamemode.Config.GeneralConfig.UAVStartDelay);
+            }
             else
-                requester.SendChat(T.UAVDeployedMarker, new GridLocation(pos));
+            {
+                if (approver.Steam64 != requester.Steam64 && approver.IsOnline)
+                    approver.SendChat(T.UAVDeployedMarkerCommander, loc, requester);
+                if (requester.IsOnline)
+                    requester.SendChat(T.UAVDeployedMarker, loc);
+            }
         }
         else
         {
             if (Gamemode.Config.GeneralConfig.UAVStartDelay > 0f)
-                requester.SendChat(T.UAVDeployedTimeSelf, Gamemode.Config.GeneralConfig.UAVStartDelay);
+            {
+                if (approver.Steam64 != requester.Steam64 && approver.IsOnline)
+                    approver.SendChat(T.UAVDeployedTimeSelfCommander, Gamemode.Config.GeneralConfig.UAVStartDelay, new GridLocation(pos), requester);
+                if (requester.IsOnline)
+                    requester.SendChat(T.UAVDeployedTimeSelf, Gamemode.Config.GeneralConfig.UAVStartDelay);
+            }
             else
-                requester.SendChat(T.UAVDeployedSelf);
+            {
+                if (approver.Steam64 != requester.Steam64 && approver.IsOnline)
+                    approver.SendChat(T.UAVDeployedSelfCommander, new GridLocation(pos), requester);
+                if (requester.IsOnline)
+                    requester.SendChat(T.UAVDeployedSelf);
+            }
         }
 
-        return SpawnUAV(requester, approver, pos, isMarker);
+        return SpawnUAV(team, requester, approver, pos, isMarker);
     }
-    public static UAV SpawnUAV(UCPlayer requester, UCPlayer approver, Vector3 loc, bool isMarker)
+    public static UAV SpawnUAV(ulong team, UCPlayer requester, UCPlayer approver, Vector3 loc, bool isMarker)
     {
-        if (!requester.IsOnline)
-            throw new ArgumentException("Requester is not online.");
-        GameObject obj = new GameObject(requester.Name.CharacterName + "'s UAV", new Type[] { typeof(UAV) });
+        GameObject obj = new GameObject(requester.Steam64 + "'s UAV", new Type[] { typeof(UAV) });
+        obj.transform.position = loc;
         UAV uav = obj.GetComponent<UAV>();
-        uav.Init(requester, approver, loc, isMarker);
+        uav.Init(team, requester, approver, loc, isMarker);
         return uav;
     }
-    private void Init(UCPlayer requester, UCPlayer approver, Vector3 loc, bool isMarker)
+    private void Init(ulong team, UCPlayer requester, UCPlayer approver, Vector3 loc, bool isMarker)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -111,12 +216,22 @@ public class UAV : MonoBehaviour, IBuff
         this.requester = requester;
         this.approver = approver;
         startTime = Time.realtimeSinceStartup;
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
-        
-        deployPosition = isMarker ? requester.Player.quests.markerPosition : requester.Player.transform.position;
-        deployPosition = deployPosition with { y = Mathf.Min(Level.HEIGHT, F.GetHeight(deployPosition, 0f) + 75f) };
+        this.isMarker = isMarker;
+        deployPosition = loc;
         deployGl = new GridLocation(deployPosition);
-        team = requester.GetTeam();
+        this.team = team;
+        if (team == 1)
+        {
+            if (team1UAV != null)
+                Destroy(team1UAV);
+            team1UAV = this;
+        }
+        else if (team == 2)
+        {
+            if (team2UAV != null)
+                Destroy(team2UAV);
+            team2UAV = this;
+        }
 
         scanSpeed = Gamemode.Config.GeneralConfig.UAVScanSpeed;
         stDelay = Gamemode.Config.GeneralConfig.UAVStartDelay;
@@ -127,10 +242,10 @@ public class UAV : MonoBehaviour, IBuff
     }
 
     [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
-    private void OnDisable()
+    private void OnDestroy()
     {
         if (!inited) return;
-        if (Time.realtimeSinceStartup - startTime < aliveTime)
+        if (Time.realtimeSinceStartup - startTime >= aliveTime)
         {
             if (requester.IsOnline)
                 requester.SendChat(T.UAVDestroyedTimer);
@@ -140,11 +255,30 @@ public class UAV : MonoBehaviour, IBuff
             if (requester.IsOnline)
                 TraitManager.BuffUI.RemoveBuff(requester, this);
         }
+        if (drop != null && drop.model != null && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
+            BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+        if (team == 1)
+        {
+            if (team1UAV == this)
+                team1UAV = null;
+        }
+        else if (team == 2)
+        {
+            if (team2UAV == this)
+                team2UAV = null;
+        }
+        for (int j = 0; j < scanOutput.Count; ++j)
+        {
+            SpottedComponent c = scanOutput[j].Value;
+            L.LogDebug("Spotter reset: " + c);
+            c.OnUAVLeft();
+        }
     }
 
     // speed gap parameters
-    private const float BASE_START = 0.02f;
-    private const float RAMP_MULTIPLIER = 0.000656f;
+    private const float BASE_START = 0.2f;
+    private const float RAMP_MULTIPLIER = 0.004656f;
+
     [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     private void Update()
     {
@@ -159,21 +293,9 @@ public class UAV : MonoBehaviour, IBuff
             return;
         else if (!active)
         {
-            active = true;
-            isBlinking = aliveTime < Buff.BLINK_LEAD_TIME + stDelay;
-            if (!isBlinking)
-                TraitManager.BuffUI.UpdateBuffTimeState(this);
-#if DEBUG
-            CircleZone.CalculateParticleSpawnPoints(out Vector2[] pts, radius, new Vector2(deployPosition.x, deployPosition.z));
-            EffectManager.sendEffectReliable(120, Level.size, deployPosition with { y = F.GetHeight(deployPosition, 0f) });
-            for (int i = 0; i < pts.Length; ++i)
-            {
-                ref Vector2 pt = ref pts[i];
-                EffectManager.sendEffectReliable(120, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y));
-            }
-#endif
+            Activate();
         }
-        if (time - startTime > aliveTime)
+        if (time - startTime > aliveTime || (didDropExist && drop?.model == null))
         {
             Destroy(gameObject);
             return;
@@ -183,7 +305,7 @@ public class UAV : MonoBehaviour, IBuff
             isBlinking = true;
             TraitManager.BuffUI.UpdateBuffTimeState(this);
         }
-        if (time - lastScan > scanSpeed && scanOutput.Count == 0)
+        if (time - lastScan > scanSpeed && activeIndex <= 0)
         {
             lastScan = time;
             // diffing scan
@@ -200,7 +322,7 @@ public class UAV : MonoBehaviour, IBuff
                         if (ReferenceEquals(c, scanOutput[i].Value))
                             goto next;
                     }
-
+                    L.LogDebug("Spotter left: " + c);
                     c.OnUAVLeft();
                     next: ;
                 }
@@ -208,42 +330,85 @@ public class UAV : MonoBehaviour, IBuff
             else Scan();
             currentTotal = scanOutput.Count;
             currentDelay = scanSpeed / currentTotal;
+            activeIndex = scanOutput.Count;
             return;
         }
-        else if (scanOutput.Count > 0 && time - lastDequeue > currentDelay)
+        else if (activeIndex > 0 && time - lastDequeue > currentDelay)
         {
             lastDequeue = time;
-            KeyValuePair<float, SpottedComponent> c = scanOutput[scanOutput.Count - 1];
+            lastScan = time;
+            KeyValuePair<float, SpottedComponent> c = scanOutput[--activeIndex];
             float dist = c.Key;
-            currentDelay = dist <= 1f ? BASE_START : (RAMP_MULTIPLIER / radius * dist * dist + BASE_START);
-            scanOutput.RemoveAt(scanOutput.Count - 1);
+            currentDelay = dist <= 1f ? BASE_START : (RAMP_MULTIPLIER / radius * dist /* dist is already squared */ + BASE_START);
             SpottedComponent spot = c.Value;
 
-            if (spot.UAVMode && spot.CurrentSpotter != null && spot.CurrentSpotter.Steam64 == requester.Steam64)
-                spot.SendMarkers();
+            if (spot.UAVMode && spot.CurrentSpotter != null)
+            {
+                if (spot.CurrentSpotter.Steam64 == requester.Steam64)
+                {
+                    spot.UAVLastKnown = spot.transform.position;
+                    L.LogDebug("Updating spotter: " + spot);
+                }
+                else
+                {
+                    L.LogDebug("Spotter: " + spot + ": is already under the control of another UAV.");
+                }
+            }
             else
+            {
                 spot.Activate(requester, true);
+                L.LogDebug("Activated spotter: " + spot);
+            }
         }
+#if DEBUG
+        if (time - lastPing > 1.5f)
+        {
+            lastPing = time;
+            if (modelAnimTransform != null)
+            {
+                EffectManager.ClearEffectByID_AllPlayers(36112);
+                EffectManager.sendEffect(36112, Level.size * 2, modelAnimTransform.position);
+            }
+        }
+#endif
     }
-
-
-    private void OnPlayerDied(PlayerDied e)
+    private void Activate()
     {
-        if (e.Steam64 != requester.Steam64)
-            return;
-
-        Destroy(gameObject);
-        requester.SendChat(T.UAVDestroyedDeath);
+        active = true;
+        isBlinking = aliveTime < Buff.BLINK_LEAD_TIME + stDelay;
+        if (!isBlinking)
+            TraitManager.BuffUI.UpdateBuffTimeState(this);
+#if DEBUG
+        CircleZone.CalculateParticleSpawnPoints(out Vector2[] pts, radius, new Vector2(deployPosition.x, deployPosition.z));
+        EffectManager.sendEffectReliable(120, Level.size, deployPosition);
+        for (int i = 0; i < pts.Length; ++i)
+        {
+            ref Vector2 pt = ref pts[i];
+            EffectManager.sendEffectReliable(120, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y));
+        }
+#endif
+        if (drop == null && Gamemode.Config.Barricades.UAV.ValidReference(out ItemBarricadeAsset asset))
+        {
+            Transform tr = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset, asset.health, asset.getState()),
+                deployPosition, Quaternion.Euler(new Vector3(-90f, 0f, 0f)), requester.Steam64,
+                TeamManager.GetGroupID(team));
+            drop = BarricadeManager.FindBarricadeByRootTransform(tr);
+            if (drop != null)
+            {
+                didDropExist = true;
+                modelAnimTransform = drop.model.Find("UAV");
+            }
+        }
     }
     private void Scan()
     {
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+        IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         float rad = radius * radius;
-        foreach (SpottedComponent spot in SpottedComponent.ActiveMarkers)
+        foreach (SpottedComponent spot in SpottedComponent.AllMarkers)
         {
-            if (spot.Team != team && spot.isActiveAndEnabled && CanUAVSpot(spot.Type))
+            if (spot.OwnerTeam != team && spot.isActiveAndEnabled && CanUAVSpot(spot.Type))
             {
                 float dist = F.SqrDistance2D(deployPosition, spot.transform.position);
                 if (dist < rad)
@@ -252,6 +417,15 @@ public class UAV : MonoBehaviour, IBuff
         }
 
         scanOutput.Sort((a, b) => a.Key.CompareTo(b.Key));
+#if DEBUG
+        profiler.Dispose();
+        L.LogDebug(Time.realtimeSinceStartup.ToString("0.#") + " Scan output: ");
+        using IDisposable d = L.IndentLog(1);
+        for (int i = 0; i < scanOutput.Count; ++i)
+        {
+            L.LogDebug(Mathf.Sqrt(scanOutput[i].Key).ToString("0.#") + "m: " + scanOutput[i].Value.ToString());
+        }
+#endif
     }
     private static bool CanUAVSpot(SpottedComponent.ESpotted spotType)
     {

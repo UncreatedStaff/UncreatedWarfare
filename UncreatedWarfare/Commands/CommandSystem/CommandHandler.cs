@@ -422,13 +422,13 @@ public static class CommandHandler
                 }
 
                 if (player is not null)
-                    CommandWaitTask.OnCommandExecuted(player, cmd);
+                    CommandWaiter.OnCommandExecuted(player, cmd);
             }
             catch (BaseCommandInteraction i)
             {
                 i.MarkComplete();
                 if (player is not null)
-                    CommandWaitTask.OnCommandExecuted(player, cmd);
+                    CommandWaiter.OnCommandExecuted(player, cmd);
             }
             catch (Exception ex)
             {

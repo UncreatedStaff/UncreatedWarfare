@@ -196,6 +196,7 @@ public class BARRICADE_IDS
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>[]> FOBRadioGUIDs;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> Team1ZoneBlocker;
     public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> Team2ZoneBlocker;
+    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> UAV;
 
     public void SetDefaults()
     {
@@ -209,6 +210,7 @@ public class BARRICADE_IDS
         RepairStationBaseGUID = new JsonAssetReference<ItemBarricadeAsset>("26a6b91cd1944730a0f28e5f299cebf9");
         AmmoBagGUID = new JsonAssetReference<ItemBarricadeAsset>("16f55b999e9b4f158be12645e41dd753");
         VehicleBayGUID = new JsonAssetReference<ItemAsset>("c076f9e9f35f42a4b8b5711dfb230010");
+        UAV = new JsonAssetReference<ItemBarricadeAsset>("fb8f84e2617b480aadfd77bbf4a6c3ec");
         TimeLimitedStorages = new JsonAssetReference<ItemBarricadeAsset>[]
         {
             AmmoCrateGUID,
@@ -335,7 +337,6 @@ public class INSURGENCY
     public int XPCacheTeamkilled;
     public int TicketsCache;
     public int CacheStartingBuild;
-    public Dictionary<ushort, int> CacheItems;
     public void SetDefaults()
     {
         MinStartingCaches = 3;
@@ -350,6 +351,5 @@ public class INSURGENCY
         XPCacheTeamkilled = -8000;
         TicketsCache = 70;
         CacheStartingBuild = 15;
-        CacheItems = new Dictionary<ushort, int>();
     }
 }

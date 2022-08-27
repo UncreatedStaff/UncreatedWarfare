@@ -122,7 +122,7 @@ public class ReportCommand : Command
 
                 ctx.Reply(T.ReportConfirm, target, targetNames);
                 ctx.LogAction(EActionLogType.START_REPORT, string.Join(", ", ctx.Parameters));
-                bool didConfirm = await CommandWaitTask.WaitForCommand(ctx.Caller, "confirm", 10000);
+                bool didConfirm = await CommandWaiter.WaitAsync(ctx.Caller, "confirm", 10000);
                 await UCWarfare.ToUpdate();
                 if (!didConfirm)
                 {

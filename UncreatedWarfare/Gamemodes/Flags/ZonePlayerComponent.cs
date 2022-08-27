@@ -185,7 +185,7 @@ internal class ZonePlayerComponent : MonoBehaviour
         ctx.Reply(T.ZoneDeleteZoneConfirm, zone);
         Task.Run(async () =>
         {
-            if (await CommandWaitTask.WaitForCommand(player, "confirm", 10000))
+            if (await CommandWaiter.WaitAsync(player, "confirm", 10000))
             {
                 await UCWarfare.ToUpdate();
 

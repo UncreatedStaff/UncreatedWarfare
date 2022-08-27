@@ -119,7 +119,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 
         foreach (var spotted in SpottedComponent.ActiveMarkers)
         {
-            if (spotted.Team == firer.quests.groupID.m_SteamID && !(spotted.Type == SpottedComponent.ESpotted.AIRCRAFT || spotted.Type == SpottedComponent.ESpotted.INFANTRY))
+            if (spotted.SpottingTeam == firer.quests.groupID.m_SteamID && !(spotted.Type == SpottedComponent.ESpotted.AIRCRAFT || spotted.Type == SpottedComponent.ESpotted.INFANTRY))
             {
                 if ((spotted.transform.position - projectile.transform.position).sqrMagnitude < Math.Pow(aquisitionRange, 2))
                 {
