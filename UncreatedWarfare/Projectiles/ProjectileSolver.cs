@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Uncreated.Warfare.Components;
@@ -20,6 +21,8 @@ internal class ProjectileSolver : MonoBehaviour
     private PhysicsScene _physxScene;
     private readonly Queue<ProjectileData> _queue = new Queue<ProjectileData>(3);
     private ProjectileData _current;
+
+    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     private void Start()
     {
         _mainScene = SceneManager.GetActiveScene();
@@ -56,7 +59,7 @@ internal class ProjectileSolver : MonoBehaviour
             {
                 foreach (LevelObject obj2 in LevelObjects.objects[x, y].Where(x => x.asset != null && x.asset.type != EObjectType.SMALL && !getIsDecal(x)))
                 {
-                    GameObject? orig = obj2.asset.modelGameObject.getOrLoad();
+                    GameObject? orig = obj2.asset.GetOrLoadModel();
                     if (orig != null)
                     {
                         GameObject obj = Instantiate(orig, obj2.transform.position, obj2.transform.rotation);
@@ -88,6 +91,7 @@ internal class ProjectileSolver : MonoBehaviour
             }
         }
     }
+    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     private void Update()
     {
         if (_queue.Count > 0 && _current.gun is null)
@@ -97,7 +101,7 @@ internal class ProjectileSolver : MonoBehaviour
         }
     }
 
-    private static readonly InstanceGetter<UseableGun, Attachments> getAttachments = F.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments", BindingFlags.NonPublic);
+    //private static readonly InstanceGetter<UseableGun, Attachments> getAttachments = F.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments", BindingFlags.NonPublic);
     private static readonly InstanceGetter<LevelObject, bool> getIsDecal = F.GenerateInstanceGetter<LevelObject, bool>("isDecal", BindingFlags.NonPublic);
     private static readonly InstanceGetter<Rocket, bool> getIsExploded = F.GenerateInstanceGetter<Rocket, bool>("isExploded", BindingFlags.NonPublic);
     private IEnumerator Simulate()
@@ -158,6 +162,7 @@ internal class ProjectileSolver : MonoBehaviour
         _current = default;
         data.callback?.Invoke(!data.gun.player.isActiveAndEnabled ? null : data.gun.player, pos, landTime, data.gunAsset, data.ammunitionType);
     }
+    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     private void FixedUpdate()
     {
         _mainPhysxScene.Simulate(Time.fixedDeltaTime);
@@ -175,6 +180,7 @@ internal class ProjectileSolver : MonoBehaviour
         else
             _queue.Enqueue(new ProjectileData(obj, origin, direction, gun, ammo, Time.realtimeSinceStartup, callback));
     }
+    [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     private void OnDestroy()
     {
         SceneManager.UnloadSceneAsync(_simScene);
@@ -215,10 +221,12 @@ internal class ProjectileSolver : MonoBehaviour
         public bool isExploded;
         public Transform ignoreTransform;
         public Rocket OriginalRocketData;
+        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
         private void Start()
         {
             L.LogDebug("Added component to " + gameObject.name + ".");
         }
+        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
         private void OnTriggerEnter(Collider other)
         {
             L.LogDebug("hit " + other.name);
@@ -236,6 +244,7 @@ internal class ProjectileSolver : MonoBehaviour
                 body.Sleep();
             }
         }
+        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
         private void OnDestroy()
         {
             isExploded = true;

@@ -106,13 +106,13 @@ public static class Data
     public static DeathTracker DeathTracker;
     internal static HomebaseClient? NetClient;
     internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
-    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearShirt;
-    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearPants;
-    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearHat;
-    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearBackpack;
-    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearVest;
-    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearMask;
-    internal static ClientInstanceMethod<Guid, byte, byte[]> SendWearGlasses;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearShirt;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearPants;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearHat;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearBackpack;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearVest;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearMask;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearGlasses;
     public static bool UseFastKits = false;
     internal static ClientInstanceMethod SendInventory;
     internal delegate void OutputToConsole(string value, ConsoleColor color);
@@ -326,13 +326,15 @@ public static class Data
 
         try
         {
-            SendWearShirt = (typeof(PlayerClothing).GetField("SendWearShirt", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
-            SendWearPants = (typeof(PlayerClothing).GetField("SendWearPants", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
-            SendWearHat = (typeof(PlayerClothing).GetField("SendWearHat", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
-            SendWearBackpack = (typeof(PlayerClothing).GetField("SendWearBackpack", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
-            SendWearVest = (typeof(PlayerClothing).GetField("SendWearVest", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
-            SendWearMask = (typeof(PlayerClothing).GetField("SendWearMask", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
-            SendWearGlasses = (typeof(PlayerClothing).GetField("SendWearGlasses", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[]>)!;
+            SendWearShirt = (typeof(PlayerClothing).GetField("SendWearShirt", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
+            SendWearPants = (typeof(PlayerClothing).GetField("SendWearPants", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
+            SendWearHat = (typeof(PlayerClothing).GetField("SendWearHat", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
+            SendWearBackpack = (typeof(PlayerClothing).GetField("SendWearBackpack", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
+            SendWearVest = (typeof(PlayerClothing).GetField("SendWearVest", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
+            SendWearMask = (typeof(PlayerClothing).GetField("SendWearMask", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
+            SendWearGlasses = (typeof(PlayerClothing).GetField("SendWearGlasses", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
+            if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null)
+                UseFastKits |= true;
         }
         catch (Exception ex)
         {

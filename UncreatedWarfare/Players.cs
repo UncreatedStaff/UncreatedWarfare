@@ -128,7 +128,7 @@ public enum EToastMessageSeverity : byte
 
 public sealed class UCPlayerKeys
 {
-    private static readonly int KEY_COUNT = 9 + ControlsSettings.NUM_PLUGIN_KEYS;
+    private static readonly int KEY_COUNT = 10 + ControlsSettings.NUM_PLUGIN_KEYS;
 
     private static readonly KeyDown?[] _downEvents = new KeyDown?[KEY_COUNT];
     private static readonly KeyUp?[] _upEvents = new KeyUp?[KEY_COUNT];
@@ -269,9 +269,10 @@ public enum PlayerKey
     LeanRight = 7,
     [Obsolete("This is not in use right now.")]
     Reserved = 8,
-    PluginKey1 = 9,
-    PluginKey2 = 10,
-    PluginKey3 = 11,
-    PluginKey4 = 12,
-    PluginKey5 = 13
+    SteadyAim = 9,
+    PluginKey1 = 10,
+    PluginKey2 = 11,
+    PluginKey3 = 12,
+    PluginKey4 = 13,
+    PluginKey5 = 14
 }

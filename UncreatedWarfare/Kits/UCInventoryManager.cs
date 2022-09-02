@@ -106,19 +106,19 @@ public static class UCInventoryManager
             {
                 id = player.Player.clothing.GetNetId();
                 if (player.Player.clothing.shirt != 0)
-                    Data.SendWearShirt.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    Data.SendWearShirt.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.pants != 0)
-                    Data.SendWearPants.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    Data.SendWearPants.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.hat != 0)
-                    Data.SendWearHat.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    Data.SendWearHat.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.backpack != 0)
-                    Data.SendWearBackpack.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    Data.SendWearBackpack.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.vest != 0)
-                    Data.SendWearVest.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    Data.SendWearVest.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.mask != 0)
-                    Data.SendWearMask.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    Data.SendWearMask.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.glasses != 0)
-                    Data.SendWearGlasses.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                    Data.SendWearGlasses.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
             }
         }
         else
@@ -174,21 +174,28 @@ public static class UCInventoryManager
         byte[] blank = Array.Empty<byte>();
         NetId id = player.Player.clothing.GetNetId();
         byte flag = 0;
+        bool hasPlayedEffect = false;
         for (int i = 0; i < clothes.Count; ++i)
         {
             KitClothing clothing = clothes[i];
             flag |= (byte)(1 << (int)clothing.type);
-            (clothing.type switch
+            ClientInstanceMethod<Guid, byte, byte[], bool>? inv =
+                clothing.type switch
+                {
+                    EClothingType.SHIRT => Data.SendWearShirt,
+                    EClothingType.PANTS => Data.SendWearPants,
+                    EClothingType.HAT => Data.SendWearHat,
+                    EClothingType.BACKPACK => Data.SendWearBackpack,
+                    EClothingType.VEST => Data.SendWearVest,
+                    EClothingType.MASK => Data.SendWearMask,
+                    EClothingType.GLASSES => Data.SendWearGlasses,
+                    _ => null
+                };
+            if (inv != null)
             {
-                EClothingType.SHIRT => Data.SendWearShirt,
-                EClothingType.PANTS => Data.SendWearPants,
-                EClothingType.HAT => Data.SendWearHat,
-                EClothingType.BACKPACK => Data.SendWearBackpack,
-                EClothingType.VEST => Data.SendWearVest,
-                EClothingType.MASK => Data.SendWearMask,
-                EClothingType.GLASSES => Data.SendWearGlasses,
-                _ => null
-            })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckClothingAssetRedirect(clothing.id, team), 100, blank);
+                inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckClothingAssetRedirect(clothing.id, team), 100, blank, !hasPlayedEffect);
+                hasPlayedEffect = true;
+            }
         }
         for (int i = 0; i < 7; ++i)
         {
@@ -204,7 +211,7 @@ public static class UCInventoryManager
                     EClothingType.MASK => Data.SendWearMask,
                     EClothingType.GLASSES => Data.SendWearGlasses,
                     _ => null
-                })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank);
+                })?.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
             }
         }
     }

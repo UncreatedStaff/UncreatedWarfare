@@ -36,6 +36,12 @@ public static class DailyQuests
         if (hasRead && !needsCreate && !sentCurrent)
             ReplicateQuestChoices();
     }
+
+    private static readonly AssetOrigin _questModOrigin = new AssetOrigin()
+    {
+        name = "Daily Quests",
+        workshopFileId = DAILY_QUESTS_WORKSHOP_ID
+    };
     public static void EarlyLoad()
     {
         MethodInfo? m = typeof(Provider).GetMethod("onDedicatedUGCInstalled", BindingFlags.NonPublic | BindingFlags.Static);
@@ -738,7 +744,7 @@ public static class DailyQuests
         }
         else
         {
-            Assets.load(p, false, EAssetOrigin.WORKSHOP, true, DAILY_QUESTS_WORKSHOP_ID);
+            Assets.load(p, _questModOrigin, true);
             L.Log("Assets loaded", ConsoleColor.Magenta);
             PrintQuests();
         }
