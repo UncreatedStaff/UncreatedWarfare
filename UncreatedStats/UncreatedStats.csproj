@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net481</TargetFramework>
     <AssemblyTitle>UncreatedStats</AssemblyTitle>
     <Product>UncreatedStats</Product>
     <Copyright>Copyright ©  2021</Copyright>
