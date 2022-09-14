@@ -443,9 +443,9 @@ public class KitCommand : Command
                     string loadoutName = playerId.ToString() + "_" + let;
                     if (!ctx.TryGetRange(4, out string signText) || string.IsNullOrEmpty(signText))
                         signText = loadoutName;
-                    await UCWarfare.ToUpdate();
-                    if (!KitManager.KitExists(loadoutName, out _))
+                    if (let <= 'z' && !KitManager.KitExists(loadoutName, out _))
                     {
+                        await UCWarfare.ToUpdate();
                         Kit loadout = new Kit(loadoutName, KitManager.ItemsFromInventory(ctx.Caller!), KitManager.ClothesFromInventory(ctx.Caller!));
 
                         loadout.IsLoadout = true;
@@ -461,7 +461,7 @@ public class KitCommand : Command
                         if (@class == EClass.HAT)
                             loadout.TeamLimit = 0.1F;
 
-                        KitManager.UpdateText(loadout, signText);
+                        KitManager.UpdateText(loadout, signText, L.DEFAULT, false);
 
                         loadout = await KitManager.AddKit(loadout);
                         await KitManager.GiveAccess(loadout, playerId, EKitAccessType.PURCHASE);
@@ -472,6 +472,7 @@ public class KitCommand : Command
                     }
                     else
                     {
+                        await UCWarfare.ToUpdate();
                         ctx.Reply(T.KitNameTaken, loadoutName);
                     }
                 }).ConfigureAwait(false);

@@ -1164,14 +1164,15 @@ public class KitManager : BaseReloadSingleton
     public static bool HasKit(SteamPlayer player, out Kit kit) => HasKit(player.playerID.steamID.m_SteamID, out kit);
     public static bool HasKit(Player player, out Kit kit) => HasKit(player.channel.owner.playerID.steamID.m_SteamID, out kit);
     public static bool HasKit(CSteamID player, out Kit kit) => HasKit(player.m_SteamID, out kit);
-    public static void UpdateText(Kit kit, string text, string language = L.DEFAULT)
+    public static void UpdateText(Kit kit, string text, string language = L.DEFAULT, bool updateSigns = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         kit.SignTexts.Remove(language);
         kit.SignTexts.Add(language, text);
-        UpdateSigns(kit);
+        if (updateSigns && UCWarfare.IsMainThread)
+            UpdateSigns(kit);
     }
     public static void UpdateSigns()
     {

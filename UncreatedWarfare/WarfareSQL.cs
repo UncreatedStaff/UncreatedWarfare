@@ -539,7 +539,7 @@ public class WarfareSQL : MySqlDatabase
             $"FROM `logindata` " +
             $"WHERE `Steam64` = @0;",
             new object[1] { steam64 },
-            o => Convert.ToInt32(o));
+            Convert.ToInt32);
         return amt > 0;
     }
     public Task RegisterLogin(Player player)
@@ -565,88 +565,6 @@ public class WarfareSQL : MySqlDatabase
             $"ON DUPLICATE KEY UPDATE " +
             $"`IP` = VALUES(`IP`), `LastLoggedIn` = VALUES(`LastLoggedIn`);",
             new object[3] { player.channel.owner.playerID.steamID.m_SteamID, ipaddress, string.Format(TIME_FORMAT_SQL, DateTime.Now) });
-    }
-    /// <returns> 0 if not banned, else duration (-1 meaning forever) </returns>
-    public int IPBanCheck(ulong id, uint packedIP, byte[] hwid)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        ulong bannedid = 0;
-        string oldids = string.Empty;
-        int durationref = 0;
-        string oldhwids = string.Empty;
-        DateTime bantime = DateTime.Now;
-        Query(
-            $"SELECT * " +
-            $"FROM `ipbans` " +
-            $"WHERE `PackedIP` = @0 OR `HWID` = @1 " +
-            $"LIMIT 1;",
-            new object[] { packedIP, Convert.ToBase64String(hwid) }, R =>
-            {
-                bannedid = R.GetUInt64("Instigator");
-                oldids = R.GetString("OtherIDs");
-                durationref = R.GetInt32("DurationMinutes");
-                bantime = R.GetDateTime("InitialBanDate");
-                oldhwids = R.GetString("OtherHWIDs");
-            });
-        if (bannedid == 0) return 0;
-        if (durationref != -1 && bantime.AddMinutes(durationref) <= DateTime.Now) return 0;
-        string idstr = id.ToString(Data.Locale);
-        string[] ids = oldids.Split(',');
-        if (ids.Contains(idstr) || ids.Length > 9) return durationref;
-        string[] newids = new string[ids.Length + 1];
-        for (int i = 0; i < ids.Length; i++)
-            newids[i] = ids[i];
-        newids[ids.Length] = idstr;
-        string newidsstr = string.Join(",", newids);
-        string newhwidsstr;
-        if (hwid != null && hwid.Count(b => b == 0) != hwid.Length)
-        {
-            string hwidstr = Convert.ToBase64String(hwid);
-            string[] hwids = oldhwids.Split(',');
-            if (hwids.Contains(hwidstr) || hwids.Length > 9) return durationref;
-            string[] newhwids = new string[hwids.Length + 1];
-            for (int i = 0; i < hwids.Length; i++)
-                newhwids[i] = hwids[i];
-            newhwids[hwids.Length] = idstr;
-            newhwidsstr = string.Join(",", newids);
-        } else
-        {
-            newhwidsstr = string.Empty;
-        }
-        
-        NonQuery(
-            $"UPDATE `ipbans` " +
-            $"SET `OtherIDs` = @1, `OtherHWIDs` = @2 " +
-            $"WHERE `PackedIP` = @0;",
-            new object[] { packedIP, newidsstr, newhwidsstr }
-            );
-        return durationref;
-    }
-    /// <returns><see langword="true"/> if player was already banned and the duration was updated, else <see langword="false"/></returns>
-    public bool AddIPBan(ulong id, uint packedIP, string unpackedIP, byte[] hwid, int duration = -1, string reason = "")
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (IPBanCheck(id, packedIP, hwid) != 0)
-        {
-            NonQuery(
-                $"UPDATE `ipbans` " +
-                $"SET `DurationMinutes` = @1 " +
-                $"WHERE `PackedIP` = @0;",
-                new object[] { packedIP, duration }
-                );
-            return false;
-        }
-        NonQuery(
-            $"INSERT INTO `ipbans` " +
-            $"(`PackedIP`, `Instigator`, `OtherIDs`, `IPAddress`, `InitialBanDate`, `DurationMinutes`, `Reason`, `HWID`) " +
-            $"VALUES(@0, @1, @2, @3, @4, @5, @6);",
-            new object[] { packedIP, id, id.ToString(Data.Locale), unpackedIP, DateTime.Now, duration, reason, hwid }
-            );
-        return true;
     }
     public string GetIP(ulong id)
     {
