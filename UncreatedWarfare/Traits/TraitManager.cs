@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;

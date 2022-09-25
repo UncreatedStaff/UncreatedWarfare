@@ -1,6 +1,8 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -116,12 +118,8 @@ public static class EventFunctions
 
         RepairManager.OnBarricadePlaced(drop, region);
 
-        if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
-
-        // ammo bag
-        if (Gamemode.Config.Barricades.AmmoBagGUID.ValidReference(out Guid guid) && guid == data.barricade.asset.GUID)
+        if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(data.barricade.asset.GUID))
             drop.model.gameObject.AddComponent<AmmoBagComponent>().Initialize(data, drop);
-
     }
     internal static void ProjectileSpawned(UseableGun gun, GameObject projectile)
     {
@@ -298,7 +296,7 @@ public static class EventFunctions
             RallyManager.OnBarricadePlaceRequested(barricade, asset, hit, ref point, ref angle_x, ref angle_y, ref angle_z, ref owner, ref group, ref shouldAllow);
             if (!shouldAllow) return;
 
-            if (Gamemode.Config.Barricades.AmmoBagGUID.ValidReference(out Guid guid) && guid == barricade.asset.GUID)
+            if (Gamemode.Config.BarricadeAmmoBag.ValidReference(out Guid guid) && guid == barricade.asset.GUID)
             {
                 if (!perms && player.KitClass != EClass.RIFLEMAN)
                 {
@@ -318,13 +316,15 @@ public static class EventFunctions
                 return;
             }
 
-            if (Gamemode.Config.Barricades.FOBRadioGUIDs.Value.Any(g => g == barricade.asset.GUID))
+            guid = barricade.asset.GUID;
+            FactionInfo? info = TeamManager.GetFactionSafe(team);
+            if (info != null && info.FOBRadio.MatchGuid(guid))
             {
                 shouldAllow = BuildableComponent.TryPlaceRadio(barricade, player, point);
                 return;
             }
 
-            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.Foundation == barricade.asset.GUID);
+            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.Foundation.MatchGuid(guid));
 
             if (buildable != null)
             {
@@ -334,7 +334,7 @@ public static class EventFunctions
         }
         catch (Exception ex)
         {
-            L.LogError("Error in OnBarricadeTryPlaced:");
+            L.LogError("Error in OnBarricadeTryPlaced");
             L.LogError(ex);
             shouldAllow = false;
         }
@@ -775,20 +775,28 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (storage == null || !shouldAllow || Gamemode.Config.Barricades.TimeLimitedStorages == null || Gamemode.Config.Barricades.TimeLimitedStorages.Value.Length == 0 || UCWarfare.Config.MaxTimeInStorages <= 0) return;
+        if (storage == null ||
+            !shouldAllow ||
+            Gamemode.Config.TimeLimitedStorages is null ||
+            !Gamemode.Config.TimeLimitedStorages.HasValue ||
+            Gamemode.Config.TimeLimitedStorages.Value.Length == 0 ||
+            UCWarfare.Config.MaxTimeInStorages <= 0)
+            return;
         SteamPlayer player = PlayerTool.getSteamPlayer(instigator);
         BarricadeDrop storagedrop = BarricadeManager.FindBarricadeByRootTransform(storage.transform);
-        if (player == null || storagedrop == null ||
-            !Gamemode.Config.Barricades.TimeLimitedStorages.Value.Any(x => x.Guid == storagedrop.asset.GUID)) return;
+
+        if (player == null || storagedrop == null || !Gamemode.Config.TimeLimitedStorages.Value.Any(x => x.MatchGuid(storagedrop.asset.GUID)))
+            return;
+
         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
         if (ucplayer == null) return;
         if (ucplayer.StorageCoroutine != null)
             player.player.StopCoroutine(ucplayer.StorageCoroutine);
         ucplayer.StorageCoroutine = player.player.StartCoroutine(WaitToCloseStorage(ucplayer));
     }
-    private static IEnumerator<WaitForSeconds> WaitToCloseStorage(UCPlayer player)
+    private static IEnumerator WaitToCloseStorage(UCPlayer player)
     {
-        yield return new WaitForSeconds(UCWarfare.Config.MaxTimeInStorages);
+        yield return new WaitForSecondsRealtime(UCWarfare.Config.MaxTimeInStorages);
         player.Player.inventory.closeStorageAndNotifyClient();
         player.StorageCoroutine = null;
     }
@@ -811,7 +819,7 @@ public static class EventFunctions
             }
             BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(barricadeTransform);
             if (drop == null) return;
-            if (Gamemode.Config.Barricades.FOBRadioDamagedGUID.ValidReference(out Guid guid) && guid == drop.asset.GUID && instigatorSteamID != CSteamID.Nil)
+            if (Gamemode.Config.BarricadeFOBRadioDamaged.ValidReference(out Guid guid) && guid == drop.asset.GUID && instigatorSteamID != CSteamID.Nil)
             {
                 shouldAllow = false;
             }

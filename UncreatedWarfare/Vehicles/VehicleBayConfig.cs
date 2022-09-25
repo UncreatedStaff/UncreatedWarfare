@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Vehicles;
 public class VehicleBayConfig : Config<VehicleBayData>
@@ -12,7 +13,7 @@ public class VehicleBayConfig : Config<VehicleBayData>
 }
 
 
-public class VehicleBayData : ConfigData
+public class VehicleBayData : JSONConfigData
 {
     public JsonAssetReference<EffectAsset> MissileWarningID;
     public JsonAssetReference<EffectAsset> MissileWarningDriverID;

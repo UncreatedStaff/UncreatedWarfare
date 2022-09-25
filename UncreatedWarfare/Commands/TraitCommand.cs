@@ -1,5 +1,6 @@
 ﻿using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Traits;
 using UnityEngine;

@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
@@ -228,9 +229,9 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                     {
                         foreach (KitItem k in vehicleData.Metadata.TrunkItems)
                         {
-                            if (Assets.find(k.id) is ItemAsset iasset)
+                            if (Assets.find(k.Id) is ItemAsset iasset)
                             {
-                                Item item = new Item(iasset.id, k.amount, 100, F.CloneBytes(k.metadata));
+                                Item item = new Item(iasset.id, k.Amount, 100, F.CloneBytes(k.Metadata));
                                 if (!vehicle.trunkItems.tryAddItem(item))
                                         ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
                             }
@@ -1296,15 +1297,7 @@ public class MetaSave : IJsonReadWrite
                         case nameof(TrunkItems):
                             if (reader.TokenType == JsonTokenType.StartArray)
                             {
-                                TrunkItems = new List<KitItem>(0);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    KitItem item = new KitItem();
-                                    item.ReadJson(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    TrunkItems.Add(item);
-                                }
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
+                                TrunkItems = JsonSerializer.Deserialize<List<KitItem>>(ref reader, JsonEx.serializerSettings);
                             }
                             else if (reader.TokenType == JsonTokenType.Null)
                                 TrunkItems = null;
@@ -1335,14 +1328,7 @@ public class MetaSave : IJsonReadWrite
         writer.WritePropertyName(nameof(TrunkItems));
         if (TrunkItems != null)
         {
-            writer.WriteStartArray();
-            for (int i = 0; i < TrunkItems.Count; i++)
-            {
-                writer.WriteStartObject();
-                TrunkItems[i].WriteJson(writer);
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
+            JsonSerializer.Serialize(TrunkItems, JsonEx.serializerSettings);
         }
         else
             writer.WriteNullValue();

@@ -12,6 +12,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;

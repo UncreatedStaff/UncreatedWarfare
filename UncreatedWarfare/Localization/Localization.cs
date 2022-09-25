@@ -11,6 +11,7 @@ using System.Xml;
 using System.Xml.Linq;
 using Uncreated.Framework;
 using Uncreated.Players;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;

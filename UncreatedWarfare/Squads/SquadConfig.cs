@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Squads;
@@ -17,7 +18,7 @@ public sealed class SquadsConfig : Config<SquadConfigData>
     }
 }
 [JsonSerializable(typeof(SquadConfigData))]
-public class SquadConfigData : ConfigData
+public class SquadConfigData : JSONConfigData
 {
     public ushort RallyTimer;
     public float RallyDespawnDistance;

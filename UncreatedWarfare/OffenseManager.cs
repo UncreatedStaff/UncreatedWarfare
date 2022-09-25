@@ -15,6 +15,7 @@ using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using UnityEngine;
@@ -306,6 +307,7 @@ public static class OffenseManager
             }
         }
     }
+
     internal static async Task OnConnected()
     {
         ITimestampOffense[] stamps = _pendingBans
@@ -339,18 +341,29 @@ public static class OffenseManager
         int ct = Math.Max(1, stamps.Length / 10);
         int num = 0;
         bool c = false;
-        for (int i = _pendingBans.Count - 1; i >= 0; --i)
+        try
         {
-            Ban ban = _pendingBans[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBanned.Request(NetCalls.AckPlayerBanned, Data.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp, 10000)).Responded)
-                _pendingBans.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send ban #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
+            _pendingBans.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingBans.Count - 1; i >= 0; --i)
+            {
+                Ban ban = _pendingBans[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBanned.Request(NetCalls.AckPlayerBanned,
+                        UCWarfare.I.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp,
+                        10000)).Responded)
+                    _pendingBans.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send ban #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
         }
 
         if (c)
@@ -359,18 +372,29 @@ public static class OffenseManager
             c = false;
         }
 
-        for (int i = _pendingUnbans.Count - 1; i >= 0; --i)
+
+        try
         {
-            Unban unban = _pendingUnbans[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned, Data.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
-                _pendingUnbans.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send unban #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
+            _pendingUnbans.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingUnbans.Count - 1; i >= 0; --i)
+            {
+                Unban unban = _pendingUnbans[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned,
+                        UCWarfare.I.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
+                    _pendingUnbans.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send unban #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
         }
 
         if (c)
@@ -379,18 +403,29 @@ public static class OffenseManager
             c = false;
         }
 
-        for (int i = _pendingKicks.Count - 1; i >= 0; --i)
+        try
         {
-            Kick kick = _pendingKicks[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerKicked.Request(NetCalls.AckPlayerKicked, Data.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000)).Responded)
-                _pendingKicks.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send kick #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
+            _pendingKicks.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingKicks.Count - 1; i >= 0; --i)
+            {
+                Kick kick = _pendingKicks[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerKicked.Request(NetCalls.AckPlayerKicked,
+                        UCWarfare.I.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000))
+                    .Responded)
+                    _pendingKicks.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send kick #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
         }
 
         if (c)
@@ -399,18 +434,29 @@ public static class OffenseManager
             c = false;
         }
 
-        for (int i = _pendingWarnings.Count - 1; i >= 0; --i)
+        try
         {
-            Warn warn = _pendingWarnings[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerWarned.Request(NetCalls.AckPlayerWarned, Data.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000)).Responded)
-                _pendingWarnings.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send warn #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
+            _pendingWarnings.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingWarnings.Count - 1; i >= 0; --i)
+            {
+                Warn warn = _pendingWarnings[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerWarned.Request(NetCalls.AckPlayerWarned,
+                        UCWarfare.I.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000))
+                    .Responded)
+                    _pendingWarnings.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send warn #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
         }
 
         if (c)
@@ -419,18 +465,29 @@ public static class OffenseManager
             c = false;
         }
 
-        for (int i = _pendingMutes.Count - 1; i >= 0; --i)
+        try
         {
-            Mute mute = _pendingMutes[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerMuted.Request(NetCalls.AckPlayerMuted, Data.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason, mute.Timestamp, 10000)).Responded)
-                _pendingMutes.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send mute #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
+            _pendingMutes.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingMutes.Count - 1; i >= 0; --i)
+            {
+                Mute mute = _pendingMutes[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerMuted.Request(NetCalls.AckPlayerMuted,
+                        UCWarfare.I.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason,
+                        mute.Timestamp, 10000)).Responded)
+                    _pendingMutes.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send mute #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
         }
 
         if (c)
@@ -439,18 +496,30 @@ public static class OffenseManager
             c = false;
         }
 
-        for (int i = _pendingBattlEyeKicks.Count - 1; i >= 0; --i)
+        try
         {
-            BattlEyeKick battlEyeKick = _pendingBattlEyeKicks[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBattleyeKicked.Request(NetCalls.AckPlayerBattleyeKicked, Data.NetClient!, battlEyeKick.Violator, battlEyeKick.Reason, battlEyeKick.Timestamp, 10000)).Responded)
-                _pendingBattlEyeKicks.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
+            _pendingBattlEyeKicks.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingBattlEyeKicks.Count - 1; i >= 0; --i)
+            {
+                BattlEyeKick battlEyeKick = _pendingBattlEyeKicks[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall &&
+                    (await NetCalls.SendPlayerBattleyeKicked.Request(NetCalls.AckPlayerBattleyeKicked,
+                        UCWarfare.I.NetClient!, battlEyeKick.Violator, battlEyeKick.Reason, battlEyeKick.Timestamp,
+                        10000)).Responded)
+                    _pendingBattlEyeKicks.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
         }
 
         if (c)
@@ -459,38 +528,29 @@ public static class OffenseManager
             c = false;
         }
 
-        for (int i = _pendingTeamkills.Count - 1; i >= 0; --i)
+        try
         {
-            Teamkill teamkill = _pendingTeamkills[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendTeamkill.Request(NetCalls.AckTeamkill, Data.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause, teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
-                _pendingTeamkills.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
+            _pendingTeamkills.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingTeamkills.Count - 1; i >= 0; --i)
+            {
+                Teamkill teamkill = _pendingTeamkills[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall && (await NetCalls.SendTeamkill.Request(NetCalls.AckTeamkill,
+                        UCWarfare.I.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause,
+                        teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
+                    _pendingTeamkills.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
         }
-
-        for (int i = _pendingUnmutes.Count - 1; i >= 0; --i)
+        catch (Exception ex)
         {
-            Unmute unmute = _pendingUnmutes[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.Request(NetCalls.AckPlayerUnmuted, Data.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
-                _pendingUnmutes.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
-        }
-
-        if (c)
-        {
-            Save<Unmute>(8);
-            c = false;
+            L.LogError(ex);
         }
 
         if (c)
@@ -499,18 +559,60 @@ public static class OffenseManager
             c = false;
         }
 
-        for (int i = _pendingVehicleTeamkills.Count - 1; i >= 0; --i)
+        try
         {
-            VehicleTeamkill vehicleTeamkill = _pendingVehicleTeamkills[i];
-            await UCWarfare.ToUpdate();
-            if (UCWarfare.CanUseNetCall && (await NetCalls.SendVehicleTeamkilled.Request(NetCalls.AckVehicleTeamkill, Data.NetClient!, vehicleTeamkill.Violator, vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000)).Responded)
-                _pendingVehicleTeamkills.RemoveAt(i);
-            else
-                L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.Locale) + "!");
-            c = true;
-            ++num;
-            if (num % ct == 0)
-                L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" + stamps.Length.ToString(Data.Locale));
+            _pendingUnmutes.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingUnmutes.Count - 1; i >= 0; --i)
+            {
+                Unmute unmute = _pendingUnmutes[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.Request(NetCalls.AckPlayerUnmuted,
+                        UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
+                    _pendingUnmutes.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
+        }
+
+        if (c)
+        {
+            Save<Unmute>(8);
+            c = false;
+        }
+
+        try
+        {
+            _pendingVehicleTeamkills.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            for (int i = _pendingVehicleTeamkills.Count - 1; i >= 0; --i)
+            {
+                VehicleTeamkill vehicleTeamkill = _pendingVehicleTeamkills[i];
+                await UCWarfare.ToUpdate();
+                if (UCWarfare.CanUseNetCall && (await NetCalls.SendVehicleTeamkilled.Request(
+                        NetCalls.AckVehicleTeamkill, UCWarfare.I.NetClient!, vehicleTeamkill.Violator,
+                        vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000))
+                    .Responded)
+                    _pendingVehicleTeamkills.RemoveAt(i);
+                else
+                    L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.Locale) + "!");
+                c = true;
+                ++num;
+                if (num % ct == 0)
+                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
+                          stamps.Length.ToString(Data.Locale));
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
         }
 
         if (c)
@@ -528,7 +630,7 @@ public static class OffenseManager
             if (UCWarfare.CanUseNetCall)
             {
                 await UCWarfare.ToUpdate();
-                RequestResponse response = await NetCalls.SendPlayerBanned.Request(NetCalls.AckPlayerBanned, Data.NetClient!, violator, caller, reason, duration, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerBanned.Request(NetCalls.AckPlayerBanned, UCWarfare.I.NetClient!, violator, caller, reason, duration, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
@@ -546,7 +648,7 @@ public static class OffenseManager
             if (UCWarfare.CanUseNetCall)
             {
                 await UCWarfare.ToUpdate();
-                RequestResponse response = await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned, Data.NetClient!, violator, caller, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned, UCWarfare.I.NetClient!, violator, caller, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
@@ -565,7 +667,7 @@ public static class OffenseManager
             if (UCWarfare.CanUseNetCall)
             {
                 await UCWarfare.ToUpdate();
-                RequestResponse response = await NetCalls.SendPlayerKicked.Request(NetCalls.AckPlayerKicked, Data.NetClient!, violator, caller, reason, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerKicked.Request(NetCalls.AckPlayerKicked, UCWarfare.I.NetClient!, violator, caller, reason, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
@@ -583,7 +685,7 @@ public static class OffenseManager
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendPlayerWarned.Request(NetCalls.AckPlayerWarned, Data.NetClient!, violator, caller, reason, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerWarned.Request(NetCalls.AckPlayerWarned, UCWarfare.I.NetClient!, violator, caller, reason, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
@@ -600,7 +702,7 @@ public static class OffenseManager
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendPlayerMuted.Request(NetCalls.AckPlayerMuted, Data.NetClient!, violator, caller, type, duration, reason, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerMuted.Request(NetCalls.AckPlayerMuted, UCWarfare.I.NetClient!, violator, caller, type, duration, reason, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
@@ -618,7 +720,7 @@ public static class OffenseManager
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendPlayerBattleyeKicked.Request(NetCalls.AckPlayerBattleyeKicked, Data.NetClient!, violator, reason, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendPlayerBattleyeKicked.Request(NetCalls.AckPlayerBattleyeKicked, UCWarfare.I.NetClient!, violator, reason, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
@@ -636,7 +738,7 @@ public static class OffenseManager
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendTeamkill.Request(NetCalls.AckTeamkill, Data.NetClient!, violator, teamkilled, deathCause, itemName, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendTeamkill.Request(NetCalls.AckTeamkill, UCWarfare.I.NetClient!, violator, teamkilled, deathCause, itemName, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
@@ -653,7 +755,7 @@ public static class OffenseManager
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendVehicleTeamkilled.Request(NetCalls.AckVehicleTeamkill, Data.NetClient!, violator, vehicleId, vehicleName, timestamp, 10000);
+                RequestResponse response = await NetCalls.SendVehicleTeamkilled.Request(NetCalls.AckVehicleTeamkill, UCWarfare.I.NetClient!, violator, vehicleId, vehicleName, timestamp, 10000);
                 if (response.Responded)
                     return;
             }
@@ -670,7 +772,7 @@ public static class OffenseManager
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
-                RequestResponse response = await NetCalls.SendPlayerUnmuted.Request(NetCalls.AckPlayerUnmuted, Data.NetClient!, violator, callerId, now, 10000);
+                RequestResponse response = await NetCalls.SendPlayerUnmuted.Request(NetCalls.AckPlayerUnmuted, UCWarfare.I.NetClient!, violator, callerId, now, 10000);
                 if (response.Responded)
                     return;
             }

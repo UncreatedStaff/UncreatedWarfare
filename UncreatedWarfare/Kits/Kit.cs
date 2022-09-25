@@ -1,6 +1,8 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -12,8 +14,9 @@ using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Kits;
 
-public class Kit : ITranslationArgument
+public class Kit : ITranslationArgument, ICloneable
 {
+    public const int CAPACITY = 256;
     internal int PrimaryKey = -1;
     public string Name;
     [JsonSettable]
@@ -47,9 +50,9 @@ public class Kit : ITranslationArgument
     public Dictionary<string, string> SignTexts;
     [JsonSettable]
     public string Weapons;
-    public Kit()
+    public Kit(string name)
     {
-        Name = "default";
+        Name = name;
         Items = new List<KitItem>();
         Clothes = new List<KitClothing>();
         Class = EClass.NONE;
@@ -69,6 +72,7 @@ public class Kit : ITranslationArgument
         Disabled = false;
         SquadLevel = ESquadLevel.MEMBER;
     }
+    public Kit() : this("default") { }
     public Kit(string kitName, List<KitItem> items, List<KitClothing> clothing)
     {
         Name = kitName;
@@ -90,6 +94,38 @@ public class Kit : ITranslationArgument
         Weapons = string.Empty;
         Disabled = false;
         SquadLevel = ESquadLevel.MEMBER;
+    }
+    public void ApplyTo(Kit kit)
+    {
+        kit.Class = Class;
+        kit.Branch = Branch;
+        kit.Team = Team;
+        kit.Items = new List<KitItem>(Items.Select(x => (KitItem)x.Clone()));
+        kit.Clothes = new List<KitClothing>(Clothes.Select(x => (KitClothing)x.Clone()));
+        kit.UnlockRequirements = new BaseUnlockRequirement[UnlockRequirements.Length];
+        for (int i = 0; i < UnlockRequirements.Length; ++i)
+            kit.UnlockRequirements[i] = (BaseUnlockRequirement)UnlockRequirements[i].Clone();
+        kit.Skillsets = new Skillset[Skillsets.Length];
+        Array.Copy(Skillsets, kit.Skillsets, Skillsets.Length);
+        kit.CreditCost = CreditCost;
+        kit.UnlockLevel = UnlockLevel;
+        kit.IsPremium = IsPremium;
+        kit.PremiumCost = PremiumCost;
+        kit.IsLoadout = IsLoadout;
+        kit.TeamLimit = TeamLimit;
+        kit.Cooldown = Cooldown;
+        kit.Disabled = Disabled;
+        kit.SquadLevel = SquadLevel;
+        kit.SignTexts = new Dictionary<string, string>(SignTexts);
+    }
+    public object Clone()
+    {
+        Kit clone = new Kit(false)
+        {
+            Name = Name
+        };
+        ApplyTo(clone);
+        return clone;
     }
     /// <summary>empty constructor</summary>
     public Kit(bool dummy) { }
@@ -124,21 +160,21 @@ public class Kit : ITranslationArgument
         {
             items.Add(new KitItem()
             {
-                id = R.ReadGUID(),
-                amount = R.ReadUInt8(),
-                page = R.ReadUInt8(),
-                x = R.ReadUInt8(),
-                y = R.ReadUInt8(),
-                rotation = R.ReadUInt8(),
-                metadata = R.ReadBytes() ?? new byte[0]
+                Id = R.ReadGUID(),
+                Amount = R.ReadUInt8(),
+                Page = R.ReadUInt8(),
+                X = R.ReadUInt8(),
+                Y = R.ReadUInt8(),
+                Rotation = R.ReadUInt8(),
+                Metadata = R.ReadBytes() ?? new byte[0]
             });
         }
         for (int i = 0; i < clothesCount; i++)
         {
             clothes.Add(new KitClothing()
             {
-                id = R.ReadGUID(),
-                type = R.ReadEnum<EClothingType>()
+                Id = R.ReadGUID(),
+                Type = R.ReadEnum<EClothingType>()
             });
         }
         kit.Items = items;
@@ -177,19 +213,19 @@ public class Kit : ITranslationArgument
         for (int i = 0; i < kit.Items.Count; i++)
         {
             KitItem item = kit.Items[i];
-            W.Write(item.id);
-            W.Write(item.amount);
-            W.Write(item.page);
-            W.Write(item.x);
-            W.Write(item.y);
-            W.Write(item.rotation);
-            W.Write(item.metadata);
+            W.Write(item.Id);
+            W.Write(item.Amount);
+            W.Write(item.Page);
+            W.Write(item.X);
+            W.Write(item.Y);
+            W.Write(item.Rotation);
+            W.Write(item.Metadata);
         }
         for (int i = 0; i < kit.Clothes.Count; i++)
         {
             KitClothing clothing = kit.Clothes[i];
-            W.Write(clothing.id);
-            W.Write(clothing.type);
+            W.Write(clothing.Id);
+            W.Write(clothing.Type);
         }
         W.Write(kit.Branch);
         W.Write(kit.Class);
@@ -401,6 +437,25 @@ public readonly struct Skillset : IEquatable<Skillset>
         Offense = default;
         Defense = default;
     }
+    public static Skillset Read(ByteReader reader)
+    {
+        EPlayerSpeciality speciality = (EPlayerSpeciality)reader.ReadUInt8();
+        byte val = reader.ReadUInt8();
+        int level = reader.ReadUInt8();
+        return speciality switch
+        {
+            EPlayerSpeciality.SUPPORT => new Skillset((EPlayerSupport)val, level),
+            EPlayerSpeciality.DEFENSE => new Skillset((EPlayerDefense)val, level),
+            EPlayerSpeciality.OFFENSE => new Skillset((EPlayerOffense)val, level),
+            _ => throw new Exception("Invalid value of specialty while reading skillset.")
+        };
+    }
+    public static void Write(ByteWriter writer, Skillset skillset)
+    {
+        writer.Write((byte)skillset.Speciality);
+        writer.Write((byte)skillset.SkillIndex);
+        writer.Write((byte)skillset.Level);
+    }
     public readonly void ServerSet(UCPlayer player) => 
         player.Player.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
     public static Skillset Read(ref Utf8JsonReader reader)
@@ -535,7 +590,6 @@ public readonly struct Skillset : IEquatable<Skillset>
     }
     public bool Equals(Skillset other) => EqualsHelper(in other, true);
     public bool TypeEquals(in Skillset skillset) => EqualsHelper(in skillset, false);
-
     public static void SetDefaultSkills(UCPlayer player)
     {
         player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.SHARPSHOOTER, 7);
@@ -544,29 +598,26 @@ public readonly struct Skillset : IEquatable<Skillset>
         player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.OFFENSE, (int)EPlayerOffense.CARDIO, 5);
         player.Player.skills.ServerSetSkillLevel((int)EPlayerSpeciality.DEFENSE, (int)EPlayerDefense.VITALITY, 5);
     }
-
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);
 }
 [JsonConverter(typeof(UnlockRequirementConverter))]
-public abstract class BaseUnlockRequirement
+public abstract class BaseUnlockRequirement : ICloneable
 {
     private static bool hasReflected = false;
     private static void Reflect()
     {
         types.Clear();
-        Type[] array = Assembly.GetExecutingAssembly().GetTypes();
-        for (int i = 0; i < array.Length; i++)
+        foreach (Type type in Assembly.GetExecutingAssembly().GetTypes().Where(typeof(BaseUnlockRequirement).IsAssignableFrom))
         {
-            Type type = array[i];
-            if (!types.ContainsKey(type) && Attribute.GetCustomAttribute(type, typeof(UnlockRequirementAttribute)) is UnlockRequirementAttribute att)
+            if (Attribute.GetCustomAttribute(type, typeof(UnlockRequirementAttribute)) is UnlockRequirementAttribute att && !types.ContainsKey(att.Type))
             {
-                types.Add(type, att.Properties);
+                types.Add(att.Type, new KeyValuePair<Type, string[]>(type, att.Properties));
             }
         }
         hasReflected = true;
     }
-    private static readonly Dictionary<Type, string[]> types = new Dictionary<Type, string[]>(4);
+    private static readonly Dictionary<int, KeyValuePair<Type, string[]>> types = new Dictionary<int, KeyValuePair<Type, string[]>>(4);
     public abstract bool CanAccess(UCPlayer player);
     public static BaseUnlockRequirement? Read(ref Utf8JsonReader reader)
     {
@@ -579,13 +630,13 @@ public abstract class BaseUnlockRequirement
             {
                 if (t == null)
                 {
-                    foreach (KeyValuePair<Type, string[]> propertyList in types)
+                    foreach (KeyValuePair<int, KeyValuePair<Type, string[]>> propertyList in types)
                     {
-                        for (int i = 0; i < propertyList.Value.Length; i++)
+                        for (int i = 0; i < propertyList.Value.Value.Length; i++)
                         {
-                            if (property.Equals(propertyList.Value[i], StringComparison.OrdinalIgnoreCase))
+                            if (property.Equals(propertyList.Value.Value[i], StringComparison.OrdinalIgnoreCase))
                             {
-                                t = Activator.CreateInstance(propertyList.Key) as BaseUnlockRequirement;
+                                t = Activator.CreateInstance(propertyList.Value.Key) as BaseUnlockRequirement;
                                 goto done;
                             }
                         }
@@ -611,12 +662,13 @@ public abstract class BaseUnlockRequirement
     {
         requirement.WriteProperties(writer);
     }
-
     protected abstract void ReadProperty(ref Utf8JsonReader reader, string property);
     protected abstract void WriteProperties(Utf8JsonWriter writer);
     public abstract string GetSignText(UCPlayer player);
+    public abstract object Clone();
+    protected abstract void Read(ByteReader reader);
+    protected abstract void Write(ByteWriter writer);
 }
-
 public class UnlockRequirementConverter : JsonConverter<BaseUnlockRequirement>
 {
     public override BaseUnlockRequirement? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -628,7 +680,7 @@ public class UnlockRequirementConverter : JsonConverter<BaseUnlockRequirement>
         writer.WriteEndObject();
     }
 }
-[UnlockRequirement("unlock_level")]
+[UnlockRequirement(1, "unlock_level")]
 public class LevelUnlockRequirement : BaseUnlockRequirement
 {
     public int UnlockLevel = -1;
@@ -655,8 +707,17 @@ public class LevelUnlockRequirement : BaseUnlockRequirement
     {
         writer.WriteNumber("unlock_level", UnlockLevel);
     }
+    public override object Clone() => new LevelUnlockRequirement() { UnlockLevel = UnlockLevel };
+    protected override void Read(ByteReader reader)
+    {
+        UnlockLevel = reader.ReadInt32();
+    }
+    protected override void Write(ByteWriter writer)
+    {
+        writer.Write(UnlockLevel);
+    }
 }
-[UnlockRequirement("unlock_rank")]
+[UnlockRequirement(2, "unlock_rank")]
 public class RankUnlockRequirement : BaseUnlockRequirement
 {
     public int UnlockRank = -1;
@@ -682,12 +743,21 @@ public class RankUnlockRequirement : BaseUnlockRequirement
     {
         writer.WriteNumber("unlock_rank", UnlockRank);
     }
+    public override object Clone() => new RankUnlockRequirement() { UnlockRank = UnlockRank };
+    protected override void Read(ByteReader reader)
+    {
+        UnlockRank = reader.ReadInt32();
+    }
+    protected override void Write(ByteWriter writer)
+    {
+        writer.Write(UnlockRank);
+    }
 }
-[UnlockRequirement("unlock_presets", "quest_id")]
+[UnlockRequirement(3, "unlock_presets", "quest_id")]
 public class QuestUnlockRequirement : BaseUnlockRequirement
 {
     public Guid QuestID = default;
-    public Guid[] UnlockPresets = new Guid[0];
+    public Guid[] UnlockPresets = Array.Empty<Guid>();
     public override bool CanAccess(UCPlayer player)
     {
         QuestManager.QuestComplete(player, QuestID);
@@ -741,124 +811,94 @@ public class QuestUnlockRequirement : BaseUnlockRequirement
 
         writer.WriteString("quest_id", QuestID);
     }
+    public override object Clone()
+    {
+        QuestUnlockRequirement req = new QuestUnlockRequirement() { QuestID = QuestID };
+        req.UnlockPresets = new Guid[UnlockPresets.Length];
+        Array.Copy(UnlockPresets, req.UnlockPresets, UnlockPresets.Length);
+        return req;
+    }
+    protected override void Read(ByteReader reader)
+    {
+        QuestID = reader.ReadGUID();
+        UnlockPresets = reader.ReadGuidArray();
+    }
+    protected override void Write(ByteWriter writer)
+    {
+        writer.Write(QuestID);
+        writer.Write(UnlockPresets);
+    }
 }
 
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public sealed class UnlockRequirementAttribute : Attribute
 {
     public string[] Properties => _properties;
-    /// <param name="properties">MUST BE UNIQUE</param>
-    public UnlockRequirementAttribute(params string[] properties)
+    public int Type => _type;
+    /// <param name="properties">Must be unique among other unlock requirements.</param>
+    public UnlockRequirementAttribute(int type, params string[] properties)
     {
         _properties = properties;
+        _type = type;
     }
     private readonly string[] _properties;
+    private readonly int _type;
 }
+public class KitItem : ICloneable
+{
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
 
-public class KitItemJsonConverter : JsonConverter<KitItem>
-{
-    public override KitItem? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        KitItem item = new KitItem();
-        item.ReadJson(ref reader);
-        return item;
-    }
-    public override void Write(Utf8JsonWriter writer, KitItem value, JsonSerializerOptions options)
-    {
-        writer.WriteStartObject();
-        value.WriteJson(writer);
-        writer.WriteEndObject();
-    }
-}
-[JsonConverter(typeof(KitItemJsonConverter))] // for backwards compatability of trunk items expecting base 64
-public class KitItem : IJsonReadWrite
-{
-    public Guid id;
-    public byte x;
-    public byte y;
-    public byte rotation;
-    public byte[] metadata;
-    public byte amount;
-    public byte page;
+    [JsonPropertyName("x")]
+    public byte X { get; set; }
+
+    [JsonPropertyName("y")]
+    public byte Y { get; set; }
+
+    [JsonPropertyName("rotation")]
+    public byte Rotation { get; set; }
+
+    [JsonPropertyName("page")]
+    public byte Page { get; set; }
+
+    [JsonPropertyName("amount")]
+    public byte Amount { get; set; }
+
+    [JsonPropertyName("metadata")]
+    [JsonConverter(typeof(Base64Converter))]
+    public byte[] Metadata { get; set; }
+
+    [JsonConstructor]
     public KitItem(Guid id, byte x, byte y, byte rotation, byte[] metadata, byte amount, byte page)
     {
-        this.id = id;
-        this.x = x;
-        this.y = y;
-        this.rotation = rotation;
-        this.metadata = metadata;
-        this.amount = amount;
-        this.page = page;
+        this.Id = id;
+        this.X = x;
+        this.Y = y;
+        this.Rotation = rotation;
+        this.Metadata = metadata;
+        this.Amount = amount;
+        this.Page = page;
     }
     public KitItem() { }
-
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WritePropertyName(nameof(id));
-        writer.WriteStringValue(id);
-        writer.WritePropertyName(nameof(x));
-        writer.WriteNumberValue(x);
-        writer.WritePropertyName(nameof(y));
-        writer.WriteNumberValue(y);
-        writer.WritePropertyName(nameof(rotation));
-        writer.WriteNumberValue(rotation);
-        writer.WritePropertyName(nameof(metadata));
-        writer.WriteStringValue(Convert.ToBase64String(metadata));
-        writer.WritePropertyName(nameof(amount));
-        writer.WriteNumberValue(amount);
-        writer.WritePropertyName(nameof(page));
-        writer.WriteNumberValue(page);
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString()!;
-                if (reader.Read())
-                {
-                    switch (prop)
-                    {
-                        case nameof(id):
-                            id = reader.GetGuid();
-                            break;
-                        case nameof(x):
-                            x = reader.GetByte();
-                            break;
-                        case nameof(y):
-                            y = reader.GetByte();
-                            break;
-                        case nameof(rotation):
-                            rotation = reader.GetByte();
-                            break;
-                        case nameof(metadata):
-                            metadata = Convert.FromBase64String(reader.GetString()!);
-                            break;
-                        case nameof(amount):
-                            amount = reader.GetByte();
-                            break;
-                        case nameof(page):
-                            page = reader.GetByte();
-                            break;
-                    }
-                }
-            }
-        }
-    }
+    public object Clone() => new KitItem(Id, X, Y, Rotation, Metadata, Amount, Page);
 }
-public class KitClothing
+public class KitClothing : ICloneable
 {
-    public Guid id;
-    public EClothingType type;
+    [JsonPropertyName("id")]
+    public Guid Id { get; set; }
 
+    [JsonPropertyName("type")]
+    public EClothingType Type { get; set; }
+
+    [JsonConstructor]
     public KitClothing(Guid id, EClothingType type)
     {
-        this.id = id;
-        this.type = type;
+        this.Id = id;
+        this.Type = type;
     }
     public KitClothing() { }
+
+    public object Clone() => new KitClothing(Id, Type);
 }
 
 [Translatable("Squad Level")]

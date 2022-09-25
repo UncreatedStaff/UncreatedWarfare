@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
@@ -122,13 +123,13 @@ public class KitManager : BaseReloadSingleton
                 {
                     KitItem item = new KitItem();
                     R.GetBytes(2, 0, GUID_BUFFER, 0, 16);
-                    item.id = new Guid(GUID_BUFFER);
-                    item.x = R.GetByte(3);
-                    item.y = R.GetByte(4);
-                    item.rotation = R.GetByte(5);
-                    item.page = R.GetByte(6);
-                    item.amount = R.GetByte(7);
-                    item.metadata = (byte[])R[8];
+                    item.Id = new Guid(GUID_BUFFER);
+                    item.X = R.GetByte(3);
+                    item.Y = R.GetByte(4);
+                    item.Rotation = R.GetByte(5);
+                    item.Page = R.GetByte(6);
+                    item.Amount = R.GetByte(7);
+                    item.Metadata = (byte[])R[8];
                     kit.Items.Add(item);
                 }
             });
@@ -139,8 +140,8 @@ public class KitManager : BaseReloadSingleton
                 {
                     KitClothing item = new KitClothing();
                     R.GetBytes(2, 0, GUID_BUFFER, 0, 16);
-                    item.id = new Guid(GUID_BUFFER);
-                    item.type = (EClothingType)R.GetByte(3);
+                    item.Id = new Guid(GUID_BUFFER);
+                    item.Type = (EClothingType)R.GetByte(3);
                     kit.Clothes.Add(item);
                 }
             });
@@ -321,13 +322,13 @@ public class KitManager : BaseReloadSingleton
                             builder.Append('@').Append(index + j);
                         }
                         objs[index++] = pk;
-                        objs[index++] = item.id.ToByteArray();
-                        objs[index++] = item.x;
-                        objs[index++] = item.y;
-                        objs[index++] = item.rotation;
-                        objs[index++] = item.page;
-                        objs[index++] = item.amount;
-                        objs[index++] = item.metadata;
+                        objs[index++] = item.Id.ToByteArray();
+                        objs[index++] = item.X;
+                        objs[index++] = item.Y;
+                        objs[index++] = item.Rotation;
+                        objs[index++] = item.Page;
+                        objs[index++] = item.Amount;
+                        objs[index++] = item.Metadata;
                         builder.Append(')');
                     }
                     builder.Append(';');
@@ -351,8 +352,8 @@ public class KitManager : BaseReloadSingleton
                             builder.Append('@').Append(index + j);
                         }
                         objs[index++] = pk;
-                        objs[index++] = clothes.id.ToByteArray();
-                        objs[index++] = (int)clothes.type;
+                        objs[index++] = clothes.Id.ToByteArray();
+                        objs[index++] = (int)clothes.Type;
                         builder.Append(')');
                     }
                     builder.Append(';');
@@ -908,10 +909,10 @@ public class KitManager : BaseReloadSingleton
             for (int i = 0; i < kit.Items.Count; ++i)
             {
                 KitItem item = kit.Items[i];
-                if (item.page < PlayerInventory.PAGES - 2 && Assets.find(TeamManager.CheckAssetRedirect(item.id, team)) is ItemAsset asset)
-                    p[item.page].addItem(item.x, item.y, item.rotation, new Item(asset.id, item.amount, 100, F.CloneBytes(item.metadata)));
+                if (item.Page < PlayerInventory.PAGES - 2 && Assets.find(TeamManager.CheckAssetRedirect(item.Id, team)) is ItemAsset asset)
+                    p[item.Page].addItem(item.X, item.Y, item.Rotation, new Item(asset.id, item.Amount, 100, F.CloneBytes(item.Metadata)));
                 else
-                    L.LogWarning("Invalid item {" + item.id.ToString("N") + "} in kit " + kit.Name + " for team " + team);
+                    L.LogWarning("Invalid item {" + item.Id.ToString("N") + "} in kit " + kit.Name + " for team " + team);
             }
             if (ohi)
                 Data.SetOwnerHasInventory(player.Player.inventory, true);
@@ -921,36 +922,36 @@ public class KitManager : BaseReloadSingleton
         {
             foreach (KitClothing clothing in kit.Clothes)
             {
-                if (Assets.find(TeamManager.CheckClothingAssetRedirect(clothing.id, team)) is ItemAsset asset)
+                if (Assets.find(TeamManager.CheckClothingAssetRedirect(clothing.Id, team)) is ItemAsset asset)
                 {
-                    if (clothing.type == EClothingType.SHIRT)
+                    if (clothing.Type == EClothingType.SHIRT)
                         player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);
-                    else if (clothing.type == EClothingType.PANTS)
+                    else if (clothing.Type == EClothingType.PANTS)
                         player.Player.clothing.askWearPants(asset.id, 100, asset.getState(true), true);
-                    else if (clothing.type == EClothingType.VEST)
+                    else if (clothing.Type == EClothingType.VEST)
                         player.Player.clothing.askWearVest(asset.id, 100, asset.getState(true), true);
-                    else if (clothing.type == EClothingType.HAT)
+                    else if (clothing.Type == EClothingType.HAT)
                         player.Player.clothing.askWearHat(asset.id, 100, asset.getState(true), true);
-                    else if (clothing.type == EClothingType.MASK)
+                    else if (clothing.Type == EClothingType.MASK)
                         player.Player.clothing.askWearMask(asset.id, 100, asset.getState(true), true);
-                    else if (clothing.type == EClothingType.BACKPACK)
+                    else if (clothing.Type == EClothingType.BACKPACK)
                         player.Player.clothing.askWearBackpack(asset.id, 100, asset.getState(true), true);
-                    else if (clothing.type == EClothingType.GLASSES)
+                    else if (clothing.Type == EClothingType.GLASSES)
                         player.Player.clothing.askWearGlasses(asset.id, 100, asset.getState(true), true);
                 }
             }
 
             foreach (KitItem k in kit.Items)
             {
-                if (Assets.find(TeamManager.CheckAssetRedirect(k.id, team)) is ItemAsset asset)
+                if (Assets.find(TeamManager.CheckAssetRedirect(k.Id, team)) is ItemAsset asset)
                 {
-                    Item item = new Item(asset.id, k.amount, 100, F.CloneBytes(k.metadata));
-                    if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
+                    Item item = new Item(asset.id, k.Amount, 100, F.CloneBytes(k.Metadata));
+                    if (!player.Player.inventory.tryAddItem(item, k.X, k.Y, k.Page, k.Rotation))
                         if (player.Player.inventory.tryAddItem(item, true))
                             ItemManager.dropItem(item, player.Position, true, true, true);
                 }
                 else
-                    L.LogWarning("Invalid item {" + k.id.ToString("N") + "} in kit " + kit.Name + " for team " + team);
+                    L.LogWarning("Invalid item {" + k.Id.ToString("N") + "} in kit " + kit.Name + " for team " + team);
             }
         }
         string oldkit = player.KitName;
@@ -1011,10 +1012,10 @@ public class KitManager : BaseReloadSingleton
         for (int i = 0; i < kit.Clothes.Count; i++)
         {
             KitClothing clothing = kit.Clothes[i];
-            if (Assets.find(clothing.id) is ItemAsset asset)
+            if (Assets.find(clothing.Id) is ItemAsset asset)
             {
                 ushort old = 0;
-                switch (clothing.type)
+                switch (clothing.Type)
                 {
                     case EClothingType.GLASSES:
                         if (player.Player.clothing.glasses != asset.id)
@@ -1072,13 +1073,13 @@ public class KitManager : BaseReloadSingleton
         }
         foreach (KitItem i in kit.Items)
         {
-            if (ignoreAmmoBags && Gamemode.Config.Barricades.AmmoBagGUID.MatchGuid(i.id))
+            if (ignoreAmmoBags && Gamemode.Config.BarricadeAmmoBag.MatchGuid(i.Id))
                 continue;
-            if (Assets.find(i.id) is ItemAsset itemasset)
+            if (Assets.find(i.Id) is ItemAsset itemasset)
             {
-                Item item = new Item(itemasset.id, i.amount, 100, F.CloneBytes(i.metadata));
+                Item item = new Item(itemasset.id, i.Amount, 100, F.CloneBytes(i.Metadata));
 
-                if (!player.Player.inventory.tryAddItem(item, i.x, i.y, i.page, i.rotation))
+                if (!player.Player.inventory.tryAddItem(item, i.X, i.Y, i.Page, i.Rotation))
                     player.Player.inventory.tryAddItem(item, true);
             }
         }
@@ -1356,7 +1357,7 @@ public class KitManager : BaseReloadSingleton
 }
 public static class KitEx
 {
-    public static bool HasItemOfID(this Kit kit, Guid ID) => kit.Items.Exists(i => i.id == ID);
+    public static bool HasItemOfID(this Kit kit, Guid ID) => kit.Items.Exists(i => i.Id == ID);
     public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {
 #if DEBUG

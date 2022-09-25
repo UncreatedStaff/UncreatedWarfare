@@ -114,14 +114,14 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     public void SpawnBlockerOnT1()
     {
-        if (Config.Barricades.Team1ZoneBlocker is not null && Config.Barricades.Team1ZoneBlocker.HasValue && Config.Barricades.Team1ZoneBlocker.Value.Exists)
-            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.Barricades.Team1ZoneBlocker.Value.Asset),
+        if (Config.BarricadeZoneBlockerTeam1.ValidReference(out ItemBarricadeAsset asset))
+            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
                 TeamManager.Team1Main.Center3D + Vector3.up, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
     }
     public void SpawnBlockerOnT2()
     {
-        if (Config.Barricades.Team2ZoneBlocker is not null && Config.Barricades.Team2ZoneBlocker.HasValue && Config.Barricades.Team2ZoneBlocker.Value.Exists)
-            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.Barricades.Team2ZoneBlocker.Value.Asset),
+        if (Config.BarricadeZoneBlockerTeam2.ValidReference(out ItemBarricadeAsset asset))
+            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
                 TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
     }
     public void DestoryBlockerOnT1()
@@ -137,10 +137,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
             _blockerBarricadeT1 = null;
         }
 
-        if (Config.Barricades.Team1ZoneBlocker is not null && Config.Barricades.Team1ZoneBlocker.HasValue &&
-            Config.Barricades.Team1ZoneBlocker.Value.Exists)
+        if (Config.BarricadeZoneBlockerTeam1.ValidReference(out Guid g))
         {
-            Guid g = Config.Barricades.Team1ZoneBlocker.Value.Guid;
             for (x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (y = 0; y < Regions.WORLD_SIZE; y++)
@@ -171,10 +169,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
             _blockerBarricadeT2 = null;
         }
 
-        if (Config.Barricades.Team2ZoneBlocker is not null && Config.Barricades.Team2ZoneBlocker.HasValue &&
-            Config.Barricades.Team2ZoneBlocker.Value.Exists)
+        if (Config.BarricadeZoneBlockerTeam2.ValidReference(out Guid g))
         {
-            Guid g = Config.Barricades.Team2ZoneBlocker.Value.Guid;
             for (x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (y = 0; y < Regions.WORLD_SIZE; y++)
@@ -227,7 +223,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
             else backup = true;
             if (backup)
             {
-                if (!Config.Barricades.Team1ZoneBlocker.ValidReference(out Guid g1) || !Config.Barricades.Team1ZoneBlocker.ValidReference(out Guid g2)) return;
+                if (!Config.BarricadeZoneBlockerTeam1.ValidReference(out Guid g1) || !Config.BarricadeZoneBlockerTeam2.ValidReference(out Guid g2)) return;
                 bool l = false;
                 for (x = 0; x < Regions.WORLD_SIZE; x++)
                 {

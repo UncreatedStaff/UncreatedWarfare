@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;

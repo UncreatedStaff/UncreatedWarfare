@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
@@ -151,7 +152,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     public void ClearUI(UCPlayer player) => TicketUI.ClearFromPlayer(player.Connection);
     public void ClearUI(ITransportConnection connection) => TicketUI.ClearFromPlayer(connection);
 }
-public class TicketData : ConfigData
+public class TicketData : JSONConfigData
 {
     public int TicketHandicapDifference;
     public int FOBCost;

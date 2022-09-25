@@ -57,7 +57,7 @@ public class UAV : MonoBehaviour, IBuff
     /// <summary>Possible for <see cref="Approver"/> to be offline. Check <see cref="UCPlayer.IsOnline"/> before using some members.</summary>
     public UCPlayer Approver => approver;
     bool IBuff.IsBlinking => isBlinking;
-    string IBuff.Icon => Gamemode.Config.UI.UAVIcon;
+    string IBuff.Icon => Gamemode.Config.UIIconUAV;
     UCPlayer IBuff.Player => requester;
     bool IBuff.Reserved => true;
     public static void RequestUAV(UCPlayer requester)
@@ -165,12 +165,12 @@ public class UAV : MonoBehaviour, IBuff
         if (isMarker)
         {
             GridLocation loc = new GridLocation(pos);
-            if (Gamemode.Config.GeneralConfig.UAVStartDelay > 0f)
+            if (Gamemode.Config.GeneralUAVStartDelay > 0f)
             {
                 if (approver.Steam64 != requester.Steam64 && approver.IsOnline)
-                    approver.SendChat(T.UAVDeployedTimeMarkerCommander, loc, Gamemode.Config.GeneralConfig.UAVStartDelay, requester);
+                    approver.SendChat(T.UAVDeployedTimeMarkerCommander, loc, Gamemode.Config.GeneralUAVStartDelay, requester);
                 if (requester.IsOnline)
-                    requester.SendChat(T.UAVDeployedTimeMarker, loc, Gamemode.Config.GeneralConfig.UAVStartDelay);
+                    requester.SendChat(T.UAVDeployedTimeMarker, loc, Gamemode.Config.GeneralUAVStartDelay);
             }
             else
             {
@@ -182,12 +182,12 @@ public class UAV : MonoBehaviour, IBuff
         }
         else
         {
-            if (Gamemode.Config.GeneralConfig.UAVStartDelay > 0f)
+            if (Gamemode.Config.GeneralUAVStartDelay > 0f)
             {
                 if (approver.Steam64 != requester.Steam64 && approver.IsOnline)
-                    approver.SendChat(T.UAVDeployedTimeSelfCommander, Gamemode.Config.GeneralConfig.UAVStartDelay, new GridLocation(pos), requester);
+                    approver.SendChat(T.UAVDeployedTimeSelfCommander, Gamemode.Config.GeneralUAVStartDelay, new GridLocation(pos), requester);
                 if (requester.IsOnline)
-                    requester.SendChat(T.UAVDeployedTimeSelf, Gamemode.Config.GeneralConfig.UAVStartDelay);
+                    requester.SendChat(T.UAVDeployedTimeSelf, Gamemode.Config.GeneralUAVStartDelay);
             }
             else
             {
@@ -233,10 +233,10 @@ public class UAV : MonoBehaviour, IBuff
             team2UAV = this;
         }
 
-        scanSpeed = Gamemode.Config.GeneralConfig.UAVScanSpeed;
-        stDelay = Gamemode.Config.GeneralConfig.UAVStartDelay;
-        aliveTime = Gamemode.Config.GeneralConfig.UAVStartDelay + Gamemode.Config.GeneralConfig.UAVAliveTime;
-        radius = Gamemode.Config.GeneralConfig.UAVRadius;
+        scanSpeed = Gamemode.Config.GeneralUAVScanSpeed;
+        stDelay = Gamemode.Config.GeneralUAVStartDelay;
+        aliveTime = Gamemode.Config.GeneralUAVStartDelay + Gamemode.Config.GeneralUAVAliveTime;
+        radius = Gamemode.Config.GeneralUAVRadius;
 
         this.inited = true;
     }
@@ -387,7 +387,7 @@ public class UAV : MonoBehaviour, IBuff
             EffectManager.sendEffectReliable(120, Level.size, new Vector3(pt.x, F.GetHeight(pt, 0f), pt.y));
         }
 #endif
-        if (drop == null && Gamemode.Config.Barricades.UAV.ValidReference(out ItemBarricadeAsset asset))
+        if (drop == null && Gamemode.Config.BarricadeUAV.ValidReference(out ItemBarricadeAsset asset))
         {
             Transform tr = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset, asset.health, asset.getState()),
                 deployPosition, Quaternion.Euler(new Vector3(-90f, 0f, 0f)), requester.Steam64,

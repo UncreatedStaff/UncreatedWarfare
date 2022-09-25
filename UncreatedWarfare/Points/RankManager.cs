@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using Uncreated.Players;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Quests;
 using static UnityEngine.TouchScreenKeyboard;
 
@@ -396,7 +397,7 @@ public static class RankManager
     }
 }
 
-public class RankConfig : ConfigData
+public class RankConfig : JSONConfigData
 {
     public RankData[] Ranks;
     public override void SetDefaults()

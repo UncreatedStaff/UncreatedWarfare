@@ -11,7 +11,7 @@ using Uncreated.Framework;
 using Uncreated.Warfare;
 using Uncreated.Warfare.Singletons;
 
-namespace Uncreated;
+namespace Uncreated.Warfare.Configuration;
 
 public abstract class JSONSaver<T> : List<T> where T : class, new()
 {
@@ -42,7 +42,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     {
         directory = Path.GetDirectoryName(_directory);
         file = _directory;
-        
+
         _serializer = serializer;
         useSerializer = serializer is not null;
         _deserializer = deserializer;
@@ -91,7 +91,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
         if (save) Save();
     }
     //private static readonly JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
-    
+
     public void Save()
     {
         if (!isInited) Init();
@@ -427,8 +427,8 @@ public static class JsonEx
     private static readonly JavaScriptEncoder jsEncoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
     public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions()
     {
-        WriteIndented = true, 
-        IncludeFields = true, 
+        WriteIndented = true,
+        IncludeFields = true,
         AllowTrailingCommas = true,
         Encoder = jsEncoder
     };
@@ -573,10 +573,10 @@ public static class JsonEx
 }
 public enum ESetFieldResult : byte
 {
-SUCCESS = 0,
-FIELD_NOT_FOUND = 1,
-FIELD_NOT_SERIALIZABLE = 2,
-FIELD_PROTECTED = 3,
-OBJECT_NOT_FOUND = 4,
-INVALID_INPUT = 5
+    SUCCESS = 0,
+    FIELD_NOT_FOUND = 1,
+    FIELD_NOT_SERIALIZABLE = 2,
+    FIELD_PROTECTED = 3,
+    OBJECT_NOT_FOUND = 4,
+    INVALID_INPUT = 5
 }

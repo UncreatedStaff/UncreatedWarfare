@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Networking;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Quests.Types;
 

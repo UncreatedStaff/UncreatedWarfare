@@ -39,7 +39,7 @@ public class AmmoCommand : Command
             bool isInMain = F.IsInMain(vehicle.transform.position);
             if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
             {
-                BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID.Value.Guid,
+                BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.BarricadeRepairStation.Value.Guid,
                 10,
                 vehicle.transform.position,
                 ctx.Caller!.GetTeam(),
@@ -95,8 +95,8 @@ public class AmmoCommand : Command
                 _ => 1
             };
 
-            if (barricade.asset.GUID == Gamemode.Config.Barricades.AmmoCrateGUID.Value.Guid || 
-                (Data.Is<Insurgency>() && barricade.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid))
+            if (barricade.asset.GUID == Gamemode.Config.BarricadeAmmoCrate.Value.Guid || 
+                (Data.Is<Insurgency>() && barricade.asset.GUID == Gamemode.Config.BarricadeInsurgencyCache.Value.Guid))
             {
                 if (TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists || TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists)
                 {
@@ -140,7 +140,7 @@ public class AmmoCommand : Command
                 }
 
             }
-            else if (Gamemode.Config.Barricades.AmmoBagGUID.Value.Guid == barricade.asset.GUID)
+            else if (Gamemode.Config.BarricadeAmmoBag.Value.Guid == barricade.asset.GUID)
             {
                 if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
                 {

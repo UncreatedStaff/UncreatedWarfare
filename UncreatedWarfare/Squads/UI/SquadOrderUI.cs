@@ -15,7 +15,7 @@ public class SquadOrderUI : UnturnedUI
     public readonly UnturnedLabel TimeLeft  = new UnturnedLabel("Time");
     public readonly UnturnedLabel Reward    = new UnturnedLabel("Reward");
 
-    public SquadOrderUI() : base(12004, Gamemode.Config.UI.OrderUI, true, false) { }
+    public SquadOrderUI() : base(12004, Gamemode.Config.UIOrder, true, false) { }
     public void SetOrder(UCPlayer player, Order order)
     {
         ITransportConnection c = player.Connection;

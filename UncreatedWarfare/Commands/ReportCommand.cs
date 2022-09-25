@@ -171,7 +171,7 @@ public class ReportCommand : Command
                     return;
                 }
                 RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(
-                    Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient!, report, targetPl != null);
+                    Reporter.NetCalls.ReceiveInvocationResponse, UCWarfare.I.NetClient!, report, targetPl != null);
                 await UCWarfare.ToUpdate();
                 if (targetPl != null && targetPl.player != null)
                 {

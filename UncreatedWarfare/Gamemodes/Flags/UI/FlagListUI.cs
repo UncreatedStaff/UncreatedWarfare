@@ -47,7 +47,7 @@ public class FlagListUI : UnturnedUI
     public readonly UnturnedLabel[] Names;
     public readonly UnturnedLabel[] Icons;
 
-    public FlagListUI() : base(12010, Gamemode.Config.UI.FlagListGUID, true, false)
+    public FlagListUI() : base(12010, Gamemode.Config.UIFlagList, true, false)
     {
         Parents = new UnturnedUIElement[]
         {

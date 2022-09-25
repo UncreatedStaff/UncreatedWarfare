@@ -69,9 +69,6 @@
     <Reference Include="UncreatedNetworking">
       <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UncreatedNetworking.dll</HintPath>
     </Reference>
-    <Reference Include="UncreatedStats">
-      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UncreatedStats.dll</HintPath>
-    </Reference>
     <Reference Include="UnityEngine">
       <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.dll</HintPath>
     </Reference>

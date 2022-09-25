@@ -44,7 +44,7 @@ public class FOBListUI : UnturnedUI
     public readonly UnturnedUIElement[] FOBParents;
     public readonly UnturnedLabel[] FOBNames;
     public readonly UnturnedLabel[] FOBResources;
-    public FOBListUI() : base(12008, Gamemodes.Gamemode.Config.UI.FOBListGUID, true, false)
+    public FOBListUI() : base(12008, Gamemodes.Gamemode.Config.UIFOBList, true, false)
     {
         FOBParents = new UnturnedUIElement[]
         {

@@ -11,15 +11,18 @@ using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Squads.Commander;
+using Uncreated.Warfare.Sync;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -697,7 +700,7 @@ internal class _DebugCommand : Command
         Task.Run(async () =>
         {
             L.Log("Sending chat abuse report.");
-            RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(Reporter.NetCalls.ReceiveInvocationResponse, Data.NetClient!, report, false);
+            RequestResponse res = await Reporter.NetCalls.SendReportInvocation.Request(Reporter.NetCalls.ReceiveInvocationResponse, UCWarfare.I.NetClient!, report, false);
             L.Log(res.Responded && res.Parameters.Length > 1 && res.Parameters[1] is string url ? ("URL: " + url) : "No response.", ConsoleColor.DarkYellow);
         });
         ctx.Defer();
@@ -827,7 +830,6 @@ internal class _DebugCommand : Command
         UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 20)));
         UCWarfare.I.StartCoroutine(_coroutine(ctx, asset, ctx.Caller.Position + new Vector3(0, 0, 10)));*/
     }
-
     private IEnumerator _coroutine(CommandInteraction ctx, VehicleAsset asset, Vector3 pos)
     {
         Vector3 forward = ctx.Caller.Player.look.aim.forward;
@@ -914,6 +916,7 @@ internal class _DebugCommand : Command
         ctx.AssertRanByPlayer();
         ctx.Caller.SendChat(T.KitAlreadyHasAccess, ctx.Caller, ctx.Caller.Kit!);
     }
+
     private void quest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();
@@ -1005,6 +1008,7 @@ internal class _DebugCommand : Command
             ctx.ReplyString("Please use a <GUID> or <uhort, type>");
         }
     }
+
     private void traits(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1080,7 +1084,6 @@ internal class _DebugCommand : Command
         }
     }
 
-
     private void giveuav(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
@@ -1099,5 +1102,124 @@ internal class _DebugCommand : Command
 
         UAV.RequestUAV(ctx.Caller);
         ctx.Defer();
+    }
+
+    private void cst1(CommandInteraction ctx)
+    {
+        ctx.AssertRanByConsole();
+
+        ConfigTest test = new ConfigTest();
+        ConfigSync.RegisterSingleton(test);
+
+        test.Test1 = "test value 1";
+        test.Test1 = "test value 2";
+
+        test.Test2 = -4;
+        test.Test2 = 8;
+
+        test.Test3 = 3f;
+        test.Test3 = 6f;
+
+        test.Test4 = new JsonAssetReference<ItemAsset>(31902);
+        test.Test4 = new JsonAssetReference<ItemAsset>(81);
+
+        test.Test5 = new RotatableConfig<Guid>(Guid.NewGuid(), new RotatableDefaults<Guid>
+        {
+            { MapScheduler.Nuijamaa, Guid.NewGuid() },
+            { MapScheduler.GulfOfAqaba, Guid.NewGuid() }
+        });
+        test.Test5.SetCurrentMapValue(Guid.NewGuid());
+
+        test.Test6 = new JsonAssetReference<ItemAsset>(15);
+        test.Test6.Value = new JsonAssetReference<ItemAsset>(1440);
+
+        test.Test7 = 46f;
+        test.Test7 = 32f;
+
+        test.Test8 = Guid.NewGuid();
+        test.Test8 = Guid.NewGuid();
+
+        StaticConfigTest.Test1 = "test value 3";
+        StaticConfigTest.Test1 = "test value 4";
+
+        StaticConfigTest.Test8 = 24f;
+        StaticConfigTest.Test8 = 86f;
+    }
+
+    private void cst2(CommandInteraction ctx)
+    {
+        StaticConfigTest.Test8 = 24f;
+    }
+}
+
+//[Sync(999)]
+public class ConfigTest : ISyncObject
+{
+    [Sync(1)]
+    public string Test1 { get; set; }
+    [Sync(2)]
+    public int Test2 { get; set; }
+    [Sync(3)]
+    public float Test3 { get; set; }
+    [Sync(4)]
+    public JsonAssetReference<ItemAsset> Test4 { get; set; }
+    [Sync(5)]
+    public RotatableConfig<Guid> Test5 { get; set; }
+    [Sync(6)]
+    public RotatableConfig<JsonAssetReference<ItemAsset>> Test6 { get; set; }
+
+    private float m_test7;
+    [Sync(7, OnPullMethod = "OnTest7Loaded", OverrideFieldName = "m_test7")]
+    public float Test7
+    {
+        get => m_test7;
+        set => m_test7 = value;
+    }
+    [Sync(8)]
+    public Guid Test8 { get; set; }
+
+    public void OnTest7Loaded()
+    {
+        L.LogDebug("Applying change of Test7 instancly.");
+    }
+
+    public static bool SetTest1Prefix(string value, ConfigTest __instance, ref object __state)
+    {
+        string oldValue = __instance.Test1;
+        __state = oldValue;
+        return !(value == oldValue);
+    }
+
+    public void Save()
+    {
+        L.LogDebug("Saving");
+    }
+}
+
+//[Sync(998, SaveMethodOverride = nameof(StaticSave))]
+public static class StaticConfigTest
+{
+    [Sync(1)]
+    public static string Test1 { get; set; }
+    public static bool SetTest1Prefix(string value, ref object __state)
+    {
+        __state = Test1;
+        return !(value == Test1);
+    }
+    private static float m_test8;
+    [Sync(7, OnPullMethod = nameof(OnTest8Loaded), OverrideFieldName = "m_test8")]
+    public static float Test8
+    {
+        get => m_test8;
+        set => m_test8 = value;
+    }
+
+    public static void OnTest8Loaded()
+    {
+        L.LogDebug("Applying change of Test8 staticly.");
+    }
+    private static void StaticSave()
+    {
+        L.LogDebug("Saving static");
     }
 }

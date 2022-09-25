@@ -359,7 +359,7 @@ public class SpottedComponent : MonoBehaviour
         public bool IsVehicle = false;
         bool IBuff.IsBlinking => true;
         bool IBuff.Reserved => true;
-        string IBuff.Icon => IsVehicle ? Gamemode.Config.UI.VehicleSpottedIcon : Gamemode.Config.UI.SpottedIcon;
+        string IBuff.Icon => IsVehicle ? Gamemode.Config.UIIconVehicleSpotted : Gamemode.Config.UIIconSpotted;
         UCPlayer IBuff.Player => Player;
 
         public SpottedBuff(UCPlayer player)

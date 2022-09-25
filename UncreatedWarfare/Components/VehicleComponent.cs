@@ -455,15 +455,15 @@ public class VehicleComponent : MonoBehaviour
             for (int i = 0; i < trunk.Count; i++)
             {
                 ItemAsset? asset;
-                if (build is not null && trunk[i].id == build.GUID) asset = build;
-                else if (ammo is not null && trunk[i].id == ammo.GUID) asset = ammo;
-                else asset = Assets.find(trunk[i].id) as ItemAsset;
+                if (build is not null && trunk[i].Id == build.GUID) asset = build;
+                else if (ammo is not null && trunk[i].Id == ammo.GUID) asset = ammo;
+                else asset = Assets.find(trunk[i].Id) as ItemAsset;
 
-                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x,
-                        asset.size_y, trunk[i].rotation))
+                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].X, trunk[i].Y, asset.size_x,
+                        asset.size_y, trunk[i].Rotation))
                 {
-                    Item item = new Item(asset.id, trunk[i].amount, 100, F.CloneBytes(trunk[i].metadata));
-                    Vehicle.trunkItems.addItem(trunk[i].x, trunk[i].y, trunk[i].rotation, item);
+                    Item item = new Item(asset.id, trunk[i].Amount, 100, F.CloneBytes(trunk[i].Metadata));
+                    Vehicle.trunkItems.addItem(trunk[i].X, trunk[i].Y, trunk[i].Rotation, item);
                     loaderCount++;
 
                     if (loaderCount >= 3)

@@ -180,37 +180,15 @@ public class FOB : IFOB, IDeployable
     }
     public BarricadeDrop? RepairStation
     {
-        get => Gamemode.Config.Barricades.RepairStationGUID.ValidReference(out Guid guid)
+        get => Gamemode.Config.BarricadeRepairStation.ValidReference(out Guid guid)
             ? UCBarricadeManager.GetNearbyBarricades(guid, Radius, Position, Team, false).FirstOrDefault()
             : null;
     }
     public IEnumerable<BarricadeDrop> AmmoCrates
     {
-        get => Gamemode.Config.Barricades.AmmoCrateGUID.ValidReference(out Guid guid)
+        get => Gamemode.Config.BarricadeAmmoCrate.ValidReference(out Guid guid)
             ? UCBarricadeManager.GetNearbyBarricades(guid, Radius, Position, Team, true)
             : Array.Empty<BarricadeDrop>();
-    }
-    public IEnumerable<BarricadeDrop> Fortifications
-    {
-        get
-        {
-            return UCBarricadeManager.GetBarricadesWhere(b =>
-                FOBManager.Config.Buildables.Exists(bl => bl.BuildableBarricade == b.asset.GUID && bl.Type == EBuildableType.FORTIFICATION) &&
-                (Position - b.model.position).sqrMagnitude < SqrRadius &&
-                b.GetServersideData().group == Team
-                );
-        }
-    }
-    public int FortificationsCount
-    {
-        get
-        {
-            return UCBarricadeManager.CountBarricadesWhere(b =>
-                FOBManager.Config.Buildables.Exists(bl => bl.BuildableBarricade == b.asset.GUID && bl.Type == EBuildableType.FORTIFICATION) &&
-                (Position - b.model.position).sqrMagnitude < SqrRadius &&
-                b.GetServersideData().group == Team
-                );
-        }
     }
     public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.Config.Buildables.Where(bl => bl.Type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
     public List<UCPlayer> FriendliesOnFOB { get; private set; }
@@ -349,7 +327,7 @@ public class FOB : IFOB, IDeployable
                 }
             }
         }
-        if (Gamemode.Config.Barricades.FOBGUID.ValidReference(out Guid fob))
+        if (Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid fob))
             UpdateBunker(UCBarricadeManager.GetNearbyBarricades(fob, 30, Position, Team, false).FirstOrDefault());
 
         component = Radio.model.gameObject.AddComponent<FOBComponent>();
@@ -536,6 +514,12 @@ public class FOB : IFOB, IDeployable
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (!Gamemode.Config.BarricadeFOBRadioDamaged.ValidReference(out ItemBarricadeAsset asset))
+        {
+            L.LogError("Damaged FOB Radio GUID does not match a barricade. (Change \"" +
+                       nameof(GamemodeConfigData.BarricadeFOBRadioDamaged) + "\" in gamemode config).");
+            return;
+        }
         builtState = Radio.GetServersideData().barricade.state;
 
         if (Radio.model.TryGetComponent(out BarricadeComponent component))
@@ -544,7 +528,7 @@ public class FOB : IFOB, IDeployable
         }
 
         BarricadeData data = Radio.GetServersideData();
-        Barricade barricade = new Barricade(Gamemode.Config.Barricades.FOBRadioDamagedGUID.Value.Asset);
+        Barricade barricade = new Barricade(asset);
         Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
         BarricadeDrop newRadio = BarricadeManager.FindBarricadeByRootTransform(transform);
 

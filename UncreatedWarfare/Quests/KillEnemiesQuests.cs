@@ -2,6 +2,7 @@
 using System;
 using System.Linq;
 using System.Text.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;

@@ -103,7 +103,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
-        yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+        yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif

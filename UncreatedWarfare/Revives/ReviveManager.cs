@@ -327,10 +327,10 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         ulong team = parameters.player.GetTeam();
         parameters.player.movement.sendPluginSpeedMultiplier(0.35f);
         parameters.player.movement.sendPluginJumpMultiplier(0);
-        short key = unchecked((short)Gamemode.Config.UI.InjuredUI.Value.Id);
+        short key = unchecked((short)Gamemode.Config.UIInjured.Value.Id);
         if (key != 0)
         {
-            EffectManager.sendUIEffect(Gamemode.Config.UI.InjuredUI.Value, key, parameters.player.channel.owner.transportConnection, true, T.InjuredUIHeader.Translate(parameters.player.channel.owner.playerID.steamID.m_SteamID), string.Empty);
+            EffectManager.sendUIEffect(Gamemode.Config.UIInjured.Value, key, parameters.player.channel.owner.transportConnection, true, T.InjuredUIHeader.Translate(parameters.player.channel.owner.playerID.steamID.m_SteamID), string.Empty);
             EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", T.InjuredUIGiveUp.Translate(parameters.player.channel.owner.playerID.steamID.m_SteamID));
         }
         parameters.player.SendChat(T.InjuredUIGiveUpChat);
@@ -419,7 +419,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 e.Player.Player.life.serverSetBleeding(false);
             }
 
-            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI.Value, e.Player.Player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Gamemode.Config.UIInjured.Value, e.Player.Player.channel.owner.transportConnection);
             EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, e.Player.Player.channel.owner.transportConnection);
         }
         ClearInjuredMarker(e.Steam64, e.Player.GetTeam());
@@ -716,7 +716,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             if (g == default) Data.Is<IRevives>(out g);
             if (g != default)
             {
-                if (Gamemode.Config.UI.InjuredUI.ValidReference(out ushort id))
+                if (Gamemode.Config.UIInjured.ValidReference(out ushort id))
                     EffectManager.askEffectClearByID(id, Player.Player.channel.owner.transportConnection);
 
                 if (Squads.SquadManager.Config.MedicMarker.ValidReference(out id))

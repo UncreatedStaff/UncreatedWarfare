@@ -9,6 +9,7 @@ using System.Text.Json;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -219,7 +220,7 @@ public class Insurgency :
         Caches = new List<CacheData>();
         SeenCaches = new List<Vector3>();
 
-        CachesLeft = UnityEngine.Random.Range(Config.Insurgency.MinStartingCaches, Config.Insurgency.MaxStartingCaches + 1);
+        CachesLeft = UnityEngine.Random.Range(Config.InsurgencyMinStartingCaches, Config.InsurgencyMaxStartingCaches + 1);
         for (int i = 0; i < CachesLeft; i++)
             Caches.Add(new CacheData());
         base.PreGameStarting(isOnLoad);
@@ -234,7 +235,7 @@ public class Insurgency :
             SpawnBlockerOnT1();
         else
             SpawnBlockerOnT2();
-        StartStagingPhase(Config.Insurgency.StagingTime);
+        StartStagingPhase(Config.InsurgencyStagingTime);
     }
     public override void DeclareWin(ulong winner)
     {
@@ -248,7 +249,7 @@ public class Insurgency :
     }
     private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
     {
-        yield return new WaitForSeconds(Config.Insurgency.FirstCacheSpawnTime);
+        yield return new WaitForSeconds(Config.InsurgencyFirstCacheSpawnTime);
 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -261,7 +262,7 @@ public class Insurgency :
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
-        yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+        yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -390,7 +391,7 @@ public class Insurgency :
             if (!first.IsDiscovered)
             {
                 IntelligencePoints += points;
-                if (IntelligencePoints >= Config.Insurgency.IntelPointsToDiscovery)
+                if (IntelligencePoints >= Config.InsurgencyIntelPointsToDiscovery)
                 {
                     IntelligencePoints = 0;
                     OnCacheDiscovered(first.Cache);
@@ -401,7 +402,7 @@ public class Insurgency :
             if (first.IsDiscovered && CachesLeft != 1)
             {
                 IntelligencePoints += points;
-                if (IntelligencePoints >= Config.Insurgency.IntelPointsToSpawn)
+                if (IntelligencePoints >= Config.InsurgencyIntelPointsToSpawn)
                 {
                     IntelligencePoints = 0;
                     SpawnNewCache(true);
@@ -416,7 +417,7 @@ public class Insurgency :
         if (!last.IsDiscovered)
         {
             IntelligencePoints += points;
-            if (IntelligencePoints >= Config.Insurgency.IntelPointsToDiscovery)
+            if (IntelligencePoints >= Config.InsurgencyIntelPointsToDiscovery)
             {
                 IntelligencePoints = 0;
                 OnCacheDiscovered(last.Cache);
@@ -469,13 +470,12 @@ public class Insurgency :
         }
         SerializableTransform transform = viableSpawns.ElementAt(UnityEngine.Random.Range(0, viableSpawns.Count()));
 
-        JsonAssetReference<ItemBarricadeAsset> r = Config.Barricades.InsurgencyCacheGUID.Value;
-        if (!r.Exists)
+        if (!Config.BarricadeInsurgencyCache.ValidReference(out ItemBarricadeAsset asset))
         {
             L.LogWarning("Invalid barricade GUID for Insurgency Cache!");
             return;
         }
-        Barricade barricade = new Barricade(r.Asset);
+        Barricade barricade = new Barricade(asset);
         Quaternion rotation = transform.Rotation;
         rotation.eulerAngles = new Vector3(transform.Rotation.eulerAngles.x, transform.Rotation.eulerAngles.y, transform.Rotation.eulerAngles.z);
         Transform barricadeTransform = BarricadeManager.dropNonPlantedBarricade(barricade, transform.Position, rotation, 0, DefendingTeam);
@@ -586,7 +586,7 @@ public class Insurgency :
         {
             if (destroyer.GetTeam() == AttackingTeam)
             {
-                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheDestroyed, T.XPToastCacheDestroyed.Translate(destroyer));
+                Points.AwardXP(destroyer.Player, Config.InsurgencyXPCacheDestroyed, T.XPToastCacheDestroyed.Translate(destroyer));
                 StatsManager.ModifyStats(destroyer.Steam64, x => x.FlagsCaptured++, false);
                 StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 if (_gameStats != null)
@@ -603,7 +603,7 @@ public class Insurgency :
             }
             else
             {
-                Points.AwardXP(destroyer.Player, Config.Insurgency.XPCacheTeamkilled, T.XPToastFriendlyCacheDestroyed.Translate(destroyer));
+                Points.AwardXP(destroyer.Player, Config.InsurgencyXPCacheTeamkilled, T.XPToastFriendlyCacheDestroyed.Translate(destroyer));
             }
         }
         for (int i = 0; i < Caches.Count; i++)
@@ -923,7 +923,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     public override void OnGameStarting(bool isOnLoaded)
     {
         if (!Data.Is(out Insurgency ins)) return;
-        int attack = Gamemode.Config.Insurgency.AttackStartingTickets;
+        int attack = Gamemode.Config.InsurgencyAttackStartingTickets;
         int defence = ins.CachesLeft;
 
         if (ins.AttackingTeam == 1)

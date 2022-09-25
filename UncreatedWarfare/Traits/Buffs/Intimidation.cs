@@ -60,13 +60,13 @@ public class Intimidation : Buff
         if (t2Intim == 0 && t1Intim > 0) return 1ul;
         if (t1Intim > t2Intim)
         {
-            if (t1Intim - Gamemode.Config.TeamCTF.RequiredPlayerDifferenceToCapture >= t2Intim)
+            if (t1Intim - Gamemode.Config.AASRequiredCapturingPlayerDifference >= t2Intim)
                 return 1ul;
             else return 0ul;
         }
         else
         {
-            if (t2Intim - Gamemode.Config.TeamCTF.RequiredPlayerDifferenceToCapture >= t1Intim)
+            if (t2Intim - Gamemode.Config.AASRequiredCapturingPlayerDifference >= t1Intim)
                 return 2ul;
             else return 0ul;
         }

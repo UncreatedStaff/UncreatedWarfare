@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Windows.Interop;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;

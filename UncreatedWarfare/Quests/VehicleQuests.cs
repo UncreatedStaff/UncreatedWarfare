@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;

@@ -408,7 +408,7 @@ public static partial class Patches
 
                     if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
                     {
-                        if (Gamemode.Config.Items.EntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
+                        if (Gamemode.Config.ItemEntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
                         {
                             if (drop.model.TryGetComponent(out RepairableComponent repairable))
                                 repairable.Repair(builder);

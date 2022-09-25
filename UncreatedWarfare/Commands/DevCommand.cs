@@ -38,11 +38,11 @@ public class DevCommand : Command
 
             ctx.AssertHelpCheck(1, "/dev addcache (at current location)");
 
-            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.HasValue ||
-                !Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Exists)
+            if (!Gamemode.Config.BarricadeInsurgencyCache.HasValue ||
+                !Gamemode.Config.BarricadeInsurgencyCache.Value.Exists)
                 throw ctx.ReplyString("Cache GUID is not set correctly.");
 
-            if (ctx.TryGetTarget(out BarricadeDrop cache) && cache != null && cache.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid)
+            if (ctx.TryGetTarget(out BarricadeDrop cache) && cache != null && cache.asset.GUID == Gamemode.Config.BarricadeInsurgencyCache.Value.Guid)
             {
                 SerializableTransform transform = new SerializableTransform(cache.model);
 
@@ -58,10 +58,10 @@ public class DevCommand : Command
 
             ctx.AssertHelpCheck(1, "/dev gencaches (generates a json file for all placed caches)");
 
-            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.HasValue ||
-                !Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Exists)
+            if (!Gamemode.Config.BarricadeInsurgencyCache.HasValue ||
+                !Gamemode.Config.BarricadeInsurgencyCache.Value.Exists)
                 throw ctx.ReplyString("Cache GUID is not set correctly.");
-            Guid g = Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid;
+            Guid g = Gamemode.Config.BarricadeInsurgencyCache.Value.Guid;
             IEnumerable<BarricadeDrop> caches = UCBarricadeManager.AllBarricades.Where(b => b.asset.GUID == g);
 
             FileStream writer = File.Create("C" + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar + Path.Combine("Users", "USER", "Desktop", "cachespanws.json"));

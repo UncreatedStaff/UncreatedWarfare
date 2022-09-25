@@ -82,9 +82,9 @@ public class Whitelister : ListSingleton<WhitelistItem>
         {
             int itemCount = UCInventoryManager.CountItems(player.Player, itemData.item.id);
 
-            int allowedItems = kit.Items.Count(k => k.id == a.GUID);
+            int allowedItems = kit.Items.Count(k => k.Id == a.GUID);
             if (allowedItems == 0)
-                allowedItems = kit.Clothes.Count(k => k.id == a.GUID);
+                allowedItems = kit.Clothes.Count(k => k.Id == a.GUID);
 
             int max = isWhitelisted ? Math.Max(allowedItems, whitelistedItem.Amount) : allowedItems;
 
@@ -215,7 +215,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
                 }
                 else
                 {
-                    int allowedCount = kit.Items.Where(k => k.id == barricade.asset.GUID).Count();
+                    int allowedCount = kit.Items.Where(k => k.Id == barricade.asset.GUID).Count();
 
                     if (allowedCount > 0)
                     {
@@ -269,7 +269,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             }
             if (KitManager.HasKit(player.CSteamID, out Kit kit))
             {
-                if (kit.Items.Exists(k => k.id == structure.asset.GUID))
+                if (kit.Items.Exists(k => k.Id == structure.asset.GUID))
                 {
                     return;
                 }

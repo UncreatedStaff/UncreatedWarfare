@@ -124,7 +124,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     protected override bool TimeToCheck()
     {
-        if (_counter > Config.TeamCTF.FlagTickInterval)
+        if (_counter > Config.AASFlagTickInterval)
         {
             _counter = 0;
             return true;
@@ -145,7 +145,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
-        yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+        yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -214,18 +214,18 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         }
         _objectiveT1Index = 0;
         _objectiveT2Index = _rotation.Count - 1;
-        if (Config.TeamCTF.DiscoveryForesight < 1)
+        if (Config.AASDiscoveryForesight < 1)
         {
             L.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
         }
         else
         {
-            for (int i = 0; i < Config.TeamCTF.DiscoveryForesight; i++)
+            for (int i = 0; i < Config.AASDiscoveryForesight; i++)
             {
                 if (i >= _rotation.Count || i < 0) break;
                 _rotation[i].Discover(1);
             }
-            for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.TeamCTF.DiscoveryForesight; i--)
+            for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.AASDiscoveryForesight; i--)
             {
                 if (i >= _rotation.Count || i < 0) break;
                 _rotation[i].Discover(2);
@@ -258,11 +258,11 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             if (_gameStats != null)
                 _gameStats.flagOwnerChanges++;
             L.Log("Team 1 objective: " + (ObjectiveTeam1?.Name ?? "null") + ", Team 2 objective: " + (ObjectiveTeam2?.Name ?? "null"), ConsoleColor.Green);
-            if (Config.TeamCTF.DiscoveryForesight > 0)
+            if (Config.AASDiscoveryForesight > 0)
             {
                 if (Team == 1)
                 {
-                    for (int i = NewFlagObj.index; i < NewFlagObj.index + Config.TeamCTF.DiscoveryForesight; i++)
+                    for (int i = NewFlagObj.index; i < NewFlagObj.index + Config.AASDiscoveryForesight; i++)
                     {
                         if (i >= _rotation.Count || i < 0) break;
                         _rotation[i].Discover(1);
@@ -274,7 +274,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 }
                 else if (Team == 2)
                 {
-                    for (int i = NewFlagObj.index; i > NewFlagObj.index - Config.TeamCTF.DiscoveryForesight; i--)
+                    for (int i = NewFlagObj.index; i > NewFlagObj.index - Config.AASDiscoveryForesight; i--)
                     {
                         if (i >= _rotation.Count || i < 0) break;
                         _rotation[i].Discover(2);

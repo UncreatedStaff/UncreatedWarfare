@@ -133,20 +133,24 @@ public class BuildableComponent : MonoBehaviour
         BarricadeData data = Foundation.GetServersideData();
 
         string structureName;
-
         if (Buildable.Type != EBuildableType.EMPLACEMENT)
         {
-            Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(Buildable.BuildableBarricade));
+            if (!Buildable.BuildableBarricade.ValidReference(out ItemBarricadeAsset asset))
+            {
+                L.LogError((Buildable.Foundation.ValidReference(out asset) ? asset.FriendlyName : "<unknown>") + " does not have a valid BuildableBarricade in FOB config.");
+                return;
+            }
+            Barricade barricade = new Barricade(asset);
             Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
             BarricadeDrop structure = BarricadeManager.FindBarricadeByRootTransform(transform);
 
             BuiltBuildableComponent comp = transform.gameObject.AddComponent<BuiltBuildableComponent>();
             comp.Initialize(structure, Buildable, PlayerHits);
 
-            if (Assets.find(Buildable.Foundation) is ItemAsset asset)
-                structureName = asset.itemName;
+            if (Buildable.Foundation.ValidReference(out ItemBarricadeAsset fndAsset))
+                structureName = fndAsset.itemName;
             else
-                structureName = Buildable.Foundation.ToString();
+                structureName = "<unknown>";
 
             if (Buildable.Type == EBuildableType.FOB_BUNKER)
             {
@@ -167,19 +171,18 @@ public class BuildableComponent : MonoBehaviour
         }
         else
         {
-            ItemAsset? ammoasset = Buildable.Emplacement == null ? null : Assets.find<ItemAsset>(Buildable.Emplacement.Ammo);
-
-            if (Buildable.Emplacement == null || Assets.find(Buildable.Emplacement.EmplacementVehicle) is not VehicleAsset vehicleasset)
+            if (Buildable.Emplacement == null || !Buildable.Emplacement.EmplacementVehicle.ValidReference(out VehicleAsset vehicleasset))
             {
-                L.LogError($"Emplacement {(Buildable.Emplacement == null ? "null" : Assets.find(Buildable.Emplacement.EmplacementVehicle)?.name?.Replace("_Base", "") ?? Buildable.Emplacement.EmplacementVehicle.ToString())}'s vehicle id is not a valid vehicle.");
+                L.LogError((Buildable.Foundation.ValidReference(out ItemBarricadeAsset asset) ? asset.FriendlyName : "<unknown>") + " does not have a valid Emplacement > EmplacementVehicle in FOB config.");
                 return;
             }
+            Buildable.Emplacement.Ammo.ValidReference(out ItemAsset ammoasset);
 
             if (ammoasset != null)
                 for (int i = 0; i < Buildable.Emplacement.AmmoCount; i++)
                     ItemManager.dropItem(new Item(ammoasset.id, true), data.point, true, true, true);
             else
-                L.LogWarning($"Emplacement {Assets.find(Buildable.BuildableBarricade)?.name ?? Buildable.BuildableBarricade.ToString()}'s ammo id is not a valid item.");
+                L.LogWarning($"Emplacement {vehicleasset.FriendlyName}'s ammo id is not a valid item.");
 
             Quaternion rotation = Foundation.model.rotation;
             rotation.eulerAngles = new Vector3(rotation.eulerAngles.x + 90, rotation.eulerAngles.y, rotation.eulerAngles.z);
@@ -358,7 +361,7 @@ public class BuildableComponent : MonoBehaviour
         }
         else
         {
-            BarricadeDrop? closeEnemyFOB = Gamemode.Config.Barricades.FOBGUID.ValidReference(out Guid guid)
+            BarricadeDrop? closeEnemyFOB = Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid)
                 ? UCBarricadeManager.GetNearbyBarricades(guid, 5, point, false).FirstOrDefault()
                 : null;
             if (closeEnemyFOB is not null && closeEnemyFOB.GetServersideData().group != team)
@@ -367,8 +370,8 @@ public class BuildableComponent : MonoBehaviour
                 placer?.SendChat(T.BuildBunkerTooClose, (closeEnemyFOB.model.position - point).magnitude, 5f);
                 return false;
             }
-
-            if (!(placer.KitClass == EClass.COMBAT_ENGINEER && KitManager.KitExists(placer.KitName, out Kit kit) && kit.Items.Exists(i => i.id == buildable.Foundation)))
+            
+            if (placer.KitClass != EClass.COMBAT_ENGINEER || !buildable.Foundation.ValidReference(out Guid foundGuid) || !KitManager.KitExists(placer.KitName, out Kit kit) || !kit.Items.Exists(i => i.Id == foundGuid))
             {
                 if (fob == null)
                 {
@@ -392,7 +395,7 @@ public class BuildableComponent : MonoBehaviour
             {
                 if (buildable.Type == EBuildableType.REPAIR_STATION)
                 {
-                    int existing = Gamemode.Config.Barricades.RepairStationGUID.ValidReference(out guid) ? UCBarricadeManager.CountNearbyBarricades(guid, fob.Radius, fob.Position, team) : 0;
+                    int existing = Gamemode.Config.BarricadeRepairStation.ValidReference(out guid) ? UCBarricadeManager.CountNearbyBarricades(guid, fob.Radius, fob.Position, team) : 0;
                     if (existing >= 1)
                     {
                         // repair station already exists

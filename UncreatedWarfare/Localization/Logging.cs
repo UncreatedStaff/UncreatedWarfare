@@ -111,10 +111,12 @@ public static class L
     [Conditional("DEBUG")]
     public static void LogDebug(string info, ConsoleColor color = ConsoleColor.DarkGray)
     {
-        if (UCWarfare.Config.Debug)
+        if (!UCWarfare.IsLoaded)
+            LogAsLibrary("[DEBUG] " + info, color);
+        else if (UCWarfare.Config.Debug)
             Log(info, color);
     }
-    internal static void NetLogInfo(string message) => Log(message);
+    internal static void NetLogInfo(string message) => LogDebug(message);
     internal static void NetLogWarning(string message) => LogWarning(message, method: "UncreatedNetworking");
     internal static void NetLogError(string message) => LogError(message, method: "UncreatedNetworking");
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking", filepath: "unknown");

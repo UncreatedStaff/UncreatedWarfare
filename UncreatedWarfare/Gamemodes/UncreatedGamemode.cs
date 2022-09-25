@@ -30,8 +30,8 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
 {
     public const float MATCH_PRESENT_THRESHOLD = 0.65f;
     public const string GAMEMODE_RELOAD_KEY = "gamemode";
-    internal static readonly GamemodeConfig ConfigObj = new GamemodeConfig();
-    public static readonly WinToastUI WinToastUI = new WinToastUI();
+    internal static GamemodeConfig ConfigObj;
+    public static WinToastUI WinToastUI;
     public static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
     public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
     public static readonly List<KeyValuePair<string, Type>> GAMEMODES = new List<KeyValuePair<string, Type>>
@@ -93,10 +93,10 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         this.useEventLoop = EventLoopSpeed > 0;
         this._state = EState.LOADING;
     }
-    public void SetTiming(float NewSpeed)
+    public void SetTiming(float newSpeed)
     {
-        this._eventLoopSpeed = NewSpeed;
-        this.useEventLoop = NewSpeed > 0;
+        this._eventLoopSpeed = newSpeed;
+        this.useEventLoop = newSpeed > 0;
     }
     public void AdvanceDelays(float seconds)
     {

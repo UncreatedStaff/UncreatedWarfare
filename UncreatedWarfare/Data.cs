@@ -21,6 +21,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Sync;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -58,10 +59,13 @@ public static class Data
         public static readonly string FOBStorage       = Path.Combine(BaseDirectory, "FOBs")      + Path.DirectorySeparatorChar;
         public static readonly string LangStorage      = Path.Combine(BaseDirectory, "Lang")      + Path.DirectorySeparatorChar;
         public static readonly string Logs             = Path.Combine(BaseDirectory, "Logs")      + Path.DirectorySeparatorChar;
+        public static readonly string Sync             = Path.Combine(BaseDirectory, "Sync")      + Path.DirectorySeparatorChar;
         public static readonly string ActionLog        = Path.Combine(Logs,          "ActionLog") + Path.DirectorySeparatorChar;
         public static readonly string PendingOffenses  = Path.Combine(BaseDirectory, "Offenses")  + Path.DirectorySeparatorChar;
         public static readonly string TraitDataStorage = Path.Combine(BaseDirectory, "traits.json");
-
+        public static readonly string ConfigSync       = Path.Combine(Sync,          "config.json");
+        public static readonly string KitSync          = Path.Combine(Sync,          "kits.json");
+        public static readonly string PlayersSync      = Path.Combine(Sync,          "players.json");
         public static readonly string CurrentLog       = Path.Combine(Logs,          "current.txt");
         public static string FlagStorage        => _flagCache is null       ? (_flagCache       = Path.Combine(MapStorage, "Flags")      + Path.DirectorySeparatorChar) : _flagCache;
         public static string StructureStorage   => _structureCache is null  ? (_structureCache  = Path.Combine(MapStorage, "Structures") + Path.DirectorySeparatorChar) : _structureCache;
@@ -74,7 +78,6 @@ public static class Data
             _vehicleCache = null;
         }
     }
-
     public static class Keys
     {
         public const PlayerKey GiveUp = PlayerKey.PluginKey3;
@@ -104,7 +107,7 @@ public static class Data
     internal static ICommandInputOutput? defaultIOHandler;
     public static Reporter Reporter;
     public static DeathTracker DeathTracker;
-    internal static HomebaseClient? NetClient;
+    //internal static HomebaseClient? NetClient;
     internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearShirt;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearPants;
@@ -121,6 +124,7 @@ public static class Data
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
+    public static bool IsInitialSyncRegistering { get; private set; } = true;
     internal static ClientInstanceMethod<string> SendChangeText { get; private set; }
     internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
     internal static ClientStaticMethod SendEffectClearAll { get; private set; }
@@ -157,6 +161,7 @@ public static class Data
             OutputToConsoleMethod = null;
         }
     }
+    /*
     public static void ReloadTCP()
     {
         if (UCWarfare.Config.TCPSettings.EnableTCPServer)
@@ -181,7 +186,7 @@ public static class Data
             NetClient.OnSentMessage += OnClientSentMessage;
             NetClient.OnReceivedMessage += OnClientReceivedMessage;
         }
-    }
+    }*/
 
     public static void LoadVariables()
     {
@@ -192,13 +197,6 @@ public static class Data
         Singletons.OnSingletonUnloaded  += OnSingletonUnloaded;
         Singletons.OnSingletonReloaded  += OnSingletonReloaded;
 
-
-        /* INITIALIZE UNCREATED NETWORKING */
-        Logging.OnLogInfo += L.NetLogInfo;
-        Logging.OnLogWarning += L.NetLogWarning;
-        Logging.OnLogError += L.NetLogError;
-        Logging.OnLogException += L.NetLogException;
-        NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
 
         /* CREATE DIRECTORIES */
         L.Log("Validating directories...", ConsoleColor.Magenta);
@@ -224,7 +222,7 @@ public static class Data
         Gamemode.ReadGamemodes();
 
         if (!Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF))) throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Failed to load gamemode"));
-        ReloadTCP();
+        //ReloadTCP();
 
         if (UCWarfare.Config.EnableReporter)
             Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
@@ -367,6 +365,13 @@ public static class Data
         Quests.QuestManager.Init();
         Quests.DailyQuests.Load();
     }
+    internal static void RegisterInitialSyncs()
+    {
+        Gamemode.ConfigObj = new GamemodeConfig();
+        Gamemode.WinToastUI = new Gamemodes.UI.WinToastUI();
+        IsInitialSyncRegistering = false;
+        ConfigSync.OnInitialSyncRegisteringComplete();
+    }
 
     private static void OnSingletonReloaded(IReloadableSingleton singleton, bool success)
     {
@@ -398,35 +403,34 @@ public static class Data
         new KeyValuePair<Type, string?>(typeof(EDeathCause), "Death Cause"),
         new KeyValuePair<Type, string?>(typeof(ELimb), "Limb")
     };
-    private static void OnClientReceivedMessage(IConnection connection, byte[] message)
+    internal static void OnClientReceivedMessage(IConnection connection, in MessageOverhead overhead, byte[] message)
     {
-        if (UCWarfare.Config.Debug)
+        if (UCWarfare.Config.Debug && (overhead.Flags & EMessageFlags.SYS_MESSAGE) == 0)
         {
-            MessageOverhead ovh = new MessageOverhead(message);
-            L.Log("Received from TCP server: " + ovh.ToString() + ".", ConsoleColor.DarkGray);
+            L.Log("Received from TCP server: " + overhead.ToString() + ".", ConsoleColor.DarkGray);
         }
     }
-    private static void OnClientSentMessage(IConnection connection, byte[] message)
+    internal static void OnClientSentMessage(IConnection connection, in MessageOverhead overhead, byte[] message)
     {
-        if (UCWarfare.Config.Debug)
+        if (UCWarfare.Config.Debug && (overhead.Flags & EMessageFlags.SYS_MESSAGE) == 0)
         {
-            MessageOverhead ovh = new MessageOverhead(message);
-            L.Log("Sent over TCP server    : " + ovh.ToString() + ".", ConsoleColor.DarkGray);
+            L.Log("Sent over TCP server    : " + overhead.ToString() + ".", ConsoleColor.DarkGray);
         }
     }
-    private static void OnClientDisconnected(IConnection connection)
+    internal static void OnClientDisconnected(IConnection connection)
     {
         L.Log("Disconnected from HomeBase.", ConsoleColor.DarkYellow);
     }
-    private static void OnClientConnected(IConnection connection)
+    internal static void OnClientConnected(IConnection connection)
     {
         L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
         PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
         ActionLogger.OnConnected();
         Quests.DailyQuests.OnConnectedToServer();
-        if (Gamemode.shutdownAfterGame)
+        if (Gamemode != null && Gamemode.shutdownAfterGame)
             ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
         Task.Run(OffenseManager.OnConnected).ConfigureAwait(false);
+        ConfigSync.OnConnected(connection);
     }
     private static void DuplicateKeyError(Exception ex)
     {

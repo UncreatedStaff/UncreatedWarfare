@@ -80,7 +80,7 @@ public abstract class Leaderboard<Stats, StatTracker> : MonoBehaviour where Stat
         this.tracker = tracker;
         Calculate();
         SendLeaderboard();
-        secondsLeft = Gamemode.Config.GeneralConfig.LeaderboardTime;
+        secondsLeft = Gamemode.Config.GeneralLeaderboardTime;
         endGameUpdateTimer = StartCoroutine(StartUpdatingTimer());
     }
     protected virtual IEnumerator<WaitForSeconds> StartUpdatingTimer()

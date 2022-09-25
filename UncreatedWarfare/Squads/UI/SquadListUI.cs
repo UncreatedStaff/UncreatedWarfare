@@ -42,7 +42,7 @@ public class SquadListUI : UnturnedUI
     public readonly UnturnedLabel[] SquadNames;
     public readonly UnturnedLabel[] SquadMemberCounts;
 
-    public SquadListUI() : base(12001, Gamemode.Config.UI.SquadListGUID, true, false)
+    public SquadListUI() : base(12001, Gamemode.Config.UISquadList, true, false)
     {
         Squads = new UnturnedUIElement[]
         {

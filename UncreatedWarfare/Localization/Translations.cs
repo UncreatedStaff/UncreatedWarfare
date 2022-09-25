@@ -183,6 +183,16 @@ public class Translation
         }
     }
 
+    private static readonly MethodInfo toStringMethod = typeof(Translation).GetMethods(BindingFlags.Static | BindingFlags.Public)
+        .First(x => x.Name.Equals("ToString") && x.GetGenericArguments().Length == 1);
+    public static string ToString(object value, string language, string? format, UCPlayer? target, TranslationFlags flags)
+    {
+        if (value is null)
+            return ToString<object>(value!, language, format, target, flags);
+        return (string)typeof(ToStringHelperClass<>).MakeGenericType(value.GetType())
+            .GetMethod("ToString", BindingFlags.Static | BindingFlags.Public).Invoke(null, new object?[] { value, language, format,
+                target, LanguageAliasSet.GetCultureInfo(language), flags });
+    }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ToString<T>(T value, string language, string? format, UCPlayer? target, TranslationFlags flags) 
         => ToStringHelperClass<T>.ToString(value, language, format, target, LanguageAliasSet.GetCultureInfo(language), flags);
@@ -469,7 +479,7 @@ public class Translation
                 if (info2 != null)
                 {
                     dm = new DynamicMethod("GetAssetName",
-                        MethodAttributes.Static | MethodAttributes.Public | MethodAttributes.Final,
+                        MethodAttributes.Static | MethodAttributes.Public,
                         CallingConventions.Standard, typeof(string), new Type[] { t }, t,
                         true);
                     dm.DefineParameter(1, ParameterAttributes.None, "value");
@@ -486,7 +496,7 @@ public class Translation
             else
             {
                 dm = new DynamicMethod("GetAssetName",
-                    MethodAttributes.Static | MethodAttributes.Public | MethodAttributes.Final,
+                    MethodAttributes.Static | MethodAttributes.Public,
                     CallingConventions.Standard, typeof(string), new Type[] { t }, t,
                     true);
                 dm.DefineParameter(1, ParameterAttributes.None, "value");

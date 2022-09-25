@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using Uncreated.Encoding;
 using Uncreated.Networking;
 using UnityEngine;
 
@@ -141,6 +142,9 @@ public class ActionLogger : MonoBehaviour
     }
     internal static void OnConnected()
     {
+#if DEBUG
+        return;
+#endif
         if (Instance != null)
         {
             F.CheckDir(Data.Paths.ActionLog, out bool success);
@@ -178,11 +182,20 @@ public class ActionLogger : MonoBehaviour
 
     public static class NetCalls
     {
-        public static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
+        public static readonly NetCallRaw<byte[], DateTime> SendLog = new NetCallRaw<byte[], DateTime>(1127, ReadLog, null, WriteLog, null, 65535);
         public static readonly NetCall<DateTime> AckLog = new NetCall<DateTime>(ReceiveAckLog);
         public static readonly NetCall RequestCurrentLog = new NetCall(ReceiveCurrentLogRequest);
-        public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, R => R.ReadLongBytes() ?? Array.Empty<byte>(), null, (W, bytes) => W.WriteLong(bytes), null, 65535);
-
+        public static readonly NetCallRaw<byte[], DateTime> SendCurrentLog = new NetCallRaw<byte[], DateTime>(1130, ReadLog, null, WriteLog, null, 65535);
+        private static byte[] ReadLog(ByteReader reader)
+        {
+            int length = reader.ReadInt32();
+            return reader.ReadBlock(length);
+        }
+        private static void WriteLog(ByteWriter writer, byte[] logData)
+        {
+            writer.Write(logData.Length);
+            writer.WriteBlock(logData);
+        }
         [NetCall(ENetCall.FROM_SERVER, 1128)]
         internal static void ReceiveAckLog(MessageContext context, DateTime fileReceived)
         {

@@ -1,11 +1,13 @@
 ﻿#define USE_DEBUGGER
 
+using JetBrains.Annotations;
 using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Uncreated.Networking;
@@ -14,6 +16,7 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -27,6 +30,7 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
@@ -41,9 +45,6 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version      = new Version(3, 0, 0, 0);
     private readonly SystemConfig _config       = new SystemConfig();
-#if DEBUG
-    private readonly TestConfig _testConfig     = new TestConfig();
-#endif
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
@@ -52,6 +53,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
     public event EventHandler UCWarfareLoaded;
     public event EventHandler UCWarfareUnloading;
     internal Projectiles.ProjectileSolver Solver;
+    public HomebaseClientComponent? NetClient;
     public bool CoroutineTiming = false;
     private bool InitialLoadEventSubscription;
     private DateTime NextRestartTime;
@@ -59,7 +61,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
     bool IUncreatedSingleton.IsLoaded => IsLoaded;
     public static bool IsLoaded => I is not null;
     public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
-    public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && Data.NetClient is not null && Data.NetClient.IsActive;
+    public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && I.NetClient != null && I.NetClient.IsActive;
     private void Awake()
     {
         if (I != null) throw new SingletonLoadException(ESingletonLoadType.LOAD, this, new Exception("Uncreated Warfare is already loaded."));
@@ -114,14 +116,46 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         UCInventoryManager.OnLoad();
 
+        gameObject.AddComponent<ConfigSync>();
         gameObject.AddComponent<ActionLogger>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
+        /* INITIALIZE UNCREATED NETWORKING */
+        Logging.OnLogInfo += L.NetLogInfo;
+        Logging.OnLogWarning += L.NetLogWarning;
+        Logging.OnLogError += L.NetLogError;
+        Logging.OnLogException += L.NetLogException;
+        NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+        
+        ConfigSync.Reflect();
+
+        Data.RegisterInitialSyncs();
+
+        InitNetClient();
 
         Quests.DailyQuests.EarlyLoad();
 
         ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
+    }
+
+    internal void InitNetClient()
+    {
+        if (NetClient != null)
+        {
+            Destroy(NetClient);
+            NetClient = null;
+        }
+        if (Config.TCPSettings.EnableTCPServer)
+        {
+            L.Log("Attempting connection with Homebase...", ConsoleColor.Magenta);
+            NetClient = gameObject.AddComponent<HomebaseClientComponent>();
+            NetClient.OnClientVerified += Data.OnClientConnected;
+            NetClient.OnClientDisconnected += Data.OnClientDisconnected;
+            NetClient.OnSentMessage += Data.OnClientSentMessage;
+            NetClient.OnReceivedMessage += Data.OnClientReceivedMessage;
+            NetClient.Init(Config.TCPSettings.TCPServerIP, Config.TCPSettings.TCPServerPort, Config.TCPSettings.TCPServerIdentity);
+        }
     }
 
     public void Load()
@@ -446,18 +480,16 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
             L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
-            try
+            if (NetClient != null)
             {
-                Data.NetClient?.Dispose();
-            }
-            finally
-            {
-                Data.NetClient = null!;
+                Destroy(NetClient);
+                NetClient = null;
             }
             Logging.OnLogInfo -= L.NetLogInfo;
             Logging.OnLogWarning -= L.NetLogWarning;
             Logging.OnLogError -= L.NetLogError;
             Logging.OnLogException -= L.NetLogException;
+            ConfigSync.UnpatchAll();
             try
             {
                 Patches.Unpatch();
@@ -477,8 +509,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
             L.LogError("Error unloading: ");
             L.LogError(ex);
         }
-        if (Data.Singletons is not null)
-            Data.Singletons.UnloadAll();
+        Data.Singletons?.UnloadAll();
         L.Log("Warfare unload complete", ConsoleColor.Blue);
 #if DEBUG
         profiler.Dispose();

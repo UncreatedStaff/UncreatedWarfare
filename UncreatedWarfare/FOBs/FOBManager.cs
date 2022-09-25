@@ -21,6 +21,9 @@ using System.Text.Json.Serialization;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Locations;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Maps;
+using Steamworks;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
@@ -63,8 +66,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 #endif
         foreach (BuildableData b in Config.Buildables)
         {
-            if (!Whitelister.IsWhitelisted(b.Foundation, out _))
-                Whitelister.AddItem(b.Foundation);
+            if (b.Foundation.ValidReference(out Guid guid) && !Whitelister.IsWhitelisted(guid, out _))
+                Whitelister.AddItem(guid);
 
             if (b.Emplacement != null)
             {
@@ -115,9 +118,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     private void OnBarricadePlaced(BarricadePlaced e)
     {
         Guid guid = e.ServersideData.barricade.asset.GUID;
-        bool isRadio = Gamemode.Config.Barricades.FOBRadioGUIDs.HasValue && Gamemode.Config.Barricades.FOBRadioGUIDs.Value.Any(g => g == guid);
+        ulong team = e.GroupID.GetTeam();
+        FactionInfo? info = TeamManager.GetFactionSafe(team);
+        bool isRadio = info != null && info.FOBRadio.MatchGuid(guid);
         BarricadeDrop drop = e.Barricade;
-        BuildableData? buildable = Config.Buildables.Find(b => b.Foundation == drop.asset.GUID);
+        BuildableData? buildable = Config.Buildables.Find(b => b.Foundation.MatchGuid(guid));
         if (buildable != null)
         {
             drop.model.gameObject.AddComponent<BuildableComponent>().Initialize(drop, buildable);
@@ -128,8 +133,8 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (Team1FOBs.FirstOrDefault(f => f.Position == pos) is null && Team2FOBs.FirstOrDefault(f => f.Position == pos) is null)
                 RegisterNewFOB(e.Barricade);
         }
-        BuildableData? repairable = isRadio ? null : Config.Buildables.Find(b => b.BuildableBarricade == drop.asset.GUID || 
-            (b.Type == EBuildableType.EMPLACEMENT && b.Emplacement != null && b.Emplacement.BaseBarricade == drop.asset.GUID));
+        BuildableData? repairable = isRadio ? null : Config.Buildables.Find(b => b.BuildableBarricade != null && b.BuildableBarricade.HasValue && b.BuildableBarricade.Value.MatchGuid(guid) || 
+            (b.Type == EBuildableType.EMPLACEMENT && b.Emplacement != null && b.Emplacement.BaseBarricade.MatchGuid(guid)));
         if (repairable != null || isRadio)
         {
             drop.model.gameObject.AddComponent<RepairableComponent>();
@@ -160,36 +165,37 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
 #endif
         if (e.Transform.TryGetComponent(out BuiltBuildableComponent comp))
             UnityEngine.Object.Destroy(comp);
-        if (Gamemode.Config.Barricades.FOBRadioGUIDs == null) return;
-        if (Gamemode.Config.Barricades.FOBGUID.ValidReference(out Guid guid) && guid == e.ServersideData.barricade.asset.GUID)
+        if (Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid) && guid == e.ServersideData.barricade.asset.GUID)
         {
             FOB? fob = FOB.GetNearestFOB(e.ServersideData.point, EFOBRadius.SHORT, e.ServersideData.group);
 
-            if (fob != null)
-            {
-                fob.UpdateBunker(null);
-            }
-
+            fob?.UpdateBunker(null);
             SendFOBListToTeam(e.ServersideData.group);
         }
         if (e.Transform.TryGetComponent(out FOBComponent f))
         {
-            if (Gamemode.Config.Barricades.FOBRadioGUIDs.Value.Any(g => g == e.ServersideData.barricade.asset.GUID))
+            ulong team = e.Barricade.GetServersideData().group.GetTeam();
+            FactionInfo? info = TeamManager.GetFactionSafe(team);
+            if (info is not null)
             {
-                if (f.parent.IsWipedByAuthority)
-                    f.parent.Destroy();
-                else
-                    f.parent.StartBleed();
-            }
-            else if (Gamemode.Config.Barricades.FOBRadioDamagedGUID.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID)
-            {
-                if (f.parent.IsBleeding)
-                    f.parent.Destroy();
-            }
+                if (info.FOBRadio.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID)
+                {
+                    if (f.parent.IsWipedByAuthority)
+                        f.parent.Destroy();
+                    else
+                        f.parent.StartBleed();
+                }
+                else if (Gamemode.Config.BarricadeFOBRadioDamaged.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID)
+                {
+                    if (f.parent.IsBleeding)
+                        f.parent.Destroy();
+                }
+                else return;
 
-            SendFOBListToTeam(f.parent.Team);
+                SendFOBListToTeam(f.parent.Team);
+            }
         }
-        else if (Gamemode.Config.Barricades.InsurgencyCacheGUID.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID)
+        else if (Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out guid) && guid == e.ServersideData.barricade.asset.GUID && Data.Is<Insurgency>())
         {
             DeleteCache(e.Barricade);
         }
@@ -268,9 +274,9 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         UCPlayer? placer = UCPlayer.FromID(drop.GetServersideData().owner);
         if (placer != null)
         {
-            if (Gamemode.Config.Barricades.FOBBaseGUID.ValidReference(out ItemBarricadeAsset fobBase))
+            if (Gamemode.Config.BarricadeFOBBunkerBase.ValidReference(out ItemBarricadeAsset fobBase))
                 ItemManager.dropItem(new Item(fobBase.id, true), placer.Position, true, true, true);
-            if (Gamemode.Config.Barricades.AmmoCrateBaseGUID.ValidReference(out ItemBarricadeAsset ammoBase))
+            if (Gamemode.Config.BarricadeAmmoCrateBase.ValidReference(out ItemBarricadeAsset ammoBase))
                 ItemManager.dropItem(new Item(ammoBase.id, true), placer.Position, true, true, true);
             QuestManager.OnFOBBuilt(placer, fob);
             Tips.TryGiveTip(placer, ETip.PLACE_BUNKER);
@@ -893,7 +899,7 @@ public class SpecialFOB : IFOB, IDeployable
     }
 }
 [JsonSerializable(typeof(FOBConfigData))]
-public class FOBConfigData : ConfigData
+public class FOBConfigData : JSONConfigData
 {
     public JsonAssetReference<VehicleAsset> MortarBase;
     public float FOBMaxHeightAboveTerrain;
@@ -966,8 +972,8 @@ public class FOBConfigData : ConfigData
         {
             new BuildableData
             {
-                BuildableBarricade = "61c349f10000498fa2b92c029d38e523",
-                Foundation = "1bb17277dd8148df9f4c53d1a19b2503",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("61c349f10000498fa2b92c029d38e523"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("1bb17277dd8148df9f4c53d1a19b2503"),
                 Type = EBuildableType.FOB_BUNKER,
                 RequiredHits = 30,
                 RequiredBuild = 15,
@@ -976,8 +982,8 @@ public class FOBConfigData : ConfigData
             },
             new BuildableData
             {
-                BuildableBarricade = "6fe208519d7c45b0be38273118eea7fd",
-                Foundation = "eccfe06e53d041d5b83c614ffa62ee59",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("6fe208519d7c45b0be38273118eea7fd"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("eccfe06e53d041d5b83c614ffa62ee59"),
                 Type = EBuildableType.AMMO_CRATE,
                 RequiredHits = 10,
                 RequiredBuild = 1,
@@ -986,8 +992,8 @@ public class FOBConfigData : ConfigData
             },
             new BuildableData
             {
-                BuildableBarricade = "c0d11e0666694ddea667377b4c0580be",
-                Foundation = "26a6b91cd1944730a0f28e5f299cebf9",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("c0d11e0666694ddea667377b4c0580be"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("26a6b91cd1944730a0f28e5f299cebf9"),
                 Type = EBuildableType.REPAIR_STATION,
                 RequiredHits = 25,
                 RequiredBuild = 15,
@@ -997,8 +1003,8 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // sandbag line
-                BuildableBarricade = "ab702192eab4456ebb9f6d7cc74d4ba2",
-                Foundation = "15f674dcaf3f44e19a124c8bf7e19ca2",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("ab702192eab4456ebb9f6d7cc74d4ba2"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("15f674dcaf3f44e19a124c8bf7e19ca2"),
                 Type = EBuildableType.FORTIFICATION,
                 RequiredHits = 8,
                 RequiredBuild = 1,
@@ -1008,8 +1014,8 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // sandbag pillbox
-                BuildableBarricade = "f3bd9ee2fa334faabc8fd9d5a3b84424",
-                Foundation = "a9294335d8e84b76b1cbcb7d70f66aaa",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("f3bd9ee2fa334faabc8fd9d5a3b84424"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("a9294335d8e84b76b1cbcb7d70f66aaa"),
                 Type = EBuildableType.FORTIFICATION,
                 RequiredHits = 8,
                 RequiredBuild = 1,
@@ -1019,8 +1025,8 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // sandbag crescent
-                BuildableBarricade = "eefee76f077349e58359f5fd03cf311d",
-                Foundation = "920f8b30ae314406ab032a0c2efa753d",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("eefee76f077349e58359f5fd03cf311d"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("920f8b30ae314406ab032a0c2efa753d"),
                 Type = EBuildableType.FORTIFICATION,
                 RequiredHits = 8,
                 RequiredBuild = 1,
@@ -1030,8 +1036,8 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // sandbag foxhole
-                BuildableBarricade = "a71e3e3d6bb54a36b7bd8bf5f25160aa",
-                Foundation = "12ea830dd9ab4f949893bbbbc5e9a5f6",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("a71e3e3d6bb54a36b7bd8bf5f25160aa"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("12ea830dd9ab4f949893bbbbc5e9a5f6"),
                 Type = EBuildableType.FORTIFICATION,
                 RequiredHits = 12,
                 RequiredBuild = 2,
@@ -1041,8 +1047,8 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // razorwire
-                BuildableBarricade = "bc24bd85ff714ff7bb2f8b2dd5056395",
-                Foundation = "a2a8a01a58454816a6c9a047df0558ad",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("bc24bd85ff714ff7bb2f8b2dd5056395"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("a2a8a01a58454816a6c9a047df0558ad"),
                 Type = EBuildableType.FORTIFICATION,
                 RequiredHits = 8,
                 RequiredBuild = 1,
@@ -1052,8 +1058,8 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // hesco wall
-                BuildableBarricade = "e1af3a3af31e4996bc5d6ffd9a0773ec",
-                Foundation = "baf23a8b514441ee8db891a3ddf32ef4",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("e1af3a3af31e4996bc5d6ffd9a0773ec"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("baf23a8b514441ee8db891a3ddf32ef4"),
                 Type = EBuildableType.FORTIFICATION,
                 RequiredHits = 20,
                 RequiredBuild = 1,
@@ -1063,8 +1069,8 @@ public class FOBConfigData : ConfigData
             new BuildableData
             {
                 // hesco tower
-                BuildableBarricade = "857c85161f254964a921700a69e215a9",
-                Foundation = "827d0ca8bfff43a39f750f191e16ea71",
+                BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>("857c85161f254964a921700a69e215a9"),
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("827d0ca8bfff43a39f750f191e16ea71"),
                 Type = EBuildableType.FORTIFICATION,
                 RequiredHits = 15,
                 RequiredBuild = 1,
@@ -1075,16 +1081,16 @@ public class FOBConfigData : ConfigData
             {
                 // M2A1
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                Foundation = "80396c361d3040d7beb3921964ec2997",
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("80396c361d3040d7beb3921964ec2997"),
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 10,
                 RequiredBuild = 6,
                 Team = 1,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = "aa3c6af4911243b5b5c9dc95ca1263bf",
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("aa3c6af4911243b5b5c9dc95ca1263bf"),
                     BaseBarricade =  new JsonAssetReference<ItemBarricadeAsset>(),
-                    Ammo = "523c49ce4df44d46ba37be0dd6b4504b",
+                    Ammo = new JsonAssetReference<ItemAsset>("523c49ce4df44d46ba37be0dd6b4504b"),
                     AmmoCount = 2,
                     MaxFobCapacity = 2
                 }
@@ -1093,16 +1099,16 @@ public class FOBConfigData : ConfigData
             {
                 // Kord
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                Foundation = "e44ba62f763c432e882ddc7eabaa9c77",
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("e44ba62f763c432e882ddc7eabaa9c77"),
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 10,
                 RequiredBuild = 6,
                 Team = 2,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = "86cfe1eb8be144aeae7659c9c74ff11a",
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("86cfe1eb8be144aeae7659c9c74ff11a"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                    Ammo = "6e9bc2083a1246b49b1656c2ec6f535a",
+                    Ammo = new JsonAssetReference<ItemAsset>("6e9bc2083a1246b49b1656c2ec6f535a"),
                     AmmoCount = 2,
                     MaxFobCapacity = 2
                 }
@@ -1111,16 +1117,16 @@ public class FOBConfigData : ConfigData
             {
                 // TOW
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                Foundation = "a68ae466fb804829a0eb0d4556071801",
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("a68ae466fb804829a0eb0d4556071801"),
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 1,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = "9d305050a6a142349376d6c49fb38362",
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("9d305050a6a142349376d6c49fb38362"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                    Ammo = "3128a69d06ac4bbbbfddc992aa7185a6",
+                    Ammo = new JsonAssetReference<ItemAsset>("3128a69d06ac4bbbbfddc992aa7185a6"),
                     AmmoCount = 1,
                     MaxFobCapacity = 1
                 }
@@ -1129,16 +1135,16 @@ public class FOBConfigData : ConfigData
             {
                 // Kornet
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                Foundation = "37811b1847744c958fcb30a0b759874b",
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("37811b1847744c958fcb30a0b759874b"),
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 2,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = "677b1084-dffa-4633-84d2-9167a3fae25b",
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("677b1084-dffa-4633-84d2-9167a3fae25b"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                    Ammo = "d7774b017c404adbb0a0fe8e902b9689",
+                    Ammo = new JsonAssetReference<ItemAsset>("d7774b017c404adbb0a0fe8e902b9689"),
                     AmmoCount = 1,
                     MaxFobCapacity = 1
                 }
@@ -1147,16 +1153,16 @@ public class FOBConfigData : ConfigData
             {
                 // Stinger
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                Foundation = "3c2dd7febc854b7f8859852b8c736c8e",
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("3c2dd7febc854b7f8859852b8c736c8e"),
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 2,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = "1883345cbdad40aa81e49c84e6c872ef",
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("1883345cbdad40aa81e49c84e6c872ef"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                    Ammo = "3c0a94af5af24901a9e3207f3e9ed0ba",
+                    Ammo = new JsonAssetReference<ItemAsset>("3c0a94af5af24901a9e3207f3e9ed0ba"),
                     AmmoCount = 1,
                     MaxFobCapacity = 1
                 }
@@ -1165,16 +1171,16 @@ public class FOBConfigData : ConfigData
             {
                 // Igla
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                Foundation = "b50cb548734946ffa5f88d6691a2c7ce",
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("b50cb548734946ffa5f88d6691a2c7ce"),
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 25,
                 RequiredBuild = 14,
                 Team = 2,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = "8add59a2e2b94f93ab0d6b727d310097",
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("8add59a2e2b94f93ab0d6b727d310097"),
                     BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                    Ammo = "a54d571983c2432a9624eec39d602997",
+                    Ammo = new JsonAssetReference<ItemAsset>("a54d571983c2432a9624eec39d602997"),
                     AmmoCount = 1,
                     MaxFobCapacity = 1
                 }
@@ -1183,16 +1189,16 @@ public class FOBConfigData : ConfigData
             {
                 // Mortar
                 BuildableBarricade = new JsonAssetReference<ItemBarricadeAsset>(),
-                Foundation = "6ff4826eaeb14c7cac1cf25a55d24bd3",
+                Foundation = new JsonAssetReference<ItemBarricadeAsset>("6ff4826eaeb14c7cac1cf25a55d24bd3"),
                 Type = EBuildableType.EMPLACEMENT,
                 RequiredHits = 22,
                 RequiredBuild = 10,
                 Team = 0,
                 Emplacement = new EmplacementData
                 {
-                    EmplacementVehicle = "94bf8feb05bc4680ac26464bc175460c",
-                    BaseBarricade = "c3eb4dd3fd1d463993ec69c4c3de50d7", // Mortar
-                    Ammo = "66f4c76a119e4d6ca9d0b1a866c4d901",
+                    EmplacementVehicle = new JsonAssetReference<VehicleAsset>("94bf8feb05bc4680ac26464bc175460c"),
+                    BaseBarricade = new JsonAssetReference<ItemBarricadeAsset>("c3eb4dd3fd1d463993ec69c4c3de50d7"), // Mortar
+                    Ammo = new JsonAssetReference<ItemAsset>("66f4c76a119e4d6ca9d0b1a866c4d901"),
                     AmmoCount = 3,
                     MaxFobCapacity = 2,
                     ShouldWarnFriendlies = true,
@@ -1220,17 +1226,19 @@ public class FOBConfigData : ConfigData
 public class BuildableData : ITranslationArgument
 {
     [JsonPropertyName("foundationID")]
-    public JsonAssetReference<ItemBarricadeAsset> Foundation;
+    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> Foundation;
     [JsonPropertyName("structureID")]
-    public JsonAssetReference<ItemBarricadeAsset> BuildableBarricade;
+    public RotatableConfig<JsonAssetReference<ItemBarricadeAsset>> BuildableBarricade;
     [JsonPropertyName("type")]
     public EBuildableType Type;
     [JsonPropertyName("requiredHits")]
-    public int RequiredHits;
+    public RotatableConfig<int> RequiredHits;
     [JsonPropertyName("requiredBuild")]
-    public int RequiredBuild;
+    public RotatableConfig<int> RequiredBuild;
     [JsonPropertyName("team")]
     public int Team;
+    [JsonPropertyName("disabled")]
+    public RotatableConfig<bool> Disabled;
     [JsonPropertyName("emplacementData")]
     public EmplacementData? Emplacement;
 

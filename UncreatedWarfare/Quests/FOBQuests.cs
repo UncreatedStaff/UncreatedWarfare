@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Teams;
 
@@ -455,7 +456,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         [Obsolete("redo this function plz")]
         public void OnBuildableBuilt(UCPlayer player, BuildableData buildable)
         {
-            if (player.Steam64 == _player.Steam64 && BuildableType.IsMatch(buildable.Type) && BaseIDs.IsMatch(buildable.Foundation.Guid))
+            if (player.Steam64 == _player.Steam64 && BuildableType.IsMatch(buildable.Type) && buildable.Foundation.ValidReference(out Guid guid) && BaseIDs.IsMatch(guid))
             {
                 _built ++;
                 if (_built >= Amount)

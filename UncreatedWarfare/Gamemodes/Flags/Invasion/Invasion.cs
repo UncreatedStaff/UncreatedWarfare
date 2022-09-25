@@ -27,7 +27,7 @@ public class Invasion :
     public ulong AttackingTeam => _attackTeam;
     public ulong DefendingTeam => _defenseTeam;
     public SpecialFOB FirstPointFOB => _vcp;
-    public Invasion() : base(nameof(Invasion), Config.TeamCTF.EvaluateTime) { }
+    public Invasion() : base(nameof(Invasion), Config.AASEvaluateTime) { }
     protected override void PostDispose()
     {
         foreach (SteamPlayer player in Provider.clients)
@@ -58,8 +58,8 @@ public class Invasion :
         else
             SpawnBlockerOnT2();
         if (firstFlag != null)
-            _vcp = FOBManager.RegisterNewSpecialFOB(Config.Invasion.SpecialFOBName, new Vector3(firstFlag.ZoneData.Center.x, F.GetHeight(firstFlag.ZoneData.Center, firstFlag.ZoneData.MinHeight) + 2f, firstFlag.ZoneData.Center.y), _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
-        StartStagingPhase(Config.Invasion.StagingTime);
+            _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, new Vector3(firstFlag.ZoneData.Center.x, F.GetHeight(firstFlag.ZoneData.Center, firstFlag.ZoneData.MinHeight) + 2f, firstFlag.ZoneData.Center.y), _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
+        StartStagingPhase(Config.InvasionStagingTime);
     }
     protected void PickTeams()
     {
@@ -91,7 +91,7 @@ public class Invasion :
             _objectiveT1Index = -1;
             _objectiveT2Index = _rotation.Count - 1;
         }
-        if (Config.Invasion.DiscoveryForesight < 1)
+        if (Config.InvasionDiscoveryForesight < 1)
         {
             L.LogWarning("Discovery Foresight is set to 0 in Flag Settings. The players can not see their next flags.");
         }
@@ -103,7 +103,7 @@ public class Invasion :
             }
             if (_attackTeam == 1)
             {
-                for (int i = 0; i < Config.Invasion.DiscoveryForesight; i++)
+                for (int i = 0; i < Config.InvasionDiscoveryForesight; i++)
                 {
                     if (i >= _rotation.Count || i < 0) break;
                     _rotation[i].Discover(1);
@@ -111,7 +111,7 @@ public class Invasion :
             }
             else if (_attackTeam == 2)
             {
-                for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.Invasion.DiscoveryForesight; i--)
+                for (int i = _rotation.Count - 1; i > _rotation.Count - 1 - Config.InvasionDiscoveryForesight; i--)
                 {
                     if (i >= _rotation.Count || i < 0) break;
                     _rotation[i].Discover(2);
@@ -155,7 +155,7 @@ public class Invasion :
                 {
                     if (winner == AttackingTeam || AttackingTeam != flag.Owner)
                     {
-                        flag.Cap(winner, flag.GetCaptureAmount(Config.Invasion.CaptureScale, winner));
+                        flag.Cap(winner, flag.GetCaptureAmount(Config.InvasionCaptureScale, winner));
                     }
                     else
                     {
@@ -197,7 +197,7 @@ public class Invasion :
             }
             else if (flag.Team1TotalCappers > flag.Team2TotalCappers)
             {
-                if (flag.Team1TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team2TotalCappers)
+                if (flag.Team1TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team2TotalCappers)
                 {
                     winner = 1;
                 }
@@ -208,7 +208,7 @@ public class Invasion :
             }
             else
             {
-                if (flag.Team2TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team1TotalCappers)
+                if (flag.Team2TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team1TotalCappers)
                 {
                     winner = 2;
                 }
@@ -464,8 +464,8 @@ public sealed class InvasionTicketProvider : BaseCTFTicketProvider, IFlagCapture
     public override void OnGameStarting(bool isOnLoaded)
     {
         if (!Data.Is(out IFlagRotation fg) || !Data.Is(out IAttackDefense ad)) return;
-        int attack = Gamemode.Config.Invasion.AttackStartingTickets;
-        int defense = Gamemode.Config.Invasion.AttackStartingTickets + fg.Rotation.Count * Gamemode.Config.Invasion.TicketsFlagCaptured;
+        int attack = Gamemode.Config.InvasionAttackStartingTickets;
+        int defense = Gamemode.Config.InvasionAttackStartingTickets + fg.Rotation.Count * Gamemode.Config.InvasionTicketsFlagCaptured;
 
         if (ad.AttackingTeam == 1)
         {
@@ -481,8 +481,8 @@ public sealed class InvasionTicketProvider : BaseCTFTicketProvider, IFlagCapture
     public void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner)
     {
         if (newOwner == 1)
-            Manager.Team1Tickets += Gamemode.Config.Invasion.TicketsFlagCaptured;
+            Manager.Team1Tickets += Gamemode.Config.InvasionTicketsFlagCaptured;
         else if (newOwner == 2)
-            Manager.Team2Tickets += Gamemode.Config.Invasion.TicketsFlagCaptured;
+            Manager.Team2Tickets += Gamemode.Config.InvasionTicketsFlagCaptured;
     }
 }

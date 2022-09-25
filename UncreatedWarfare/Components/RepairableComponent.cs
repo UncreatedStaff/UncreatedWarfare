@@ -53,11 +53,11 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.BuildableBarricade == Structure.asset.GUID && b.Type != EBuildableType.EMPLACEMENT);
+            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.BuildableBarricade.MatchGuid(Structure.asset.GUID) && b.Type != EBuildableType.EMPLACEMENT);
 
-            if (buildable != null)
+            if (buildable != null && buildable.Foundation.ValidReference(out ItemBarricadeAsset asset))
             {
-                string structureName = Assets.find<ItemBarricadeAsset>(buildable.Foundation).itemName;
+                string structureName = asset.itemName;
                 string message = structureName + " DESTROYED";
 
                 UCPlayer? player = e.Instigator;

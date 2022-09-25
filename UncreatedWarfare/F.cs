@@ -29,6 +29,7 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
+    public static bool IsMono { get; } = Type.GetType("Mono.Runtime") != null;
     private static readonly Regex RemoveRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:color=\\\"{0,1}[#a-z]{0,9}\\\"{0,1})|(?:color)|(?:size=\\\"{0,1}\\d+\\\"{0,1})|(?:size)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:#.{3,8})|(?:[isub])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex RemoveTMProRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:noparse)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:[su])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex TimeRegex = new Regex(@"(\d+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -939,77 +940,82 @@ public static class F
     public static void NetInvoke(this NetCall call)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!);
+            call.Invoke(UCWarfare.I.NetClient!);
+    }
+    public static void NetInvoke<T>(this NetCallCustom call, NetCallCustom.WriterTask task)
+    {
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(UCWarfare.I.NetClient!, task);
     }
     public static void NetInvoke<T>(this NetCallRaw<T> call, T arg)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg);
+            call.Invoke(UCWarfare.I.NetClient!, arg);
     }
     public static void NetInvoke<T1, T2>(this NetCallRaw<T1, T2> call, T1 arg1, T2 arg2)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2);
     }
     public static void NetInvoke<T1, T2, T3>(this NetCallRaw<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3);
     }
     public static void NetInvoke<T1, T2, T3, T4>(this NetCallRaw<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4);
     }
     public static void NetInvoke<T1>(this NetCall<T1> call, T1 arg1)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1);
+            call.Invoke(UCWarfare.I.NetClient!, arg1);
     }
     public static void NetInvoke<T1, T2>(this NetCall<T1, T2> call, T1 arg1, T2 arg2)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2);
     }
     public static void NetInvoke<T1, T2, T3>(this NetCall<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3);
     }
     public static void NetInvoke<T1, T2, T3, T4>(this NetCall<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5>(this NetCall<T1, T2, T3, T4, T5> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6>(this NetCall<T1, T2, T3, T4, T5, T6> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7>(this NetCall<T1, T2, T3, T4, T5, T6, T7> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     }
     public static bool FilterName(string original, out string final)
     {
@@ -1319,15 +1325,28 @@ public static class F
     }
     public static InstanceSetter<TInstance, TValue> GenerateInstanceSetter<TInstance, TValue>(string fieldName, BindingFlags flags)
     {
+
         flags |= BindingFlags.Instance;
         flags &= ~BindingFlags.Static;
         FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
         if (field is null || field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
             throw new FieldAccessException("Field not found or invalid.");
-        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-        DynamicMethod method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.HasThis, typeof(void), new Type[] { typeof(TInstance), field.FieldType }, typeof(TInstance), true);
+        MethodAttributes attr;
+        DynamicMethod method;
+        if (IsMono)
+        {
+            attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.HasThis, typeof(void), new Type[] { typeof(TInstance), field.FieldType }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "value");
+        }
+        else
+        {
+            attr = MethodAttributes.Public | MethodAttributes.Static;
+            method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { typeof(TInstance), field.FieldType }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "instance");
+            method.DefineParameter(2, ParameterAttributes.None, "value");
+        }
         ILGenerator il = method.GetILGenerator();
-        method.DefineParameter(1, ParameterAttributes.None, "value");
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldarg_1);
         il.Emit(OpCodes.Stfld, field);
@@ -1341,8 +1360,19 @@ public static class F
         FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
         if (field is null || field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
             throw new FieldAccessException("Field not found or invalid.");
-        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-        DynamicMethod method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.HasThis, typeof(TValue), new Type[] { typeof(TInstance) }, typeof(TInstance), true);
+        MethodAttributes attr;
+        DynamicMethod method;
+        if (IsMono)
+        {
+            attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.HasThis, typeof(TValue), new Type[] { typeof(TInstance) }, typeof(TInstance), true);
+        }
+        else
+        {
+            attr = MethodAttributes.Public | MethodAttributes.Static;
+            method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), new Type[] { typeof(TInstance) }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "instance");
+        }
         ILGenerator il = method.GetILGenerator();
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldfld, field);
@@ -1356,10 +1386,21 @@ public static class F
         FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
         if (field is null || !field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
             throw new FieldAccessException("Field not found or invalid.");
-        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-        DynamicMethod method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { field.FieldType }, typeof(TInstance), true);
+        MethodAttributes attr;
+        DynamicMethod method;
+        if (IsMono)
+        {
+            attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { field.FieldType }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "value");
+        }
+        else
+        {
+            attr = MethodAttributes.Public | MethodAttributes.Static;
+            method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { field.FieldType }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "value");
+        }
         ILGenerator il = method.GetILGenerator();
-        method.DefineParameter(0, ParameterAttributes.None, "value");
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Stsfld, field);
         il.Emit(OpCodes.Ret);
@@ -1372,8 +1413,18 @@ public static class F
         FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
         if (field is null || !field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
             throw new FieldAccessException("Field not found or invalid.");
-        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-        DynamicMethod method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), Array.Empty<Type>(), typeof(TInstance), true);
+        MethodAttributes attr;
+        DynamicMethod method;
+        if (IsMono)
+        {
+            attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), Array.Empty<Type>(), typeof(TInstance), true);
+        }
+        else
+        {
+            attr = MethodAttributes.Public | MethodAttributes.Static;
+            method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), Array.Empty<Type>(), typeof(TInstance), true);
+        }
         ILGenerator il = method.GetILGenerator();
         il.Emit(OpCodes.Ldsfld, field);
         il.Emit(OpCodes.Ret);

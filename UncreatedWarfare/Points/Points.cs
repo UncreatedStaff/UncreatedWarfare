@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
@@ -710,7 +711,7 @@ public static class Points
     }
 }
 
-public class XPConfig : ConfigData
+public class XPConfig : JSONConfigData
 {
     public char ProgressBlockCharacter;
     public int EnemyKilledXP;
@@ -786,7 +787,7 @@ public class XPConfig : ConfigData
     public XPConfig()
     { }
 }
-public class TWConfig : ConfigData
+public class TWConfig : JSONConfigData
 {
     public ushort MedalsUI;
     public int FirstMedalPoints;
@@ -813,7 +814,7 @@ public class TWConfig : ConfigData
     public TWConfig()
     { }
 }
-public class CreditsConfig : ConfigData
+public class CreditsConfig : JSONConfigData
 {
     public ushort CreditsUI;
     public int StartingCredits;

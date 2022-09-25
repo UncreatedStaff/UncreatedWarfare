@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
@@ -421,7 +422,7 @@ public class VehicleBayCommand : Command
             {
                 if (ctx.TryGetTarget(out BarricadeDrop barricade))
                 {
-                    if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(barricade.asset.GUID))
+                    if (Gamemode.Config.StructureVehicleBay.MatchGuid(barricade.asset.GUID))
                     {
                         if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                         {
@@ -440,7 +441,7 @@ public class VehicleBayCommand : Command
                 }
                 else if (ctx.TryGetTarget(out StructureDrop structure))
                 {
-                    if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(structure.asset.GUID))
+                    if (Gamemode.Config.StructureVehicleBay.MatchGuid(structure.asset.GUID))
                     {
                         if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
                         {

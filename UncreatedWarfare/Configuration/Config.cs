@@ -6,7 +6,7 @@ using System.Xml.Serialization;
 using Uncreated.SQL;
 using Uncreated.Warfare.Maps;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Configuration;
 
 public class SystemConfig : Config<SystemConfigData>
 {
@@ -20,7 +20,7 @@ public class SystemConfig : Config<SystemConfigData>
     }
 }
 
-public class SystemConfigData : ConfigData
+public class SystemConfigData : JSONConfigData
 {
     [JsonPropertyName("moderation")]
     public ModerationConfig ModerationSettings;
@@ -30,6 +30,10 @@ public class SystemConfigData : ConfigData
     public MySqlData SQL;
     [JsonPropertyName("debugMode")]
     public bool Debug;
+    [JsonPropertyName("region")]
+    public string Region;
+    [JsonPropertyName("localCurrency")]
+    public string Currency;
     [JsonPropertyName("allowCosmetics")]
     public bool AllowCosmetics;
     [JsonPropertyName("modifySkills")]
@@ -84,7 +88,7 @@ public class SystemConfigData : ConfigData
     public bool EnablePlayerJoinLeaveMessages;
     [JsonPropertyName("playerJoinLeaveTeamMessages")]
     public bool EnablePlayerJoinLeaveTeamMessages;
-    
+
     public override void SetDefaults()
     {
         ModerationSettings = new ModerationConfig();
@@ -139,13 +143,13 @@ public class SystemConfigData : ConfigData
         public string[] BattleyeExclusions;
         public ModerationConfig()
         {
-            this.InternOnDutyGroup = "intern";
-            this.InternOffDutyGroup = "intern-od";
-            this.AdminOnDutyGroup = "admin";
-            this.AdminOffDutyGroup = "admin-od";
-            this.AllowedBarricadesOnVehicles = new List<ushort>();
-            this.TimeBetweenShutdownMessages = 60f;
-            this.BattleyeExclusions = new string[]
+            InternOnDutyGroup = "intern";
+            InternOffDutyGroup = "intern-od";
+            AdminOnDutyGroup = "admin";
+            AdminOffDutyGroup = "admin-od";
+            AllowedBarricadesOnVehicles = new List<ushort>();
+            TimeBetweenShutdownMessages = 60f;
+            BattleyeExclusions = new string[]
             {
                 "Client not responding",
                 "Query Timeout"
@@ -161,41 +165,10 @@ public class SystemConfigData : ConfigData
 
         public TCPConfig()
         {
-            this.EnableTCPServer = true;
-            this.TCPServerIP = "127.0.0.1";
-            this.TCPServerPort = 31902;
-            this.TCPServerIdentity = "ucwarfare";
+            EnableTCPServer = true;
+            TCPServerIP = "127.0.0.1";
+            TCPServerPort = 31902;
+            TCPServerIdentity = "ucwarfare";
         }
     }
 }
-
-#if DEBUG
-public class TestConfig : Config<TestConfigData>
-{
-    public TestConfig() : base(Warfare.Data.Paths.BaseDirectory, "test_config.json", "testconfig")
-    {
-    }
-    protected override void OnReload()
-    {
-        L.Log("Reloaded test config");
-        L.Log(Data.IntegerTest.ToString());
-        L.Log(Data.StringTest.ToString());
-        L.Log(Data.AssetTest.ToString());
-        base.OnReload();
-    }
-}
-public class TestConfigData : ConfigData
-{
-    public RotatableConfig<int> IntegerTest;
-    public RotatableConfig<string> StringTest;
-    public RotatableConfig<JsonAssetReference<ItemAsset>> AssetTest;
-    public override void SetDefaults()
-    {
-        IntegerTest = 4;
-        StringTest = "TeamCTF";
-        AssetTest = (JsonAssetReference<ItemAsset>)31902;
-    }
-}
-
-
-#endif

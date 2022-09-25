@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
 using UnityEngine;
@@ -169,7 +170,7 @@ public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingle
         Unload();
     }
 }
-public abstract class ConfigSingleton<TConfig, TData> : BaseReloadSingleton where TConfig : Config<TData> where TData : ConfigData, new()
+public abstract class ConfigSingleton<TConfig, TData> : BaseReloadSingleton where TConfig : Config<TData> where TData : JSONConfigData, new()
 {
     private readonly string? _folder;
     private readonly string? _file;

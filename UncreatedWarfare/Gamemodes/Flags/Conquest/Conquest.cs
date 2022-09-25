@@ -73,7 +73,7 @@ public sealed partial class Conquest :
     object IGameStats.GameStats => _gameStats;
     public override string DisplayName => "Conquest";
     public override EGamemode GamemodeType => EGamemode.CONQUEST;
-    public Conquest() : base(nameof(Conquest), Config.TeamCTF.EvaluateTime) { }
+    public Conquest() : base(nameof(Conquest), Config.AASEvaluateTime) { }
     protected override void PreInit()
     {
         AddSingletonRequirement(ref _vehicleSpawner);
@@ -125,7 +125,7 @@ public sealed partial class Conquest :
                 ++t1Bleed;
         }
     }
-    protected override bool TimeToCheck() => EveryXSeconds(Config.Conquest.FlagTickSeconds);
+    protected override bool TimeToCheck() => EveryXSeconds(Config.ConquestFlagTickSeconds);
     public override bool IsAttackSite(ulong team, Flag flag) => true;
     public override bool IsDefenseSite(ulong team, Flag flag) => true;
     public override void DeclareWin(ulong winner)
@@ -135,7 +135,7 @@ public sealed partial class Conquest :
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
-        yield return new WaitForSeconds(Config.GeneralConfig.LeaderboardDelay);
+        yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -170,7 +170,7 @@ public sealed partial class Conquest :
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
         SpawnBlockers();
-        StartStagingPhase(Config.Conquest.StagingPhaseSeconds);
+        StartStagingPhase(Config.ConquestStagingPhaseSeconds);
         base.PostGameStarting(isOnLoad);
     }
     protected override void EndStagingPhase()
@@ -214,7 +214,7 @@ public sealed partial class Conquest :
             {
                 if (winner == 1 || winner == 2)
                 {
-                    flag.Cap(winner, flag.GetCaptureAmount(Config.Conquest.CaptureScale, winner));
+                    flag.Cap(winner, flag.GetCaptureAmount(Config.ConquestCaptureScale, winner));
                 }
             }
             else flag.SetPoints(flag.Points);
@@ -235,14 +235,14 @@ public sealed partial class Conquest :
             winner = 1;
         else if (flag.Team1TotalCappers > flag.Team2TotalCappers)
         {
-            if (flag.Team1TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team2TotalCappers)
+            if (flag.Team1TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team2TotalCappers)
                 winner = 1;
             else
                 winner = Intimidation.CheckSquadsForContestBoost(flag);
         }
         else
         {
-            if (flag.Team2TotalCappers - Config.TeamCTF.RequiredPlayerDifferenceToCapture >= flag.Team1TotalCappers)
+            if (flag.Team2TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team1TotalCappers)
                 winner = 2;
             else
                 winner = Intimidation.CheckSquadsForContestBoost(flag);
@@ -426,8 +426,8 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
     private int _t2Bleed;
     public override void OnGameStarting(bool isOnLoaded)
     {
-        Manager.Team1Tickets = Gamemode.Config.Conquest.StartingTickets;
-        Manager.Team2Tickets = Gamemode.Config.Conquest.StartingTickets;
+        Manager.Team1Tickets = Gamemode.Config.ConquestStartingTickets;
+        Manager.Team2Tickets = Gamemode.Config.ConquestStartingTickets;
     }
     public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
     {
@@ -480,7 +480,7 @@ public class ConquestTicketProvider : BaseTicketProvider, IFlagCapturedListener,
     {
         if (Data.Gamemode.State == EState.ACTIVE)
         {
-            if (Data.Gamemode.EveryXSeconds(Gamemode.Config.Conquest.PointCount * Gamemode.Config.Conquest.TicketBleedIntervalPerPoint))
+            if (Data.Gamemode.EveryXSeconds(Gamemode.Config.ConquestPointCount * Gamemode.Config.ConquestTicketBleedIntervalPerPoint))
             {
                 if (_t1Bleed < 0)
                     Manager.Team1Tickets += _t1Bleed;

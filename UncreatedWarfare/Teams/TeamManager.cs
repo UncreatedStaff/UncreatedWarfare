@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Maps;
@@ -784,9 +785,9 @@ public static class TeamManager
         else if (input == ZONE_BLOCKER_REDIRECT)
         {
             if (team == 1)
-                Gamemode.Config.Barricades.Team1ZoneBlocker.ValidReference(out input);
+                Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out input);
             else if (team == 2)
-                Gamemode.Config.Barricades.Team2ZoneBlocker.ValidReference(out input);
+                Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out input);
         }
         return input;
     }
@@ -841,7 +842,7 @@ public static class TeamManager
             return AMMO_SUPPLIES_REDIRECT;
 
         // zone blockers
-        if (Gamemode.Config.Barricades.Team1ZoneBlocker.ValidReference(out guid) && guid == input || Gamemode.Config.Barricades.Team2ZoneBlocker.ValidReference(out guid) && guid == input)
+        if (Gamemode.Config.BarricadeZoneBlockerTeam1.ValidReference(out guid) && guid == input || Gamemode.Config.BarricadeZoneBlockerTeam2.ValidReference(out guid) && guid == input)
             return ZONE_BLOCKER_REDIRECT;
 
         return input;
@@ -1003,7 +1004,7 @@ public class TeamConfig : Config<TeamConfigData>
     }
 }
 
-public class TeamConfigData : ConfigData
+public class TeamConfigData : JSONConfigData
 {
     [JsonPropertyName("t1Faction")]
     public RotatableConfig<string> Team1FactionId;

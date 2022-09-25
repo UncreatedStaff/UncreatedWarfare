@@ -7,9 +7,9 @@ using System.Text.Json.Serialization;
 using Uncreated.Warfare;
 using Uncreated.Warfare.Commands;
 
-namespace Uncreated;
+namespace Uncreated.Warfare.Configuration;
 
-public class Config<TData> : IConfiguration where TData : ConfigData, new()
+public class Config<TData> : IConfiguration<TData> where TData : JSONConfigData, new()
 {
     public delegate TData CustomDeserializer(ref Utf8JsonReader reader);
     public delegate void CustomSerializer(TData obj, Utf8JsonWriter writer);
@@ -26,18 +26,18 @@ public class Config<TData> : IConfiguration where TData : ConfigData, new()
     public string? ReloadKey => reloadKey;
     public TData Data { get; private set; }
     public Config(string directory, string filename, string reloadKey)
-        : this (directory, filename)
+        : this(directory, filename)
     {
         if (reloadKey is not null)
         {
             this.reloadKey = reloadKey;
-            _regReload = ReloadCommand.RegisterConfigForRelaod(this);
+            _regReload = ReloadCommand.RegisterConfigForReload(this);
         }
     }
     private readonly bool isFirst = true;
     public Config(string directory, string filename)
     {
-        this._dir = Path.Combine(directory, filename);
+        _dir = Path.Combine(directory, filename);
         customDeserializer = null;
         useCustomDeserializer = false;
         customSerializer = null;
@@ -55,7 +55,7 @@ public class Config<TData> : IConfiguration where TData : ConfigData, new()
             }
         }
 
-        if (!File.Exists(this._dir))
+        if (!File.Exists(_dir))
             LoadDefaults();
         else
             Reload();
@@ -63,12 +63,12 @@ public class Config<TData> : IConfiguration where TData : ConfigData, new()
     }
     public void DeregisterReload()
     {
-        if (_regReload && this.reloadKey is not null)
-            ReloadCommand.DeregisterConfigForReload(this.reloadKey);
+        if (_regReload && reloadKey is not null)
+            ReloadCommand.DeregisterConfigForReload(reloadKey);
     }
     public Config(string directory, string filename, CustomDeserializer deserializer, CustomSerializer serializer)
     {
-        this._dir = directory + filename;
+        _dir = directory + filename;
         customDeserializer = deserializer;
         useCustomDeserializer = deserializer != null;
         customSerializer = serializer;
@@ -85,7 +85,7 @@ public class Config<TData> : IConfiguration where TData : ConfigData, new()
                 return;
             }
         }
-        if (!File.Exists(this._dir))
+        if (!File.Exists(_dir))
             LoadDefaults();
         else
             Reload();
@@ -139,7 +139,7 @@ public class Config<TData> : IConfiguration where TData : ConfigData, new()
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking("JsonConfig Reload -> " + _dir);
 #endif
-        if (!File.Exists(this._dir))
+        if (!File.Exists(_dir))
         {
             LoadDefaults();
             if (!isFirst)
@@ -267,24 +267,30 @@ public class Config<TData> : IConfiguration where TData : ConfigData, new()
                 return;
             }
 
-            other:
+        other:
             byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Data, JsonEx.serializerSettings));
             stream.Write(utf8, 0, utf8.Length);
         }
     }
 }
 
-public abstract class ConfigData
+public abstract class JSONConfigData
 {
-    public ConfigData() => SetDefaults();
+    public JSONConfigData() => SetDefaults();
     public abstract void SetDefaults();
 }
 public interface IConfiguration
 {
     string Directory { get; }
+    string? ReloadKey { get; }
     void LoadDefaults();
     void Reload();
     void Save();
+}
+
+public interface IConfiguration<TData> : IConfiguration where TData : JSONConfigData, new()
+{
+    TData Data { get; }
 }
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = false)]
 sealed class PreventUpgradeAttribute : Attribute

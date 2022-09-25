@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Commands.Permissions;
 public class PermissionSaver : JSONSaver<PermissionSave>

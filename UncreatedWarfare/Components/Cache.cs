@@ -110,7 +110,7 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
     }
     public void SpawnAttackIcon()
     {
-        if (Data.Is(out Insurgency ins) && Gamemode.Config.UI.MarkerCacheAttack.ValidReference(out Guid effect))
+        if (Data.Is(out Insurgency ins) && Gamemode.Config.EffectMarkerCacheAttack.ValidReference(out Guid effect))
         {
             IconManager.AttachIcon(effect, Structure.model, ins.AttackingTeam, 2.25F);
         }

@@ -463,7 +463,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             }
             else if (Team1TotalCappers > Team2TotalCappers)
             {
-                if (Team1TotalCappers - Gamemode.Config.TeamCTF.RequiredPlayerDifferenceToCapture >= Team2TotalCappers)
+                if (Team1TotalCappers - Gamemode.Config.AASRequiredCapturingPlayerDifference >= Team2TotalCappers)
                 {
                     winner = 1;
                 }
@@ -474,7 +474,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             }
             else
             {
-                if (Team2TotalCappers - Gamemode.Config.TeamCTF.RequiredPlayerDifferenceToCapture >= Team1TotalCappers)
+                if (Team2TotalCappers - Gamemode.Config.AASRequiredCapturingPlayerDifference >= Team1TotalCappers)
                 {
                     winner = 2;
                 }
@@ -514,7 +514,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
                     {
                         if (winner == 1 || winner == 2)
                         {
-                            Cap(winner, GetCaptureAmount(Gamemode.Config.TeamCTF.CaptureScale, winner));
+                            Cap(winner, GetCaptureAmount(Gamemode.Config.AASCaptureScale, winner));
                         }
                     }
                 }

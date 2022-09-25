@@ -37,32 +37,32 @@ public static class UCInventoryManager
             ClearInventory(player);
             foreach (KitClothing clothing in kit.Clothes)
             {
-                if (Assets.find(clothing.id) is ItemAsset asset)
+                if (Assets.find(clothing.Id) is ItemAsset asset)
                 {
-                    if (clothing.type == EClothingType.SHIRT)
+                    if (clothing.Type == EClothingType.SHIRT)
                         player.Player.clothing.askWearShirt(asset.id, 100, asset.getState(true), true);
-                    if (clothing.type == EClothingType.PANTS)
+                    if (clothing.Type == EClothingType.PANTS)
                         player.Player.clothing.askWearPants(asset.id, 100, asset.getState(true), true);
-                    if (clothing.type == EClothingType.VEST)
+                    if (clothing.Type == EClothingType.VEST)
                         player.Player.clothing.askWearVest(asset.id, 100, asset.getState(true), true);
-                    if (clothing.type == EClothingType.HAT)
+                    if (clothing.Type == EClothingType.HAT)
                         player.Player.clothing.askWearHat(asset.id, 100, asset.getState(true), true);
-                    if (clothing.type == EClothingType.MASK)
+                    if (clothing.Type == EClothingType.MASK)
                         player.Player.clothing.askWearMask(asset.id, 100, asset.getState(true), true);
-                    if (clothing.type == EClothingType.BACKPACK)
+                    if (clothing.Type == EClothingType.BACKPACK)
                         player.Player.clothing.askWearBackpack(asset.id, 100, asset.getState(true), true);
-                    if (clothing.type == EClothingType.GLASSES)
+                    if (clothing.Type == EClothingType.GLASSES)
                         player.Player.clothing.askWearGlasses(asset.id, 100, asset is ItemGlassesAsset ga && ga.vision != ELightingVision.NONE ? new byte[1] : asset.getState(true), true);
                 }
             }
 
             foreach (KitItem k in kit.Items)
             {
-                if (Assets.find(k.id) is ItemAsset asset)
+                if (Assets.find(k.Id) is ItemAsset asset)
                 {
-                    Item item = new Item(asset.id, k.amount, 100, F.CloneBytes(k.metadata));
+                    Item item = new Item(asset.id, k.Amount, 100, F.CloneBytes(k.Metadata));
 
-                    if (!player.Player.inventory.tryAddItem(item, k.x, k.y, k.page, k.rotation))
+                    if (!player.Player.inventory.tryAddItem(item, k.X, k.Y, k.Page, k.Rotation))
                         player.Player.inventory.tryAddItem(item, true);
                 }
             }
@@ -178,9 +178,9 @@ public static class UCInventoryManager
         for (int i = 0; i < clothes.Count; ++i)
         {
             KitClothing clothing = clothes[i];
-            flag |= (byte)(1 << (int)clothing.type);
+            flag |= (byte)(1 << (int)clothing.Type);
             ClientInstanceMethod<Guid, byte, byte[], bool>? inv =
-                clothing.type switch
+                clothing.Type switch
                 {
                     EClothingType.SHIRT => Data.SendWearShirt,
                     EClothingType.PANTS => Data.SendWearPants,
@@ -193,7 +193,7 @@ public static class UCInventoryManager
                 };
             if (inv != null)
             {
-                inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckClothingAssetRedirect(clothing.id, team), 100, blank, !hasPlayedEffect);
+                inv.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), TeamManager.CheckClothingAssetRedirect(clothing.Id, team), 100, blank, !hasPlayedEffect);
                 hasPlayedEffect = true;
             }
         }

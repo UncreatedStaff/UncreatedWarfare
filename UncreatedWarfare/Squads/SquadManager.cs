@@ -25,7 +25,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     private static SquadManager _singleton;
     public static readonly SquadMenuUI MenuUI   = new SquadMenuUI();
     public static readonly SquadListUI ListUI   = new SquadListUI();
-    public static readonly UnturnedUI RallyUI   = new UnturnedUI(12003, Gamemode.Config.UI.RallyGUID, true, false, false);
+    public static readonly UnturnedUI RallyUI   = new UnturnedUI(12003, Gamemode.Config.UIRally, true, false, false);
     public static readonly SquadOrderUI OrderUI = new SquadOrderUI();
     public static readonly string[] SQUAD_NAMES =
     {
@@ -234,7 +234,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                     ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? sq.Name.Colorize("5eff87") : sq.Name);
                     ListUI.SquadMemberCounts[s2].SetText(player.Connection,
                         sq.IsLocked ?
-                            T.SquadsUIPlayerCountListLocked.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UI.LockIcon) :
+                            T.SquadsUIPlayerCountListLocked.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UIIconLocked) :
                             T.SquadsUIPlayerCountList.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length));
                     s2++;
                 }
@@ -300,7 +300,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 ListUI.SquadNames[s2].SetText(c, RallyManager.HasRally(sq, out _) ? sq.Name.Colorize(UCWarfare.GetColorHex("rally")) : sq.Name);
                 ListUI.SquadMemberCounts[s2].SetText(player.Connection,
                     sq.IsLocked ?
-                        T.SquadsUIPlayerCountListLocked.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UI.LockIcon) :
+                        T.SquadsUIPlayerCountListLocked.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UIIconLocked) :
                         T.SquadsUIPlayerCountList.Translate(player, sq.Members.Count, MenuUI.MemberParents.Length));
                 s2++;
             }
@@ -339,7 +339,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 {
                     ListUI.SquadMemberCounts[index].SetText(player.Connection,
                         squad.IsLocked ? 
-                            T.SquadsUIPlayerCountListLocked.Translate(player, squad.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UI.LockIcon) :
+                            T.SquadsUIPlayerCountListLocked.Translate(player, squad.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UIIconLocked) :
                             T.SquadsUIPlayerCountList.Translate(player, squad.Members.Count, MenuUI.MemberParents.Length));
                 }
             }

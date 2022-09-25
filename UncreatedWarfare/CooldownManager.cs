@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
@@ -103,7 +104,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
         Singleton.cooldowns.RemoveAll(x => x.type is not ECooldownType.REPORT);
     }
 }
-public class CooldownConfig : ConfigData
+public class CooldownConfig : JSONConfigData
 {
     public bool EnableCombatLogger;
     public RotatableConfig<float> CombatCooldown;

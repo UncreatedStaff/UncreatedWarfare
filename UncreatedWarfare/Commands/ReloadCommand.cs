@@ -8,6 +8,7 @@ using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -177,8 +178,7 @@ public class ReloadCommand : Command
             Translation.ReadTranslations();
             Deaths.Localization.Reload();
             Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
-            if (OnTranslationsReloaded != null)
-                OnTranslationsReloaded.Invoke();
+            OnTranslationsReloaded?.Invoke();
         }
         catch (Exception ex)
         {
@@ -207,8 +207,7 @@ public class ReloadCommand : Command
                 Data.ZoneProvider.Reload();
             Data.ExtraPoints = JSONMethods.LoadExtraPoints();
             TeamManager.OnReloadFlags();
-            if (OnFlagsReloaded != null)
-                OnFlagsReloaded.Invoke();
+            OnFlagsReloaded?.Invoke();
         }
         catch (Exception ex)
         {
@@ -284,7 +283,7 @@ public class ReloadCommand : Command
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Data.ReloadTCP();
+        UCWarfare.I.InitNetClient();
     }
     internal static void ReloadSQLServer()
     {
@@ -298,7 +297,7 @@ public class ReloadCommand : Command
     {
         ReloadableConfigs.Remove(reloadKey);
     }
-    internal static bool RegisterConfigForRelaod<TData>(Config<TData> config) where TData : ConfigData, new()
+    internal static bool RegisterConfigForReload<TData>(IConfiguration<TData> config) where TData : JSONConfigData, new()
     {
         if (config is null) return false;
         if (ReloadableConfigs.TryGetValue(config.ReloadKey!, out IConfiguration config2))

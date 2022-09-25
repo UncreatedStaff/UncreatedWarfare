@@ -390,7 +390,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
     public readonly UnturnedLabel[] Team2PlayerDamage;
     public readonly UnturnedUIElement[] Team2PlayerVCs;
 
-    public ConventionalLeaderboardUI() : base(12007, Gamemodes.Gamemode.Config.UI.CTFLeaderboardGUID, true, false)
+    public ConventionalLeaderboardUI() : base(12007, Gamemodes.Gamemode.Config.UIConventionalLeaderboard, true, false)
     {
         Team1PlayerNames = new UnturnedLabel[]
         {
@@ -678,7 +678,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         if (t2Stats is not null)
             len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
         string[] values = new string[len];
-        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
 
         values[0] = T.WinnerTitle.Translate(lang, TeamManager.GetFactionSafe(winner)!);
         values[1] = shutdownReason is null ?
@@ -686,7 +686,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
         values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", Data.Locale);
-        values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
+        values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.CTFWarStats0.Translate(lang);
@@ -994,7 +994,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         if (t2Stats is not null)
             len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
         string[] values = new string[len];
-        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
 
         values[0] = T.WinnerTitle.Translate(lang, TeamManager.GetFactionSafe(winner)!);
         values[1] = shutdownReason is null ?
@@ -1002,7 +1002,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
         values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("mm\\:ss", Data.Locale);
-        values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
+        values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.InsurgencyWarStats0.Translate(lang);
@@ -1314,7 +1314,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
         if (t2Stats is not null)
             len += Math.Min(t2Stats.Count, Team2PlayerNames.Length + 1) * 7;
         string[] values = new string[len];
-        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+        int secondsLeft = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
 
         values[0] = T.WinnerTitle.Translate(lang, TeamManager.GetFactionSafe(winner)!);
         values[1] = shutdownReason is null ?
@@ -1322,7 +1322,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             T.NextGameShutdown.Translate(lang, shutdownReason);
 
         values[2] = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss", Data.Locale);
-        values[3] = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[0], 1);
+        values[3] = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[0], 1);
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.ConquestWarStats0.Translate(lang);
@@ -1622,9 +1622,9 @@ public class ConventionalLeaderboardUI : UnturnedUI
     }
     public void UpdateTime(LanguageSet set, int secondsLeft)
     {
-        int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralConfig.LeaderboardTime);
+        int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);
         string l1 = TimeSpan.FromSeconds(secondsLeft).ToString("m\\:ss");
-        string l2 = new string(Gamemodes.Gamemode.Config.UI.ProgressChars[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
+        string l2 = new string(Gamemodes.Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(Mathf.RoundToInt(time - secondsLeft), time)], 1);
         while (set.MoveNext())
         {
             NextGameSeconds.SetText(set.Next.Connection, l1);

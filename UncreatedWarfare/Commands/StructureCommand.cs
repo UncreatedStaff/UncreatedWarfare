@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;

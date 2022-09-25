@@ -13,6 +13,7 @@ using Uncreated.Framework;
 using Uncreated.Framework.Quests;
 using Uncreated.Networking;
 using Uncreated.Players;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Quests.Types;
 
 namespace Uncreated.Warfare.Quests;

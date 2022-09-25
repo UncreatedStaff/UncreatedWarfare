@@ -20,7 +20,7 @@ public class CaptureUI : UnturnedUI
     public readonly UnturnedLabel T2CountIcon = new UnturnedLabel("T2CountIcon");
     public readonly UnturnedLabel T2Count = new UnturnedLabel("T2Count");
     public readonly UnturnedLabel Status = new UnturnedLabel("Status");
-    public CaptureUI() : base(12005, Gamemode.Config.UI.CaptureGUID, true, false) { }
+    public CaptureUI() : base(12005, Gamemode.Config.UICapture, true, false) { }
 
     public void Send(Player player, in CaptureUIParameters p)
     {
@@ -32,17 +32,17 @@ public class CaptureUI : UnturnedUI
         GetColors(p.Team, p.Type, out string backcolor, out string forecolor);
         string translation = p.Type is EFlagStatus.BLANK ? string.Empty : Localization.TranslateEnum(p.Type, player.channel.owner.playerID.steamID.m_SteamID);
         ITransportConnection c = player.channel.owner.transportConnection;
-        string desc = new string(Gamemode.Config.UI.ProgressChars[CTFUI.FromMax(p.Points)], 1);
-        if (p.Type is not EFlagStatus.BLANK or EFlagStatus.DONT_DISPLAY && Gamemode.Config.UI.ShowPointsOnUI)
+        string desc = new string(Gamemode.Config.UICircleFontCharacters[CTFUI.FromMax(p.Points)], 1);
+        if (p.Type is not EFlagStatus.BLANK or EFlagStatus.DONT_DISPLAY && Gamemode.Config.UICaptureShowPointCount)
             translation += " (" + p.Points.ToString(Data.Locale) + "/" + Flag.MAX_POINTS.ToString(Data.Locale) + ")";
 
         SendToPlayer(c, "<color=#" + forecolor + ">" + translation + "</color>", "<color=#" + forecolor + ">" + desc + "</color>", backcolor);
-        if (Gamemode.Config.UI.EnablePlayerCount && p.Flag is not null)
+        if (Gamemode.Config.UICaptureEnablePlayerCount && p.Flag is not null)
         {
             T1Count.SetText(c, "<color=#ffffff>" + p.Flag.Team1TotalCappers.ToString(Data.Locale) + "</color>");
             T2Count.SetText(c, "<color=#ffffff>" + p.Flag.Team2TotalCappers.ToString(Data.Locale) + "</color>");
-            T1CountIcon.SetText(c, "<color=#" + TeamManager.GetTeamHexColor(1) + ">" + Gamemode.Config.UI.PlayerIcon + "</color>");
-            T2CountIcon.SetText(c, "<color=#" + TeamManager.GetTeamHexColor(2) + ">" + Gamemode.Config.UI.PlayerIcon + "</color>");
+            T1CountIcon.SetText(c, "<color=#" + TeamManager.GetTeamHexColor(1) + ">" + Gamemode.Config.UIIconPlayer + "</color>");
+            T2CountIcon.SetText(c, "<color=#" + TeamManager.GetTeamHexColor(2) + ">" + Gamemode.Config.UIIconPlayer + "</color>");
         }
         else
         {

@@ -34,7 +34,7 @@ public class UCPlayer : IPlayer
     }
 
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
-    public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UI.MutedUI, false, false);
+    public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UIMuted, false, false);
     public readonly ulong Steam64;
     public EClass KitClass;
     public EBranch Branch;

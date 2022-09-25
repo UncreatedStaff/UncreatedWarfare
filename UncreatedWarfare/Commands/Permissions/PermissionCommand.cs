@@ -81,7 +81,7 @@ public class PermissionCommand : Command
         if (ctx.MatchParameter(2, "admin", "admin-od"))
             type = EAdminType.ADMIN_OFF_DUTY;
         else if (ctx.MatchParameter(2, "intern", "trial", "intern-od"))
-            type = EAdminType.ADMIN_OFF_DUTY;
+            type = EAdminType.TRIAL_ADMIN_OFF_DUTY;
         else if (ctx.MatchParameter(2, "helper", "help", "assistant"))
             type = EAdminType.HELPER;
         else if (ctx.MatchParameter(2, "member", "0", "none"))

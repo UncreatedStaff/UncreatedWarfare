@@ -452,7 +452,7 @@ public class RequestCommand : Command
                 EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
                 ucplayer.SendChat(T.RequestVehicleSuccess, data);
 
-                if (!FOBManager.Config.Buildables.Exists(e => e.Type == EBuildableType.EMPLACEMENT && e.BuildableBarricade == vehicle.asset.GUID))
+                if (!FOBManager.Config.Buildables.Exists(e => e.Type == EBuildableType.EMPLACEMENT && e.Emplacement != null && e.Emplacement.EmplacementVehicle.MatchGuid(vehicle.asset.GUID)))
                 {
                     ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
                     ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack
