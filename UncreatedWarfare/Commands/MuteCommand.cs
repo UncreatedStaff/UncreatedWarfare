@@ -1,7 +1,4 @@
-﻿using SDG.Unturned;
-using System;
-using System.Threading.Tasks;
-using Uncreated.Framework;
+﻿using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -26,7 +23,7 @@ public class MuteCommand : Command
             : (ctx.MatchParameter(0, "text")
                 ? EMuteType.TEXT_CHAT
                 : (ctx.MatchParameter(0, "both")
-                    ? EMuteType.BOTH 
+                    ? EMuteType.BOTH
                     : throw ctx.SendCorrectUsage(SYNTAX)));
 
         int duration = F.ParseTime(ctx.Get(2)!);

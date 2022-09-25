@@ -1,11 +1,6 @@
-﻿using SDG.Unturned;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using System.Xml.Serialization;
-using Uncreated.Networking;
 using Uncreated.SQL;
-using Uncreated.Warfare.Maps;
 
 namespace Uncreated.Warfare.Configuration;
 
@@ -29,6 +24,8 @@ public class SystemConfigData : JSONConfigData
     public TCPConfig TCPSettings;
     [JsonPropertyName("mysql")]
     public MySqlData SQL;
+    [JsonPropertyName("mysqlRemote")]
+    public MySqlData? RemoteSQL;
     [JsonPropertyName("debugMode")]
     public bool Debug;
     [JsonPropertyName("region")]
@@ -97,6 +94,7 @@ public class SystemConfigData : JSONConfigData
         ModerationSettings = new ModerationConfig();
         TCPSettings = new TCPConfig();
         SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
+        RemoteSQL = null;
         Debug = true;
         AllowCosmetics = false;
         ModifySkillLevels = true;

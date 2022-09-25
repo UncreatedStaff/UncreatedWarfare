@@ -1,8 +1,6 @@
-﻿using JetBrains.Annotations;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
@@ -151,6 +149,7 @@ public class Kit : ITranslationArgument, ICloneable
     {
         if (R.ReadUInt8() == 1) return null;
         Kit kit = new Kit(true);
+        kit.PrimaryKey = R.ReadInt32();
         kit.Name = R.ReadString();
         ushort itemCount = R.ReadUInt16();
         ushort clothesCount = R.ReadUInt16();
@@ -207,6 +206,7 @@ public class Kit : ITranslationArgument, ICloneable
             return;
         }
         else W.Write((byte)0);
+        W.Write(kit.PrimaryKey);
         W.Write(kit.Name);
         W.Write((ushort)kit.Items.Count);
         W.Write((ushort)kit.Clothes.Count);
@@ -456,7 +456,7 @@ public readonly struct Skillset : IEquatable<Skillset>
         writer.Write((byte)skillset.SkillIndex);
         writer.Write((byte)skillset.Level);
     }
-    public readonly void ServerSet(UCPlayer player) => 
+    public readonly void ServerSet(UCPlayer player) =>
         player.Player.skills.ServerSetSkillLevel(SpecialityIndex, SkillIndex, Level);
     public static Skillset Read(ref Utf8JsonReader reader)
     {
@@ -647,7 +647,7 @@ public abstract class BaseUnlockRequirement : ICloneable
                     t.ReadProperty(ref reader, property);
                 }
                 continue;
-                done:
+            done:
                 if (t != null)
                     t.ReadProperty(ref reader, property);
                 else
@@ -775,7 +775,7 @@ public class QuestUnlockRequirement : BaseUnlockRequirement
             return T.KitRequiredQuestsComplete.Translate(player);
         if (Assets.find(QuestID) is QuestAsset quest)
             return T.KitRequiredQuest.Translate(player, quest, UCWarfare.GetColor("kit_level_unavailable"));
-        
+
         return T.KitRequiredQuestsMultiple.Translate(player, UnlockPresets.Length, UCWarfare.GetColor("kit_level_unavailable"), UnlockPresets.Length.S());
     }
     protected override void ReadProperty(ref Utf8JsonReader reader, string property)

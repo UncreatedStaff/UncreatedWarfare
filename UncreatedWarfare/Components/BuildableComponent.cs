@@ -22,7 +22,7 @@ public class BuildableComponent : MonoBehaviour
     public BarricadeDrop Foundation { get; private set; }
     public BuildableData Buildable { get; private set; }
 
-    public float Hits { get; private set;}
+    public float Hits { get; private set; }
 
     public Dictionary<ulong, float> PlayerHits { get; private set; }
 
@@ -41,8 +41,8 @@ public class BuildableComponent : MonoBehaviour
         UCPlayer? placer = UCPlayer.FromID(data.owner);
         if (placer != null && !(buildable.Type == EBuildableType.FORTIFICATION || buildable.Type == EBuildableType.AMMO_CRATE))
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers.Where(p => p != placer && 
-            p.GetTeam() == data.group && 
+            foreach (UCPlayer player in PlayerManager.OnlinePlayers.Where(p => p != placer &&
+            p.GetTeam() == data.group &&
             !F.IsInMain(p.Position) &&
             p.Player.movement.getVehicle() == null &&
             (p.Position - foundation.model.position).sqrMagnitude < Math.Pow(80, 2)))
@@ -89,7 +89,7 @@ public class BuildableComponent : MonoBehaviour
                 break;
         }
         float amount = builder.KitClass == EClass.COMBAT_ENGINEER ? 2f : 1f;
-        
+
         amount = Mathf.Max(builder.ShovelSpeedMultiplier, amount);
 
         Hits += amount;
@@ -231,7 +231,7 @@ public class BuildableComponent : MonoBehaviour
                     amount = Mathf.RoundToInt(contribution * Points.XPConfig.BuiltFOBXP);
                 else
                     amount = entry.Value * Points.XPConfig.ShovelXP;
-                
+
                 Points.AwardXP(player, Mathf.CeilToInt(amount), structureName.ToUpper() + " BUILT");
                 ActionLogger.Add(EActionLogType.HELP_BUILD_BUILDABLE, $"{Foundation.asset.itemName} / {Foundation.asset.id} / {Foundation.asset.GUID:N} - {Mathf.RoundToInt(contribution * 100f).ToString(Data.Locale)}%", player);
                 if (contribution > 0.3333f)
@@ -297,7 +297,7 @@ public class BuildableComponent : MonoBehaviour
             List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
             VehicleManager.getVehiclesInRadius(point, Mathf.Pow(30, 2), vehicles);
             int logis = vehicles.Where(v => v.lockedGroup.m_SteamID == team &&
-            VehicleBay.VehicleExists(v.asset.GUID, out var vehicleData) &&
+            VehicleBay.VehicleExists(v.asset.GUID, out VehicleData? vehicleData) &&
             (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT)).Count();
             if (logis == 0)
             {
@@ -370,7 +370,7 @@ public class BuildableComponent : MonoBehaviour
                 placer?.SendChat(T.BuildBunkerTooClose, (closeEnemyFOB.model.position - point).magnitude, 5f);
                 return false;
             }
-            
+
             if (placer.KitClass != EClass.COMBAT_ENGINEER || !buildable.Foundation.ValidReference(out Guid foundGuid) || !KitManager.KitExists(placer.KitName, out Kit kit) || !kit.Items.Exists(i => i.Id == foundGuid))
             {
                 if (fob == null)

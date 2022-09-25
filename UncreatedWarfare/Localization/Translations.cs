@@ -28,7 +28,7 @@ public class Translation
         typeof(Translation<,,,,,,,,>),
         typeof(Translation<,,,,,,,,,>)
     };
-    private static readonly Dictionary<string, List<KeyValuePair<Type, FormatDisplayAttribute>>> _formatDisplays 
+    private static readonly Dictionary<string, List<KeyValuePair<Type, FormatDisplayAttribute>>> _formatDisplays
         = new Dictionary<string, List<KeyValuePair<Type, FormatDisplayAttribute>>>(32);
     private const string NULL_CLR_1 = "<#569cd6><b>null</b></color>";
     private const string NULL_CLR_2 = "<color=#569cd6><b>null</b></color>";
@@ -194,7 +194,7 @@ public class Translation
                 target, LanguageAliasSet.GetCultureInfo(language), flags });
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string ToString<T>(T value, string language, string? format, UCPlayer? target, TranslationFlags flags) 
+    public static string ToString<T>(T value, string language, string? format, UCPlayer? target, TranslationFlags flags)
         => ToStringHelperClass<T>.ToString(value, language, format, target, LanguageAliasSet.GetCultureInfo(language), flags);
 
     private static readonly Type[] tarr1 = new Type[] { typeof(string), typeof(IFormatProvider) };
@@ -358,13 +358,13 @@ public class Translation
 
             if (format is not null)
             {
-                if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+                if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
                     return player.characterName;
-                else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal)   || format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
                     return player.nickName;
                 else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
                     return player.playerName;
-                else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal)    || format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
+                else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal) || format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
                     return player.steamID.m_SteamID.ToString(Warfare.Data.Locale);
             }
             return player.characterName;
@@ -609,7 +609,7 @@ public class Translation
         public readonly string Original;
         public readonly string ProcessedInner;
         public readonly string Processed;
-        public readonly Color  Color;
+        public readonly Color Color;
         public readonly bool rt;
         private string? _console;
         public string Console => rt ? (_console ??= F.RemoveRichText(ProcessedInner)) : Original;
@@ -633,7 +633,7 @@ public class Translation
             Color = color;
             _console = null;
         }
-        public TranslationValue(in TranslationValue value, TranslationFlags flags) : this (value.Language, value.Original, flags) { }
+        public TranslationValue(in TranslationValue value, TranslationFlags flags) : this(value.Language, value.Original, flags) { }
     }
     public static string Pluralize(string word, TranslationFlags flags)
     {
@@ -680,7 +680,7 @@ public class Translation
             str.Equals("chef", StringComparison.OrdinalIgnoreCase) ||
             str.Equals("chief", StringComparison.OrdinalIgnoreCase)
             )
-        goto s;
+            goto s;
         if (last is 'f')
             return word.Substring(0, word.Length - 1) + "ves";
 
@@ -835,7 +835,7 @@ public class Translation
             color = F.Hex(clr);
             goto next;
         }
-        
+
     noColor:
         color = UCWarfare.GetColor("default");
         innerText = message;
@@ -848,7 +848,7 @@ public class Translation
         1 => Flags | TranslationFlags.Team1,
         _ => Flags
     };
-    internal static string Null(TranslationFlags flags) => 
+    internal static string Null(TranslationFlags flags) =>
         ((flags & TranslationFlags.NoRichText) == TranslationFlags.NoRichText)
             ? NULL_NO_CLR
             : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
@@ -964,11 +964,11 @@ public class Translation
                 }
                 else
                 {
-                    _formatDisplays.Add(str, new List<KeyValuePair<Type, FormatDisplayAttribute>>(1) 
+                    _formatDisplays.Add(str, new List<KeyValuePair<Type, FormatDisplayAttribute>>(1)
                         { new KeyValuePair<Type, FormatDisplayAttribute>(type, attr) });
                 }
             }
-            cont: ;
+        cont:;
         }
 
         foreach (List<KeyValuePair<Type, FormatDisplayAttribute>> list in _formatDisplays.Values)
@@ -1111,7 +1111,7 @@ public class Translation
                         }
                     }
                     L.LogWarning("[TRANSLATIONS] Unknown translation key: " + key + " in " + lang + " translation file.");
-                    n: ;
+                n:;
                 }
             }
 
@@ -1240,7 +1240,7 @@ public class Translation
                         }
                     }
                 }
-                next:
+            next:
                 if (!string.IsNullOrEmpty(fmt2))
                     fmt += " (" + fmt2 + ")";
                 if (pluralType != -1)
@@ -1273,10 +1273,10 @@ public class Translation
     {
         if (signId.StartsWith("sign_", StringComparison.Ordinal))
             signId = signId.Substring(5);
-        
+
         if (T.Signs.TryGetValue(signId, out Translation tr))
             return tr;
-        
+
         foreach (Translation tr2 in T.Signs.Values)
         {
             if (signId.Equals(tr2.AttributeData?.SignId, StringComparison.OrdinalIgnoreCase))
@@ -2191,15 +2191,15 @@ public sealed class Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : Trans
         flags |= TranslationFlags.Plural;
         return expectation switch
         {
-            0 => arg1  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            1 => arg2  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            2 => arg3  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            3 => arg4  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            4 => arg5  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            5 => arg6  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            6 => arg7  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            7 => arg8  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
-            8 => arg9  is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            0 => arg1 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            1 => arg2 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            2 => arg3 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            3 => arg4 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            4 => arg5 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            5 => arg6 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            6 => arg7 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            7 => arg8 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
+            8 => arg9 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
             9 => arg10 is IComparable c && c.CompareTo(1) == 0 ? flags | TranslationFlags.NoPlural : flags,
             _ => flags
         };
@@ -2244,7 +2244,7 @@ public sealed class TranslationDataAttribute : Attribute
             if (parameters[i] == null)
                 parameters[i] = string.Empty;
         }
-            
+
         _formatArgs = parameters;
     }
     public string? SignId { get => _signId; set => _signId = value; }

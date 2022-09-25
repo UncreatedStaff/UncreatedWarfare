@@ -1,5 +1,4 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -130,7 +129,7 @@ public class KitCommand : Command
         else if (ctx.MatchParameter(0, "give", "g"))
         {
             ctx.AssertHelpCheck(1, "/kit <give|g> <id> - Equips you with the kit with the id provided.");
-            
+
             ctx.AssertRanByPlayer();
 
             if (ctx.TryGet(1, out string kitName))
@@ -477,7 +476,7 @@ public class KitCommand : Command
                         ctx.Reply(T.KitNameTaken, loadoutName);
                     }
                 }).ConfigureAwait(false);
-                ctx.Defer();    
+                ctx.Defer();
             }
             else
                 ctx.SendCorrectUsage("/kit <createloadout|cloadout|cl> <player> <team (1 = " + TeamManager.Team1Code + ", 2 = " + TeamManager.Team2Code + "> <class> <sign text>");

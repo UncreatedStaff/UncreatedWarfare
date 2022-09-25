@@ -17,12 +17,10 @@ using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Squads.Commander;
-using Uncreated.Warfare.Sync;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -449,7 +447,7 @@ internal class _DebugCommand : Command
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { ctx.Caller.Connection });
         }
         ctx.Caller.HasUIHidden = !ctx.Caller.HasUIHidden;
-        
+
     }
     private void game(CommandInteraction ctx)
     {
@@ -723,7 +721,7 @@ internal class _DebugCommand : Command
         {
             for (int i = 0; i < QuestManager.RegisteredTrackers.Count; i++)
             {
-                if (QuestManager.RegisteredTrackers[i].Player!.Steam64 == ctx.CallerID && 
+                if (QuestManager.RegisteredTrackers[i].Player!.Steam64 == ctx.CallerID &&
                     QuestManager.RegisteredTrackers[i].QuestData?.QuestType == type)
                 {
                     QuestManager.RegisteredTrackers[i].ManualComplete();

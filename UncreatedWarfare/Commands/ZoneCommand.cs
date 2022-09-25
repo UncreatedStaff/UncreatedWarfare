@@ -241,12 +241,12 @@ public class ZoneCommand : Command
             }
         }
         for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-        {                
+        {
             if (Data.ZoneProvider.Zones[i].Name.Equals(nameInput, StringComparison.OrdinalIgnoreCase))
                 return Data.ZoneProvider.Zones[i];
         }
         for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-        {                
+        {
             if (Data.ZoneProvider.Zones[i].Name.IndexOf(nameInput, StringComparison.OrdinalIgnoreCase) != -1)
                 return Data.ZoneProvider.Zones[i];
         }
@@ -334,7 +334,7 @@ public class ZoneCommand : Command
     internal static Zone? GetZone(Vector3 position)
     {
         for (int i = 0; i < Data.ZoneProvider.Zones.Count; i++)
-        {                
+        {
             if (Data.ZoneProvider.Zones[i].IsInside(position))
                 return Data.ZoneProvider.Zones[i];
         }

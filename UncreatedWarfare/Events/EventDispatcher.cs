@@ -2,13 +2,8 @@
 using Steamworks;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
@@ -16,7 +11,6 @@ using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -433,7 +427,7 @@ public static class EventDispatcher
     }
     internal static void InvokeOnProjectileExploded(ProjectileComponent projectileComponent, Collider other)
     {
-        var vehicle = other.GetComponentInParent<InteractableVehicle>();
+        InteractableVehicle vehicle = other.GetComponentInParent<InteractableVehicle>();
 
         if (vehicle != null)
             VehicleDamageCalculator.RegisterForAdvancedDamage(vehicle, VehicleDamageCalculator.GetDamageMultiplier(projectileComponent, other));

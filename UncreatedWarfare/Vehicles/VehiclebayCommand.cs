@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Configuration;
@@ -10,7 +9,6 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine.Assertions;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
@@ -550,8 +548,8 @@ public class VehicleBayCommand : Command
                         ctx.Reply(T.VehicleBayLinkFinished,
                             (c2 == null
                                 ? null
-                                : (c2.Spawn is null 
-                                    ? null 
+                                : (c2.Spawn is null
+                                    ? null
                                     : Assets.find<VehicleAsset>(c2.Spawn.VehicleID)))!);
                         c.currentlylinking = null;
                     }
@@ -636,9 +634,9 @@ public class VehicleBayCommand : Command
                     }
                 }
             }
-            if ((VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn) && 
-                VehicleBay.VehicleExists(spawn.VehicleID, out data)) || 
-                (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) && 
+            if ((VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn) &&
+                VehicleBay.VehicleExists(spawn.VehicleID, out data)) ||
+                (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) &&
                 VehicleBay.VehicleExists(spawn.VehicleID, out data)))
                 return data;
             else return null;

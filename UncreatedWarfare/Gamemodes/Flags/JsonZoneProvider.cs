@@ -3,13 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Gamemodes.Flags;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -116,7 +111,7 @@ public class JsonZoneProvider
                 if (_zones[j].Id == i) goto c;
             }
             return i;
-            c: ;
+        c:;
         }
     }
     public void Save()

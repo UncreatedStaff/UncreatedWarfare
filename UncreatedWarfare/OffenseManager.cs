@@ -951,7 +951,7 @@ public static class OffenseManager
             Chat.Broadcast(LanguageSet.AllBut(targetId), T.WarnSuccessBroadcastOperator, target);
 
             string lang = Localization.GetLang(target.Steam64);
-            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(T.WarnSuccessDMOperator.Translate(lang), 
+            ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(T.WarnSuccessDMOperator.Translate(lang),
                 lang, reason, target, target.GetTeam(), T.WarnSuccessDMOperator.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
 
             target.SendChat(T.WarnSuccessDMOperator, reason!);
@@ -978,7 +978,8 @@ public static class OffenseManager
 #endif
         UCPlayer? muted = UCPlayer.FromID(target);
         UCPlayer? muter = UCPlayer.FromID(admin);
-        Task.Run(async () => {
+        Task.Run(async () =>
+        {
             DateTime now = DateTime.Now;
             await Data.DatabaseManager.NonQueryAsync(
                 "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4, @5);",

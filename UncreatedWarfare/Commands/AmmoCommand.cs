@@ -95,7 +95,7 @@ public class AmmoCommand : Command
                 _ => 1
             };
 
-            if (barricade.asset.GUID == Gamemode.Config.BarricadeAmmoCrate.Value.Guid || 
+            if (barricade.asset.GUID == Gamemode.Config.BarricadeAmmoCrate.Value.Guid ||
                 (Data.Is<Insurgency>() && barricade.asset.GUID == Gamemode.Config.BarricadeInsurgencyCache.Value.Guid))
             {
                 if (TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists || TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists)
@@ -106,7 +106,7 @@ public class AmmoCommand : Command
 
                 bool isInMain = false;
 
-                if (!ctx.Caller.IsOnFOB(out var fob))
+                if (!ctx.Caller.IsOnFOB(out FOB? fob))
                 {
                     if (F.IsInMain(barricade.model.transform.position))
                         isInMain = true;

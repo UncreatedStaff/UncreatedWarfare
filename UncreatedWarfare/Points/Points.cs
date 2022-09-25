@@ -336,7 +336,7 @@ public static class Points
         EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
             "XP", player.Rank.CurrentXP + "/" + player.Rank.RequiredXP
         );
-        EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,   
+        EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
             "Next", player.Rank.NextAbbreviation
         );
         EffectManager.sendUIEffectText(XPUI_KEY, player.Connection, true,
@@ -353,7 +353,7 @@ public static class Points
             return;
 
         EffectManager.sendUIEffect(CreditsConfig.CreditsUI, CREDITSUI_KEY, player.Connection, true);
-        EffectManager.sendUIEffectText(CREDITSUI_KEY, player.Connection, true,  
+        EffectManager.sendUIEffectText(CREDITSUI_KEY, player.Connection, true,
             "Credits", "<color=#b8ffc1>C</color>  " + player.CachedCredits
         );
     }

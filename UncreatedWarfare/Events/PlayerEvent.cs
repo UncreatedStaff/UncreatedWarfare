@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Uncreated.Warfare.Events;
+﻿namespace Uncreated.Warfare.Events;
 public class PlayerEvent : EventState
 {
     private readonly UCPlayer _player;

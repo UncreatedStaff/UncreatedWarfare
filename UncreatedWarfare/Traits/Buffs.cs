@@ -1,13 +1,4 @@
-﻿using SDG.Unturned;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Vehicles;
+﻿using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits;
 public abstract class Buff : Trait, IBuff

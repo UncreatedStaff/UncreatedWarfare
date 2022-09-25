@@ -106,7 +106,7 @@ public static partial class Patches
                     }
                 }
                 if (seat == 0 && __instance.transform.TryGetComponent(out VehicleComponent c))
-                {   
+                {
                     c.LastDriver = player.channel.owner.playerID.steamID.m_SteamID;
                     c.LastDriverTime = Time.realtimeSinceStartup;
                 }

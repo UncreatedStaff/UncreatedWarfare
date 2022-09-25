@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Uncreated.Warfare.Squads.Commander;
+﻿namespace Uncreated.Warfare.Squads.Commander;
 public class Commanders
 {
     private UCPlayer? _commanderT1;

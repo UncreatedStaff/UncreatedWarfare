@@ -3,7 +3,6 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Text.RegularExpressions;
-using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -396,12 +395,12 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            var weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
+            ItemWeaponAsset weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
 
             RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE, __instance.player);
             if (info.transform != null)
             {
-                var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
+                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
                 if (drop != null)
                 {
                     UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);

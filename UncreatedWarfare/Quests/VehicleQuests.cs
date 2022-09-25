@@ -1,14 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -240,7 +235,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
                     lastInstID = vehicle.Vehicle.instanceID;
                     if (VehicleBay.VehicleExists(vehicle.Vehicle.asset.GUID, out VehicleData data))
                         lastType = data.Type;
-                    else 
+                    else
                         lastType = EVehicleType.NONE;
                 }
                 if (VehicleType.IsMatch(lastType))

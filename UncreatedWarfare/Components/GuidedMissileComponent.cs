@@ -1,9 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -45,10 +42,10 @@ internal class GuidedMissileComponent : MonoBehaviour
 
         if (projectile.TryGetComponent(out rigidbody))
         {
-            var vehicle = firer.movement.getVehicle(); // check if the player is in a vehicle
+            InteractableVehicle vehicle = firer.movement.getVehicle(); // check if the player is in a vehicle
             if (vehicle != null)
             {
-                foreach (var turret in vehicle.turrets)
+                foreach (Passenger? turret in vehicle.turrets)
                 {
                     if (turret.player != null && turret.player.player == firer)
                     {
@@ -97,7 +94,7 @@ internal class GuidedMissileComponent : MonoBehaviour
     }
     private IEnumerator<WaitForSeconds> Tick()
     {
-        int count = 0;  
+        int count = 0;
 
         while (isActive) // this loop runs every 0.05 seconds. every iteration it will send a small smoke trail effect to all clients here
         {

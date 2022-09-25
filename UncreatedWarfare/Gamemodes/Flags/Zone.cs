@@ -1,8 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
@@ -137,7 +135,7 @@ public abstract class Zone : IDeployable
     }
     /// <inheritdoc/>
     public override string ToString() => $"{Name}: {Type.ToString().ToLower()}. ({Center})." +
-        $"{(!float.IsNaN(MaxHeight) ? $" Max Height: {MaxHeight}." : string.Empty)}{(!float.IsNaN(MinHeight)? $" Min Height: {MinHeight}." : string.Empty)}";
+        $"{(!float.IsNaN(MaxHeight) ? $" Max Height: {MaxHeight}." : string.Empty)}{(!float.IsNaN(MinHeight) ? $" Min Height: {MinHeight}." : string.Empty)}";
     /// <summary>
     /// Get the spawnpoints for the border preview.
     /// </summary>
@@ -157,7 +155,7 @@ public abstract class Zone : IDeployable
         return location.x >= Bounds.x && location.x <= Bounds.z && location.z >= Bounds.y && location.z <= Bounds.w && (float.IsNaN(MinHeight) || location.y >= MinHeight) && (float.IsNaN(MaxHeight) || location.y <= MaxHeight);
     }
     private Zone()
-    { 
+    {
         throw new NotImplementedException();
     }
     private bool drawDataGenerated = false;
@@ -238,7 +236,7 @@ public abstract class Zone : IDeployable
     bool IDeployable.CheckDeployableTick(UCPlayer player, bool chat) => true;
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
-        if (format is not null && (format.Equals(Flag.SHORT_NAME_FORMAT, StringComparison.Ordinal) || 
+        if (format is not null && (format.Equals(Flag.SHORT_NAME_FORMAT, StringComparison.Ordinal) ||
                                    format.Equals(Flag.COLOR_SHORT_NAME_FORMAT, StringComparison.Ordinal) ||
                                    format.Equals(Flag.COLOR_SHORT_NAME_DISCOVER_FORMAT, StringComparison.Ordinal) ||
                                    format.Equals(Flag.SHORT_NAME_DISCOVER_FORMAT, StringComparison.Ordinal)))

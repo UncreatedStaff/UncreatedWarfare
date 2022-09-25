@@ -1,5 +1,4 @@
 ﻿using SDG.Unturned;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Kits;
@@ -35,16 +34,16 @@ public class SquadConfigData : JSONConfigData
     public JsonAssetReference<EffectAsset> SquadRallyUI;
     public override void SetDefaults()
     {
-        RallyTimer              = 45;
-        RallyDespawnDistance    = 30;
-        MedicRange              = 300f;
-        SquadDisconnectTime     = 120;
+        RallyTimer = 45;
+        RallyDespawnDistance = 30;
+        MedicRange = 300f;
+        SquadDisconnectTime = 120;
 
-        EmptyMarker             = "84d38753c46e4a1b8e5b26ff44787ef2";
-        SquadLeaderEmptyMarker  = "dc95d06e787e4a069518e0487645ed6b";
-        MortarMarker            = "e608e0add55d4f3cbfbd6f5cabe091f3";
-        InjuredMarker           = "5edcd9bb87e240428902c04e1ba04e97";
-        MedicMarker             = "0d846b64766041f6b9f1a08df88a9268";
+        EmptyMarker = "84d38753c46e4a1b8e5b26ff44787ef2";
+        SquadLeaderEmptyMarker = "dc95d06e787e4a069518e0487645ed6b";
+        MortarMarker = "e608e0add55d4f3cbfbd6f5cabe091f3";
+        InjuredMarker = "5edcd9bb87e240428902c04e1ba04e97";
+        MedicMarker = "0d846b64766041f6b9f1a08df88a9268";
 
         Classes = new ClassConfig[]
         {
@@ -68,8 +67,8 @@ public class SquadConfigData : JSONConfigData
             new ClassConfig(EClass.SPEC_OPS,           'À', "a1ebe4722dc24da5a7eef7604436c9e3", "21fe1dcba8bf49caa3f7928fc2bb3f36")
         };
 
-        SquadMenuUI  = "98154002fbcd4b7499552d6497db8fc5";
-        SquadListUI  = "5acd091f1e7b4f93ac9f5431729ac5cc";
+        SquadMenuUI = "98154002fbcd4b7499552d6497db8fc5";
+        SquadListUI = "5acd091f1e7b4f93ac9f5431729ac5cc";
         SquadRallyUI = "a280ac3fe8c1486cadc8eca331e8ce32";
     }
 }

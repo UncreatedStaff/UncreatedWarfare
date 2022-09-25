@@ -48,28 +48,28 @@ public static class Data
         private static string? _flagCache;
         private static string? _structureCache;
         private static string? _vehicleCache;
-        public static readonly string FactionsStorage  = Path.Combine(BaseDirectory, "Factions")  + Path.DirectorySeparatorChar;
-        public static readonly string TicketStorage    = Path.Combine(BaseDirectory, "Tickets")   + Path.DirectorySeparatorChar;
-        public static readonly string PointsStorage    = Path.Combine(BaseDirectory, "Points")    + Path.DirectorySeparatorChar;
-        public static readonly string OfficerStorage   = Path.Combine(BaseDirectory, "Officers")  + Path.DirectorySeparatorChar;
-        public static readonly string CooldownStorage  = Path.Combine(BaseDirectory, "Cooldowns") + Path.DirectorySeparatorChar;
-        public static readonly string SquadStorage     = Path.Combine(BaseDirectory, "Squads")    + Path.DirectorySeparatorChar;
-        public static readonly string KitsStorage      = Path.Combine(BaseDirectory, "Kits")      + Path.DirectorySeparatorChar;
-        public static readonly string SQLStorage       = Path.Combine(BaseDirectory, "SQL")       + Path.DirectorySeparatorChar;
-        public static readonly string FOBStorage       = Path.Combine(BaseDirectory, "FOBs")      + Path.DirectorySeparatorChar;
-        public static readonly string LangStorage      = Path.Combine(BaseDirectory, "Lang")      + Path.DirectorySeparatorChar;
-        public static readonly string Logs             = Path.Combine(BaseDirectory, "Logs")      + Path.DirectorySeparatorChar;
-        public static readonly string Sync             = Path.Combine(BaseDirectory, "Sync")      + Path.DirectorySeparatorChar;
-        public static readonly string ActionLog        = Path.Combine(Logs,          "ActionLog") + Path.DirectorySeparatorChar;
-        public static readonly string PendingOffenses  = Path.Combine(BaseDirectory, "Offenses")  + Path.DirectorySeparatorChar;
+        public static readonly string FactionsStorage = Path.Combine(BaseDirectory, "Factions") + Path.DirectorySeparatorChar;
+        public static readonly string TicketStorage = Path.Combine(BaseDirectory, "Tickets") + Path.DirectorySeparatorChar;
+        public static readonly string PointsStorage = Path.Combine(BaseDirectory, "Points") + Path.DirectorySeparatorChar;
+        public static readonly string OfficerStorage = Path.Combine(BaseDirectory, "Officers") + Path.DirectorySeparatorChar;
+        public static readonly string CooldownStorage = Path.Combine(BaseDirectory, "Cooldowns") + Path.DirectorySeparatorChar;
+        public static readonly string SquadStorage = Path.Combine(BaseDirectory, "Squads") + Path.DirectorySeparatorChar;
+        public static readonly string KitsStorage = Path.Combine(BaseDirectory, "Kits") + Path.DirectorySeparatorChar;
+        public static readonly string SQLStorage = Path.Combine(BaseDirectory, "SQL") + Path.DirectorySeparatorChar;
+        public static readonly string FOBStorage = Path.Combine(BaseDirectory, "FOBs") + Path.DirectorySeparatorChar;
+        public static readonly string LangStorage = Path.Combine(BaseDirectory, "Lang") + Path.DirectorySeparatorChar;
+        public static readonly string Logs = Path.Combine(BaseDirectory, "Logs") + Path.DirectorySeparatorChar;
+        public static readonly string Sync = Path.Combine(BaseDirectory, "Sync") + Path.DirectorySeparatorChar;
+        public static readonly string ActionLog = Path.Combine(Logs, "ActionLog") + Path.DirectorySeparatorChar;
+        public static readonly string PendingOffenses = Path.Combine(BaseDirectory, "Offenses") + Path.DirectorySeparatorChar;
         public static readonly string TraitDataStorage = Path.Combine(BaseDirectory, "traits.json");
-        public static readonly string ConfigSync       = Path.Combine(Sync,          "config.json");
-        public static readonly string KitSync          = Path.Combine(Sync,          "kits.json");
-        public static readonly string PlayersSync      = Path.Combine(Sync,          "players.json");
-        public static readonly string CurrentLog       = Path.Combine(Logs,          "current.txt");
-        public static string FlagStorage        => _flagCache is null       ? (_flagCache       = Path.Combine(MapStorage, "Flags")      + Path.DirectorySeparatorChar) : _flagCache;
-        public static string StructureStorage   => _structureCache is null  ? (_structureCache  = Path.Combine(MapStorage, "Structures") + Path.DirectorySeparatorChar) : _structureCache;
-        public static string VehicleStorage     => _vehicleCache is null    ? (_vehicleCache    = Path.Combine(MapStorage, "Vehicles")   + Path.DirectorySeparatorChar) : _vehicleCache;
+        public static readonly string ConfigSync = Path.Combine(Sync, "config.json");
+        public static readonly string KitSync = Path.Combine(Sync, "kits.json");
+        public static readonly string PlayersSync = Path.Combine(Sync, "players.json");
+        public static readonly string CurrentLog = Path.Combine(Logs, "current.txt");
+        public static string FlagStorage => _flagCache is null ? (_flagCache = Path.Combine(MapStorage, "Flags") + Path.DirectorySeparatorChar) : _flagCache;
+        public static string StructureStorage => _structureCache is null ? (_structureCache = Path.Combine(MapStorage, "Structures") + Path.DirectorySeparatorChar) : _structureCache;
+        public static string VehicleStorage => _vehicleCache is null ? (_vehicleCache = Path.Combine(MapStorage, "Vehicles") + Path.DirectorySeparatorChar) : _vehicleCache;
         public static void OnMapChanged()
         {
             mapCache = null;
@@ -99,6 +99,7 @@ public static class Data
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
     internal static JsonZoneProvider ZoneProvider;
     internal static WarfareSQL DatabaseManager;
+    internal static WarfareSQL? RemoteSQL;
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     internal static MethodInfo ReplicateStance;
@@ -129,6 +130,7 @@ public static class Data
     internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
     internal static ClientStaticMethod SendEffectClearAll { get; private set; }
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
+    public static WarfareSQL AdminSql => RemoteSQL ?? DatabaseManager;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Is<T>(out T gamemode) where T : class, Gamemodes.Interfaces.IGamemode => (gamemode = (Gamemode as T)!) is not null;
@@ -167,9 +169,9 @@ public static class Data
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Singletons.OnSingletonLoaded    += OnSingletonLoaded;
-        Singletons.OnSingletonUnloaded  += OnSingletonUnloaded;
-        Singletons.OnSingletonReloaded  += OnSingletonReloaded;
+        Singletons.OnSingletonLoaded += OnSingletonLoaded;
+        Singletons.OnSingletonUnloaded += OnSingletonUnloaded;
+        Singletons.OnSingletonReloaded += OnSingletonReloaded;
 
 
         /* CREATE DIRECTORIES */
@@ -191,6 +193,11 @@ public static class Data
 #endif
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
         DatabaseManager.Open();
+        if (UCWarfare.Config.RemoteSQL != null)
+        {
+            RemoteSQL = new WarfareSQL(UCWarfare.Config.RemoteSQL);
+            RemoteSQL.Open();
+        }
         Points.Initialize();
         CommandWindow.shouldLogDeaths = false;
         Gamemode.ReadGamemodes();
@@ -373,7 +380,7 @@ public static class Data
 
     internal static readonly List<KeyValuePair<Type, string?>> TranslatableEnumTypes = new List<KeyValuePair<Type, string?>>()
     {
-        new KeyValuePair<Type, string?>(typeof(EDamageOrigin), "Damage Origin"), 
+        new KeyValuePair<Type, string?>(typeof(EDamageOrigin), "Damage Origin"),
         new KeyValuePair<Type, string?>(typeof(EDeathCause), "Death Cause"),
         new KeyValuePair<Type, string?>(typeof(ELimb), "Limb")
     };

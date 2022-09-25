@@ -2,7 +2,6 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
@@ -254,7 +253,7 @@ public class WarfareSQL : MySqlDatabase
                     "VALUES(@0, 0) " +
                     "ON DUPLICATE KEY UPDATE " +
                     "`Points` = 0;", // clamp to 0
-                    new object[] { Steam64});
+                    new object[] { Steam64 });
                 return 0;
             }
             else
@@ -349,21 +348,21 @@ public class WarfareSQL : MySqlDatabase
         {
             await NonQueryAsync(
                 "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, 0) ON DUPLICATE KEY UPDATE `Credits` = 0;",
-                new object[2] { player, team}).ConfigureAwait(false);
+                new object[2] { player, team }).ConfigureAwait(false);
             return 0;
         }
         else return old;
     }
-    public async Task<List<Kit>> GetAccessibleKits(ulong player)
+    public async Task<List<string>> GetAccessibleKits(ulong player)
     {
         KitManager singleton = KitManager.GetSingleton();
-        List<Kit> kits = new List<Kit>();
+        List<string> kits = new List<string>();
         await QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
             new object[1] { player },
             R =>
             {
                 if (singleton.Kits.TryGetValue(R.GetInt32(0), out Kit kit))
-                    kits.Add(kit);
+                    kits.Add(kit.Name);
             });
         return kits;
     }

@@ -233,7 +233,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                             {
                                 Item item = new Item(iasset.id, k.Amount, 100, F.CloneBytes(k.Metadata));
                                 if (!vehicle.trunkItems.tryAddItem(item))
-                                        ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
+                                    ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
                             }
                         }
                     }
@@ -546,8 +546,8 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                         bool canEnterDriverSeat = owner == null ||
                             e.Player == owner ||
                             e.Player.OnDuty() ||
-                            IsOwnerInVehicle(e.Vehicle, owner) || 
-                            (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) || 
+                            IsOwnerInVehicle(e.Vehicle, owner) ||
+                            (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                             (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
                             (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
 
@@ -605,13 +605,13 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 }
 public enum EDelayType
 {
-    NONE            = 0,
-    TIME            = 1,
+    NONE = 0,
+    TIME = 1,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG            = 2,
+    FLAG = 2,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
     FLAG_PERCENT = 3,
-    OUT_OF_STAGING  = 4
+    OUT_OF_STAGING = 4
 }
 [JsonConverter(typeof(DelayConverter))]
 public struct Delay : IJsonReadWrite

@@ -133,8 +133,8 @@ public static class StatsManager
         {
             NetCalls.BackupWeapon.NetInvoke(Weapons[weaponCounter]);
             if (UCWarfare.Config.Debug)
-                L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[weaponCounter].ID) is ItemAsset asset ? 
-                    (asset.itemName + " - " + Weapons[weaponCounter].KitID) : 
+                L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[weaponCounter].ID) is ItemAsset asset ?
+                    (asset.itemName + " - " + Weapons[weaponCounter].KitID) :
                     (Weapons[weaponCounter].ID.ToString() + " - " + Weapons[weaponCounter].KitID)));
         }
         if (Vehicles.Count > 0)
@@ -770,7 +770,7 @@ public static class StatsManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2010)]
-        internal static void ReceiveRequestKitList(MessageContext context) 
+        internal static void ReceiveRequestKitList(MessageContext context)
             => context.Reply(SendKitList, KitManager.GetKitsWhere(k => !k.IsLoadout).Select(k => k.Name).ToArray());
 
         [NetCall(ENetCall.FROM_SERVER, 2012)]

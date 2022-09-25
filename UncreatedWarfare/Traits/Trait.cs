@@ -3,7 +3,6 @@ using System;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -15,7 +14,6 @@ using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 
 namespace Uncreated.Warfare.Traits;
 public abstract class Trait : MonoBehaviour, ITranslationArgument

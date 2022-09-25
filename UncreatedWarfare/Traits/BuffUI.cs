@@ -1,6 +1,4 @@
 ﻿using SDG.NetTransport;
-using System;
-using System.Drawing;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Squads;
@@ -39,8 +37,8 @@ public class BuffUI : UnturnedUI
     public UnturnedLabel BlinkingIcon8 = new UnturnedLabel("Buff8_Blinking");
 
     public UnturnedUIElement[] Parents;
-    public UnturnedLabel[]     SolidIcons;
-    public UnturnedLabel[]     BlinkingIcons;
+    public UnturnedLabel[] SolidIcons;
+    public UnturnedLabel[] BlinkingIcons;
     public BuffUI() : base(12013, Gamemode.Config.UIBuffs, true, false)
     {
         Parents = new UnturnedUIElement[MAX_BUFFS]
@@ -93,7 +91,7 @@ public class BuffUI : UnturnedUI
             }
             if (ind == -1 || !res && ind < MAX_BUFFS - RESERVED_BUFFS - 1)
                 return false; // no room
-            
+
             string icon = buff.Icon;
             ITransportConnection c = player.Connection;
 

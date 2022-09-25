@@ -1,10 +1,7 @@
 ﻿using HarmonyLib;
-using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Data.OleDb;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -18,8 +15,6 @@ using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Singletons;
-using Unity.Rendering.HybridV2;
 using UnityEngine;
 using Version = System.Version;
 

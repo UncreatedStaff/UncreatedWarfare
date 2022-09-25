@@ -1,7 +1,5 @@
-﻿using SDG.Unturned;
-using System.Globalization;
+﻿using System.Globalization;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Squads;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 

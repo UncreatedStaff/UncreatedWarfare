@@ -151,8 +151,8 @@ public class TeleportCommand : Command
                 }
 
                 pos = new Vector3(x, y, z);
-                throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Player.look.aim.transform.rotation.y) 
-                        ? T.TeleportSelfLocationSuccess 
+                throw ctx.Reply(ctx.Caller.Player.teleportToLocation(pos, ctx.Caller.Player.look.aim.transform.rotation.y)
+                        ? T.TeleportSelfLocationSuccess
                         : T.TeleportSelfLocationObstructed,
                     $"({x.ToString("0.##", Data.Locale)}, {y.ToString("0.##", Data.Locale)}, {z.ToString("0.##", Data.Locale)})");
             case 4:

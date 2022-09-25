@@ -15,7 +15,7 @@ public class CooldownManager : ConfigSingleton<Config<CooldownConfig>, CooldownC
     public static CooldownManager Singleton;
     public static new CooldownConfig Config => Singleton.IsLoaded() ? Singleton.ConfigurationFile.Data : null!;
     internal List<Cooldown> cooldowns;
-    public CooldownManager() : base ("cooldowns", Data.Paths.CooldownStorage, "config.json") { }
+    public CooldownManager() : base("cooldowns", Data.Paths.CooldownStorage, "config.json") { }
     public override void Load()
     {
         cooldowns = new List<Cooldown>(64);

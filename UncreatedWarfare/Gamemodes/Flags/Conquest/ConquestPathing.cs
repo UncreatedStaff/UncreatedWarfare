@@ -110,7 +110,7 @@ public partial class Conquest
                     goto br;
 
             continue;
-        br: fl = null; 
+        br: fl = null;
             break;
         }
 

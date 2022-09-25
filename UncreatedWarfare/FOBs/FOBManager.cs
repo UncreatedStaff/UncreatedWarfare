@@ -3,27 +3,26 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Barricades;
+using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.FOBs.UI;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Locations;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Uncreated.Warfare.Singletons;
 using Cache = Uncreated.Warfare.Components.Cache;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
-using Uncreated.Warfare.FOBs.UI;
-using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Barricades;
-using System.Text.Json.Serialization;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Locations;
-using Uncreated.Warfare.Commands.CommandSystem;
-using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Maps;
-using Steamworks;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
@@ -35,7 +34,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public static readonly FOBListUI ListUI = new FOBListUI();
     public static readonly NearbyResourceUI ResourceUI = new NearbyResourceUI();
     public readonly List<SpecialFOB> SpecialFOBs = new List<SpecialFOB>();
-    public readonly List<Cache> Caches  = new List<Cache>();
+    public readonly List<Cache> Caches = new List<Cache>();
     public readonly List<FOB> Team1FOBs = new List<FOB>();
     public readonly List<FOB> Team2FOBs = new List<FOB>();
     public static FOBConfigData Config => _config.Data;
@@ -133,7 +132,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (Team1FOBs.FirstOrDefault(f => f.Position == pos) is null && Team2FOBs.FirstOrDefault(f => f.Position == pos) is null)
                 RegisterNewFOB(e.Barricade);
         }
-        BuildableData? repairable = isRadio ? null : Config.Buildables.Find(b => b.BuildableBarricade != null && b.BuildableBarricade.HasValue && b.BuildableBarricade.Value.MatchGuid(guid) || 
+        BuildableData? repairable = isRadio ? null : Config.Buildables.Find(b => b.BuildableBarricade != null && b.BuildableBarricade.HasValue && b.BuildableBarricade.Value.MatchGuid(guid) ||
             (b.Type == EBuildableType.EMPLACEMENT && b.Emplacement != null && b.Emplacement.BaseBarricade.MatchGuid(guid)));
         if (repairable != null || isRadio)
         {
@@ -199,14 +198,14 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         {
             DeleteCache(e.Barricade);
         }
-    }    
+    }
     public FOB RegisterNewFOB(BarricadeDrop drop)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         FOB fob = new FOB(drop);
-        
+
         if (fob.Owner != 0 && Data.Is(out IGameStats ws) && ws.GameStats is IFobsTracker ft)
         {
             if (fob.Owner.TryGetPlayerData(out UCPlayerData c) && c.stats is IFOBStats f)
@@ -496,10 +495,10 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             pts.Dispose();
         }
 
-        
+
         if (killer == null)
         {
-             if (removed != null)
+            if (removed != null)
                 ins.OnCacheDestroyed(removed, killer);
             return;
         }
@@ -956,7 +955,7 @@ public class FOBConfigData : JSONConfigData
         T2RadioState = "8yh8NQEAEAEAAAAAAAAAACIAAACmlQFkAAQAAKyVAWQAAAIArpUBZAADCADAlQFkAAYIAMCVAWQABwIA1pUBZAAKAgDWlQFkAAcDANaVAWQACgMA1pUBZAAHBADWlQFkAAoEANaVAWQACQUA2JUBZAAJBwDYlQFkAAkJANiVAWQAAAsAzpUBZAAADADOlQFkAAANAM6VAWQAAwsAzpUBZAAHAACslQFkAAoAANaVAWQACgEA1pUBZAADDADOlQFkAAMNAM6VAWQABg0A0JUBZAAEAgDalQFkAAkLANCVAWQACQwA0JUBZAAJDQDQlQFkAAYLAM6VAWQABgwAzpUBZAAABQDDlQFkAAMFAMqVAWQABgUAypUBZAAACAC6ZQFkAA==";
 
         LogiTruckIDs = new JsonAssetReference<VehicleAsset>[6]
-        { 
+        {
             "58d6410084f04e43ba4462a1c9a6b8c0", // Logistics_Woodlands
             "fe1a85aeb8e34c2fbeca3e485300a61c", // Logistics_Forest
             "6082d95b5fcb4805a7a2120e3e3c6f68", // UH60_Blackhawk

@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;

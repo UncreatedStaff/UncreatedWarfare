@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
@@ -28,9 +27,9 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 });
                 Texture2D img = new Texture2D(Level.size, Level.size);
                 List<Vector2> ptsToTest = new List<Vector2>(img.width * img.height);
-                for (int i = 0; i < img.width; i ++)
+                for (int i = 0; i < img.width; i++)
                 {
-                    for (int j = 0; j < img.height; j ++)
+                    for (int j = 0; j < img.height; j++)
                     {
                         ptsToTest.Add(new Vector2(i, j));
                     }
@@ -153,7 +152,7 @@ namespace Uncreated.Warfare.Gamemodes.Flags
                 int next = (step - 1) * 3; //3
                 if (zones.Count <= next) complete = true;
                 System.Random r = new System.Random();
-                
+
                 for (int e = z; e < (zones.Count > next ? next : zones.Count); e++)
                 {
                     Zone zone = zones[e];

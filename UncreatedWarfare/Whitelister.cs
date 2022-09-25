@@ -8,7 +8,6 @@ using Uncreated.Framework;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -71,7 +70,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
             return;
         }
         else
-        isWhitelisted = IsWhitelisted(a.GUID, out whitelistedItem);
+            isWhitelisted = IsWhitelisted(a.GUID, out whitelistedItem);
         if (to_page == PlayerInventory.STORAGE && !isWhitelisted)
         {
             shouldAllow = false;

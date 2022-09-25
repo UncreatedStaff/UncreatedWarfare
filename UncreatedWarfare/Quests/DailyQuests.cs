@@ -4,9 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Framework;
@@ -14,7 +12,6 @@ using Uncreated.Framework.Quests;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Quests.Types;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -238,7 +235,7 @@ public static class DailyQuests
             int rndPick;
             while (true)
             {
-                exists:;
+            exists:;
                 rndPick = UnityEngine.Random.Range(0, QuestManager.Quests.Count);
                 for (int p = 0; p < i; ++p)
                 {
@@ -526,7 +523,7 @@ public static class DailyQuests
                                                             if (reader.TokenType == JsonTokenType.String)
                                                             {
                                                                 string? v = reader.GetString();
-                                                                if (v != null) 
+                                                                if (v != null)
                                                                     DateTime.TryParseExact(v, "s", Data.Locale, DateTimeStyles.AssumeUniversal, out save.StartDate);
                                                             }
                                                             break;
@@ -732,7 +729,7 @@ public static class DailyQuests
             }
         }
         return;
-        deleteFile:
+    deleteFile:
         File.Delete(path);
     }
     public static void LoadAssets()

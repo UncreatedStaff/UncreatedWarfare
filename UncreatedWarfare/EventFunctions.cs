@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections;
@@ -27,7 +26,6 @@ using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
@@ -448,7 +446,7 @@ public static class EventFunctions
                                 }
                             }
                             // if the trap belongs to the triggerer's team, blame the triggerer
-                            if (triggerer != null && (instigator == null || triggerer.Steam64 != instigator.Steam64) && 
+                            if (triggerer != null && (instigator == null || triggerer.Steam64 != instigator.Steam64) &&
                                 (drop.GetServersideData().group.GetTeam() == triggerer.GetTeam()))
                                 c.LastInstigator = triggerer.Steam64;
                         }
@@ -1331,10 +1329,10 @@ public static class EventFunctions
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         // leave the player where they logged off if they logged off in the same game.
-        if (PlayerSave.TryReadSaveFile(playerID.steamID.m_SteamID, out PlayerSave save) && 
+        if (PlayerSave.TryReadSaveFile(playerID.steamID.m_SteamID, out PlayerSave save) &&
             Data.Gamemode is not null && Data.Gamemode.GameID == save.LastGame && !save.ShouldRespawnOnJoin)
             return;
-        
+
         point = TeamManager.LobbySpawn;
         yaw = TeamManager.LobbySpawnAngle;
         initialStance = EPlayerStance.STAND;
@@ -1465,7 +1463,7 @@ public static class EventFunctions
             }
 
             player.playerID.characterName = Regex.Replace(player.playerID.characterName, "<.*>", string.Empty);
-            player.playerID.nickName      = Regex.Replace(player.playerID.nickName,      "<.*>", string.Empty);
+            player.playerID.nickName = Regex.Replace(player.playerID.nickName, "<.*>", string.Empty);
 
             if (player.playerID.characterName.Length < 3 && player.playerID.nickName.Length < 3)
             {

@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Warfare.Kits;
 
@@ -59,8 +56,8 @@ public class XPReward : IQuestReward
     {
         Point.Points.AwardXP(player.Player, XP,
             Localization.TranslateEnum(tracker.QuestData.QuestType,
-                Data.Languages.TryGetValue(player.Steam64, out string lang) 
-                    ? lang 
+                Data.Languages.TryGetValue(player.Steam64, out string lang)
+                    ? lang
                     : L.DEFAULT).ToUpper() + " REWARD");
     }
     public void Init(object value)
@@ -103,7 +100,7 @@ public class CreditsReward : IQuestReward
     {
         Point.Points.AwardCredits(player, Credits,
             Localization.TranslateEnum(tracker.QuestData.QuestType,
-                Data.Languages.TryGetValue(player.Steam64, out string lang) 
+                Data.Languages.TryGetValue(player.Steam64, out string lang)
                     ? lang
                     : L.DEFAULT).ToUpper() + " REWARD", redmessage: false);
     }

@@ -110,7 +110,7 @@ public class FOBComponent : MonoBehaviour
                 }
             }
 
-            count ++;
+            count++;
             if (count >= (60 / tickFrequency))
                 count = 0;
 #if DEBUG
@@ -449,9 +449,9 @@ public class FOB : IFOB, IDeployable
         ShowResourceUI(player);
 
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
-        if (vehicle != null && 
-            VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data) && 
-            (data.Type == EVehicleType.LOGISTICS || 
+        if (vehicle != null &&
+            VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data) &&
+            (data.Type == EVehicleType.LOGISTICS ||
             data.Type == EVehicleType.HELI_TRANSPORT))
         {
             Tips.TryGiveTip(player, ETip.UNLOAD_SUPPLIES);
@@ -600,7 +600,7 @@ public class FOB : IFOB, IDeployable
 
         component.Destroy();
 
-        if(!(Bunker == null || Bunker.GetServersideData().barricade.isDead))
+        if (!(Bunker == null || Bunker.GetServersideData().barricade.isDead))
         {
             if (Regions.tryGetCoordinate(Bunker.model.position, out byte x, out byte y))
                 BarricadeManager.destroyBarricade(Bunker, x, y, ushort.MaxValue);
@@ -650,7 +650,7 @@ public class FOB : IFOB, IDeployable
         float radius2 = GetRadius(radius);
         List<BarricadeDrop> barricades = UCBarricadeManager.GetBarricadesWhere(b =>
             {
-                var data = b.GetServersideData();
+                BarricadeData data = b.GetServersideData();
 
                 if (!b.model.TryGetComponent(out FOBComponent f)) return false;
 

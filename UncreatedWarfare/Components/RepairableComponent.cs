@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Components
             if (Structure.GetServersideData().barricade.health >= Structure.asset.health)
                 return;
 
-                float amount = 30;
+            float amount = 30;
 
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
                 amount *= 2;
@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Components
                     if (buildable.Type == EBuildableType.FORTIFICATION)
                     {
                         amount = (int)Math.Round(buildable.RequiredHits * 0.1F);
-                        
+
 
                         if (teamkilled) amount *= -1;
                         else vehicleQuota = 0.1F;
@@ -111,5 +111,5 @@ namespace Uncreated.Warfare.Components
             Destroy(this);
         }
     }
-    
+
 }

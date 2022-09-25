@@ -1,11 +1,9 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
-using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -75,7 +73,7 @@ public static class InvasionUI
                 else if (winner == TeamManager.Other(team))
                 {
                     return new CaptureUIParameters(team, inVehicle ? EFlagStatus.IN_VEHICLE : EFlagStatus.LOSING, flag);
-                } 
+                }
                 else
                 {
                     return new CaptureUIParameters(team, EFlagStatus.NOT_OBJECTIVE, flag);

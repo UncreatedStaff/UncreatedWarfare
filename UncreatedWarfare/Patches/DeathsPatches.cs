@@ -1,18 +1,13 @@
 ﻿using HarmonyLib;
-using JetBrains.Annotations;
 using SDG.Unturned;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
-using Uncreated.Players;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Projectiles;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
@@ -50,7 +45,7 @@ public static partial class Patches
                 }
             }
         }
-        
+
         private static void OnMortarLandingPointFound(Player? owner, Vector3 position, float impactTime, ItemGunAsset gun, ItemMagazineAsset? ammoType)
         {
             if (owner == null || ammoType == null)
@@ -72,7 +67,7 @@ public static partial class Patches
                 if (data.Emplacement!.ShouldWarnFriendlies)
                     BadOmen.WarnFreindlies(player, position, impactTime, gun, ammoType);
             }
-                
+
         }
 
         // SDG.Unturned.Bumper

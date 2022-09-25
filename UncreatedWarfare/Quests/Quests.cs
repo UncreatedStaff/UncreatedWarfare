@@ -2,11 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare.Quests;
 /// <summary>Stores information about a <see cref="EQuestType"/> of quest. Isn't necessarily constant, some can have varients that are used for daily quests.
@@ -64,7 +60,7 @@ public abstract class BaseQuestData : ITranslationArgument
         }
         return string.Join(", ", formatting);
     }
-    public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) => 
+    public string Translate(bool forAsset, UCPlayer? player, params object[]? formatting) =>
         Translate(forAsset, player is not null && Data.Languages.TryGetValue(player.Steam64, out string language) ? language : L.DEFAULT, formatting);
     public abstract void OnPropertyRead(string propertyname, ref Utf8JsonReader reader);
     public abstract BaseQuestTracker? CreateTracker(UCPlayer player);

@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using Uncreated.Framework;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Kits;
@@ -24,7 +23,7 @@ public class DutyCommand : Command
         ctx.AssertRanByPlayer();
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
-        
+
         EAdminType level = ctx.Caller.PermissionLevel;
 
         switch (level)

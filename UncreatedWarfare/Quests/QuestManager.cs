@@ -1,13 +1,10 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
@@ -17,7 +14,6 @@ using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
@@ -332,7 +328,7 @@ public static class QuestManager
         {
             types = e.Types;
         }
-        
+
         foreach (Type type in types.Where<Type>(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
@@ -631,7 +627,7 @@ public static class QuestManager
                     }
                 }
             }
-            nextFile: ;
+        nextFile:;
         }
     }
     #endregion

@@ -138,12 +138,12 @@ public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingle
         if (!_isLoaded)
             throw new SingletonUnloadedException(this.GetType());
     }
-    protected ListSingleton(string? reloadKey, string file) : base (file, false)
+    protected ListSingleton(string? reloadKey, string file) : base(file, false)
     {
         this.reloadKey = reloadKey;
     }
     protected ListSingleton(string file) : this(null, file) { }
-    protected ListSingleton(string? reloadKey, string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : base (file, serializer, deserializer, false)
+    protected ListSingleton(string? reloadKey, string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : base(file, serializer, deserializer, false)
     {
         this.reloadKey = reloadKey;
     }
@@ -178,12 +178,12 @@ public abstract class ConfigSingleton<TConfig, TData> : BaseReloadSingleton wher
     public TConfig ConfigurationFile => _config;
     public TData Config => _config.Data;
     protected ConfigSingleton(string reloadKey) : base(reloadKey) { }
-    protected ConfigSingleton(string? reloadKey, string folder, string fileName) : base (reloadKey)
+    protected ConfigSingleton(string? reloadKey, string folder, string fileName) : base(reloadKey)
     {
         _folder = folder;
         _file = fileName;
     }
-    protected ConfigSingleton(string folder, string fileName) : this (null, folder, fileName)
+    protected ConfigSingleton(string folder, string fileName) : this(null, folder, fileName)
     {
         _folder = folder;
         _file = fileName;

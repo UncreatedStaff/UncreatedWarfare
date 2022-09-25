@@ -1,5 +1,4 @@
-﻿using SDG.Framework.Translations;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -7,11 +6,8 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Networking;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Commands.CommandSystem;
@@ -321,11 +317,11 @@ public static class CommandHandler
                                     }
                                     cmdInd = k;
                                     goto brk;
-                                    nxt:;
+                                nxt:;
                                 }
                             }
                         }
-                        continue; 
+                        continue;
                     brk:
                         break;
                     }
@@ -473,7 +469,7 @@ public abstract class BaseCommandInteraction : Exception
     public readonly IExecutableCommand Command;
     protected bool _responded = false;
     public bool Responded => _responded;
-    protected BaseCommandInteraction(IExecutableCommand cmd, string message) : base (message)
+    protected BaseCommandInteraction(IExecutableCommand cmd, string message) : base(message)
     {
         this.Command = cmd;
     }
@@ -1278,15 +1274,15 @@ public class CommandInteraction : BaseCommandInteraction
         if (MatchParameter(parameter, "help"))
             throw SendCorrectUsage(usage);
     }
-    
-    public Exception SendNotImplemented()   => Reply(T.NotImplemented);
-    public Exception SendNotEnabled()       => Reply(T.NotEnabled);
-    public Exception SendGamemodeError()    => Reply(T.GamemodeError);
-    public Exception SendPlayerOnlyError()  => Reply(T.PlayersOnly);
+
+    public Exception SendNotImplemented() => Reply(T.NotImplemented);
+    public Exception SendNotEnabled() => Reply(T.NotEnabled);
+    public Exception SendGamemodeError() => Reply(T.GamemodeError);
+    public Exception SendPlayerOnlyError() => Reply(T.PlayersOnly);
     public Exception SendConsoleOnlyError() => Reply(T.ConsoleOnly);
-    public Exception SendUnknownError()     => Reply(T.UnknownError);
-    public Exception SendNoPermission()     => Reply(T.NoPermissions);
-    public Exception SendPlayerNotFound()   => Reply(T.PlayerNotFound);
+    public Exception SendUnknownError() => Reply(T.UnknownError);
+    public Exception SendNoPermission() => Reply(T.NoPermissions);
+    public Exception SendPlayerNotFound() => Reply(T.PlayerNotFound);
     public Exception SendCorrectUsage(string usage)
                                             => Reply(T.CorrectUsage, usage);
     public Exception ReplyString(string message, Color color)

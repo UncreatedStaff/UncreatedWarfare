@@ -56,7 +56,7 @@ public class BanCommand : Command
                 callerName = FPlayerName.Console;
             ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
                 (duration == -1 ? "PERMANENT" : duration.ToString(Data.Locale) + " SECONDS"), ctx.CallerID);
-            
+
             OffenseManager.LogBanPlayer(targetId, ctx.CallerID, reason!, duration, DateTime.Now);
             await UCWarfare.ToUpdate();
 

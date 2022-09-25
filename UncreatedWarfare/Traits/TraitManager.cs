@@ -53,8 +53,8 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
             if (player.GetTeam() is 1 or 2)
                 BuffUI.SendBuffs(player);
         }
-        
-        
+
+
 
         KitManager.OnKitChanged += OnKitChagned;
         EventDispatcher.OnGroupChanged += OnGroupChanged;

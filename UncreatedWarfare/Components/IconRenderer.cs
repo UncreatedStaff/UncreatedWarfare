@@ -1,9 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -106,7 +103,7 @@ public static class IconManager
         IconRenderer icon = transform.gameObject.AddComponent<IconRenderer>();
         icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
 
-        foreach (var player in PlayerManager.OnlinePlayers)
+        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
         {
             if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
             {

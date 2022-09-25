@@ -2,14 +2,9 @@
 using SDG.Unturned;
 using Steamworks;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
-using Uncreated.Warfare.FOBs;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -20,10 +15,10 @@ internal static class EventPatches
     {
         PatchMethod(
             typeof(BarricadeManager)
-            .GetMethod(nameof(BarricadeManager.destroyBarricade), 
-                BindingFlags.Static | BindingFlags.Public, 
-                null, 
-                new Type[] { typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort) }, 
+            .GetMethod(nameof(BarricadeManager.destroyBarricade),
+                BindingFlags.Static | BindingFlags.Public,
+                null,
+                new Type[] { typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort) },
                 null),
             postfix: GetMethodInfo(DestroyBarricadePostFix));
 
@@ -62,11 +57,11 @@ internal static class EventPatches
         if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return;
         try
         {
-            MethodInfo? originalInfo    = original.Method;
-            MethodInfo? prefixInfo      = prefix?.Method;
-            MethodInfo? postfixInfo     = prefix?.Method;
-            MethodInfo? transpilerInfo  = prefix?.Method;
-            MethodInfo? finalizerInfo   = prefix?.Method;
+            MethodInfo? originalInfo = original.Method;
+            MethodInfo? prefixInfo = prefix?.Method;
+            MethodInfo? postfixInfo = prefix?.Method;
+            MethodInfo? transpilerInfo = prefix?.Method;
+            MethodInfo? finalizerInfo = prefix?.Method;
             if (originalInfo is null)
             {
                 L.LogError("Error getting method info for patching.");
@@ -74,17 +69,17 @@ internal static class EventPatches
             }
             if (prefixInfo is null && postfixInfo is null && transpilerInfo is null && finalizerInfo is null)
             {
-                L.LogError("Error getting method info for patching " +      originalInfo.FullDescription());
+                L.LogError("Error getting method info for patching " + originalInfo.FullDescription());
                 return;
             }
             if (prefix is not null && prefixInfo is null)
-                L.LogError("Error getting prefix info for patching " +      originalInfo.FullDescription());
+                L.LogError("Error getting prefix info for patching " + originalInfo.FullDescription());
             if (postfix is not null && postfixInfo is null)
-                L.LogError("Error getting postfix info for patching " +     originalInfo.FullDescription());
+                L.LogError("Error getting postfix info for patching " + originalInfo.FullDescription());
             if (transpiler is not null && transpilerInfo is null)
-                L.LogError("Error getting transpiler info for patching " +  originalInfo.FullDescription());
+                L.LogError("Error getting transpiler info for patching " + originalInfo.FullDescription());
             if (finalizer is not null && finalizerInfo is null)
-                L.LogError("Error getting finalizer info for patching " +   originalInfo.FullDescription());
+                L.LogError("Error getting finalizer info for patching " + originalInfo.FullDescription());
             PatchMethod(originalInfo, prefixInfo, postfixInfo, transpilerInfo, finalizerInfo);
         }
         catch (MemberAccessException ex)
@@ -97,10 +92,10 @@ internal static class EventPatches
     {
         if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return;
 
-        HarmonyMethod? prfx2 = prefix is null       ? null : new HarmonyMethod(prefix);
-        HarmonyMethod? pofx2 = postfix is null      ? null : new HarmonyMethod(postfix);
-        HarmonyMethod? tplr2 = transpiler is null   ? null : new HarmonyMethod(transpiler);
-        HarmonyMethod? fnlr2 = finalizer is null    ? null : new HarmonyMethod(finalizer);
+        HarmonyMethod? prfx2 = prefix is null ? null : new HarmonyMethod(prefix);
+        HarmonyMethod? pofx2 = postfix is null ? null : new HarmonyMethod(postfix);
+        HarmonyMethod? tplr2 = transpiler is null ? null : new HarmonyMethod(transpiler);
+        HarmonyMethod? fnlr2 = finalizer is null ? null : new HarmonyMethod(finalizer);
         try
         {
             Patches.Patcher.Patch(original, prefix: prfx2, postfix: pofx2, transpiler: tplr2, finalizer: fnlr2);
@@ -166,7 +161,7 @@ internal static class EventPatches
     /// <summary>
     /// Prefix of <see cref="InteractableTrap.OnTriggerEnter(Collider)"/> to call OnVehicleSpawned
     /// </summary>
-    private static bool TrapOnTriggerEnter(Collider other, InteractableTrap __instance, float ___lastActive, float ___setupDelay, ref float ___lastTriggered, 
+    private static bool TrapOnTriggerEnter(Collider other, InteractableTrap __instance, float ___lastActive, float ___setupDelay, ref float ___lastTriggered,
         float ___cooldown, bool ___isExplosive, float ___playerDamage, float ___zombieDamage, float ___animalDamage, float ___barricadeDamage,
         float ___structureDamage, float ___vehicleDamage, float ___resourceDamage, float ___objectDamage, float ___range2, float ___explosionLaunchSpeed,
         ushort ___explosion2, bool ___isBroken)
@@ -178,7 +173,7 @@ internal static class EventPatches
             __instance.transform.parent == other.transform.parent && other.transform.parent != null ||
             time - ___lastTriggered < ___cooldown ||    // on cooldown
                                                         // gamemode not active
-            Data.Gamemode is null || Data.Gamemode.State != Gamemodes.EState.ACTIVE 
+            Data.Gamemode is null || Data.Gamemode.State != Gamemodes.EState.ACTIVE
             )
             return false;
         ___lastTriggered = time;
@@ -307,7 +302,7 @@ internal static class EventPatches
         }
         return false;
     }
-    
+
     // SDG.Unturned.InteractableCharge.detonate
     /// <summary>
     /// Prefix of <see cref="InteractableCharge.detonate(CSteamID)"/> to save the last charge detonated.

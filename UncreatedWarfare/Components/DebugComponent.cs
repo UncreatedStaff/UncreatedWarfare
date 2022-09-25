@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
-using UnityEngine.PlayerLoop;
-using System.Reflection;
-using SDG.Unturned;
-using HarmonyLib;
+﻿using HarmonyLib;
 using SDG.NetTransport;
+using SDG.Unturned;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
 internal class DebugComponent : MonoBehaviour
@@ -73,7 +69,7 @@ internal class DebugComponent : MonoBehaviour
         _lastDt = Time.deltaTime;
         if (_lastDt > _maxUpdateSpeed && Level.isLoaded)
             L.LogWarning("Update took " + _lastDt.ToString("F6", Data.Locale) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", Data.Locale) + "!!", ConsoleColor.Yellow);
-        
+
     }
     private void FixedUpdate()
     {

@@ -3,14 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -115,7 +113,7 @@ public class DevCommand : Command
 
             if (ctx.TryGetTarget(out BarricadeDrop drop))
             {
-                if (drop.model.TryGetComponent<BuildableComponent>(out var buildable))
+                if (drop.model.TryGetComponent<BuildableComponent>(out BuildableComponent? buildable))
                 {
                     buildable.Build();
                     ctx.ReplyString($"Successfully built {drop.asset.itemName}".Colorize("ebd491"));
@@ -132,7 +130,7 @@ public class DevCommand : Command
 
             if (ctx.TryGetTarget(out BarricadeDrop drop))
             {
-                var data = drop.GetServersideData();
+                BarricadeData data = drop.GetServersideData();
                 string state = Convert.ToBase64String(data.barricade.state);
                 L.Log($"BARRICADE STATE: {state}");
                 ctx.ReplyString($"Metadata state has been logged to console. State: {state}".Colorize("ebd491"));
@@ -169,15 +167,15 @@ public class DevCommand : Command
                 L.Log($"    Quota: {component.Quota}/{component.RequiredQuota}\n");
 
                 L.Log($"    Usage Table:");
-                foreach (var entry in component.UsageTable)
+                foreach (KeyValuePair<ulong, double> entry in component.UsageTable)
                     L.Log($"        {entry.Key}'s time in vehicle: {entry.Value} s");
 
                 L.Log($"    Transport Table:");
-                foreach (var entry in component.TransportTable)
+                foreach (KeyValuePair<ulong, Vector3> entry in component.TransportTable)
                     L.Log($"        {entry.Key}'s starting position: {entry.Value}");
 
                 L.Log($"    Damage Table:");
-                foreach (var entry in component.DamageTable)
+                foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in component.DamageTable)
                     L.Log($"        {entry.Key}'s damage so far: {entry.Value.Key} ({(DateTime.Now - entry.Value.Value).TotalSeconds} seconds ago)");
             }
             else throw ctx.ReplyString($"This vehicle does have a VehicleComponent".Colorize("c7a29f"));

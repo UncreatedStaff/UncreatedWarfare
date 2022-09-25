@@ -2,10 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;
@@ -723,8 +720,9 @@ public class SingletonLoadException : Exception
 public class SingletonUnloadedException : Exception
 {
     private readonly Type? singletonType;
-    public SingletonUnloadedException(Type singletonType) : base("Error executing code in an unloaded singleton: " + 
-        (singletonType?.Name ?? "Unknown singleton") + " is not currently loaded.") { this.singletonType = singletonType; }
+    public SingletonUnloadedException(Type singletonType) : base("Error executing code in an unloaded singleton: " +
+        (singletonType?.Name ?? "Unknown singleton") + " is not currently loaded.")
+    { this.singletonType = singletonType; }
     protected SingletonUnloadedException(SerializationInfo info, StreamingContext context) : base(info, context) { }
     public override string ToString()
     {

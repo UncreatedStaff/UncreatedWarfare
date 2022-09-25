@@ -1,9 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
@@ -98,7 +95,7 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
     }
     internal void OnDefenderLeft(UCPlayer player)
     {
-        
+
     }
     internal void OnAttackerEntered(UCPlayer player)
     {

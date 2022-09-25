@@ -155,7 +155,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
 
             VehicleSign n = Singleton.AddObjectToSave(new VehicleSign(drop, sign, structure, spawn));
             spawn.LinkedSign = n;
-            
+
             n.save.Metadata = RequestSigns.SetSignTextSneaky(sign, n.placeholder_text);
             StructureSaver.SaveSingleton();
             spawn.UpdateSign();

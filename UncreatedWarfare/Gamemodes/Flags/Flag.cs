@@ -275,7 +275,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
                 if (player.Steam64 == _prevPlayers[j].Steam64)
                     goto done;
             newPlayers.Add(player);
-            done: ;
+        done:;
         }
         for (int i = 0; i < _prevPlayers.Length; i++)
         {
@@ -284,7 +284,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
                 if (player.Steam64 == PlayersOnFlag[j].Steam64)
                     goto done;
             departedPlayers.Add(player);
-            done: ;
+        done:;
         }
     }
     public void SetPoints(float value, bool skipEvent = false, bool skipDeltaPoints = false)
@@ -608,7 +608,7 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             return team == 0 || Discovered(team)
                 ? Name
                 : Localization.Translate(T.UndiscoveredFlagNoColor, target);
-    end:
+        end:
         return Name;
     }
 }

@@ -1,5 +1,4 @@
-﻿using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Teams;
+﻿using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;

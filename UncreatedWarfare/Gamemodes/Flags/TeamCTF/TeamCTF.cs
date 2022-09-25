@@ -1,9 +1,7 @@
 ﻿using SDG.Unturned;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
@@ -100,7 +98,7 @@ public sealed class TeamCTFTicketProvider : BaseCTFTicketProvider, IFlagCaptured
     public void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner)
     {
         if (!Data.Is(out IFlagRotation r)) return;
-        
+
         if (r.Rotation.Count / 2f + 0.5f == flag.index) // if is middle flag
         {
             if (newOwner == 1) Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagCaptured;

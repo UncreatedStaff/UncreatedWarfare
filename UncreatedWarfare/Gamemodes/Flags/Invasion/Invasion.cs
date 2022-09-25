@@ -2,16 +2,15 @@
 using SDG.Unturned;
 using System;
 using System.Linq;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Quests;
-using UnityEngine;
 using Uncreated.Warfare.Events.Players;
-using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
+using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits.Buffs;
+using UnityEngine;
+using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.Invasion;
 

@@ -184,7 +184,7 @@ public static class Signs
         if (t == null)
         {
             foreach (ITransportConnection pl in BarricadeManager.EnumerateClients(x, y, ushort.MaxValue))
-            { 
+            {
                 Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, pl, signKey);
             }
         }

@@ -1,7 +1,5 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -59,7 +57,7 @@ public class SquadCommand : Command
 
             if (ctx.Caller.Squad is not null)
                 throw ctx.Reply(T.SquadAlreadyInSquad);
-            
+
             if (!SquadManager.FindSquad(name, team, out Squad squad))
                 throw ctx.Reply(T.SquadNotFound, name);
 

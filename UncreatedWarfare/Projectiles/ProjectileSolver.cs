@@ -1,6 +1,5 @@
 ﻿using SDG.Framework.Landscapes;
 using SDG.Unturned;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +9,6 @@ using System.Reflection;
 using Uncreated.Warfare.Components;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 
 namespace Uncreated.Warfare.Projectiles;
 internal class ProjectileSolver : MonoBehaviour

@@ -1,7 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
 using Uncreated.Framework;
-using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Vehicles;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -70,7 +69,7 @@ public class ClearCommand : Command
         if (VehicleSpawner.Loaded)
         {
             VehicleBay.DeleteAllVehiclesFromWorld();
-        } 
+        }
         else
         {
             VehicleManager.askVehicleDestroyAll();

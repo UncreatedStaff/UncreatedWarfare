@@ -3,9 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
-using System.Windows.Interop;
 using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -589,7 +587,7 @@ internal static class Localization
         else DeathTranslations.TryGetValue(language, out causes);
         if (causes is null)
             return args.DeathCause.ToString() + " Dead: " + args.DeadPlayerName;
-    rtn:
+        rtn:
         int i = FindDeathCause(causes, ref args);
         if (i == -1)
         {
@@ -780,7 +778,7 @@ public class DeathCause : IJsonReadWrite
     {
         this.Cause = cause;
     }
-    public DeathCause(EDeathCause cause, DeathTranslation translation) : this (cause, new DeathTranslation[] { translation }) { }
+    public DeathCause(EDeathCause cause, DeathTranslation translation) : this(cause, new DeathTranslation[] { translation }) { }
     public DeathCause(EDeathCause cause, DeathTranslation[] translations) : this(cause)
     {
         this.Translations = translations;
@@ -844,7 +842,7 @@ public class DeathCause : IJsonReadWrite
                                 if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
                                     prop = reader.GetString();
-                                    if (reader.Read() && prop is not null && Enum.TryParse(prop, true, out EDeathFlags flags) 
+                                    if (reader.Read() && prop is not null && Enum.TryParse(prop, true, out EDeathFlags flags)
                                         && reader.TokenType == JsonTokenType.String && (prop = reader.GetString()) is not null)
                                     {
                                         translations.Add(new DeathTranslation(flags, prop));

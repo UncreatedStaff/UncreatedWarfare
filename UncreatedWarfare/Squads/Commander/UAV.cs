@@ -324,7 +324,7 @@ public class UAV : MonoBehaviour, IBuff
                     }
                     L.LogDebug("Spotter left: " + c);
                     c.OnUAVLeft();
-                    next: ;
+                next:;
                 }
             }
             else Scan();

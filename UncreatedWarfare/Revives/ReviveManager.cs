@@ -38,7 +38,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     public bool CanPlayerInjure(ref DamagePlayerParameters parameters)
     {
-        return parameters.player != null && 
+        return parameters.player != null &&
                SafezoneManager.checkPointValid(parameters.player.transform.position) &&
                !parameters.player.life.isDead &&
                parameters.damage > parameters.player.life.health &&
@@ -90,8 +90,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     private void SelfRevivePressed(UCPlayer player, float timeDown, ref bool handled)
     {
-        if (DownedPlayers.TryGetValue(player.Steam64, out DownedPlayerData data) && 
-            TraitManager.Loaded && 
+        if (DownedPlayers.TryGetValue(player.Steam64, out DownedPlayerData data) &&
+            TraitManager.Loaded &&
             SelfRevive.HasSelfRevive(player, out SelfRevive sr))
         {
             float tl = Time.realtimeSinceStartup - data.start;
@@ -445,8 +445,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             .GetEnumerator();
         while (player.MoveNext())
         {
-            var sqrDistance = (player.Current.Position - Position).sqrMagnitude;
-            var sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
+            float sqrDistance = (player.Current.Position - Position).sqrMagnitude;
+            double sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
             if (sqrDistance >= 1 && sqrDistance <= sqrmLimit)
                 EffectManager.sendEffectReliable(Squads.SquadManager.Config.InjuredMarker, player.Current.Player.channel.owner.transportConnection, Position);
         }
@@ -463,8 +463,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 EffectManager.askEffectClearByID(Squads.SquadManager.Config.InjuredMarker, players.Current.Player.channel.owner.transportConnection);
             for (int i = 0; i < positions.Length; i++)
             {
-                var sqrDistance = (players.Current.Position - positions[i]).sqrMagnitude;
-                var sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
+                float sqrDistance = (players.Current.Position - positions[i]).sqrMagnitude;
+                double sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
                 if (sqrDistance >= 1 && sqrDistance <= sqrmLimit)
                     EffectManager.sendEffectReliable(Squads.SquadManager.Config.InjuredMarker, players.Current.Player.channel.owner.transportConnection, positions[i]);
             }
@@ -670,7 +670,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         private void OnPlayerPostDamage(Player player, byte damage, Vector3 force, EDeathCause cause, ELimb limb, CSteamID killerid)
         {
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+            using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             if (killerid.TryGetPlayerData(out Components.UCPlayerData killer) && killer.stats != null && killer.stats is IPVPModeStats pvp)
             {
@@ -727,7 +727,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
                 Player.Player.movement.sendPluginJumpMultiplier(1.0f);
                 Player.Player.life.serverSetBleeding(false);
-                
+
                 CancelStance();
                 if (remove)
                 {

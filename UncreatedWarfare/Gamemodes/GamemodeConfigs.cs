@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
 using Uncreated.Warfare.Components;
@@ -462,38 +461,38 @@ public sealed class GamemodeConfigData : JSONConfigData
     public override void SetDefaults()
     {
         #region Barricades and Structures
-        BarricadeInsurgencyCache   = new JsonAssetReference<ItemBarricadeAsset>("39051f33f24449b4b3417d0d666a4f27");
-        BarricadeFOBRadioDamaged   = new JsonAssetReference<ItemBarricadeAsset>("07e68489e3b547879fa26f94ea227522");
-        BarricadeFOBBunker         = new JsonAssetReference<ItemBarricadeAsset>("61c349f10000498fa2b92c029d38e523");
-        BarricadeFOBBunkerBase     = new JsonAssetReference<ItemBarricadeAsset>("1bb17277dd8148df9f4c53d1a19b2503");
-        BarricadeAmmoCrate         = new JsonAssetReference<ItemBarricadeAsset>("6fe208519d7c45b0be38273118eea7fd");
-        BarricadeAmmoCrateBase     = new JsonAssetReference<ItemBarricadeAsset>("eccfe06e53d041d5b83c614ffa62ee59");
-        BarricadeRepairStation     = new JsonAssetReference<ItemBarricadeAsset>("c0d11e0666694ddea667377b4c0580be");
+        BarricadeInsurgencyCache = new JsonAssetReference<ItemBarricadeAsset>("39051f33f24449b4b3417d0d666a4f27");
+        BarricadeFOBRadioDamaged = new JsonAssetReference<ItemBarricadeAsset>("07e68489e3b547879fa26f94ea227522");
+        BarricadeFOBBunker = new JsonAssetReference<ItemBarricadeAsset>("61c349f10000498fa2b92c029d38e523");
+        BarricadeFOBBunkerBase = new JsonAssetReference<ItemBarricadeAsset>("1bb17277dd8148df9f4c53d1a19b2503");
+        BarricadeAmmoCrate = new JsonAssetReference<ItemBarricadeAsset>("6fe208519d7c45b0be38273118eea7fd");
+        BarricadeAmmoCrateBase = new JsonAssetReference<ItemBarricadeAsset>("eccfe06e53d041d5b83c614ffa62ee59");
+        BarricadeRepairStation = new JsonAssetReference<ItemBarricadeAsset>("c0d11e0666694ddea667377b4c0580be");
         BarricadeRepairStationBase = new JsonAssetReference<ItemBarricadeAsset>("26a6b91cd1944730a0f28e5f299cebf9");
-        BarricadeAmmoBag           = new JsonAssetReference<ItemBarricadeAsset>("16f55b999e9b4f158be12645e41dd753");
-        StructureVehicleBay        = new JsonAssetReference<ItemAsset>         ("c076f9e9f35f42a4b8b5711dfb230010");
-        BarricadeUAV               = new JsonAssetReference<ItemBarricadeAsset>("fb8f84e2617b480aadfd77bbf4a6c3ec");
-        TimeLimitedStorages        = (SyncableArray<JsonAssetReference<ItemBarricadeAsset>>)new JsonAssetReference<ItemBarricadeAsset>[]
+        BarricadeAmmoBag = new JsonAssetReference<ItemBarricadeAsset>("16f55b999e9b4f158be12645e41dd753");
+        StructureVehicleBay = new JsonAssetReference<ItemAsset>("c076f9e9f35f42a4b8b5711dfb230010");
+        BarricadeUAV = new JsonAssetReference<ItemBarricadeAsset>("fb8f84e2617b480aadfd77bbf4a6c3ec");
+        TimeLimitedStorages = (SyncableArray<JsonAssetReference<ItemBarricadeAsset>>)new JsonAssetReference<ItemBarricadeAsset>[]
         {
             BarricadeAmmoCrate,
             BarricadeRepairStation,
             "a2eb76590cf74401aeb7ff4b4b79fd86", // supply crate
             "2193aa0b272f4cc1938f719c8e8badb1"  // supply roll
         };
-        FOBRadios                  = (SyncableArray<JsonAssetReference<ItemBarricadeAsset>>)new JsonAssetReference<ItemBarricadeAsset>[]
+        FOBRadios = (SyncableArray<JsonAssetReference<ItemBarricadeAsset>>)new JsonAssetReference<ItemBarricadeAsset>[]
         {
             "7715ad81f1e24f60bb8f196dd09bd4ef",
             "fb910102ad954169abd4b0cb06a112c8",
             "c7754ac78083421da73006b12a56811a"
         };
-        BarricadeZoneBlockerTeam1  = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
+        BarricadeZoneBlockerTeam1 = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
             new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty),
             new RotatableDefaults<JsonAssetReference<ItemBarricadeAsset>>()
             {
                 { MapScheduler.Nuijamaa,        "57927806-0501-4735-ab01-2f1f7adaf714" },
                 { MapScheduler.GulfOfAqaba,     "57927806-0501-4735-ab01-2f1f7adaf714" },
             });
-        BarricadeZoneBlockerTeam2  = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
+        BarricadeZoneBlockerTeam2 = new RotatableConfig<JsonAssetReference<ItemBarricadeAsset>>(
             new JsonAssetReference<ItemBarricadeAsset>(Guid.Empty),
             new RotatableDefaults<JsonAssetReference<ItemBarricadeAsset>>()
             {
@@ -503,54 +502,54 @@ public sealed class GamemodeConfigData : JSONConfigData
         #endregion
 
         #region Items
-        ItemEntrenchingTool        = new JsonAssetReference<ItemMeleeAsset>("6cee2662e8884d7bad3a5d743f8222da");
+        ItemEntrenchingTool = new JsonAssetReference<ItemMeleeAsset>("6cee2662e8884d7bad3a5d743f8222da");
         #endregion
 
         #region UI and Effects
-        UICapture                  = new JsonAssetReference<EffectAsset>("76a9ffb4659a494080d98c8ef7733815");
-        UIFlagList                 = new JsonAssetReference<EffectAsset>("c01fe46d9b794364aca6a3887a028164");
-        UIHeader                   = new JsonAssetReference<EffectAsset>("c14fe9ffee6d4f8dbe7f57885f678edd");
-        UIFOBList                  = new JsonAssetReference<EffectAsset>("2c01a36943ea45189d866f5463f8e5e9");
-        UISquadList                = new JsonAssetReference<EffectAsset>("5acd091f1e7b4f93ac9f5431729ac5cc");
-        UISquadMenu                = new JsonAssetReference<EffectAsset>("98154002fbcd4b7499552d6497db8fc5");
-        UIRally                    = new JsonAssetReference<EffectAsset>("a280ac3fe8c1486cadc8eca331e8ce32");
-        UIOrder                    = new JsonAssetReference<EffectAsset>("57a08eb9c4cb4fd2ad30a3e413e29b27");
-        UITeamSelector             = new JsonAssetReference<EffectAsset>("b5924bc83eb24d7298a47f933d3f16d9");
-        UIMuted                    = new JsonAssetReference<EffectAsset>("c5e31c7357134be09732c1930e0e4ff0");
-        UIInjured                  = new JsonAssetReference<EffectAsset>("27b84636ed8d4c0fb557a67d89254b00");
-        UIToastProgress            = new JsonAssetReference<EffectAsset>("a113a0f2d0af4db8b5e5bcbc17fc96c9");
-        UIToastTip                 = new JsonAssetReference<EffectAsset>("abbf74e86f1c4665925884c70b9433ba");
-        UIXPPanel                  = new JsonAssetReference<EffectAsset>("d6de0a8025de44d29a99a41937a58a59");
-        UIOfficers                 = new JsonAssetReference<EffectAsset>("9fd31b776b744b72847f2dc00dba93a8");
-        UIConventionalLeaderboard  = new JsonAssetReference<EffectAsset>("b83389df1245438db18889af94f04960");
-        UINearbyResources          = new JsonAssetReference<EffectAsset>("3775a1e7d84b47e79cacecd5e6b2a224");
-        UITickets                  = new JsonAssetReference<EffectAsset>("aba88eedb84448e8a30bb803a53a7236");
-        UIBuffs                    = new JsonAssetReference<EffectAsset>("f298af0b4d34405b98a539b8d2ff0505");
-        UIToastInfo                = new JsonAssetReference<EffectAsset>("d75046834b324ed491914b4136ab1bc8");
-        UIToastWarning             = new JsonAssetReference<EffectAsset>("5678a559695e4d999dfea9a771b6616f");
-        UIToastSevere              = new JsonAssetReference<EffectAsset>("26fed6564ccf4c46aac1df01dbba0aab");
-        UIToastXP                  = new JsonAssetReference<EffectAsset>("a213915d61ad41cebab34fb12fe6870c");
-        UIToastMedium              = new JsonAssetReference<EffectAsset>("5f695955f0da4d19adacac39140da797");
-        UIToastLarge               = new JsonAssetReference<EffectAsset>("9de82ffea13946b391090eb918bf3991");
-        UIToastWin                 = new JsonAssetReference<EffectAsset>("1f3ce50c120042c390f5c42522bd0fcd");
-        EffectMarkerAmmo           = new JsonAssetReference<EffectAsset>("827b0c00724b466d8d33633fe2a7743a");
-        EffectMarkerRepair         = new JsonAssetReference<EffectAsset>("bcfda6fb871f42cd88597c8ac5f7c424");
-        EffectMarkerRadio          = new JsonAssetReference<EffectAsset>("bc6f0e7d5d9340f39ca4968bc3f7a132");
-        EffectMarkerRadioDamaged   = new JsonAssetReference<EffectAsset>("37d5c48597ea4b61a7a87ed85a4c9b39");
-        EffectMarkerBunker         = new JsonAssetReference<EffectAsset>("d7452e8671c14e93a5e9d69e077d999c");
-        EffectMarkerCacheAttack    = new JsonAssetReference<EffectAsset>("26b60044bc1442eb9d0521bfea306517");
-        EffectMarkerCacheDefend    = new JsonAssetReference<EffectAsset>("06efa2c2f9ec413aa417c717a7be3364");
-        EffectMarkerBuildable      = new JsonAssetReference<EffectAsset>("35ab4b71bfb74755b318ce62935f58c9");
+        UICapture = new JsonAssetReference<EffectAsset>("76a9ffb4659a494080d98c8ef7733815");
+        UIFlagList = new JsonAssetReference<EffectAsset>("c01fe46d9b794364aca6a3887a028164");
+        UIHeader = new JsonAssetReference<EffectAsset>("c14fe9ffee6d4f8dbe7f57885f678edd");
+        UIFOBList = new JsonAssetReference<EffectAsset>("2c01a36943ea45189d866f5463f8e5e9");
+        UISquadList = new JsonAssetReference<EffectAsset>("5acd091f1e7b4f93ac9f5431729ac5cc");
+        UISquadMenu = new JsonAssetReference<EffectAsset>("98154002fbcd4b7499552d6497db8fc5");
+        UIRally = new JsonAssetReference<EffectAsset>("a280ac3fe8c1486cadc8eca331e8ce32");
+        UIOrder = new JsonAssetReference<EffectAsset>("57a08eb9c4cb4fd2ad30a3e413e29b27");
+        UITeamSelector = new JsonAssetReference<EffectAsset>("b5924bc83eb24d7298a47f933d3f16d9");
+        UIMuted = new JsonAssetReference<EffectAsset>("c5e31c7357134be09732c1930e0e4ff0");
+        UIInjured = new JsonAssetReference<EffectAsset>("27b84636ed8d4c0fb557a67d89254b00");
+        UIToastProgress = new JsonAssetReference<EffectAsset>("a113a0f2d0af4db8b5e5bcbc17fc96c9");
+        UIToastTip = new JsonAssetReference<EffectAsset>("abbf74e86f1c4665925884c70b9433ba");
+        UIXPPanel = new JsonAssetReference<EffectAsset>("d6de0a8025de44d29a99a41937a58a59");
+        UIOfficers = new JsonAssetReference<EffectAsset>("9fd31b776b744b72847f2dc00dba93a8");
+        UIConventionalLeaderboard = new JsonAssetReference<EffectAsset>("b83389df1245438db18889af94f04960");
+        UINearbyResources = new JsonAssetReference<EffectAsset>("3775a1e7d84b47e79cacecd5e6b2a224");
+        UITickets = new JsonAssetReference<EffectAsset>("aba88eedb84448e8a30bb803a53a7236");
+        UIBuffs = new JsonAssetReference<EffectAsset>("f298af0b4d34405b98a539b8d2ff0505");
+        UIToastInfo = new JsonAssetReference<EffectAsset>("d75046834b324ed491914b4136ab1bc8");
+        UIToastWarning = new JsonAssetReference<EffectAsset>("5678a559695e4d999dfea9a771b6616f");
+        UIToastSevere = new JsonAssetReference<EffectAsset>("26fed6564ccf4c46aac1df01dbba0aab");
+        UIToastXP = new JsonAssetReference<EffectAsset>("a213915d61ad41cebab34fb12fe6870c");
+        UIToastMedium = new JsonAssetReference<EffectAsset>("5f695955f0da4d19adacac39140da797");
+        UIToastLarge = new JsonAssetReference<EffectAsset>("9de82ffea13946b391090eb918bf3991");
+        UIToastWin = new JsonAssetReference<EffectAsset>("1f3ce50c120042c390f5c42522bd0fcd");
+        EffectMarkerAmmo = new JsonAssetReference<EffectAsset>("827b0c00724b466d8d33633fe2a7743a");
+        EffectMarkerRepair = new JsonAssetReference<EffectAsset>("bcfda6fb871f42cd88597c8ac5f7c424");
+        EffectMarkerRadio = new JsonAssetReference<EffectAsset>("bc6f0e7d5d9340f39ca4968bc3f7a132");
+        EffectMarkerRadioDamaged = new JsonAssetReference<EffectAsset>("37d5c48597ea4b61a7a87ed85a4c9b39");
+        EffectMarkerBunker = new JsonAssetReference<EffectAsset>("d7452e8671c14e93a5e9d69e077d999c");
+        EffectMarkerCacheAttack = new JsonAssetReference<EffectAsset>("26b60044bc1442eb9d0521bfea306517");
+        EffectMarkerCacheDefend = new JsonAssetReference<EffectAsset>("06efa2c2f9ec413aa417c717a7be3364");
+        EffectMarkerBuildable = new JsonAssetReference<EffectAsset>("35ab4b71bfb74755b318ce62935f58c9");
         UICaptureEnablePlayerCount = true;
-        UICaptureShowPointCount    = false;
-        UICircleFontCharacters     = "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀ";
-        UIIconPlayer               = '³';
-        UIIconAttack               = 'µ';
-        UIIconDefend               = '´';
-        UIIconLocked               = '²';
-        UIIconUAV                  = "ŀ";
-        UIIconSpotted              = "£";
-        UIIconVehicleSpotted       = "£";
+        UICaptureShowPointCount = false;
+        UICircleFontCharacters = "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀ";
+        UIIconPlayer = '³';
+        UIIconAttack = 'µ';
+        UIIconDefend = '´';
+        UIIconLocked = '²';
+        UIIconUAV = "ŀ";
+        UIIconSpotted = "£";
+        UIIconVehicleSpotted = "£";
         #endregion
 
         #region General Gamemode Config
@@ -613,19 +612,19 @@ public sealed class GamemodeConfigData : JSONConfigData
         InsurgencyCacheStartingBuild = 15;
         #endregion
     }
-    private void OnUIToastUpdated()           => UCPlayerData.ReloadToastIDs();
-    private void OnUIToastWinUpdated()        => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
-    private void OnUIMutedUpdated()           => UCPlayer.MutedUI.LoadFromConfig(UIMuted);
-    private void OnUITicketsUpdated()         => TicketManager.TicketUI.LoadFromConfig(UITickets);
-    private void OnUITeamSelectorUpdated()    => Teams.TeamSelector.JoinUI.LoadFromConfig(UITeamSelector);
-    private void OnUISquadMenuUpdated()       => SquadManager.MenuUI.LoadFromConfig(UISquadMenu);
-    private void OnUISquadListUpdated()       => SquadManager.ListUI.LoadFromConfig(UISquadList);
-    private void OnUIRallyUpdated()           => SquadManager.RallyUI.LoadFromConfig(UIRally);
-    private void OnUIOrderUpdated()           => SquadManager.OrderUI.LoadFromConfig(UIOrder);
+    private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();
+    private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
+    private void OnUIMutedUpdated() => UCPlayer.MutedUI.LoadFromConfig(UIMuted);
+    private void OnUITicketsUpdated() => TicketManager.TicketUI.LoadFromConfig(UITickets);
+    private void OnUITeamSelectorUpdated() => Teams.TeamSelector.JoinUI.LoadFromConfig(UITeamSelector);
+    private void OnUISquadMenuUpdated() => SquadManager.MenuUI.LoadFromConfig(UISquadMenu);
+    private void OnUISquadListUpdated() => SquadManager.ListUI.LoadFromConfig(UISquadList);
+    private void OnUIRallyUpdated() => SquadManager.RallyUI.LoadFromConfig(UIRally);
+    private void OnUIOrderUpdated() => SquadManager.OrderUI.LoadFromConfig(UIOrder);
     private void OnUINearbyResourcesUpdated() => FOBManager.ResourceUI.LoadFromConfig(UINearbyResources);
-    private void OnUIFOBListUpdated()         => FOBManager.ListUI.LoadFromConfig(UIFOBList);
-    private void OnUICaptureUpdated()         => CTFUI.CaptureUI.LoadFromConfig(UICapture);
-    private void OnUIFlagListUpdated()        => CTFUI.ListUI.LoadFromConfig(UIFlagList);
+    private void OnUIFOBListUpdated() => FOBManager.ListUI.LoadFromConfig(UIFOBList);
+    private void OnUICaptureUpdated() => CTFUI.CaptureUI.LoadFromConfig(UICapture);
+    private void OnUIFlagListUpdated() => CTFUI.ListUI.LoadFromConfig(UIFlagList);
     private void OnConquestEvaluateTimeUpdated()
     {
         if (Data.Is<Flags.Conquest>())

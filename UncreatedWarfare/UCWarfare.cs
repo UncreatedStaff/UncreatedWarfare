@@ -1,14 +1,11 @@
 ﻿#define USE_DEBUGGER
 
-using JetBrains.Annotations;
 using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
@@ -32,7 +29,6 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -43,8 +39,8 @@ public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version      = new Version(3, 0, 0, 1);
-    private readonly SystemConfig _config       = new SystemConfig();
+    public static readonly Version Version = new Version(3, 0, 0, 1);
+    private readonly SystemConfig _config = new SystemConfig();
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
@@ -128,7 +124,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         gameObject.AddComponent<ActionLogger>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
-        
+
         ConfigSync.Reflect();
 
         Data.RegisterInitialSyncs();

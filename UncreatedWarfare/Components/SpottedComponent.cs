@@ -189,7 +189,7 @@ public class SpottedComponent : MonoBehaviour
         team = spotter.GetTeam();
 
         _coroutine = StartCoroutine(MarkerLoop());
-        
+
         if (!isUav)
             spotter.ActivateMarker(this);
 #if ENABLE_SPOTTED_BUFF

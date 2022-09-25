@@ -8,7 +8,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using Uncreated.Framework;
-using Uncreated.Warfare;
 using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Configuration;
@@ -265,7 +264,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     }
     public bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
     {
-        if (Enum.TryParse<TEnum>(name.ToString(), out var p))
+        if (Enum.TryParse<TEnum>(name.ToString(), out TEnum p))
         {
             property = p;
             return true;

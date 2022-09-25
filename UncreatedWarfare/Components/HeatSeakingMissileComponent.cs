@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -48,7 +46,7 @@ namespace Uncreated.Warfare.Components
                     }
                     else if (!(vehicleLockedOn == null || vehicleLockedOn.isDead))
                     {
-                        var center = vehicleLockedOn.transform.Find("Center");
+                        Transform center = vehicleLockedOn.transform.Find("Center");
                         if (center != null)
                             return center.position;
                         else
@@ -99,7 +97,7 @@ namespace Uncreated.Warfare.Components
                         {
                             aim = turret.turretAim;
                             isActive = true;
-                            
+
                             projectile.transform.forward = aim.forward;
                             rigidbody.velocity = projectile.transform.forward * projectileSpeed;
 
@@ -127,7 +125,7 @@ namespace Uncreated.Warfare.Components
 #endif
             float minAngle = 10;
 
-            if (Physics.SphereCast(projectile.transform.position, 4, projectile.transform.up, out var hit, aquisitionRange, RayMasks.VEHICLE))
+            if (Physics.SphereCast(projectile.transform.position, 4, projectile.transform.up, out RaycastHit hit, aquisitionRange, RayMasks.VEHICLE))
             {
                 if (hit.transform != null && hit.transform.TryGetComponent(out InteractableVehicle v))
                 {
@@ -137,7 +135,7 @@ namespace Uncreated.Warfare.Components
             }
 
             if (vehicleLockedOn == null)
-            {   
+            {
                 foreach (InteractableVehicle v in VehicleManager.vehicles)
                 {
                     if ((v.asset.engine == EEngine.PLANE || v.asset.engine == EEngine.HELICOPTER) && !v.isDead)
@@ -167,7 +165,7 @@ namespace Uncreated.Warfare.Components
             }
             else
             {
-                var vc = vehicle.transform.gameObject.AddComponent<VehicleComponent>();
+                VehicleComponent vc = vehicle.transform.gameObject.AddComponent<VehicleComponent>();
                 vc.Initialize(vehicle);
                 vehicleLockedOnData = vc.Data;
             }

@@ -40,12 +40,12 @@ public class OfficerStorage : ListSingleton<OfficerData>
 #endif
         bool isNewOfficer = false;
 
-        if (Singleton.ObjectExists(o => o.Steam64 == playerID && o.Team == newTeam, out var officer))
+        if (Singleton.ObjectExists(o => o.Steam64 == playerID && o.Team == newTeam, out OfficerData? officer))
         {
             if (officer.OfficerTier == newOfficerTier)
                 return;
 
-            Singleton.UpdateObjectsWhere(o => o.Steam64 == playerID, o => { o.Team = newTeam; o.OfficerTier = newOfficerTier; });                
+            Singleton.UpdateObjectsWhere(o => o.Steam64 == playerID, o => { o.Team = newTeam; o.OfficerTier = newOfficerTier; });
         }
         else
         {

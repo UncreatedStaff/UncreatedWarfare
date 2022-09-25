@@ -1,12 +1,8 @@
-﻿using SDG.Framework.Translations;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using Uncreated.Players;
 using UnityEngine;
 
 namespace Uncreated.Warfare;

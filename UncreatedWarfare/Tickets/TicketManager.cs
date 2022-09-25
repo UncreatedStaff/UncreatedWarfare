@@ -1,24 +1,10 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.Invasion;
-using Uncreated.Warfare.Gamemodes.Insurgency;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Point;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;

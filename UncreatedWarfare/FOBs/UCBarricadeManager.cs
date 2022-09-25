@@ -244,7 +244,7 @@ public static class UCBarricadeManager
         }
         drops.Dispose();
 
-        return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
+        return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
     }
     public static IEnumerable<BarricadeDrop> GetNearbyBarricades(Guid id, float range, Vector3 origin, bool sortClosest)
     {
@@ -269,7 +269,7 @@ public static class UCBarricadeManager
                     }
                 }
             }
-            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
+            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
         }
     }
     public static IEnumerable<BarricadeDrop> GetNearbyBarricades(Guid id, float range, Vector3 origin, ulong team, bool sortClosest)
@@ -297,7 +297,7 @@ public static class UCBarricadeManager
                     }
                 }
             }
-            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
+            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
         }
     }
     public static int CountNearbyBarricades(Guid id, float range, Vector3 origin, ulong team)

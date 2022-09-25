@@ -12,7 +12,6 @@ using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Squads;
-using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Quests;
@@ -1021,7 +1020,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
         if (type == EDynamicValueType.CONSTANT)
             return constant.ToString(Data.Locale);
         else if (type == EDynamicValueType.RANGE)
-            return (_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + range.Minimum.ToString(Data.Locale) + 
+            return (_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + range.Minimum.ToString(Data.Locale) +
                    ":" + range.Maximum.ToString(Data.Locale) + ")";
         else if (type == EDynamicValueType.ANY)
             return _choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
@@ -1048,7 +1047,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
         }
         else if (type == EDynamicValueType.RANGE)
         {
-            writer.WriteStringValue((_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + range.Minimum.ToString(Data.Locale) + 
+            writer.WriteStringValue((_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + range.Minimum.ToString(Data.Locale) +
                                     ":" + range.Maximum.ToString(Data.Locale) + ")");
         }
         else if (type == EDynamicValueType.ANY)
@@ -1919,7 +1918,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
     public IDynamicValue<Guid>.ISet? Set => set;
 
     public EDynamicValueType ValueType => type;
-    
+
     public EChoiceBehavior ChoiceBehavior => _choiceBehavior;
 
     /// <remarks>Don't use this unless you know what you're doing.</remarks>
@@ -2138,7 +2137,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             }
             if (_valueCache != null)
                 _valuesCache = new TAsset[1] { _valueCache };
-            else 
+            else
                 _valuesCache = new TAsset[0];
             _areValuesCached = !Assets.isLoading;
             return _valuesCache;
@@ -2483,7 +2482,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             {
                 t = t.GetEnumUnderlyingType();
                 if (t == typeof(long) || t == typeof(ulong) || t == typeof(uint))
-                    throw new ArgumentException(nameof(TEnum), "Type " + typeof(TEnum).Name + 
+                    throw new ArgumentException(nameof(TEnum), "Type " + typeof(TEnum).Name +
                                                                " derives from an underlying type too large to convert: " + t.Name);
             }
             else throw new ArgumentException(nameof(TEnum), "Type " + typeof(TEnum).Name + " is not an enum type.");
@@ -2523,7 +2522,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             {
                 if (_behavior == EChoiceBehavior.ALLOW_ONE)
                 {
-                    
+
                     int r1 = ((IConvertible)value.Range.Minimum).ToInt32(Data.Locale);
                     int r2 = ((IConvertible)value.Range.Maximum).ToInt32(Data.Locale);
                     int r3 = UnityEngine.Random.Range(r1, r2 + 1);

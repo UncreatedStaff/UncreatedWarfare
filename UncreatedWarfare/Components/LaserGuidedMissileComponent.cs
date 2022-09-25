@@ -2,11 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 namespace Uncreated.Warfare.Components;
 
@@ -117,7 +113,7 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 #endif
         float minAngle = 45;
 
-        foreach (var spotted in SpottedComponent.ActiveMarkers)
+        foreach (SpottedComponent spotted in SpottedComponent.ActiveMarkers)
         {
             if (spotted.SpottingTeam == firer.quests.groupID.m_SteamID && !(spotted.Type == SpottedComponent.ESpotted.AIRCRAFT || spotted.Type == SpottedComponent.ESpotted.INFANTRY))
             {
@@ -145,15 +141,15 @@ internal class LaserGuidedMissileComponent : MonoBehaviour
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                guiderDistance += Time.fixedDeltaTime * projectileSpeed;
+            guiderDistance += Time.fixedDeltaTime * projectileSpeed;
 
             turnMultiplier = Mathf.Clamp(turnMultiplier + Time.fixedDeltaTime / fullGuidanceDelay, 0, 1);
 
-                if (guiderDistance > 30 + armingDistance && !armed)
-                {
-                    colliders.ForEach(c => c.enabled = true);
-                    armed = true;
-                }
+            if (guiderDistance > 30 + armingDistance && !armed)
+            {
+                colliders.ForEach(c => c.enabled = true);
+                armed = true;
+            }
 
             ushort id = 26044;
             if (count % 10 == 0 && armed)

@@ -1,10 +1,6 @@
-﻿using SDG.Unturned;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
+﻿using System.Globalization;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Squads;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Traits.Buffs;
 

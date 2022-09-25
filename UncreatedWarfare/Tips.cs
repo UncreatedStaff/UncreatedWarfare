@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Singletons;
 
@@ -51,7 +48,7 @@ public class Tips : BaseSingleton
     }
     private static void GiveTip(UCPlayer player, Tip tip)
     {
-        ToastMessage.QueueMessage(player, 
+        ToastMessage.QueueMessage(player,
             new ToastMessage(
                 tip.TranslationKey.TranslateUnsafe(
                     Localization.GetLang(player.Steam64), tip.TranslationArgs, player, player.GetTeam()),
@@ -76,12 +73,12 @@ public class Tip
         TranslationArgs = translationArgs;
         switch (Type)
         {
-            case ETip.UAV_REQUEST:      Cooldown = 0;   TranslationKey = T.TipUAVRequest;                   break;
-            case ETip.PLACE_RADIO:      Cooldown = 300; TranslationKey = T.TipPlaceRadio;                   break;
-            case ETip.PLACE_BUNKER:     Cooldown = 3;   TranslationKey = T.TipPlaceBunker;                  break;
-            case ETip.UNLOAD_SUPPLIES:  Cooldown = 120; TranslationKey = T.TipUnloadSupplies;               break;
-            case ETip.HELP_BUILD:       Cooldown = 120; TranslationKey = T.TipHelpBuild;                    break;
-            case ETip.LOGI_RESUPPLIED:  Cooldown = 120; TranslationKey = T.TipLogisticsVehicleResupplied;   break;
+            case ETip.UAV_REQUEST: Cooldown = 0; TranslationKey = T.TipUAVRequest; break;
+            case ETip.PLACE_RADIO: Cooldown = 300; TranslationKey = T.TipPlaceRadio; break;
+            case ETip.PLACE_BUNKER: Cooldown = 3; TranslationKey = T.TipPlaceBunker; break;
+            case ETip.UNLOAD_SUPPLIES: Cooldown = 120; TranslationKey = T.TipUnloadSupplies; break;
+            case ETip.HELP_BUILD: Cooldown = 120; TranslationKey = T.TipHelpBuild; break;
+            case ETip.LOGI_RESUPPLIED: Cooldown = 120; TranslationKey = T.TipLogisticsVehicleResupplied; break;
         }
     }
 }

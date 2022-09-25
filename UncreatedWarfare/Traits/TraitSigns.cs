@@ -2,15 +2,11 @@
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using static Uncreated.Warfare.Gamemodes.Flags.ZoneModel;
 
 namespace Uncreated.Warfare.Traits;
 
@@ -337,7 +333,7 @@ public static class TraitSigns
                                 }
                             }
                             if (!player.OnDuty() &&
-                                (CooldownManager.HasCooldown(player, ECooldownType.REQUEST_TRAIT_SINGLE, out _, data.TypeName) || 
+                                (CooldownManager.HasCooldown(player, ECooldownType.REQUEST_TRAIT_SINGLE, out _, data.TypeName) ||
                                  CooldownManager.HasCooldownNoStateCheck(player, ECooldownType.REQUEST_TRAIT_GLOBAL, out _)))
                             {
                                 if (st != ETraitSignPlayerState.COOLDOWN)

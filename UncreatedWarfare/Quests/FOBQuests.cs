@@ -1,14 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -458,7 +453,7 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         {
             if (player.Steam64 == _player.Steam64 && BuildableType.IsMatch(buildable.Type) && buildable.Foundation.ValidReference(out Guid guid) && BaseIDs.IsMatch(guid))
             {
-                _built ++;
+                _built++;
                 if (_built >= Amount)
                     TellCompleted();
                 else

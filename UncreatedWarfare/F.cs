@@ -227,7 +227,7 @@ public static class F
             case PermissionComparison.AtMost:
                 if (permission is <= EAdminType.MEMBER || check == permission || check is >= EAdminType.CONSOLE || check is EAdminType.MODERATOR || check is EAdminType.STAFF)
                     return true;
-                
+
                 if (check is EAdminType.VANILLA_ADMIN)
                     return permission is <= EAdminType.VANILLA_ADMIN;
 
@@ -311,28 +311,28 @@ public static class F
         => PermissionCheck(player, EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool OffDuty(this ulong player)       => !OnDuty(player);
+    public static bool OffDuty(this ulong player) => !OnDuty(player);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool OffDuty(this UCPlayer player)    => !OnDuty(player);
+    public static bool OffDuty(this UCPlayer player) => !OnDuty(player);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsIntern(this ulong player)      => PermissionCheck(player, EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
+    public static bool IsIntern(this ulong player) => PermissionCheck(player, EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsIntern(this UCPlayer player)   => player.PermissionCheck(EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
+    public static bool IsIntern(this UCPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsAdmin(this ulong player)       => PermissionCheck(player, EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
+    public static bool IsAdmin(this ulong player) => PermissionCheck(player, EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsAdmin(this UCPlayer player)    => player.PermissionCheck(EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
+    public static bool IsAdmin(this UCPlayer player) => player.PermissionCheck(EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsHelper(this ulong player)      => PermissionCheck(player, EAdminType.HELPER, PermissionComparison.MaskOverlaps);
+    public static bool IsHelper(this ulong player) => PermissionCheck(player, EAdminType.HELPER, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsHelper(this UCPlayer player)   => player.PermissionCheck(EAdminType.HELPER, PermissionComparison.MaskOverlaps);
+    public static bool IsHelper(this UCPlayer player) => player.PermissionCheck(EAdminType.HELPER, PermissionComparison.MaskOverlaps);
 
     /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
     /// <param name="duration">Duration of ban IN SECONDS</param>
@@ -373,11 +373,11 @@ public static class F
         return string.Empty;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string S(this int number)   => number == 1 ? string.Empty : "s";
+    public static string S(this int number) => number == 1 ? string.Empty : "s";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string S(this float number) => number == 1 ? string.Empty : "s";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string S(this uint number)  => number == 1 ? string.Empty : "s";
+    public static string S(this uint number) => number == 1 ? string.Empty : "s";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void S(this int number, ref string str, int index = 0)
     {
@@ -1057,7 +1057,7 @@ public static class F
         final = original;
         return alphanumcount != original.Length;
     }
-    public static DateTime FromUnityTime(this float realtimeSinceStartup) => 
+    public static DateTime FromUnityTime(this float realtimeSinceStartup) =>
         DateTime.Now - TimeSpan.FromSeconds(Time.realtimeSinceStartup) + TimeSpan.FromSeconds(realtimeSinceStartup);
 
     /// <summary>

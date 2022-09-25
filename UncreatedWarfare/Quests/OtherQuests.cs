@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Warfare.Configuration;
 
@@ -84,7 +82,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
             _hasReceivedKey |= state;
             if (_hasReceivedKey)
                 TellCompleted();
-            else 
+            else
                 TellUpdated();
         }
         public static readonly NetCall<ulong, string, bool> SendDiscordKeyState = new NetCall<ulong, string, bool>(ReceiveDiscordKeyState);
@@ -122,7 +120,7 @@ public class DiscordKeySetQuest : BaseQuestData<DiscordKeySetQuest.Tracker, Disc
                                 tracker._hasReceivedKey = true;
                                 QuestManager.SaveProgress(player, tracker, preset.Team);
                             }
-                            next: ;
+                        next:;
                         }
                     }
                 }

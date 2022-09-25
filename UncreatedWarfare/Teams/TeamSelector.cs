@@ -1,23 +1,13 @@
 ﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Events;
-using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
-using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
@@ -134,7 +124,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             ucplayer.TeamSelectorData.SelectedTeam is not 1 and not 2 ||
             ucplayer.TeamSelectorData.JoiningCoroutine != null)
             return;
-        
+
         ucplayer.TeamSelectorData.JoiningCoroutine = StartCoroutine(JoinCoroutine(ucplayer, ucplayer.TeamSelectorData.SelectedTeam));
     }
     private IEnumerator JoinCoroutine(UCPlayer player, ulong targetTeam)
@@ -233,8 +223,8 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal | EPluginWidgetFlags.ForceBlur);
 
             player.Player.teleportToLocationUnsafe(
-                team is 1 ? TeamManager.Team1Main.Center3D : TeamManager.Team2Main.Center3D, 
-                team is 1 ? TeamManager.Team1SpawnAngle    : TeamManager.Team2SpawnAngle);
+                team is 1 ? TeamManager.Team1Main.Center3D : TeamManager.Team2Main.Center3D,
+                team is 1 ? TeamManager.Team1SpawnAngle : TeamManager.Team2SpawnAngle);
 
             UpdateList();
 
@@ -350,7 +340,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
              b2 = CheckTeam(2, 0, t1ct, t2ct),
              b3 = CheckTeam(1, 2, t1ct, t2ct),
              b4 = CheckTeam(2, 1, t1ct, t2ct);
-        
+
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
@@ -399,12 +389,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             SetButtonState(player, 2, CheckTeam(2, 0, t1ct, t2ct));
         }
     }
-    private static void CheckAccess(List<Kit> kits, ref bool t1Donor, ref bool t2Donor)
+    private static void CheckAccess(List<string> kits, ref bool t1Donor, ref bool t2Donor)
     {
         for (int i = 0; i < kits.Count; ++i)
         {
-            Kit kit = kits[i];
-            if (kit.IsPremium || kit.IsLoadout)
+            if (KitManager.KitExists(kits[i], out Kit kit) && kit.IsPremium || kit.IsLoadout)
             {
                 if (kit.Team == 0)
                 {
@@ -475,7 +464,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             return true;
         if (team == 2 && t2 <= t1)
             return true;
-        
+
 
         if (team == 1 && t2 - maxDiff <= t1)
             return true;

@@ -2,11 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -130,7 +127,7 @@ public class ReportCommand : Command
                     return;
                 }
                 if (!UCWarfare.CanUseNetCall)
-                    {
+                {
                     ctx.Reply(T.ReportNotConnected);
                     return;
                 }

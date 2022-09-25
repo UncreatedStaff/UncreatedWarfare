@@ -4,7 +4,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json.Serialization;
 using Uncreated.Framework.UI;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -23,9 +22,9 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     public new static SquadConfigData Config => _singleton.IsLoaded() ? _singleton.ConfigurationFile.Data : null!;
     public static readonly List<Squad> Squads = new List<Squad>(12);
     private static SquadManager _singleton;
-    public static readonly SquadMenuUI MenuUI   = new SquadMenuUI();
-    public static readonly SquadListUI ListUI   = new SquadListUI();
-    public static readonly UnturnedUI RallyUI   = new UnturnedUI(12003, Gamemode.Config.UIRally, true, false, false);
+    public static readonly SquadMenuUI MenuUI = new SquadMenuUI();
+    public static readonly SquadListUI ListUI = new SquadListUI();
+    public static readonly UnturnedUI RallyUI = new UnturnedUI(12003, Gamemode.Config.UIRally, true, false, false);
     public static readonly SquadOrderUI OrderUI = new SquadOrderUI();
     public static readonly string[] SQUAD_NAMES =
     {
@@ -338,7 +337,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 if (player.Squad is null)
                 {
                     ListUI.SquadMemberCounts[index].SetText(player.Connection,
-                        squad.IsLocked ? 
+                        squad.IsLocked ?
                             T.SquadsUIPlayerCountListLocked.Translate(player, squad.Members.Count, MenuUI.MemberParents.Length, Gamemode.Config.UIIconLocked) :
                             T.SquadsUIPlayerCountList.Translate(player, squad.Members.Count, MenuUI.MemberParents.Length));
                 }
@@ -438,7 +437,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
                 }
             }
             return name;
-            next:
+        next:
             continue;
         }
         return SQUAD_NAMES[SQUAD_NAMES.Length - 1];
@@ -569,7 +568,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         ActionLogger.Add(EActionLogType.JOINED_SQUAD, squad.Name + " on team " + Teams.TeamManager.TranslateName(squad.Team, 0) + " owned by " + (squad.Leader == null ? "0" : squad.Leader.Steam64.ToString(Data.Locale)), player);
 
         if (willNeedNewLeader)
-        {   
+        {
             squad.Leader = null!; // need to set leader to null before sorting, otherwise old leader will get added back
         }
         SortMembers(squad);

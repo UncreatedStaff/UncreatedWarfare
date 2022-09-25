@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Configuration;
 
@@ -68,7 +64,7 @@ public class PermissionSaver : JSONSaver<PermissionSave>
                 AddPlayer(player, i);
                 set = true;
             }
-            c:;
+        c:;
         }
         if (!set && level > EAdminType.MEMBER)
         {

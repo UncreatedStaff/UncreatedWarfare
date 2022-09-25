@@ -7,10 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using System.Xml;
-using System.Xml.Linq;
 using Uncreated.Framework;
-using Uncreated.Players;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
@@ -143,31 +140,31 @@ public static class Localization
         {
             val = F.DivideRemainder(seconds, 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
         }
         if (seconds < 86400) // < 1 day 
         {
             val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
         }
         if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
             return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}")}";
         }
         if (seconds < 31536000) // < 1 year
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
             return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}")}";
         }
         // > 1 year
 
         val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
         return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(player)}" +
-               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(player)}")}";
+               $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}")}";
     }
     public static string GetTimeFromSeconds(this int seconds, IPlayer player)
     {
@@ -183,31 +180,31 @@ public static class Localization
         {
             val = F.DivideRemainder(seconds, 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(player)}")}";
         }
         if (seconds < 86400) // < 1 day 
         {
             val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(player)}")}";
         }
         if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
             return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(player)}")}";
         }
         if (seconds < 31536000) // < 1 year
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
             return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(player)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(player)}")}";
         }
         // > 1 year
 
         val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
         return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(player)}" +
-               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(player)}")}";
+               $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(player)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(player)}")}";
     }
     public static string GetTimeFromSeconds(this int seconds, string language)
     {
@@ -223,34 +220,34 @@ public static class Localization
         {
             val = F.DivideRemainder(seconds, 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeSecondSingle : T.TimeSecondPlural).Translate(language)}")}";
         }
         if (seconds < 86400) // < 1 day 
         {
             val = F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out overflow);
             return $"{val} {(val == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(language)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMinuteSingle : T.TimeMinutePlural).Translate(language)}")}";
         }
         if (seconds < 2565000) // < 1 month (29.6875 days) (365.25/12)
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out overflow);
             return $"{val} {(val == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(language)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural)    .Translate(language)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeHourSingle : T.TimeHourPlural).Translate(language)}")}";
         }
         if (seconds < 31536000) // < 1 year
         {
             val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out overflow);
             return $"{val} {(val == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(language)}" +
-                   $"{(overflow == 0 ? string.Empty :       $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural)      .Translate(language)}")}";
+                   $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeDaySingle : T.TimeDayPlural).Translate(language)}")}";
         }
         // > 1 year
 
         val = F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(F.DivideRemainder(seconds, 60, out _), 60, out _), 24, out _), 30.416m, out _), 12, out overflow);
         return $"{val} {(val == 1 ? T.TimeYearSingle : T.TimeYearPlural).Translate(language)}" +
-               $"{(overflow == 0 ? string.Empty :           $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural)  .Translate(language)}")}";
+               $"{(overflow == 0 ? string.Empty : $" {(T.TimeAnd).Translate(language)} {overflow} {(overflow == 1 ? T.TimeMonthSingle : T.TimeMonthPlural).Translate(language)}")}";
     }
-    public static string GetTimeFromMinutes(this int minutes, ulong player)    => GetTimeFromSeconds(minutes * 60, player);
-    public static string GetTimeFromMinutes(this int minutes, IPlayer player)  => GetTimeFromSeconds(minutes * 60, player);
+    public static string GetTimeFromMinutes(this int minutes, ulong player) => GetTimeFromSeconds(minutes * 60, player);
+    public static string GetTimeFromMinutes(this int minutes, IPlayer player) => GetTimeFromSeconds(minutes * 60, player);
     public static string GetTimeFromMinutes(this int minutes, string language) => GetTimeFromSeconds(minutes * 60, language);
     public static string TranslateSign(string key, string language, UCPlayer ucplayer, bool important = false)
     {
@@ -466,7 +463,7 @@ public static class Localization
         }
         if (weapons.Length == 0)
         {
-            return 
+            return
                 name + "\n\n" +
                 cost + "\n" +
                 playercount;
@@ -743,7 +740,7 @@ public static class Localization
                         goto added;
                 }
                 otherlangs.Add(new KeyValuePair<Type, List<string>>(enumType.Key, new List<string>(1) { t.Language }));
-                added:;
+            added:;
             }
         }
     }

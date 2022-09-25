@@ -99,7 +99,7 @@ public class JoinUI : UnturnedUI
     public readonly UnturnedLabel Team2Player31 = new UnturnedLabel("T2P32");
 
     public readonly UnturnedLabel[] Team2Players;
-    public JoinUI() : base(29000, Gamemode.Config.UITeamSelector, true, false) 
+    public JoinUI() : base(29000, Gamemode.Config.UITeamSelector, true, false)
     {
         Team1Players = new UnturnedLabel[]
         {

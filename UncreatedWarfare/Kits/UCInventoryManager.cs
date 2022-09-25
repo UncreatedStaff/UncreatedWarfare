@@ -1,11 +1,10 @@
-﻿using SDG.NetPak;
+﻿using HarmonyLib;
+using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Events.Players;
 using System.Reflection;
-using HarmonyLib;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
@@ -309,7 +308,7 @@ public static class UCInventoryManager
     private static void GlassesFix(PlayerEquipment __instance)
     {
         ItemGlassesAsset? ga = __instance.player.clothing.glassesAsset;
-        if (ga != null && ga.vision != ELightingVision.NONE && 
+        if (ga != null && ga.vision != ELightingVision.NONE &&
             (__instance.player.clothing.glassesState == null
             || __instance.player.clothing.glassesState.Length < 1))
         {

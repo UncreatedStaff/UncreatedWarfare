@@ -40,7 +40,7 @@ public struct LandmineData
             this.ownerID = owner.Owner;
         }
     }
-    
+
 }
 public class UCPlayerData : MonoBehaviour
 {
@@ -96,7 +96,7 @@ public class UCPlayerData : MonoBehaviour
         {
             if (Assets.find(this.guid) is not EffectAsset ea)
                 L.Log("Unable to find effect asset with GUID " + this.guid.ToString("N") + " in toast messages.");
-            else 
+            else
                 this.id = ea.id;
         }
     }
@@ -198,11 +198,11 @@ public class UCPlayerData : MonoBehaviour
                 }
             }
         }
-    }   
+    }
     readonly List<KeyValuePair<ToastMessage, ToastMessageInfo>> pendingToastMessages = new List<KeyValuePair<ToastMessage, ToastMessageInfo>>();
     private void SendToastMessage(ToastMessage message, ToastMessageInfo info)
     {
-        EffectManager.sendUIEffect(info.id, unchecked((short)info.id), player.channel.owner.transportConnection, true, message.Message1 ?? "", message.Message2 ?? "", message.Message3 ?? "" );
+        EffectManager.sendUIEffect(info.id, unchecked((short)info.id), player.channel.owner.transportConnection, true, message.Message1 ?? "", message.Message2 ?? "", message.Message3 ?? "");
         channels[info.channel].SetMessage(info, message);
         for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
         {
@@ -274,7 +274,7 @@ public class UCPlayerData : MonoBehaviour
                     }
                 }
                 channel.hasPending = false;
-                next: ;
+            next:;
             }
         }
     }

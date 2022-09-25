@@ -204,7 +204,7 @@ namespace Uncreated.Warfare.FOBs
                         }
                         else if (parent.structure.group == nearby[i].lockedGroup.m_SteamID)
                         {
-                            var fob = FOB.GetNearestFOB(parent.structure.point, EFOBRadius.FULL_WITH_BUNKER_CHECK, parent.structure.group);
+                            FOB? fob = FOB.GetNearestFOB(parent.structure.point, EFOBRadius.FULL_WITH_BUNKER_CHECK, parent.structure.group);
                             if (F.IsInMain(parent.structure.point) || (fob != null && fob.Build > 0))
                             {
                                 parent.VehiclesRepairing.Add(nearby[i].instanceID, 9);

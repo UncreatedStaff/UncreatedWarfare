@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
@@ -208,7 +207,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         {
             if (s.VehicleID == vehicleID && s.VehicleInstanceID != 0)
             {
-                var vehicle = VehicleManager.getVehicle(s.VehicleInstanceID);
+                InteractableVehicle vehicle = VehicleManager.getVehicle(s.VehicleInstanceID);
                 return vehicle != null && !vehicle.isDead && !vehicle.isDrowned;
             }
             return false;
@@ -236,7 +235,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         {
             VehicleSpawn spawn = this[i];
             if (spawn.LinkedSign != null && spawn.LinkedSign.SignDrop != null && (
-                team == 1 && TeamManager.Team1Main.IsInside(spawn.LinkedSign.SignDrop.model.transform.position) || 
+                team == 1 && TeamManager.Team1Main.IsInside(spawn.LinkedSign.SignDrop.model.transform.position) ||
                 team == 2 && TeamManager.Team2Main.IsInside(spawn.LinkedSign.SignDrop.model.transform.position)))
                 spawn.UpdateSign(player);
         }
@@ -577,7 +576,7 @@ public class VehicleSpawn
                     L.LogError($"VEHICLE SPAWNER ERROR: {(Assets.find(VehicleID) is VehicleAsset va ? (va.vehicleName + " - " + VehicleID.ToString("N")) : VehicleID.ToString("N"))} at spawn {SpawnpadLocation} was unable to find StructureData.");
                     return;
                 }
-                    
+
                 Quaternion rotation = new Quaternion
                 { eulerAngles = new Vector3(StructureData.angle_x * 2 + 90, StructureData.angle_y * 2, StructureData.angle_z * 2) };
                 InteractableVehicle? veh = VehicleBay.SpawnLockedVehicle(VehicleID, new Vector3(StructureData.point.x, StructureData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, StructureData.point.z), rotation, out _);

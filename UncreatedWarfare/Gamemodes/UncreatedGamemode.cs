@@ -155,7 +155,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     /// <summary>Use to add <see cref="IUncreatedSingleton"/>s to be loaded.</summary>
     /// <remarks>Abstract</remarks>
     protected abstract void PreInit();
-    
+
     /// <summary>Called after all <see cref="IUncreatedSingleton"/>s have been loaded.</summary>
     /// <remarks>Abstract</remarks>
     protected abstract void PostInit();

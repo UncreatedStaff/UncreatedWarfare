@@ -91,8 +91,8 @@ public class UCPlayer : IPlayer
     }
 
     public Dictionary<Buff, float> ShovelSpeedMultipliers { get; } = new Dictionary<Buff, float>(6);
-    
-    private static readonly InstanceGetter<Dictionary<Buff, float>, int> _versionGetter = 
+
+    private static readonly InstanceGetter<Dictionary<Buff, float>, int> _versionGetter =
         F.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
 
     private int multVersion = -1;
@@ -123,7 +123,7 @@ public class UCPlayer : IPlayer
             return _rank.Value;
         }
     }
-    public List<Kit>? AccessibleKits;
+    public List<string>? AccessibleKits;
     public IBuff?[] ActiveBuffs = new IBuff?[6];
     public List<Trait> ActiveTraits = new List<Trait>(8);
     internal List<Guid>? _completedQuests;
@@ -177,7 +177,7 @@ public class UCPlayer : IPlayer
 
         if (CurrentMarkers.Count(x => !x.UAVMode) == 3)
         {
-            var oldest = CurrentMarkers.LastOrDefault(x => !x.UAVMode);
+            SpottedComponent oldest = CurrentMarkers.LastOrDefault(x => !x.UAVMode);
             if (oldest != null)
             {
                 oldest.Deactivate();
@@ -552,7 +552,7 @@ public class UCPlayer : IPlayer
     }
     private bool isTalking = false;
     private bool lastMuted = false;
-    
+
     internal void Update()
     {
         if (isTalking && Time.realtimeSinceStartup - LastSpoken > 0.5f)
@@ -680,7 +680,7 @@ public struct OfflinePlayer : IPlayer
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is null) goto end;
-        
+
         if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
             return (_names ??= F.GetPlayerOriginalNames(_s64)).CharacterName;
         else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))

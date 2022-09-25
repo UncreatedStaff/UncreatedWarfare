@@ -1,6 +1,4 @@
 ﻿using SDG.NetTransport;
-using System;
-using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;

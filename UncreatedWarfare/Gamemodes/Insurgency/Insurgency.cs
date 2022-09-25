@@ -1,5 +1,4 @@
 ﻿using SDG.NetTransport;
-using SDG.Provider;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -10,7 +9,6 @@ using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -33,7 +31,7 @@ using Cache = Uncreated.Warfare.Components.Cache;
 
 namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
-public class Insurgency : 
+public class Insurgency :
     TeamGamemode,
     ITeams,
     IFOBs,
@@ -581,7 +579,7 @@ public class Insurgency :
                 StartCoroutine(WaitToSpawnNewCache());
             }
         }
-        
+
         if (destroyer != null)
         {
             if (destroyer.GetTeam() == AttackingTeam)
@@ -700,8 +698,8 @@ public class Insurgency :
 
     public class CacheData : IObjective, IDeployable, IFOB
     {
-        public int Number { get => Cache != null ? Cache.Number : 0;  }
-        public bool IsActive { get => Cache != null;  }
+        public int Number { get => Cache != null ? Cache.Number : 0; }
+        public bool IsActive { get => Cache != null; }
         public bool IsDestroyed { get => Cache != null && Cache.Structure.GetServersideData().barricade.isDead; }
         public bool IsDiscovered { get => Cache != null && Cache.IsDiscovered; }
         public Cache Cache { get; private set; }

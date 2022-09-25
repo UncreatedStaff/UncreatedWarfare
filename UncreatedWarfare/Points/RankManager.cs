@@ -3,12 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using Uncreated.Players;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Quests;
-using static UnityEngine.TouchScreenKeyboard;
 
 namespace Uncreated.Warfare.Ranks;
 public static class RankManager
@@ -25,7 +23,7 @@ public static class RankManager
         }
         catch (Exception ex)
         {
-            L.LogError(ex); 
+            L.LogError(ex);
         }
     }
     private static string GetSavePath(ulong steam64) => Path.DirectorySeparatorChar + Path.Combine("Players", steam64.ToString(Data.Locale) + "_0",
@@ -52,7 +50,7 @@ public static class RankManager
         RankStatus[] statuses;
         bool t = !ServerSavedata.fileExists(path);
         int l;
-        t:
+    t:
         if (t)
         {
             l = Config.Ranks.Length;
@@ -77,7 +75,8 @@ public static class RankManager
             L.LogError("RANKS WERE NOT SET UP IN THIS CONFIG FILE!");
             return new RankStatus[0];
         }
-        /*uint dataVersion =*/ block.readUInt32();
+        /*uint dataVersion =*/
+        block.readUInt32();
         int len = block.readInt32();
         l = Config.Ranks.Length;
         statuses = new RankStatus[l];
@@ -288,7 +287,7 @@ public static class RankManager
         ref RankStatus status = ref player.RankData[index + 1];
 
         ClearRank(player, in data);
-        
+
         for (int i = 0; i < Config.Ranks.Length; ++i)
         {
             data = ref Config.Ranks[i];
@@ -418,7 +417,7 @@ public class RankConfig : JSONConfigData
             new RankData(6, "Staff Sergeant", "Ssg", "rare", "6ca6d44bc07e4a4d98653dadf30be5a1",
                 "39a1fb42-f797-4190-a86c-147675ccd800", "2d23a366-fbcf-4847-a599-96c4f60e530c", "064f08a2-182d-4dae-ab70-bf4f28669c66"),
             new RankData(7, "Sergeant 1st Class", "Sfc", "epic", "0ac0318ac6064a2ab30f22e61769f21e",
-                "55c7e483-79f4-4b72-9b16-cd0f24c10844", "b5fc53f9-6184-4233-b683-cd141d14d892", "0600d9aa-9f7c-413f-959c-ab25b2f4c165", 
+                "55c7e483-79f4-4b72-9b16-cd0f24c10844", "b5fc53f9-6184-4233-b683-cd141d14d892", "0600d9aa-9f7c-413f-959c-ab25b2f4c165",
                 "8fdf2b79-52a0-4a65-81ef-d3df0b8bf6e3"),
             new RankData(8, "Warrant Officer", "W.O", "epic", "5730fa43425c48759ea31138572e575f",
                 "e2607e1f-2781-46fe-b53d-c13dd9921595", "d077f440-29e0-4f91-9406-f3050c44fadf", "edf07ac7-6e04-4167-9cb5-f3240d1e0ab8",
@@ -509,12 +508,13 @@ public readonly struct RankData : IComparable<RankData>, ITranslationArgument
         this.QuestID = questID;
         this.UnlockRequirements = unlockRequirements;
     }
-    public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements) : 
+    public RankData(int order, string name, string abbreviation, string color, Guid questID, params Guid[] unlockRequirements) :
         this(order, new Dictionary<string, string>(1) { { L.DEFAULT, name } }, new Dictionary<string, string>(1) { { L.DEFAULT, abbreviation } },
             color, questID, unlockRequirements)
     { }
-    public RankData(int order, string name, string abbreviation, string color, string questID, params string[] unlockRequirements) : 
-        this(order, name, abbreviation, color, Guid.TryParse(questID, out Guid guid) ? guid : Guid.Empty, ToGuidArray(unlockRequirements)) { }
+    public RankData(int order, string name, string abbreviation, string color, string questID, params string[] unlockRequirements) :
+        this(order, name, abbreviation, color, Guid.TryParse(questID, out Guid guid) ? guid : Guid.Empty, ToGuidArray(unlockRequirements))
+    { }
     private static Guid[] ToGuidArray(string[] strings)
     {
         Guid[] res = new Guid[strings.Length];

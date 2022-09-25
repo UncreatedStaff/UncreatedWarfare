@@ -1,9 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
@@ -120,7 +118,7 @@ public class VehicleComponent : MonoBehaviour
 #endif
         UCPlayer player = e.Player;
         InteractableVehicle vehicle = e.Vehicle;
-        
+
         byte toSeat = e.PassengerIndex;
         if (toSeat == 0)
         {
@@ -367,7 +365,7 @@ public class VehicleComponent : MonoBehaviour
 
             oldTrunkItems.Add(Vehicle.trunkItems.items[i]);
             Vehicle.trunkItems.removeItem(Vehicle.trunkItems.getIndex(Vehicle.trunkItems.items[i].x, Vehicle.trunkItems.items[i].y));
-            
+
         }
 
         bool shouldAddMoreItems = true;
