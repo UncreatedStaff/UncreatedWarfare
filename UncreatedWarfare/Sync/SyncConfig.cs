@@ -14,6 +14,7 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
     private bool _regReload = false;
     private readonly int syncId;
     public TData Data { get; } = new TData();
+    public virtual bool DontReplicate => Warfare.Data.IsInitialSyncRegistering;
     public string? ReloadKey { get; }
     public FileInfo File { get; }
     string IConfiguration.Directory => File.FullName;

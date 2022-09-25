@@ -21,6 +21,7 @@ using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Singletons;
 using Unity.Rendering.HybridV2;
 using UnityEngine;
+using Version = System.Version;
 
 namespace Uncreated.Warfare.Sync;
 public class ConfigSync : MonoBehaviour
@@ -43,7 +44,6 @@ public class ConfigSync : MonoBehaviour
     {
         Instance = this;
     }
-
     [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
     void OnDestroy()
     {
@@ -180,7 +180,7 @@ public class ConfigSync : MonoBehaviour
             public readonly PropertyInfo PropertyInfo;
             public readonly MethodInfo SetterMethod;
             public readonly MethodInfo GetterMethod;
-            public readonly MethodInfo OnUpdateMethod;
+            public readonly MethodInfo? OnUpdateMethod;
             public readonly FieldInfo BackingField;
             public readonly ByteWriter.Writer<object?> Writer;
             public readonly ByteReader.Reader<object?> Reader;
@@ -191,7 +191,7 @@ public class ConfigSync : MonoBehaviour
             public bool ValuePending;
             public DateTimeOffset LastUpdated = default;
             public readonly int SyncId;
-            public Property(InstanceSetter<object?, object?> setter, InstanceGetter<object?, object?> getter, PropertyInfo propertyInfo, MethodInfo setterMethod, MethodInfo getterMethod, FieldInfo backingField, ByteWriter.Writer<object?> writer, ByteReader.Reader<object?> reader, string jsonName, int syncId, MethodInfo onUpdateMethod)
+            public Property(InstanceSetter<object?, object?> setter, InstanceGetter<object?, object?> getter, PropertyInfo propertyInfo, MethodInfo setterMethod, MethodInfo getterMethod, FieldInfo backingField, ByteWriter.Writer<object?> writer, ByteReader.Reader<object?> reader, string jsonName, int syncId, MethodInfo? onUpdateMethod)
             {
                 Setter = setter;
                 Getter = getter;
@@ -475,6 +475,10 @@ public class ConfigSync : MonoBehaviour
             return;
         using FileStream str = new FileStream(Data.Paths.ConfigSync, FileMode.Create, FileAccess.Write, FileShare.Read);
         using Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
+        writer.WriteStartObject();
+        writer.WritePropertyName("version");
+        writer.WriteStringValue(UCWarfare.Version.ToString());
+        writer.WritePropertyName("documents");
         writer.WriteStartArray();
         foreach (KeyValuePair<int, ConfigSyncInst> @class in RegisteredTypes)
         {
@@ -528,6 +532,7 @@ public class ConfigSync : MonoBehaviour
             writer.WriteEndObject();
         }
         writer.WriteEndArray();
+        writer.WriteEndObject();
         writer.Flush();
     }
     private static void ReadProperties()
@@ -541,7 +546,20 @@ public class ConfigSync : MonoBehaviour
             return;
         str.Read(bytes, 0, bytes.Length);
         Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-        if (!reader.Read() || reader.TokenType != JsonTokenType.StartArray)
+        if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject || !reader.Read() ||
+            reader.TokenType != JsonTokenType.PropertyName ||
+            !reader.GetString()!.Equals("version", StringComparison.OrdinalIgnoreCase) || !reader.Read() ||
+            reader.TokenType != JsonTokenType.String)
+            return;
+        if (!Version.TryParse(reader.GetString(), out Version version) || version != UCWarfare.Version)
+        {
+            L.Log("Updating property map to new version: " + UCWarfare.Version);
+            str.Dispose();
+            File.Delete(Data.Paths.ConfigSync);
+            SaveProperties();
+            return;
+        }
+        if (!reader.Read() || reader.TokenType != JsonTokenType.PropertyName || !reader.GetString()!.Equals("documents", StringComparison.OrdinalIgnoreCase))
             return;
         while (reader.Read())
         {
@@ -682,14 +700,14 @@ public class ConfigSync : MonoBehaviour
         }
         return true;
     }
-    public static void SetPropertySilent(int parentSyncId, int syncId, object? value, bool save = true, bool applyToSave = false, bool pushAsNew = true)
+    public static bool SetPropertySilent(int parentSyncId, int syncId, object? value, bool save = true, bool applyToSave = false, bool pushAsNew = true)
     {
         if (!RegisteredTypes.TryGetValue(parentSyncId, out ConfigSyncInst inst) || !inst.SyncedMembers.TryGetValue(syncId, out ConfigSyncInst.Property prop))
             throw new InvalidOperationException("Property is not registered. Ensure it has the Sync attribute along with its defining class (with a unique ID).");
 
-        SetPropertySilent(inst, prop, value, save, applyToSave, pushAsNew);
+        return SetPropertySilent(inst, prop, value, save, applyToSave, pushAsNew);
     }
-    public static void SetPropertySilent(ConfigSyncInst inst, ConfigSyncInst.Property prop, object? value, bool save = true, bool applyToSave = false, bool pushAsNew = true)
+    public static bool SetPropertySilent(ConfigSyncInst inst, ConfigSyncInst.Property prop, object? value, bool save = true, bool applyToSave = false, bool pushAsNew = true)
     {
         lock (prop)
         {
@@ -698,20 +716,21 @@ public class ConfigSync : MonoBehaviour
                 throw new InvalidOperationException("There is not a instance of this ID loaded.");
             if ((value is null && prop.PropertyInfo.PropertyType.IsValueType) || (value is not null && !prop.PropertyInfo.PropertyType.IsAssignableFrom(value.GetType())))
                 throw new InvalidOperationException("Value provided: \"" + (value?.ToString() ?? "null") + "\" is not compatible with type " + prop.PropertyInfo.PropertyType.Name + ".");
-            prop.Setter(instance, value!);
             if (!applyToSave && !save || prop.SavedValue == null && value == null || value != null && value.Equals(prop.SavedValue))
-                return;
+                return false;
+            prop.Setter(instance, value!);
             if (applyToSave)
             {
                 prop.SavedValue = value;
                 prop.ValuePending |= pushAsNew;
                 prop.LastUpdated = DateTime.UtcNow;
                 ReplicatePropertyValue(inst.SyncId, prop.SyncId, value, prop.LastUpdated);
-                SaveProperties();
+                savePending = true;
             }
             if (save)
                 TrySaveParent(inst, prop.Static);
         }
+        return true;
     }
     public static void OnInitialSyncRegisteringComplete()
     {
@@ -729,10 +748,7 @@ public class ConfigSync : MonoBehaviour
                 {
                     object? value = property.Getter(instance);
                     if (property.SavedValue == null && value == null || value != null && value.Equals(property.SavedValue))
-                    {
-                        L.LogDebug("Detected no change: " + property.JsonName + " Value: " + (value?.ToString() ?? "null") + ".");
                         continue;
-                    }
                     L.LogDebug("Detected change: " + property.JsonName + " (" + (property.SavedValue?.ToString() ?? "null") + " -> " + (value?.ToString() ?? "null") + ").");
                     property.SavedValue = value;
                     property.ValuePending = true;
@@ -742,13 +758,13 @@ public class ConfigSync : MonoBehaviour
             }
         }
 
-        SaveProperties();
+        savePending = true;
     }
     public static void OnUpdated(int parentSyncId, int syncId, object? instance, object? value)
     {
-        L.LogDebug("Detected update: " + parentSyncId + " / " + syncId + " to " + (value is null ? "null" : value.ToString()));
-        if (Data.IsInitialSyncRegistering)
+        if (instance is null && Data.IsInitialSyncRegistering || instance is ISyncObject obj && obj.DontReplicate)
             return;
+        L.LogDebug("Detected update: " + parentSyncId + " / " + syncId + " to " + (value is null ? "null" : value.ToString()));
         if (RegisteredTypes.TryGetValue(parentSyncId, out ConfigSyncInst inst))
         {
             lock (inst)
@@ -790,6 +806,7 @@ public class ConfigSync : MonoBehaviour
                         savePending = true;
 
                         ReplicatePropertyValue(parentSyncId, syncId, value, prop.LastUpdated);
+                        TryCallOnUpdated(inst, prop);
                     }
                 }
             }
@@ -823,11 +840,13 @@ public class ConfigSync : MonoBehaviour
                     ReplicatePropertyValue(docType.SyncId, propertyData.Id, propType.SavedValue, propType.LastUpdated);
                 else
                 {
-                    SetPropertySilent(docType, propType, propertyData.Value, false, applyToSave: true);
-                    TryCallOnUpdated(docType, propType);
-                    if (propType.Static)
-                        @static = true;
-                    else instFound = true;
+                    if (SetPropertySilent(docType, propType, propertyData.Value, false, applyToSave: true))
+                    {
+                        TryCallOnUpdated(docType, propType);
+                        if (propType.Static)
+                            @static = true;
+                        else instFound = true;
+                    }
                 }
             }
 
@@ -854,11 +873,13 @@ public class ConfigSync : MonoBehaviour
                 ReplicatePropertyValue(docType.SyncId, propertyData.SyncId, propType.SavedValue, propType.LastUpdated);
             else
             {
-                SetPropertySilent(docType, propType, propertyData.Value, false, applyToSave: true);
-                TryCallOnUpdated(docType, propType);
-                if (propType.Static)
-                    @static = true;
-                else instFound = true;
+                if (SetPropertySilent(docType, propType, propertyData.Value, false, applyToSave: true))
+                {
+                    TryCallOnUpdated(docType, propType);
+                    if (propType.Static)
+                        @static = true;
+                    else instFound = true;
+                }
             }
 
             if (@static)
@@ -898,8 +919,10 @@ public class ConfigSync : MonoBehaviour
             ReplicatePropertyValue(docType.SyncId, property.SyncId, propData.SavedValue, propData.LastUpdated);
         else
         {
-            SetPropertySilent(docType, propData, property.Value, true, applyToSave: true);
-            TryCallOnUpdated(docType, propData);
+            if (SetPropertySilent(docType, propData, property.Value, true, applyToSave: true, pushAsNew: true))
+            {
+                TryCallOnUpdated(docType, propData);
+            }
         }
     }
     public static void AddToSyncPacket(int parentSyncId, SyncPacket pending)
@@ -940,6 +963,16 @@ public class ConfigSync : MonoBehaviour
     internal static void OnConnected(IConnection connection)
     {
         NetCalls.RequestFullSyncPacket.NetInvoke();
+        foreach (ConfigSyncInst inst in RegisteredTypes.Values)
+        {
+            foreach (ConfigSyncInst.Property property in inst.SyncedMembers.Values)
+            {
+                if (property.ValuePending)
+                {
+                    ReplicatePropertyValue(inst.SyncId, property.SyncId, property.SavedValue, property.LastUpdated);
+                }
+            }
+        }
     }
     private class UpdateTracker : IDisposable
     {
@@ -1075,13 +1108,59 @@ public class ConfigSync : MonoBehaviour
         [NetCall(ENetCall.FROM_SERVER, 3004)]
         private static void ReceiveFullSyncPacketRequest(MessageContext ctx)
         {
-            SyncPacket packet = new SyncPacket();
-            foreach (KeyValuePair<int, ConfigSyncInst> inst in RegisteredTypes)
+            L.LogDebug("running");
+            try
             {
-                if (inst.Value.Mode == SyncMode.Automatic)
-                    AddToSyncPacket(inst.Key, packet);
+                SyncPacket packet = new SyncPacket();
+                foreach (KeyValuePair<int, ConfigSyncInst> inst in RegisteredTypes)
+                {
+                    if (inst.Value.Mode == SyncMode.Automatic)
+                        AddToSyncPacket(inst.Key, packet);
+                }
+
+                L.LogDebug("Sending full sync packet: " + packet);
+                Task.Run(async () =>
+                {
+                    if (!UCWarfare.CanUseNetCall)
+                        return;
+                    RequestResponse res = await SendSyncPacket.RequestAck(UCWarfare.I.NetClient!, packet, 10000);
+                    if (res.Responded)
+                    {
+                        for (int i = 0; i < packet.PropertyGroups.Count; i++)
+                        {
+                            SyncPacket.PropertyGroup inst = packet.PropertyGroups[i];
+                            ConfigSyncInst? inst2 = GetClassData(inst.SyncId);
+                            if (inst2 is null)
+                                continue;
+                            for (int j = 0; j < inst.Properties.Count; ++j)
+                            {
+                                SyncPacket.PropertyGroup.Property prop = inst.Properties[i];
+                                ConfigSyncInst.Property? prop2 = GetPropertyData(inst2, prop.Id);
+                                if (prop2 is null) continue;
+                                lock (prop2)
+                                {
+                                    if (prop2.ValuePending)
+                                    {
+                                        prop2.ValuePending = false;
+                                        savePending = true;
+                                    }
+                                }
+                            }
+                        }
+                        pending.Clear();
+                        L.LogDebug("Confirmed sending of full sync packet: " + packet);
+                    }
+                    else
+                    {
+                        L.LogDebug("Failed to send full sync packet: " + packet);
+                    }
+                });
             }
-            ctx.Reply(SendSyncPacket, packet);
+            catch (Exception ex)
+            {
+                L.LogError("Error sending full sync packet");
+                L.LogError(ex);
+            }
         }
     }
 }
@@ -1272,5 +1351,6 @@ public enum SyncMode
 }
 public interface ISyncObject
 {
+    bool DontReplicate { get; }
     void Save();
 }

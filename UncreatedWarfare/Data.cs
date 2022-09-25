@@ -161,32 +161,6 @@ public static class Data
             OutputToConsoleMethod = null;
         }
     }
-    /*
-    public static void ReloadTCP()
-    {
-        if (UCWarfare.Config.TCPSettings.EnableTCPServer)
-        {
-            if (NetClient is not null)
-            {
-                try
-                {
-                    NetClient.Dispose();
-                    NetClient.OnClientVerified -= OnClientConnected;
-                    NetClient.OnClientDisconnected -= OnClientDisconnected;
-                    NetClient.OnSentMessage -= OnClientSentMessage;
-                    NetClient.OnReceivedMessage -= OnClientReceivedMessage;
-                    GC.Collect();
-                }
-                catch { }
-            }
-            L.Log("Attempting a connection to a TCP server.", ConsoleColor.Magenta);
-            NetClient = new HomebaseClient(UCWarfare.Config.TCPSettings.TCPServerIP, UCWarfare.Config.TCPSettings.TCPServerPort, UCWarfare.Config.TCPSettings.TCPServerIdentity);
-            NetClient.OnClientVerified += OnClientConnected;
-            NetClient.OnClientDisconnected += OnClientDisconnected;
-            NetClient.OnSentMessage += OnClientSentMessage;
-            NetClient.OnReceivedMessage += OnClientReceivedMessage;
-        }
-    }*/
 
     public static void LoadVariables()
     {

@@ -43,7 +43,7 @@ public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version      = new Version(3, 0, 0, 0);
+    public static readonly Version Version      = new Version(3, 0, 0, 1);
     private readonly SystemConfig _config       = new SystemConfig();
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
@@ -76,7 +76,15 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         L.Log("Started loading - Uncreated Warfare version " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
               "Please stop using this plugin now.", ConsoleColor.Green);
 
+        /* INITIALIZE UNCREATED NETWORKING */
+        Logging.OnLogInfo += L.NetLogInfo;
+        Logging.OnLogWarning += L.NetLogWarning;
+        Logging.OnLogError += L.NetLogError;
+        Logging.OnLogException += L.NetLogException;
+        NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
+
         CommandHandler.LoadCommands();
 
         DateTime loadTime = DateTime.Now;
@@ -120,13 +128,6 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         gameObject.AddComponent<ActionLogger>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
-
-        /* INITIALIZE UNCREATED NETWORKING */
-        Logging.OnLogInfo += L.NetLogInfo;
-        Logging.OnLogWarning += L.NetLogWarning;
-        Logging.OnLogError += L.NetLogError;
-        Logging.OnLogException += L.NetLogException;
-        NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
         
         ConfigSync.Reflect();
 
@@ -154,8 +155,14 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
             NetClient.OnClientDisconnected += Data.OnClientDisconnected;
             NetClient.OnSentMessage += Data.OnClientSentMessage;
             NetClient.OnReceivedMessage += Data.OnClientReceivedMessage;
+            NetClient.ModifyVerifyPacketCallback += OnVerifyPacketMade;
             NetClient.Init(Config.TCPSettings.TCPServerIP, Config.TCPSettings.TCPServerPort, Config.TCPSettings.TCPServerIdentity);
         }
+    }
+
+    private void OnVerifyPacketMade(ref VerifyPacket packet)
+    {
+        packet = new VerifyPacket(packet.Identity, packet.SecretKey, packet.ApiVersion, packet.TimezoneOffset, Config.Currency, Config.RegionKey, Version);
     }
 
     public void Load()

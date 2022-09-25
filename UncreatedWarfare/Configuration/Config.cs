@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Xml.Serialization;
+using Uncreated.Networking;
 using Uncreated.SQL;
 using Uncreated.Warfare.Maps;
 
@@ -32,6 +33,8 @@ public class SystemConfigData : JSONConfigData
     public bool Debug;
     [JsonPropertyName("region")]
     public string Region;
+    [JsonPropertyName("regionKey")]
+    public byte RegionKey;
     [JsonPropertyName("localCurrency")]
     public string Currency;
     [JsonPropertyName("allowCosmetics")]
@@ -122,6 +125,8 @@ public class SystemConfigData : JSONConfigData
         DisableDailyQuests = false;
         EnablePlayerJoinLeaveMessages = false;
         EnablePlayerJoinLeaveTeamMessages = false;
+        Currency = "USD";
+        RegionKey = 255;
     }
     public class ModerationConfig
     {
