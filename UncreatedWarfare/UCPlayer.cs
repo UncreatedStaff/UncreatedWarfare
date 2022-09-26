@@ -33,6 +33,10 @@ public class UCPlayer : IPlayer
         int IEqualityComparer<UCPlayer>.GetHashCode(UCPlayer obj) => obj.Steam64.GetHashCode();
     }
 
+    ~UCPlayer()
+    {
+        PurchaseSync.Dispose();
+    }
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UIMuted, false, false);
     public readonly ulong Steam64;
@@ -42,6 +46,8 @@ public class UCPlayer : IPlayer
     public Kit? Kit;
     public Squad? Squad;
     public volatile bool HasDownloadedKits;
+    public volatile bool HasDownloadedXP;
+    public volatile bool IsDownloadingXP;
     public volatile bool IsDownloadingKits;
     public TeamSelectorData? TeamSelectorData;
     public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 5);
@@ -517,39 +523,6 @@ public class UCPlayer : IPlayer
     {
         return FOB.IsOnFOB(this, out fob);
     }
-
-    public bool IsNearOtherPlayer(UCPlayer player, float distance)
-    {
-        if (Player.life.isDead || Player.transform is null || player.Player.life.isDead || player.Player.transform is null)
-            return false;
-
-        return (Position - player.Position).sqrMagnitude < Math.Pow(distance, 2);
-    }
-
-    /// <summary>Gets some of the values from the playersave again.</summary>
-    public static void Refresh(ulong Steam64)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        UCPlayer? pl = PlayerManager.OnlinePlayers?.FirstOrDefault(s => s.Steam64 == Steam64);
-        if (pl == null) return;
-        else if (PlayerManager.HasSave(Steam64, out PlayerSave save))
-        {
-            if (KitManager.KitExists(save.KitName, out Kit kit))
-            {
-                pl.ChangeKit(kit);
-            }
-            else
-            {
-                pl.KitClass = EClass.NONE;
-                pl.Branch = EBranch.DEFAULT;
-                pl.Kit = null;
-            }
-            pl.KitName = save.KitName;
-            pl._otherDonator = save.IsOtherDonator;
-        }
-    }
     private bool isTalking = false;
     private bool lastMuted = false;
 
@@ -632,9 +605,17 @@ public class UCPlayer : IPlayer
         }
         else
         {
-            AccessibleKits = await Data.DatabaseManager.GetAccessibleKits(Steam64);
-            HasDownloadedKits = true;
-            IsDownloadingKits = false;
+            await PurchaseSync.WaitAsync();
+            try
+            {
+                AccessibleKits = await Data.AdminSql.GetAccessibleKits(this);
+                HasDownloadedKits = true;
+                IsDownloadingKits = false;
+            }
+            finally
+            {
+                PurchaseSync.Release();
+            }
         }
     }
 

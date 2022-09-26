@@ -1353,8 +1353,9 @@ public static class EventFunctions
         FPlayerName names = F.GetPlayerOriginalNames(ucplayer.Player.channel.owner);
         try
         {
-            Quests.DailyQuests.DeregisterDailyTrackers(ucplayer);
-            Quests.QuestManager.DeregisterOwnedTrackers(ucplayer);
+            Points.OnPlayerLeft(ucplayer);
+            DailyQuests.DeregisterDailyTrackers(ucplayer);
+            QuestManager.DeregisterOwnedTrackers(ucplayer);
             kit = ucplayer.KitName;
 
             EAdminType type = ucplayer.PermissionLevel;

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -481,39 +482,159 @@ public static class Points
         }
         TryAwardDriverAssist(e, XPConfig.EnemyKilledXP, 1);
     }
-
+    internal static void OnPlayerLeft(UCPlayer caller)
+    {
+        if (Data.RemoteSQL != null && Data.RemoteSQL.Opened)
+            Task.Run(async () =>
+            {
+                await caller.PurchaseSync.WaitAsync();
+                try
+                {
+                    uint t1Xp = 0;
+                    uint t2Xp = 0;
+                    uint t1Cd = 0;
+                    uint t2Cd = 0;
+                    await Data.DatabaseManager.QueryAsync(
+                        "SELECT `Experience`, `Credits`, `Team` FROM `s2_levels` WHERE `Steam64` = @0 LIMIT 2;",
+                        new object[] { caller.Steam64 },
+                        R =>
+                        {
+                            ulong team = R.GetUInt64(2);
+                            if (team == 1)
+                            {
+                                t1Xp = R.GetUInt32(0);
+                                t1Cd = R.GetUInt32(1);
+                            }
+                            else if (team == 2)
+                            {
+                                t2Xp = R.GetUInt32(0);
+                                t2Cd = R.GetUInt32(1);
+                            }
+                        });
+                    await Data.RemoteSQL.NonQueryAsync(
+                        "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, 1, @1, @2), (@0, 2, @3, @4) AS vals " +
+                        "ON DUPLICATE KEY UPDATE `Experience` = vals.Experience, `Credits` = vals.Credits;",
+                        new object[5] { caller.Steam64, t1Xp, t1Cd, t2Xp, t2Cd }).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error trying to sync player levels with remote server.");
+                    L.LogError(ex);
+                }
+                finally
+                {
+                    caller.PurchaseSync.Release();
+                    caller.PurchaseSync.Dispose();
+                    GC.SuppressFinalize(caller);
+                }
+            });
+    }
     public static async Task UpdatePointsAsync(UCPlayer caller)
     {
         if (caller is null) throw new ArgumentNullException(nameof(caller));
-        ulong team = caller.GetTeam();
-        if (team is 1 or 2)
+        caller.IsDownloadingXP = true;
+        await caller.PurchaseSync.WaitAsync();
+        try
         {
-            bool found = false;
-            uint cd = 1;
-            uint xp = 1;
-            await Data.DatabaseManager.QueryAsync(
-                "SELECT `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
-                new object[] { caller.Steam64, team },
-                R =>
+            ulong team = caller.GetTeam();
+            if (team is 1 or 2)
+            {
+                bool found = false;
+                bool found2 = false;
+                uint cd = 1;
+                uint xp = 1;
+                uint cd2 = 1;
+                uint xp2 = 1;
+                Task? t2 = null;
+                if (Data.RemoteSQL != null && Data.RemoteSQL.Opened)
                 {
-                    xp = R.GetUInt32(0);
-                    cd = R.GetUInt32(1);
-                    found = true;
-                });
-            if (!found)
-                return;
-            caller.UpdatePoints(xp, cd);
-            await UCWarfare.ToUpdate();
+                    t2 = Data.RemoteSQL.QueryAsync(
+                        "SELECT `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                        new object[] { caller.Steam64, team },
+                        R =>
+                        {
+                            xp2 = R.GetUInt32(0);
+                            cd2 = R.GetUInt32(1);
+                            found2 = true;
+                        });
+                }
 
-            if (TraitManager.Loaded)
-                TraitSigns.SendAllTraitSigns(caller);
+                await Data.DatabaseManager.QueryAsync(
+                    "SELECT `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+                    new object[] { caller.Steam64, team },
+                    R =>
+                    {
+                        xp = R.GetUInt32(0);
+                        cd = R.GetUInt32(1);
+                        found = true;
+                    });
+                if (found)
+                    caller.UpdatePoints(xp, cd);
+                if (t2 != null)
+                    await t2;
+                if (!found && found2)
+                {
+                    cd = cd2;
+                    xp = xp2;
+                    L.LogWarning(caller.Steam64 +
+                                 " Missing local levels, Remote: (XP: " + xp2 + ", Credits: " + cd2 + ").");
+                }
 
-            if (VehicleBay.Loaded && VehicleSpawner.Loaded && VehicleSigns.Loaded)
-                VehicleSpawner.UpdateSigns(caller);
+                if (cd != cd2 || xp != xp2)
+                {
+                    WarfareSQL? target;
+                    if (found2)
+                    {
+                        L.LogWarning("Inconsistancy between remote and local experience/credit values for " +
+                                     caller.Steam64 +
+                                     " Remote: (XP: " + xp2 + ", Credits: " + cd2 + "), Local: (" + xp + ", " + cd +
+                                     ").");
+                        if (xp2 > xp)
+                        {
+                            xp = xp2;
+                            cd = cd2;
+                            target = Data.DatabaseManager;
+                        }
+                        else
+                            target = Data.RemoteSQL;
+                    }
+                    else target = found ? Data.RemoteSQL : null;
 
-            if (RequestSigns.Loaded)
-                RequestSigns.UpdateAllSigns(caller);
+                    if (target != null && target.Opened)
+                        await target.NonQueryAsync(
+                            "INSERT INTO `s2_levels` (`Steam64`, `Team`, `Experience`, `Credits`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `Experience` = @2, `Credits` = @3;",
+                            new object[4] { caller.Steam64, team, xp, cd }).ConfigureAwait(false);
+                }
+
+                if (!found && !found2)
+                    return;
+                caller.UpdatePoints(xp, cd);
+            }
         }
+        catch (Exception ex)
+        {
+            L.LogError("Error downloading " + caller.Steam64 + " (" + caller.Name.PlayerName + ")'s XP and Credits.");
+            L.LogError(ex);
+            return;
+        }
+        finally
+        {
+            caller.PurchaseSync.Release();
+            caller.IsDownloadingXP = false;
+            caller.HasDownloadedXP = true;
+        }
+        await UCWarfare.ToUpdate();
+        UpdateXPUI(caller);
+        UpdateCreditsUI(caller);
+
+        if (TraitManager.Loaded)
+            TraitSigns.SendAllTraitSigns(caller);
+
+        if (VehicleBay.Loaded && VehicleSpawner.Loaded && VehicleSigns.Loaded)
+            VehicleSpawner.UpdateSigns(caller);
+
+        if (RequestSigns.Loaded)
+            RequestSigns.UpdateAllSigns(caller);
     }
     /*
     public static void AwardSquadXP(UCPlayer ucplayer, float range, int xp, int ofp, string KeyplayerTranslationKey, string squadTranslationKey, float squadMultiplier)
@@ -709,6 +830,7 @@ public static class Points
                     e.Component.LastDamageOrigin, vehicleWasFriendly);
         }
     }
+
 }
 
 public class XPConfig : JSONConfigData

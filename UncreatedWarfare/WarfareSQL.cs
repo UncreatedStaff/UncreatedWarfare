@@ -353,18 +353,26 @@ public class WarfareSQL : MySqlDatabase
         }
         else return old;
     }
-    public async Task<List<string>> GetAccessibleKits(ulong player)
+    public async Task<List<string>> GetAccessibleKits(UCPlayer player)
     {
-        KitManager singleton = KitManager.GetSingleton();
-        List<string> kits = new List<string>();
-        await QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
-            new object[1] { player },
-            R =>
-            {
-                if (singleton.Kits.TryGetValue(R.GetInt32(0), out Kit kit))
-                    kits.Add(kit.Name);
-            });
-        return kits;
+        await player.PurchaseSync.WaitAsync();
+        try
+        {
+            KitManager singleton = KitManager.GetSingleton();
+            List<string> kits = new List<string>();
+            await QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
+                new object[1] { player.Steam64 },
+                R =>
+                {
+                    if (singleton.Kits.TryGetValue(R.GetInt32(0), out Kit kit))
+                        kits.Add(kit.Name);
+                });
+            return kits;
+        }
+        finally
+        {
+            player.PurchaseSync.Release();
+        }
     }
     public Task AddKill(ulong Steam64, ulong Team, int amount = 1)
     {
