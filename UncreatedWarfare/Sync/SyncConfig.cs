@@ -104,7 +104,7 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
         TData? defaults = null;
         lock (sync)
         {
-            if (!File.Exists)
+            if (!System.IO.File.Exists(File.FullName))
                 goto def;
 
             ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(syncId);

@@ -34,7 +34,7 @@ public class LoadCommand : Command
                     if (vehicle.lockedOwner == CSteamID.Nil || vehicle.lockedGroup == CSteamID.Nil)
                         throw ctx.Reply(T.LoadNoTarget);
 
-                    if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data) && data.Type == EVehicleType.LOGISTICS)
+                    if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data) && data.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
                     {
                         if (F.IsInMain(vehicle.transform.position))
                         {

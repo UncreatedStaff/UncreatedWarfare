@@ -203,7 +203,6 @@ public static class Data
         Gamemode.ReadGamemodes();
 
         if (!Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF))) throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Failed to load gamemode"));
-        //ReloadTCP();
 
         if (UCWarfare.Config.EnableReporter)
             Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
@@ -351,7 +350,8 @@ public static class Data
         Gamemode.ConfigObj = new GamemodeConfig();
         Gamemode.WinToastUI = new Gamemodes.UI.WinToastUI();
         IsInitialSyncRegistering = false;
-        ConfigSync.OnInitialSyncRegisteringComplete();
+        if (UCWarfare.Config.EnableSync)
+            ConfigSync.OnInitialSyncRegisteringComplete();
     }
 
     private static void OnSingletonReloaded(IReloadableSingleton singleton, bool success)

@@ -120,12 +120,15 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         UCInventoryManager.OnLoad();
 
-        gameObject.AddComponent<ConfigSync>();
+        if (Config.EnableSync)
+            gameObject.AddComponent<ConfigSync>();
         gameObject.AddComponent<ActionLogger>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
-        ConfigSync.Reflect();
+
+        if (Config.EnableSync)
+            ConfigSync.Reflect();
 
         Data.RegisterInitialSyncs();
 

@@ -66,6 +66,8 @@ public class SystemConfigData : JSONConfigData
     public bool RelayMicsDuringEndScreen;
     [JsonPropertyName("enableSquads")]
     public bool EnableSquads;
+    [JsonPropertyName("enableSync")]
+    public bool EnableSync;
     [JsonPropertyName("loadoutPremiumCost")]
     public float LoadoutCost;
     [JsonPropertyName("vehicleAbandonmentDistance")]
@@ -125,6 +127,7 @@ public class SystemConfigData : JSONConfigData
         EnablePlayerJoinLeaveTeamMessages = false;
         Currency = "USD";
         RegionKey = 255;
+        EnableSync = true;
     }
     public class ModerationConfig
     {
