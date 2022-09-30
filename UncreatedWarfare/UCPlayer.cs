@@ -52,6 +52,7 @@ public class UCPlayer : IPlayer
     public TeamSelectorData? TeamSelectorData;
     public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 5);
     public readonly UCPlayerKeys Keys;
+    public readonly UCPlayerEvents Events;
     private string? _lang;
     internal bool _isLeaving;
     public string Language => _lang ??= Localization.GetLang(Steam64);
@@ -369,6 +370,7 @@ public class UCPlayer : IPlayer
             }
         }
         Keys = new UCPlayerKeys(this);
+        Events = new UCPlayerEvents(this);
     }
     public char Icon
     {
@@ -596,7 +598,7 @@ public class UCPlayer : IPlayer
     end:
         return Name.CharacterName;
     }
-    public async Task DownloadKits()
+    public async Task DownloadKits(bool @lock)
     {
         if (IsDownloadingKits)
         {
@@ -605,16 +607,28 @@ public class UCPlayer : IPlayer
         }
         else
         {
-            await PurchaseSync.WaitAsync();
+            IsDownloadingKits = true;
+            if (@lock)
+                await PurchaseSync.WaitAsync();
             try
             {
-                AccessibleKits = await Data.AdminSql.GetAccessibleKits(this);
-                HasDownloadedKits = true;
-                IsDownloadingKits = false;
+                KitManager singleton = KitManager.GetSingleton();
+                List<string> kits = new List<string>();
+                await Data.AdminSql.QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
+                    new object[1] { Steam64 },
+                    R =>
+                    {
+                        if (singleton.Kits.TryGetValue(R.GetInt32(0), out Kit kit))
+                            kits.Add(kit.Name);
+                    });
+                AccessibleKits = kits;
             }
             finally
             {
-                PurchaseSync.Release();
+                HasDownloadedKits = true;
+                IsDownloadingKits = false;
+                if (@lock)
+                    PurchaseSync.Release();
             }
         }
     }

@@ -31,6 +31,8 @@ public static class EventDispatcher
     public static event EventDelegate<BarricadePlaced> OnBarricadePlaced;
     public static event EventDelegate<LandmineExploding> OnLandmineExploding;
 
+    public static event EventDelegate<ItemDropRequested> OnItemDropRequested;
+
     public static event EventDelegate<ThrowableSpawned> OnThrowableSpawned;
     public static event EventDelegate<ThrowableSpawned> OnThrowableDespawning;
 
@@ -461,6 +463,33 @@ public static class EventDispatcher
             TryInvoke(inv, request, nameof(OnLandmineExploding));
         }
         if (!request.CanContinue) shouldExplode = false;
+    }
+
+    internal static void InvokeOnDropItemRequested(UCPlayer player, PlayerInventory inventory, Item item, ref bool shouldAllow)
+    {
+        if (OnItemDropRequested == null || !shouldAllow) return;
+        byte pageNum = 0, index = 0;
+        bool found = false;
+        for (int i = 0; i < PlayerInventory.PAGES; ++i)
+        {
+            Items page = inventory.items[i];
+            for (int j = 0; j < page.items.Count; ++j)
+            {
+                if (page.items[j].item == item)
+                {
+                    pageNum = i;
+                    index = j;
+                    found = true;
+                }
+            }
+        }
+        ItemDropRequested request = new ItemDropRequested(player, item, shouldAllow);
+        foreach (EventDelegate<ItemDropRequested> inv in OnItemDropRequested.GetInvocationList().Cast<EventDelegate<ItemDropRequested>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnItemDropRequested));
+        }
+        if (!request.CanContinue) shouldAllow = false;
     }
     internal static void InvokeOnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup)
     {

@@ -529,11 +529,12 @@ public static class Points
                 }
             });
     }
-    public static async Task UpdatePointsAsync(UCPlayer caller)
+    public static async Task UpdatePointsAsync(UCPlayer caller, bool @lock)
     {
         if (caller is null) throw new ArgumentNullException(nameof(caller));
         caller.IsDownloadingXP = true;
-        await caller.PurchaseSync.WaitAsync();
+        if (@lock)
+            await caller.PurchaseSync.WaitAsync();
         try
         {
             ulong team = caller.GetTeam();
@@ -619,7 +620,8 @@ public static class Points
         }
         finally
         {
-            caller.PurchaseSync.Release();
+            if (@lock)
+                caller.PurchaseSync.Release();
             caller.IsDownloadingXP = false;
             caller.HasDownloadedXP = true;
         }

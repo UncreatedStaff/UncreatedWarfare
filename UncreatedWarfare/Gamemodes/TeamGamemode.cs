@@ -53,10 +53,6 @@ public abstract class TeamGamemode : Gamemode, ITeams
 
         base.PreGameStarting(isOnLoad);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
-    {
-        base.PlayerInit(player, wasAlreadyOnline);
-    }
     protected override void OnReady()
     {
         TeamManager.CheckGroups();
@@ -262,7 +258,6 @@ public abstract class TeamGamemode : Gamemode, ITeams
 
         base.OnAsyncInitComplete(player);
     }
-
     public virtual void OnJoinTeam(UCPlayer player, ulong team)
     {
         if (team is 1 or 2 && _state == EState.STAGING)

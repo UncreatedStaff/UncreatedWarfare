@@ -201,7 +201,7 @@ public static class KitSync
                 return;
             try
             {
-                await player.DownloadKits();
+                await player.DownloadKits(true);
                 L.Log("Received access update notification for player: \"" + player.Name.PlayerName + "\" and redownloaded their kits.");
                 ctx.Acknowledge();
             }

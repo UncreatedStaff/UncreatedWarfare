@@ -48,13 +48,12 @@ public class BuyCommand : Command
 
             Task.Run(async () =>
             {
-                if (!ctx.Caller.HasDownloadedKits)
-                    await ctx.Caller.DownloadKits();
-
                 await ctx.Caller.PurchaseSync.WaitAsync();
+                if (!ctx.Caller.HasDownloadedKits)
+                    await ctx.Caller.DownloadKits(false);
                 try
                 {
-                    await Points.UpdatePointsAsync(ctx.Caller);
+                    await Points.UpdatePointsAsync(ctx.Caller, false);
                     if (ctx.Caller.CachedCredits < kit.CreditCost)
                     {
                         await UCWarfare.ToUpdate();

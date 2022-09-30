@@ -539,7 +539,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
                 await ctx.Caller.PurchaseSync.WaitAsync();
                 try
                 {
-                    await Points.UpdatePointsAsync(ctx.Caller);
+                    await Points.UpdatePointsAsync(ctx.Caller, false);
                     if (ctx.Caller.CachedCredits < trait.CreditCost)
                     {
                         await UCWarfare.ToUpdate();

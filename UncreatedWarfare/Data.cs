@@ -413,17 +413,6 @@ public static class Data
         Task.Run(OffenseManager.OnConnected).ConfigureAwait(false);
         ConfigSync.OnConnected(connection);
     }
-    private static void DuplicateKeyError(Exception ex)
-    {
-        string[] stuff = ex.Message.Split(':');
-        string badKey = "unknown";
-        if (stuff.Length >= 2) badKey = stuff[1].Trim();
-        L.LogError("\"" + badKey + "\" has a duplicate key in default translations, unable to load them. Unloading...");
-        L.LogError(ex);
-        if (ex.InnerException != default)
-            L.LogError(ex.InnerException);
-        throw new SingletonLoadException(ESingletonLoadType.LOAD, UCWarfare.I, ex);
-    }
     public class NetCalls
     {
         public static readonly NetCallRaw<WarfareServerInfo> SendServerInfo = new NetCallRaw<WarfareServerInfo>(1008, WarfareServerInfo.Read, WarfareServerInfo.Write);

@@ -523,8 +523,8 @@ public static class EventFunctions
                 try
                 {
                     Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
-                    Task t2 = Points.UpdatePointsAsync(ucplayer);
-                    Task t3 = ucplayer.DownloadKits();
+                    Task t2 = Points.UpdatePointsAsync(ucplayer, false);
+                    Task t3 = ucplayer.DownloadKits(false);
                     Task t4 = OffenseManager.ApplyMuteSettings(ucplayer);
                     await Data.DatabaseManager.RegisterLogin(ucplayer.Player);
                     await t1;
@@ -537,10 +537,18 @@ public static class EventFunctions
                     ucplayer.PurchaseSync.Release();
                 }
                 await UCWarfare.ToUpdate();
-                RequestSigns.UpdateAllSigns(ucplayer);
-                VehicleSpawner.UpdateSigns(ucplayer);
-                Points.UpdateCreditsUI(ucplayer);
-                Points.UpdateXPUI(ucplayer);
+                try
+                {
+                    RequestSigns.UpdateAllSigns(ucplayer);
+                    VehicleSpawner.UpdateSigns(ucplayer);
+                    Points.UpdateCreditsUI(ucplayer);
+                    Points.UpdateXPUI(ucplayer);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error updating GUI after OnAsyncInitComplete:");
+                    L.LogError(ex);
+                }
                 try
                 {
                     Data.Gamemode.InternalOnAsyncInitComplete(ucplayer);

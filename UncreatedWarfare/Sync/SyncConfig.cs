@@ -12,7 +12,8 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
     private readonly object sync = new object();
     private bool _regReload = false;
     private readonly int syncId;
-    public TData Data { get; } = new TData();
+    private TData _data = UCWarfare.Config.EnableSync ? new TData() : null!;
+    public TData Data { get => _data; }
     public virtual bool DontReplicate => Warfare.Data.IsInitialSyncRegistering;
     public string? ReloadKey { get; }
     public FileInfo File { get; }
@@ -24,13 +25,16 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
             ReloadKey = reloadKey;
             _regReload = ReloadCommand.RegisterConfigForReload(this);
         }
-        if (Attribute.GetCustomAttribute(typeof(TData), typeof(SyncAttribute)) == null)
-            throw new ArgumentException("To use SyncConfig, you must apply the Sync attribute to the config data class (" + typeof(TData).Name + ") with a unique ID.", nameof(TData));
         File = new FileInfo(path);
-        ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(typeof(TData));
-        if (data is null || !ConfigSync.RegisterSingleton(Data))
-            throw new ArgumentException("Unable to find the associated class data with the type provided (" + typeof(TData).Name + ").", nameof(TData));
-        syncId = data.SyncId;
+        if (UCWarfare.Config.EnableSync)
+        {
+            if (Attribute.GetCustomAttribute(typeof(TData), typeof(SyncAttribute)) == null)
+                throw new ArgumentException("To use SyncConfig, you must apply the Sync attribute to the config data class (" + typeof(TData).Name + ") with a unique ID.", nameof(TData));
+            ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(typeof(TData));
+            if (data is null || !ConfigSync.RegisterSingleton(Data))
+                throw new ArgumentException("Unable to find the associated class data with the type provided (" + typeof(TData).Name + ").", nameof(TData));
+            syncId = data.SyncId;
+        }
 
         Read();
     }
@@ -44,7 +48,7 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
     }
     public void LoadDefaults()
     {
-        Data.SetDefaults();
+        (_data ??= new TData()).SetDefaults();
         Write();
     }
     public void Reload()
@@ -64,35 +68,42 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
         {
             using FileStream stream = new FileStream(File.FullName, FileMode.Create, FileAccess.Write, FileShare.Read);
             using Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-            ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(syncId);
-            if (data is null)
+            if (UCWarfare.Config.EnableSync)
             {
-                L.LogWarning("Unable to find ConfigSync data for " + typeof(TData).Name + " when writing.");
-                return;
-            }
-
-            writer.WriteStartObject();
-            foreach (KeyValuePair<int, ConfigSync.ConfigSyncInst.Property> property in data.SyncedMembers)
-            {
-                writer.WritePropertyName(property.Value.JsonName);
-                object? val = property.Value.Getter(Data);
-                if (val is null)
-                    writer.WriteNullValue();
-                else
+                ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(syncId);
+                if (data is null)
                 {
-                    try
+                    L.LogWarning("Unable to find ConfigSync data for " + typeof(TData).Name + " when writing.");
+                    return;
+                }
+
+                writer.WriteStartObject();
+                foreach (KeyValuePair<int, ConfigSync.ConfigSyncInst.Property> property in data.SyncedMembers)
+                {
+                    writer.WritePropertyName(property.Value.JsonName);
+                    object? val = property.Value.Getter(Data);
+                    if (val is null)
+                        writer.WriteNullValue();
+                    else
                     {
-                        JsonSerializer.Serialize(writer, val, property.Value.PropertyInfo.PropertyType, JsonEx.serializerSettings);
-                    }
-                    catch (Exception ex)
-                    {
-                        L.LogError("Error serializing " + property.Value.JsonName + " (" + property.Value.PropertyInfo.DeclaringType.Name + "." + property.Value.PropertyInfo.Name + ").");
-                        L.LogError(ex);
-                        throw;
+                        try
+                        {
+                            JsonSerializer.Serialize(writer, val, property.Value.PropertyInfo.PropertyType, JsonEx.serializerSettings);
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError("Error serializing " + property.Value.JsonName + " (" + property.Value.PropertyInfo.DeclaringType.Name + "." + property.Value.PropertyInfo.Name + ").");
+                            L.LogError(ex);
+                            throw;
+                        }
                     }
                 }
+                writer.WriteEndObject();
             }
-            writer.WriteEndObject();
+            else
+            {
+                JsonSerializer.Serialize(writer, Data, JsonEx.serializerSettings);
+            }
             writer.Flush();
         }
     }
@@ -101,19 +112,10 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking("Sync Config: " + typeof(TData).Name + " (Read)");
 #endif
-        TData? defaults = null;
         lock (sync)
         {
             if (!System.IO.File.Exists(File.FullName))
                 goto def;
-
-            ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(syncId);
-            if (data is null)
-            {
-                L.LogWarning("Unable to find ConfigSync data for " + typeof(TData).Name + " when reading.");
-                return;
-            }
-
             using (FileStream stream = new FileStream(File.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 if (stream.Length > int.MaxValue)
@@ -123,74 +125,85 @@ public class SyncConfig<TData> : IConfiguration<TData>, ISyncObject where TData 
                 Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
                 if (!reader.Read())
                     goto def;
-
-                List<int> vals = new List<int>(data.SyncedMembers.Count);
-                if (reader.TokenType == JsonTokenType.StartObject)
+                if (UCWarfare.Config.EnableSync)
                 {
-                    while (reader.Read())
+                    TData? defaults = null;
+                    ConfigSync.ConfigSyncInst? data = ConfigSync.GetClassData(syncId);
+                    if (data is null)
                     {
-                        if (reader.TokenType == JsonTokenType.PropertyName)
+                        L.LogWarning("Unable to find ConfigSync data for " + typeof(TData).Name + " when reading.");
+                        return;
+                    }
+
+                    List<int> vals = new List<int>(data.SyncedMembers.Count);
+                    if (reader.TokenType == JsonTokenType.StartObject)
+                    {
+                        while (reader.Read())
                         {
-                            string prop = reader.GetString()!;
-                            if (prop != null && reader.Read())
+                            if (reader.TokenType == JsonTokenType.PropertyName)
                             {
-                                bool found = false;
-                                foreach (KeyValuePair<int, ConfigSync.ConfigSyncInst.Property> propData in data.SyncedMembers)
+                                string prop = reader.GetString()!;
+                                if (prop != null && reader.Read())
                                 {
-                                    if (propData.Value.JsonName.Equals(prop, StringComparison.Ordinal))
+                                    bool found = false;
+                                    foreach (KeyValuePair<int, ConfigSync.ConfigSyncInst.Property> propData in data.SyncedMembers)
                                     {
-                                        found = true;
-                                        object? value;
-                                        if (reader.TokenType == JsonTokenType.Null)
-                                            value = null;
-                                        else
+                                        if (propData.Value.JsonName.Equals(prop, StringComparison.Ordinal))
                                         {
-                                            try
+                                            found = true;
+                                            object? value;
+                                            if (reader.TokenType == JsonTokenType.Null)
+                                                value = null;
+                                            else
                                             {
-                                                value = JsonSerializer.Deserialize(ref reader, propData.Value.PropertyInfo.PropertyType, JsonEx.serializerSettings);
+                                                try
+                                                {
+                                                    value = JsonSerializer.Deserialize(ref reader, propData.Value.PropertyInfo.PropertyType, JsonEx.serializerSettings);
+                                                }
+                                                catch (Exception ex)
+                                                {
+                                                    L.LogError("Error deserializing " + propData.Value.JsonName + " (" + propData.Value.PropertyInfo.DeclaringType.Name + "." + propData.Value.PropertyInfo.Name + ").");
+                                                    L.LogError(ex);
+                                                    throw;
+                                                }
                                             }
-                                            catch (Exception ex)
-                                            {
-                                                L.LogError("Error deserializing " + propData.Value.JsonName + " (" + propData.Value.PropertyInfo.DeclaringType.Name + "." + propData.Value.PropertyInfo.Name + ").");
-                                                L.LogError(ex);
-                                                throw;
-                                            }
+                                            ConfigSync.SetPropertySilent(data, propData.Value, value, false, applyToSave: !Warfare.Data.IsInitialSyncRegistering, pushAsNew: true);
+                                            vals.Add(propData.Key);
+                                            break;
                                         }
-                                        ConfigSync.SetPropertySilent(data, propData.Value, value, false, applyToSave: !Warfare.Data.IsInitialSyncRegistering, pushAsNew: true);
-                                        vals.Add(propData.Key);
-                                        break;
                                     }
+                                    if (!found)
+                                        L.LogWarning("Unknown property \"" + prop + "\" in config for " + typeof(TData).Name + ": " + File.FullName + ".");
                                 }
-                                if (!found)
-                                    L.LogWarning("Unknown property \"" + prop + "\" in config for " + typeof(TData).Name + ": " + File.FullName + ".");
                             }
                         }
                     }
+                    else
+                        throw new JsonException("Unexpected token in config file " + typeof(TData).Name + ": " + File.FullName + ".");
+                    foreach (KeyValuePair<int, ConfigSync.ConfigSyncInst.Property> propData in data.SyncedMembers)
+                    {
+                        for (int i = 0; i < vals.Count; i++)
+                        {
+                            if (vals[i] == propData.Key)
+                                goto c;
+                        }
+
+                        (defaults ??= new TData()).SetDefaults();
+                        ConfigSync.SetPropertySilent(data, propData.Value, propData.Value.Getter(defaults), false, applyToSave: !Warfare.Data.IsInitialSyncRegistering, pushAsNew: true);
+                    c:;
+                    }
+                    if (defaults is not null)
+                    {
+                        Save();
+                        if (defaults is IDisposable disp)
+                            disp.Dispose();
+                    }
                 }
                 else
-                    throw new JsonException("Unexpected token in config file " + typeof(TData).Name + ": " + File.FullName + ".");
-                foreach (KeyValuePair<int, ConfigSync.ConfigSyncInst.Property> propData in data.SyncedMembers)
                 {
-                    for (int i = 0; i < vals.Count; i++)
-                    {
-                        if (vals[i] == propData.Key)
-                            goto c;
-                    }
-                    if (defaults is null)
-                    {
-                        defaults = new TData();
-                        defaults.SetDefaults();
-                    }
-                    ConfigSync.SetPropertySilent(data, propData.Value, propData.Value.Getter(defaults), false, applyToSave: !Warfare.Data.IsInitialSyncRegistering, pushAsNew: true);
-                c:;
+                    _data = JsonSerializer.Deserialize<TData>(ref reader, JsonEx.serializerSettings) ?? throw new JsonException("Failed to read config file " + typeof(TData).Name + ": " + File.FullName + ", returned null.");
                 }
             }
-        }
-        if (defaults is not null)
-        {
-            Save();
-            if (defaults is IDisposable disp)
-                disp.Dispose();
         }
         return;
     def:

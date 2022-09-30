@@ -405,7 +405,7 @@ public class RequestCommand : Command
                     await ucplayer.PurchaseSync.WaitAsync();
                     try
                     {
-                        await Points.UpdatePointsAsync(ucplayer);
+                        await Points.UpdatePointsAsync(ucplayer, false);
                         if (ucplayer.CachedCredits >= data.CreditCost)
                         {
                             await Points.AwardCreditsAsync(ucplayer, -data.CreditCost, isPurchase: true);

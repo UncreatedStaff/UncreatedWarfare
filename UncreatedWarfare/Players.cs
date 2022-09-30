@@ -126,6 +126,17 @@ public enum EToastMessageSeverity : byte
     TIP = 7
 }
 
+public sealed class UCPlayerEvents
+{
+    public UCPlayer Player { get; }
+    public UCPlayerEvents(UCPlayer player)
+    {
+        this.Player = player;
+        Player.Player.inventory.onDropItemRequested += OnDropItemRequested;
+    }
+
+    private void OnDropItemRequested(PlayerInventory inventory, Item item, ref bool shouldAllow) => EventDispatcher.InvokeOnDropItemRequested(Player, inventory, item, ref shouldAllow);
+}
 public sealed class UCPlayerKeys
 {
     private static readonly int KEY_COUNT = 10 + ControlsSettings.NUM_PLUGIN_KEYS;
