@@ -135,7 +135,9 @@ internal class ProjectileSolver : MonoBehaviour
             seconds = i * Time.fixedDeltaTime;
             if (seconds - lastSent > 0.25f)
             {
+#if DEBUG
                 EffectManager.sendEffect(36130, Level.size * 2, transform.gameObject.transform.position);
+#endif
                 lastSent = seconds;
             }
             _physxScene.Simulate(Time.fixedDeltaTime);
