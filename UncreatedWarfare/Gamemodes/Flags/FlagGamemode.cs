@@ -10,8 +10,6 @@ namespace Uncreated.Warfare.Gamemodes.Flags;
 
 public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 {
-    protected int _counter;
-    protected int _counter2;
     protected List<Flag> _rotation = new List<Flag>();
     protected List<Flag> _allFlags = new List<Flag>();
     public Dictionary<ulong, int> _onFlag = new Dictionary<ulong, int>();
@@ -21,14 +19,12 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     public virtual bool AllowPassengersToCapture => false;
     public FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
     { }
-    protected abstract bool TimeToCheck();
+    protected abstract bool TimeToEvaluatePoints();
     protected override void PostDispose()
     {
         ResetFlags();
         _onFlag.Clear();
         _rotation.Clear();
-        _counter = 0;
-        _counter2 = 0;
         base.PostDispose();
     }
     protected override void OnReady()
@@ -46,8 +42,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        bool ttc = TimeToCheck();
-
         for (int i = 0; i < _rotation.Count; i++)
         {
             if (_rotation[i] == null) continue;
@@ -57,13 +51,13 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             foreach (Player player in newPlayers)
                 AddPlayerOnFlag(player, _rotation[i]);
         }
-        if (ttc)
+        if (TimeToEvaluatePoints())
         {
             EvaluatePoints();
             if (EnableAMC)
-                CheckPlayersAMC();
+                CheckMainCampZones();
             OnEvaluate();
-            Teams.TeamManager.EvaluateBases();
+            TeamManager.EvaluateBases();
         }
     }
     protected void ConvertFlags()

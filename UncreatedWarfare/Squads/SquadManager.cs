@@ -44,7 +44,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
     {
         base.Load();
         Squads.Clear();
-        KitManager.OnKitChanged += OnKitChanged;
+        KitManager.OnPlayersKitChanged += OnKitChanged;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
         EventDispatcher.OnPlayerLeaving += OnPlayerLeaving;
         Commanders = new Commanders();
@@ -62,7 +62,7 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
         ClearSquads();
         EventDispatcher.OnPlayerLeaving -= OnPlayerLeaving;
         EventDispatcher.OnGroupChanged -= OnGroupChanged;
-        KitManager.OnKitChanged -= OnKitChanged;
+        KitManager.OnPlayersKitChanged -= OnKitChanged;
         Commanders = null!;
     }
     private void ClearSquads()

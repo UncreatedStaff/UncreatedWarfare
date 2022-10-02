@@ -2227,6 +2227,7 @@ public sealed class TranslationDataAttribute : Attribute
     private string? _description;
     private string? _section;
     private string[]? _formatArgs;
+    private bool _announcerTranslation = false;
     public TranslationDataAttribute()
     {
 
@@ -2251,6 +2252,7 @@ public sealed class TranslationDataAttribute : Attribute
     public string? Description { get => _description; set => _description = value; }
     public string? Section { get => _section; set => _section = value; }
     public string[]? FormattingDescriptions { get => _formatArgs; set => _formatArgs = value; }
+    public bool IsAnnounced { get => _announcerTranslation; set => _announcerTranslation = value; }
 }
 
 [AttributeUsage(AttributeTargets.Field, Inherited = false, AllowMultiple = true)]

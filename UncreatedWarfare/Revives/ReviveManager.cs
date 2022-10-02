@@ -191,13 +191,14 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.PrivateStance == null || Data.ReplicateStance == null)
+        if (Data.SetPrivateStance == null || Data.ReplicateStance == null)
         {
             player.stance.checkStance(stance);
             L.LogWarning("Unable to set stance properly, fell back to checkStance.");
+            return;
         }
-        Data.PrivateStance?.SetValue(player.stance, stance);
-        Data.ReplicateStance?.Invoke(player.stance, new object[] { false });
+        Data.SetPrivateStance!(player.stance, stance);
+        Data.ReplicateStance.Invoke(player.stance, new object[] { false });
     }
     internal void OnPlayerHealed(Player medic, Player target)
     {

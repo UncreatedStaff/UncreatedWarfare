@@ -51,7 +51,7 @@ public class LoadCommand : Command
                                 else if (ctx.MatchParameter(0, "ammo")) type = ESupplyType.AMMO;
                                 else throw ctx.Reply(T.LoadUsage);
 
-                                if (c.forceSupplyLoop == null)
+                                if (c.ForceSupplyLoop == null)
                                     c.StartForceLoadSupplies(ctx.Caller, type, amount);
 
                                 ctx.LogAction(EActionLogType.LOAD_SUPPLIES, type.ToString() + " x" + amount);

@@ -103,33 +103,33 @@ public static class Data
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     internal static MethodInfo ReplicateStance;
-    internal static FieldInfo PrivateStance;
-    internal static FieldInfo ItemManagerInstanceCount;
     internal static ICommandInputOutput? defaultIOHandler;
     public static Reporter Reporter;
     public static DeathTracker DeathTracker;
     //internal static HomebaseClient? NetClient;
-    internal static ClientStaticMethod<byte, byte, uint> SendTakeItem;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearShirt;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearPants;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearHat;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearBackpack;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearVest;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearMask;
-    internal static ClientInstanceMethod<Guid, byte, byte[], bool> SendWearGlasses;
+    internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearPants;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearHat;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearBackpack;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearVest;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearMask;
+    internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearGlasses;
+    internal static ClientInstanceMethod<string> SendChangeText;
+    internal static ClientStaticMethod SendMultipleBarricades;
+    internal static ClientStaticMethod SendEffectClearAll;
+    internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
     public static bool UseFastKits = false;
-    internal static ClientInstanceMethod SendInventory;
+    internal static ClientInstanceMethod? SendInventory;
     internal delegate void OutputToConsole(string value, ConsoleColor color);
     internal static OutputToConsole? OutputToConsoleMethod;
     internal static SingletonManager Singletons;
+    internal static InstanceSetter<PlayerStance, EPlayerStance> SetPrivateStance;
     internal static InstanceSetter<PlayerInventory, bool> SetOwnerHasInventory;
     internal static InstanceGetter<PlayerInventory, bool> GetOwnerHasInventory;
     internal static InstanceGetter<Items, bool[,]> GetItemsSlots;
+    internal static StaticGetter<uint> GetItemManagerInstanceCount;
     public static bool IsInitialSyncRegistering { get; private set; } = true;
-    internal static ClientInstanceMethod<string> SendChangeText { get; private set; }
-    internal static ClientStaticMethod SendMultipleBarricades { get; private set; }
-    internal static ClientStaticMethod SendEffectClearAll { get; private set; }
-    internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual { get; private set; }
     public static WarfareSQL AdminSql => RemoteSQL ?? DatabaseManager;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -211,60 +211,41 @@ public static class Data
         DeathTracker = Singletons.LoadSingleton<DeathTracker>(false);
 
         /* REFLECT PRIVATE VARIABLES */
-        L.Log("Getting client calls...", ConsoleColor.Magenta);
-        FieldInfo updateSignInfo;
-        FieldInfo sendRegionInfo;
-        FieldInfo sendChatInfo;
-        FieldInfo clearAllUiInfo;
-        FieldInfo sendTakeItemInfo;
+        L.Log("Getting RPCs...", ConsoleColor.Magenta);
+        IDisposable indent = L.IndentLog(1);
+        SendChangeText          = F.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
+        SendMultipleBarricades  = F.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
+        SendChatIndividual      = F.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
+        SendEffectClearAll      = F.GetRPC<ClientStaticMethod, EffectManager>("SendEffectClearAll", true)!;
+        SendDestroyItem         = F.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
+        SendInventory           = F.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
+        SendWearShirt           = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
+        SendWearPants           = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
+        SendWearHat             = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearHat");
+        SendWearBackpack        = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearBackpack");
+        SendWearVest            = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
+        SendWearMask            = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
+        SendWearGlasses         = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
+        UseFastKits = true;
+        if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null || SendInventory is null)
+        {
+            L.LogWarning("Unable to gather all the RPCs needed for Fast Kits, kits will not work as quick.");
+            UseFastKits = false;
+        }
+
+        GetItemManagerInstanceCount = F.GenerateStaticGetter<ItemManager, uint>("instanceCount", BindingFlags.NonPublic);
+        SetPrivateStance = F.GenerateInstanceSetter<PlayerStance, EPlayerStance>("_stance", BindingFlags.NonPublic);
         try
         {
-            updateSignInfo = typeof(InteractableSign).GetField("SendChangeText", BindingFlags.NonPublic | BindingFlags.Static);
-            SendChangeText = (ClientInstanceMethod<string>)updateSignInfo.GetValue(null);
+            SetOwnerHasInventory = F.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
+            GetOwnerHasInventory = F.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
+            GetItemsSlots = F.GenerateInstanceGetter<Items, bool[,]>("slots", BindingFlags.NonPublic);
         }
         catch (Exception ex)
         {
-            L.LogError("Couldn't get SendUpdateSign from BarricadeManager:");
+            UseFastKits = false;
+            L.LogWarning("Couldn't generate a setter method for ownerHasInventory, kits will not work as quick.");
             L.LogError(ex);
-            L.LogError("The sign translation system will likely not work!");
-        }
-        try
-        {
-            sendRegionInfo = typeof(BarricadeManager).GetField("SendMultipleBarricades", BindingFlags.NonPublic | BindingFlags.Static);
-            SendMultipleBarricades = (ClientStaticMethod)sendRegionInfo.GetValue(null);
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Couldn't get SendMultipleBarricades from BarricadeManager:");
-            L.LogError(ex);
-            L.LogError("The sign translation system will likely not work!");
-        }
-        try
-        {
-            sendChatInfo = typeof(ChatManager).GetField("SendChatEntry", BindingFlags.NonPublic | BindingFlags.Static);
-            SendChatIndividual = (ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>)sendChatInfo.GetValue(null);
-        }
-        catch (Exception ex)
-        {
-            L.LogWarning("Couldn't get SendChatEntry from ChatManager, the chat message will default to the vanilla implementation. (" + ex.Message + ").");
-        }
-        try
-        {
-            clearAllUiInfo = typeof(EffectManager).GetField("SendEffectClearAll", BindingFlags.NonPublic | BindingFlags.Static);
-            SendEffectClearAll = (ClientStaticMethod)clearAllUiInfo.GetValue(null);
-        }
-        catch (Exception ex)
-        {
-            L.LogWarning("Couldn't get SendEffectClearAll from EffectManager, failed to get send effect clear all. (" + ex.Message + ").");
-        }
-        try
-        {
-            sendTakeItemInfo = typeof(ItemManager).GetField("SendTakeItem", BindingFlags.NonPublic | BindingFlags.Static);
-            SendTakeItem = (ClientStaticMethod<byte, byte, uint>)sendTakeItemInfo.GetValue(null);
-        }
-        catch (Exception ex)
-        {
-            L.LogWarning("Couldn't get SendTakeItem from ItemManager, ammo item clearing won't work. (" + ex.Message + ").");
         }
         try
         {
@@ -274,65 +255,7 @@ public static class Data
         {
             L.LogWarning("Couldn't get replicateState from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
         }
-        try
-        {
-            ItemManagerInstanceCount = typeof(ItemManager).GetField("instanceCount", BindingFlags.Static | BindingFlags.NonPublic);
-        }
-        catch (Exception ex)
-        {
-            L.LogWarning("Couldn't get instanceCount from ItemManager, ammo item clearing won't work. (" + ex.Message + ").");
-        }
-        try
-        {
-            PrivateStance = typeof(PlayerStance).GetField("_stance", BindingFlags.Instance | BindingFlags.NonPublic);
-        }
-        catch (Exception ex)
-        {
-            L.LogWarning("Couldn't get state from PlayerStance, players will spawn while prone. (" + ex.Message + ").");
-        }
-
-        UseFastKits = false;
-        try
-        {
-            SendInventory = (typeof(PlayerInventory).GetField("SendInventory", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod)!;
-        }
-        catch (Exception ex)
-        {
-            UseFastKits |= true;
-            L.LogWarning("Couldn't get SendInventory from PlayerInventory, kits will not work as quick. (" + ex.Message + ").");
-        }
-
-        try
-        {
-            SendWearShirt = (typeof(PlayerClothing).GetField("SendWearShirt", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
-            SendWearPants = (typeof(PlayerClothing).GetField("SendWearPants", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
-            SendWearHat = (typeof(PlayerClothing).GetField("SendWearHat", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
-            SendWearBackpack = (typeof(PlayerClothing).GetField("SendWearBackpack", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
-            SendWearVest = (typeof(PlayerClothing).GetField("SendWearVest", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
-            SendWearMask = (typeof(PlayerClothing).GetField("SendWearMask", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
-            SendWearGlasses = (typeof(PlayerClothing).GetField("SendWearGlasses", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) as ClientInstanceMethod<Guid, byte, byte[], bool>)!;
-            if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null)
-                UseFastKits |= true;
-        }
-        catch (Exception ex)
-        {
-            UseFastKits |= true;
-            L.LogWarning("Couldn't get one of the SendWear______ methods from PlayerInventory, kits will not work as quick. (" + ex.Message + ").");
-        }
-
-        try
-        {
-            SetOwnerHasInventory = F.GenerateInstanceSetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
-            GetOwnerHasInventory = F.GenerateInstanceGetter<PlayerInventory, bool>("ownerHasInventory", BindingFlags.NonPublic);
-            GetItemsSlots = F.GenerateInstanceGetter<Items, bool[,]>("slots", BindingFlags.NonPublic);
-        }
-        catch (Exception ex)
-        {
-            UseFastKits |= true;
-            L.LogWarning("Couldn't generate a setter method for ownerHasInventory, kits will not work as quick. (" + ex.Message + ").");
-            L.LogError(ex);
-        }
-        UseFastKits = !UseFastKits;
+        indent.Dispose();
 
         /* REGISTER STATS MANAGER */
         StatsManager.LoadTeams();
@@ -342,8 +265,11 @@ public static class Data
         for (int i = 0; i < Provider.clients.Count; i++)
             StatsManager.RegisterPlayer(Provider.clients[i].playerID.steamID.m_SteamID);
 
-        Quests.QuestManager.Init();
-        Quests.DailyQuests.Load();
+        if (!UCWarfare.Config.DisableDailyQuests)
+        {
+            Quests.QuestManager.Init();
+            Quests.DailyQuests.Load();
+        }
     }
     internal static void RegisterInitialSyncs()
     {
@@ -407,7 +333,8 @@ public static class Data
         L.Log("Established a verified connection to HomeBase.", ConsoleColor.DarkYellow);
         PlayerManager.NetCalls.SendPlayerList.NetInvoke(PlayerManager.GetPlayerList());
         ActionLogger.OnConnected();
-        Quests.DailyQuests.OnConnectedToServer();
+        if (!UCWarfare.Config.DisableDailyQuests)
+            Quests.DailyQuests.OnConnectedToServer();
         if (Gamemode != null && Gamemode.shutdownAfterGame)
             ShutdownCommand.NetCalls.SendShuttingDownAfter.NetInvoke(Gamemode.shutdownPlayer, Gamemode.shutdownMessage);
         Task.Run(OffenseManager.OnConnected).ConfigureAwait(false);

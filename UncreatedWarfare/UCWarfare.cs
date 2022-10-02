@@ -39,7 +39,7 @@ public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version = new Version(3, 0, 0, 1);
+    public static readonly Version Version = new Version(2, 7, 0, 0);
     private readonly SystemConfig _config = new SystemConfig();
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
@@ -134,7 +134,8 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         InitNetClient();
 
-        Quests.DailyQuests.EarlyLoad();
+        if (!Config.DisableDailyQuests)
+            Quests.DailyQuests.EarlyLoad();
 
         ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
     }
@@ -249,6 +250,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Data.Gamemode?.Subscribe();
         StatsManager.LoadEvents();
 
+        GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
         EventDispatcher.OnPlayerJoined += EventFunctions.OnPostPlayerConnected;
         EventDispatcher.OnPlayerLeaving += EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
@@ -278,6 +280,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         EventDispatcher.OnVehicleSwapSeat += EventFunctions.OnVehicleSwapSeat;
         EventDispatcher.OnExitVehicle += EventFunctions.OnPlayerLeavesVehicle;
         EventDispatcher.OnLandmineExploding += EventFunctions.OnLandmineExploding;
+        EventDispatcher.OnItemDropRequested += EventFunctions.OnItemDropRequested;
         VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
@@ -294,6 +297,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Data.Gamemode?.Unsubscribe();
         EventDispatcher.UnsubscribeFromAll();
 
+        GameUpdateMonitor.OnGameUpdateDetected -= EventFunctions.OnGameUpdateDetected;
         ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
         EventDispatcher.OnPlayerJoined -= EventFunctions.OnPostPlayerConnected;
         EventDispatcher.OnPlayerLeaving -= EventFunctions.OnPlayerDisconnected;
@@ -319,6 +323,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
         BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
         StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
+        EventDispatcher.OnItemDropRequested -= EventFunctions.OnItemDropRequested;
         EventDispatcher.OnLandmineExploding -= EventFunctions.OnLandmineExploding;
         EventDispatcher.OnEnterVehicle -= EventFunctions.OnEnterVehicle;
         EventDispatcher.OnVehicleSwapSeat -= EventFunctions.OnVehicleSwapSeat;

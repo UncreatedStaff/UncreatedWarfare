@@ -221,7 +221,8 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        DailyQuests.Tick();
+        if (!UCWarfare.Config.DisableDailyQuests)
+            DailyQuests.Tick();
         for (int i = 0; i < RegisteredTrackers.Count; i++)
         {
             BaseQuestTracker tracker = RegisteredTrackers[i];
@@ -252,7 +253,10 @@ public static class QuestManager
         }
         ActionLogger.Add(EActionLogType.COMPLETE_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
-            DailyQuests.OnDailyQuestCompleted(tracker);
+        {
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.OnDailyQuestCompleted(tracker);
+        }
         else
         {
             if (tracker.PresetKey != default)
@@ -279,7 +283,10 @@ public static class QuestManager
         }
         ActionLogger.Add(EActionLogType.MAKE_QUEST_PROGRESS, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
-            DailyQuests.OnDailyQuestUpdated(tracker);
+        {
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.OnDailyQuestUpdated(tracker);
+        }
         else
         {
             if (tracker.Preset != null)

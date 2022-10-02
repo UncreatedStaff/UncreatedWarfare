@@ -12,16 +12,22 @@ namespace Uncreated.Warfare
         public static class LifePatches
         {
             // SDG.Unturned.PlayerLife
-            /// <summary>Prefix of <see cref="PlayerLife.askStarve(byte)"/> to invoke prevent starving in main base.</summary>
+            /// <summary>Prefix of <see cref="PlayerLife.askStarve(byte)"/> to prevent starving in main base.</summary>
             [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askStarve))]
             [HarmonyPrefix]
-            static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => !(Data.Gamemode is TeamGamemode) || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
+            static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
 
             // SDG.Unturned.PlayerLife
-            /// <summary>Prefix of <see cref="PlayerLife.askDehydrate(byte)"/> to invoke prevent dehydrating in main base.</summary>
+            /// <summary>Prefix of <see cref="PlayerLife.askDehydrate(byte)"/> to prevent dehydrating in main base.</summary>
             [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askDehydrate))]
             [HarmonyPrefix]
-            static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !(Data.Gamemode is TeamGamemode) || !Teams.TeamManager.IsInMainOrLobby(__instance.player);
+            static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
+
+            // SDG.Unturned.PlayerLife
+            /// <summary>Prefix of <see cref="PlayerLife.askTire(byte)"/> to prevent tiring in main base.</summary>
+            [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askTire))]
+            [HarmonyPrefix]
+            static bool OnPlayerTireTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
 
             // SDG.Unturned.PlayerLife
             /// <summary>

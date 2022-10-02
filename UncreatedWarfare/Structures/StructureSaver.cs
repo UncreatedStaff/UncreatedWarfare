@@ -15,33 +15,6 @@ public class StructureSaver : ListSingleton<SavedStructure>, ILevelStartListener
     public StructureSaver() : base("structures", Path.Combine(Data.Paths.StructureStorage, "structures.json")) { }
     public override void Load()
     {
-#if false // migrate old structures file
-        string path = Path.Combine(Data.Paths.StructureStorage, "structures_formigrate.json");
-        if (File.Exists(path))
-        {
-            using (FileStream str = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-            {
-                byte[] bytes = new byte[str.Length];
-                str.Read(bytes, 0, bytes.Length);
-                Utf8JsonReader reader = new Utf8JsonReader(bytes);
-                if (reader.Read() && reader.TokenType == JsonTokenType.StartArray)
-                {
-                    while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                    {
-                        if (reader.TokenType == JsonTokenType.StartObject)
-                        {
-                            OldStructure next = OldStructure.ReadStructure(ref reader);
-                            Add(next.Upgrade);
-                            while (reader.TokenType != JsonTokenType.EndObject && reader.Read()) ;
-                        }
-                    }
-                }
-            }
-
-            Save();
-            File.Move(path, Path.Combine(Data.Paths.StructureStorage, "structures - Copy.json"));
-        }
-#endif
         Singleton = this;
     }
     public override void Unload()

@@ -56,13 +56,13 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
 
 
 
-        KitManager.OnKitChanged += OnKitChagned;
+        KitManager.OnPlayersKitChanged += OnKitChagned;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
     }
     public override void Unload()
     {
         EventDispatcher.OnGroupChanged -= OnGroupChanged;
-        KitManager.OnKitChanged -= OnKitChagned;
+        KitManager.OnPlayersKitChanged -= OnKitChagned;
         if (ActiveTraits != null)
         {
             for (int j = ActiveTraits.Count - 1; j >= 0; --j)

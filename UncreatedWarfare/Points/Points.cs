@@ -827,7 +827,7 @@ public static class Points
 
             Data.Reporter?.OnVehicleDied(e.OwnerId,
                     VehicleSpawner.HasLinkedSpawn(e.Vehicle.instanceID, out Vehicles.VehicleSpawn spawn)
-                        ? spawn.SpawnPadInstanceID
+                        ? spawn.InstanceId
                         : uint.MaxValue, e.InstigatorId, e.Vehicle.asset.GUID, e.Component.LastItem,
                     e.Component.LastDamageOrigin, vehicleWasFriendly);
         }

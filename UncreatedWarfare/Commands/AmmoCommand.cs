@@ -95,8 +95,8 @@ public class AmmoCommand : Command
                 _ => 1
             };
 
-            if (barricade.asset.GUID == Gamemode.Config.BarricadeAmmoCrate.Value.Guid ||
-                (Data.Is<Insurgency>() && barricade.asset.GUID == Gamemode.Config.BarricadeInsurgencyCache.Value.Guid))
+            if (Gamemode.Config.BarricadeAmmoCrate.MatchGuid(barricade.asset.GUID) ||
+                (Data.Is<Insurgency>() && Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(barricade.asset.GUID)))
             {
                 if (TeamManager.Team1Faction.Ammo is null || !TeamManager.Team1Faction.Ammo.Exists || TeamManager.Team2Faction.Ammo is null || !TeamManager.Team2Faction.Ammo.Exists)
                 {
@@ -134,13 +134,12 @@ public class AmmoCommand : Command
                 }
                 else
                 {
-                    fob.ReduceAmmo(1);
+                    fob.ReduceAmmo(ammoCost);
                     ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BOX");
                     ctx.Reply(T.AmmoResuppliedKit, ammoCost, fob.Ammo);
                 }
-
             }
-            else if (Gamemode.Config.BarricadeAmmoBag.Value.Guid == barricade.asset.GUID)
+            else if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(barricade.asset.GUID))
             {
                 if (barricade.model.TryGetComponent(out AmmoBagComponent ammobag))
                 {
@@ -185,7 +184,7 @@ public class AmmoCommand : Command
                             ItemData it = ItemManager.regions[x, y].items[index];
                             if (it.item.id == build1 || it.item.id == build2 || it.item.id == ammo1 || it.item.id == ammo2) continue;
 
-                            Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i]);
+                            Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable, Regions.EnumerateClients(x, y, ItemManager.ITEM_REGIONS), x, y, instances[i], false);
                             ItemManager.regions[x, y].items.RemoveAt(index);
                         }
                     }

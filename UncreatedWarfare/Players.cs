@@ -125,17 +125,24 @@ public enum EToastMessageSeverity : byte
     PROGRESS = 6,
     TIP = 7
 }
-
-public sealed class UCPlayerEvents
+public sealed class UCPlayerEvents : IDisposable
 {
-    public UCPlayer Player { get; }
+    public UCPlayer Player { get; private set; }
     public UCPlayerEvents(UCPlayer player)
     {
         this.Player = player;
         Player.Player.inventory.onDropItemRequested += OnDropItemRequested;
     }
+    public void Dispose()
+    {
+        if (Player.Player != null)
+        {
+            Player.Player.inventory.onDropItemRequested -= OnDropItemRequested;
+        }
 
-    private void OnDropItemRequested(PlayerInventory inventory, Item item, ref bool shouldAllow) => EventDispatcher.InvokeOnDropItemRequested(Player, inventory, item, ref shouldAllow);
+        Player = null!;
+    }
+    private void OnDropItemRequested(PlayerInventory inventory, Item item, ref bool shouldAllow) => EventDispatcher.InvokeOnDropItemRequested(Player ?? UCPlayer.FromPlayer(inventory.player)!, inventory, item, ref shouldAllow);
 }
 public sealed class UCPlayerKeys
 {

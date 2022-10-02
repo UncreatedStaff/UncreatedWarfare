@@ -292,7 +292,8 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        CheckPlayersAMC();
+        if (EveryXSeconds(Config.AASFlagTickSeconds))
+            CheckMainCampZones();
         TeamManager.EvaluateBases();
         if (State == EState.ACTIVE)
             TicketManager.Provider.Tick();

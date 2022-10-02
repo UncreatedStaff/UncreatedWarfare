@@ -471,14 +471,14 @@ public class VehicleBayCommand : Command
             VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
-                VehicleSpawner.DeleteSpawn(spawn.SpawnPadInstanceID, spawn.type);
-                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleID);
+                VehicleSpawner.DeleteSpawn(spawn.InstanceId, spawn.StructureType);
+                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleGuid);
                 if (asset is not null)
                     ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                                               $"UNREGISTERED SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                                                               $"UNREGISTERED SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{spawn.VehicleID:N} - " +
-                        $"UNREGISTERED SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                    ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{spawn.VehicleGuid:N} - " +
+                        $"UNREGISTERED SPAWN ID: {spawn.InstanceId}");
                 ctx.Reply(T.VehicleBaySpawnDeregistered, asset!);
             }
             else if (ctx.TryGetTarget(out BarricadeDrop _) || ctx.TryGetTarget(out StructureDrop _))
@@ -503,13 +503,13 @@ public class VehicleBayCommand : Command
                 }
                 else
                 {
-                    asset = Assets.find(spawn.VehicleID) as VehicleAsset;
+                    asset = Assets.find(spawn.VehicleGuid) as VehicleAsset;
                 }
                 if (asset != null)
                     ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                                               $"FORCED VEHICLE TO SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                                                               $"FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleID:N} - FORCED VEHICLE TO SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                    ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleGuid:N} - FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
                 spawn.SpawnVehicle();
                 ctx.Reply(T.VehicleBayForceSuccess, asset!);
             }
@@ -537,12 +537,12 @@ public class VehicleBayCommand : Command
                         if (c2 != null)
                         {
                             ctx.LogAction(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
-                                $"LINKED TO SPAWN AT {c2.transform.position:N2} ID: {c.currentlylinking.SpawnPadInstanceID}");
+                                $"LINKED TO SPAWN AT {c2.transform.position:N2} ID: {c.currentlylinking.InstanceId}");
                         }
                         else
                         {
                             ctx.LogAction(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
-                                $"LINKED TO SPAWN ID: {c.currentlylinking.SpawnPadInstanceID}");
+                                $"LINKED TO SPAWN ID: {c.currentlylinking.InstanceId}");
                         }
                         VehicleSigns.LinkSign(sign, c.currentlylinking);
                         ctx.Reply(T.VehicleBayLinkFinished,
@@ -550,7 +550,7 @@ public class VehicleBayCommand : Command
                                 ? null
                                 : (c2.Spawn is null
                                     ? null
-                                    : Assets.find<VehicleAsset>(c2.Spawn.VehicleID)))!);
+                                    : Assets.find<VehicleAsset>(c2.Spawn.VehicleGuid)))!);
                         c.currentlylinking = null;
                     }
                     else
@@ -589,7 +589,7 @@ public class VehicleBayCommand : Command
             if (sign is not null && sign.SignDrop is not null && sign.SignDrop.interactable is InteractableSign sign2)
             {
                 VehicleSigns.UnlinkSign(sign2);
-                ctx.Reply(T.VehicleBayUnlinked, (sign.bay is null ? null : Assets.find<VehicleAsset>(sign.bay.VehicleID))!);
+                ctx.Reply(T.VehicleBayUnlinked, (sign.VehicleBay is null ? null : Assets.find<VehicleAsset>(sign.VehicleBay.VehicleGuid))!);
             }
             else
                 ctx.Reply(T.VehicleBayNoTarget);
@@ -601,8 +601,8 @@ public class VehicleBayCommand : Command
             VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
-                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleID);
-                ctx.Reply(T.VehicleBayCheck, spawn.SpawnPadInstanceID, asset!, asset == null ? (ushort)0 : asset.id);
+                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleGuid);
+                ctx.Reply(T.VehicleBayCheck, spawn.InstanceId, asset!, asset == null ? (ushort)0 : asset.id);
             }
             else
                 ctx.Reply(T.VehicleBaySpawnNotRegistered);
@@ -627,7 +627,7 @@ public class VehicleBayCommand : Command
                 {
                     if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
                     {
-                        if (sign2.bay is not null && VehicleBay.VehicleExists(sign2.bay.VehicleID, out data))
+                        if (sign2.VehicleBay is not null && VehicleBay.VehicleExists(sign2.VehicleBay.VehicleGuid, out data))
                         {
                             return data;
                         }
@@ -635,15 +635,15 @@ public class VehicleBayCommand : Command
                 }
             }
             if ((VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn) &&
-                VehicleBay.VehicleExists(spawn.VehicleID, out data)) ||
+                VehicleBay.VehicleExists(spawn.VehicleGuid, out data)) ||
                 (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) &&
-                VehicleBay.VehicleExists(spawn.VehicleID, out data)))
+                VehicleBay.VehicleExists(spawn.VehicleGuid, out data)))
                 return data;
             else return null;
         }
         if (ctx.TryGetTarget(out drop2))
         {
-            return VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) && VehicleBay.VehicleExists(spawn.VehicleID, out data) ? data : null;
+            return VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) && VehicleBay.VehicleExists(spawn.VehicleGuid, out data) ? data : null;
         }
         return null;
     }
@@ -663,8 +663,8 @@ public class VehicleBayCommand : Command
                 {
                     if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
                     {
-                        if (sign2.bay is not null)
-                            return sign2.bay;
+                        if (sign2.VehicleBay is not null)
+                            return sign2.VehicleBay;
                     }
                 }
             }

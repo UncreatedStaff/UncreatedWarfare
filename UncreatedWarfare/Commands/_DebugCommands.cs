@@ -750,13 +750,13 @@ internal class _DebugCommand : Command
 
         if (ctx.TryGetRange(0, out string text) && ctx.TryGetTarget(out BarricadeDrop drop) && drop.interactable is InteractableSign sign)
         {
-            BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
-            if (RequestSigns.Loaded && RequestSigns.SignExists(sign, out RequestSign sign2))
+            if (!RequestSigns.Loaded || !RequestSigns.SignExists(sign, out _))
             {
-                sign2.SignText = text;
-                RequestSigns.SaveSingleton();
+                BarricadeManager.ServerSetSignText(sign, text.Replace("\\n", "\n"));
+                Signs.BroadcastSignUpdate(drop);
             }
-            Signs.BroadcastSignUpdate(drop);
+            else
+                ctx.ReplyString("Unable to set text on a request sign. Not supported.");
         }
     }
 #if DEBUG

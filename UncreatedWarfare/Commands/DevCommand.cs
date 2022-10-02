@@ -154,9 +154,9 @@ public class DevCommand : Command
 
                 L.Log($"{vehicle.asset.vehicleName.ToUpper()}");
 
-                L.Log($"    Is In VehicleBay: {component.isInVehiclebay}\n");
+                L.Log($"    Is In VehicleBay: {component.IsInVehiclebay}\n");
 
-                if (component.isInVehiclebay)
+                if (component.IsInVehiclebay)
                 {
                     L.Log($"    Team: {component.Data.Team}");
                     L.Log($"    Type: {component.Data.Type}");

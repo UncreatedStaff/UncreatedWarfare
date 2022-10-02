@@ -61,18 +61,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
         else if (player.AccessibleKits is not null)
             CheckAccess(player.AccessibleKits, ref t1Donor, ref t2Donor);
         if (player.TeamSelectorData is null)
-        {
             player.TeamSelectorData = new TeamSelectorData(false, t1Donor, t2Donor);
-        }
         else
         {
-            if (player.TeamSelectorData.IsTeam1Donator != t1Donor || player.TeamSelectorData.IsTeam2Donator != t2Donor)
-            {
-                player.TeamSelectorData.IsTeam1Donator = t1Donor;
-                player.TeamSelectorData.IsTeam2Donator = t2Donor;
-                if (player.TeamSelectorData.IsSelecting)
-                    OnDonorsChanged(player);
-            }
+            player.TeamSelectorData.IsTeam1Donator = t1Donor;
+            player.TeamSelectorData.IsTeam2Donator = t2Donor;
         }
 
         JoinSelectionMenu(player);
@@ -284,7 +277,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
     private void SetButtonState(UCPlayer player, ulong team, bool hasSpace)
     {
         ITransportConnection c = player.Connection;
-        if (team is 1)
+        if (team == 1)
         {
             if (player.TeamSelectorData!.IsTeam1Donator)
                 hasSpace = true;
@@ -292,7 +285,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             JoinUI.Team1Select.SetText(c,
                 (hasSpace ? (player.TeamSelectorData!.IsTeam1Donator ? T.TeamsUIClickToJoinDonor : T.TeamsUIClickToJoin) : T.TeamsUIFull).Translate(player));
         }
-        else if (team is 2)
+        else if (team == 2)
         {
             if (player.TeamSelectorData!.IsTeam2Donator)
                 hasSpace = true;
@@ -393,7 +386,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
     {
         for (int i = 0; i < kits.Count; ++i)
         {
-            if (KitManager.KitExists(kits[i], out Kit kit) && kit.IsPremium || kit.IsLoadout)
+            if (KitManager.KitExists(kits[i], out Kit kit) && (kit.IsPremium || kit.IsLoadout))
             {
                 if (kit.Team == 0)
                 {

@@ -17,16 +17,20 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
 
-public delegate void KitChangedHandler(UCPlayer player, Kit kit, string oldKit);
 public class KitManager : BaseReloadSingleton
 {
     private static readonly byte[] GUID_BUFFER = new byte[16];
     internal readonly SemaphoreSlim _threadLocker = new SemaphoreSlim(1, 5);
-    public static event KitChangedHandler OnKitChanged;
+    public static event KitChangedCallback? OnPlayersKitChanged;
+    public static event KitCallback? OnKitCreated;
+    public static event KitCallback? OnKitDeleted;
+    public static event KitCallback? OnKitUpdated;
+    public static event KitAccessCallback? OnKitAccessChanged;
     public Dictionary<int, Kit> Kits = new Dictionary<int, Kit>(256);
     private static KitManager _singleton;
     public static bool Loaded => _singleton.IsLoaded();
@@ -79,6 +83,11 @@ public class KitManager : BaseReloadSingleton
         }
         return sb.ToString();
     }
+    public static float GetDefaultTeamLimit(EClass @class) => @class switch
+    {
+        EClass.HAT => 0.1f,
+        _ => 1f
+    };
     public override void Unload()
     {
         _isLoaded = false;
@@ -101,12 +110,12 @@ public class KitManager : BaseReloadSingleton
         kit.Cooldown = reader.GetInt32(11);
         kit.Disabled = reader.GetBoolean(12);
         kit.Weapons = reader.GetString(13);
+        kit.SquadLevel = (ESquadLevel)reader.GetByte(14);
         kit.Items = new List<KitItem>(12);
         kit.Clothes = new List<KitClothing>(5);
         kit.SignTexts = new Dictionary<string, string>(1);
         kit.UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
         kit.Skillsets = Array.Empty<Skillset>();
-        kit.SquadLevel = (ESquadLevel)reader.GetByte(14);
     }
     private static void ReadToKitItem(MySqlDataReader reader, KitItem item)
     {
@@ -276,14 +285,14 @@ public class KitManager : BaseReloadSingleton
                         L.LogWarning("Invalid skillset for kit " + kitPk.ToString());
                 }
             });
-            await Data.AdminSql.QueryAsync("SELECT * FROM `kit_lang`;", Array.Empty<object>(), R =>
+            await Data.AdminSql.QueryAsync("SELECT `Kit`, `Language`, `Text` FROM `kit_lang`;", Array.Empty<object>(), R =>
             {
-                int kitPk = R.GetInt32(1);
+                int kitPk = R.GetInt32(0);
                 if (Kits.TryGetValue(kitPk, out Kit kit))
                 {
-                    string lang = R.GetString(2);
+                    string lang = R.GetString(1);
                     if (!kit.SignTexts.ContainsKey(lang))
-                        kit.SignTexts.Add(lang, R.GetString(3));
+                        kit.SignTexts.Add(lang, R.GetString(2));
                     else
                         L.LogWarning("Duplicate translation for kit " + kit.Name + " (" + kit.PrimaryKey +
                                      ") for language " + lang);
@@ -352,7 +361,7 @@ public class KitManager : BaseReloadSingleton
                 int pk = -1;
                 await Data.DatabaseManager.QueryAsync(
                     "INSERT INTO `kit_data` (`InternalName`, `Class`, `Branch`, `Team`, `CreditCost`, " +
-                    "`UnlockLevel`, `IsPremium`, `PremiumCost`, `IsLoadout`, `TeamLimit`, `Cooldown`, `Disabled`, `WeaponText`" + (hasPk ? ", `pk`" : string.Empty) + ") VALUES " +
+                    "`UnlockLevel`, `IsPremium`, `PremiumCost`, `IsLoadout`, `TeamLimit`, `Cooldown`, `Disabled`, `WeaponText`, `SquadLevel`" + (hasPk ? ", `pk`" : string.Empty) + ") VALUES " +
                     "(@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12, @13" + (hasPk ? ", @14" : string.Empty) + ")" +
                     "ON DUPLICATE KEY UPDATE " +
                     "`InternalName` = @0, `Class` = @1, `Branch` = @2, `Team` = @3, `CreditCost` = @4, `UnlockLevel` = @5, `IsPremium` = @6, `PremiumCost` = @7, `IsLoadout` = @8, " +
@@ -396,8 +405,8 @@ public class KitManager : BaseReloadSingleton
                         kit.TeamLimit,
                         kit.Cooldown,
                         kit.Disabled,
-                        (byte)kit.SquadLevel,
-                        kit.Weapons
+                        kit.Weapons,
+                        (byte)kit.SquadLevel
                     }, R =>
                     {
                         pk = R.GetInt32(0);
@@ -1092,7 +1101,7 @@ public class KitManager : BaseReloadSingleton
             //Points.OnBranchChanged(player, oldBranch, kit.Branch);
         }
 
-        OnKitChanged?.Invoke(player, kit, oldkit);
+        OnPlayersKitChanged?.Invoke(player, kit, oldkit);
         if (oldkit != null && oldkit != string.Empty)
             UpdateSigns(oldkit);
         UpdateSigns(kit);
@@ -1361,7 +1370,7 @@ public class KitManager : BaseReloadSingleton
                 {
                     for (int i = 0; i < RequestSigns.Singleton.Count; i++)
                     {
-                        if (RequestSigns.Singleton[i].kit_name.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
+                        if (RequestSigns.Singleton[i].KitName.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
                             RequestSigns.Singleton[i].InvokeUpdate();
                     }
                 }
@@ -1369,7 +1378,7 @@ public class KitManager : BaseReloadSingleton
                 {
                     for (int i = 0; i < RequestSigns.Singleton.Count; i++)
                     {
-                        if (RequestSigns.Singleton[i].kit_name.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
+                        if (RequestSigns.Singleton[i].KitName.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
                             RequestSigns.Singleton[i].InvokeUpdate(player);
                     }
                 }
@@ -1388,7 +1397,7 @@ public class KitManager : BaseReloadSingleton
             {
                 for (int i = 0; i < RequestSigns.Singleton.Count; i++)
                 {
-                    if (RequestSigns.Singleton[i].kit_name.Equals(kitId, StringComparison.Ordinal))
+                    if (RequestSigns.Singleton[i].KitName.Equals(kitId, StringComparison.Ordinal))
                         RequestSigns.Singleton[i].InvokeUpdate();
                 }
             }
@@ -1396,7 +1405,7 @@ public class KitManager : BaseReloadSingleton
             {
                 for (int i = 0; i < RequestSigns.Singleton.Count; i++)
                 {
-                    if (RequestSigns.Singleton[i].kit_name.StartsWith(kitId, StringComparison.Ordinal))
+                    if (RequestSigns.Singleton[i].KitName.Equals(kitId, StringComparison.Ordinal))
                         RequestSigns.Singleton[i].InvokeUpdate(player);
                 }
             }
@@ -1468,7 +1477,46 @@ public class KitManager : BaseReloadSingleton
             return (loadout, 0);
         }
     }
+    internal static void InvokeKitCreated(Kit kit)
+    {
+        OnKitCreated?.Invoke(kit);
+        if (UCWarfare.Config.EnableSync)
+        {
+            KitSync.OnKitUpdated(kit.Name);
+        }
+    }
+
+    internal static void InvokeKitDeleted(Kit kit)
+    {
+        OnKitDeleted?.Invoke(kit);
+        if (UCWarfare.Config.EnableSync)
+        {
+            KitSync.OnKitDeleted(kit.Name);
+        }
+    }
+
+    internal static void InvokeKitUpdated(Kit kit)
+    {
+        OnKitUpdated?.Invoke(kit);
+        if (UCWarfare.Config.EnableSync)
+        {
+            KitSync.OnKitUpdated(kit.Name);
+        }
+    }
+
+    internal static void InvokeKitAccessUpdated(Kit kit, ulong player)
+    {
+        OnKitAccessChanged?.Invoke(kit, player);
+        if (UCWarfare.Config.EnableSync)
+        {
+            KitSync.OnAccessChanged(player);
+        }
+    }
 }
+
+public delegate void KitCallback(Kit kit);
+public delegate void KitAccessCallback(Kit kit, ulong player);
+public delegate void KitChangedCallback(UCPlayer player, Kit kit, string oldKit);
 public static class KitEx
 {
     public static bool HasItemOfID(this Kit kit, Guid ID) => kit.Items.Exists(i => i.Id == ID);

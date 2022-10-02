@@ -90,6 +90,8 @@ public class SystemConfigData : JSONConfigData
     public bool EnablePlayerJoinLeaveMessages;
     [JsonPropertyName("playerJoinLeaveTeamMessages")]
     public bool EnablePlayerJoinLeaveTeamMessages;
+    [JsonPropertyName("timeBetweenAnnouncements")]
+    public float SecondsBetweenAnnouncements;
 
     public override void SetDefaults()
     {
@@ -125,9 +127,11 @@ public class SystemConfigData : JSONConfigData
         DisableDailyQuests = false;
         EnablePlayerJoinLeaveMessages = false;
         EnablePlayerJoinLeaveTeamMessages = false;
+        Region = "eus";
         Currency = "USD";
         RegionKey = 255;
         EnableSync = true;
+        SecondsBetweenAnnouncements = 60f;
     }
     public class ModerationConfig
     {

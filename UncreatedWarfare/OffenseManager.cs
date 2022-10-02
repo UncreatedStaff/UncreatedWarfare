@@ -25,6 +25,7 @@ namespace Uncreated.Warfare;
 
 public static class OffenseManager
 {
+    private static volatile int version = 0;
     // calls the type initializer
     internal static void Init()
     {
@@ -280,7 +281,7 @@ public static class OffenseManager
                     string path = GetSavePath(index);
                     using (FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
                     {
-                        JsonSerializer.Serialize(str, col, JsonEx.serializerSettings);
+                        JsonSerializer.Serialize(str, col, JsonEx.condensedSerializerSettings);
                     }
                 }
             }
@@ -299,7 +300,7 @@ public static class OffenseManager
                     T[]? t;
                     using (FileStream str = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        t = JsonSerializer.Deserialize<T[]>(str, JsonEx.serializerSettings);
+                        t = JsonSerializer.Deserialize<T[]>(str, JsonEx.condensedSerializerSettings);
                     }
                     if (t is null) return;
                     col.AddRange(t);
@@ -310,182 +311,194 @@ public static class OffenseManager
 
     internal static async Task OnConnected()
     {
-        ITimestampOffense[] stamps = _pendingBans
-            .Cast<ITimestampOffense>()
-            .Concat(_pendingUnbans
-                .Cast<ITimestampOffense>())
-            .Concat(_pendingKicks
-                .Cast<ITimestampOffense>())
-            .Concat(_pendingWarnings
-                .Cast<ITimestampOffense>())
-            .Concat(_pendingMutes
-                .Cast<ITimestampOffense>())
-            .Concat(_pendingBattlEyeKicks
-                .Cast<ITimestampOffense>())
-            .Concat(_pendingTeamkills
-                .Cast<ITimestampOffense>())
-            .Concat(_pendingVehicleTeamkills
-                .Cast<ITimestampOffense>())
-            .Concat(_pendingUnmutes
-                .Cast<ITimestampOffense>())
-            .OrderBy(x => x.Timestamp)
-            .ToArray();
-
-        if (stamps.Length == 0)
-        {
-            L.Log("No queued past offenses.", ConsoleColor.Magenta);
-            return;
-        }
-
-        L.Log("Sending past offenses, " + stamps.Length.ToString(Data.Locale) + " queued.", ConsoleColor.Magenta);
-        int ct = Math.Max(1, stamps.Length / 10);
-        int num = 0;
+        int v = ++version;
         try
         {
-            for (int i = 0; i < stamps.Length; ++i)
+            ITimestampOffense[] stamps = _pendingBans
+                .Cast<ITimestampOffense>()
+                .Concat(_pendingUnbans
+                    .Cast<ITimestampOffense>())
+                .Concat(_pendingKicks
+                    .Cast<ITimestampOffense>())
+                .Concat(_pendingWarnings
+                    .Cast<ITimestampOffense>())
+                .Concat(_pendingMutes
+                    .Cast<ITimestampOffense>())
+                .Concat(_pendingBattlEyeKicks
+                    .Cast<ITimestampOffense>())
+                .Concat(_pendingTeamkills
+                    .Cast<ITimestampOffense>())
+                .Concat(_pendingVehicleTeamkills
+                    .Cast<ITimestampOffense>())
+                .Concat(_pendingUnmutes
+                    .Cast<ITimestampOffense>())
+                .OrderBy(x => x.Timestamp)
+                .ToArray();
+
+            if (stamps.Length == 0)
             {
-                await UCWarfare.ToUpdate();
-                bool brk = false;
-                switch (stamps[i])
+                L.Log("No queued past offenses.", ConsoleColor.Magenta);
+                return;
+            }
+
+            L.Log("Sending past offenses, " + stamps.Length.ToString(Data.Locale) + " queued.", ConsoleColor.Magenta);
+            int ct = Math.Max(1, stamps.Length / 10);
+            try
+            {
+                for (int i = 0; i < stamps.Length; ++i)
                 {
-                    case Ban ban:
-                        if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBanned.Request(NetCalls.AckPlayerBanned,
-                                UCWarfare.I.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp,
-                                10000)).Responded)
-                        {
-                            _pendingBans.RemoveAt(i);
-                            Save<Ban>(0);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send ban #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
+                    if (version != v)
+                    {
+                        L.LogWarning("Cancelling active send job.");
+                        return;
+                    }
+                    await UCWarfare.ToUpdate();
+                    bool brk = false;
+                    switch (stamps[i])
+                    {
+                        case Ban ban:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerBanned.Request(NetCalls.AckPlayerBanned,
+                                    UCWarfare.I.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp,
+                                    10000)).Responded)
+                            {
+                                _pendingBans.RemoveAt(i);
+                                Save<Ban>(0);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send ban #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Unban unban:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned,
+                                    UCWarfare.I.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
+                            {
+                                _pendingUnbans.RemoveAt(i);
+                                Save<Unban>(1);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send unban #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Kick kick:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerKicked.Request(NetCalls.AckPlayerKicked,
+                                    UCWarfare.I.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000))
+                                .Responded)
+                            {
+                                _pendingKicks.RemoveAt(i);
+                                Save<Kick>(2);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send kick #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Warn warn:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerWarned.Request(NetCalls.AckPlayerWarned,
+                                    UCWarfare.I.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000))
+                                .Responded)
+                            {
+                                _pendingWarnings.RemoveAt(i);
+                                Save<Warn>(3);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send warn #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Mute mute:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerMuted.Request(NetCalls.AckPlayerMuted,
+                                    UCWarfare.I.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason,
+                                    mute.Timestamp, 10000)).Responded)
+                            {
+                                _pendingMutes.RemoveAt(i);
+                                Save<Mute>(4);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send mute #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case BattlEyeKick bekick:
+                            if (UCWarfare.CanUseNetCall &&
+                                (await NetCalls.SendPlayerBattleyeKicked.Request(NetCalls.AckPlayerBattleyeKicked,
+                                    UCWarfare.I.NetClient!, bekick.Violator, bekick.Reason, bekick.Timestamp,
+                                    10000)).Responded)
+                            {
+                                _pendingBattlEyeKicks.RemoveAt(i);
+                                Save<BattlEyeKick>(5);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Teamkill teamkill:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendTeamkill.Request(NetCalls.AckTeamkill,
+                                    UCWarfare.I.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause,
+                                    teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
+                            {
+                                _pendingTeamkills.RemoveAt(i);
+                                Save<BattlEyeKick>(6);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case VehicleTeamkill vehicleTeamkill:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendVehicleTeamkilled.Request(
+                                    NetCalls.AckVehicleTeamkill, UCWarfare.I.NetClient!, vehicleTeamkill.Violator,
+                                    vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000))
+                                .Responded)
+                            {
+                                _pendingVehicleTeamkills.RemoveAt(i);
+                                Save<VehicleTeamkill>(7);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                        case Unmute unmute:
+                            if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.Request(NetCalls.AckPlayerUnmuted,
+                                    UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
+                            {
+                                _pendingUnmutes.RemoveAt(i);
+                                Save<Unmute>(8);
+                            }
+                            else
+                            {
+                                L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
+                                brk = true;
+                            }
+                            break;
+                    }
+                    if (brk)
                         break;
-                    case Unban unban:
-                        if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned,
-                                UCWarfare.I.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
-                        {
-                            _pendingUnbans.RemoveAt(i);
-                            Save<Unban>(1);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send unban #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
-                        break;
-                    case Kick kick:
-                        if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerKicked.Request(NetCalls.AckPlayerKicked,
-                                UCWarfare.I.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000))
-                            .Responded)
-                        {
-                            _pendingKicks.RemoveAt(i);
-                            Save<Kick>(2);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send kick #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
-                        break;
-                    case Warn warn:
-                        if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerWarned.Request(NetCalls.AckPlayerWarned,
-                                UCWarfare.I.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000))
-                            .Responded)
-                        {
-                            _pendingWarnings.RemoveAt(i);
-                            Save<Warn>(3);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send warn #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
-                        break;
-                    case Mute mute:
-                        if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerMuted.Request(NetCalls.AckPlayerMuted,
-                                UCWarfare.I.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason,
-                                mute.Timestamp, 10000)).Responded)
-                        {
-                            _pendingMutes.RemoveAt(i);
-                            Save<Mute>(4);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send mute #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
-                        break;
-                    case BattlEyeKick bekick:
-                        if (UCWarfare.CanUseNetCall &&
-                            (await NetCalls.SendPlayerBattleyeKicked.Request(NetCalls.AckPlayerBattleyeKicked,
-                                UCWarfare.I.NetClient!, bekick.Violator, bekick.Reason, bekick.Timestamp,
-                                10000)).Responded)
-                        {
-                            _pendingBattlEyeKicks.RemoveAt(i);
-                            Save<BattlEyeKick>(5);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send battleye kick #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
-                        break;
-                    case Teamkill teamkill:
-                        if (UCWarfare.CanUseNetCall && (await NetCalls.SendTeamkill.Request(NetCalls.AckTeamkill,
-                                UCWarfare.I.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause,
-                                teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
-                        {
-                            _pendingTeamkills.RemoveAt(i);
-                            Save<BattlEyeKick>(6);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send teamkill #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
-                        break;
-                    case VehicleTeamkill vehicleTeamkill:
-                        if (UCWarfare.CanUseNetCall && (await NetCalls.SendVehicleTeamkilled.Request(
-                                NetCalls.AckVehicleTeamkill, UCWarfare.I.NetClient!, vehicleTeamkill.Violator,
-                                vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000))
-                            .Responded)
-                        {
-                            _pendingVehicleTeamkills.RemoveAt(i);
-                            Save<VehicleTeamkill>(7);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send vehicle teamkill #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
-                        break;
-                    case Unmute unmute:
-                        if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.Request(NetCalls.AckPlayerUnmuted,
-                                UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
-                        {
-                            _pendingUnmutes.RemoveAt(i);
-                            Save<Unmute>(8);
-                        }
-                        else
-                        {
-                            L.LogWarning("  Failed to send unmute #" + i.ToString(Data.Locale) + "!");
-                            brk = true;
-                        }
-                        break;
+                    if (i % ct == 0)
+                        L.Log("  Sending past offenses: " + i.ToString(Data.Locale) + "/" +
+                              stamps.Length.ToString(Data.Locale), ConsoleColor.Magenta);
                 }
-                if (brk)
-                    break;
-                ++num;
-                if (num % ct == 0)
-                    L.Log("  Sending past offenses: " + num.ToString(Data.Locale) + "/" +
-                          stamps.Length.ToString(Data.Locale), ConsoleColor.Magenta);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error sending past offenses.");
+                L.LogError(ex);
             }
         }
         catch (Exception ex)
         {
-            L.LogError("Error sending past offenses.");
+            L.LogError("Error sending offenses.");
             L.LogError(ex);
         }
     }
@@ -990,8 +1003,6 @@ public static class OffenseManager
     private interface ITimestampOffense
     {
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
     }
 
     private struct Ban : ITimestampOffense
@@ -1001,8 +1012,6 @@ public static class OffenseManager
         public string Reason;
         public int Duration;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public Ban(ulong violator, ulong admin, string reason, int duration, DateTime timestamp)
         {
@@ -1018,8 +1027,6 @@ public static class OffenseManager
         public ulong Violator;
         public ulong Admin;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public Unban(ulong violator, ulong admin, DateTime timestamp)
         {
@@ -1034,8 +1041,6 @@ public static class OffenseManager
         public ulong Admin;
         public string Reason;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public Kick(ulong violator, ulong admin, string reason, DateTime timestamp)
         {
@@ -1051,8 +1056,6 @@ public static class OffenseManager
         public ulong Admin;
         public string Reason;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public Warn(ulong violator, ulong admin, string reason, DateTime timestamp)
         {
@@ -1070,8 +1073,6 @@ public static class OffenseManager
         public int Duration;
         public string Reason;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public Mute(ulong violator, ulong admin, EMuteType muteType, int duration, string reason, DateTime timestamp)
         {
@@ -1088,8 +1089,6 @@ public static class OffenseManager
         public ulong Violator;
         public string Reason;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public BattlEyeKick(ulong violator, string reason, DateTime timestamp)
         {
@@ -1105,8 +1104,6 @@ public static class OffenseManager
         public string DeathCause;
         public string ItemName;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public Teamkill(ulong violator, ulong dead, string deathCause, string itemName, DateTime timestamp)
         {
@@ -1123,8 +1120,6 @@ public static class OffenseManager
         public ushort VehicleID;
         public string VehicleName;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public VehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTime timestamp)
         {
@@ -1139,8 +1134,6 @@ public static class OffenseManager
         public ulong Violator;
         public ulong Admin;
         public DateTime Timestamp { get; set; }
-        public bool Sent { get; set; }
-        public bool Received { get; set; }
         [JsonConstructor]
         public Unmute(ulong violator, ulong admin, DateTime timestamp)
         {

@@ -226,6 +226,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     private void InternalOnReady()
     {
         ReplaceBarricadesAndStructures();
+        _hasTimeSynced = false;
         if (useEventLoop)
         {
             EventLoopCoroutine = StartCoroutine(EventLoop());
@@ -290,30 +291,25 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (VehicleSpawner.Loaded)
-            VehicleSpawner.UpdateSignsWhere(spawn => VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data) && data.HasDelayType(EDelayType.OUT_OF_STAGING));
+            VehicleSpawner.UpdateSignsWhere(spawn => VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data) && data.HasDelayType(EDelayType.OUT_OF_STAGING));
     }
     protected abstract void EventLoopAction();
-    private IEnumerator<WaitForSeconds> EventLoop()
+    private IEnumerator<WaitForSecondsRealtime> EventLoop()
     {
         while (!isPendingCancel)
         {
             _ticks++;
-            yield return new WaitForSeconds(_eventLoopSpeed);
+            yield return new WaitForSecondsRealtime(_eventLoopSpeed);
 #if DEBUG
             IDisposable profiler = ProfilingUtils.StartTracking(Name + " Gamemode Event Loop");
 #endif
-            DateTime start = DateTime.Now;
+            DateTime start = DateTime.UtcNow;
             for (int i = PlayerManager.OnlinePlayers.Count - 1; i >= 0; i--)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 try
                 {
-                    if (pl.Player.transform == null)
-                    {
-                        L.Log($"Kicking {F.GetPlayerOriginalNames(pl).PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
-                        Provider.kick(pl.CSteamID, Localization.Translate(T.NullTransformKickMessage, pl, UCWarfare.Config.DiscordInviteCode));
-                        continue;
-                    }
+                    _ = pl.Player.transform;
                 }
                 catch (NullReferenceException)
                 {
@@ -334,10 +330,10 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
 
             if (!_hasTimeSynced)
             {
-                _hasTimeSynced = true;
                 TimeSync();
+                _hasTimeSynced = true;
             }
-
+            
             QuestManager.OnGameTick();
 #if DEBUG
             profiler.Dispose();
@@ -347,7 +343,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             }
 #endif
             if (UCWarfare.I.CoroutineTiming)
-                L.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
+                L.Log(Name + " Eventloop: " + (DateTime.UtcNow - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
         }
     }
 
@@ -549,6 +545,8 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public virtual void OnPlayerDeath(PlayerDied e)
     {
         Point.Points.OnPlayerDeath(e);
+        if (F.TryGetPlayerData(e.Player.Player, out UCPlayerData c))
+            c.LastGunShot = default;
     }
     public static Type? FindGamemode(string name)
     {

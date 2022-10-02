@@ -51,11 +51,11 @@ public class RequestCommand : Command
                 {
                     if (RequestSigns.AddRequestSign(sign, out RequestSign signadded))
                     {
-                        if (KitManager.KitExists(signadded.kit_name, out Kit kit))
+                        if (KitManager.KitExists(signadded.KitName, out Kit kit))
                             ctx.Reply(T.RequestSignSaved, kit);
                         else
                             ctx.SendUnknownError();
-                        ctx.LogAction(EActionLogType.SAVE_REQUEST_SIGN, signadded.kit_name);
+                        ctx.LogAction(EActionLogType.SAVE_REQUEST_SIGN, signadded.KitName);
                     }
                     else throw ctx.Reply(T.RequestSignAlreadySaved); // sign already registered
                 }
@@ -71,12 +71,12 @@ public class RequestCommand : Command
                     if (RequestSigns.SignExists(sign, out RequestSign requestsign))
                     {
                         string teamcolor = TeamManager.NeutralColorHex;
-                        if (KitManager.KitExists(requestsign.kit_name, out Kit kit))
+                        if (KitManager.KitExists(requestsign.KitName, out Kit kit))
                             ctx.Reply(T.RequestSignRemoved, kit);
                         else
                             ctx.SendUnknownError();
                         RequestSigns.RemoveRequestSign(requestsign);
-                        ctx.LogAction(EActionLogType.UNSAVE_REQUEST_SIGN, requestsign.kit_name);
+                        ctx.LogAction(EActionLogType.UNSAVE_REQUEST_SIGN, requestsign.KitName);
                     }
                     else throw ctx.Reply(T.RequestSignNotSaved);
                 }
@@ -93,9 +93,9 @@ public class RequestCommand : Command
                     ctx.AssertGamemode<IKitRequests>();
 
                     UCPlayer caller2 = ctx.Caller!;
-                    if (kitsign.kit_name.StartsWith("loadout_"))
+                    if (kitsign.KitName.StartsWith("loadout_", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (byte.TryParse(kitsign.kit_name.Substring(8), NumberStyles.Number, Data.Locale, out byte loadoutId))
+                        if (byte.TryParse(kitsign.KitName.Substring(8), NumberStyles.Number, Data.Locale, out byte loadoutId))
                         {
                             byte bteam = ctx.Caller!.Player.GetTeamByte();
                             List<Kit> loadouts = KitManager.GetKitsWhere(k => k.IsLoadout && k.Team == team && KitManager.HasAccessFast(k, caller2));
@@ -119,8 +119,8 @@ public class RequestCommand : Command
                     }
                     else
                     {
-                        if (!KitManager.KitExists(kitsign.kit_name, out Kit kit) || kit.IsLoadout)
-                            throw ctx.Reply(T.KitNotFound, kitsign.kit_name);
+                        if (!KitManager.KitExists(kitsign.KitName, out Kit kit) || kit.IsLoadout)
+                            throw ctx.Reply(T.KitNotFound, kitsign.KitName);
                         if (caller2.KitName == kit.Name)
                             throw ctx.Reply(T.RequestKitAlreadyOwned);
                         if (kit.IsPremium && !KitManager.HasAccessFast(kit, caller2) && !UCWarfare.Config.OverrideKitRequirements)
@@ -233,7 +233,7 @@ public class RequestCommand : Command
                 {
                     ctx.AssertGamemode<IVehicles>();
 
-                    if (vbsign.bay.HasLinkedVehicle(out InteractableVehicle vehicle) && vbsign.bay.Component != null && vbsign.bay.Component.State == EVehicleBayState.READY)
+                    if (vbsign.VehicleBay.HasLinkedVehicle(out InteractableVehicle vehicle))
                     {
                         RequestVehicle(ctx.Caller!, vehicle);
                         ctx.Defer();
@@ -438,7 +438,7 @@ public class RequestCommand : Command
                     }
                     else
                         ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
-                    Data.Reporter?.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.SpawnPadInstanceID);
+                    Data.Reporter?.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.InstanceId);
                 }
                 else
                     ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);

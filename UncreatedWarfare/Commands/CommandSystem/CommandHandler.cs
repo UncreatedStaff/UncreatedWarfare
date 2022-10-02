@@ -391,8 +391,7 @@ public static class CommandHandler
     }
     internal static void OnLog(string message)
     {
-        if (_activeVanillaCmd is not null)
-            _activeVanillaCmd.ReplyString("<color=#bfb9ac>" + message + "</color>");
+        _activeVanillaCmd?.ReplyString("<color=#bfb9ac>" + message + "</color>");
     }
     private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
     {

@@ -585,7 +585,7 @@ internal static class T
         [TranslationData(SECTION_TOASTS, "Sent when the player joins for the 2nd+ time..")]
     public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
         [TranslationData(SECTION_TOASTS, "Sent when the player joins for the 1st time..")]
-    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nTalk to the NPCs to get started.", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nCheck out our tutorial to get started (follow the signs).", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     #endregion
 
     #region KitCommand
@@ -850,7 +850,7 @@ internal static class T
         [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_hat")]
     public static readonly Translation SignClassDescriptionHAT           = new Translation("\n\n<#cecece>Equipped with multiple powerful <#f0a31c>anti-tank shells</color> to take out any vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_grenadier")]
-    public static readonly Translation SignClassDescription              = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
+    public static readonly Translation SignClassDescriptionGrenadier     = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>grenade launcher</color> to take out enemies behind cover or in light-armored vehicles.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_marksman")]
     public static readonly Translation SignClassDescriptionMarksman      = new Translation("\n\n<#cecece>Equipped with a <#f0a31c>marksman rifle</color> to take out enemies from medium to high distances.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_sniper")]
@@ -866,29 +866,99 @@ internal static class T
         [TranslationData(Section = SECTION_SIGNS, SignId = "class_desc_specops")]
     public static readonly Translation SignClassDescriptionSpecOps       = new Translation("\n\n<#cecece>Equipped with <#f0a31c>night-vision</color> to help see at night.</color>\n<#f01f1c>\\/</color>", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_misc")]
-    public static readonly Translation SignBundleMisc       = new Translation("<#f0a31c>Misc.", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleMisc       = new Translation("<#fff>Misc.", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_caf")]
-    public static readonly Translation SignBundleCanada     = new Translation("<#f0a31c>Canadian Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleCanada     = new Translation("<#fff>Canadian Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_fr")]
-    public static readonly Translation SignBundleFrance     = new Translation("<#f0a31c>French Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleFrance     = new Translation("<#fff>French Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_ger")]
-    public static readonly Translation SignBundleGermany    = new Translation("<#f0a31c>German Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleGermany    = new Translation("<#fff>German Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_usmc")]
-    public static readonly Translation SignBundleUSMC       = new Translation("<#f0a31c>USMC Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleUSMC       = new Translation("<#fff>USMC Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_usa")]
-    public static readonly Translation SignBundleUSA        = new Translation("<#f0a31c>USA Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleUSA        = new Translation("<#fff>USA Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_pl")]
-    public static readonly Translation SignBundlePoland     = new Translation("<#f0a31c>Polish Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundlePoland     = new Translation("<#fff>Polish Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_idf")]
-    public static readonly Translation SignBundleIsrael     = new Translation("<#f0a31c>IDF Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleIsrael     = new Translation("<#fff>IDF Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_militia")]
-    public static readonly Translation SignBundleMilitia    = new Translation("<#f0a31c>Militia Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleMilitia    = new Translation("<#fff>Militia Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_ru")]
-    public static readonly Translation SignBundleRussia     = new Translation("<#f0a31c>Russia Bundle", TranslationFlags.TMProSign);
+    public static readonly Translation SignBundleRussia     = new Translation("<#fff>Russia Bundle", TranslationFlags.TMProSign);
         [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_soviet")]
-    public static readonly Translation SignBundleSoviet     = new Translation("<#f0a31c>Soviet Bundle", TranslationFlags.TMProSign);
-        [TranslationData(Section = SECTION_SIGNS, SignId = "sign_loadout_info", Description = "Information on how to obtain a loadout.")]
+    public static readonly Translation SignBundleSoviet     = new Translation("<#fff>Soviet Bundle", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "bundle_special")]
+    public static readonly Translation SignBundleSpecial    = new Translation("<#fff>Special Kits", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "loadout_info", Description = "Information on how to obtain a loadout.")]
     public static readonly Translation SignLoadoutInfo      = new Translation("<#cecece>Loadouts and elite kits can be purchased\nin our <#7483c4>Discord</color> server.</color>\n\n<#7483c4>/discord</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "air_solo_warning", Description = "Soloing warning positioned near attack heli and jet.")]
+    public static readonly Translation SignAirSoloingWarning = new Translation("<color=#f01f1c><b>Do not exit main without another <#cedcde>PILOT</color> for the Jet or Attack Heli\n\n\n<color=#ff6600>YOU WILL BE BANNED FOR 6 DAYS WITHOUT WARNING!<b></color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "armor_solo_warning", Description = "Soloing warning positioned near armor requests.")]
+    public static readonly Translation SignArmorSoloingWarning = new Translation("<color=#f01f1c><b>Do not exit main without another <#cedcde>CREWMAN</color> while driving any vehicles that require a <#cedcde>CREWMAN</color> kit!\n\n\n<color=#ff6600>YOU WILL BE BANNED FOR 6 DAYS WITHOUT WARNING!<b></color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "waiting_warning", Description = "Warning about waiting for vehicles while the server is full.")]
+    public static readonly Translation SignWaitingWarning = new Translation("<color=#f01f1c>Waiting for vehicles to spawn when the server is full for more than 2 minutes will result in a KICK or BAN</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "waiting_notice_1", Description = "Change notice about waiting for vehicles while the server is full (part 1).")]
+    public static readonly Translation SignWaitingNoticePart1 = new Translation("<color=yellow>Warning:</color>\n<color=white>Due to players sitting at base waiting for air assets, we've decided that if the server capacity is full and air assets aren't available for</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "waiting_notice_2", Description = "Change notice about waiting for vehicles while the server is full (part 2).")]
+    public static readonly Translation SignWaitingNoticePart2 = new Translation("<color=white>a considerable amount of time, we reserve the right to warn you not to. If you continue to sit around we will kick you to allow another player in the queue to play.</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "solo_notice_1", Description = "Notice about soloing (part 1).")]
+    public static readonly Translation SignSoloNoticePart1 = new Translation("<color=#f01f1c>You are not allowed to take out the following vehicles without a passenger:</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "solo_notice_2_t1", Description = "Notice about soloing (part 2, team 1).")]
+    public static readonly Translation SignSoloNoticePart2T1 = new Translation("<#f01f1c>- Abrams\n- LAV\n- Stryker\n- Attack Heli\n- Fighter Jet\n</color>\n<#ec8100>You will get banned for <#ff6600>3 days</color> if you do!</color>\n<#f01f1c>If your passenger leaves, return to base (RTB).</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "solo_notice_2_t2", Description = "Notice about soloing (part 2, team 2).")]
+    public static readonly Translation SignSoloNoticePart2T2 = new Translation("<#f01f1c>- T-90\n- BTR-82A\n- BDRM\n- BMP-2\n- Attack Heli\n- Fighter Jet\n</color>\n<#ec8100>You will get banned for <#ff6600>3 days</color> if you do!</color>\n<#f01f1c>If your passenger leaves, return to base (RTB).</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_arrow", Description = "Points to the tutorial with a caption.")]
+    public static readonly Translation SignTutorialArrow = new Translation("<#2df332>Small tutorial this way!\n<#ff6600><b><---</b>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_get_kit_1", Description = "Tells the player about kits and how to request them (part 1).")]
+    public static readonly Translation SignTutorialGetKitPart1 = new Translation("<#ff6600><b>How do I get a kit?</b>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_get_kit_2", Description = "Tells the player about kits and how to request them (part 2).")]
+    public static readonly Translation SignTutorialGetKitPart2 = new Translation("<#cEcEcE>Look at kit sign and type <#2df332>/req</color> in chat to recieve the kit.", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_get_kit_3", Description = "Tells the player about kits and how to request them (part 3).")]
+    public static readonly Translation SignTutorialGetKitPart3 = new Translation("<#cEcEcE>Some kits are unlocked using <#c$credits$>credits</color>. Look at the sign and do <#2df332>/buy</color> to unlock the kit.", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_get_vehicle_1", Description = "Tells the player about vehicles and how to request them (part 1).")]
+    public static readonly Translation SignTutorialGetVehiclePart1 = new Translation("<#ff6600><b>How do I get a vehicle?</b>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_get_vehicle_2", Description = "Tells the player about vehicles and how to request them (part 2).")]
+    public static readonly Translation SignTutorialGetVehiclePart2 = new Translation("<#cEcEcE>Look at the vehicle you'd like to request and type in chat <#2df332>/req</color> to unlock the vehicle.", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_get_vehicle_3", Description = "Tells the player about vehicles and how to request them (part 3).")]
+    public static readonly Translation SignTutorialGetVehiclePart3 = new Translation("<#cEcEcE>Some vehicles require a special kit. Request a <#cedcde>CREWMAN</color> or <#cedcde>PILOT</color> kit to gain acces to them!", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_faq_header", Description = "Header for the FAQ (frequently asked questions) section of the tutorial.")]
+    public static readonly Translation SignTutorialFAQHeader = new Translation("<#ff6600><b>FAQ</b>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_faq_give_up_q", Description = "(question) This FAQ explains how to Give Up after being injured.")]
+    public static readonly Translation SignTutorialFAQGiveUpQ = new Translation("<#2df332>Q: Help! I can't reset when downed!", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "tutorial_faq_give_up_a", Description = "(answer) This FAQ explains how to Give Up after being injured.")]
+    public static readonly Translation SignTutorialFAQGiveUpA = new Translation("<#cEcEcE>A: Press the '/' button on your keyboard to give up when injured. If this doesn't work, Head to your <#2df332>keybind settings</color> and set <#f32d2d>Code Hotkey #3</color> to your preference!", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "discord_link", Description = "Has the discord link.")]
+    public static readonly Translation SignDiscordLink = new Translation("<color=#CECECE>Need help? Join our <color=#7483c4>Discord</color> server!\n<#6796ce>discord.gg/" + UCWarfare.Config.DiscordInviteCode + "</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "saddam_hussein", Description = "Saddam Hussein.")]
+    public static readonly Translation SignSaddamHussein = new Translation("<color=red>Saddam Hussein\n ▇▅▆▇▆▅▅█</color>", TranslationFlags.TMProSign);
+        [TranslationData(Section = SECTION_SIGNS, SignId = "elite_kit_pointer", Description = "Points to the building with elite kits.")]
+    public static readonly Translation SignEliteKitPointer = new Translation("<color=#f0a31c>Elite kits found in this building     --></color>", TranslationFlags.TMProSign);
+    #endregion
+
+    #region Announcements
+    private const string SECTION_ANNOUNCEMENTS = "Announcements";
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people to join the discord by typing /discord.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementDiscord = new Translation("<#b3b3b3>Have you joined our <#7483c4>Discord</color> server yet? Type <#7483c4>/discord</color> to join.");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people how to return to base from FOBs.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementDeployMain = new Translation("<#c2b7a5>You can deploy back to main by doing <#ffffff>/deploy main</color> while near a friendly FOB.");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people the best ways to earn XP.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementRankUp = new Translation("<#92a692>Capture <#ffffff>flags</color> and build <#ffffff>FOBs</color> to rank up and earn respect amongst your team.");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people not to waste assets.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementDontWasteAssets = new Translation("<#c79675>Do not waste vehicles, ammo, build, or other assets! You may risk punishment if you're reported or caught.");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people to communicate and listen to higher-ups.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementListenToSuperiors = new Translation("<#a2a7ba>Winning requires coordination and teamwork. Listen to your superior officers, and communicate!");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people to build FOBs to help their team.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementBuildFOBs = new Translation("<#9da6a6>Building <color=#54e3ff>FOBs</color> is vital for advancing operations. Grab a logistics truck and go build one!");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people to join or create a squad.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementSquads = new Translation("<#c2b7a5>Join a squad with <#ffffff>/squad join</color> or create one with <#ffffff>/squad create</color> to earn extra XP among other benefits.");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people about the different way our chat works.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementChatChanges = new Translation("<#a2a7ba>Use area chat while in a squad to communicate with only them or group chat to communicate with your entire <#54e3ff>team</color>.");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people about the abandon command.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementAbandon = new Translation("<#b3b3b3>Done with your vehicle? Type <#ffffff>/abandon</color> while in main base to get some credits back and free up the vehicle for your team.");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people about soloing.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementSoloing = new Translation("<#c79675>Soloing armor vehicles, attack helis, and jets is against the rules. Make sure you have a passenger for these vehicles.");
+    [TranslationData(Section = SECTION_ANNOUNCEMENTS, Description = "Announcement telling people about reporting with /report.", IsAnnounced = true)]
+    public static readonly Translation AnnouncementReport = new Translation("<#c2b7a5>See someone breaking rules? Use the <#ffffff>/report</color> command to help admins see context about the report.</color>");
     #endregion
 
     #region Kick Command
@@ -1038,8 +1108,7 @@ internal static class T
     public static readonly Translation<string> StructureSaveInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a structure property. Try putting 'owner' or 'group'.");
     public static readonly Translation<string, string> StructureSaveInvalidSetValue = new Translation<string, string>("<#ff8c69><#ddd>{0}</color> isn't a valid value for structure property: <#a0ad8e>{1}</color>.");
     public static readonly Translation<string> StructureSaveNotJsonSettable = new Translation<string>("<#ff8c69><#a0ad8e>{0}</color> is not marked as settable.");
-    public static readonly Translation<string, ItemAsset, string> StructureSaveSetProperty = 
-        new Translation<string, ItemAsset, string>("<#a0ad8e>Set <#8ce4ff>{0}</color> for {1} save to: <#ffffff>{2}</color>.", arg1Fmt: RARITY_COLOR_FORMAT);
+    public static readonly Translation<string, ItemAsset, string> StructureSaveSetProperty = new Translation<string, ItemAsset, string>("<#a0ad8e>Set <#8ce4ff>{0}</color> for {1} save to: <#ffffff>{2}</color>.", arg1Fmt: RARITY_COLOR_FORMAT);
     #endregion
 
     #region Whitelist
@@ -1242,6 +1311,7 @@ internal static class T
     #endregion
 
     #region Request Signs
+    public static readonly Translation KitFree = new Translation("<#c$kit_free$>FREE</color>", TranslationFlags.NoColor);
     public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>", TranslationFlags.NoColor);
     public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);
     public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);

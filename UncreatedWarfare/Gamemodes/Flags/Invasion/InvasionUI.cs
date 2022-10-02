@@ -322,7 +322,7 @@ public static class InvasionUI
                         objective = $"<color=#{TeamManager.GetTeamHexColor(attack)}>{Gamemode.Config.UIIconAttack}</color> <color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UIIconDefend}</color>";
                     }
                     if (flag.Owner == attack)
-                        objective = $"<color=#{TeamManager.GetTeamHexColor(defense)}>{Gamemode.Config.UIIconLocked}</color>";
+                        objective = $"<color=#{UCWarfare.GetColorHex("locked_icon_color")}>{Gamemode.Config.UIIconLocked}</color>";
                     if (flag.T2Obj)
                     {
                         objective = $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconAttack}</color>";

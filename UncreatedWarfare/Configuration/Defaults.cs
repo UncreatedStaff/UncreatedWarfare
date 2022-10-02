@@ -395,6 +395,7 @@ partial class JSONMethods
         { "kit_level_available", "ff974d" },
         { "kit_level_unavailable", "917663" },
         { "kit_level_dollars", "7878ff" },
+        { "kit_free", "66ffcc" },
         { "kit_level_dollars_owned", "769fb5" },
         { "kit_level_dollars_exclusive", "96ffb2" },
         { "kit_weapon_list", "343434" },

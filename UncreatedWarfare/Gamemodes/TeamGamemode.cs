@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Uncreated.Players;
 using Uncreated.Warfare.Deaths;
@@ -13,11 +14,10 @@ namespace Uncreated.Warfare.Gamemodes;
 /// <summary>Gamemode with 2 teams</summary>
 public abstract class TeamGamemode : Gamemode, ITeams
 {
-    protected const int AMC_TIME = 10;
     protected TeamSelector _teamSelector;
-    public List<ulong> InAMC = new List<ulong>();
     private Transform? _blockerBarricadeT1;
     private Transform? _blockerBarricadeT2;
+    private readonly List<ulong> mainCampers = new List<ulong>(24);
     public TeamSelector TeamSelector { get => _teamSelector; }
     public virtual bool UseTeamSelector { get => true; }
     public virtual bool EnableAMC { get => true; }
@@ -57,51 +57,49 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         TeamManager.CheckGroups();
     }
-    protected void CheckPlayersAMC()
+    protected void CheckMainCampZones()
     {
-        if (EnableAMC)
+        if (!Config.GeneralAMCKillTime.HasValue || Config.GeneralAMCKillTime.Value < 0)
+            return;
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
-            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            ulong team = player.GetTeam();
+            if (!player.IsOnline || team is not 1 and not 2 || player.OnDuty() || player.Player.life.isDead)
+                goto notInMain;
+            Vector3 pos = player.Position;
+            if (team == 1 && !TeamManager.Team2AMC.IsInside(pos) || team == 2 && !TeamManager.Team1AMC.IsInside(pos))
+                goto notInMain;
+            if (!mainCampers.Contains(player.Steam64))
             {
-                UCPlayer cnt = PlayerManager.OnlinePlayers[i];
-                ulong team = cnt.GetTeam();
-                try
-                {
-                    if (!cnt.OnDutyOrAdmin() && !cnt.Player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(cnt.Player.transform.position)) ||
-                                                                            (team == 2 && TeamManager.Team1AMC.IsInside(cnt.Player.transform.position))))
-                    {
-                        if (!InAMC.Contains(cnt.Steam64))
-                        {
-                            InAMC.Add(cnt.Steam64);
-                            int a = Mathf.RoundToInt(AMC_TIME);
-                            ToastMessage.QueueMessage(cnt,
-                                new ToastMessage(T.EnteredEnemyTerritory.Translate(cnt, a.GetTimeFromSeconds(cnt.Steam64)),
-                                    EToastMessageSeverity.WARNING));
-                            UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(cnt));
-                        }
-                    }
-                    else
-                    {
-                        InAMC.Remove(cnt.Steam64);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error checking for duty players on player " + cnt.Name.PlayerName + " (" + cnt.Steam64 + ").");
-                    if (UCWarfare.Config.Debug)
-                        L.LogError(ex);
-                }
+                mainCampers.Add(player.Steam64);
+                OnPlayerMainCamping(player);
             }
+            continue;
+        notInMain:
+            mainCampers.Remove(player.Steam64);
         }
     }
-    public IEnumerator<WaitForSeconds> KillPlayerInEnemyTerritory(SteamPlayer player)
+    private void OnPlayerMainCamping(UCPlayer player)
     {
-        yield return new WaitForSeconds(AMC_TIME);
-        if (player != null && !player.player.life.isDead && InAMC.Contains(player.playerID.steamID.m_SteamID))
-        {
-            player.player.movement.forceRemoveFromVehicle();
-            player.player.life.askDamage(byte.MaxValue, Vector3.zero, DeathTracker.MAIN_DEATH, ELimb.SKULL, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
-        }
+        ToastMessage.QueueMessage(player, new ToastMessage(
+            T.EnteredEnemyTerritory.Translate(player, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player)),
+            EToastMessageSeverity.WARNING));
+        player.Player.StartCoroutine(PlayerMainCampingCoroutine(player));
+    }
+    private IEnumerator PlayerMainCampingCoroutine(UCPlayer player)
+    {
+        ulong team = player.GetTeam();
+        if (Config.GeneralAMCKillTime.Value != 0)
+            yield return new WaitForSecondsRealtime(Config.GeneralAMCKillTime.Value);
+        if (player.Player == null || !mainCampers.Contains(player.Steam64) || player.Player.life.isDead || player.OnDuty())
+            yield break;
+        player.Player.movement.forceRemoveFromVehicle();
+        yield return null;
+        player.Player.life.askDamage(byte.MaxValue, Vector3.up / 8f, DeathTracker.MAIN_DEATH, ELimb.SPINE, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
+        ActionLogger.Add(EActionLogType.MAIN_CAMP_ATTEMPT, $"Player team: {TeamManager.TranslateName(team, 0, false)}, " +
+                                                           $"Team: {TeamManager.TranslateName(TeamManager.Other(team), 0, false)}, " +
+                                                           $"Location: {player.Position.ToString("0.#", Data.Locale)}", player);
     }
     public void SpawnBlockers()
     {
@@ -248,7 +246,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     public override void OnPlayerDeath(PlayerDied e)
     {
         base.OnPlayerDeath(e);
-        InAMC.Remove(e.Player.Steam64);
+        mainCampers.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
     protected override void OnAsyncInitComplete(UCPlayer player)
@@ -262,5 +260,10 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
         if (team is 1 or 2 && _state == EState.STAGING)
             ShowStagingUI(player);
+    }
+    public override void PlayerLeave(UCPlayer player)
+    {
+        mainCampers.Remove(player.Steam64);
+        base.PlayerLeave(player);
     }
 }

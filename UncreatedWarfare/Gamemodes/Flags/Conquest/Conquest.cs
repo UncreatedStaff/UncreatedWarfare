@@ -125,7 +125,7 @@ public sealed partial class Conquest :
                 ++t1Bleed;
         }
     }
-    protected override bool TimeToCheck() => EveryXSeconds(Config.ConquestFlagTickSeconds);
+    protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.ConquestFlagTickSeconds);
     public override bool IsAttackSite(ulong team, Flag flag) => true;
     public override bool IsDefenseSite(ulong team, Flag flag) => true;
     public override void DeclareWin(ulong winner)

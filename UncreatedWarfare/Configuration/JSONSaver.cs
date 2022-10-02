@@ -431,6 +431,13 @@ public static class JsonEx
         AllowTrailingCommas = true,
         Encoder = jsEncoder
     };
+    public static readonly JsonSerializerOptions condensedSerializerSettings = new JsonSerializerOptions()
+    {
+        WriteIndented = false,
+        IncludeFields = true,
+        AllowTrailingCommas = true,
+        Encoder = jsEncoder
+    };
     public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true, Encoder = jsEncoder };
     public static readonly JsonWriterOptions condensedWriterOptions = new JsonWriterOptions() { Indented = false, Encoder = jsEncoder };
     public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };

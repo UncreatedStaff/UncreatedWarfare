@@ -33,10 +33,10 @@ public class BuyCommand : Command
         {
             if (!RequestSigns.SignExists(sign, out RequestSign requestsign))
                 throw ctx.Reply(T.RequestKitNotRegistered);
-            if (requestsign.kit_name.StartsWith("loadout_"))
+            if (requestsign.KitName.StartsWith("loadout_"))
                 throw ctx.Reply(T.RequestNotBuyable);
-            if (!KitManager.KitExists(requestsign.kit_name, out Kit kit))
-                throw ctx.Reply(T.KitNotFound, requestsign.kit_name);
+            if (!KitManager.KitExists(requestsign.KitName, out Kit kit))
+                throw ctx.Reply(T.KitNotFound, requestsign.KitName);
             if (ctx.Caller.Rank.Level < kit.UnlockLevel)
                 throw ctx.Reply(T.RequestKitLowLevel, RankData.GetRankName(kit.UnlockLevel));
             if (kit.IsPremium)
@@ -72,8 +72,8 @@ public class BuyCommand : Command
                 await UCWarfare.ToUpdate();
 
                 KitManager.UpdateSigns(kit, ctx.Caller);
-                if (requestsign != null && requestsign.barricadetransform != null)
-                    EffectManager.sendEffect(81, 7f, requestsign.barricadetransform.position);
+                if (requestsign != null && requestsign.BarricadeTransform != null)
+                    EffectManager.sendEffect(81, 7f, requestsign.BarricadeTransform.position);
                 ctx.Reply(T.RequestKitBought, kit.CreditCost);
                 ctx.LogAction(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS");
                 L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Name);

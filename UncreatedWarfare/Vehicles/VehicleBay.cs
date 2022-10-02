@@ -1020,7 +1020,7 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
     }
     public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
-    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleID == VehicleID);
+    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
     public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
     public void SaveMetaData(InteractableVehicle vehicle)
     {

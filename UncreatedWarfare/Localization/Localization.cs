@@ -371,18 +371,19 @@ public static class Localization
     }
     public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
     {
+        L.LogDebug("Translating kit sign for " + ucplayer.Name.PlayerName + ".");
         bool keepline = false;
         ulong team = ucplayer.GetTeam();
         string name;
         if (!ucplayer.OnDuty() && kit.SignTexts != null)
         {
-            if (!kit.SignTexts.TryGetValue(language, out name))
-                if (!kit.SignTexts.TryGetValue(L.DEFAULT, out name))
-                    if (kit.SignTexts.Count > 0)
-                        name = kit.SignTexts.First().Value;
-                    else
-                        name = kit.Name;
-
+            if (!kit.SignTexts.TryGetValue(language, out name) && !kit.SignTexts.TryGetValue(L.DEFAULT, out name))
+            {
+                if (kit.SignTexts.Count > 0)
+                    name = kit.SignTexts.First().Value;
+                else
+                    name = kit.Name;
+            }
 
             for (int i = 0; i < name.Length; i++)
             {
@@ -418,13 +419,12 @@ public static class Localization
         }
         if (kit.IsPremium && (kit.PremiumCost > 0 || kit.PremiumCost == -1))
         {
-            if (ucplayer != null)
-                if (KitManager.HasAccessFast(kit, ucplayer))
-                    cost = T.KitPremiumOwned.Translate(language);
-                else if (kit.PremiumCost == -1)
-                    cost = T.KitExclusive.Translate(language);
-                else
-                    cost = T.KitPremiumCost.Translate(language, kit.PremiumCost);
+            if (KitManager.HasAccessFast(kit, ucplayer))
+                cost = T.KitPremiumOwned.Translate(language);
+            else if (kit.PremiumCost == -1)
+                cost = T.KitExclusive.Translate(language);
+            else
+                cost = T.KitPremiumCost.Translate(language, kit.PremiumCost);
         }
         else if (kit.UnlockRequirements != null && kit.UnlockRequirements.Length != 0)
         {
@@ -436,6 +436,14 @@ public static class Localization
                 break;
             }
         }
+        else if (kit.CreditCost > 0)
+        {
+            if (KitManager.HasAccessFast(kit, ucplayer))
+                cost = T.KitPremiumOwned.Translate(language);
+            else
+                cost = T.KitCreditCost.Translate(language, kit.CreditCost);
+        }
+        else cost = T.KitFree.Translate(language);
     n:
         if (cost == string.Empty && kit.CreditCost > 0)
         {
@@ -489,15 +497,15 @@ public static class Localization
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         VehicleBayComponent comp;
-        if (spawn.type == Structures.EStructType.STRUCTURE)
+        if (spawn.StructureType == Structures.EStructType.STRUCTURE)
             if (spawn.StructureDrop != null)
                 comp = spawn.StructureDrop.model.gameObject.GetComponent<VehicleBayComponent>();
             else
-                return spawn.VehicleID.ToString("N");
+                return spawn.VehicleGuid.ToString("N");
         else if (spawn.BarricadeDrop != null)
             comp = spawn.BarricadeDrop.model.gameObject.GetComponent<VehicleBayComponent>();
-        else return spawn.VehicleID.ToString("N");
-        if (comp == null) return spawn.VehicleID.ToString("N");
+        else return spawn.VehicleGuid.ToString("N");
+        if (comp == null) return spawn.VehicleGuid.ToString("N");
 
         string unlock = string.Empty;
         if (data.UnlockLevel > 0)
@@ -511,7 +519,7 @@ public static class Localization
         }
 
         string finalformat =
-            $"{(spawn.VehicleID == F15 ? "F15-E" : (Assets.find(spawn.VehicleID) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleID.ToString("N")))}\n" +
+            $"{(spawn.VehicleGuid == F15 ? "F15-E" : (Assets.find(spawn.VehicleGuid) is VehicleAsset asset ? asset.vehicleName : spawn.VehicleGuid.ToString("N")))}\n" +
             $"<#{UCWarfare.GetColorHex("vbs_branch")}>{TranslateEnum(data.Branch, language)}</color>\n" +
             (data.TicketCost > 0 ? T.VBSTickets.Translate(language, data.TicketCost, null, team) : " ") + "\n" +
             unlock +

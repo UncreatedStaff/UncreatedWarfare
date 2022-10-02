@@ -1621,9 +1621,39 @@ public static class F
 
         return questName;
     }
+    public static TRequest? GetRPC<TRequest, TOwner>(string name, bool essential = false) where TRequest : ClientMethodHandle
+    {
+        Exception? ex2 = null;
+        try
+        {
+            FieldInfo info = typeof(TOwner).GetField(name, BindingFlags.NonPublic | BindingFlags.Static);
+            if (info != null && info.GetValue(null) is TRequest req)
+            {
+                L.Log("Found \"" + typeof(TOwner).Name + "." + name + "\".", ConsoleColor.Blue);
+                return req;
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
+            ex2 = ex;
+        }
+
+        string msg = "Unable to retreive the RPC \"" + typeof(TOwner).Name + "." + name + "\" with parameters: [" +
+                     string.Join(", ",
+                         !typeof(TRequest).IsGenericType
+                             ? "<none>"
+                             : typeof(TRequest).GetGenericArguments().Select(x => x.Name)) +
+                     "], perhaps Nelson changed something?";
+        L.LogError(msg);
+        if (essential)
+            throw ex2 ?? new Exception(msg);
+
+        return null;
+    }
 }
-public delegate void InstanceSetter<T1, T2>(T1 owner, T2 value);
-public delegate T2 InstanceGetter<T1, T2>(T1 owner);
+public delegate void InstanceSetter<TInstance, T>(TInstance owner, T value);
+public delegate T InstanceGetter<TInstance, T>(TInstance owner);
 public delegate void StaticSetter<T>(T value);
 public delegate T StaticGetter<T>();
 

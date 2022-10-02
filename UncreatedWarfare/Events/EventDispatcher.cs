@@ -468,28 +468,36 @@ public static class EventDispatcher
     internal static void InvokeOnDropItemRequested(UCPlayer player, PlayerInventory inventory, Item item, ref bool shouldAllow)
     {
         if (OnItemDropRequested == null || !shouldAllow) return;
-        byte pageNum = 0, index = 0;
+        ItemJar? jar = null;
+        byte pageNum = default, index = default;
         bool found = false;
-        for (int i = 0; i < PlayerInventory.PAGES; ++i)
+        for (byte i = 0; i < PlayerInventory.PAGES; ++i)
         {
             Items page = inventory.items[i];
-            for (int j = 0; j < page.items.Count; ++j)
+            for (byte j = 0; j < page.items.Count; ++j)
             {
                 if (page.items[j].item == item)
                 {
+                    jar = page.items[j];
                     pageNum = i;
                     index = j;
                     found = true;
+                    break;
                 }
             }
+            if (found)
+                break;
         }
-        ItemDropRequested request = new ItemDropRequested(player, item, shouldAllow);
-        foreach (EventDelegate<ItemDropRequested> inv in OnItemDropRequested.GetInvocationList().Cast<EventDelegate<ItemDropRequested>>())
+        if (found)
         {
-            if (!request.CanContinue) break;
-            TryInvoke(inv, request, nameof(OnItemDropRequested));
+            ItemDropRequested request = new ItemDropRequested(player, item, jar!, pageNum, index, shouldAllow);
+            foreach (EventDelegate<ItemDropRequested> inv in OnItemDropRequested.GetInvocationList().Cast<EventDelegate<ItemDropRequested>>())
+            {
+                if (!request.CanContinue) break;
+                TryInvoke(inv, request, nameof(OnItemDropRequested));
+            }
+            if (!request.CanContinue) shouldAllow = false;
         }
-        if (!request.CanContinue) shouldAllow = false;
     }
     internal static void InvokeOnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup)
     {

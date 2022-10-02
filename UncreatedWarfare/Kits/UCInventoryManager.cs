@@ -105,19 +105,19 @@ public static class UCInventoryManager
             {
                 id = player.Player.clothing.GetNetId();
                 if (player.Player.clothing.shirt != 0)
-                    Data.SendWearShirt.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearShirt!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.pants != 0)
-                    Data.SendWearPants.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearPants!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.hat != 0)
-                    Data.SendWearHat.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearHat!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.backpack != 0)
-                    Data.SendWearBackpack.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearBackpack!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.vest != 0)
-                    Data.SendWearVest.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearVest!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.mask != 0)
-                    Data.SendWearMask.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearMask!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
                 if (player.Player.clothing.glasses != 0)
-                    Data.SendWearGlasses.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
+                    Data.SendWearGlasses!.InvokeAndLoopback(id, ENetReliability.Reliable, Provider.EnumerateClients_Remote(), Guid.Empty, 100, blank, false);
             }
         }
         else
@@ -217,7 +217,7 @@ public static class UCInventoryManager
     public static void SendPages(UCPlayer player)
     {
         Items[] il = player.Player.inventory.items;
-        Data.SendInventory.Invoke(player.Player.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
+        Data.SendInventory!.Invoke(player.Player.inventory.GetNetId(), ENetReliability.Reliable, player.Connection,
             writer =>
             {
                 for (int i = 0; i < PlayerInventory.PAGES - 2; ++i)

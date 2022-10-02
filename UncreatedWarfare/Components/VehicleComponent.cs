@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
@@ -19,7 +20,7 @@ public class VehicleComponent : MonoBehaviour
     public InteractableVehicle Vehicle;
     public ulong Team { get => Vehicle.lockedGroup.m_SteamID; }
     public VehicleData Data;
-    public bool isInVehiclebay { get; private set; }
+    public bool IsInVehiclebay { get; private set; }
     public EDamageOrigin LastDamageOrigin;
     public ulong LastInstigator;
     public Dictionary<ulong, Vector3> TransportTable { get; private set; }
@@ -34,7 +35,7 @@ public class VehicleComponent : MonoBehaviour
     private bool IsResupplied;
     private Coroutine? quotaLoop;
     private Coroutine? autoSupplyLoop;
-    public Coroutine? forceSupplyLoop { get; private set; }
+    public Coroutine? ForceSupplyLoop { get; private set; }
     public bool IsArmor
     {
         get
@@ -97,7 +98,7 @@ public class VehicleComponent : MonoBehaviour
             if (data.Team is 1 or 2)
                 team = data.Team;
             Data = data;
-            isInVehiclebay = true;
+            IsInVehiclebay = true;
         }
         lastPos = this.transform.position;
 
@@ -107,6 +108,8 @@ public class VehicleComponent : MonoBehaviour
         else if (IsAircraft) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.AIRCRAFT, team);
         else if (IsEmplacement) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.EMPLACEMENT, team);
     }
+
+    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
     private void OnDestroy()
     {
         RemoveCountermeasures();
@@ -159,7 +162,7 @@ public class VehicleComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (isInVehiclebay)
+        if (IsInVehiclebay)
             EvaluateUsage(e.Player.Player.channel.owner);
 
         if (e.Player.KitClass == EClass.SQUADLEADER &&
@@ -218,7 +221,7 @@ public class VehicleComponent : MonoBehaviour
             totalDistance = 0;
         }
 
-        if (isInVehiclebay)
+        if (IsInVehiclebay)
         {
             EvaluateUsage(e.Player.SteamPlayer);
 
@@ -320,7 +323,7 @@ public class VehicleComponent : MonoBehaviour
     }
     public void StartForceLoadSupplies(UCPlayer caller, ESupplyType type, int amount)
     {
-        forceSupplyLoop = StartCoroutine(ForceSupplyLoopCoroutine(caller, type, amount));
+        ForceSupplyLoop = StartCoroutine(ForceSupplyLoopCoroutine(caller, type, amount));
     }
     public bool TryStartAutoLoadSupplies()
     {
@@ -434,7 +437,7 @@ public class VehicleComponent : MonoBehaviour
 
         caller.SendChat(type is ESupplyType.BUILD ? T.LoadCompleteBuild : T.LoadCompleteAmmo, addedBackCount + addedNewCount);
 
-        forceSupplyLoop = null;
+        ForceSupplyLoop = null;
     }
     private IEnumerator<WaitForSeconds> AutoSupplyLoop()
     {
@@ -529,6 +532,8 @@ public class VehicleComponent : MonoBehaviour
     public ulong LastDriver;
     public float LastDriverTime;
     public float LastDriverDistance;
+
+    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
     private void Update()
     {
         if (Time.time - lastCheck > 3f)

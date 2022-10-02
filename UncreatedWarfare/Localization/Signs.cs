@@ -82,7 +82,7 @@ public static class Signs
     {
         if (VehicleSigns.Loaded && VehicleSpawner.Loaded && VehicleBay.Loaded &&
             VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn) &&
-            VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+            VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data))
         {
             NetId id = sign.GetNetId();
             foreach (LanguageSet set in LanguageSet.InRegions(x, y, BarricadeManager.BARRICADE_REGIONS))
@@ -102,7 +102,7 @@ public static class Signs
     {
         if (VehicleSigns.Loaded && VehicleSpawner.Loaded && VehicleBay.Loaded &&
             VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn) &&
-            VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
+            VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data))
         {
             string lang = Localization.GetLang(player.Steam64);
             return QuickFormat(Localization.TranslateVBS(spawn, data, lang, data.Team), data.GetCostLine(player));

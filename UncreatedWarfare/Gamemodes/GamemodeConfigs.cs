@@ -333,7 +333,7 @@ public sealed class GamemodeConfigData : JSONConfigData
 
     [Sync(1009)]
     [JsonPropertyName("aas_flag_tick_interval")]
-    public RotatableConfig<int> AASFlagTickInterval { get; set; }
+    public RotatableConfig<float> AASFlagTickSeconds { get; set; }
 
     [Sync(1010)]
     [JsonPropertyName("aas_tickets_flag_captured")]
@@ -570,7 +570,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         AASOverrideContestDifference = 2;
         AASAllowVehicleCapture = false;
         AASDiscoveryForesight = 2;
-        AASFlagTickInterval = 12;
+        AASFlagTickSeconds = 4f;
         AASTicketsFlagCaptured = 40;
         AASTicketsFlagLost = -10;
         AASRequiredCapturingPlayerDifference = 2;

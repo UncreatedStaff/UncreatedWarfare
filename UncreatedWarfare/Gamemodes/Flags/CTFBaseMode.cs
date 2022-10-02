@@ -122,19 +122,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         Destroy(_gameStats);
         base.PostDispose();
     }
-    protected override bool TimeToCheck()
-    {
-        if (_counter > Config.AASFlagTickInterval)
-        {
-            _counter = 0;
-            return true;
-        }
-        else
-        {
-            _counter++;
-            return false;
-        }
-    }
+    protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.AASFlagTickSeconds);
     public override void DeclareWin(ulong winner)
     {
 #if DEBUG

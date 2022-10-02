@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
@@ -57,7 +58,7 @@ public static class EventFunctions
             uint nextindex;
             try
             {
-                nextindex = (uint)Data.ItemManagerInstanceCount.GetValue(null);
+                nextindex = Data.GetItemManagerInstanceCount();
             }
             catch
             {
@@ -337,6 +338,40 @@ public static class EventFunctions
             shouldAllow = false;
         }
     }
+    internal static void OnItemDropRequested(ItemDropRequested e)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        if (e.Page == PlayerInventory.STORAGE && e.Player.Player.inventory.isStorageTrunk)
+        {
+            FactionInfo? faction = TeamManager.GetFactionSafe(e.Player.GetTeam());
+            if (faction is null || Assets.find(EAssetType.ITEM, e.Item.id) is not ItemAsset item || !TeamManager.IsInMain(e.Player))
+                return;
+            faction.Build.ValidReference(out ItemAsset? buildAsset);
+            faction.Ammo.ValidReference(out ItemAsset? ammoAsset);
+            bool build = buildAsset is not null && buildAsset.GUID == item.GUID;
+            if (!build && !(ammoAsset is not null && ammoAsset.GUID == item.GUID))
+                return;
+            Items? trunk = e.Player.Player.inventory.items[PlayerInventory.STORAGE];
+            if (trunk is null)
+                return;
+            for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
+            {
+                if (VehicleManager.vehicles[i].trunkItems == trunk)
+                {
+                    if (VehicleBay.VehicleExists(VehicleManager.vehicles[i].asset.GUID, out VehicleData data) && data.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
+                    {
+                        trunk.removeItem(e.Index);
+                        Item it2 = new Item((!build ? buildAsset : ammoAsset)!.id, true);
+                        trunk.addItem(e.X, e.Y, e.ItemJar.rot, it2);
+                        e.Break();
+                    }
+                    return;
+                }
+            }
+        }
+    }
     internal static void OnPreVehicleDamage(CSteamID instigatorSteamID, InteractableVehicle vehicle, ref ushort pendingTotalDamage, ref bool canRepair, ref bool shouldAllow, EDamageOrigin damageOrigin)
     {
 #if DEBUG
@@ -583,7 +618,8 @@ public static class EventFunctions
                     Steam64 = ucplayer.Steam64,
                     Team = ucplayer.Player.GetTeamByte()
                 });
-                DailyQuests.RegisterDailyTrackers(ucplayer);
+                if (!UCWarfare.Config.DisableDailyQuests)
+                    DailyQuests.RegisterDailyTrackers(ucplayer);
                 //KitManager.OnPlayerJoinedQuestHandling(ucplayer);
                 //VehicleBay.OnPlayerJoinedQuestHandling(ucplayer);
                 //Ranks.RankManager.OnPlayerJoin(ucplayer);
@@ -1047,13 +1083,10 @@ public static class EventFunctions
         }
 
         UCPlayer? ucplayer = UCPlayer.FromPlayer(parameters.player);
-        if (ucplayer != null && ucplayer.OnDuty())
+        if (ucplayer != null && ucplayer.OnDuty() && ucplayer.GodMode)
         {
-            if (ucplayer.GodMode)
-            {
-                shouldAllow = false;
-                return;
-            }
+            shouldAllow = false;
+            return;
         }
         if (parameters.cause < DeathTracker.MAIN_CAMP_OFFSET && Data.Gamemode is TeamGamemode gm && gm.EnableAMC && OffenseManager.IsValidSteam64ID(parameters.killer) && parameters.killer != parameters.player.channel.owner.playerID.steamID) // prevent killer from being null or suicidal
         {
@@ -1205,6 +1238,8 @@ public static class EventFunctions
             ucplayer.LastPingID = 0;
         }
     }
+
+    private static readonly Guid KIT_RACK = new Guid("7ee1d28efe904a369c93c544494fa1ef");
     internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
     {
 #if DEBUG
@@ -1215,6 +1250,16 @@ public static class EventFunctions
         if (ucplayer != null && ucplayer.OnDuty())
             return;
         if (Assets.find(EAssetType.ITEM, jar.item.id) is not ItemAsset asset) return;
+        if (player.inventory.storage != null)
+        {
+            BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(player.inventory.storage.transform);
+            if (drop != null && drop.asset.GUID == KIT_RACK)
+            {
+                allow = false;
+                player.SendChat(T.ProhibitedStoring, asset);
+                return;
+            }
+        }
         if (!Whitelister.IsWhitelisted(asset.GUID, out _))
         {
             allow = false;
@@ -1231,17 +1276,6 @@ public static class EventFunctions
             found.Position = point;
             found.Rotation = new Vector3(angle_x * 2f, angle_y * 2f, angle_z * 2f);
             StructureSaver.SaveSingleton();
-            if (VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, EStructType.STRUCTURE))
-            {
-                IEnumerable<VehicleSign> linked = VehicleSigns.GetLinkedSigns(spawn);
-                int i = 0;
-                foreach (VehicleSign sign in linked)
-                {
-                    i++;
-                    sign.bay_transform = new SerializableTransform(found.Position, found.Rotation);
-                }
-                if (i > 0) VehicleSigns.SaveSingleton();
-            }
         }
     }
     internal static void BarricadeMovedInWorkzone(CSteamID instigator, byte x, byte y, ushort plant, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
@@ -1254,17 +1288,6 @@ public static class EventFunctions
             found.Position = point;
             found.Rotation = new Vector3(angle_x * 2f, angle_y * 2f, angle_z * 2f);
             StructureSaver.SaveSingleton();
-            if (VehicleSpawner.IsRegistered(instanceID, out Vehicles.VehicleSpawn spawn, EStructType.BARRICADE))
-            {
-                IEnumerable<VehicleSign> linked = VehicleSigns.GetLinkedSigns(spawn);
-                int i = 0;
-                foreach (VehicleSign sign in linked)
-                {
-                    i++;
-                    sign.bay_transform = new SerializableTransform(found.Position, found.Rotation);
-                }
-                if (i > 0) VehicleSigns.SaveSingleton();
-            }
         }
         UCBarricadeManager.GetBarricadeFromInstID(instanceID, out BarricadeDrop? drop);
         if (drop != default)
@@ -1273,13 +1296,9 @@ public static class EventFunctions
             {
                 if (RequestSigns.SignExists(sign, out RequestSign rsign))
                 {
-                    rsign.transform = new SerializableTransform(found.Position, found.Rotation);
+                    rsign.Position = drop.model.position;
+                    rsign.Rotation = drop.model.rotation.eulerAngles;
                     RequestSigns.SaveSingleton();
-                }
-                else if (VehicleSigns.SignExists(sign, out VehicleSign vbsign))
-                {
-                    vbsign.sign_transform = new SerializableTransform(found.Position, found.Rotation);
-                    VehicleSigns.SaveSingleton();
                 }
                 TraitSigns.OnBarricadeMoved(drop, sign);
             }
@@ -1362,7 +1381,8 @@ public static class EventFunctions
         try
         {
             Points.OnPlayerLeft(ucplayer);
-            DailyQuests.DeregisterDailyTrackers(ucplayer);
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.DeregisterDailyTrackers(ucplayer);
             QuestManager.DeregisterOwnedTrackers(ucplayer);
             kit = ucplayer.KitName;
 
@@ -1608,6 +1628,12 @@ public static class EventFunctions
             r.ReviveManager.ClearInjuredMarker(instigator.channel.owner.playerID.steamID.m_SteamID, instigator.GetTeam());
             r.ReviveManager.OnPlayerHealed(instigator, target);
         }
+    }
+
+    internal static void OnGameUpdateDetected(string newVersion, ref bool shouldShutdown)
+    {
+        shouldShutdown = false;
+        ShutdownCommand.ShutdownAfterGame("Unturned update \"v" + newVersion + "\".", false);
     }
 }
 #pragma warning restore IDE0060 // Remove unused parameter

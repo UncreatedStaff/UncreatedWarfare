@@ -114,7 +114,7 @@ public static class PlayerManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         player.IsOnline = false;
-
+        player.Events.Dispose();
 
         OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
         _dict.Remove(player.Steam64);
