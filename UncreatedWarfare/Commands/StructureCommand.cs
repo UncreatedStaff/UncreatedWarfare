@@ -236,7 +236,7 @@ public class StructureCommand : Command
         {
             if (bdrop.model.TryGetComponent(out Components.FOBComponent f))
             {
-                f.parent.IsWipedByAuthority = true;
+                f.Parent.IsWipedByAuthority = true;
                 //f.parent.Destroy();
             }
 

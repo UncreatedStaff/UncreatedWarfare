@@ -526,6 +526,7 @@ public static class EventDispatcher
     }
     internal static void OnKeyDown(UCPlayer player, PlayerKey key, KeyDown? callback)
     {
+        L.LogDebug("On Key down " + player.Name.PlayerName + ", " + key);
         if (callback == null || !player.IsOnline) return;
         bool handled = false;
         foreach (KeyDown inv in callback.GetInvocationList().Cast<KeyDown>())
@@ -536,6 +537,7 @@ public static class EventDispatcher
     }
     internal static void OnKeyUp(UCPlayer player, PlayerKey key, float timeDown, KeyUp? callback)
     {
+        L.LogDebug("On Key up " + player.Name.PlayerName + ", " + key);
         if (callback == null || !player.IsOnline) return;
         bool handled = false;
         foreach (KeyUp inv in callback.GetInvocationList().Cast<KeyUp>())

@@ -1,4 +1,5 @@
-﻿using SDG.NetTransport;
+﻿using JetBrains.Annotations;
+using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections;
@@ -20,7 +21,9 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.ReportSystem;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.Commander;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -1102,17 +1105,36 @@ internal class _DebugCommand : Command
         ctx.Defer();
     }
 
-    private void cst1(CommandInteraction ctx)
+    private void squadsetup(CommandInteraction ctx)
     {
-        ctx.AssertRanByConsole();
+        ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
+        ctx.AssertRanByPlayer();
 
-        Gamemode.Config.AASAllowVehicleCapture = true;
-        Gamemode.ConfigObj.Save();
-    }
+        ulong team = ctx.Caller.GetTeam();
+        string kitname = team == 1 ? "ussql1" : "mesql1";
+        if (!KitManager.KitExists(kitname, out Kit kit))
+            throw ctx.SendUnknownError();
 
-    private void cst2(CommandInteraction ctx)
-    {
-        Gamemode.Config.BarricadeAmmoBag.SetCurrentMapValue(new JsonAssetReference<ItemBarricadeAsset>(20000));
-        Gamemode.ConfigObj.Save();
+        KitManager.GiveKit(ctx.Caller, kit);
+        if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader != ctx.Caller)
+        {
+            SquadManager.CreateSquad(ctx.Caller, team);
+        }
+        if (VehicleBay.Loaded && VehicleSpawner.Loaded)
+        {
+            Vector3 pos = ctx.Caller.Position;
+            Vehicles.VehicleSpawn logi = VehicleBay.Singleton
+                .Where(x => (x.Team == team || x.Team == 0) && x.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
+                .SelectMany(x => VehicleSpawner.Spawners
+                    .Where(y => y.VehicleGuid == x.VehicleID && y.HasLinkedVehicle(out _) && y.LinkedSign?.SignInteractable != null))
+                .OrderBy(x => (pos - x.LinkedSign!.SignInteractable!.transform.position).sqrMagnitude)
+                .FirstOrDefault();
+            if (logi.HasLinkedVehicle(out InteractableVehicle veh) && VehicleBay.VehicleExists(logi.VehicleGuid, out VehicleData data))
+                RequestCommand.GiveVehicle(ctx.Caller, veh, data);
+        }
+        if (Data.Gamemode.State == EState.STAGING)
+        {
+            Data.Gamemode.SkipStagingPhase();
+        }
     }
 }

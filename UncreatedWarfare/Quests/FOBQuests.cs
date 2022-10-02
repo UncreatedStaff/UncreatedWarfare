@@ -147,7 +147,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         {
             writer.WriteProperty("fobs_built", _fobsBuilt);
         }
-        public void OnFOBBuilt(UCPlayer constructor, Components.FOB fob)
+        public void OnFOBBuilt(UCPlayer constructor, FOB fob)
         {
             if (constructor.Steam64 == _player.Steam64)
             {
@@ -162,8 +162,8 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
                 }
                 else if (Data.Is(out Gamemodes.Flags.Invasion.Invasion inv))
                 {
-                    if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && F.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
-                        (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && F.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
+                    if ((inv.AttackingTeam == 1 && inv.ObjectiveTeam1 != null && F.SqrDistance2D(fob.Position, inv.ObjectiveTeam1.Position) <= SqrBuildRange) ||
+                        (inv.AttackingTeam == 2 && inv.ObjectiveTeam2 != null && F.SqrDistance2D(fob.Position, inv.ObjectiveTeam2.Position) <= SqrBuildRange))
                     {
                         goto add;
                     }

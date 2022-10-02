@@ -219,8 +219,6 @@ public sealed class UCPlayerKeys
     private static void CheckAnySubs()
     {
         anySubs = false;
-        for (int i = 0; i < KEY_COUNT; ++i)
-            eventMask[i] = false;
         for (int i = 0; i < _upEvents.Length; ++i)
         {
             if (_upEvents[i] != null)
@@ -228,6 +226,8 @@ public sealed class UCPlayerKeys
                 anySubs = true;
                 eventMask[i] = true;
             }
+            else
+                eventMask[i] = false;
         }
         for (int i = 0; i < _downEvents.Length; ++i)
         {
@@ -255,7 +255,7 @@ public sealed class UCPlayerKeys
                 if (eventMask[i])
                 {
                     bool ost = this.lastKeys[i];
-                    if (st == ost) return;
+                    if (st == ost) continue;
                     if (st)
                     {
                         EventDispatcher.OnKeyDown(Player, (PlayerKey)i, _downEvents[i]);

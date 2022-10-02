@@ -375,7 +375,7 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation from {4}m away using a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after hitting themselves with {3} fragmentation using a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM, "{0} was killed by {3} fragmentation from {4}m away using a {6} driven by {5}."),
-                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed {1}'s {3} fragmentation from {4}m away using a {6} driven by {5}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed by {1}'s {3} fragmentation from {4}m away using a {6} driven by {5}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} killed themselves with {3} fragmentation while in a {6} driven by {5}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being hit by {3} fragmentation using a {6} driven by {5} from {4}m away."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation using a {6} driven by {5} from {4}m away."),

@@ -30,7 +30,7 @@ public static class Localization
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Colorize(string hex, string inner, TranslationFlags flags)
     {
-        return (flags & TranslationFlags.NoColor) == TranslationFlags.NoColor ? inner : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
+        return (flags & TranslationFlags.SkipColorize) == TranslationFlags.SkipColorize ? inner : (((flags & TranslationFlags.TranslateWithUnityRichText) == TranslationFlags.TranslateWithUnityRichText)
             ? (UNITY_RICH_TEXT_COLOR_BASE_START + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE)
             : (TMPRO_RICH_TEXT_COLOR_BASE + hex + RICH_TEXT_COLOR_END + inner + RICH_TEXT_COLOR_CLOSE));
     }
@@ -371,7 +371,6 @@ public static class Localization
     }
     public static string TranslateKitSign(string language, Kit kit, UCPlayer ucplayer)
     {
-        L.LogDebug("Translating kit sign for " + ucplayer.Name.PlayerName + ".");
         bool keepline = false;
         ulong team = ucplayer.GetTeam();
         string name;

@@ -138,7 +138,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
 
         if (player == null || player.OnDuty() && isFOB)
         {
-            f.parent.IsWipedByAuthority = true;
+            f.Parent.IsWipedByAuthority = true;
         }
         else
         {

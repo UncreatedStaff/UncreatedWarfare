@@ -116,7 +116,7 @@ internal static class T
     public static readonly Translation UndiscoveredFlag = new Translation("<#c$undiscovered_flag$>unknown", TranslationFlags.UnityUI);
 
     [TranslationData(SECTION_FLAGS, "Shows in place of the objective name for an undiscovered flag or objective.")]
-    public static readonly Translation UndiscoveredFlagNoColor = new Translation("unknown", TranslationFlags.NoColor);
+    public static readonly Translation UndiscoveredFlagNoColor = new Translation("unknown", TranslationFlags.NoColorOptimization);
     
     [TranslationData(SECTION_FLAGS, "Shows on the Capture UI when the player's team is capturing a flag they're on.")]
     public static readonly Translation UICapturing = new Translation("CAPTURING",     TranslationFlags.UnityUI);
@@ -176,13 +176,13 @@ internal static class T
     public static readonly Translation<IPlayer> PlayerDisconnected = new Translation<IPlayer>("<#e6e3d5>{0} left the server.");
 
     [TranslationData(SECTION_PLAYERS, "Kick message for a player that suffers from a rare bug which will cause GameObject.get_transform() to throw a NullReferenceException (not return null). They are kicked if this happens.", "Discord Join Code")]
-    public static readonly Translation<string> NullTransformKickMessage = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationFlags.NoColor);
+    public static readonly Translation<string> NullTransformKickMessage = new Translation<string>("Your character is bugged, which messes up our zone plugin. Rejoin or contact a Director if this continues. (discord.gg/{0}).", TranslationFlags.NoColorOptimization);
 
     [TranslationData(SECTION_PLAYERS, "Gets sent to a player when their message gets blocked by the chat filter.", "Section of the message that matched the chat filter.")]
     public static readonly Translation<string> ChatFilterFeedback = new Translation<string>("<#ff8c69>Our chat filter flagged <#fdfdfd>{0}</color>, so the message wasn't sent.");
     
     [TranslationData(SECTION_PLAYERS, "Gets sent to a player when their message gets blocked by the chat filter.", "Amount of alphanumeric characters in succession.")]
-    public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationFlags.NoColor);
+    public static readonly Translation<int> NameFilterKickMessage = new Translation<int>("Your name does not contain enough alphanumeric characters in succession ({0}), please change your name and rejoin.", TranslationFlags.NoColorOptimization);
     
     [TranslationData(SECTION_PLAYERS, "Gets sent to a player who is attempting to main camp the other team.")]
     public static readonly Translation AntiMainCampWarning = new Translation("<#fa9e9e>Stop <b><#ff3300>main-camping</color></b>! Damage is <b>reversed</b> back on you.");
@@ -235,7 +235,7 @@ internal static class T
     public static readonly Translation<string> NextGameShutdown       = new Translation<string>("<#94cbff>Shutting Down Because: \"{0}\"</color>", TranslationFlags.UnityUI);
 
     [TranslationData(SECTION_LEADERBOARD)]
-    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationFlags.UnityUI, "mm:ss");
+    public static readonly Translation<TimeSpan> NextGameShutdownTime = new Translation<TimeSpan>("{0}", TranslationFlags.UnityUI, "mm\\:ss");
 
     [TranslationData(SECTION_LEADERBOARD)]
     public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationFlags.UnityUI, FactionInfo.COLOR_SHORT_NAME_FORMAT, FactionInfo.COLOR_SHORT_NAME_FORMAT);
@@ -717,7 +717,7 @@ internal static class T
     public static readonly Translation RallyEnemiesNearby   = new Translation("<#959c8c>There are enemies near this <#c$rally$>rally</color>.");
     public static readonly Translation RallyEnemiesNearbyTp = new Translation("<#959c8c>There are enemies near your pending <#c$rally$>rally</color>. Deployment cancelled.");
     public static readonly Translation<string> RallyUI      = new Translation<string>("<#c$rally$>RALLY</color> {0}", TranslationFlags.UnityUI);
-    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationFlags.UnityUI, "mm:ss");
+    public static readonly Translation<TimeSpan, string> RallyUITimer = new Translation<TimeSpan, string>("<#c$rally$>RALLY</color> {0} {1}", TranslationFlags.UnityUI, "mm\\:ss");
     #endregion
 
     #region Time
@@ -1183,7 +1183,7 @@ internal static class T
     #endregion
 
     #region Clear
-    public static readonly Translation ClearNoPlayerConsole = new Translation("Specify a player name when clearing from console.", TranslationFlags.NoColor);
+    public static readonly Translation ClearNoPlayerConsole = new Translation("Specify a player name when clearing from console.", TranslationFlags.NoColorOptimization);
     public static readonly Translation ClearInventorySelf = new Translation("<#e6e3d5>Cleared your inventory.");
     public static readonly Translation<IPlayer> ClearInventoryOther = new Translation<IPlayer>("<#e6e3d5>Cleared {0}'s inventory.", UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
     public static readonly Translation ClearItems = new Translation("<#e6e3d5>Cleared all dropped items.");
@@ -1273,29 +1273,29 @@ internal static class T
     #region Trait Signs
     private const string TRAITS_SIGN_SECTION = "Traits / Sign";
     [TranslationData(TRAITS_SIGN_SECTION, "Shows instead of the credits when Credit Cost is 0.")]
-    public static readonly Translation TraitSignFree = new Translation("<#c$kit_level_dollars_owned$>FREE</color>", TranslationFlags.NoColor);
+    public static readonly Translation TraitSignFree = new Translation("<#c$kit_level_dollars_owned$>FREE</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows instead of the unlock requirements when a trait is unlocked.")]
-    public static readonly Translation TraitSignUnlocked = new Translation("<#99ff99>Unlocked</color>", TranslationFlags.NoColor);
+    public static readonly Translation TraitSignUnlocked = new Translation("<#99ff99>Unlocked</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you're not in a squad and it's required.")]
-    public static readonly Translation TraitSignRequiresSquad = new Translation("<#c$vbs_delay$>Join a Squad</color>", TranslationFlags.NoColor);
+    public static readonly Translation TraitSignRequiresSquad = new Translation("<#c$vbs_delay$>Join a Squad</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you're not in a squad or not a squad leader and it's required.")]
-    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#c$vbs_delay$>Squad Leaders Only</color>", TranslationFlags.NoColor);
+    public static readonly Translation TraitSignRequiresSquadLeader = new Translation("<#c$vbs_delay$>Squad Leaders Only</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you dont have a kit or have an unarmed kit.")]
-    public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>", TranslationFlags.NoColor);
+    public static readonly Translation TraitSignNoKit = new Translation("<#c$vbs_delay$>Request a Kit</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the trait is locked in the current gamemode.")]
-    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationFlags.NoColor);
+    public static readonly Translation TraitGamemodeBlacklisted = new Translation("<#c$vbs_delay$>Locked</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait.", "Class name")]
-    public static readonly Translation<EClass> TraitSignClassBlacklisted = new Translation<EClass>("<#c$vbs_delay$>Locked for {0}</color>", TranslationFlags.NoColor, PLURAL);
+    public static readonly Translation<EClass> TraitSignClassBlacklisted = new Translation<EClass>("<#c$vbs_delay$>Locked for {0}</color>", TranslationFlags.NoColorOptimization, PLURAL);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 1 class.", "Class name")]
-    public static readonly Translation<EClass> TraitSignClassWhitelisted1 = new Translation<EClass>("<#c$vbs_delay$>{0} Required</color>", TranslationFlags.NoColor);
+    public static readonly Translation<EClass> TraitSignClassWhitelisted1 = new Translation<EClass>("<#c$vbs_delay$>{0} Required</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when the kit class you have isn't compatible with the trait and theres a kit whitelist with 2 classes.", "Class name")]
-    public static readonly Translation<EClass, EClass> TraitSignClassWhitelisted2 = new Translation<EClass, EClass>("<#c$vbs_delay$>{0} or {1} Required</color>", TranslationFlags.NoColor);
+    public static readonly Translation<EClass, EClass> TraitSignClassWhitelisted2 = new Translation<EClass, EClass>("<#c$vbs_delay$>{0} or {1} Required</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait and it expires in time.", "Minutes", "Seconds")]
-    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
+    public static readonly Translation<int, int> TraitSignAlreadyActiveTime = new Translation<int, int>("<#c$vbs_delay$>Already Active: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you currently have the trait and it expires on death.")]
-    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColor);
+    public static readonly Translation TraitSignAlreadyActiveDeath = new Translation("<#c$vbs_delay$>Already Active</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(TRAITS_SIGN_SECTION, "Shows when you are on either global or individual cooldown (whichever is longer).", "Minutes", "Seconds")]
-    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
+    public static readonly Translation<int, int> TraitSignCooldown = new Translation<int, int>("<#c$vbs_delay$>On Cooldown: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
     #endregion
     #region Trait Interactions
     private const string TRAITS_INTERACTIONS_SECTION = "Traits / Interactions";
@@ -1311,51 +1311,51 @@ internal static class T
     #endregion
 
     #region Request Signs
-    public static readonly Translation KitFree = new Translation("<#c$kit_free$>FREE</color>", TranslationFlags.NoColor);
-    public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>", TranslationFlags.NoColor);
-    public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);
-    public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColor);
-    public static readonly Translation<float> KitPremiumCost = new Translation<float>("<#c$kit_level_dollars$>$ {0}</color>", TranslationFlags.NoColor, "N2");
+    public static readonly Translation KitFree = new Translation("<#c$kit_free$>FREE</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitExclusive = new Translation("<#c$kit_level_dollars_exclusive$>EXCLUSIVE</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> KitName = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<string> KitWeapons = new Translation<string>("<b>{0}</b>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<float> KitPremiumCost = new Translation<float>("<#c$kit_level_dollars$>$ {0}</color>", TranslationFlags.NoColorOptimization, "N2");
     [TranslationData(FormattingDescriptions = new string[] { "Level", "Color depending on player's current level." })]
-    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<string, Color> KitRequiredLevel = new Translation<string, Color>("<#f0a31c>Rank:</color> <#{1}>{0}</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(FormattingDescriptions = new string[] { "Rank", "Color depending on player's current rank." })]
-    public static readonly Translation<Ranks.RankData, Color> KitRequiredRank = new Translation<Ranks.RankData, Color>("<#{1}>Rank: {0}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<Ranks.RankData, Color> KitRequiredRank = new Translation<Ranks.RankData, Color>("<#{1}>Rank: {0}</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(FormattingDescriptions = new string[] { "Quest", "Color depending on whether the player has completed the quest." })]
-    public static readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationFlags.NoColor);
+    public static readonly Translation<QuestAsset, Color> KitRequiredQuest = new Translation<QuestAsset, Color>("<#{1}>Quest: <#fff>{0}</color></color>", TranslationFlags.NoColorOptimization);
     [TranslationData(FormattingDescriptions = new string[] { "Number of quests needed.", "Color depending on whether the player has completed the quest(s).", "s if {0} != 1" })]
-    public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>", TranslationFlags.NoColor);
-    public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>", TranslationFlags.NoColor);
-    public static readonly Translation KitPremiumOwned = new Translation("<#c$kit_level_dollars_owned$>OWNED</color>", TranslationFlags.NoColor);
-    public static readonly Translation KitCommanderTakenByViewer = new Translation("<#c$kit_level_dollars_owned$>You are the <#cedcde>COMMANDER</color>.</color>", TranslationFlags.NoColor);
-    public static readonly Translation<IPlayer> KitCommanderTaken = new Translation<IPlayer>("<#f0a31c>Taken by <#fff>{0}</color></color>", TranslationFlags.NoColor, UCPlayer.NICK_NAME_FORMAT);
-    public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>", TranslationFlags.NoColor);
-    public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>", TranslationFlags.NoColor);
-    public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}", TranslationFlags.NoColor);
-    public static readonly Translation<int> LoadoutName = new Translation<int>("<#c$kit_level_dollars$>LOADOUT {0}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<int, Color, string> KitRequiredQuestsMultiple = new Translation<int, Color, string>("<#{1}>Finish <#fff>{0}</color> quest{2}.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitRequiredQuestsComplete = new Translation("<#ff974d>Kit Unlocked</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitPremiumOwned = new Translation("<#c$kit_level_dollars_owned$>OWNED</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitCommanderTakenByViewer = new Translation("<#c$kit_level_dollars_owned$>You are the <#cedcde>COMMANDER</color>.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<IPlayer> KitCommanderTaken = new Translation<IPlayer>("<#f0a31c>Taken by <#fff>{0}</color></color>", TranslationFlags.NoColorOptimization, UCPlayer.NICK_NAME_FORMAT);
+    public static readonly Translation<int> KitCreditCost = new Translation<int>("<#c$credits$>C</color> <#fff>{0}</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation KitUnlimited = new Translation("<#c$kit_unlimited_players$>unlimited</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int, int> KitPlayerCount = new Translation<int, int>("{0}/{1}", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> LoadoutName = new Translation<int>("<#c$kit_level_dollars$>LOADOUT {0}</color>", TranslationFlags.NoColorOptimization);
     #endregion
 
     #region Vehicle Bay Signs
-    public static readonly Translation<int> VBSTickets = new Translation<int>("<#c$vbs_ticket_number$>{0}</color> <#c$vbs_ticket_label$>Tickets</color>", TranslationFlags.NoColor);
-    public static readonly Translation VBSStateReady = new Translation("<#c$vbs_ready$>Ready!</color> <#aaa><b>/request</b></color>", TranslationFlags.NoColor);
+    public static readonly Translation<int> VBSTickets = new Translation<int>("<#c$vbs_ticket_number$>{0}</color> <#c$vbs_ticket_label$>Tickets</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation VBSStateReady = new Translation("<#c$vbs_ready$>Ready!</color> <#aaa><b>/request</b></color>", TranslationFlags.NoColorOptimization);
     [TranslationData(FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
-    public static readonly Translation<int, int> VBSStateDead = new Translation<int, int>("<#c$vbs_dead$>{0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
+    public static readonly Translation<int, int> VBSStateDead = new Translation<int, int>("<#c$vbs_dead$>{0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
     [TranslationData(FormattingDescriptions = new string[] { "Nearest location." })]
-    public static readonly Translation<string> VBSStateActive = new Translation<string>("<#c$vbs_active$>{0}</color>", TranslationFlags.NoColor);
+    public static readonly Translation<string> VBSStateActive = new Translation<string>("<#c$vbs_active$>{0}</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
-    public static readonly Translation<int, int> VBSStateIdle = new Translation<int, int>("<#c$vbs_idle$>Idle: {0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
-    public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>", TranslationFlags.NoColor);
+    public static readonly Translation<int, int> VBSStateIdle = new Translation<int, int>("<#c$vbs_idle$>Idle: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation VBSDelayStaging = new Translation("<#c$vbs_delay$>Locked Until Start</color>", TranslationFlags.NoColorOptimization);
     [TranslationData(FormattingDescriptions = new string[] { "Minutes", "Seconds" })]
-    public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#c$vbs_delay$>Locked: {0}:{1}</color>", TranslationFlags.NoColor, arg1Fmt: "D2");
-    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#c$vbs_delay$>Capture {0}</color>", TranslationFlags.NoColor | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
-    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColor | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
-    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more flags.</color>", TranslationFlags.NoColor);
-    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#c$vbs_delay$>Capture {0} more flags.</color>", TranslationFlags.NoColor);
-    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", TranslationFlags.NoColor, FOB.CLOSEST_LOCATION_FORMAT);
-    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#c$vbs_delay$>Destroy Next Cache</color>", TranslationFlags.NoColor);
-    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#c$vbs_delay$>Destroy {0} more caches.</color>", TranslationFlags.NoColor);
-    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColor, FOB.CLOSEST_LOCATION_FORMAT);
-    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#c$vbs_delay$>Lose Next Cache</color>", TranslationFlags.NoColor);
-    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more caches.</color>", TranslationFlags.NoColor);
+    public static readonly Translation<int, int> VBSDelayTime = new Translation<int, int>("<#c$vbs_delay$>Locked: {0}:{1}</color>", TranslationFlags.NoColorOptimization, arg1Fmt: "D2");
+    public static readonly Translation<Flag> VBSDelayCaptureFlag = new Translation<Flag>("<#c$vbs_delay$>Capture {0}</color>", TranslationFlags.NoColorOptimization | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<Flag> VBSDelayLoseFlag = new Translation<Flag>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColorOptimization | TranslationFlags.PerTeamTranslation, Flag.SHORT_NAME_DISCOVER_FORMAT);
+    public static readonly Translation<int> VBSDelayLoseFlagMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more flags.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayCaptureFlagMultiple = new Translation<int>("<#c$vbs_delay$>Capture {0} more flags.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Cache> VBSDelayAttackCache = new Translation<Cache>("<#c$vbs_delay$>Destroy {0}</color>", TranslationFlags.NoColorOptimization, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation VBSDelayAttackCacheUnknown = new Translation("<#c$vbs_delay$>Destroy Next Cache</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayAttackCacheMultiple = new Translation<int>("<#c$vbs_delay$>Destroy {0} more caches.</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<Cache> VBSDelayDefendCache = new Translation<Cache>("<#c$vbs_delay$>Lose {0}</color>", TranslationFlags.NoColorOptimization, FOB.CLOSEST_LOCATION_FORMAT);
+    public static readonly Translation VBSDelayDefendCacheUnknown = new Translation("<#c$vbs_delay$>Lose Next Cache</color>", TranslationFlags.NoColorOptimization);
+    public static readonly Translation<int> VBSDelayDefendCacheMultiple = new Translation<int>("<#c$vbs_delay$>Lose {0} more caches.</color>", TranslationFlags.NoColorOptimization);
     #endregion
 
     #region Revives
@@ -1655,10 +1655,10 @@ internal static class T
     #region Spotting
     public static readonly Translation SpottedToast = new Translation("<#b9ffaa>SPOTTED", TranslationFlags.UnityUI);
         [TranslationData(FormattingDescriptions = new string[] { "Team color of the speaker.", "Target" })]
-    public static readonly Translation<Color, string> SpottedMessage = new Translation<Color, string>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Enemy {1} spotted!", TranslationFlags.NoColor);
-    public static readonly Translation SpottedTargetPlayer = new Translation("contact", TranslationFlags.NoColor);
-    public static readonly Translation SpottedTargetFOB = new Translation("FOB", TranslationFlags.NoColor);
-    public static readonly Translation SpottedTargetCache = new Translation("Cache", TranslationFlags.NoColor);
+    public static readonly Translation<Color, string> SpottedMessage = new Translation<Color, string>("[T] <#{0}><noparse>%SPEAKER%</noparse></color>: Enemy {1} spotted!", TranslationFlags.NoColorOptimization);
+    public static readonly Translation SpottedTargetPlayer = new Translation("contact", TranslationFlags.NoColorOptimization);
+    public static readonly Translation SpottedTargetFOB = new Translation("FOB", TranslationFlags.NoColorOptimization);
+    public static readonly Translation SpottedTargetCache = new Translation("Cache", TranslationFlags.NoColorOptimization);
     #endregion
 
     #region Teleport

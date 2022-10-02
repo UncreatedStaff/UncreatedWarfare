@@ -160,7 +160,6 @@ public class BuildableComponent : MonoBehaviour
                     transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.FOB, data.group.GetTeam());
 
                     fob.UpdateBunker(structure);
-                    FOBManager.SendFOBListToTeam(fob.Team);
 
                     Orders.OnFOBBunkerBuilt(fob, this);
 

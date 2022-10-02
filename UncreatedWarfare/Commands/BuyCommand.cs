@@ -60,7 +60,7 @@ public class BuyCommand : Command
                         ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
                         return;
                     }
-                    await Points.AwardCreditsAsync(ctx.Caller, -kit.CreditCost, isPurchase: true);
+                    await Points.AwardCreditsAsync(ctx.Caller, -kit.CreditCost, isPurchase: true, @lock: false);
                 }
                 finally
                 {

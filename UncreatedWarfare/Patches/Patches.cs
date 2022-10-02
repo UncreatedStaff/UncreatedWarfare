@@ -414,7 +414,7 @@ public static partial class Patches
                             else if (drop.model.TryGetComponent(out BuildableComponent buildable))
                                 buildable.IncrementBuildPoints(builder);
                             else if (drop.model.TryGetComponent(out FOBComponent radio))
-                                radio.parent.Repair(builder);
+                                radio.Parent.Repair(builder);
                         }
                     }
                 }

@@ -645,6 +645,8 @@ public class UCPlayer : IPlayer
         _rank = new RankData((int)xp);
         CachedCredits = (int)credits;
     }
+
+    public override string ToString() => Name.PlayerName + " [" + Steam64.ToString("G17", Data.Locale) + "]";
 }
 
 public interface IPlayer : ITranslationArgument

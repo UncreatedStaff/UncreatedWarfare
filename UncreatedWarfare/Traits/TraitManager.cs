@@ -546,7 +546,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
                         ctx.Reply(T.RequestKitCantAfford, trait.CreditCost - ctx.Caller.CachedCredits, trait.CreditCost);
                         return;
                     }
-                    await Points.AwardCreditsAsync(ctx.Caller, -trait.CreditCost, isPurchase: true);
+                    await Points.AwardCreditsAsync(ctx.Caller, -trait.CreditCost, isPurchase: true, @lock: false);
                 }
                 finally
                 {

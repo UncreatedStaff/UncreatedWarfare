@@ -19,109 +19,110 @@ namespace Uncreated.Warfare.Components;
 
 public class FOBComponent : MonoBehaviour
 {
-    public FOB parent { get; private set; }
-    private Coroutine loop;
+    public FOB Parent { get; private set; }
 
     public void Initialize(FOB parent)
     {
-        this.parent = parent;
-
-        loop = StartCoroutine(Tick());
+        this.Parent = parent;
+        Data.Gamemode.OnGameTick += OnTick;
     }
 
-    private IEnumerator<WaitForSeconds> Tick()
+    private void OnTick()
     {
-        float count = 0;
-        float tickFrequency = 0.25F;
-
-        while (true)
-        {
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+        Vector3 pos = Parent.Position;
+        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+        {
+            if (player.GetTeam() == Parent.Team)
             {
-                if (player.GetTeam() == parent.Team)
+                if ((player.Position - pos).sqrMagnitude < Parent.SqrRadius)
                 {
-                    if ((player.Position - parent.Position).sqrMagnitude < parent.SqrRadius)
+                    if (!Parent.FriendliesOnFOB.Contains(player))
                     {
-                        if (!parent.FriendliesOnFOB.Contains(player))
-                        {
-                            parent.FriendliesOnFOB.Add(player);
-                            parent.OnPlayerEnteredFOB(player);
-                        }
-                    }
-                    else
-                    {
-                        if (parent.FriendliesOnFOB.Remove(player))
-                        {
-                            parent.OnPlayerLeftFOB(player);
-                        }
+                        Parent.FriendliesOnFOB.Add(player);
+                        Parent.OnPlayerEnteredFOB(player);
                     }
                 }
-                else if (parent.Bunker != null)
+                else
                 {
-                    if (Mathf.Abs(player.Position.y - parent.Position.y) < 4 && F.SqrDistance2D(player.Position, parent.Bunker.model.position) < Math.Pow(7, 2))
+                    if (Parent.FriendliesOnFOB.Remove(player))
                     {
-                        if (!parent.NearbyEnemies.Contains(player))
-                        {
-                            parent.NearbyEnemies.Add(player);
-                            parent.OnEnemyEnteredFOB(player);
-                        }
-                    }
-                    else
-                    {
-                        if (parent.NearbyEnemies.Remove(player))
-                        {
-                            parent.OnEnemyLeftFOB(player);
-                        }
+                        Parent.OnPlayerLeftFOB(player);
                     }
                 }
             }
+            else
+            {
+                if (Parent.FriendliesOnFOB.Remove(player))
+                    Parent.OnPlayerLeftFOB(player);
+                if (Parent.Bunker != null)
+                {
+                    // keeps people from being able to block FOBs from the floor above
+                    if (Mathf.Abs(player.Position.y - pos.y) < 4 && F.SqrDistance2D(player.Position, Parent.Bunker.model.position) < 49)
+                    {
+                        if (!Parent.NearbyEnemies.Contains(player))
+                        {
+                            Parent.NearbyEnemies.Add(player);
+                            Parent.OnEnemyEnteredFOB(player);
+                        }
+                    }
+                    else
+                    {
+                        if (Parent.NearbyEnemies.Remove(player))
+                        {
+                            Parent.OnEnemyLeftFOB(player);
+                        }
+                    }
+                }
+                else if (Parent.NearbyEnemies.Count > 0)
+                {
+                    for (int i = 0; i < Parent.NearbyEnemies.Count; ++i)
+                        Parent.OnEnemyLeftFOB(Parent.NearbyEnemies[i]);
+                    Parent.NearbyEnemies.Clear();
+                }
+            }
+        }
 
-            if (count % (1 / tickFrequency) == 0) // every 1 second
+        if (Data.Gamemode.EveryXSeconds(1f))
+        {
+            if (!Parent.IsBleeding)
+                Parent.ConsumeResources();
+
+            if (Data.Gamemode.EveryXSeconds(2f))
             {
-                if (!parent.IsBleeding)
-                    parent.ConsumeResources();
-            }
-            if (count % (2 / tickFrequency) == 0)  // every 2 seconds
-            {
-                if (parent.IsBleeding)
+                if (Parent.IsBleeding)
                 {
                     ushort loss = 10;
 
-                    Barricade barricade = parent.Radio.GetServersideData().barricade;
+                    Barricade barricade = Parent.Radio.GetServersideData().barricade;
 
                     BarricadeManager.damage(transform, loss, 1, false, default, EDamageOrigin.Useable_Melee);
                 }
-            }
-            if (count % (60 / tickFrequency) == 0)
-            {
-                if (!parent.IsBleeding)
-                {
-                    byte[] state = new byte[0];
-                    if (parent.Team == 1)
-                        state = Convert.FromBase64String(FOBManager.Config.T1RadioState);
-                    else if (parent.Team == 2)
-                        state = Convert.FromBase64String(FOBManager.Config.T2RadioState);
 
-                    parent.Radio.GetServersideData().barricade.state = state;
-                    parent.Radio.ReceiveUpdateState(state);
+                if (Data.Gamemode.EveryMinute)
+                {
+                    if (!Parent.IsBleeding)
+                    {
+                        byte[] state = new byte[0];
+                        if (Parent.Team == 1)
+                            state = Convert.FromBase64String(FOBManager.Config.T1RadioState);
+                        else if (Parent.Team == 2)
+                            state = Convert.FromBase64String(FOBManager.Config.T2RadioState);
+
+                        Parent.Radio.GetServersideData().barricade.state = state;
+                        Parent.Radio.ReceiveUpdateState(state);
+                    }
                 }
             }
-
-            count++;
-            if (count >= (60 / tickFrequency))
-                count = 0;
-#if DEBUG
-            profiler.Dispose();
-#endif
-            yield return new WaitForSeconds(tickFrequency);
         }
     }
+
     public void Destroy()
     {
-        StopCoroutine(loop);
+        Data.Gamemode.OnGameTick -= OnTick;
+        this.Parent = null!;
         Destroy(this);
     }
 }
@@ -332,8 +333,6 @@ public class FOB : IFOB, IDeployable
 
         component = Radio.model.gameObject.AddComponent<FOBComponent>();
         component.Initialize(this);
-
-        FOBManager.SendFOBListToTeam(Team);
     }
     public void UpdateBunker(BarricadeDrop? bunker)
     {
@@ -349,6 +348,8 @@ public class FOB : IFOB, IDeployable
         {
             Radius = FOBManager.Config.FOBBuildPickupRadius;
         }
+
+        FOBManager.UpdateFOBListForTeam(Team, this);
     }
     public void ConsumeResources()
     {
@@ -446,6 +447,7 @@ public class FOB : IFOB, IDeployable
     }
     internal void OnPlayerEnteredFOB(UCPlayer player)
     {
+        L.LogDebug("Player entered FOB: " + player);
         ShowResourceUI(player);
 
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
@@ -459,14 +461,17 @@ public class FOB : IFOB, IDeployable
     }
     internal void OnPlayerLeftFOB(UCPlayer player)
     {
+        L.LogDebug("Player left FOB: " + player);
         HideResourceUI(player);
     }
     internal void OnEnemyEnteredFOB(UCPlayer player)
     {
+        L.LogDebug("Enemy entered FOB: " + player);
         FOBManager.UpdateFOBListForTeam(this.Team, this);
     }
     internal void OnEnemyLeftFOB(UCPlayer player)
     {
+        L.LogDebug("Enemy left FOB: " + player);
         FOBManager.UpdateFOBListForTeam(this.Team, this);
     }
     public void ShowResourceUI(UCPlayer player)
@@ -536,7 +541,7 @@ public class FOB : IFOB, IDeployable
 
         SwapRadioBarricade(newRadio);
 
-        FOBManager.SendFOBListToTeam(Team);
+        FOBManager.UpdateFOBListForTeam(Team, this);
     }
     public void Reactivate()
     {
@@ -637,7 +642,7 @@ public class FOB : IFOB, IDeployable
         {
             if (team != 0 && barricade.GetServersideData().group.GetTeam() == team)
                 if (barricade.model.TryGetComponent(out FOBComponent comp))
-                    fobs.Add(comp.parent);
+                    fobs.Add(comp.Parent);
         }
 
         return fobs;
@@ -660,7 +665,7 @@ public class FOB : IFOB, IDeployable
                     if ((data.point - point).sqrMagnitude <= 30 * 30)
                         return true;
                     else
-                        return f.parent.Bunker != null && (data.point - point).sqrMagnitude <= radius2;
+                        return f.Parent.Bunker != null && (data.point - point).sqrMagnitude <= radius2;
                 }
                 else if (radius2 > 0)
                     return (data.point - point).sqrMagnitude <= radius2;
@@ -673,7 +678,7 @@ public class FOB : IFOB, IDeployable
 
         foreach (BarricadeDrop barricade in barricades)
         {
-            fobs.Add(barricade.model.GetComponent<FOBComponent>().parent);
+            fobs.Add(barricade.model.GetComponent<FOBComponent>().Parent);
         }
 
         return fobs;

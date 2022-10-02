@@ -643,6 +643,8 @@ public class Translation
         bool hOthWrds = words.Length > 1;
         string otherWords = string.Empty;
         string str = (hOthWrds ? words[words.Length - 1] : word).ToLowerInvariant();
+        if (str.Length < 2)
+            return word;
         if (hOthWrds)
             otherWords = string.Join(" ", words, 0, words.Length - 1);
         bool isPCaps = char.IsUpper(word[0]);
@@ -800,7 +802,7 @@ public class Translation
         if ((flags & TranslationFlags.NoRichText) == 0 && (flags & TranslationFlags.ReplaceTMProRichText) == TranslationFlags.ReplaceTMProRichText)
             ReplaceTMProRichText(ref message, flags);
 
-        if ((flags & TranslationFlags.NoColor) == TranslationFlags.NoColor)
+        if ((flags & TranslationFlags.NoColorOptimization) == TranslationFlags.NoColorOptimization)
             goto noColor;
 
         // <#ffffff>
@@ -1218,7 +1220,7 @@ public class Translation
         {
             Type type = gen[i];
             string vi = i.ToString(Warfare.Data.Locale);
-            string fmt = "#  " + "{" + vi + "} - [" + ToString(type, L.DEFAULT, null, null, TranslationFlags.NoColor) + "]";
+            string fmt = "#  " + "{" + vi + "} - [" + ToString(type, L.DEFAULT, null, null, TranslationFlags.NoColorOptimization) + "]";
 
             FieldInfo? info = tt.GetField("_arg" + vi + "Fmt", BindingFlags.NonPublic | BindingFlags.Instance);
             FieldInfo? info2 = tt.GetField("_arg" + vi + "PluralExp", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -1327,50 +1329,74 @@ public class Translation
 public enum TranslationFlags
 {
     None = 0,
+
     /// <summary>Tells the translator not to search for translations in other languages if not found in the current language, and instead just return the field name.
     /// <para>If the current language isn't <see cref="L.DEFAULT"/>, a default will not be chosen.</para></summary>
     DontDefaultToOtherLanguage = 1,
+
     /// <summary>Tells the translator to an <see cref="ArgumentException"/> if the translation isn't found.
     /// <para>Combine with <see cref="DontDefaultToOtherLanguage"/> to make it require the active language to have the tranlation.</para></summary>
     ThrowMissingException = 2,
+
     /// <summary>Warnings about unused or missing parameters are not sent on load.</summary>
     SuppressWarnings = 4,
+
     /// <summary>Tells the translator to prioritize using base Unity rich text instead of TMPro rich text.</summary>
     TranslateWithUnityRichText = 8,
+
     /// <summary>Tells the translator to replace &lt;#ffffff&gt; format with &lt;color=#ffffff&gt;.</summary>
     ReplaceTMProRichText = 16,
+
     /// <summary>Tells the translator to target Unity rich text instead of TMPro rich text and replace &lt;#ffffff&gt; tags with &lt;color=#ffffff&gt; tags.</summary>
     UseUnityRichText = TranslateWithUnityRichText | ReplaceTMProRichText,
+
     /// <summary>Tells the translator not to look for color tags on this translation. Useful for UI elements mainly.</summary>
-    NoColor = 32,
+    NoColorOptimization = 32,
+
     /// <summary>Tells the translator to translate the messsage for each player when broadcasted.</summary>
     PerPlayerTranslation = 64,
+
     /// <summary>Checks for any &lt;size&gt tags.</summary>
     TMProSign = 128,
+
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 1.</summary>
     Team1 = 256,
+
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 2.</summary>
     Team2 = 512,
+
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is for team 3.</summary>
     Team3 = 1024,
+
     /// <summary>Tells <see cref="ChatManager"/> to send chat messages with RichText set to false.</summary>
     NoRichText = 2048,
+
     /// <summary>Use for translations to be used on TMPro UI. Skips color scanning.</summary>
-    TMProUI = NoColor,
+    TMProUI = NoColorOptimization,
+
     /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format.</summary>
-    UnityUI = NoColor | UseUnityRichText,
+    UnityUI = NoColorOptimization | UseUnityRichText,
+
     /// <summary>Use for translations to be used on non-TMPro UI. Skips color optimization and convert to &lt;color=#ffffff&gt; format, doesn't replace already existing TMPro tags.</summary>
-    UnityUINoReplace = NoColor | TranslateWithUnityRichText,
+    UnityUINoReplace = NoColorOptimization | TranslateWithUnityRichText,
+
     /// <summary>Tells the translator to format the term plurally, this will be automatically applied to individual arguments if the format is <see cref="T.PLURAL"/>.</summary>
     Plural = 4096,
+
     /// <summary>Tells the translator to not try to turn arguments plural.</summary>
     NoPlural = 8192,
+
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent in chat.</summary>
     ForChat = 16384,
+
     /// <summary>Don't use this in a constructor, used to tell translator functions that the translation is going to be sent on a sign.</summary>
     ForSign = 32768,
+
     /// <summary>Tells the translator to translate the messsage for each team when broadcasted.</summary>
-    PerTeamTranslation = 65536
+    PerTeamTranslation = 65536,
+
+    /// <summary>Overrides any Colorize calls to not add color.</summary>
+    SkipColorize = 131072
 }
 
 public interface ITranslationArgument

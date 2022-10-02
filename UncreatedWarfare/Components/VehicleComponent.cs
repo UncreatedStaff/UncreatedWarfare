@@ -490,7 +490,7 @@ public class VehicleComponent : MonoBehaviour
 
         if (shouldMessagePlayer && driver is not null && driver.IsOnline && F.IsInMain(driver.Position))
         {
-            Tips.TryGiveTip(driver, ETip.LOGI_RESUPPLIED, Vehicle.asset.vehicleName);
+            Tips.TryGiveTip(driver, ETip.LOGI_RESUPPLIED, Data.Type);
         }
     }
     private IEnumerator<WaitForSeconds> QuotaLoop()

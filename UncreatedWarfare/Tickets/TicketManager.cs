@@ -95,14 +95,16 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
             Provider.UpdateUI(player);
         }
     }
-    public void UpdateUI(UCPlayer player) => Provider.UpdateUI(player);
+    public void UpdateUI(UCPlayer player) => Provider?.UpdateUI(player);
     public void UpdateUI(ulong team)
     {
+        if (Provider == null) return;
         if (SDG.Unturned.Provider.clients.Count < 1) return;
         Provider.UpdateUI(team);
     }
     public void UpdateUI()
     {
+        if (Provider == null) return;
         if (SDG.Unturned.Provider.clients.Count < 1) return;
         Provider.UpdateUI(1ul);
         Provider.UpdateUI(2ul);

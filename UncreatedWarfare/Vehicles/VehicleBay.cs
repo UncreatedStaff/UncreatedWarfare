@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Vehicles;
 public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDeclareWinListener
 {
     private static VehicleBayConfig _config;
-    private static VehicleBay Singleton;
+    internal static VehicleBay Singleton;
     public static bool Loaded => Singleton.IsLoaded<VehicleBay, VehicleData>();
     public static VehicleBayData Config => _config.Data;
 

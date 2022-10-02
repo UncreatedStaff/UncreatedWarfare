@@ -86,6 +86,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public virtual bool AllowCosmetics => true;
     public virtual EGamemode GamemodeType => EGamemode.UNDEFINED;
     protected bool HasOnReadyRan => _hasOnReadyRan;
+    public event Action? OnGameTick;
     public Gamemode(string Name, float EventLoopSpeed)
     {
         this._name = Name;
@@ -321,6 +322,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             try
             {
                 EventLoopAction();
+                OnGameTick?.Invoke();
             }
             catch (Exception ex)
             {
@@ -679,7 +681,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                                 {
                                     if (drop.model.TryGetComponent(out FOBComponent fob))
                                     {
-                                        fob.parent.IsWipedByAuthority = true;
+                                        fob.Parent.IsWipedByAuthority = true;
                                     }
                                     if (drop.model.transform.TryGetComponent(out InteractableStorage storage))
                                         storage.despawnWhenDestroyed = true;

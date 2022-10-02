@@ -140,34 +140,36 @@ public static class Points
         int strt = GetLevelXP(lvl);
         return (float)(xp - strt) / (GetNextLevelXP(lvl) - strt);
     }
-    public static void AwardCredits(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false) =>
-        AwardCredits(player, amount, Localization.Translate(message, player), redmessage, isPurchase);
-    public static void AwardCredits<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false) =>
-        AwardCredits(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase);
-    public static void AwardCredits<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false) =>
-        AwardCredits(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase);
-    public static Task AwardCreditsAsync(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase);
-    public static Task AwardCreditsAsync<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase);
-    public static Task AwardCreditsAsync<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase);
-    public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
+    public static void AwardCredits(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
+        AwardCredits(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock);
+    public static void AwardCredits<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
+        AwardCredits(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase, @lock);
+    public static void AwardCredits<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
+        AwardCredits(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase, @lock);
+    public static Task AwardCreditsAsync(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock);
+    public static Task AwardCreditsAsync<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase, @lock);
+    public static Task AwardCreditsAsync<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase, @lock);
+    public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true)
     {
-        _ = AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase).ConfigureAwait(false);
+        Task.Run(() => AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase, @lock)).ConfigureAwait(false);
     }
-    public static Task AwardCreditsAsync(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
+    public static Task AwardCreditsAsync(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true)
     {
-        return AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase);
+        return AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase, @lock);
     }
-    private static async Task AwardCreditsAsyncIntl(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false)
+    private static async Task AwardCreditsAsyncIntl(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true)
     {
         try
         {
+            if (@lock)
+                await player.PurchaseSync.WaitAsync().ConfigureAwait(false);
             if (amount == 0 || _xpconfig.Data.XPMultiplier == 0f) return;
             amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
 
-            int currentAmount = await Data.DatabaseManager.AddCredits(player.Steam64, player.GetTeam(), amount);
+            int currentAmount = await Data.DatabaseManager.AddCredits(player.Steam64, player.GetTeam(), amount).ConfigureAwait(false);
             int oldamt = currentAmount - amount;
             await UCWarfare.ToUpdate();
 
@@ -188,7 +190,8 @@ public static class Points
 
                 string number = Localization.Translate(key, player, Math.Abs(amount));
                 if (!string.IsNullOrEmpty(message))
-                    ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message!.Colorize("adadad"), EToastMessageSeverity.MINI));
+                    ToastMessage.QueueMessage(player,
+                        new ToastMessage(number + "\n" + message!.Colorize("adadad"), EToastMessageSeverity.MINI));
                 else
                     ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
 
@@ -203,8 +206,14 @@ public static class Points
         }
         catch (Exception ex)
         {
-            L.LogError("Error giving credits to " + player.Name.PlayerName + " (" + player.Steam64 + ")", method: "AWARD CREDITS");
+            L.LogError("Error giving credits to " + player.Name.PlayerName + " (" + player.Steam64 + ")",
+                method: "AWARD CREDITS");
             L.LogError(ex, method: "AWARD CREDITS");
+        }
+        finally
+        {
+            if (@lock)
+                player.PurchaseSync.Release();
         }
     }
     public static void AwardXP(UCPlayer player, int amount, Translation message, bool awardCredits = true) =>
@@ -235,74 +244,83 @@ public static class Points
         amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier * multiplier);
         Task.Run(async () =>
         {
-            RankData oldRank = player.Rank;
-            int currentAmount = await Data.DatabaseManager.AddXP(player.Steam64, player.GetTeam(), amount);
-            await UCWarfare.ToUpdate();
-
-            player.CachedXP = currentAmount;
-
-            if (player.Player.TryGetPlayerData(out UCPlayerData c))
+            RankData oldRank = default;
+            try
             {
-                if (c.stats is IExperienceStats kd)
-                    kd.AddXP(amount);
-            }
+                await player.PurchaseSync.WaitAsync().ConfigureAwait(false);
+                oldRank = player.Rank;
+                int currentAmount = await Data.DatabaseManager.AddXP(player.Steam64, player.GetTeam(), amount).ConfigureAwait(false);
+                if (awardCredits)
+                    await AwardCreditsAsyncIntl(player, Mathf.RoundToInt(0.15f * amount), redmessage: true, @lock: false).ConfigureAwait(false);
+                await UCWarfare.ToUpdate();
 
-            if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
+                player.CachedXP = currentAmount;
+
+                if (player.Player.TryGetPlayerData(out UCPlayerData c))
+                {
+                    if (c.stats is IExperienceStats kd)
+                        kd.AddXP(amount);
+                }
+
+                if (!player.HasUIHidden && (Data.Gamemode is not IEndScreen lb || !lb.IsScreenUp))
+                {
+                    string number = Localization.Translate(amount >= 0 ? T.XPToastGainXP : T.XPToastLoseXP, player,
+                        Math.Abs(amount));
+
+                    if (amount > 0)
+                        number = number.Colorize("e3e3e3");
+                    else
+                        number = number.Colorize("d69898");
+
+                    if (!string.IsNullOrEmpty(message))
+                        ToastMessage.QueueMessage(player,
+                            new ToastMessage(number + "\n" + message!.Colorize("adadad"), EToastMessageSeverity.MINI));
+                    else
+                        ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
+                    UpdateXPUI(player);
+                }
+
+                ActionLogger.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, player);
+            }
+            finally
             {
-                string number = Localization.Translate(amount >= 0 ? T.XPToastGainXP : T.XPToastLoseXP, player, Math.Abs(amount));
-
-                if (amount > 0)
-                    number = number.Colorize("e3e3e3");
-                else
-                    number = number.Colorize("d69898");
-
-                if (!string.IsNullOrEmpty(message))
-                    ToastMessage.QueueMessage(player, new ToastMessage(number + "\n" + message!.Colorize("adadad"), EToastMessageSeverity.MINI));
-                else
-                    ToastMessage.QueueMessage(player, new ToastMessage(number, EToastMessageSeverity.MINI));
-                UpdateXPUI(player);
+                player.PurchaseSync.Release();
             }
-
-            ActionLogger.Add(EActionLogType.XP_CHANGED, oldRank.TotalXP + " >> " + currentAmount, player);
-
-            if (awardCredits)
-                AwardCredits(player, Mathf.RoundToInt(0.15f * amount), redmessage: true);
 
             if (player.Rank.Level > oldRank.Level)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Rank.Name.ToUpper(), EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player,
+                    new ToastMessage(Localization.Translate(T.ToastPromoted, player), player.Rank.Name.ToUpper(),
+                        EToastMessageSeverity.BIG));
 
                 if (VehicleSpawner.Loaded)
-                {
                     VehicleSpawner.UpdateSigns(player);
-                }
+
                 if (RequestSigns.Loaded)
-                {
                     RequestSigns.UpdateAllSigns(player);
-                }
+
                 if (TraitManager.Loaded)
-                {
                     TraitSigns.SendAllTraitSigns(player);
-                }
             }
             else if (player.Rank.Level < oldRank.Level)
             {
-                ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Rank.Name.ToUpper(), EToastMessageSeverity.BIG));
+                ToastMessage.QueueMessage(player,
+                    new ToastMessage(Localization.Translate(T.ToastDemoted, player), player.Rank.Name.ToUpper(),
+                        EToastMessageSeverity.BIG));
 
                 if (VehicleSpawner.Loaded)
                 {
                     foreach (Vehicles.VehicleSpawn spawn in VehicleSpawner.Spawners)
                         spawn.UpdateSign(player.SteamPlayer);
                 }
+
                 if (RequestSigns.Loaded)
-                {
                     RequestSigns.UpdateAllSigns(player);
-                }
+
                 if (TraitManager.Loaded)
-                {
                     TraitSigns.SendAllTraitSigns(player);
-                }
             }
+
             if (TraitManager.Loaded)
             {
                 for (int i = 0; i < player.ActiveBuffs.Length; ++i)

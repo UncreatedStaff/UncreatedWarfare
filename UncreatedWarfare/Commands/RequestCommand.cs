@@ -288,8 +288,8 @@ public class RequestCommand : Command
 
         //PlayerManager.ApplyTo(ucplayer);
     }
-    private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle) => RequestVehicle(ucplayer, vehicle, ucplayer.GetTeam());
-    private void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, ulong team)
+    internal void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle) => RequestVehicle(ucplayer, vehicle, ucplayer.GetTeam());
+    internal void RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, ulong team)
     {
         if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
         {
@@ -303,7 +303,7 @@ public class RequestCommand : Command
         }
         else if (data.Team != 0 && data.Team != team)
         {
-            ucplayer.SendChat(T.RequestVehicleOtherTeam, TeamManager.GetFactionSafe(team)!);
+            ucplayer.SendChat(T.RequestVehicleOtherTeam, TeamManager.GetFactionSafe(data.Team)!);
             return;
         }
         else if (data.RequiresSL && ucplayer.Squad == null)
@@ -408,7 +408,7 @@ public class RequestCommand : Command
                         await Points.UpdatePointsAsync(ucplayer, false);
                         if (ucplayer.CachedCredits >= data.CreditCost)
                         {
-                            await Points.AwardCreditsAsync(ucplayer, -data.CreditCost, isPurchase: true);
+                            await Points.AwardCreditsAsync(ucplayer, -data.CreditCost, isPurchase: true, @lock: false);
                         }
                         else
                         {
@@ -424,41 +424,7 @@ public class RequestCommand : Command
                 }
 
                 await UCWarfare.ToUpdate();
-                vehicle.tellLocked(ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
-
-                VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
-
-                if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
-                {
-                    VehicleBayComponent? comp = spawn.Component;
-                    if (comp != null)
-                    {
-                        comp.OnRequest();
-                        ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", Data.Locale)}", ucplayer);
-                    }
-                    else
-                        ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
-                    Data.Reporter?.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.InstanceId);
-                }
-                else
-                    ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
-
-                vehicle.updateVehicle();
-                vehicle.updatePhysics();
-
-                EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
-                ucplayer.SendChat(T.RequestVehicleSuccess, data);
-
-                if (!FOBManager.Config.Buildables.Exists(e => e.Type == EBuildableType.EMPLACEMENT && e.Emplacement != null && e.Emplacement.EmplacementVehicle.MatchGuid(vehicle.asset.GUID)))
-                {
-                    ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
-                    ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack
-                }
-                foreach (Guid item in data.Items)
-                {
-                    if (Assets.find(item) is ItemAsset a)
-                        ItemManager.dropItem(new Item(a.id, true), ucplayer.Position, true, true, true);
-                }
+                GiveVehicle(ucplayer, vehicle, data);
                 Stats.StatsManager.ModifyStats(ucplayer.Steam64, x => x.VehiclesRequested++, false);
                 Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
                 Stats.StatsManager.ModifyVehicle(vehicle.id, v => v.TimesRequested++);
@@ -468,6 +434,45 @@ public class RequestCommand : Command
         else
         {
             ucplayer.SendChat(T.RequestVehicleAlreadyRequested);
+        }
+    }
+
+    internal static void GiveVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data)
+    {
+        vehicle.tellLocked(ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
+
+        VehicleManager.ServerSetVehicleLock(vehicle, ucplayer.CSteamID, ucplayer.Player.quests.groupID, true);
+
+        if (VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
+        {
+            VehicleBayComponent? comp = spawn.Component;
+            if (comp != null)
+            {
+                comp.OnRequest();
+                ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N} at spawn {comp.gameObject.transform.position.ToString("N2", Data.Locale)}", ucplayer);
+            }
+            else
+                ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
+            Data.Reporter?.OnVehicleRequest(ucplayer.Steam64, vehicle.asset.GUID, spawn.InstanceId);
+        }
+        else
+            ActionLogger.Add(EActionLogType.REQUEST_VEHICLE, $"{vehicle.asset.vehicleName} / {vehicle.id} / {vehicle.asset.GUID:N}", ucplayer);
+
+        vehicle.updateVehicle();
+        vehicle.updatePhysics();
+
+        EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
+        ucplayer.SendChat(T.RequestVehicleSuccess, data);
+
+        if (!FOBManager.Config.Buildables.Exists(e => e.Type == EBuildableType.EMPLACEMENT && e.Emplacement != null && e.Emplacement.EmplacementVehicle.MatchGuid(vehicle.asset.GUID)))
+        {
+            ItemManager.dropItem(new Item(28, true), ucplayer.Position, true, true, true); // gas can
+            ItemManager.dropItem(new Item(277, true), ucplayer.Position, true, true, true); // car jack
+        }
+        foreach (Guid item in data.Items)
+        {
+            if (Assets.find(item) is ItemAsset a)
+                ItemManager.dropItem(new Item(a.id, true), ucplayer.Position, true, true, true);
         }
     }
 }
