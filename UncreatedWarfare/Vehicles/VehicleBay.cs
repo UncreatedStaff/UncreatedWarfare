@@ -579,7 +579,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                 }
                 else
                 {
-                    e.Player.SendChat(T.VehicleMissingKit, vehicleData.RequiredClass);
+                    e.Player.SendChat(T.VehicleMissingKit, c.Data.RequiredClass);
                     e.Break();
                 }
             }
@@ -1018,6 +1018,11 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         Metadata = null;
         Delays = new Delay[0];
     }
+    public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
+    public static bool IsArmor(EVehicleType type) => type is EVehicleType.APC or EVehicleType.IFV or EVehicleType.MBT or EVehicleType.SCOUT_CAR;
+    public static bool IsLogistics(EVehicleType type) => type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT;
+    public static bool IsAircraft(EVehicleType type) => type is EVehicleType.HELI_TRANSPORT or EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
+    public static bool IsEmplacement(EVehicleType type) => type is EVehicleType.HMG or EVehicleType.ATGM or EVehicleType.AA or EVehicleType.MORTAR;
     public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
     public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
@@ -1512,4 +1517,12 @@ public enum EVehicleType
     [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
     [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
     EMPLACEMENT,
+    [Translatable("Mortar")]
+    MORTAR,
+    [Translatable("Anti-Air")]
+    AA,
+    [Translatable("ATGM")]
+    ATGM,
+    [Translatable("HMG")]
+    HMG
 }

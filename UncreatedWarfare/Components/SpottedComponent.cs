@@ -45,8 +45,6 @@ public class SpottedComponent : MonoBehaviour
     private static bool statInit = false;
 #endif
     public void Initialize(ESpotted type, ulong ownerTeam)
-
-    public void Initialize(ESpotted type)
     {
         this.ownerTeam = ownerTeam;
 #if ENABLE_SPOTTED_BUFF
@@ -420,7 +418,11 @@ public class SpottedComponent : MonoBehaviour
     public enum ESpotted
     {
         INFANTRY,
-        FOB
+        FOB,
+        LIGHT_VEHICLE,
+        ARMOR,
+        AIRCRAFT,
+        EMPLACEMENT
     }
 
     private sealed class SpottedBuff : IBuff

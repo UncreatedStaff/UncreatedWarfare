@@ -304,6 +304,7 @@ public static class PlayerManager
         [NetCall(ENetCall.FROM_SERVER, 1035)]
         internal static void ReceivePlayerOnlineCheckRequest(MessageContext context, ulong target)
         {
+            L.Log("Player online check for " + target);
             context.Reply(SendPlayerOnlineStatus, target, PlayerTool.getSteamPlayer(target) is not null);
         }
     }
