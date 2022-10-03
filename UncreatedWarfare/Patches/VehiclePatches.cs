@@ -32,7 +32,7 @@ public static partial class Patches
 
                     if (enterer != null)
                     {
-                        if (vehicleData.Type == EVehicleType.EMPLACEMENT)
+                        if (VehicleData.IsEmplacement(vehicleData.Type))
                         {
                             if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
                             {

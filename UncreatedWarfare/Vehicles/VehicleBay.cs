@@ -521,9 +521,9 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!VehicleExists(e.Vehicle.asset.GUID, out VehicleData vehicleData))
+        if (!e.Vehicle.TryGetComponent(out VehicleComponent c))
             return;
-        if (vehicleData.Type == EVehicleType.EMPLACEMENT && e.FinalSeat == 0)
+        if (c.IsEmplacement && e.FinalSeat == 0)
         {
             e.Break();
         }
@@ -538,9 +538,9 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 
             UCPlayer? owner = UCPlayer.FromCSteamID(e.Vehicle.lockedOwner);
 
-            if (vehicleData.CrewSeats.Contains(e.FinalSeat) && vehicleData.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
+            if (c.Data.CrewSeats.Contains(e.FinalSeat) && c.Data.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
             {
-                if (e.Player.KitClass == vehicleData.RequiredClass || e.Player.OnDuty())
+                if (e.Player.KitClass == c.Data.RequiredClass || e.Player.OnDuty())
                 {
                     if (e.FinalSeat == 0) // if a crewman is trying to enter the driver's seat
                     {
@@ -550,7 +550,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                             IsOwnerInVehicle(e.Vehicle, owner) || 
                             (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) || 
                             (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                            (vehicleData.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
+                            (c.Data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
 
                         if (!canEnterDriverSeat)
                         {
@@ -580,7 +580,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                 }
                 else
                 {
-                    e.Player.Message("vehicle_not_valid_kit", vehicleData.RequiredClass.ToString().ToUpper());
+                    e.Player.SendChat(T.VehicleMissingKit, c.Data.RequiredClass);
                     e.Break();
                 }
             }
@@ -751,6 +751,11 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         Metadata = null;
         Delays = new Delay[0];
     }
+    public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
+    public static bool IsArmor(EVehicleType type) => type == EVehicleType.APC || type == EVehicleType.IFV || type == EVehicleType.MBT || type == EVehicleType.SCOUT_CAR;
+    public static bool IsLogistics(EVehicleType type) => type == EVehicleType.LOGISTICS || type == EVehicleType.HELI_TRANSPORT;
+    public static bool IsAircraft(EVehicleType type) =>  type == EVehicleType.HELI_TRANSPORT || type == EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
+    public static bool IsEmplacement(EVehicleType type) => type == EVehicleType.HMG || type == EVehicleType.ATGM || type == EVehicleType.AA || type == EVehicleType.MORTAR;
     public void AddDelay(EDelayType type, float value, string? gamemode = null)
     {
         int index = -1;
@@ -1455,6 +1460,17 @@ public enum EVehicleType
     HELI_TRANSPORT,
     [Translatable("Attack Heli")]
     HELI_ATTACK,
+    [Translatable(LanguageAliasSet.RUSSIAN, "реактивный")]
+    [Translatable(LanguageAliasSet.SPANISH, "")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
+    [Translatable(LanguageAliasSet.POLISH, "")]
+    [Translatable("Jet")]
     JET,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
+    [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
+    [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
     EMPLACEMENT,
 }

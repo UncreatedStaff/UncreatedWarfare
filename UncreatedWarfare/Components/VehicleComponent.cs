@@ -37,47 +37,18 @@ public class VehicleComponent : MonoBehaviour
     private Coroutine? quotaLoop;
     private Coroutine? autoSupplyLoop;
     public Coroutine? forceSupplyLoop { get; private set; }
-    public bool IsArmor
+    public bool IsGroundVehicle => Data == null ? false : VehicleData.IsGroundVehicle(Data.Type);
+    public bool IsArmor => Data == null ? false : VehicleData.IsArmor(Data.Type);
+    public bool IsLogistics => Data == null ? false : VehicleData.IsLogistics(Data.Type);
+    public bool IsAircraft => Data == null ? false : VehicleData.IsAircraft(Data.Type);
+    public bool IsEmplacement => Data == null ? false : VehicleData.IsEmplacement(Data.Type);
+    public bool CanTransport
     {
         get
         {
             if (Data is null) return false;
 
-            return Data.Type == EVehicleType.APC ||
-                Data.Type == EVehicleType.IFV ||
-                Data.Type == EVehicleType.MBT;
-        }
-    }
-    public bool IsLightVehlice
-    {
-        get
-        {
-            if (Data is null) return false;
-
-            return Data.Type == EVehicleType.LOGISTICS ||
-                Data.Type == EVehicleType.TRANSPORT ||
-                Data.Type == EVehicleType.HUMVEE ||
-                Data.Type == EVehicleType.SCOUT_CAR;
-        }
-    }
-    public bool IsAircraft
-    {
-        get
-        {
-            if (Data is null) return false;
-
-            return Data.Type == EVehicleType.HELI_TRANSPORT ||
-                Data.Type == EVehicleType.HELI_ATTACK ||
-                Data.Type == EVehicleType.JET;
-        }
-    }
-    public bool IsEmplacement
-    {
-        get
-        {
-            if (Data is null) return false;
-
-            return Data.Type == EVehicleType.EMPLACEMENT;
+            return !IsEmplacement && Data.CrewSeats.Count < Vehicle.passengers.Length;
         }
     }
     public void Initialize(InteractableVehicle vehicle)
@@ -97,15 +68,12 @@ public class VehicleComponent : MonoBehaviour
         {
             Data = data;
             isInVehiclebay = true;
+
+            vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(data.Type);
         }
         lastPos = this.transform.position;
 
         countermeasures = new List<Transform>();
-
-        if (IsArmor) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.ARMOR);
-        else if (IsLightVehlice) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.LIGHT_VEHICLE);
-        else if (IsAircraft) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.AIRCRAFT);
-        else if (IsEmplacement) vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.EMPLACEMENT);
     }
     private void OnDestroy()
     {

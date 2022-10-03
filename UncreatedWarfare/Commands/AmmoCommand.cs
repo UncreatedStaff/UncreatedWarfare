@@ -37,7 +37,7 @@ public class AmmoCommand : Command
                 throw ctx.Reply("ammo_auto_resupply");
 
             bool isInMain = F.IsInMain(vehicle.transform.position);
-            if (vehicleData.Type != EVehicleType.EMPLACEMENT && !isInMain)
+            if (VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
             {
                 BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.Barricades.RepairStationGUID.Value.Guid,
                 10,

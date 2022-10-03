@@ -521,7 +521,10 @@ public class XPConfig : ConfigData
             {EVehicleType.IFV, 70},
             {EVehicleType.MBT, 100},
             {EVehicleType.HELI_TRANSPORT, 30},
-            {EVehicleType.EMPLACEMENT, 20},
+            {EVehicleType.AA, 20},
+            {EVehicleType.HMG, 20},
+            {EVehicleType.ATGM, 20},
+            {EVehicleType.MORTAR, 20},
             {EVehicleType.HELI_ATTACK, 150},
             {EVehicleType.JET, 200},
         };

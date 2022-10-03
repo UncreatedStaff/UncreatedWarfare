@@ -9,17 +9,21 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using static Uncreated.Framework.Report;
 
 namespace Uncreated.Warfare.Components;
 
 public class SpottedComponent : MonoBehaviour
 {
     public Guid EffectGUID { get; private set; }
-    public ESpotted Type { get; private set; }
+    public ESpotted? Type { get; private set; }
+    public EVehicleType? VehicleType { get; private set; }
     public ushort EffectID { get; private set; }
     public Player? CurrentSpotter { get; private set; }
     public bool IsActive { get => _coroutine != null; }
+    public bool IsLaserTarget { get; private set; }
     private float _frequency;
     private int _defaultTimer;
     private Coroutine? _coroutine;
@@ -27,44 +31,111 @@ public class SpottedComponent : MonoBehaviour
 
     public static readonly HashSet<SpottedComponent> ActiveMarkers = new HashSet<SpottedComponent>();
 
-
     public void Initialize(ESpotted type)
     {
         Type = type;
         CurrentSpotter = null;
+        IsLaserTarget = type == ESpotted.FOB;
 
         switch (type)
         {
             case ESpotted.INFANTRY:
-                EffectGUID = new Guid("70f75e38a90e481190ba147f25bd6e24");
+                EffectGUID = new Guid("79add0f1b07c478f87207d30fe5a5f4f");
                 _defaultTimer = 12;
                 _frequency = 0.5f;
                 break;
-            case ESpotted.LIGHT_VEHICLE:
-                EffectGUID = new Guid("34fea0ab821141bd935b001ee82a7049");
-                _defaultTimer = 20;
-                _frequency = 0.5f;
+            case ESpotted.FOB:
+                EffectGUID = new Guid("39dce42142074b46b819feba9ce83353");
+                _defaultTimer = 240;
+                _frequency = 1f;
                 break;
-            case ESpotted.ARMOR:
-                EffectGUID = new Guid("1a25daa6f506441282cd30be48d27883");
+        }
+
+        if (Assets.find(EffectGUID) is EffectAsset effect)
+        {
+            EffectID = effect.id;
+        }
+        else
+            L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
+    }
+    public void Initialize(EVehicleType type)
+    {
+        CurrentSpotter = null;
+        IsLaserTarget = VehicleData.IsGroundVehicle(type);
+
+        switch (type)
+        {
+            case EVehicleType.AA:
+                EffectGUID = new Guid("0e90e68eff624456b76fee28a4875d14");
+                _defaultTimer = 240;
+                _frequency = 1f;
+                break;
+            case EVehicleType.APC:
+                EffectGUID = new Guid("31d1404b7b3a465b8631308cdb48e3b2");
                 _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
-            case ESpotted.AIRCRAFT:
-                EffectGUID = new Guid("0e90e68eff624456b76fee28a4875d14");
-                _defaultTimer = 20;
+            case EVehicleType.ATGM:
+                EffectGUID = new Guid("b20a7d914f92492fb1588f7baac80239");
+                _defaultTimer = 240;
+                _frequency = 1f;
+                break;
+            case EVehicleType.HELI_ATTACK:
+                EffectGUID = new Guid("3f2c6776ba484f8ea443719161ec6ce5");
+                _defaultTimer = 15;
                 _frequency = 0.5f;
                 break;
-            case ESpotted.EMPLACEMENT:
-                EffectGUID = new Guid("f7816f7d06e1475f8e68ed894c282a74");
-                _defaultTimer = 90;
+            case EVehicleType.HMG:
+                EffectGUID = new Guid("2315e6ed970542499fec1b06df87ffd2");
+                _defaultTimer = 240;
+                _frequency = 1f;
+                break;
+            case EVehicleType.HUMVEE:
+                EffectGUID = new Guid("99a84b82f9bd433891fdb99e80394bf3");
+                _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
-            case ESpotted.FOB:
-                EffectGUID = new Guid("de142d979e12442fb9d44baf8f520751");
-                _defaultTimer = 90;
+            case EVehicleType.IFV:
+                EffectGUID = new Guid("f2c29856b4f64146afd9872ab528c242");
+                _defaultTimer = 30;
                 _frequency = 0.5f;
                 break;
+            case EVehicleType.JET:
+                EffectGUID = new Guid("08f2cc6ed558459ea2caf3477b40df64");
+                _defaultTimer = 10;
+                _frequency = 0.5f;
+                break;
+            case EVehicleType.MBT:
+                EffectGUID = new Guid("983c6510c13042bf983e81f49cffca39");
+                _defaultTimer = 30;
+                _frequency = 0.5f;
+                break;
+            case EVehicleType.MORTAR:
+                EffectGUID = new Guid("c377810f849c4c7d84391b491406918b");
+                _defaultTimer = 240;
+                _frequency = 1f;
+                break;
+            case EVehicleType.SCOUT_CAR:
+                EffectGUID = new Guid("b0937aff90b94a588b70bc96ece49f53");
+                _defaultTimer = 30;
+                _frequency = 0.5f;
+                break;
+            case EVehicleType.HELI_TRANSPORT:
+                EffectGUID = new Guid("91b9f175b84849268d861eb0f0567788");
+                _defaultTimer = 15;
+                _frequency = 0.5f;
+                break;
+            case EVehicleType.LOGISTICS:
+                EffectGUID = new Guid("fa226268e87b4ec89664eca5b22b4d3d");
+                _defaultTimer = 30;
+                _frequency = 0.5f;
+                break;
+            case EVehicleType.TRANSPORT:
+                EffectGUID = new Guid("fa226268e87b4ec89664eca5b22b4d3d");
+                _defaultTimer = 30;
+                _frequency = 0.5f;
+                break;
+
         }
 
         if (Assets.find(EffectGUID) is EffectAsset effect)
@@ -195,10 +266,6 @@ public class SpottedComponent : MonoBehaviour
     public enum ESpotted
     {
         INFANTRY,
-        LIGHT_VEHICLE,
-        ARMOR,
-        AIRCRAFT,
-        EMPLACEMENT,
         FOB
     }
 }
