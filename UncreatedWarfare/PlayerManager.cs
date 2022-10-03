@@ -6,6 +6,8 @@ using System.Reflection;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.Permissions;
+using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -103,6 +105,8 @@ public static class PlayerManager
     {
         ApplyTo(e.Player);
         NetCalls.SendTeamChanged.NetInvoke(e.Steam64, F.GetTeamByte(e.NewGroup));
+        if (e.Player.Player.TryGetComponent(out SpottedComponent spot))
+            spot.OwnerTeam = e.NewTeam;
     }
     private static void OnPlayerDisconnected(UCPlayer player)
     {
@@ -110,10 +114,11 @@ public static class PlayerManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         player.IsOnline = false;
+        player.Events.Dispose();
 
         OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
         _dict.Remove(player.Steam64);
-        SquadManager.OnPlayerDisconnected(player);
+        player.Player = null!;
     }
     public static IEnumerable<UCPlayer> GetNearbyPlayers(float range, Vector3 point)
     {
@@ -173,11 +178,11 @@ public static class PlayerManager
         GroupManager.save();
 
     }
-    public static ESetFieldResult SetProperty(PlayerSave obj, string property, string value)
+    public static ESetFieldResult SetProperty(PlayerSave obj, ref string property, string value)
     {
         if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
         if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
-        FieldInfo? field = GetField(property, out ESetFieldResult reason);
+        FieldInfo? field = GetField(ref property, out ESetFieldResult reason);
         if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
             if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
@@ -201,7 +206,7 @@ public static class PlayerManager
     {
         if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
         if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
-        FieldInfo? field = GetField(property, out ESetFieldResult reason);
+        FieldInfo? field = GetField(ref property, out ESetFieldResult reason);
         if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
             if (field.FieldType.IsAssignableFrom(value.GetType()))
@@ -221,19 +226,25 @@ public static class PlayerManager
         }
         else return reason;
     }
-    private static FieldInfo? GetField(string property, out ESetFieldResult reason)
+    private static FieldInfo? GetField(ref string property, out ESetFieldResult reason)
     {
         for (int i = 0; i < fields.Length; i++)
         {
             FieldInfo fi = fields[i];
             if (fi.Name.Equals(property, StringComparison.Ordinal))
+            {
+                property = fi.Name;
                 return ValidateField(fi, out reason) ? fi : null;
+            }
         }
         for (int i = 0; i < fields.Length; i++)
         {
             FieldInfo fi = fields[i];
             if (fi.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
+            {
+                property = fi.Name;
                 return ValidateField(fi, out reason) ? fi : null;
+            }
         }
         reason = ESetFieldResult.FIELD_NOT_FOUND;
         return default;

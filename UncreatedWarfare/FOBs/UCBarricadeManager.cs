@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
@@ -9,7 +10,7 @@ namespace Uncreated.Warfare;
 
 public static class UCBarricadeManager
 {
-    private static readonly List<RegionCoordinate> regionBuffer = new List<RegionCoordinate>(48);
+    internal static readonly List<RegionCoordinate> regionBuffer = new List<RegionCoordinate>(48);
     [Obsolete]
     public static void TryAddItemToStorage(BarricadeDrop drop, ushort itemID)
     {
@@ -31,6 +32,36 @@ public static class UCBarricadeManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         return BarricadeManager.FindBarricadeByRootTransform(sign.transform);
+    }
+    public static BarricadeDrop? GetBarricadeFromPosition(Vector3 pos, float tolerance = 0.05f)
+    {
+        if (Regions.tryGetCoordinate(pos, out byte x, out byte y))
+        {
+            BarricadeRegion region = BarricadeManager.regions[x, y];
+            if (tolerance == 0f)
+            {
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    if (region.drops[i].model.position == pos)
+                        return region.drops[i];
+                }
+            }
+            else
+            {
+                tolerance = tolerance < 0 ? -tolerance : tolerance;
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    Vector3 pos2 = region.drops[i].model.position - pos;
+                    if (pos2.x > -tolerance && pos2.x < tolerance &&
+                        pos2.y > -tolerance && pos2.y < tolerance &&
+                        pos2.z > -tolerance && pos2.z < tolerance)
+                    {
+                        return region.drops[i];
+                    }
+                }
+            }
+        }
+        return null;
     }
     public static BarricadeData? GetBarricadeDataFromLook(PlayerLook look, out BarricadeDrop? drop)
     {
@@ -244,7 +275,7 @@ public static class UCBarricadeManager
         }
         drops.Dispose();
 
-        return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
+        return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
     }
     public static IEnumerable<BarricadeDrop> GetNearbyBarricades(Guid id, float range, Vector3 origin, bool sortClosest)
     {
@@ -269,7 +300,7 @@ public static class UCBarricadeManager
                     }
                 }
             }
-            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
+            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
         }
     }
     public static IEnumerable<BarricadeDrop> GetNearbyBarricades(Guid id, float range, Vector3 origin, ulong team, bool sortClosest)
@@ -297,7 +328,7 @@ public static class UCBarricadeManager
                     }
                 }
             }
-            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list as IEnumerable<BarricadeDrop>;
+            return sortClosest ? list.OrderBy(x => (origin - x.model.position).sqrMagnitude) : list;
         }
     }
     public static int CountNearbyBarricades(Guid id, float range, Vector3 origin, ulong team)
@@ -791,8 +822,8 @@ public static class UCBarricadeManager
                             ItemData item = ItemManager.regions[r.x, r.y].items[j];
                             if (item.item.id == asset.id && (item.point - center).sqrMagnitude <= sqrRadius)
                             {
-                                Data.SendTakeItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
-                                    Regions.EnumerateClients(r.x, r.y, ItemManager.ITEM_REGIONS), r.x, r.y, item.instanceID);
+                                Data.SendDestroyItem.Invoke(SDG.NetTransport.ENetReliability.Reliable,
+                                    Regions.EnumerateClients(r.x, r.y, ItemManager.ITEM_REGIONS), r.x, r.y, item.instanceID, false);
                                 ItemManager.regions[r.x, r.y].items.RemoveAt(j);
                                 removed_count++;
                             }

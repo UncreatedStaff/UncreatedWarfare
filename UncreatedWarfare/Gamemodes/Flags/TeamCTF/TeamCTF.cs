@@ -1,9 +1,7 @@
 ﻿using SDG.Unturned;
-using System;
 using System.Linq;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
@@ -13,7 +11,7 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
 {
     public override string DisplayName => "Advance and Secure";
     public override EGamemode GamemodeType => EGamemode.TEAM_CTF;
-    public TeamCTF() : base(nameof(TeamCTF), Config.TeamCTF.EvaluateTime) { }
+    public TeamCTF() : base(nameof(TeamCTF), Config.AASEvaluateTime) { }
     protected override void PostDispose()
     {
         foreach (SteamPlayer player in Provider.clients)
@@ -29,7 +27,7 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     {
         base.PostGameStarting(isOnLoad);
         SpawnBlockers();
-        StartStagingPhase(Config.TeamCTF.StagingTime);
+        StartStagingPhase(Config.AASStagingTime);
     }
     protected override void EndStagingPhase()
     {
@@ -55,7 +53,7 @@ public class TeamCTF : CTFBaseMode<TeamCTFLeaderboard, BaseCTFStats, TeamCTFTrac
     public override void OnGroupChanged(GroupChanged e)
     {
         CTFUI.ClearFlagList(e.Player);
-        if (_onFlag.TryGetValue(e.Player, out int id))
+        if (_onFlag.TryGetValue(e.Player.Steam64, out int id))
         {
             CaptureUIParameters p = CTFUI.RefreshStaticUI(e.NewTeam, _rotation.FirstOrDefault(x => x.ID == id)
                                                                           ?? _rotation[0], e.Player.Player.movement.getVehicle() != null);
@@ -94,29 +92,29 @@ public sealed class TeamCTFTicketProvider : BaseCTFTicketProvider, IFlagCaptured
     }
     public override void OnGameStarting(bool isOnLoaded)
     {
-        Manager.Team1Tickets = Gamemode.Config.TeamCTF.StartingTickets;
-        Manager.Team2Tickets = Gamemode.Config.TeamCTF.StartingTickets;
+        Manager.Team1Tickets = Gamemode.Config.AASStartingTickets;
+        Manager.Team2Tickets = Gamemode.Config.AASStartingTickets;
     }
     public void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner)
     {
         if (!Data.Is(out IFlagRotation r)) return;
-        
+
         if (r.Rotation.Count / 2f + 0.5f == flag.index) // if is middle flag
         {
-            if (newOwner == 1) Manager.Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
-            else if (newOwner == 2) Manager.Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+            if (newOwner == 1) Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagCaptured;
+            else if (newOwner == 2) Manager.Team2Tickets += Gamemode.Config.AASTicketsFlagCaptured;
         }
 
         if (GetTeamBleed(2ul) < 0)
         {
-            Manager.Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+            Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagCaptured;
         }
         else if (GetTeamBleed(1ul) < 0)
         {
-            Manager.Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagCaptured;
+            Manager.Team2Tickets += Gamemode.Config.AASTicketsFlagCaptured;
         }
 
-        if (oldOwner == 1) Manager.Team1Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
-        else if (oldOwner == 2) Manager.Team2Tickets += Gamemode.Config.TeamCTF.TicketsFlagLost;
+        if (oldOwner == 1) Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagLost;
+        else if (oldOwner == 2) Manager.Team2Tickets += Gamemode.Config.AASTicketsFlagLost;
     }
 }

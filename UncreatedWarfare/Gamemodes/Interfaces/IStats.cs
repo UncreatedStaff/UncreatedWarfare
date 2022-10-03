@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-
-namespace Uncreated.Warfare.Gamemodes.Interfaces
+﻿namespace Uncreated.Warfare.Gamemodes.Interfaces
 {
     public interface IStats
     {

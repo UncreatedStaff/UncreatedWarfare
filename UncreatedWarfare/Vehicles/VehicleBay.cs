@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
@@ -28,7 +29,7 @@ namespace Uncreated.Warfare.Vehicles;
 public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDeclareWinListener
 {
     private static VehicleBayConfig _config;
-    private static VehicleBay Singleton;
+    internal static VehicleBay Singleton;
     public static bool Loaded => Singleton.IsLoaded<VehicleBay, VehicleData>();
     public static VehicleBayData Config => _config.Data;
 
@@ -146,15 +147,15 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
         data.SaveMetaData(vehicle);
         Singleton.AddObjectToSave(data);
     }
-    public new static ESetFieldResult SetProperty(VehicleData data, string property, string value)
+    public new static ESetFieldResult SetProperty(VehicleData data, ref string property, string value)
     {
         Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        return (Singleton as JSONSaver<VehicleData>).SetProperty(data, property, value);
+        return (Singleton as JSONSaver<VehicleData>).SetProperty(data, ref property, value);
     }
-    public static ESetFieldResult SetProperty(Guid vehicleGuid, string property, string value)
+    public static ESetFieldResult SetProperty(Guid vehicleGuid, ref string property, string value)
     {
         Singleton.AssertLoaded<VehicleBay, VehicleData>();
-        return Singleton.SetProperty(x => x.VehicleID == vehicleGuid, property, value);
+        return Singleton.SetProperty(x => x.VehicleID == vehicleGuid, ref property, value);
     }
     public static void RemoveRequestableVehicle(Guid vehicleID)
     {
@@ -228,11 +229,11 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                     {
                         foreach (KitItem k in vehicleData.Metadata.TrunkItems)
                         {
-                            if (Assets.find(k.id) is ItemAsset iasset)
+                            if (Assets.find(k.Id) is ItemAsset iasset)
                             {
-                                Item item = new Item(iasset.id, k.amount, 100, F.CloneBytes(k.metadata));
+                                Item item = new Item(iasset.id, k.Amount, 100, F.CloneBytes(k.Metadata));
                                 if (!vehicle.trunkItems.tryAddItem(item))
-                                        ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
+                                    ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
                             }
                         }
                     }
@@ -310,9 +311,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
             if (data.CreditCost > 0 && spawn.Component != null && spawn.Component.RequestTime != 0)
                 creditReward = data.CreditCost - Mathf.Min(data.CreditCost, Mathf.FloorToInt(data.AbandonValueLossSpeed * (Time.realtimeSinceStartup - spawn.Component.RequestTime)));
 
-            Points.AwardCredits(pl, creditReward,
-                T.AbandonCompensationToast.Translate(Data.Languages.TryGetValue(pl, out string lang) ? lang : JSONMethods.DEFAULT_LANGUAGE),
-                false, false);
+            Points.AwardCredits(pl, creditReward, T.AbandonCompensationToast.Translate(pl), false, false);
         }
 
         VehicleBay.DeleteVehicle(vehicle);
@@ -480,7 +479,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
         {
             if (!FOBManager.Config.Buildables.Exists(v => v.Type == EBuildableType.EMPLACEMENT && v.Emplacement is not null && v.Emplacement.EmplacementVehicle is not null && v.Emplacement.EmplacementVehicle.Guid == e.Vehicle.asset.GUID))
             {
-                e.Player.SendChat("vehicle_too_high");
+                e.Player.SendChat(T.VehicleTooHigh);
                 e.Break();
             }
         }
@@ -492,14 +491,14 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 #endif
         if (Data.Gamemode.State != EState.ACTIVE && Data.Gamemode.State != EState.STAGING)
         {
-            e.Player.SendChat("vehiclebay_e_gamemode_not_active");
+            e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
             e.Break();
             return;
         }
         if (!e.Vehicle.asset.canBeLocked) return;
         if (!e.Player.OnDuty() && Data.Gamemode.State == EState.STAGING && Data.Is<IStagingPhase>(out _) && (!Data.Is(out IAttackDefense atk) || e.Player.GetTeam() == atk.AttackingTeam))
         {
-            e.Player.SendChat("vehicle_staging");
+            e.Player.SendChat(T.VehicleStaging, e.Vehicle.asset);
             e.Break();
             return;
         }
@@ -511,7 +510,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 
         if (!KitManager.HasKit(e.Player, out Kit kit))
         {
-            e.Player.SendChat("vehicle_no_kit");
+            e.Player.SendChat(T.VehicleNoKit);
             e.Break();
             return;
         }
@@ -531,7 +530,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
         {
             if (!KitManager.HasKit(e.Player, out Kit kit))
             {
-                e.Player.SendChat("vehicle_no_kit");
+                e.Player.SendChat(T.VehicleNoKit);
                 e.Break();
                 return;
             }
@@ -547,17 +546,17 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                         bool canEnterDriverSeat = owner == null ||
                             e.Player == owner ||
                             e.Player.OnDuty() ||
-                            IsOwnerInVehicle(e.Vehicle, owner) || 
-                            (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) || 
+                            IsOwnerInVehicle(e.Vehicle, owner) ||
+                            (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                             (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
                             (c.Data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
 
                         if (!canEnterDriverSeat)
                         {
                             if (owner is null || owner!.Squad is null)
-                                e.Player.Message("vehicle_wait_for_owner", owner?.CharacterName ?? F.GetPlayerOriginalNames(e.Vehicle.lockedOwner.m_SteamID).CharacterName);
+                                e.Player.SendChat(T.VehicleWaitForOwner, owner ?? new OfflinePlayer(e.Vehicle.lockedOwner.m_SteamID) as IPlayer);
                             else
-                                e.Player.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
+                                e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
                             e.Break();
                         }
                     }
@@ -567,12 +566,12 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                         {
                             if (e.Vehicle.passengers[0].player is null) // if they have no driver
                             {
-                                e.Player.Message("vehicle_need_driver");
+                                e.Player.SendChat(T.VehicleDriverNeeded);
                                 e.Break();
                             }
                             else if (e.Player.Steam64 == e.Vehicle.passengers[0].player.playerID.steamID.m_SteamID) // if they are the driver
                             {
-                                e.Player.Message("vehicle_cannot_abandon_driver");
+                                e.Player.SendChat(T.VehicleAbandoningDriver);
                                 e.Break();
                             }
                         }
@@ -580,7 +579,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                 }
                 else
                 {
-                    e.Player.SendChat(T.VehicleMissingKit, c.Data.RequiredClass);
+                    e.Player.SendChat(T.VehicleMissingKit, vehicleData.RequiredClass);
                     e.Break();
                 }
             }
@@ -593,9 +592,9 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                     if (!canEnterDriverSeat)
                     {
                         if (owner!.Squad == null)
-                            e.Player.Message("vehicle_wait_for_owner", owner.CharacterName);
+                            e.Player.SendChat(T.VehicleWaitForOwner, owner);
                         else
-                            e.Player.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
+                            e.Player.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
 
                         e.Break();
                     }
@@ -606,14 +605,15 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
 }
 public enum EDelayType
 {
-    NONE            = 0,
-    TIME            = 1,
+    NONE = 0,
+    TIME = 1,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG            = 2,
+    FLAG = 2,
     /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
     FLAG_PERCENT = 3,
-    OUT_OF_STAGING  = 4
+    OUT_OF_STAGING = 4
 }
+[JsonConverter(typeof(DelayConverter))]
 public struct Delay : IJsonReadWrite
 {
     public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
@@ -662,7 +662,274 @@ public struct Delay : IJsonReadWrite
             }
         }
     }
+
+    public static void AddDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+    {
+        int index = -1;
+        for (int i = 0; i < delays.Length; i++)
+        {
+            ref Delay del = ref delays[i];
+            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1)
+        {
+            Delay del = new Delay(type, value, gamemode);
+            Delay[] old = delays;
+            delays = new Delay[old.Length + 1];
+            if (old.Length > 0)
+            {
+                Array.Copy(old, 0, delays, 0, old.Length);
+                delays[delays.Length - 1] = del;
+            }
+            else
+            {
+                delays[0] = del;
+            }
+        }
+    }
+    public static bool RemoveDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+    {
+        if (delays.Length == 0) return false;
+        int index = -1;
+        for (int i = 0; i < delays.Length; i++)
+        {
+            ref Delay del = ref delays[i];
+            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
+            {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) return false;
+        Delay[] old = delays;
+        delays = new Delay[old.Length - 1];
+        if (old.Length == 1) return true;
+        if (index != 0)
+            Array.Copy(old, 0, delays, 0, index);
+        Array.Copy(old, index + 1, delays, index, old.Length - index - 1);
+        return true;
+    }
+    public static bool HasDelayType(Delay[] delays, EDelayType type)
+    {
+        string gm = Data.Gamemode.Name;
+        for (int i = 0; i < delays.Length; i++)
+        {
+            ref Delay del = ref delays[i];
+            if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+            if (del.type == type) return true;
+        }
+        return false;
+    }
+    public static bool IsDelayedType(Delay[] delays, EDelayType type, ulong team)
+    {
+        string gm = Data.Gamemode.Name;
+        for (int i = 0; i < delays.Length; i++)
+        {
+            ref Delay del = ref delays[i];
+            if (!string.IsNullOrEmpty(del.gamemode))
+            {
+                string gamemode = del.gamemode!;
+                bool blacklist = false;
+                if (gamemode[0] == '!')
+                {
+                    blacklist = true;
+                    gamemode = gamemode.Substring(1);
+                }
+
+                if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (blacklist) continue;
+                }
+                else if (!blacklist) continue;
+            }
+            if (del.type == type)
+            {
+                switch (type)
+                {
+                    case EDelayType.NONE:
+                        return false;
+                    case EDelayType.TIME:
+                        if (TimeDelayed(ref del))
+                            return true;
+                        break;
+                    case EDelayType.FLAG:
+                        if (FlagDelayed(ref del, team))
+                            return true;
+                        break;
+                    case EDelayType.FLAG_PERCENT:
+                        if (FlagPercentDelayed(ref del, team))
+                            return true;
+                        break;
+                    case EDelayType.OUT_OF_STAGING:
+                        if (StagingDelayed(ref del))
+                            return true;
+                        break;
+                }
+            }
+        }
+        return false;
+    }
+    // TODO: gamemode blacklist not working
+    public static bool IsDelayed(Delay[] delays, out Delay delay, ulong team)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        delay = Delay.Nil;
+        string? gm = Data.Gamemode?.Name;
+        if (delays == null || delays.Length == 0) return false;
+        bool anyVal = false;
+        bool isNoneYet = false;
+        for (int i = delays.Length - 1; i >= 0; i--)
+        {
+            ref Delay del = ref delays[i];
+            bool universal = string.IsNullOrEmpty(del.gamemode);
+            if (!universal)
+            {
+                string gamemode = del.gamemode!; // !TeamCTF
+                bool blacklist = false;
+                if (gamemode[0] == '!') // true
+                {
+                    blacklist = true;
+                    gamemode = gamemode.Substring(1); // TeamCTF
+                }
+
+                if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
+                {
+                    if (blacklist) continue;
+                }
+                else if (!blacklist) continue; // false
+                universal = true;
+            }
+            if (universal && anyVal) continue;
+            switch (del.type)
+            {
+                case EDelayType.NONE:
+                    if (!universal)
+                    {
+                        delay = del;
+                        isNoneYet = true;
+                    }
+                    break;
+                case EDelayType.TIME:
+                    if ((!universal || !isNoneYet) && TimeDelayed(ref del))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
+                case EDelayType.FLAG:
+                    if ((!universal || !isNoneYet) && FlagDelayed(ref del, team))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
+                case EDelayType.FLAG_PERCENT:
+                    if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del, team))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
+                case EDelayType.OUT_OF_STAGING:
+                    if ((!universal || !isNoneYet) && StagingDelayed(ref del))
+                    {
+                        delay = del;
+                        if (!universal) return true;
+                        anyVal = true;
+                    }
+                    break;
+            }
+        }
+        return anyVal;
+    }
+    private static bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.value > Data.Gamemode.SecondsSinceStart;
+    private static bool FlagDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, false, team);
+    private static bool FlagPercentDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, true, team);
+    private static bool FlagDelayed(ref Delay delay, bool percent, ulong team)
+    {
+        if (Data.Is(out Invasion inv))
+        {
+            int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            if (team == 1)
+            {
+                if (inv.AttackingTeam == 1)
+                    return inv.ObjectiveT1Index < ct;
+                else
+                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
+            }
+            else if (team == 2)
+            {
+                if (inv.AttackingTeam == 2)
+                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
+                else
+                    return inv.ObjectiveT1Index < ct;
+            }
+            return false;
+        }
+        else if (Data.Is(out IFlagTeamObjectiveGamemode fr))
+        {
+            int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            int i2 = GetHighestObjectiveIndex(team, fr);
+            return (team == 1 && i2 < ct) ||
+                   (team == 2 && fr.Rotation.Count - i2 - 1 < ct);
+        }
+        else if (Data.Is(out Insurgency ins))
+        {
+            int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            return ins.Caches != null && ins.CachesDestroyed < ct;
+        }
+        return false;
+    }
+    private static bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
+    private static int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
+    {
+        if (team == 1)
+        {
+            for (int i = 0; i < gm.Rotation.Count; i++)
+            {
+                if (!gm.Rotation[i].HasBeenCapturedT1)
+                    return i;
+            }
+            return 0;
+        }
+        else if (team == 2)
+        {
+            for (int i = gm.Rotation.Count - 1; i >= 0; i--)
+            {
+                if (!gm.Rotation[i].HasBeenCapturedT2)
+                    return i;
+            }
+            return gm.Rotation.Count - 1;
+        }
+        return -1;
+    }
 }
+public sealed class DelayConverter : JsonConverter<Delay>
+{
+    public override Delay Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        Delay delay = new Delay();
+        delay.ReadJson(ref reader);
+        return delay;
+    }
+
+    public override void Write(Utf8JsonWriter writer, Delay value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        value.WriteJson(writer);
+        writer.WriteEndObject();
+    }
+}
+
 public class VehicleData : IJsonReadWrite, ITranslationArgument
 {
     [JsonSettable]
@@ -751,261 +1018,9 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         Metadata = null;
         Delays = new Delay[0];
     }
-    public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
-    public static bool IsArmor(EVehicleType type) => type == EVehicleType.APC || type == EVehicleType.IFV || type == EVehicleType.MBT || type == EVehicleType.SCOUT_CAR;
-    public static bool IsLogistics(EVehicleType type) => type == EVehicleType.LOGISTICS || type == EVehicleType.HELI_TRANSPORT;
-    public static bool IsAircraft(EVehicleType type) =>  type == EVehicleType.HELI_TRANSPORT || type == EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
-    public static bool IsEmplacement(EVehicleType type) => type == EVehicleType.HMG || type == EVehicleType.ATGM || type == EVehicleType.AA || type == EVehicleType.MORTAR;
-    public void AddDelay(EDelayType type, float value, string? gamemode = null)
-    {
-        int index = -1;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            Delay del = new Delay(type, value, gamemode);
-            Delay[] old = Delays;
-            Delays = new Delay[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, Delays, 0, old.Length);
-                Delays[Delays.Length - 1] = del;
-            }
-            else
-            {
-                Delays[0] = del;
-            }
-        }
-    }
-    public bool RemoveDelay(EDelayType type, float value, string? gamemode = null)
-    {
-        if (Delays.Length == 0) return false;
-        int index = -1;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) return false;
-        Delay[] old = Delays;
-        Delays = new Delay[old.Length - 1];
-        if (old.Length == 1) return true;
-        if (index != 0)
-            Array.Copy(old, 0, Delays, 0, index);
-        Array.Copy(old, index + 1, Delays, index, old.Length - index - 1);
-        return true;
-    }
-    public bool HasDelayType(EDelayType type)
-    {
-        string gm = Data.Gamemode.Name;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
-            if (del.type == type) return true;
-        }
-        return false;
-    }
-    public bool IsDelayedType(EDelayType type)
-    {
-        string gm = Data.Gamemode.Name;
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            ref Delay del = ref Delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode))
-            {
-                string gamemode = del.gamemode!;
-                bool blacklist = false;
-                if (gamemode[0] == '!')
-                {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1);
-                }
-
-                if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue;
-            }
-            if (del.type == type)
-            {
-                switch (type)
-                {
-                    case EDelayType.NONE:
-                        return false;
-                    case EDelayType.TIME:
-                        if (TimeDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.FLAG:
-                        if (FlagDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.FLAG_PERCENT:
-                        if (FlagPercentDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.OUT_OF_STAGING:
-                        if (StagingDelayed(ref del))
-                            return true;
-                        break;
-                }
-            }
-        }
-        return false;
-    }
-    // TODO: gamemode blacklist not working
-    public bool IsDelayed(out Delay delay)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        delay = Delay.Nil;
-        string? gm = Data.Gamemode?.Name;
-        if (Delays == null || Delays.Length == 0) return false;
-        bool anyVal = false;
-        bool isNoneYet = false;
-        for (int i = Delays.Length - 1; i >= 0; i--)
-        {
-            ref Delay del = ref Delays[i];
-            bool universal = string.IsNullOrEmpty(del.gamemode);
-            if (!universal)
-            {
-                string gamemode = del.gamemode!; // !TeamCTF
-                bool blacklist = false;
-                if (gamemode[0] == '!') // true
-                {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1); // TeamCTF
-                }
-
-                if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue; // false
-                universal = true;
-            }
-            if (universal && anyVal) continue;
-            switch (del.type)
-            {
-                case EDelayType.NONE:
-                    if (!universal)
-                    {
-                        delay = del;
-                        isNoneYet = true;
-                    }
-                    break;
-                case EDelayType.TIME:
-                    if ((!universal || !isNoneYet) && TimeDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.FLAG:
-                    if ((!universal || !isNoneYet) && FlagDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.FLAG_PERCENT:
-                    if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.OUT_OF_STAGING:
-                    if ((!universal || !isNoneYet) && StagingDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-            }
-        }
-        return anyVal;
-    }
-    private bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.value > Data.Gamemode.SecondsSinceStart;
-    private bool FlagDelayed(ref Delay delay) => FlagDelayed(ref delay, false);
-    private bool FlagPercentDelayed(ref Delay delay) => FlagDelayed(ref delay, true);
-    private bool FlagDelayed(ref Delay delay, bool percent)
-    {
-        if (Data.Is(out Invasion inv))
-        {
-            int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            if (Team == 1)
-            {
-                if (inv.AttackingTeam == 1)
-                    return inv.ObjectiveT1Index < ct;
-                else
-                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
-            }
-            else if (Team == 2)
-            {
-                if (inv.AttackingTeam == 2)
-                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
-                else
-                    return inv.ObjectiveT1Index < ct;
-            }
-            return false;
-        }
-        else if (Data.Is(out IFlagTeamObjectiveGamemode fr))
-        {
-            int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            int i2 = GetHighestObjectiveIndex(Team, fr);
-            return (Team == 1 && i2 < ct) ||
-                   (Team == 2 && fr.Rotation.Count - i2 - 1 < ct);
-        }
-        else if (Data.Is(out Insurgency ins))
-        {
-            int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            return ins.Caches != null && ins.CachesDestroyed < ct;
-        }
-        return false;
-    }
-    private bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
-    private int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
-    {
-        if (team == 1)
-        {
-            for (int i = 0; i < gm.Rotation.Count; i++)
-            {
-                if (!gm.Rotation[i].HasBeenCapturedT1)
-                    return i;
-            }
-            return 0;
-        }
-        else if (team == 2)
-        {
-            for (int i = gm.Rotation.Count - 1; i >= 0; i--)
-            {
-                if (!gm.Rotation[i].HasBeenCapturedT2)
-                    return i;
-            }
-            return gm.Rotation.Count - 1;
-        }
-        return -1;
-    }
-    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleID == VehicleID);
+    public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
+    public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
+    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
     public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
     public void SaveMetaData(InteractableVehicle vehicle)
     {
@@ -1245,8 +1260,9 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         }
         return string.Empty;
     }
-
+    [FormatDisplay("Colored Vehicle Name")]
     public const string COLORED_NAME = "cn";
+    [FormatDisplay("Vehicle Name")]
     public const string NAME = "n";
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
@@ -1281,15 +1297,7 @@ public class MetaSave : IJsonReadWrite
                         case nameof(TrunkItems):
                             if (reader.TokenType == JsonTokenType.StartArray)
                             {
-                                TrunkItems = new List<KitItem>(0);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    KitItem item = new KitItem();
-                                    item.ReadJson(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    TrunkItems.Add(item);
-                                }
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
+                                TrunkItems = JsonSerializer.Deserialize<List<KitItem>>(ref reader, JsonEx.serializerSettings);
                             }
                             else if (reader.TokenType == JsonTokenType.Null)
                                 TrunkItems = null;
@@ -1320,14 +1328,7 @@ public class MetaSave : IJsonReadWrite
         writer.WritePropertyName(nameof(TrunkItems));
         if (TrunkItems != null)
         {
-            writer.WriteStartArray();
-            for (int i = 0; i < TrunkItems.Count; i++)
-            {
-                writer.WriteStartObject();
-                TrunkItems[i].WriteJson(writer);
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
+            JsonSerializer.Serialize(TrunkItems, JsonEx.serializerSettings);
         }
         else
             writer.WriteNullValue();
@@ -1444,20 +1445,58 @@ public enum EVehicleType
 {
     [Translatable("Unknown")]
     NONE,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Хамви")]
+    [Translatable(LanguageAliasSet.SPANISH, "Humvee")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Humvee")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Humvee")]
+    [Translatable(LanguageAliasSet.POLISH, "Humvee")]
     HUMVEE,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Транспорт")]
+    [Translatable(LanguageAliasSet.SPANISH, "Transporte")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Transport")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Transporte")]
+    [Translatable(LanguageAliasSet.POLISH, "Humvee")]
     [Translatable("Transport Truck")]
     TRANSPORT,
     SCOUT_CAR,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Логистический")]
+    [Translatable(LanguageAliasSet.SPANISH, "Logistico")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Camion")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Logística")]
+    [Translatable(LanguageAliasSet.POLISH, "Transport Logistyczny")]
     [Translatable("Logistics Truck")]
     LOGISTICS,
+    [Translatable(LanguageAliasSet.RUSSIAN, "БТР")]
+    [Translatable(LanguageAliasSet.SPANISH, "APC")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "TAB")]
+    [Translatable(LanguageAliasSet.POLISH, "APC")]
     [Translatable("APC")]
     APC,
+    [Translatable(LanguageAliasSet.RUSSIAN, "БМП")]
+    [Translatable(LanguageAliasSet.SPANISH, "IFV")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "MLI")]
+    [Translatable(LanguageAliasSet.POLISH, "BWP")]
     [Translatable("IFV")]
     IFV,
+    [Translatable(LanguageAliasSet.RUSSIAN, "ТАНК")]
+    [Translatable(LanguageAliasSet.SPANISH, "Tanque")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Tanc")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Tanque")]
+    [Translatable(LanguageAliasSet.POLISH, "Czołg")]
     [Translatable("Tank")]
     MBT,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
+    [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
+    [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
     [Translatable("Transport Heli")]
     HELI_TRANSPORT,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
+    [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
+    [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
     [Translatable("Attack Heli")]
     HELI_ATTACK,
     [Translatable(LanguageAliasSet.RUSSIAN, "реактивный")]

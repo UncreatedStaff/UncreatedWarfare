@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
@@ -20,9 +19,10 @@ using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using Action = System.Action;
 
 namespace Uncreated.Warfare.Gamemodes;
 
@@ -30,23 +30,24 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
 {
     public const float MATCH_PRESENT_THRESHOLD = 0.65f;
     public const string GAMEMODE_RELOAD_KEY = "gamemode";
-    internal static readonly GamemodeConfig ConfigObj = new GamemodeConfig();
-    public static readonly WinToastUI WinToastUI = new WinToastUI();
+    internal static GamemodeConfig ConfigObj;
+    public static WinToastUI WinToastUI;
     public static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
     public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
-    public static readonly Dictionary<string, Type> GAMEMODES = new Dictionary<string, Type>
+    public static readonly List<KeyValuePair<string, Type>> GAMEMODES = new List<KeyValuePair<string, Type>>
     {
-        { "TeamCTF", typeof(TeamCTF) },
-        { "Invasion", typeof(Invasion) },
-        { "TDM", typeof(TeamDeathmatch.TeamDeathmatch) },
-        { "Insurgency", typeof(Insurgency.Insurgency) },
-        { "Conquest", typeof(Flags.Conquest) }
+        new KeyValuePair<string, Type>("TeamCTF", typeof(TeamCTF)),
+        new KeyValuePair<string, Type>("Invasion", typeof(Invasion)),
+        new KeyValuePair<string, Type>("TDM", typeof(TeamDeathmatch.TeamDeathmatch)),
+        new KeyValuePair<string, Type>("Insurgency", typeof(Insurgency.Insurgency)),
+        new KeyValuePair<string, Type>("Conquest", typeof(Conquest))
     };
     public Whitelister Whitelister;
     public CooldownManager Cooldowns;
     public Tips Tips;
     public Coroutine EventLoopCoroutine;
     public bool isPendingCancel;
+    public event Action? StagingPhaseOver;
     internal string shutdownMessage = string.Empty;
     internal bool shutdownAfterGame = false;
     internal ulong shutdownPlayer = 0;
@@ -62,6 +63,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     private List<IUncreatedSingleton> _singletons;
     private bool wasLevelLoadedOnStart;
     private bool _hasOnReadyRan = false;
+    private bool _hasTimeSynced = false;
     public EState State => _state;
     public float StartTime => _startTime;
     public int StagingSeconds => _stagingSeconds;
@@ -84,6 +86,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public virtual bool AllowCosmetics => true;
     public virtual EGamemode GamemodeType => EGamemode.UNDEFINED;
     protected bool HasOnReadyRan => _hasOnReadyRan;
+    public event Action? OnGameTick;
     public Gamemode(string Name, float EventLoopSpeed)
     {
         this._name = Name;
@@ -91,10 +94,16 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         this.useEventLoop = EventLoopSpeed > 0;
         this._state = EState.LOADING;
     }
-    public void SetTiming(float NewSpeed)
+    public void SetTiming(float newSpeed)
     {
-        this._eventLoopSpeed = NewSpeed;
-        this.useEventLoop = NewSpeed > 0;
+        this._eventLoopSpeed = newSpeed;
+        this.useEventLoop = newSpeed > 0;
+    }
+    public void AdvanceDelays(float seconds)
+    {
+        _startTime -= seconds;
+        VehicleSpawner.UpdateSigns();
+        TraitSigns.BroadcastAllTraitSigns();
     }
     public override void Load()
     {
@@ -147,7 +156,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     /// <summary>Use to add <see cref="IUncreatedSingleton"/>s to be loaded.</summary>
     /// <remarks>Abstract</remarks>
     protected abstract void PreInit();
-    
+
     /// <summary>Called after all <see cref="IUncreatedSingleton"/>s have been loaded.</summary>
     /// <remarks>Abstract</remarks>
     protected abstract void PostInit();
@@ -218,6 +227,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     private void InternalOnReady()
     {
         ReplaceBarricadesAndStructures();
+        _hasTimeSynced = false;
         if (useEventLoop)
         {
             EventLoopCoroutine = StartCoroutine(EventLoop());
@@ -242,6 +252,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             PostOnReady();
             _hasOnReadyRan = true;
         }
+        _hasTimeSynced = false;
     }
 
     private void InternalSubscribe()
@@ -265,55 +276,53 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     }
     public static void OnStagingComplete()
     {
+        if (Data.Gamemode.StagingPhaseOver != null)
+        {
+            try
+            {
+                Data.Gamemode.StagingPhaseOver.Invoke();
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error invoking void StagingPhaseOver():");
+                L.LogError(ex);
+            }
+        }
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (VehicleSpawner.Loaded)
-            VehicleSpawner.UpdateSignsWhere(spawn => VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data) && data.HasDelayType(EDelayType.OUT_OF_STAGING));
+            VehicleSpawner.UpdateSignsWhere(spawn => VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data) && data.HasDelayType(EDelayType.OUT_OF_STAGING));
     }
     protected abstract void EventLoopAction();
-    private IEnumerator<WaitForSeconds> EventLoop()
+    private IEnumerator<WaitForSecondsRealtime> EventLoop()
     {
         while (!isPendingCancel)
         {
             _ticks++;
-            yield return new WaitForSeconds(_eventLoopSpeed);
+            yield return new WaitForSecondsRealtime(_eventLoopSpeed);
 #if DEBUG
             IDisposable profiler = ProfilingUtils.StartTracking(Name + " Gamemode Event Loop");
 #endif
-            DateTime start = DateTime.Now;
-            for (int i = 0; i < Provider.clients.Count; i++)
+            DateTime start = DateTime.UtcNow;
+            for (int i = PlayerManager.OnlinePlayers.Count - 1; i >= 0; i--)
             {
-                SteamPlayer sp = Provider.clients[i];
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
                 try
                 {
-                    if (sp.player.transform == null)
-                    {
-                        L.Log($"Kicking {F.GetPlayerOriginalNames(sp).PlayerName} ({sp.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                        Provider.kick(sp.playerID.steamID, Localization.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
-                        continue;
-                    }
+                    _ = pl.Player.transform;
                 }
                 catch (NullReferenceException)
                 {
-                    L.Log($"Kicking {F.GetPlayerOriginalNames(sp).PlayerName} ({sp.playerID.steamID.m_SteamID}) for null transform.", ConsoleColor.Cyan);
-                    Provider.kick(sp.playerID.steamID, Localization.Translate("null_transform_kick_message", sp, UCWarfare.Config.DiscordInviteCode));
+                    L.Log($"Kicking {F.GetPlayerOriginalNames(pl).PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
+                    Provider.kick(pl.CSteamID, Localization.Translate(T.NullTransformKickMessage, pl, UCWarfare.Config.DiscordInviteCode));
                     continue;
                 }
-                /*
-                // TODO: Fix
-                if (Data.Is(out ITeams t) && t.UseTeamSelector && Teams.TeamManager.LobbyZone.IsInside(sp.player.transform.position) && sp.player.movement.getVehicle() == null &&
-                    UCPlayer.FromSteamPlayer(sp) is UCPlayer pl && pl.GetTeam() != 3 && !t.JoinManager.IsInLobby(pl))
-                {
-                    L.Log($"{pl.Steam64} was stuck in lobby and was auto-rejoined.");
-                    t.JoinManager.OnPlayerDisconnected(pl);
-                    t.JoinManager.CloseUI(pl);
-                    t.JoinManager.OnPlayerConnected(pl, true);
-                }*/
             }
             try
             {
                 EventLoopAction();
+                OnGameTick?.Invoke();
             }
             catch (Exception ex)
             {
@@ -321,7 +330,13 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 L.LogError(ex);
             }
 
-            Quests.QuestManager.OnGameTick();
+            if (!_hasTimeSynced)
+            {
+                TimeSync();
+                _hasTimeSynced = true;
+            }
+            
+            QuestManager.OnGameTick();
 #if DEBUG
             profiler.Dispose();
             if (EveryXSeconds(150))
@@ -330,9 +345,16 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             }
 #endif
             if (UCWarfare.I.CoroutineTiming)
-                L.Log(Name + " Eventloop: " + (DateTime.Now - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
+                L.Log(Name + " Eventloop: " + (DateTime.UtcNow - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
         }
     }
+
+    private void TimeSync()
+    {
+        TraitSigns.TimeSync();
+        VehicleSigns.TimeSync();
+    }
+
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => DisplayName;
     public void ShutdownAfterGame(string reason, ulong player)
     {
@@ -357,11 +379,10 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         QuestManager.OnGameOver(winner);
 
         ActionLogger.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
-        string c = TeamManager.GetTeamHexColor(winner);
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
-        {
-            Chat.Broadcast(set, "team_win", TeamManager.TranslateName(winner, set.Language), c);
-        }
+
+        foreach (LanguageSet set in LanguageSet.All())
+            Chat.Broadcast(set, T.TeamWin, TeamManager.GetFaction(winner));
+
         foreach (SteamPlayer client in Provider.clients)
             client.player.movement.forceRemoveFromVehicle();
 
@@ -514,7 +535,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     }
     public virtual void PlayerLeave(UCPlayer player)
     {
-        if (State is not EState.ACTIVE or EState.STAGING && PlayerSave.TryReadSaveFile(player, out PlayerSave save))
+        if (State is not EState.ACTIVE or EState.STAGING && PlayerSave.TryReadSaveFile(player.Steam64, out PlayerSave save))
         {
             save.ShouldRespawnOnJoin = true;
             PlayerSave.WriteToSaveFile(save);
@@ -526,27 +547,36 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public virtual void OnPlayerDeath(PlayerDied e)
     {
         Point.Points.OnPlayerDeath(e);
+        if (F.TryGetPlayerData(e.Player.Player, out UCPlayerData c))
+            c.LastGunShot = default;
     }
     public static Type? FindGamemode(string name)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        try
+        for (int i = 0; i < GAMEMODES.Count; ++i)
         {
-            if (GAMEMODES.TryGetValue(name, out Type type))
+            if (GAMEMODES[i].Key.Equals(name, StringComparison.OrdinalIgnoreCase))
             {
+                Type type = GAMEMODES[i].Value;
                 if (type is null || !type.IsSubclassOf(typeof(Gamemode))) return null;
                 return type;
             }
-            else return null;
         }
-        catch (Exception ex)
+        if (name.Length > 2)
         {
-            L.LogWarning("Exception when finding gamemode: \"" + name + '\"');
-            L.LogError(ex, ConsoleColor.Yellow);
-            return null;
+            for (int i = 0; i < GAMEMODES.Count; ++i)
+            {
+                if (GAMEMODES[i].Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                {
+                    Type type = GAMEMODES[i].Value;
+                    if (type is null || !type.IsSubclassOf(typeof(Gamemode))) return null;
+                    return type;
+                }
+            }
         }
+        return null;
     }
     public virtual void Subscribe() { }
     public virtual void Unsubscribe() { }
@@ -586,7 +616,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     public virtual void ShowStagingUI(UCPlayer player)
     {
         CTFUI.StagingUI.SendToPlayer(player.Connection);
-        CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate("phases_briefing", player));
+        CTFUI.StagingUI.Top.SetText(player.Connection, Localization.Translate(T.PhaseBriefing, player));
     }
     public void ClearStagingUI(UCPlayer player)
     {
@@ -647,12 +677,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                             for (int i = barricadeRegion.drops.Count - 1; i >= 0; i--)
                             {
                                 BarricadeDrop drop = barricadeRegion.drops[i];
-                                uint instid = drop.instanceID;
-                                if (!(isStruct && (StructureSaver.StructureExists(instid, EStructType.BARRICADE, out _) || RequestSigns.SignExists(instid, out _))))
+                                if (!(isStruct && ((StructureSaver.Loaded && StructureSaver.SaveExists(drop, out _)) || (RequestSigns.Loaded && RequestSigns.SignExists(drop.instanceID, out _)))))
                                 {
                                     if (drop.model.TryGetComponent(out FOBComponent fob))
                                     {
-                                        fob.parent.IsWipedByAuthority = true;
+                                        fob.Parent.IsWipedByAuthority = true;
                                     }
                                     if (drop.model.transform.TryGetComponent(out InteractableStorage storage))
                                         storage.despawnWhenDestroyed = true;
@@ -667,8 +696,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                             for (int i = structureRegion.drops.Count - 1; i >= 0; i--)
                             {
                                 StructureDrop drop = structureRegion.drops[i];
-                                uint instid = drop.instanceID;
-                                if (!(isStruct && StructureSaver.StructureExists(instid, EStructType.STRUCTURE, out _)))
+                                if (!(isStruct && StructureSaver.Loaded && StructureSaver.SaveExists(drop, out _)))
                                     StructureManager.destroyStructure(drop, x, y, Vector3.zero);
                             }
                         }
@@ -683,8 +711,10 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                     }
                 }
             }
-            RequestSigns.DropAllSigns();
-            StructureSaver.DropAllStructures();
+            if (RequestSigns.Loaded)
+                RequestSigns.DropAllSigns();
+            if (StructureSaver.Loaded)
+                StructureSaver.Singleton.CheckAll();
             IconManager.OnLevelLoaded();
         }
         catch (Exception ex)
@@ -693,6 +723,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             L.LogError(ex);
         }
     }
+
     public static void ReadGamemodes()
     {
 #if DEBUG
@@ -704,6 +735,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(typeof(TeamCTF), 1.0f));
             return;
         }
+
         List<KeyValuePair<string?, float>> gms = new List<KeyValuePair<string?, float>>();
         using (IEnumerator<char> iter = UCWarfare.Config.GamemodeRotation.GetEnumerator())
         {
@@ -736,7 +768,8 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                 {
                     if (c == ',')
                     {
-                        if (float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out weight))
+                        if (float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale,
+                                out weight))
                             gms.Add(new KeyValuePair<string?, float>(name, weight));
                         name = null;
                         current.Clear();
@@ -748,18 +781,22 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
                     }
                 }
             }
-            if (name != null && float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale, out weight))
+
+            if (name != null && float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale,
+                    out weight))
                 gms.Add(new KeyValuePair<string?, float>(name, weight));
         }
-        using (IEnumerator<KeyValuePair<string?, float>> iter = gms.GetEnumerator())
+
+        for (int j = 0; j < gms.Count; ++j)
         {
-            while (iter.MoveNext())
+            for (int i = 0; i < GAMEMODES.Count; ++i)
             {
-                if (iter.Current.Key != null && GAMEMODES.TryGetValue(iter.Current.Key, out Type GamemodeType))
-                    GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(GamemodeType, iter.Current.Value));
+                if (GAMEMODES[i].Key.Equals(gms[j].Key, StringComparison.OrdinalIgnoreCase))
+                    GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(GAMEMODES[i].Value, gms[j].Value));
             }
         }
     }
+
     public static Type? GetNextGamemode()
     {
 #if DEBUG
@@ -785,6 +822,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
             }
         }
         return null;
+    }
+
+    internal virtual string DumpState()
+    {
+        return "Mode: " + DisplayName;
     }
 }
 public enum EState : byte

@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using UnityEngine;
@@ -31,8 +30,8 @@ namespace Uncreated.Warfare.FOBs
 
             UCPlayer? owner = UCPlayer.FromID(data.owner);
             if (owner != null && owner.Steam64 != player.Steam64)
-                Points.AwardXP(owner, Points.XPConfig.ResupplyFriendlyXP, Localization.Translate("xp_resupplied_teammate", owner));
-            
+                Points.AwardXP(owner, Points.XPConfig.ResupplyFriendlyXP, T.XPToastResuppliedTeammate);
+
             if (Ammo <= 0 && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
             {
                 Destroy(this);

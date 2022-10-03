@@ -1,9 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using Uncreated.Warfare.Events;
+using System.Diagnostics.CodeAnalysis;
 using Uncreated.Warfare.Events.Vehicles;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
@@ -21,7 +20,7 @@ public class VehicleComponent : MonoBehaviour
     public InteractableVehicle Vehicle;
     public ulong Team { get => Vehicle.lockedGroup.m_SteamID; }
     public VehicleData Data;
-    public bool isInVehiclebay { get; private set; }
+    public bool IsInVehiclebay { get; private set; }
     public EDamageOrigin LastDamageOrigin;
     public ulong LastInstigator;
     public Dictionary<ulong, Vector3> TransportTable { get; private set; }
@@ -64,8 +63,11 @@ public class VehicleComponent : MonoBehaviour
         _quota = 0;
         _requiredQuota = -1;
 
+        ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
         if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data))
         {
+            if (data.Team is 1 or 2)
+                team = data.Team;
             Data = data;
             isInVehiclebay = true;
 
@@ -75,6 +77,8 @@ public class VehicleComponent : MonoBehaviour
 
         countermeasures = new List<Transform>();
     }
+
+    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
     private void OnDestroy()
     {
         RemoveCountermeasures();
@@ -86,7 +90,7 @@ public class VehicleComponent : MonoBehaviour
 #endif
         UCPlayer player = e.Player;
         InteractableVehicle vehicle = e.Vehicle;
-        
+
         byte toSeat = e.PassengerIndex;
         if (toSeat == 0)
         {
@@ -127,7 +131,7 @@ public class VehicleComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (isInVehiclebay)
+        if (IsInVehiclebay)
             EvaluateUsage(e.Player.Player.channel.owner);
 
         if (e.Player.KitClass == EClass.SQUADLEADER &&
@@ -159,7 +163,8 @@ public class VehicleComponent : MonoBehaviour
                 {
                     int amount = (int)(Math.Floor(distance / 100) * 2) + 5;
 
-                    Points.AwardXP(e.Vehicle.passengers[0].player.player, amount, Localization.Translate("xp_transporting_players", e.Vehicle.passengers[0].player.player));
+                    Player player = e.Vehicle.passengers[0].player.player;
+                    Points.AwardXP(player, amount, T.XPToastTransportingPlayers.Translate(player.channel.owner.playerID.steamID.m_SteamID));
 
                     _quota += 0.5F;
 
@@ -185,7 +190,7 @@ public class VehicleComponent : MonoBehaviour
             totalDistance = 0;
         }
 
-        if (isInVehiclebay)
+        if (IsInVehiclebay)
         {
             EvaluateUsage(e.Player.SteamPlayer);
 
@@ -263,12 +268,10 @@ public class VehicleComponent : MonoBehaviour
         }
         else
             L.LogDebug("     ERROR: Countermeasure asset not found");
-
-        
     }
     private IEnumerator<WaitForSeconds> ReloadCountermeasures()
     {
-        yield return new WaitForSeconds(15);    
+        yield return new WaitForSeconds(15);
 
         RemoveCountermeasures();
 
@@ -289,7 +292,7 @@ public class VehicleComponent : MonoBehaviour
     }
     public void StartForceLoadSupplies(UCPlayer caller, ESupplyType type, int amount)
     {
-        forceSupplyLoop = StartCoroutine(ForceSupplyLoopCoroutine(caller, type, amount));
+        ForceSupplyLoop = StartCoroutine(ForceSupplyLoopCoroutine(caller, type, amount));
     }
     public bool TryStartAutoLoadSupplies()
     {
@@ -313,12 +316,12 @@ public class VehicleComponent : MonoBehaviour
             TeamManager.GetFaction(Team).Ammo.ValidReference(out supplyAsset);
         else
         {
-            caller.Message("load_e_itemassetnotfound");
+            caller.SendChat(T.UnknownError);
             yield break;
         }
         if (supplyAsset == null)
         {
-            caller.Message("load_e_itemassetnotfound");
+            caller.SendChat(T.UnknownError);
             yield break;
         }
         int existingCount = 0;
@@ -334,7 +337,7 @@ public class VehicleComponent : MonoBehaviour
 
             oldTrunkItems.Add(Vehicle.trunkItems.items[i]);
             Vehicle.trunkItems.removeItem(Vehicle.trunkItems.getIndex(Vehicle.trunkItems.items[i].x, Vehicle.trunkItems.items[i].y));
-            
+
         }
 
         bool shouldAddMoreItems = true;
@@ -372,6 +375,8 @@ public class VehicleComponent : MonoBehaviour
         {
             for (int i = 0; i < amount - existingCount; i++)
             {
+                if (!TeamManager.IsInAnyMain(Vehicle.transform.position))
+                    break;
                 if (Vehicle.trunkItems.tryAddItem(new Item(supplyAsset.id, true)))
                 {
                     addedNewCount++;
@@ -399,9 +404,9 @@ public class VehicleComponent : MonoBehaviour
             }
         }
 
-        caller.Message(type is ESupplyType.BUILD ? "load_s_build" : "load_s_ammo", (addedBackCount + addedNewCount).ToString());
+        caller.SendChat(type is ESupplyType.BUILD ? T.LoadCompleteBuild : T.LoadCompleteAmmo, addedBackCount + addedNewCount);
 
-        forceSupplyLoop = null;
+        ForceSupplyLoop = null;
     }
     private IEnumerator<WaitForSeconds> AutoSupplyLoop()
     {
@@ -420,15 +425,15 @@ public class VehicleComponent : MonoBehaviour
             for (int i = 0; i < trunk.Count; i++)
             {
                 ItemAsset? asset;
-                if (build is not null && trunk[i].id == build.GUID) asset = build;
-                else if (ammo is not null && trunk[i].id == ammo.GUID) asset = ammo;
-                else asset = Assets.find(trunk[i].id) as ItemAsset;
+                if (build is not null && trunk[i].Id == build.GUID) asset = build;
+                else if (ammo is not null && trunk[i].Id == ammo.GUID) asset = ammo;
+                else asset = Assets.find(trunk[i].Id) as ItemAsset;
 
-                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].x, trunk[i].y, asset.size_x,
-                        asset.size_y, trunk[i].rotation))
+                if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].X, trunk[i].Y, asset.size_x,
+                        asset.size_y, trunk[i].Rotation))
                 {
-                    Item item = new Item(asset.id, trunk[i].amount, 100, F.CloneBytes(trunk[i].metadata));
-                    Vehicle.trunkItems.addItem(trunk[i].x, trunk[i].y, trunk[i].rotation, item);
+                    Item item = new Item(asset.id, trunk[i].Amount, 100, F.CloneBytes(trunk[i].Metadata));
+                    Vehicle.trunkItems.addItem(trunk[i].X, trunk[i].Y, trunk[i].Rotation, item);
                     loaderCount++;
 
                     if (loaderCount >= 3)
@@ -454,7 +459,7 @@ public class VehicleComponent : MonoBehaviour
 
         if (shouldMessagePlayer && driver is not null && driver.IsOnline && F.IsInMain(driver.Position))
         {
-            Tips.TryGiveTip(driver, ETip.LOGI_RESUPPLIED, Vehicle.asset.vehicleName);
+            Tips.TryGiveTip(driver, ETip.LOGI_RESUPPLIED, Data.Type);
         }
     }
     private IEnumerator<WaitForSeconds> QuotaLoop()
@@ -496,6 +501,8 @@ public class VehicleComponent : MonoBehaviour
     public ulong LastDriver;
     public float LastDriverTime;
     public float LastDriverDistance;
+
+    [SuppressMessage(Warfare.Data.SUPPRESS_CATEGORY, Warfare.Data.SUPPRESS_ID)]
     private void Update()
     {
         if (Time.time - lastCheck > 3f)

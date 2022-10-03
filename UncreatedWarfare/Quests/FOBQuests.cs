@@ -1,13 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
-using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -151,7 +147,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
         {
             writer.WriteProperty("fobs_built", _fobsBuilt);
         }
-        public void OnFOBBuilt(UCPlayer constructor, Components.FOB fob)
+        public void OnFOBBuilt(UCPlayer constructor, FOB fob)
         {
             if (constructor.Steam64 == _player.Steam64)
             {
@@ -166,8 +162,8 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
                 }
                 else if (Data.Is(out Gamemodes.Flags.Invasion.Invasion inv))
                 {
-                    if ((inv.AttackingTeam == 1 && ctf.ObjectiveTeam1 != null && F.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
-                        (inv.AttackingTeam == 2 && ctf.ObjectiveTeam2 != null && F.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
+                    if ((inv.AttackingTeam == 1 && inv.ObjectiveTeam1 != null && F.SqrDistance2D(fob.Position, inv.ObjectiveTeam1.Position) <= SqrBuildRange) ||
+                        (inv.AttackingTeam == 2 && inv.ObjectiveTeam2 != null && F.SqrDistance2D(fob.Position, inv.ObjectiveTeam2.Position) <= SqrBuildRange))
                     {
                         goto add;
                     }
@@ -455,9 +451,9 @@ public class HelpBuildQuest : BaseQuestData<HelpBuildQuest.Tracker, HelpBuildQue
         [Obsolete("redo this function plz")]
         public void OnBuildableBuilt(UCPlayer player, BuildableData buildable)
         {
-            if (player.Steam64 == _player.Steam64 && BuildableType.IsMatch(buildable.Type) && BaseIDs.IsMatch(buildable.Foundation.Guid))
+            if (player.Steam64 == _player.Steam64 && BuildableType.IsMatch(buildable.Type) && buildable.Foundation.ValidReference(out Guid guid) && BaseIDs.IsMatch(guid))
             {
-                _built ++;
+                _built++;
                 if (_built >= Amount)
                     TellCompleted();
                 else

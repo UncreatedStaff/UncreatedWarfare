@@ -24,7 +24,7 @@ public static class ConquestUI
             List<Flag> rotation = gm.Rotation;
             CTFUI.ListUI.SendToPlayer(c);
             CTFUI.ListUI.Header.SetVisibility(c, true);
-            CTFUI.ListUI.Header.SetText(c, Localization.Translate("flag_header", player));
+            CTFUI.ListUI.Header.SetText(c, T.FlagsHeader.Translate(player));
             if (team == 1 || team == 2)
             {
                 for (int i = 0; i < CTFUI.ListUI.Parents.Length; i++)
@@ -38,11 +38,11 @@ public static class ConquestUI
                         Flag flag = rotation[index];
                         string objective;
                         if (flag.Owner == 0)
-                            objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UIIconAttack}</color>";
                         else if (flag.Owner == team)
-                            objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
+                            objective = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UIIconDefend}</color>";
                         else
-                            objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                            objective = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UIIconAttack}</color>";
 
                         CTFUI.ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
                         CTFUI.ListUI.Icons[i].SetText(c, objective);
@@ -61,12 +61,12 @@ public static class ConquestUI
                         Flag flag = rotation[i];
                         string objective = flag.Owner switch
                         {
-                            0 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>" +
-                                 $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>",
-                            1 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>" +
-                                 $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>",
-                            2 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>" +
-                                 $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>",
+                            0 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconAttack}</color>" +
+                                 $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconAttack}</color>",
+                            1 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconDefend}</color>" +
+                                 $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconAttack}</color>",
+                            2 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconAttack}</color>" +
+                                 $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconDefend}</color>",
                             _ => string.Empty
                         };
                         CTFUI.ListUI.Names[i].SetText(c, $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>");
@@ -91,11 +91,11 @@ public static class ConquestUI
             string obj2;
             string name = $"<color=#{flag.TeamSpecificHexColor}>{flag.Name}</color>";
             if (flag.Owner == 0)
-                obj2 = obj1 = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                obj2 = obj1 = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UIIconAttack}</color>";
             else
             {
-                obj1 = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UI.DefendIcon}</color>";
-                obj2 = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UI.AttackIcon}</color>";
+                obj1 = $"<color=#{UCWarfare.GetColorHex("defend_icon_color")}>{Gamemode.Config.UIIconDefend}</color>";
+                obj2 = $"<color=#{UCWarfare.GetColorHex("attack_icon_color")}>{Gamemode.Config.UIIconAttack}</color>";
                 if (flag.Owner == 2)
                     (obj1, obj2) = (obj2, obj1);
             }
@@ -114,12 +114,12 @@ public static class ConquestUI
                 {
                     string obj3 = flag.Owner switch
                     {
-                        0 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>" +
-                             $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>",
-                        1 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>" +
-                             $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>",
-                        2 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UI.AttackIcon}</color>" +
-                             $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UI.DefendIcon}</color>",
+                        0 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconAttack}</color>" +
+                             $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconAttack}</color>",
+                        1 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconDefend}</color>" +
+                             $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconAttack}</color>",
+                        2 => $"<color=#{TeamManager.Team1ColorHex}>{Gamemode.Config.UIIconAttack}</color>" +
+                             $"<color=#{TeamManager.Team2ColorHex}>{Gamemode.Config.UIIconDefend}</color>",
                         _ => string.Empty
                     };
                     CTFUI.ListUI.Icons[i2].SetText(pl.Connection, obj3);
@@ -134,10 +134,7 @@ public static class ConquestUI
 #endif
         if (flag.IsContested(out _))
         {
-            if (Mathf.Abs(flag.Points) < Flag.MAX_POINTS)
-                return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
-            else
-                return new CaptureUIParameters(team, flag.Owner == team ? EFlagStatus.SECURED : EFlagStatus.NOT_OWNED, flag);
+            return new CaptureUIParameters(team, EFlagStatus.CONTESTED, flag);
         }
 
         if (flag.Owner == 0)

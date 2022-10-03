@@ -29,6 +29,7 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
+    public static bool IsMono { get; } = Type.GetType("Mono.Runtime") != null;
     private static readonly Regex RemoveRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:color=\\\"{0,1}[#a-z]{0,9}\\\"{0,1})|(?:color)|(?:size=\\\"{0,1}\\d+\\\"{0,1})|(?:size)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:#.{3,8})|(?:[isub])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex RemoveTMProRichTextRegex = new Regex("(?<!(?:\\<noparse\\>(?!\\<\\/noparse\\>)).*)\\<\\/{0,1}(?:(?:noparse)|(?:alpha)|(?:alpha=#[0-f]{1,2})|(?:[su])|(?:su[pb])|(?:lowercase)|(?:uppercase)|(?:smallcaps))\\>", RegexOptions.IgnoreCase);
     private static readonly Regex TimeRegex = new Regex(@"(\d+)\s{0,1}([a-z]+)", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -89,6 +90,24 @@ public static class F
         if (color.g > 0.5f) i |= 2;
         if (color.b > 0.5f) i |= 1;
         return (ConsoleColor)i;
+    }
+    public static Color GetColor(ConsoleColor color)
+    {
+        int c = (int)color;
+        float r = 0f, g = 0f, b = 0f;
+        if ((c & 8) == 8)
+        {
+            r += 0.5f;
+            g += 0.5f;
+            b += 0.5f;
+        }
+        if ((c & 4) == 4)
+            r += 0.25f;
+        if ((c & 2) == 2)
+            g += 0.25f;
+        if ((c & 1) == 1)
+            b += 0.25f;
+        return new Color(r, g, b);
     }
     public static string RemoveRichText(string text)
     {
@@ -208,7 +227,7 @@ public static class F
             case PermissionComparison.AtMost:
                 if (permission is <= EAdminType.MEMBER || check == permission || check is >= EAdminType.CONSOLE || check is EAdminType.MODERATOR || check is EAdminType.STAFF)
                     return true;
-                
+
                 if (check is EAdminType.VANILLA_ADMIN)
                     return permission is <= EAdminType.VANILLA_ADMIN;
 
@@ -254,7 +273,7 @@ public static class F
         EAdminType perms = player.PermissionLevel;
         if (player.Player.channel.owner.isAdmin)
             perms |= EAdminType.VANILLA_ADMIN;
-        return perms | PermissionSaver.Instance.GetPlayerPermissionLevel(player);
+        return perms | PermissionSaver.Instance.GetPlayerPermissionLevel(player.Steam64);
     }
     public static unsafe string ToProperCase(this string input)
     {
@@ -292,28 +311,28 @@ public static class F
         => PermissionCheck(player, EAdminType.ADMIN_ON_DUTY | EAdminType.TRIAL_ADMIN_ON_DUTY, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool OffDuty(this ulong player)       => !OnDuty(player);
+    public static bool OffDuty(this ulong player) => !OnDuty(player);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool OffDuty(this UCPlayer player)    => !OnDuty(player);
+    public static bool OffDuty(this UCPlayer player) => !OnDuty(player);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsIntern(this ulong player)      => PermissionCheck(player, EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
+    public static bool IsIntern(this ulong player) => PermissionCheck(player, EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsIntern(this UCPlayer player)   => player.PermissionCheck(EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
+    public static bool IsIntern(this UCPlayer player) => player.PermissionCheck(EAdminType.TRIAL_ADMIN, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsAdmin(this ulong player)       => PermissionCheck(player, EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
+    public static bool IsAdmin(this ulong player) => PermissionCheck(player, EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsAdmin(this UCPlayer player)    => player.PermissionCheck(EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
+    public static bool IsAdmin(this UCPlayer player) => player.PermissionCheck(EAdminType.ADMIN, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsHelper(this ulong player)      => PermissionCheck(player, EAdminType.HELPER, PermissionComparison.MaskOverlaps);
+    public static bool IsHelper(this ulong player) => PermissionCheck(player, EAdminType.HELPER, PermissionComparison.MaskOverlaps);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsHelper(this UCPlayer player)   => player.PermissionCheck(EAdminType.HELPER, PermissionComparison.MaskOverlaps);
+    public static bool IsHelper(this UCPlayer player) => player.PermissionCheck(EAdminType.HELPER, PermissionComparison.MaskOverlaps);
 
     /// <summary>Ban someone for <paramref name="duration"/> seconds.</summary>
     /// <param name="duration">Duration of ban IN SECONDS</param>
@@ -354,11 +373,11 @@ public static class F
         return string.Empty;
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string S(this int number)   => number == 1 ? string.Empty : "s";
+    public static string S(this int number) => number == 1 ? string.Empty : "s";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string S(this float number) => number == 1 ? string.Empty : "s";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string S(this uint number)  => number == 1 ? string.Empty : "s";
+    public static string S(this uint number) => number == 1 ? string.Empty : "s";
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static void S(this int number, ref string str, int index = 0)
     {
@@ -394,6 +413,7 @@ public static class F
     public static ulong GetTeam(this UCPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this Player player) => GetTeam(player.quests.groupID.m_SteamID);
+    public static ulong GetTeam(this IPlayer player) => player is UCPlayer ucp ? ucp.GetTeam() : GetTeamFromPlayerSteam64ID(player.Steam64);
     public static ulong GetTeam(this ulong groupID)
     {
         if (!Data.Is<ITeams>(out _)) return groupID;
@@ -473,38 +493,6 @@ public static class F
         else if (team == 2) return TeamManager.Team2SpawnAngle;
         else return TeamManager.LobbySpawnAngle;
     }
-    public static void InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, string text)
-    {
-        string newtext = text;
-        if (text.StartsWith("sign_"))
-        {
-            UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
-            if (pl != null)
-                newtext = Localization.TranslateSign(text, pl, false);
-        }
-        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
-    }
-    /// <summary>Runs one player at a time instead of one language at a time. Used for kit signs.</summary>
-    public static void InvokeSignUpdateForAll(InteractableSign sign, byte x, byte y, string text, bool translate = true)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (text == null) return;
-        if (!translate || text.StartsWith("sign_"))
-        {
-            for (int i = 0; i < Provider.clients.Count; i++)
-            {
-                SteamPlayer pl = Provider.clients[i];
-                if (Regions.checkArea(x, y, pl.player.movement.region_x, pl.player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
-                {
-                    UCPlayer? pl2 = UCPlayer.FromSteamPlayer(pl);
-                    if (pl2 != null)
-                        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, pl.transportConnection, translate ? Localization.TranslateSign(text, pl2, false) : text);
-                }
-            }
-        }
-    }
     public static IEnumerable<SteamPlayer> EnumerateClients_Remote(byte x, byte y, byte distance)
     {
         for (int i = 0; i < Provider.clients.Count; i++)
@@ -513,24 +501,6 @@ public static class F
             if (client.player != null && Regions.checkArea(x, y, client.player.movement.region_x, client.player.movement.region_y, distance))
                 yield return client;
         }
-    }
-    public static void InvokeSignUpdateFor(SteamPlayer client, InteractableSign sign, bool changeText = false, string text = "")
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (text == default || client == default) return;
-        string newtext;
-        if (!changeText)
-            newtext = sign.text;
-        else newtext = text;
-        if (newtext.StartsWith("sign_"))
-        {
-            UCPlayer? pl = UCPlayer.FromSteamPlayer(client);
-            if (pl != null)
-                newtext = Localization.TranslateSign(newtext, pl, false);
-        }
-        Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Reliable, client.transportConnection, newtext);
     }
     public static float GetTerrainHeightAt2DPoint(float x, float z, float above = 0)
     {
@@ -552,7 +522,7 @@ public static class F
             height = LevelGround.getHeight(point);
             if (!float.IsNaN(minHeight))
                 return Mathf.Max(height, minHeight);
-            else return height;
+            return height;
         }
     }
     public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
@@ -767,7 +737,7 @@ public static class F
             }
         }
     }
-    public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => GetPlayerOriginalNames(player.Player);
+    public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => player.Name;
     public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
     public static FPlayerName GetPlayerOriginalNames(Player player)
     {
@@ -877,6 +847,8 @@ public static class F
         return false;
     }
     public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
+
+    public static string ColorizeTMPro(this string inner, string colorhex, bool endTag = true) => endTag ? $"<#{colorhex}>{inner}</color>" : $"<#{colorhex}>{inner}";
     public static string ColorizeName(string innerText, ulong team)
     {
         if (!Data.Is<ITeams>(out _)) return innerText;
@@ -968,77 +940,82 @@ public static class F
     public static void NetInvoke(this NetCall call)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!);
+            call.Invoke(UCWarfare.I.NetClient!);
+    }
+    public static void NetInvoke<T>(this NetCallCustom call, NetCallCustom.WriterTask task)
+    {
+        if (UCWarfare.CanUseNetCall)
+            call.Invoke(UCWarfare.I.NetClient!, task);
     }
     public static void NetInvoke<T>(this NetCallRaw<T> call, T arg)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg);
+            call.Invoke(UCWarfare.I.NetClient!, arg);
     }
     public static void NetInvoke<T1, T2>(this NetCallRaw<T1, T2> call, T1 arg1, T2 arg2)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2);
     }
     public static void NetInvoke<T1, T2, T3>(this NetCallRaw<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3);
     }
     public static void NetInvoke<T1, T2, T3, T4>(this NetCallRaw<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4);
     }
     public static void NetInvoke<T1>(this NetCall<T1> call, T1 arg1)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1);
+            call.Invoke(UCWarfare.I.NetClient!, arg1);
     }
     public static void NetInvoke<T1, T2>(this NetCall<T1, T2> call, T1 arg1, T2 arg2)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2);
     }
     public static void NetInvoke<T1, T2, T3>(this NetCall<T1, T2, T3> call, T1 arg1, T2 arg2, T3 arg3)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3);
     }
     public static void NetInvoke<T1, T2, T3, T4>(this NetCall<T1, T2, T3, T4> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5>(this NetCall<T1, T2, T3, T4, T5> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6>(this NetCall<T1, T2, T3, T4, T5, T6> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7>(this NetCall<T1, T2, T3, T4, T5, T6, T7> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
     }
     public static void NetInvoke<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this NetCall<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> call, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
     {
         if (UCWarfare.CanUseNetCall)
-            call.Invoke(Data.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            call.Invoke(UCWarfare.I.NetClient!, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
     }
     public static bool FilterName(string original, out string final)
     {
@@ -1080,7 +1057,7 @@ public static class F
         final = original;
         return alphanumcount != original.Length;
     }
-    public static DateTime FromUnityTime(this float realtimeSinceStartup) => 
+    public static DateTime FromUnityTime(this float realtimeSinceStartup) =>
         DateTime.Now - TimeSpan.FromSeconds(Time.realtimeSinceStartup) + TimeSpan.FromSeconds(realtimeSinceStartup);
 
     /// <summary>
@@ -1348,15 +1325,28 @@ public static class F
     }
     public static InstanceSetter<TInstance, TValue> GenerateInstanceSetter<TInstance, TValue>(string fieldName, BindingFlags flags)
     {
+
         flags |= BindingFlags.Instance;
         flags &= ~BindingFlags.Static;
         FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
         if (field is null || field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
             throw new FieldAccessException("Field not found or invalid.");
-        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-        DynamicMethod method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.HasThis, typeof(void), new Type[] { typeof(TInstance), field.FieldType }, typeof(TInstance), true);
+        MethodAttributes attr;
+        DynamicMethod method;
+        if (IsMono)
+        {
+            attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.HasThis, typeof(void), new Type[] { typeof(TInstance), field.FieldType }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "value");
+        }
+        else
+        {
+            attr = MethodAttributes.Public | MethodAttributes.Static;
+            method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { typeof(TInstance), field.FieldType }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "instance");
+            method.DefineParameter(2, ParameterAttributes.None, "value");
+        }
         ILGenerator il = method.GetILGenerator();
-        method.DefineParameter(1, ParameterAttributes.None, "value");
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldarg_1);
         il.Emit(OpCodes.Stfld, field);
@@ -1370,8 +1360,19 @@ public static class F
         FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
         if (field is null || field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
             throw new FieldAccessException("Field not found or invalid.");
-        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-        DynamicMethod method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.HasThis, typeof(TValue), new Type[] { typeof(TInstance) }, typeof(TInstance), true);
+        MethodAttributes attr;
+        DynamicMethod method;
+        if (IsMono)
+        {
+            attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.HasThis, typeof(TValue), new Type[] { typeof(TInstance) }, typeof(TInstance), true);
+        }
+        else
+        {
+            attr = MethodAttributes.Public | MethodAttributes.Static;
+            method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), new Type[] { typeof(TInstance) }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "instance");
+        }
         ILGenerator il = method.GetILGenerator();
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Ldfld, field);
@@ -1385,10 +1386,21 @@ public static class F
         FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
         if (field is null || !field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
             throw new FieldAccessException("Field not found or invalid.");
-        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-        DynamicMethod method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { field.FieldType }, typeof(TInstance), true);
+        MethodAttributes attr;
+        DynamicMethod method;
+        if (IsMono)
+        {
+            attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { field.FieldType }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "value");
+        }
+        else
+        {
+            attr = MethodAttributes.Public | MethodAttributes.Static;
+            method = new DynamicMethod("set_" + fieldName, attr, CallingConventions.Standard, typeof(void), new Type[] { field.FieldType }, typeof(TInstance), true);
+            method.DefineParameter(1, ParameterAttributes.None, "value");
+        }
         ILGenerator il = method.GetILGenerator();
-        method.DefineParameter(0, ParameterAttributes.None, "value");
         il.Emit(OpCodes.Ldarg_0);
         il.Emit(OpCodes.Stsfld, field);
         il.Emit(OpCodes.Ret);
@@ -1401,8 +1413,18 @@ public static class F
         FieldInfo? field = typeof(TInstance).GetField(fieldName, flags);
         if (field is null || !field.IsStatic || !field.FieldType.IsAssignableFrom(typeof(TValue)))
             throw new FieldAccessException("Field not found or invalid.");
-        MethodAttributes attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
-        DynamicMethod method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), Array.Empty<Type>(), typeof(TInstance), true);
+        MethodAttributes attr;
+        DynamicMethod method;
+        if (IsMono)
+        {
+            attr = MethodAttributes.Public | MethodAttributes.SpecialName | MethodAttributes.HideBySig;
+            method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), Array.Empty<Type>(), typeof(TInstance), true);
+        }
+        else
+        {
+            attr = MethodAttributes.Public | MethodAttributes.Static;
+            method = new DynamicMethod("get_" + fieldName, attr, CallingConventions.Standard, typeof(TValue), Array.Empty<Type>(), typeof(TInstance), true);
+        }
         ILGenerator il = method.GetILGenerator();
         il.Emit(OpCodes.Ldsfld, field);
         il.Emit(OpCodes.Ret);
@@ -1599,9 +1621,39 @@ public static class F
 
         return questName;
     }
+    public static TRequest? GetRPC<TRequest, TOwner>(string name, bool essential = false) where TRequest : ClientMethodHandle
+    {
+        Exception? ex2 = null;
+        try
+        {
+            FieldInfo info = typeof(TOwner).GetField(name, BindingFlags.NonPublic | BindingFlags.Static);
+            if (info != null && info.GetValue(null) is TRequest req)
+            {
+                L.Log("Found \"" + typeof(TOwner).Name + "." + name + "\".", ConsoleColor.Blue);
+                return req;
+            }
+        }
+        catch (Exception ex)
+        {
+            L.LogError(ex);
+            ex2 = ex;
+        }
+
+        string msg = "Unable to retreive the RPC \"" + typeof(TOwner).Name + "." + name + "\" with parameters: [" +
+                     string.Join(", ",
+                         !typeof(TRequest).IsGenericType
+                             ? "<none>"
+                             : typeof(TRequest).GetGenericArguments().Select(x => x.Name)) +
+                     "], perhaps Nelson changed something?";
+        L.LogError(msg);
+        if (essential)
+            throw ex2 ?? new Exception(msg);
+
+        return null;
+    }
 }
-public delegate void InstanceSetter<T1, T2>(T1 owner, T2 value);
-public delegate T2 InstanceGetter<T1, T2>(T1 owner);
+public delegate void InstanceSetter<TInstance, T>(TInstance owner, T value);
+public delegate T InstanceGetter<TInstance, T>(TInstance owner);
 public delegate void StaticSetter<T>(T value);
 public delegate T StaticGetter<T>();
 

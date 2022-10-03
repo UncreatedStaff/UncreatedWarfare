@@ -22,6 +22,11 @@ public readonly struct GridLocation : ITranslationArgument
         X = x;
         Y = y;
         Index = index;
+
+        _toStringCache = ToString(x, y, index);
+    }
+    private static unsafe string ToString(byte x, byte y, byte index)
+    {
         ++y;
         int len = y > 9 ? 5 : 4;
         if (index == 0)
@@ -42,11 +47,10 @@ public readonly struct GridLocation : ITranslationArgument
             ptr[a] = '-';
             ptr[a + 1] = (char)(index + 48);
         }
-
-        _toStringCache = new string(ptr, 0, len);
+        return new string(ptr, 0, len);
     }
     /// <returns>A cached string representation of the grid, formatted like A1-1.</returns>
-    public override readonly string ToString() => _toStringCache ?? "A1";
+    public override readonly string ToString() => _toStringCache;
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => _toStringCache;
     public static bool TryParse(string value, out GridLocation location)
     {
@@ -156,5 +160,7 @@ public readonly struct GridLocation : ITranslationArgument
         this.Y = (byte)bigsqry;
         if (!isOut)
             this.Index = (byte)(smlSqrDstX + (2 - smlSqrDstY) * 3 + 1);
+
+        _toStringCache = ToString(X, Y, Index);
     }
 }

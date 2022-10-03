@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Maps;
@@ -27,11 +25,11 @@ internal class MapScheduler : MonoBehaviour
     };
 
     /* MAP NAMES */
-    public static readonly string FoolsRoad     = mapRotation[0].Name;
-    public static readonly string GooseBay      = mapRotation[1].Name;
-    public static readonly string Nuijamaa      = mapRotation[2].Name;
-    public static readonly string GulfOfAqaba   = mapRotation[3].Name;
-    public static readonly string S3Map         = mapRotation[4].Name;
+    public static readonly string FoolsRoad = mapRotation[0].Name;
+    public static readonly string GooseBay = mapRotation[1].Name;
+    public static readonly string Nuijamaa = mapRotation[2].Name;
+    public static readonly string GulfOfAqaba = mapRotation[3].Name;
+    public static readonly string S3Map = mapRotation[4].Name;
 
     private static List<ulong> originalMods;
     private static List<ulong> originalIgnoreChildren;
@@ -85,7 +83,7 @@ internal class MapScheduler : MonoBehaviour
 
                 L.Log("Added " + mod + " to the workshop queue.", ConsoleColor.Magenta);
                 config.File_IDs.Add(mod);
-                c:;
+            c:;
             }
 
             if (d.RemoveMods is not null)
@@ -121,7 +119,7 @@ internal class MapScheduler : MonoBehaviour
 
                     L.Log("Deleting unused mod folder " + mod + " from workshop directory.", ConsoleColor.Magenta);
                     modFolder.Delete(true);
-                    c:;
+                c:;
                 }
             }
             else

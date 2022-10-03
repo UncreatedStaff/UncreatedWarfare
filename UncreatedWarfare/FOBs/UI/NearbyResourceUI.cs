@@ -1,9 +1,4 @@
 ﻿using SDG.NetTransport;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Framework.UI;
 
 namespace Uncreated.Warfare.FOBs.UI;
@@ -12,7 +7,7 @@ public class NearbyResourceUI : UnturnedUI
     public readonly UnturnedLabel BuildLabel = new UnturnedLabel("Build");
     public readonly UnturnedLabel AmmoLabel = new UnturnedLabel("Ammo");
 
-    public NearbyResourceUI() : base(12009, Gamemodes.Gamemode.Config.UI.NearbyResourcesGUID, true, false)
+    public NearbyResourceUI() : base(12009, Gamemodes.Gamemode.Config.UINearbyResources, true, false)
     {
 
     }

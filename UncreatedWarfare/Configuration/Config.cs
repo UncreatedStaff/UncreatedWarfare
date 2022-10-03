@@ -1,12 +1,8 @@
-﻿using SDG.Unturned;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using System.Xml.Serialization;
 using Uncreated.SQL;
-using Uncreated.Warfare.Maps;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Configuration;
 
 public class SystemConfig : Config<SystemConfigData>
 {
@@ -20,7 +16,7 @@ public class SystemConfig : Config<SystemConfigData>
     }
 }
 
-public class SystemConfigData : ConfigData
+public class SystemConfigData : JSONConfigData
 {
     [JsonPropertyName("moderation")]
     public ModerationConfig ModerationSettings;
@@ -28,8 +24,16 @@ public class SystemConfigData : ConfigData
     public TCPConfig TCPSettings;
     [JsonPropertyName("mysql")]
     public MySqlData SQL;
+    [JsonPropertyName("mysqlRemote")]
+    public MySqlData? RemoteSQL;
     [JsonPropertyName("debugMode")]
     public bool Debug;
+    [JsonPropertyName("region")]
+    public string Region;
+    [JsonPropertyName("regionKey")]
+    public byte RegionKey;
+    [JsonPropertyName("localCurrency")]
+    public string Currency;
     [JsonPropertyName("allowCosmetics")]
     public bool AllowCosmetics;
     [JsonPropertyName("modifySkills")]
@@ -62,6 +66,8 @@ public class SystemConfigData : ConfigData
     public bool RelayMicsDuringEndScreen;
     [JsonPropertyName("enableSquads")]
     public bool EnableSquads;
+    [JsonPropertyName("enableSync")]
+    public bool EnableSync;
     [JsonPropertyName("loadoutPremiumCost")]
     public float LoadoutCost;
     [JsonPropertyName("vehicleAbandonmentDistance")]
@@ -80,38 +86,52 @@ public class SystemConfigData : ConfigData
     public bool BlockLandmineFriendlyFire;
     [JsonPropertyName("disableDailyQuests")]
     public bool DisableDailyQuests;
+    [JsonPropertyName("playerJoinLeaveMessages")]
+    public bool EnablePlayerJoinLeaveMessages;
+    [JsonPropertyName("playerJoinLeaveTeamMessages")]
+    public bool EnablePlayerJoinLeaveTeamMessages;
+    [JsonPropertyName("timeBetweenAnnouncements")]
+    public float SecondsBetweenAnnouncements;
 
     public override void SetDefaults()
     {
-        this.ModerationSettings = new ModerationConfig();
-        this.TCPSettings = new TCPConfig();
-        this.SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
-        this.Debug = true;
-        this.AllowCosmetics = false;
-        this.ModifySkillLevels = true;
-        this.AllowBatteryStealing = false;
-        this.DiscordInviteCode = "ucn"; // https://discord.gg/code
-        this.InjuredLifeTimeSeconds = 90f;
-        this.InjuredDamageMultiplier = 0.1f;
-        this.EnableMortarWarning = true;
-        this.MortarWarningDistance = 75f;
-        this.StatsInterval = 1;
-        this.AfkCheckInterval = 450f;
-        this.AMCDamageMultiplier = 0.25f;
-        this.OverrideKitRequirements = false;
-        this.MaxTimeInStorages = 15f;
-        this.ClearItemsOnAmmoBoxUse = true;
-        this.RelayMicsDuringEndScreen = true;
-        this.EnableSquads = true;
-        this.LoadoutCost = 10;
-        this.MaxVehicleAbandonmentDistance = 300f;
-        this.MaxVehicleHeightToLeave = 50f;
-        this.GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0";
-        this.DisableNameFilter = false;
-        this.MinAlphanumericStringLength = 5;
-        this.EnableReporter = true;
-        this.BlockLandmineFriendlyFire = true;
-        this.DisableDailyQuests = false;
+        ModerationSettings = new ModerationConfig();
+        TCPSettings = new TCPConfig();
+        SQL = new MySqlData { Database = "unturned", Host = "127.0.0.1", Password = "password", Port = 3306, Username = "root", CharSet = "utf8mb4" };
+        RemoteSQL = null;
+        Debug = true;
+        AllowCosmetics = false;
+        ModifySkillLevels = true;
+        AllowBatteryStealing = false;
+        DiscordInviteCode = "ucn"; // https://discord.gg/code
+        InjuredLifeTimeSeconds = 90f;
+        InjuredDamageMultiplier = 0.1f;
+        EnableMortarWarning = true;
+        MortarWarningDistance = 75f;
+        StatsInterval = 1;
+        AfkCheckInterval = 450f;
+        AMCDamageMultiplier = 0.25f;
+        OverrideKitRequirements = false;
+        MaxTimeInStorages = 15f;
+        ClearItemsOnAmmoBoxUse = true;
+        RelayMicsDuringEndScreen = true;
+        EnableSquads = true;
+        LoadoutCost = 10;
+        MaxVehicleAbandonmentDistance = 300f;
+        MaxVehicleHeightToLeave = 50f;
+        GamemodeRotation = "TeamCTF:2.0, Invasion:1.0, Insurgency:1.0, Conquest:1.0";
+        DisableNameFilter = false;
+        MinAlphanumericStringLength = 5;
+        EnableReporter = true;
+        BlockLandmineFriendlyFire = true;
+        DisableDailyQuests = false;
+        EnablePlayerJoinLeaveMessages = false;
+        EnablePlayerJoinLeaveTeamMessages = false;
+        Region = "eus";
+        Currency = "USD";
+        RegionKey = 255;
+        EnableSync = true;
+        SecondsBetweenAnnouncements = 60f;
     }
     public class ModerationConfig
     {
@@ -133,13 +153,13 @@ public class SystemConfigData : ConfigData
         public string[] BattleyeExclusions;
         public ModerationConfig()
         {
-            this.InternOnDutyGroup = "intern";
-            this.InternOffDutyGroup = "intern-od";
-            this.AdminOnDutyGroup = "admin";
-            this.AdminOffDutyGroup = "admin-od";
-            this.AllowedBarricadesOnVehicles = new List<ushort>();
-            this.TimeBetweenShutdownMessages = 60f;
-            this.BattleyeExclusions = new string[]
+            InternOnDutyGroup = "intern";
+            InternOffDutyGroup = "intern-od";
+            AdminOnDutyGroup = "admin";
+            AdminOffDutyGroup = "admin-od";
+            AllowedBarricadesOnVehicles = new List<ushort>();
+            TimeBetweenShutdownMessages = 60f;
+            BattleyeExclusions = new string[]
             {
                 "Client not responding",
                 "Query Timeout"
@@ -155,41 +175,10 @@ public class SystemConfigData : ConfigData
 
         public TCPConfig()
         {
-            this.EnableTCPServer = true;
-            this.TCPServerIP = "127.0.0.1";
-            this.TCPServerPort = 31902;
-            this.TCPServerIdentity = "ucwarfare";
+            EnableTCPServer = true;
+            TCPServerIP = "127.0.0.1";
+            TCPServerPort = 31902;
+            TCPServerIdentity = "ucwarfare";
         }
     }
 }
-
-#if DEBUG
-public class TestConfig : Config<TestConfigData>
-{
-    public TestConfig() : base(Warfare.Data.Paths.BaseDirectory, "test_config.json", "testconfig")
-    {
-    }
-    protected override void OnReload()
-    {
-        L.Log("Reloaded test config");
-        L.Log(Data.IntegerTest.ToString());
-        L.Log(Data.StringTest.ToString());
-        L.Log(Data.AssetTest.ToString());
-        base.OnReload();
-    }
-}
-public class TestConfigData : ConfigData
-{
-    public RotatableConfig<int> IntegerTest;
-    public RotatableConfig<string> StringTest;
-    public RotatableConfig<JsonAssetReference<ItemAsset>> AssetTest;
-    public override void SetDefaults()
-    {
-        IntegerTest = 4;
-        StringTest = "TeamCTF";
-        AssetTest = (JsonAssetReference<ItemAsset>)31902;
-    }
-}
-
-
-#endif

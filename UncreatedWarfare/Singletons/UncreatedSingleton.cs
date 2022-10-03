@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using Uncreated.Warfare.Commands;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
 using UnityEngine;
@@ -137,12 +138,12 @@ public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingle
         if (!_isLoaded)
             throw new SingletonUnloadedException(this.GetType());
     }
-    protected ListSingleton(string? reloadKey, string file) : base (file, false)
+    protected ListSingleton(string? reloadKey, string file) : base(file, false)
     {
         this.reloadKey = reloadKey;
     }
     protected ListSingleton(string file) : this(null, file) { }
-    protected ListSingleton(string? reloadKey, string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : base (file, serializer, deserializer, false)
+    protected ListSingleton(string? reloadKey, string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : base(file, serializer, deserializer, false)
     {
         this.reloadKey = reloadKey;
     }
@@ -169,7 +170,7 @@ public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingle
         Unload();
     }
 }
-public abstract class ConfigSingleton<TConfig, TData> : BaseReloadSingleton where TConfig : Config<TData> where TData : ConfigData, new()
+public abstract class ConfigSingleton<TConfig, TData> : BaseReloadSingleton where TConfig : Config<TData> where TData : JSONConfigData, new()
 {
     private readonly string? _folder;
     private readonly string? _file;
@@ -177,12 +178,12 @@ public abstract class ConfigSingleton<TConfig, TData> : BaseReloadSingleton wher
     public TConfig ConfigurationFile => _config;
     public TData Config => _config.Data;
     protected ConfigSingleton(string reloadKey) : base(reloadKey) { }
-    protected ConfigSingleton(string? reloadKey, string folder, string fileName) : base (reloadKey)
+    protected ConfigSingleton(string? reloadKey, string folder, string fileName) : base(reloadKey)
     {
         _folder = folder;
         _file = fileName;
     }
-    protected ConfigSingleton(string folder, string fileName) : this (null, folder, fileName)
+    protected ConfigSingleton(string folder, string fileName) : this(null, folder, fileName)
     {
         _folder = folder;
         _file = fileName;

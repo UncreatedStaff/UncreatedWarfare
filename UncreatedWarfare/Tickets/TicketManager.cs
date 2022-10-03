@@ -1,23 +1,10 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using Uncreated.Warfare.Commands;
-using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using Uncreated.Warfare.Gamemodes;
-using Uncreated.Warfare.Gamemodes.Flags.Invasion;
-using Uncreated.Warfare.Gamemodes.Insurgency;
-using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Point;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
@@ -70,6 +57,8 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         if (Provider is null)
             throw new InvalidOperationException("You must set TicketManager." + nameof(Provider) + " before TicketManager loads.");
         Provider.Manager = this;
+        _t1Tickets = 0;
+        _t2Tickets = 0;
         Provider.Load();
         EventDispatcher.OnPlayerDied += OnPlayerDeath;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
@@ -93,23 +82,29 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     }
     public void SendUI(UCPlayer player)
     {
-        if (Provider == null || player is null || !player.IsOnline || player.HasUIHidden)
-            return;
-        L.Log("Sending UI to " + player.CharacterName);
-        TicketUI.SendToPlayer(player.Connection);
-        string? url = TeamManager.GetFaction(player.GetTeam())?.FlagImageURL;
-        if (url is not null)
-            TicketUI.Flag.SetImage(player.Connection, url);
-        Provider.UpdateUI(player);
+        ulong team = player.GetTeam();
+        if (team is 1 or 2)
+        {
+            if (Provider == null || player is null || !player.IsOnline || player.HasUIHidden)
+                return;
+            L.Log("Sending UI to " + player.CharacterName);
+            TicketUI.SendToPlayer(player.Connection);
+            string? url = TeamManager.GetFaction(team)?.FlagImageURL;
+            if (url is not null)
+                TicketUI.Flag.SetImage(player.Connection, url);
+            Provider.UpdateUI(player);
+        }
     }
-    public void UpdateUI(UCPlayer player) => Provider.UpdateUI(player);
+    public void UpdateUI(UCPlayer player) => Provider?.UpdateUI(player);
     public void UpdateUI(ulong team)
     {
+        if (Provider == null) return;
         if (SDG.Unturned.Provider.clients.Count < 1) return;
         Provider.UpdateUI(team);
     }
     public void UpdateUI()
     {
+        if (Provider == null) return;
         if (SDG.Unturned.Provider.clients.Count < 1) return;
         Provider.UpdateUI(1ul);
         Provider.UpdateUI(2ul);
@@ -145,7 +140,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     public void ClearUI(UCPlayer player) => TicketUI.ClearFromPlayer(player.Connection);
     public void ClearUI(ITransportConnection connection) => TicketUI.ClearFromPlayer(connection);
 }
-public class TicketData : ConfigData
+public class TicketData : JSONConfigData
 {
     public int TicketHandicapDifference;
     public int FOBCost;

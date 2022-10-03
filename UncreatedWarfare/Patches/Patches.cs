@@ -3,10 +3,10 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Text.RegularExpressions;
-using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
+using Uncreated.Warfare.Squads;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
@@ -204,9 +204,9 @@ public static partial class Patches
                     caller.TimeUnmuted > DateTime.Now)
                 {
                     if (caller.TimeUnmuted == DateTime.MaxValue)
-                        caller.SendChat("text_chat_feedback_muted_permanent", caller.MuteReason ?? "unknown");
+                        caller.SendChat(T.MuteTextChatFeedbackPermanent, caller.MuteReason ?? "unknown");
                     else
-                        caller.SendChat("text_chat_feedback_muted", caller.TimeUnmuted.ToString("g") + " EST", caller.MuteReason ?? string.Empty);
+                        caller.SendChat(T.MuteTextChatFeedback, caller.TimeUnmuted, caller.MuteReason ?? "unknown");
                     return false;
                 }
                 if (!duty)
@@ -214,7 +214,7 @@ public static partial class Patches
                     Match match = Data.ChatFilter.Match(text);
                     if (match.Success && match.Length > 0)
                     {
-                        caller.SendChat("text_chat_feedback_chat_filter", match.Value);
+                        caller.SendChat(T.ChatFilterFeedback, match.Value);
                         ActionLogger.Add(EActionLogType.CHAT_FILTER_VIOLATION, mode switch { EChatMode.LOCAL => "AREA/SQUAD: ", EChatMode.GLOBAL => "GLOBAL: ", _ => "TEAM: " } + text, caller);
                         return false;
                     }
@@ -223,8 +223,11 @@ public static partial class Patches
 
             if (callingPlayer.isAdmin || duty)
                 text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: " + text;
+            else if (caller != null && SquadManager.Loaded && SquadManager.Singleton.Commanders.IsCommander(caller))
+                text = "<color=#" + UCWarfare.GetColorHex("commander") + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
             else
-                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(callingPlayer.GetTeam()) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", "");
+                text = "<color=#" + Teams.TeamManager.GetTeamHexColor(team) + ">%SPEAKER%</color>: <noparse>" + text.Replace("</noparse>", string.Empty);
+
             if (mode == EChatMode.GROUP)
                 text = "[T] " + text;
 
@@ -330,7 +333,7 @@ public static partial class Patches
 #endif
             UCPlayer? pl = UCPlayer.FromPlayer(player);
             if (pl == null || pl.OnDutyOrAdmin()) return true;
-            player.SendChat("cant_leave_group");
+            player.SendChat(T.NoLeavingGroup);
             return false;
         }
         // SDG.Unturned.PlayerClothing
@@ -392,26 +395,26 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            var weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
+            ItemWeaponAsset weaponAsset = ((ItemWeaponAsset)__instance.player.equipment.asset);
 
             RaycastInfo info = DamageTool.raycast(new Ray(__instance.player.look.aim.position, __instance.player.look.aim.forward), weaponAsset.range, RayMasks.BARRICADE, __instance.player);
             if (info.transform != null)
             {
-                var drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
+                BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(info.transform);
                 if (drop != null)
                 {
                     UCPlayer? builder = UCPlayer.FromPlayer(__instance.player);
 
                     if (builder != null && builder.GetTeam() == drop.GetServersideData().group)
                     {
-                        if (Gamemode.Config.Items.EntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
+                        if (Gamemode.Config.ItemEntrenchingTool.MatchGuid(__instance.equippedMeleeAsset.GUID))
                         {
                             if (drop.model.TryGetComponent(out RepairableComponent repairable))
                                 repairable.Repair(builder);
                             else if (drop.model.TryGetComponent(out BuildableComponent buildable))
                                 buildable.IncrementBuildPoints(builder);
                             else if (drop.model.TryGetComponent(out FOBComponent radio))
-                                radio.parent.Repair(builder);
+                                radio.Parent.Repair(builder);
                         }
                     }
                 }

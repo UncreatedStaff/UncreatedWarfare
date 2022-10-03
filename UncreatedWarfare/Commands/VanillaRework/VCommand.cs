@@ -1,6 +1,5 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using UnityEngine;
@@ -29,7 +28,7 @@ public class VCommand : Command
         ctx.AssertRanByPlayer();
 
         if (!ctx.TryGet(0, out VehicleAsset asset, out bool mutiple, true, allowMultipleResults: true))
-            throw ctx.Reply("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + ctx.GetRange(0) + "</color>.</color>");
+            throw ctx.ReplyString("<color=#8f9494>Unable to find a vehicle by the name or id: <color=#dddddd>" + ctx.GetRange(0) + "</color>.</color>");
 
         Vector3 ppos = ctx.Caller.Position;
         Vector3 v = ctx.Caller.Player.look.aim.forward with { y = 0 };
@@ -81,6 +80,6 @@ public class VCommand : Command
             turrets,
             255);
 
-        ctx.Reply($"<color=#bfb9ac>Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).</color>");
+        ctx.ReplyString($"Spawned a <color=#dddddd>{vehicle.asset.vehicleName}</color> (<color=#aaaaaa>{vehicle.asset.id}</color>).", "bfb9ac");
     }
 }

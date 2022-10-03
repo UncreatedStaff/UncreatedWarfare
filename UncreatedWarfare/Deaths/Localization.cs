@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Uncreated.Framework;
-using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;
@@ -375,7 +375,7 @@ internal static class Localization
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation from {4}m away using a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.BLEEDING | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} bled out after hitting themselves with {3} fragmentation using a {6}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM, "{0} was killed by {3} fragmentation from {4}m away using a {6} driven by {5}."),
-                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed {1}'s {3} fragmentation from {4}m away using a {6} driven by {5}."),
+                new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} was killed by {1}'s {3} fragmentation from {4}m away using a {6} driven by {5}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.SUICIDE | EDeathFlags.ITEM, "{0} killed themselves with {3} fragmentation while in a {6} driven by {5}."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM, "{0} bled out after being hit by {3} fragmentation using a {6} driven by {5} from {4}m away."),
                 new DeathTranslation(EDeathFlags.ITEM2 | EDeathFlags.PLAYER3 | EDeathFlags.BLEEDING | EDeathFlags.ITEM | EDeathFlags.KILLER, "{0} bled out after being hit by {1}'s {3} fragmentation using a {6} driven by {5} from {4}m away."),
@@ -477,18 +477,14 @@ internal static class Localization
     {
         bool sentInConsole = false;
         // red if its a teamkill, otherwise white
-        Color color = UCWarfare.GetColor((args.Flags & EDeathFlags.SUICIDE) != EDeathFlags.SUICIDE && args.isTeamkill ? "death_background_teamkill" : "death_background");
-        foreach (LanguageSet set in Warfare.Localization.EnumerateLanguageSets())
+        bool tk = (args.Flags & EDeathFlags.SUICIDE) != EDeathFlags.SUICIDE && args.isTeamkill;
+        Color color = UCWarfare.GetColor(tk ? "death_background_teamkill" : "death_background");
+        foreach (LanguageSet set in LanguageSet.All())
         {
             string msg = TranslateMessage(set.Language, args);
-            if (!sentInConsole && set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+            if (!sentInConsole && set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
             {
-                string log = F.RemoveRichText(msg);
-                L.Log(log, ConsoleColor.DarkCyan);
-                if (e.Killer is not null)
-                    ActionLogger.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
-                else
-                    ActionLogger.Add(EActionLogType.DEATH, log, e.Player.Steam64);
+                Log(tk, msg, e);
                 sentInConsole = true;
             }
             while (set.MoveNext())
@@ -498,25 +494,33 @@ internal static class Localization
         }
 
         if (!sentInConsole)
-        {
-            string log = F.RemoveRichText(TranslateMessage(JSONMethods.DEFAULT_LANGUAGE, args));
-            L.Log(log, ConsoleColor.DarkCyan);
-            if (e.Killer is not null)
-                ActionLogger.Add(EActionLogType.DEATH, log + " | Killer: " + e.Killer.Steam64, e.Player.Steam64);
-            else
-                ActionLogger.Add(EActionLogType.DEATH, log, e.Player.Steam64);
-        }
+            Log(tk, TranslateMessage(L.DEFAULT, args), e);
+
         e.LocalizationArgs = args;
         EventDispatcher.InvokeOnPlayerDied(e);
+    }
+    private static void Log(bool tk, string msg, PlayerDied e)
+    {
+        string log = F.RemoveRichText(msg);
+        L.Log(log, tk ? ConsoleColor.Cyan : ConsoleColor.DarkCyan);
+        if (OffenseManager.IsValidSteam64ID(e.Instigator))
+        {
+            ActionLogger.Add(EActionLogType.DEATH, log + " | Killer: " + e.Instigator.m_SteamID, e.Player.Steam64);
+            ActionLogger.Add(EActionLogType.KILL, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
+            if (tk)
+                ActionLogger.Add(EActionLogType.TEAMKILL, log + " | Dead: " + e.Player.Steam64, e.Instigator.m_SteamID);
+        }
+        else
+            ActionLogger.Add(EActionLogType.DEATH, log, e.Player.Steam64);
     }
     internal static void Reload()
     {
         string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
 
-        F.CheckDir(Data.Paths.LangStorage + JSONMethods.DEFAULT_LANGUAGE, out bool folderIsThere);
+        F.CheckDir(Data.Paths.LangStorage + L.DEFAULT, out bool folderIsThere);
         if (folderIsThere)
         {
-            string directory = Path.Combine(Data.Paths.LangStorage, JSONMethods.DEFAULT_LANGUAGE, "deaths.json");
+            string directory = Path.Combine(Data.Paths.LangStorage, L.DEFAULT, "deaths.json");
             if (!File.Exists(directory))
             {
                 using (FileStream stream = File.Create(directory))
@@ -583,17 +587,17 @@ internal static class Localization
         else DeathTranslations.TryGetValue(language, out causes);
         if (causes is null)
             return args.DeathCause.ToString() + " Dead: " + args.DeadPlayerName;
-    rtn:
+        rtn:
         int i = FindDeathCause(causes, ref args);
         if (i == -1)
         {
-            if (language.Equals(JSONMethods.DEFAULT_LANGUAGE, StringComparison.Ordinal))
+            if (language.Equals(L.DEFAULT, StringComparison.Ordinal))
             {
                 isDefault = true;
                 causes = DefaultValues;
             }
             else
-                DeathTranslations.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out causes);
+                DeathTranslations.TryGetValue(L.DEFAULT, out causes);
             i = FindDeathCause(causes, ref args);
             if (i == -1)
                 return args.DeathCause.ToString() + " Dead: " + args.DeadPlayerName;
@@ -774,7 +778,7 @@ public class DeathCause : IJsonReadWrite
     {
         this.Cause = cause;
     }
-    public DeathCause(EDeathCause cause, DeathTranslation translation) : this (cause, new DeathTranslation[] { translation }) { }
+    public DeathCause(EDeathCause cause, DeathTranslation translation) : this(cause, new DeathTranslation[] { translation }) { }
     public DeathCause(EDeathCause cause, DeathTranslation[] translations) : this(cause)
     {
         this.Translations = translations;
@@ -838,7 +842,7 @@ public class DeathCause : IJsonReadWrite
                                 if (reader.TokenType == JsonTokenType.PropertyName)
                                 {
                                     prop = reader.GetString();
-                                    if (reader.Read() && prop is not null && Enum.TryParse(prop, true, out EDeathFlags flags) 
+                                    if (reader.Read() && prop is not null && Enum.TryParse(prop, true, out EDeathFlags flags)
                                         && reader.TokenType == JsonTokenType.String && (prop = reader.GetString()) is not null)
                                     {
                                         translations.Add(new DeathTranslation(flags, prop));

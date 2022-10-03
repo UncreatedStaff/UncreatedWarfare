@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-using System;
-using System.Threading.Tasks;
+﻿using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
@@ -22,6 +20,7 @@ public class DeployCommand : Command
         AddAlias("dep");
     }
 
+    // todo use Deployment instead
     public override void Execute(CommandInteraction ctx)
     {
 #if DEBUG
@@ -36,11 +35,11 @@ public class DeployCommand : Command
         if (ctx.MatchParameter(0, "cancel") && F.TryGetPlayerData(ctx.Caller.Player, out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
         {
             comp.CancelTeleport();
-            throw ctx.Reply("deploy_cancelled");
+            throw ctx.Reply(T.DeployCancelled);
         }
 
         if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(ctx.CallerID))
-            throw ctx.Reply("deploy_e_injured");
+            throw ctx.Reply(T.DeployInjured);
 
         string destination = ctx.GetRange(0)!;
 
@@ -54,15 +53,15 @@ public class DeployCommand : Command
         bool shouldCancelOnDamage = !IsInMain;
 
         if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.DEPLOY, out Cooldown cooldown))
-            throw ctx.Reply("deploy_e_cooldown", cooldown.ToString());
+            throw ctx.Reply(T.DeployCooldown, cooldown);
 
         if (!(IsInMain || IsInLobby))
         {
             if (CooldownManager.HasCooldown(ctx.Caller, ECooldownType.COMBAT, out Cooldown combatlog))
-                throw ctx.Reply("deploy_e_incombat", combatlog.ToString());
+                throw ctx.Reply(T.DeployInCombat, combatlog);
 
-            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.ValidReference(out Guid guid) || !(ctx.Caller.IsOnFOB(out _) || UCBarricadeManager.CountNearbyBarricades(guid, 10, ctx.Caller.Position, team) != 0))
-                throw ctx.Reply(Data.Is<Insurgency>() ? "deploy_e_notnearfob_ins" : "deploy_e_notnearfob");
+            if (!Gamemode.Config.BarricadeInsurgencyCache.ValidReference(out Guid guid) || !(ctx.Caller.IsOnFOB(out _) || UCBarricadeManager.CountNearbyBarricades(guid, 10, ctx.Caller.Position, team) != 0))
+                throw ctx.Reply(Data.Is<Insurgency>() ? T.DeployNotNearFOBInsurgency : T.DeployNotNearFOB);
         }
 
         if (!FOBManager.FindFOBByName(destination, team, out object? deployable))
@@ -73,26 +72,26 @@ public class DeployCommand : Command
                 throw ctx.Defer();
             }
             if (destination.Equals("lobby", StringComparison.OrdinalIgnoreCase))
-                throw ctx.Reply("deploy_lobby_removed");
+                throw ctx.Reply(T.DeployLobbyRemoved);
             else
-                throw ctx.Reply("deploy_e_fobnotfound", destination);
+                throw ctx.Reply(T.DeployableNotFound, destination);
         }
 
         if (deployable is FOB FOB)
         {
             if (FOB.Bunker == null)
             {
-                ctx.Reply("deploy_e_nobunker", FOB.Name);
+                ctx.Reply(T.DeployNoBunker, FOB);
                 return;
             }
             if (FOB.IsBleeding)
             {
-                ctx.Reply("deploy_e_damaged", FOB.Name);
+                ctx.Reply(T.DeployRadioDamaged, FOB);
                 return;
             }
             if (FOB.NearbyEnemies.Count != 0)
             {
-                ctx.Reply("deploy_e_enemiesnearby", FOB.Name);
+                ctx.Reply(T.DeployEnemiesNearby, FOB);
                 return;
             }
 
@@ -108,11 +107,11 @@ public class DeployCommand : Command
         else if (deployable is Cache cache)
         {
             if (cache.NearbyAttackers.Count != 0)
-                throw ctx.Reply("deploy_e_enemiesnearby", cache.Name);
+                throw ctx.Reply(T.DeployEnemiesNearby, cache);
 
             c.TeleportTo(cache, FOBManager.Config.DeloyFOBDelay, shouldCancelOnMove);
         }
         else
-            throw ctx.Reply("deploy_e_fobnotfound", destination);
+            throw ctx.Reply(T.DeployableNotFound, destination);
     }
 }

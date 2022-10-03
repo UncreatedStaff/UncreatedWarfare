@@ -8,10 +8,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using Uncreated.Framework;
-using Uncreated.Warfare;
 using Uncreated.Warfare.Singletons;
 
-namespace Uncreated;
+namespace Uncreated.Warfare.Configuration;
 
 public abstract class JSONSaver<T> : List<T> where T : class, new()
 {
@@ -42,7 +41,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     {
         directory = Path.GetDirectoryName(_directory);
         file = _directory;
-        
+
         _serializer = serializer;
         useSerializer = serializer is not null;
         _deserializer = deserializer;
@@ -91,7 +90,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
         if (save) Save();
     }
     //private static readonly JsonSerializer serializer = new JsonSerializer() { Formatting = Formatting.Indented, Culture = Data.Locale };
-    
+
     public void Save()
     {
         if (!isInited) Init();
@@ -265,7 +264,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
     }
     public bool IsPropertyValid<TEnum>(object name, out TEnum property) where TEnum : struct, Enum
     {
-        if (Enum.TryParse<TEnum>(name.ToString(), out var p))
+        if (Enum.TryParse<TEnum>(name.ToString(), out TEnum p))
         {
             property = p;
             return true;
@@ -315,61 +314,69 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
             L.LogError(ex);
         }
     }
-    internal ESetFieldResult SetProperty(Func<T, bool> selector, string property, string value)
+    internal ESetFieldResult SetProperty(Func<T, bool> selector, ref string property, string value)
     {
-        return ObjectExists(selector, out T selected) ? SetProperty(selected, property, value) : ESetFieldResult.OBJECT_NOT_FOUND;
+        return ObjectExists(selector, out T selected) ? SetProperty(selected, ref property, value) : ESetFieldResult.OBJECT_NOT_FOUND;
     }
-    internal ESetFieldResult SetProperty<TValue>(Func<T, bool> selector, string property, TValue value)
+    internal ESetFieldResult SetProperty<TValue>(Func<T, bool> selector, ref string property, TValue value)
     {
-        return ObjectExists(selector, out T selected) ? SetProperty(selected, property, value) : ESetFieldResult.OBJECT_NOT_FOUND;
+        return ObjectExists(selector, out T selected) ? SetProperty(selected, ref property, value) : ESetFieldResult.OBJECT_NOT_FOUND;
     }
-    internal ESetFieldResult SetProperty(T obj, string property, string value)
+    internal ESetFieldResult SetProperty(T obj, ref string property, string value)
     {
         if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
         if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
         FieldInfo? field = GetField(property, out ESetFieldResult reason);
-        if (field is not null && reason == ESetFieldResult.SUCCESS)
+        if (field is not null)
         {
-            if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
+            property = field.Name;
+            if (reason == ESetFieldResult.SUCCESS)
             {
-                try
+                if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
                 {
-                    field.SetValue(obj, val);
+                    try
+                    {
+                        field.SetValue(obj, val);
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError(ex);
+                        return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
+                    }
+                    return ESetFieldResult.SUCCESS;
                 }
-                catch (Exception ex)
-                {
-                    L.LogError(ex);
-                    return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
-                }
-                return ESetFieldResult.SUCCESS;
+                return ESetFieldResult.INVALID_INPUT;
             }
-            return ESetFieldResult.INVALID_INPUT;
         }
-        else return reason;
+        return reason;
     }
-    protected ESetFieldResult SetProperty<TValue>(T obj, string property, TValue value)
+    protected ESetFieldResult SetProperty<TValue>(T obj, ref string property, TValue value)
     {
         if (obj is null) return ESetFieldResult.OBJECT_NOT_FOUND;
         if (property is null || value is null) return ESetFieldResult.FIELD_NOT_FOUND;
         FieldInfo? field = GetField(property, out ESetFieldResult reason);
-        if (field is not null && reason == ESetFieldResult.SUCCESS)
+        if (field is not null)
         {
-            if (field.FieldType.IsAssignableFrom(value.GetType()))
+            property = field.Name;
+            if (reason == ESetFieldResult.SUCCESS)
             {
-                try
+                if (field.FieldType.IsAssignableFrom(value.GetType()))
                 {
-                    field.SetValue(obj, value);
+                    try
+                    {
+                        field.SetValue(obj, value);
+                    }
+                    catch (Exception ex)
+                    {
+                        L.LogError(ex);
+                        return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
+                    }
+                    return ESetFieldResult.SUCCESS;
                 }
-                catch (Exception ex)
-                {
-                    L.LogError(ex);
-                    return ESetFieldResult.FIELD_NOT_SERIALIZABLE;
-                }
-                return ESetFieldResult.SUCCESS;
+                return ESetFieldResult.INVALID_INPUT;
             }
-            return ESetFieldResult.INVALID_INPUT;
         }
-        else return reason;
+        return reason;
     }
     private FieldInfo? GetField(string property, out ESetFieldResult reason)
     {
@@ -377,13 +384,19 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
         {
             FieldInfo fi = fields[i];
             if (fi.Name.Equals(property, StringComparison.Ordinal))
-                return ValidateField(fi, out reason) ? fi : null;
+            {
+                ValidateField(fi, out reason);
+                return fi;
+            }
         }
         for (int i = 0; i < fields.Length; i++)
         {
             FieldInfo fi = fields[i];
             if (fi.Name.Equals(property, StringComparison.OrdinalIgnoreCase))
-                return ValidateField(fi, out reason) ? fi : null;
+            {
+                ValidateField(fi, out reason);
+                return fi;
+            }
         }
         reason = ESetFieldResult.FIELD_NOT_FOUND;
         return default;
@@ -413,17 +426,24 @@ public static class JsonEx
     private static readonly JavaScriptEncoder jsEncoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
     public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions()
     {
-        WriteIndented = true, 
-        IncludeFields = true, 
+        WriteIndented = true,
+        IncludeFields = true,
         AllowTrailingCommas = true,
-        Encoder = jsEncoder,
+        Encoder = jsEncoder
+    };
+    public static readonly JsonSerializerOptions condensedSerializerSettings = new JsonSerializerOptions()
+    {
+        WriteIndented = false,
+        IncludeFields = true,
+        AllowTrailingCommas = true,
+        Encoder = jsEncoder
     };
     public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true, Encoder = jsEncoder };
     public static readonly JsonWriterOptions condensedWriterOptions = new JsonWriterOptions() { Indented = false, Encoder = jsEncoder };
     public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };
     static JsonEx()
     {
-
+        serializerSettings.Converters.Add(new Vector3JsonConverter());
     }
     public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, bool value)
     {
@@ -559,10 +579,10 @@ public static class JsonEx
 }
 public enum ESetFieldResult : byte
 {
-SUCCESS = 0,
-FIELD_NOT_FOUND = 1,
-FIELD_NOT_SERIALIZABLE = 2,
-FIELD_PROTECTED = 3,
-OBJECT_NOT_FOUND = 4,
-INVALID_INPUT = 5
+    SUCCESS = 0,
+    FIELD_NOT_FOUND = 1,
+    FIELD_NOT_SERIALIZABLE = 2,
+    FIELD_PROTECTED = 3,
+    OBJECT_NOT_FOUND = 4,
+    INVALID_INPUT = 5
 }

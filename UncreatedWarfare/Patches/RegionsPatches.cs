@@ -3,8 +3,8 @@ using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
-using System.Text;
-using Uncreated.Warfare.Vehicles;
+using Uncreated.Warfare.Structures;
+using Uncreated.Warfare.Traits;
 using UnityEngine;
 
 namespace Uncreated.Warfare
@@ -38,31 +38,37 @@ namespace Uncreated.Warfare
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                if (trimmedText.StartsWith("sign_"))
+                if (trimmedText.StartsWith(Signs.PREFIX, StringComparison.Ordinal))
                 {
-                    if (trimmedText.Length > 5)
-                    {
-                        if (Kits.KitManager.KitExists(trimmedText.Substring(5), out _))
-                            F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
-                        else
-                            F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
-                    }
-                    else
-                        F.InvokeSignUpdateForAll(sign, x, y, trimmedText);
-
-
                     BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
-
-                    byte[] state = drop.GetServersideData().barricade.state;
+                    if (drop == null)
+                        return false;
                     byte[] bytes = System.Text.Encoding.UTF8.GetBytes(trimmedText);
-                    byte[] numArray1 = new byte[17 + bytes.Length];
-                    byte[] numArray2 = numArray1;
-                    Buffer.BlockCopy(state, 0, numArray2, 0, 16);
-                    numArray1[16] = (byte)bytes.Length;
+                    byte[] newState = new byte[sizeof(ulong) * 2 + 1 + bytes.Length];
+                    Buffer.BlockCopy(BitConverter.GetBytes(drop.GetServersideData().owner), 0, newState, 0, sizeof(ulong));
+                    Buffer.BlockCopy(BitConverter.GetBytes(Teams.TeamManager.GetGroupID(3ul)), 0, newState, sizeof(ulong), sizeof(ulong));
+                    newState[sizeof(ulong) * 2] = (byte)bytes.Length;
                     if (bytes.Length != 0)
-                        Buffer.BlockCopy(bytes, 0, numArray1, 17, bytes.Length);
-                    drop.ReceiveUpdateState(numArray1);
-                    sign.updateText(trimmedText);
+                        Buffer.BlockCopy(bytes, 0, newState, sizeof(ulong) * 2 + 1, bytes.Length);
+                    BarricadeManager.updateState(drop.model, newState, newState.Length);
+                    sign.updateState(drop.asset, newState);
+                    Signs.BroadcastSign(trimmedText, sign, x, y);
+                    if (StructureSaver.Loaded && StructureSaver.SaveExists(drop, out SavedStructure structure))
+                    {
+                        structure.Metadata = F.CloneBytes(newState);
+                        StructureSaver.SaveSingleton();
+                    }
+
+                    if (TraitManager.Loaded && trimmedText.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        TraitData? d = TraitManager.GetData(trimmedText.Substring(TraitSigns.TRAIT_SIGN_PREFIX.Length));
+                        if (d != null)
+                            TraitSigns.InitTraitSign(d, drop, sign);
+                        else
+                            TraitSigns.TryRemoveComponent(drop, sign);
+                    }
+                    else TraitSigns.TryRemoveComponent(drop, sign);
                     return false;
                 }
                 else
@@ -74,7 +80,7 @@ namespace Uncreated.Warfare
             [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
             [HarmonyPrefix]
             static void OnItemDropRemovedPrefix(
-                ref SDG.Unturned.ItemData? __state,
+                ref ItemData? __state,
                 in ServerInvocationContext context,
                 byte x,
                 byte y,
@@ -92,7 +98,7 @@ namespace Uncreated.Warfare
                 ItemRegion region = ItemManager.regions[x, y];
                 for (ushort index = 0; index < region.items.Count; ++index)
                 {
-                    SDG.Unturned.ItemData itemData = region.items[index];
+                    ItemData itemData = region.items[index];
                     if (itemData.instanceID == instanceID)
                     {
                         __state = itemData;
@@ -103,7 +109,7 @@ namespace Uncreated.Warfare
             [HarmonyPatch(typeof(ItemManager), nameof(ItemManager.ReceiveTakeItemRequest))]
             [HarmonyPostfix]
             static void OnItemDropRemovedPostfix(
-                SDG.Unturned.ItemData? __state,
+                ItemData? __state,
                 in ServerInvocationContext context,
                 byte x,
                 byte y,
@@ -153,7 +159,8 @@ namespace Uncreated.Warfare
                         while (count < region.drops.Count)
                         {
                             num += 44 + region.drops[count].GetServersideData().barricade.state.Length;
-                            hasSign |= !hasSign && region.drops[count].interactable is InteractableSign;
+                            if (!hasSign)
+                                hasSign = region.drops[count].interactable is InteractableSign;
                             count++;
                             if (num > Block.BUFFER_SIZE / 2)
                                 break;
@@ -162,7 +169,7 @@ namespace Uncreated.Warfare
                         if (hasSign)
                         {
                             if (!Data.Languages.TryGetValue(client.playerID.steamID.m_SteamID, out lang))
-                                lang = JSONMethods.DEFAULT_LANGUAGE;
+                                lang = L.DEFAULT;
                         }
                         else lang = null;
                         Data.SendMultipleBarricades.Invoke(ENetReliability.Reliable, client.transportConnection, writer =>
@@ -176,7 +183,7 @@ namespace Uncreated.Warfare
                             for (; index < count; ++index)
                             {
                                 BarricadeDrop drop = region.drops[index];
-                                SDG.Unturned.BarricadeData serversideData = drop.GetServersideData();
+                                BarricadeData serversideData = drop.GetServersideData();
                                 InteractableStorage? interactable = drop.interactable as InteractableStorage;
                                 writer.WriteGuid(drop.asset.GUID);
                                 if (interactable != null)
@@ -218,24 +225,8 @@ namespace Uncreated.Warfare
                                     }
                                     else
                                     {
-                                        if (newtext.StartsWith("sign_"))
-                                        {
-                                            if (newtext.StartsWith("sign_vbs_"))
-                                            {
-                                                if (VehicleSpawner.Loaded && VehicleBay.Loaded && VehicleSigns.Loaded)
-                                                {
-                                                    if (VehicleSigns.SignExists(sign, out VehicleSign vbsign) &&
-                                                        VehicleSpawner.SpawnExists(vbsign.bay_instance_id, vbsign.bay_type, out Vehicles.VehicleSpawn spawn))
-                                                    {
-                                                        if (VehicleBay.VehicleExists(spawn.VehicleID, out VehicleData data))
-                                                            newtext = string.Format(Localization.TranslateVBS(spawn, data, lang), data.GetCostLine(pl));
-                                                    }
-                                                }
-                                            }
-                                                newtext = Localization.TranslateSign(newtext, lang, pl, false);
-                                            // size is not allowed in signs.
-                                            newtext = newtext.Replace("<size=", "").Replace("</size>", "");
-                                        }
+                                        if (newtext.StartsWith(Signs.PREFIX, StringComparison.OrdinalIgnoreCase))
+                                            newtext = Signs.GetClientText(newtext, pl, sign);
                                         byte[] state = serversideData.barricade.state;
                                         byte[] textbytes = System.Text.Encoding.UTF8.GetBytes(newtext);
                                         if (textbytes.Length > byte.MaxValue - 18)

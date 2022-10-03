@@ -9,6 +9,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Point;
+using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Components;
@@ -39,7 +40,7 @@ public struct LandmineData
             this.ownerID = owner.Owner;
         }
     }
-    
+
 }
 public class UCPlayerData : MonoBehaviour
 {
@@ -58,6 +59,7 @@ public class UCPlayerData : MonoBehaviour
     internal ThrowableComponent? TriggeringThrowable;
     public Guid lastExplodedVehicle;
     public Guid LastVehicleHitBy;
+    public ItemMagazineAsset LastProjectedAmmoType;
     public Coroutine? CurrentTeleportRequest;
     public Vehicles.VehicleSpawn? currentlylinking;
     public DeathMessageArgs LastBleedingArgs;
@@ -73,7 +75,7 @@ public class UCPlayerData : MonoBehaviour
     public int PingBufferIndex = -1;
     public float LastAvgPingDifference;
     #region TOASTS
-    private struct ToastMessageInfo
+    public struct ToastMessageInfo
     {
         public static readonly ToastMessageInfo Nil = new ToastMessageInfo(0, Guid.Empty, 0, 0f);
         public byte channel;
@@ -94,41 +96,41 @@ public class UCPlayerData : MonoBehaviour
         {
             if (Assets.find(this.guid) is not EffectAsset ea)
                 L.Log("Unable to find effect asset with GUID " + this.guid.ToString("N") + " in toast messages.");
-            else 
+            else
                 this.id = ea.id;
         }
     }
     internal static void ReloadToastIDs()
     {
         ref ToastMessageInfo i = ref TOASTS[0];
-        Gamemode.Config.UI.InfoToast.ValidReference(out i.guid);
+        Gamemode.Config.UIToastInfo.ValidReference(out i.guid);
         i = ref TOASTS[1];
-        Gamemode.Config.UI.WarningToast.ValidReference(out i.guid);
+        Gamemode.Config.UIToastWarning.ValidReference(out i.guid);
         i = ref TOASTS[2];
-        Gamemode.Config.UI.SevereToast.ValidReference(out i.guid);
+        Gamemode.Config.UIToastSevere.ValidReference(out i.guid);
         i = ref TOASTS[3];
-        Gamemode.Config.UI.XPToast.ValidReference(out i.guid);
+        Gamemode.Config.UIToastXP.ValidReference(out i.guid);
         i = ref TOASTS[4];
-        Gamemode.Config.UI.MediumToast.ValidReference(out i.guid);
+        Gamemode.Config.UIToastMedium.ValidReference(out i.guid);
         i = ref TOASTS[5];
-        Gamemode.Config.UI.BigToast.ValidReference(out i.guid);
+        Gamemode.Config.UIToastLarge.ValidReference(out i.guid);
         i = ref TOASTS[6];
-        Gamemode.Config.UI.ProgressToast.ValidReference(out i.guid);
+        Gamemode.Config.UIToastProgress.ValidReference(out i.guid);
         i = ref TOASTS[7];
-        Gamemode.Config.UI.TipToast.ValidReference(out i.guid);
+        Gamemode.Config.UIToastTip.ValidReference(out i.guid);
     }
-    private static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
+    public static readonly ToastMessageInfo[] TOASTS = new ToastMessageInfo[]
     {
-        new ToastMessageInfo(EToastMessageSeverity.INFO,        Gamemode.Config.UI.InfoToast.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f), // info
-        new ToastMessageInfo(EToastMessageSeverity.WARNING,     Gamemode.Config.UI.WarningToast.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),   // warning
-        new ToastMessageInfo(EToastMessageSeverity.SEVERE,      Gamemode.Config.UI.SevereToast.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),    // error
-        new ToastMessageInfo(EToastMessageSeverity.MINI,        Gamemode.Config.UI.XPToast.ValidReference(out guid) ? guid : Guid.Empty, 1, 1.58f),      // xp
-        new ToastMessageInfo(EToastMessageSeverity.MEDIUM,      Gamemode.Config.UI.MediumToast.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),   // medium
-        new ToastMessageInfo(EToastMessageSeverity.BIG,         Gamemode.Config.UI.BigToast.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),      // big
-        new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    Gamemode.Config.UI.ProgressToast.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f), // progress
-        new ToastMessageInfo(EToastMessageSeverity.TIP,         Gamemode.Config.UI.TipToast.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f),        // tip
+        new ToastMessageInfo(EToastMessageSeverity.INFO,        Gamemode.Config.UIToastInfo.ValidReference(out Guid guid) ? guid : Guid.Empty, 0, 12f), // info
+        new ToastMessageInfo(EToastMessageSeverity.WARNING,     Gamemode.Config.UIToastWarning.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),   // warning
+        new ToastMessageInfo(EToastMessageSeverity.SEVERE,      Gamemode.Config.UIToastSevere.ValidReference(out guid) ? guid : Guid.Empty, 0, 12f),    // error
+        new ToastMessageInfo(EToastMessageSeverity.MINI,        Gamemode.Config.UIToastXP.ValidReference(out guid) ? guid : Guid.Empty, 1, 1.58f),      // xp
+        new ToastMessageInfo(EToastMessageSeverity.MEDIUM,      Gamemode.Config.UIToastMedium.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),   // medium
+        new ToastMessageInfo(EToastMessageSeverity.BIG,         Gamemode.Config.UIToastLarge.ValidReference(out guid) ? guid : Guid.Empty, 3, 5.5f),    // big
+        new ToastMessageInfo(EToastMessageSeverity.PROGRESS,    Gamemode.Config.UIToastProgress.ValidReference(out guid) ? guid : Guid.Empty, 4, 1.6f), // progress
+        new ToastMessageInfo(EToastMessageSeverity.TIP,         Gamemode.Config.UIToastTip.ValidReference(out guid) ? guid : Guid.Empty, 1, 4f),        // tip
     };
-    private struct ToastChannel
+    public struct ToastChannel
     {
         public byte channel;
         public ToastMessageInfo info;
@@ -162,7 +164,7 @@ public class UCPlayerData : MonoBehaviour
             return false;
         }
     }
-    private ToastChannel[] channels;
+    public ToastChannel[] channels;
     public void QueueMessage(ToastMessage message, bool priority = false)
     {
 #if DEBUG
@@ -196,11 +198,11 @@ public class UCPlayerData : MonoBehaviour
                 }
             }
         }
-    }   
+    }
     readonly List<KeyValuePair<ToastMessage, ToastMessageInfo>> pendingToastMessages = new List<KeyValuePair<ToastMessage, ToastMessageInfo>>();
     private void SendToastMessage(ToastMessage message, ToastMessageInfo info)
     {
-        EffectManager.sendUIEffect(info.id, unchecked((short)info.id), player.channel.owner.transportConnection, true, message.Message1 ?? "", message.Message2 ?? "", message.Message3 ?? "" );
+        EffectManager.sendUIEffect(info.id, unchecked((short)info.id), player.channel.owner.transportConnection, true, message.Message1 ?? "", message.Message2 ?? "", message.Message3 ?? "");
         channels[info.channel].SetMessage(info, message);
         for (int i = pendingToastMessages.Count - 1; i >= 0; i--)
         {
@@ -272,7 +274,7 @@ public class UCPlayerData : MonoBehaviour
                     }
                 }
                 channel.hasPending = false;
-                next: ;
+            next:;
             }
         }
     }
@@ -296,7 +298,7 @@ public class UCPlayerData : MonoBehaviour
                 return true;
             }
             else
-                player.Message("deploy_e_alreadydeploying");
+                player.SendChat(T.DeployAlreadyActive);
         }
         return false;
     }
@@ -321,15 +323,12 @@ public class UCPlayerData : MonoBehaviour
         else if (isCache)
             cache = structure as Cache;
 
+        ulong team = player.GetTeam();
 
-        if (isFOB)
-            player.Message("deploy_fob_standby", fob!.UIColor, fob.Name, delay.ToString());
-        else if (isSpecialFOB)
-            player.Message("deploy_fob_standby", special!.UIColor, special.Name, delay.ToString());
-        else if (isCache)
-            player.Message("deploy_fob_standby", cache!.UIColor, cache.Name, delay.ToString());
-        else if (isMain)
-            player.Message("deploy_fob_standby", "f0c28d", "MAIN", delay.ToString());
+        if (isFOB || isSpecialFOB || isCache)
+            player.SendChat(T.DeployStandby, isFOB ? fob! : (isSpecialFOB ? special : cache)!, Mathf.RoundToInt(delay));
+        else if (isMain && team is 1 or 2)
+            player.SendChat(T.DeployStandby, team == 1 ? Teams.TeamManager.Team1Main : Teams.TeamManager.Team2Main, Mathf.RoundToInt(delay));
 
         int counter = 0;
 
@@ -346,14 +345,12 @@ public class UCPlayerData : MonoBehaviour
             {
                 if (player.Player.life.isDead)
                 {
-                    player.Message("deploy_c_dead");
-
                     CancelTeleport();
                     yield break;
                 }
                 if (shouldCancelOnMove && player.Position != originalPosition)
                 {
-                    player.Message("deploy_c_moved");
+                    player.SendChat(T.DeployMoved);
 
                     CancelTeleport();
                     yield break;
@@ -362,21 +359,21 @@ public class UCPlayerData : MonoBehaviour
                 {
                     if (fob!.NearbyEnemies.Count != 0)
                     {
-                        player.Message("deploy_c_enemiesNearby");
+                        player.SendChat(T.DeployEnemiesNearby, fob);
 
                         CancelTeleport();
                         yield break;
                     }
                     if (fob.IsBleeding)
                     {
-                        player.Message("deploy_c_bleeding");
+                        player.SendChat(T.DeployRadioDamaged, fob);
 
                         CancelTeleport();
                         yield break;
                     }
                     if (!fob.IsSpawnable)
                     {
-                        player.Message("deploy_c_notspawnable");
+                        player.SendChat(T.DeployNotSpawnable, fob);
 
                         CancelTeleport();
                         yield break;
@@ -386,14 +383,14 @@ public class UCPlayerData : MonoBehaviour
                 {
                     if (cache!.NearbyAttackers.Count != 0)
                     {
-                        player.Message("deploy_c_enemiesNearby");
+                        player.SendChat(T.DeployEnemiesNearby);
 
                         CancelTeleport();
                         yield break;
                     }
                     if (cache == null || cache.Structure.GetServersideData().barricade.isDead)
                     {
-                        player.Message("deploy_c_cachedead");
+                        player.SendChat(T.DeployDestroyed);
 
                         CancelTeleport();
                         yield break;
@@ -403,7 +400,7 @@ public class UCPlayerData : MonoBehaviour
                 {
                     if (special == null || !special.IsActive)
                     {
-                        player.Message("deploy_c_notactive");
+                        player.SendChat(T.DeployNotSpawnable);
 
                         CancelTeleport();
                         yield break;
@@ -458,23 +455,23 @@ public class UCPlayerData : MonoBehaviour
 
         if (isFOB)
         {
-            player.Message("deploy_s", fob!.UIColor, fob.Name);
+            player.SendChat(T.DeploySuccess, fob!);
 
-            Points.TryAwardFOBCreatorXP(fob, Points.XPConfig.FOBDeployedXP, "xp_fob_in_use");
+            Points.TryAwardFOBCreatorXP(fob!, Points.XPConfig.FOBDeployedXP, T.XPToastFOBUsed);
 
             if (fob!.Bunker!.model.TryGetComponent(out BuiltBuildableComponent comp))
                 Quests.QuestManager.OnPlayerSpawnedAtBunker(comp, fob!, player);
         }
         else if (isSpecialFOB)
-            player.Message("deploy_s", special!.UIColor, special.Name);
+            player.SendChat(T.DeploySuccess, special!);
         else if (isCache)
-            player.Message("deploy_s", cache!.UIColor, cache.Name);
-        else if (structure is Vector3)
+            player.SendChat(T.DeploySuccess, cache!);
+        else if (structure is Vector3 && team is 1 or 2)
         {
-            player.Message("deploy_s", "f0c28d", "MAIN");
+            player.SendChat(T.DeploySuccess, team == 1 ? Teams.TeamManager.Team1Main : Teams.TeamManager.Team2Main);
         }
 
         if (startCoolDown)
-            CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, CooldownManager.Config.DeployFOBCooldown);
+            CooldownManager.StartCooldown(player, ECooldownType.DEPLOY, RapidDeployment.GetDeployTime(player));
     }
 }

@@ -4,12 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading;
-using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.VanillaRework;
@@ -18,6 +15,8 @@ namespace Uncreated.Warfare;
 
 public static class L
 {
+    /// <summary>Default Language (previously <see cref="JSONMethods"/>.DEFAULT_LANGUAGE)</summary>
+    public const string DEFAULT = LanguageAliasSet.ENGLISH;
     //public const int MAX_LOGS = 1000;
     //internal static List<LogMessage> Logs;
     private static bool _init = false;
@@ -47,11 +46,6 @@ public static class L
             if (Data.OutputToConsoleMethod is not null)
                 AddLog(message);
             CommandHandler.OnLog(message);
-            if (message.StartsWith("Detected newer game version: ", StringComparison.Ordinal))
-            {
-                ShutdownCommand.ShutdownAfterGame("Unturned update v" + message.Substring(29), false);
-                throw new Exception("Why Nelson (auto-update stopper)");
-            }
         }
     }
 
@@ -109,10 +103,12 @@ public static class L
     [Conditional("DEBUG")]
     public static void LogDebug(string info, ConsoleColor color = ConsoleColor.DarkGray)
     {
-        if (UCWarfare.Config.Debug)
+        if (!UCWarfare.IsLoaded)
+            LogAsLibrary("[DEBUG] " + info, color);
+        else if (UCWarfare.Config.Debug)
             Log(info, color);
     }
-    internal static void NetLogInfo(string message) => Log(message);
+    internal static void NetLogInfo(string message) => LogDebug(message);
     internal static void NetLogWarning(string message) => LogWarning(message, method: "UncreatedNetworking");
     internal static void NetLogError(string message) => LogError(message, method: "UncreatedNetworking");
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking", filepath: "unknown");

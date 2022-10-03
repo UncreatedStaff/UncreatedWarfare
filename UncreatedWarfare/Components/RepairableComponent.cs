@@ -29,7 +29,7 @@ namespace Uncreated.Warfare.Components
             if (Structure.GetServersideData().barricade.health >= Structure.asset.health)
                 return;
 
-                float amount = 30;
+            float amount = 30;
 
             if (builder.KitClass == EClass.COMBAT_ENGINEER)
                 amount *= 2;
@@ -53,11 +53,11 @@ namespace Uncreated.Warfare.Components
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.BuildableBarricade == Structure.asset.GUID && b.Type != EBuildableType.EMPLACEMENT);
+            BuildableData buildable = FOBManager.Config.Buildables.Find(b => b.BuildableBarricade.MatchGuid(Structure.asset.GUID) && b.Type != EBuildableType.EMPLACEMENT);
 
-            if (buildable != null)
+            if (buildable != null && buildable.Foundation.ValidReference(out ItemBarricadeAsset asset))
             {
-                string structureName = Assets.find<ItemBarricadeAsset>(buildable.Foundation).itemName;
+                string structureName = asset.itemName;
                 string message = structureName + " DESTROYED";
 
                 UCPlayer? player = e.Instigator;
@@ -83,7 +83,7 @@ namespace Uncreated.Warfare.Components
                     if (buildable.Type == EBuildableType.FORTIFICATION)
                     {
                         amount = (int)Math.Round(buildable.RequiredHits * 0.1F);
-                        
+
 
                         if (teamkilled) amount *= -1;
                         else vehicleQuota = 0.1F;
@@ -111,5 +111,5 @@ namespace Uncreated.Warfare.Components
             Destroy(this);
         }
     }
-    
+
 }

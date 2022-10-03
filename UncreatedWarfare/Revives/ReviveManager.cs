@@ -3,6 +3,7 @@ using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -15,8 +16,9 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Traits;
+using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
-using static UnityEngine.GraphicsBuffer;
 
 namespace Uncreated.Warfare.Revives;
 
@@ -36,7 +38,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     }
     public bool CanPlayerInjure(ref DamagePlayerParameters parameters)
     {
-        return parameters.player != null && 
+        return parameters.player != null &&
                SafezoneManager.checkPointValid(parameters.player.transform.position) &&
                !parameters.player.life.isDead &&
                parameters.damage > parameters.player.life.health &&
@@ -52,9 +54,13 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         UseableConsumeable.onPerformingAid += OnHealPlayer;
         Singleton = this;
         Updater = UCWarfare.I.StartCoroutine(UpdatePositions());
+        UCPlayerKeys.SubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
+        UCPlayerKeys.SubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
     }
     public override void Unload()
     {
+        UCPlayerKeys.UnsubscribeKeyUp(SelfRevivePressed, Data.Keys.SelfRevive);
+        UCPlayerKeys.UnsubscribeKeyUp(GiveUpPressed, Data.Keys.GiveUp);
         Singleton = null!;
         UseableConsumeable.onPerformingAid -= OnHealPlayer;
         PlayerLife.OnRevived_Global -= OnPlayerRespawned;
@@ -72,6 +78,37 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         DownedPlayers.Clear();
         DeathTracker.ReviveManagerUnloading();
+    }
+    private void GiveUpPressed(UCPlayer player, float timeDown, ref bool handled)
+    {
+        if (DownedPlayers.TryGetValue(player.Steam64, out DownedPlayerData p))
+        {
+            player.Player.life.askDamage(byte.MaxValue, Vector3.down, p.parameters.cause, p.parameters.limb, p.parameters.killer, out _,
+                p.parameters.trackKill, p.parameters.ragdollEffect, false, true);
+            handled = true;
+        }
+    }
+    private void SelfRevivePressed(UCPlayer player, float timeDown, ref bool handled)
+    {
+        if (DownedPlayers.TryGetValue(player.Steam64, out DownedPlayerData data) &&
+            TraitManager.Loaded &&
+            SelfRevive.HasSelfRevive(player, out SelfRevive sr))
+        {
+            float tl = Time.realtimeSinceStartup - data.start;
+            if (tl >= sr.Cooldown)
+            {
+                if (player.Player.TryGetComponent(out Reviver r))
+                {
+                    sr.Consume();
+                    r.SelfRevive();
+                }
+                else player.SendChat(T.UnknownError);
+            }
+            else
+            {
+                player.SendChat(T.TraitSelfReviveCooldown, sr.Data, Localization.GetTimeFromSeconds(Mathf.CeilToInt(tl), player));
+            }
+        }
     }
     void IPlayerConnectListener.OnPlayerConnecting(UCPlayer player)
     {
@@ -108,7 +145,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         }
         if (!CAN_HEAL_ENEMIES || medic.GetTeam() != downed.GetTeam())
         {
-            medic.Message("heal_e_enemy");
+            medic.SendChat(T.ReviveHealEnemies);
             shouldAllow = false;
             return;
         }
@@ -116,12 +153,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             return;
         if (medic.KitClass != EClass.MEDIC)
         {
-            medic.Message("heal_e_notmedic");
+            medic.SendChat(T.ReviveNotMedic);
             shouldAllow = false;
             return;
         }
     }
-
     private void OnPlayerRespawned(PlayerLife obj)
     {
 #if DEBUG
@@ -132,7 +168,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         obj.player.movement.sendPluginSpeedMultiplier(1.0f);
         obj.player.movement.sendPluginJumpMultiplier(1.0f);
     }
-    /// <summary>Pre-destroy</summary>
     internal void OnPlayerDisconnected(SteamPlayer player)
     {
 #if DEBUG
@@ -156,13 +191,14 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.PrivateStance == null || Data.ReplicateStance == null)
+        if (Data.SetPrivateStance == null || Data.ReplicateStance == null)
         {
             player.stance.checkStance(stance);
             L.LogWarning("Unable to set stance properly, fell back to checkStance.");
+            return;
         }
-        Data.PrivateStance?.SetValue(player.stance, stance);
-        Data.ReplicateStance?.Invoke(player.stance, new object[] { false });
+        Data.SetPrivateStance!(player.stance, stance);
+        Data.ReplicateStance.Invoke(player.stance, new object[] { false });
     }
     internal void OnPlayerHealed(Player medic, Player target)
     {
@@ -182,9 +218,25 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 UCPlayer? uctarget = UCPlayer.FromPlayer(target);
                 if (ucmedic != null)
                 {
-                    Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, Localization.Translate("xp_healed_teammate", medic.channel.owner.playerID.steamID.m_SteamID, F.GetPlayerOriginalNames(target).CharacterName));
-                    if (uctarget != null)
-                        QuestManager.OnRevive(ucmedic, uctarget);
+                    if (CooldownManager.Config.ReviveXPCooldown <= 0 || (uctarget != null &&
+                      !(CooldownManager.HasCooldown(ucmedic, ECooldownType.REVIVE, out Cooldown cooldown) &&
+                        cooldown.data.Length > 0 &&
+                        cooldown.data[0] is ulong id &&
+                        id == uctarget.Steam64)))
+                    {
+                        Points.AwardXP(ucmedic, Points.XPConfig.FriendlyRevivedXP, T.XPToastHealedTeammate);
+                        if (uctarget != null)
+                        {
+                            QuestManager.OnRevive(ucmedic, uctarget);
+                            CooldownManager.StartCooldown(ucmedic, ECooldownType.REVIVE, CooldownManager.Config.ReviveXPCooldown, uctarget.Steam64);
+                        }
+                    }
+                    else
+                    {
+                        ToastMessage.QueueMessage(ucmedic, new ToastMessage(
+                            T.XPToastGainXP.Translate(ucmedic, 0) + "\n" +
+                            T.XPToastHealedTeammate.Translate(ucmedic).Colorize("adadad"), EToastMessageSeverity.MINI));
+                    }
                 }
 
 
@@ -245,7 +297,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 InjurePlayer(ref shouldAllow, ref parameters, killer);
             }
         }
-        else if ((DateTime.Now - p.start).TotalSeconds >= 0.4)
+        else if (Time.realtimeSinceStartup - p.start >= 0.4f)
         {
             float bleedsPerSecond = Time.timeScale / SIM_TIME / Provider.modeConfigData.Players.Bleed_Damage_Ticks;
             parameters = p.parameters;
@@ -256,7 +308,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             shouldAllow = false;
         }
     }
-    private void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer? killer)
+    internal void InjurePlayer(ref bool shouldAllow, ref DamagePlayerParameters parameters, SteamPlayer? killer)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -276,13 +328,13 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         ulong team = parameters.player.GetTeam();
         parameters.player.movement.sendPluginSpeedMultiplier(0.35f);
         parameters.player.movement.sendPluginJumpMultiplier(0);
-        short key = unchecked((short)Gamemode.Config.UI.InjuredUI.Value.Id);
+        short key = unchecked((short)Gamemode.Config.UIInjured.Value.Id);
         if (key != 0)
         {
-            EffectManager.sendUIEffect(Gamemode.Config.UI.InjuredUI.Value, key, parameters.player.channel.owner.transportConnection, true, Localization.Translate("injured_ui_header", parameters.player), string.Empty);
-            EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", Localization.Translate("injured_ui_give_up", parameters.player));
+            EffectManager.sendUIEffect(Gamemode.Config.UIInjured.Value, key, parameters.player.channel.owner.transportConnection, true, T.InjuredUIHeader.Translate(parameters.player.channel.owner.playerID.steamID.m_SteamID), string.Empty);
+            EffectManager.sendUIEffectText(key, parameters.player.channel.owner.transportConnection, true, "GiveUpText", T.InjuredUIGiveUp.Translate(parameters.player.channel.owner.playerID.steamID.m_SteamID));
         }
-        parameters.player.SendChat("injured_chat");
+        parameters.player.SendChat(T.InjuredUIGiveUpChat);
 
         ActionLogger.Add(EActionLogType.INJURED, "by " + (killer == null ? "self" : killer.playerID.steamID.m_SteamID.ToString(Data.Locale)), parameters.player.channel.owner.playerID.steamID.m_SteamID);
 
@@ -302,7 +354,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 byte kteam = killer.GetTeamByte();
                 if (kteam != team)
                 {
-                    ToastMessage.QueueMessage(killer, new ToastMessage(Localization.Translate("xp_enemy_downed", killer), EToastMessageSeverity.MINI));
+                    ToastMessage.QueueMessage(killer, new ToastMessage(T.XPToastEnemyInjured.Translate(killer.playerID.steamID.m_SteamID), EToastMessageSeverity.MINI));
                     if (parameters.player.transform.TryGetComponent(out UCPlayerData p))
                     {
                         if ((DateTime.Now - p.secondLastAttacker.Value).TotalSeconds < 30 && p.secondLastAttacker.Key != parameters.killer.m_SteamID)
@@ -337,7 +389,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                         Stats.StatsManager.ModifyStats(killer.playerID.steamID.m_SteamID, s => s.Downs++, false);
                 }
                 else
-                    ToastMessage.QueueMessage(killer, new ToastMessage("", Localization.Translate("xp_friendly_downed", killer), EToastMessageSeverity.MINI));
+                    ToastMessage.QueueMessage(killer, new ToastMessage(T.XPToastFriendlyInjured.Translate(Localization.GetLang(killer.playerID.steamID.m_SteamID)), EToastMessageSeverity.MINI));
             }
         }
         if (parameters.player.transform.TryGetComponent(out Reviver reviver))
@@ -368,7 +420,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 e.Player.Player.life.serverSetBleeding(false);
             }
 
-            EffectManager.askEffectClearByID(Gamemode.Config.UI.InjuredUI.Value, e.Player.Player.channel.owner.transportConnection);
+            EffectManager.askEffectClearByID(Gamemode.Config.UIInjured.Value, e.Player.Player.channel.owner.transportConnection);
             EffectManager.askEffectClearByID(Squads.SquadManager.Config.MedicMarker, e.Player.Player.channel.owner.transportConnection);
         }
         ClearInjuredMarker(e.Steam64, e.Player.GetTeam());
@@ -394,23 +446,12 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             .GetEnumerator();
         while (player.MoveNext())
         {
-            var sqrDistance = (player.Current.Position - Position).sqrMagnitude;
-            var sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
+            float sqrDistance = (player.Current.Position - Position).sqrMagnitude;
+            double sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
             if (sqrDistance >= 1 && sqrDistance <= sqrmLimit)
                 EffectManager.sendEffectReliable(Squads.SquadManager.Config.InjuredMarker, player.Current.Player.channel.owner.transportConnection, Position);
         }
         player.Dispose();
-    }
-    internal void GiveUp(Player player)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (DownedPlayers.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out DownedPlayerData p))
-        {
-            player.life.askDamage(byte.MaxValue, Vector3.down, p.parameters.cause, p.parameters.limb, p.parameters.killer, out _, p.parameters.trackKill, p.parameters.ragdollEffect, false, true);
-            // player and Revive UI will be removed from list in OnDeath
-        }
     }
     public void SpawnInjuredMarkers(IEnumerator<UCPlayer> players, Vector3[] positions, bool dispose, bool clearAll)
     {
@@ -423,8 +464,8 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 EffectManager.askEffectClearByID(Squads.SquadManager.Config.InjuredMarker, players.Current.Player.channel.owner.transportConnection);
             for (int i = 0; i < positions.Length; i++)
             {
-                var sqrDistance = (players.Current.Position - positions[i]).sqrMagnitude;
-                var sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
+                float sqrDistance = (players.Current.Position - positions[i]).sqrMagnitude;
+                double sqrmLimit = Math.Pow(Squads.SquadManager.Config.MedicRange, 2);
                 if (sqrDistance >= 1 && sqrDistance <= sqrmLimit)
                     EffectManager.sendEffectReliable(Squads.SquadManager.Config.InjuredMarker, players.Current.Player.channel.owner.transportConnection, positions[i]);
             }
@@ -556,7 +597,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             .ToArray();
         SpawnMedicMarkers(player, medics, clearOld);
     }
-
     public void OnWinnerDeclared(ulong winner)
     {
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
@@ -568,10 +608,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             }
         }
     }
-
     private class Reviver : MonoBehaviour
     {
         public UCPlayer Player;
+
+        [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
         void Start()
         {
             Player = UCPlayer.FromPlayer(gameObject.GetComponent<Player>())!;
@@ -592,7 +633,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
 #pragma warning disable IDE0051
         void OnDestroy()
         {
-            if (Player is not null)
+            if (Player is not null && Player.Player != null)
             {
                 Player.Player.stance.onStanceUpdated -= StanceUpdatedLocal;
                 Player.Player.equipment.onEquipRequested -= OnEquipRequested;
@@ -630,7 +671,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         private void OnPlayerPostDamage(Player player, byte damage, Vector3 force, EDeathCause cause, ELimb limb, CSteamID killerid)
         {
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+            using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
             if (killerid.TryGetPlayerData(out Components.UCPlayerData killer) && killer.stats != null && killer.stats is IPVPModeStats pvp)
             {
@@ -641,7 +682,6 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 victim.TryUpdateAttackers(killerid.m_SteamID);
             }
         }
-
         public void TellProneDelayed(float time = 0.5f)
         {
             stance = StartCoroutine(WaitToChangeStance(EPlayerStance.PRONE, time));
@@ -677,7 +717,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
             if (g == default) Data.Is<IRevives>(out g);
             if (g != default)
             {
-                if (Gamemode.Config.UI.InjuredUI.ValidReference(out ushort id))
+                if (Gamemode.Config.UIInjured.ValidReference(out ushort id))
                     EffectManager.askEffectClearByID(id, Player.Player.channel.owner.transportConnection);
 
                 if (Squads.SquadManager.Config.MedicMarker.ValidReference(out id))
@@ -688,7 +728,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                 Player.Player.movement.sendPluginSpeedMultiplier(1.0f);
                 Player.Player.movement.sendPluginJumpMultiplier(1.0f);
                 Player.Player.life.serverSetBleeding(false);
-                
+
                 CancelStance();
                 if (remove)
                 {
@@ -696,6 +736,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
                     DeathTracker.RemovePlayerInfo(Player.Player.channel.owner.playerID.steamID.m_SteamID);
                 }
             }
+        }
+        public void SelfRevive()
+        {
+            RevivePlayer();
+            Player.Player.stance.checkStance(EPlayerStance.CROUCH);
         }
         public void FinishKillingPlayer(bool isDead = false)
         {
@@ -721,12 +766,11 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     public struct DownedPlayerData
     {
         public DamagePlayerParameters parameters;
-        public DateTime start;
-
+        public float start;
         public DownedPlayerData(DamagePlayerParameters parameters)
         {
             this.parameters = parameters;
-            start = DateTime.Now;
+            start = Time.realtimeSinceStartup;
         }
     }
 }

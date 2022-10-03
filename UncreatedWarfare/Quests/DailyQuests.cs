@@ -4,16 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Framework.Quests;
 using Uncreated.Networking;
 using Uncreated.Players;
-using Uncreated.Warfare.Quests.Types;
+using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Quests;
 
@@ -36,6 +34,12 @@ public static class DailyQuests
         if (hasRead && !needsCreate && !sentCurrent)
             ReplicateQuestChoices();
     }
+
+    private static readonly AssetOrigin _questModOrigin = new AssetOrigin()
+    {
+        name = "Daily Quests",
+        workshopFileId = DAILY_QUESTS_WORKSHOP_ID
+    };
     public static void EarlyLoad()
     {
         MethodInfo? m = typeof(Provider).GetMethod("onDedicatedUGCInstalled", BindingFlags.NonPublic | BindingFlags.Static);
@@ -231,7 +235,7 @@ public static class DailyQuests
             int rndPick;
             while (true)
             {
-                exists:;
+            exists:;
                 rndPick = UnityEngine.Random.Range(0, QuestManager.Quests.Count);
                 for (int p = 0; p < i; ++p)
                 {
@@ -345,7 +349,7 @@ public static class DailyQuests
             L.Log("Daily quest " + tracker.QuestData.QuestType + " completed: \"" + tracker.GetDisplayString() + "\"", ConsoleColor.Cyan);
         ToastMessage.QueueMessage(tracker.Player!, new ToastMessage("Daily Quest Completed!", tracker.GetDisplayString(), "good job man idk does this need filled?", EToastMessageSeverity.PROGRESS));
         // todo UI or something, xp reward?
-        tracker.Player?.SendChat("Daily Quest Completed!");
+        tracker.Player?.SendString("Daily Quest Completed!");
     }
 
     public static void OnDailyQuestUpdated(BaseQuestTracker tracker)
@@ -361,7 +365,7 @@ public static class DailyQuests
             L.LogWarning("Player " + tracker.Player.Steam64 + " is missing their entry in DailyTrackers dictionary!");
         if (tracker.Flag != 0)
             tracker.Player!.Player.quests.sendSetFlag(tracker.Flag, tracker.FlagValue);
-        tracker.Player.SendChat("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
+        tracker.Player.SendString("<#e4a399>Daily Quest updated: <#cdcec0>" + tracker.GetDisplayString());
     }
     /// <summary>Runs every day, creates the daily quests for the day.</summary>
     public static void CreateNewDailyQuests()
@@ -519,7 +523,7 @@ public static class DailyQuests
                                                             if (reader.TokenType == JsonTokenType.String)
                                                             {
                                                                 string? v = reader.GetString();
-                                                                if (v != null) 
+                                                                if (v != null)
                                                                     DateTime.TryParseExact(v, "s", Data.Locale, DateTimeStyles.AssumeUniversal, out save.StartDate);
                                                             }
                                                             break;
@@ -562,7 +566,6 @@ public static class DailyQuests
                                                                                         if (v != null && Enum.TryParse(v, true, out EQuestType type))
                                                                                         {
                                                                                             preset.Type = type;
-                                                                                            L.Log("Reading a " + type.ToString() + " preset");
                                                                                             BaseQuestData? data = QuestManager.Quests.Find(x => x.QuestType == type);
                                                                                             if (data != null)
                                                                                             {
@@ -573,7 +576,6 @@ public static class DailyQuests
                                                                                                     BaseQuestTracker? tempTracker = data.GetTracker(null, preset.PresetObj);
                                                                                                     if (tempTracker != null)
                                                                                                     {
-                                                                                                        L.Log("Made a temp tracker");
                                                                                                         cond.FlagValue = checked((short)preset.PresetObj.State.FlagValue.InsistValue());
                                                                                                         cond.Translation = tempTracker.GetDisplayString(true);
                                                                                                         cond.Key = preset.PresetObj.Key;
@@ -591,8 +593,6 @@ public static class DailyQuests
                                                                                                         L.LogWarning("Unable to create tracker for " + preset.PresetObj.State.FlagValue + " (" + type.ToString() + ")");
                                                                                                     }
                                                                                                 }
-                                                                                                else
-                                                                                                    L.Log("Already sent");
                                                                                             }
                                                                                             else
                                                                                             {
@@ -601,7 +601,7 @@ public static class DailyQuests
                                                                                         }
                                                                                         else
                                                                                         {
-                                                                                            L.Log("Unknown quest type: " + v);
+                                                                                            L.LogWarning("Unknown quest type: " + v);
                                                                                         }
                                                                                         break;
                                                                                 }
@@ -729,7 +729,7 @@ public static class DailyQuests
             }
         }
         return;
-        deleteFile:
+    deleteFile:
         File.Delete(path);
     }
     public static void LoadAssets()
@@ -742,7 +742,7 @@ public static class DailyQuests
         }
         else
         {
-            Assets.load(p, false, EAssetOrigin.WORKSHOP, true, DAILY_QUESTS_WORKSHOP_ID);
+            Assets.load(p, _questModOrigin, true);
             L.Log("Assets loaded", ConsoleColor.Magenta);
             PrintQuests();
         }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Squads;
@@ -172,7 +173,7 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         {
             if (Gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
-                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2 && 
+                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2 &&
                     st2.stats.TryGetValue(_player.Steam64, out BasePlayerStats st3) && st3 is IExperienceStats exp4)
                     _currentXp = exp4.XPGained;
                 if (_currentXp >= XPCount)

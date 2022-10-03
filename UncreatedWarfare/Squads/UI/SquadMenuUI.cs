@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Framework.UI;
-using SDG.Unturned;
+﻿using Uncreated.Framework.UI;
 using Uncreated.Warfare.Gamemodes;
 
 namespace Uncreated.Warfare.Squads.UI;
@@ -60,7 +54,7 @@ public class SquadMenuUI : UnturnedUI
     public readonly UnturnedUIElement[] MemberParents;
     public readonly UnturnedLabel[] MemberNames;
     public readonly UnturnedLabel[] MemberIcons;
-    public SquadMenuUI() : base(12002, Gamemode.Config.UI.SquadMenuGUID, true, false)
+    public SquadMenuUI() : base(12002, Gamemode.Config.UISquadMenu, true, false)
     {
         OtherSquadParents = new UnturnedUIElement[]
         {

@@ -1,479 +1,471 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Uncreated.Framework;
 using Uncreated.Warfare.Singletons;
-using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Structures;
 
-public class StructureSaver : ListSingleton<Structure>, ILevelStartListener
+public class StructureSaver : ListSingleton<SavedStructure>, ILevelStartListener
 {
-    private static StructureSaver Singleton;
-    public static bool Loaded => Singleton.IsLoaded<StructureSaver, Structure>();
-    public StructureSaver() : base("structures", Path.Combine(Data.Paths.StructureStorage, "structures.json"), Structure.WriteStructure, Structure.ReadStructure) { }
-    protected override string LoadDefaults() => EMPTY_LIST;
+    public static bool Loaded => Singleton.IsLoaded<StructureSaver, SavedStructure>();
+    internal static StructureSaver Singleton;
+    public StructureSaver() : base("structures", Path.Combine(Data.Paths.StructureStorage, "structures.json")) { }
     public override void Load()
     {
         Singleton = this;
-    }
-    void ILevelStartListener.OnLevelReady()
-    {
-        for (int i = 0; i < Count; ++i)
-        {
-            this[i].Init();
-            this[i].SpawnCheck();
-        }
     }
     public override void Unload()
     {
         Singleton = null!;
     }
-    public static void DropAllStructures()
+    protected override string LoadDefaults() => EMPTY_LIST;
+    void ILevelStartListener.OnLevelReady()
     {
-        Singleton.AssertLoaded<StructureSaver, Structure>();
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        foreach (Structure structure in Singleton)
-        {
-            structure.SpawnCheck();
-            if (!structure.exists)
-                L.LogError($"Structure {structure.Asset?.itemName ?? structure.id.ToString("N")} ({structure.instance_id}) failed to spawn.");
-        }
+        CheckAll();
     }
-    public static bool AddStructure(StructureDrop drop, StructureData data, out Structure structureadded)
+    public static bool AddStructure(StructureDrop structure, out SavedStructure newStructure)
     {
-        Singleton.AssertLoaded<StructureSaver, Structure>();
-        if (data == default || drop == default)
-        {
-            structureadded = default!;
-            return false;
-        }
-        if (!Singleton.ObjectExists(s => s != null && s.instance_id == drop.instanceID && s.type == EStructType.STRUCTURE, out Structure structure))
-        {
-            structureadded = Singleton.AddObjectToSave(new Structure(drop, data));
-            return structureadded != default;
-        }
-        else
-        {
-            structureadded = default!;
-            return false;
-        }
-    }
-    public static bool AddStructure(BarricadeDrop drop, BarricadeData data, out Structure structureadded)
-    {
-        Singleton.AssertLoaded<StructureSaver, Structure>();
-        if (data == default || drop == default)
-        {
-            structureadded = default!;
-            return false;
-        }
-        if (!Singleton.ObjectExists(s => s != null && s.instance_id == drop.instanceID && s.type == EStructType.BARRICADE, out Structure structure))
-        {
-            structureadded = Singleton.AddObjectToSave(new Structure(drop, data));
-            return structureadded != default;
-        }
-        else
-        {
-            structureadded = default!;
-            return false;
-        }
-    }
-    public static void RemoveStructure(Structure structure)
-    {
-        Singleton.AssertLoaded<StructureSaver, Structure>();
-        Singleton.RemoveWhere(x => structure != default && x != default && x.instance_id == structure.instance_id && x.type == structure.type);
-    }
+        Singleton.AssertLoaded<StructureSaver, SavedStructure>();
+        uint id = structure.instanceID;
 
-    public static bool StructureExists(uint instance_id, EStructType type, out Structure found)
+        for (int i = 0; i < Singleton.Count; ++i)
+        {
+            if (Singleton[i].InstanceID == id && Singleton[i].ItemGuid == structure.asset.GUID)
+            {
+                newStructure = Singleton[i];
+                return false;
+            }
+        }
+
+        StructureData data = structure.GetServersideData();
+        newStructure = new SavedStructure()
+        {
+            Group = data.group,
+            Owner = data.owner,
+            InstanceID = data.instanceID,
+            ItemGuid = structure.asset.GUID,
+            Position = structure.model.position,
+            Rotation = structure.model.rotation.eulerAngles
+        };
+        Singleton.Add(newStructure);
+        Singleton.Save();
+        return true;
+    }
+    public static bool AddBarricade(BarricadeDrop barricade, out SavedStructure newStructure)
     {
-        Singleton.AssertLoaded<StructureSaver, Structure>();
-        return Singleton.ObjectExists(s => s.instance_id == instance_id && s.type == type, out found);
+        Singleton.AssertLoaded<StructureSaver, SavedStructure>();
+        uint id = barricade.instanceID;
+
+        for (int i = 0; i < Singleton.Count; ++i)
+        {
+            if (Singleton[i].InstanceID == id && Singleton[i].ItemGuid == barricade.asset.GUID)
+            {
+                newStructure = Singleton[i];
+                return false;
+            }
+        }
+
+        BarricadeData data = barricade.GetServersideData();
+        newStructure = new SavedStructure()
+        {
+            Group = data.group,
+            Owner = data.owner,
+            InstanceID = data.instanceID,
+            ItemGuid = barricade.asset.GUID,
+            Position = barricade.model.position,
+            Rotation = barricade.model.rotation.eulerAngles
+        };
+        newStructure.Metadata = GetBarricadeState(barricade, barricade.asset, newStructure);
+        Singleton.Add(newStructure);
+        Singleton.Save();
+        return true;
+    }
+    public static bool RemoveSave(SavedStructure save)
+    {
+        Singleton.AssertLoaded<StructureSaver, SavedStructure>();
+        uint id = save.InstanceID;
+        bool rem = false;
+        for (int i = Singleton.Count - 1; i >= 0; --i)
+        {
+            if (Singleton[i].InstanceID == id && Singleton[i].ItemGuid == save.ItemGuid)
+            {
+                Singleton.RemoveAt(i);
+                rem = true;
+            }
+        }
+
+        if (rem) Singleton.Save();
+        return rem;
+    }
+    public static bool SaveExists(StructureDrop structure, out SavedStructure found) => SaveExists(structure.instanceID, EStructType.STRUCTURE, out found);
+    public static bool SaveExists(BarricadeDrop barricade, out SavedStructure found) => SaveExists(barricade.instanceID, EStructType.BARRICADE, out found);
+    public static bool SaveExists(uint instanceId, EStructType type, out SavedStructure found)
+    {
+        Singleton.AssertLoaded<StructureSaver, SavedStructure>();
+        if (type == EStructType.STRUCTURE || type == EStructType.BARRICADE)
+        {
+            for (int i = 0; i < Singleton.Count; ++i)
+            {
+                if (Singleton[i].InstanceID == instanceId)
+                {
+                    if (Assets.find(Singleton[i].ItemGuid) is ItemAsset a1 && (
+                        type == EStructType.STRUCTURE && a1 is ItemStructureAsset ||
+                        type == EStructType.BARRICADE && a1 is ItemBarricadeAsset))
+                    {
+                        found = Singleton[i];
+                        return true;
+                    }
+                }
+            }
+        }
+
+        found = null!;
+        return false;
     }
     public static void SaveSingleton()
     {
-        Singleton.AssertLoaded<StructureSaver, Structure>();
+        Singleton.AssertLoaded<StructureSaver, SavedStructure>();
         Singleton.Save();
     }
-    public static void SetOwner(Structure structure, ulong newOwner)
-    {
-        Singleton.AssertLoaded<StructureSaver, Structure>();
-        structure.owner = newOwner;
-        Singleton.Save();
-    }
-    public static void SetGroupOwner(Structure structure, ulong group)
-    {
-        Singleton.AssertLoaded<StructureSaver, Structure>();
-        structure.group = group;
-        Singleton.Save();
-    }
-
-    internal static Structure? FindStructure(Predicate<Structure> value)
-    {
-        for (int i = 0; i < Singleton.Count; ++i)
-        {
-            if (value(Singleton[i]))
-                return Singleton[i];
-        }
-        return null;
-    }
-}
-public enum EStructType : byte
-{
-    STRUCTURE = 1,
-    BARRICADE = 2
-}
-
-public class Structure : IJsonReadWrite, ITranslationArgument
-{
-    public const string ARGUMENT_EXCEPTION_VEHICLE_SAVED = "ERROR_VEHICLE_SAVED";
-    public const string ARGUMENT_EXCEPTION_BARRICADE_NOT_FOUND = "ERROR_BARRICADE_NOT_FOUND";
-    public Guid id;
-    [JsonIgnore]
-    public ItemAsset? Asset => _asset ??= Assets.find<ItemAsset>(id);
-    [JsonIgnore]
-    private ItemAsset? _asset;
-    [JsonIgnore]
-    public byte[] Metadata
-    {
-        get
-        {
-            if (_metadata != default) return _metadata;
-            if (state == default) return new byte[0];
-            _metadata = Convert.FromBase64String(state);
-            return _metadata;
-        }
-    }
-    [JsonIgnore]
-    private byte[] _metadata;
-    internal void ResetMetadata()
-    {
-        _metadata = Convert.FromBase64String(state);
-    }
-    public string state;
-    public SerializableTransform transform;
-    public uint instance_id;
-    public EStructType type;
-    [JsonSettable]
-    public ulong owner;
-    [JsonSettable]
-    public ulong group;
-    [JsonIgnore]
-    public bool exists;
-    [JsonIgnore]
-    private bool inited = false;
-    [JsonConstructor]
-    public Structure(Guid id, string state, SerializableTransform transform, uint instance_id, ulong owner, ulong group, EStructType type)
-    {
-        this.id = id;
-        this.state = state;
-        this.type = type;
-        this.instance_id = instance_id;
-        this.owner = owner;
-        this.group = group;
-        this.transform = transform;
-        this.exists = false;
-        if (Level.isLoaded) Init();
-    }
-    public bool Init()
-    {
-        if (inited) return exists;
-        if (type == EStructType.BARRICADE)
-        {
-            UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? drop);
-            if (drop == default)
-            {
-                exists = false;
-            }
-            else
-            {
-                this.transform = new SerializableTransform(drop.model.transform);
-                exists = true;
-            }
-        }
-        else if (type == EStructType.STRUCTURE)
-        {
-            UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop? drop);
-            if (drop == default)
-            {
-                exists = false;
-            }
-            else
-            {
-                this.transform = new SerializableTransform(drop.model.transform);
-                exists = true;
-            }
-        }
-        else exists = false;
-        inited = true;
-        return exists;
-    }
-    public Structure()
-    {
-        this.id = Guid.Empty;
-        this.state = string.Empty;
-        this.type = EStructType.BARRICADE;
-        this.instance_id = 0;
-        this.owner = 0;
-        this.group = 0;
-        this.exists = false;
-    }
-    /// <summary>Spawns the structure if it is not already placed.</summary>
-    public void SpawnCheck()
+    internal void CheckAll()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (type == EStructType.BARRICADE)
+        for (int i = Count - 1; i >= 0; --i)
         {
-            SDG.Unturned.BarricadeData? data = UCBarricadeManager.GetBarricadeFromInstID(instance_id, out BarricadeDrop? bdrop);
-            if (data == default)
-            {
-                if (Asset is not ItemBarricadeAsset asset)
-                {
-                    L.LogError("Failed to find barricade asset in Structure Saver");
-                    exists = false;
-                    return;
-                }
-                if (transform != default(SerializableTransform))
-                {
-                    bdrop = UCBarricadeManager.GetBarriadeBySerializedTransform(transform);
-                    if (bdrop != null && bdrop.asset.GUID == id)
-                    {
-                        if (bdrop.interactable is InteractableSign sign && Regions.tryGetCoordinate(bdrop.model.position, out byte x, out byte y))
-                        {
-                            F.InvokeSignUpdateForAll(sign, x, y, sign.text);
-                        }
-                        if (Vehicles.VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
-                        {
-                            vbspawn.SpawnPadInstanceID = bdrop.instanceID;
-                            VehicleSpawner.SaveSingleton();
-                        }
-                        instance_id = bdrop.instanceID;
-                        exists = true;
-                        float h = bdrop.GetServersideData().barricade.health;
-                        if (h < asset.health)
-                            BarricadeManager.repair(bdrop.model, asset.health - h, 1f);
-                        StructureSaver.SaveSingleton();
-                        L.Log("Found barricade by location", ConsoleColor.DarkGray);
-                        return;
-                    }
-                }
-                Transform newBarricade = BarricadeManager.dropNonPlantedBarricade(
-                    new Barricade(asset, asset.health, Metadata),
-                    transform.position.Vector3, transform.Rotation, owner, group
-                    );
-                if (newBarricade == null)
-                {
-                    exists = false;
-                    return;
-                }
-                bdrop = BarricadeManager.FindBarricadeByRootTransform(newBarricade);
-                if (bdrop != null)
-                {
-                    if (newBarricade.TryGetComponent(out InteractableSign sign) && Regions.tryGetCoordinate(newBarricade.position, out byte x, out byte y))
-                    {
-                        F.InvokeSignUpdateForAll(sign, x, y, sign.text);
-                    }
-                    if (VehicleSpawner.SpawnExists(instance_id, EStructType.BARRICADE, out Vehicles.VehicleSpawn vbspawn))
-                    {
-                        vbspawn.SpawnPadInstanceID = bdrop.instanceID;
-                        VehicleSpawner.SaveSingleton();
-                    }
-                    instance_id = bdrop.instanceID;
-                    exists = true;
-                    StructureSaver.SaveSingleton();
-                }
-                else
-                {
-                    exists = false;
-                }
-            }
-            else
-            {
-                SerializableTransform n = new SerializableTransform(bdrop!.model);
-                if (transform != n)
-                {
-                    transform = n;
-                    StructureSaver.SaveSingleton();
-                }
-                exists = true;
-                float h = bdrop.GetServersideData().barricade.health;
-                if (h < bdrop.asset.health)
-                    BarricadeManager.repair(bdrop.model, bdrop.asset.health - h, 1f);
-            }
+            if (!Check(this[i]))
+                RemoveAt(i);
         }
-        else if (type == EStructType.STRUCTURE)
+
+        Save();
+    }
+    internal bool Check(SavedStructure structure)
+    {
+        try
         {
-            SDG.Unturned.StructureData? data = UCBarricadeManager.GetStructureFromInstID(instance_id, out StructureDrop? sdrop);
-            if (data == default)
+            if (Assets.find(structure.ItemGuid) is not ItemAsset asset)
             {
-                if (Asset is not ItemStructureAsset asset)
+                ReportError(structure, "GUID is not a valid asset.");
+                return false;
+            }
+
+            uint id = structure.InstanceID;
+            Vector3 pos = structure.Position;
+            Vector3 rot = structure.Rotation;
+            if (asset is ItemStructureAsset structureAsset)
+            {
+                StructureDrop? drop = GetStructureDrop(id, pos);
+                if (drop is not null)
                 {
-                    L.LogError("Failed to find structure asset asset in Structure Saver");
-                    exists = false;
-                    return;
-                }
-                if (transform != default(SerializableTransform))
-                {
-                    sdrop = UCBarricadeManager.GetStructureBySerializedTransform(transform);
-                    if (sdrop != null && sdrop.asset.GUID == id)
+                    Vector3 ea = drop.model.rotation.eulerAngles;
+                    if (drop.model.position != pos || rot != ea)
                     {
-                        if (VehicleSpawner.SpawnExists(instance_id, EStructType.STRUCTURE, out Vehicles.VehicleSpawn vbspawn))
-                        {
-                            vbspawn.SpawnPadInstanceID = sdrop.instanceID;
-                            VehicleSpawner.SaveSingleton();
-                        }
-                        instance_id = sdrop.instanceID;
-                        exists = true;
-                        float h = sdrop.GetServersideData().structure.health;
-                        if (h < asset.health)
-                            BarricadeManager.repair(sdrop.model, asset.health - h, 1f);
-                        StructureSaver.SaveSingleton();
-                        L.Log("Found structure by location", ConsoleColor.DarkGray);
-                        return;
+                        structure.Position = drop.model.position;
+                        structure.Rotation = ea;
                     }
-                }
-                if (!StructureManager.dropStructure(
-                    new SDG.Unturned.Structure(asset, asset.health),
-                    transform.position.Vector3, transform.euler_angles.x, transform.euler_angles.y,
-                    transform.euler_angles.z, owner, group))
-                {
-                    L.LogWarning("Error in StructureSaver SpawnCheck(): Structure could not be placed, unknown error.");
-                    exists = false;
                 }
                 else
                 {
-                    if (Regions.tryGetCoordinate(transform.position.Vector3, out byte x, out byte y))
+                    drop = GetStructureDrop(pos, rot);
+                    if (drop is null)
                     {
-                        sdrop = StructureManager.regions[x, y].drops.LastOrDefault(nd => nd.model.position == transform.position.Vector3);
-                        if (sdrop == null)
+                        if (Regions.tryGetCoordinate(pos, out byte x, out byte y) &&
+                            StructureManager.dropReplicatedStructure(
+                                new Structure(structureAsset, structureAsset.health), pos,
+                                Quaternion.Euler(rot), structure.Owner, structure.Group))
                         {
-                            L.LogWarning("Error in StructureSaver SpawnCheck(): Spawned structure could be placed but was not able to locate a structure at that position.");
-                            exists = false;
+                            L.LogDebug("[STRUCTURE SAVER] Spawned new structure: " + structureAsset.itemName + " at " + pos.ToString("F0", Data.Locale));
+                            List<StructureDrop> d = StructureManager.regions[x, y].drops;
+                            drop = d[d.Count - 1];
+                            if (drop.asset.GUID != structureAsset.GUID)
+                            {
+                                ReportError(structure, "Unable to spawn structure.");
+                                return false;
+                            }
+                            structure.Position = drop.model.position;
+                            structure.Rotation = drop.model.rotation.eulerAngles;
+                            structure.InstanceID = drop.instanceID;
+                            return true;
                         }
                         else
                         {
-                            L.Log("Respawned structure", ConsoleColor.DarkGray);
-                            if (VehicleSpawner.SpawnExists(instance_id, EStructType.STRUCTURE, out Vehicles.VehicleSpawn vbspawn))
-                            {
-                                vbspawn.SpawnPadInstanceID = sdrop.instanceID;
-                                VehicleSpawner.SaveSingleton();
-                            }
-                            instance_id = sdrop.instanceID;
-                            StructureSaver.SaveSingleton();
-                            exists = true;
+                            ReportError(structure, "Unable to spawn structure.");
+                            return false;
                         }
                     }
-                    else
+                    L.LogDebug("[STRUCTURE SAVER] Identified alternate structure: " + structureAsset.itemName + " at " + pos.ToString("F0", Data.Locale));
+                    structure.Position = drop.model.position;
+                    structure.Rotation = drop.model.rotation.eulerAngles;
+                    structure.InstanceID = drop.instanceID;
+                }
+                if (drop.model.TryGetComponent(out Interactable2HP hp))
+                {
+                    hp.hp = 100;
+                }
+
+                StructureManager.changeOwnerAndGroup(drop.model, structure.Owner, structure.Group);
+                return true;
+            }
+            else if (asset is ItemBarricadeAsset barricadeAsset)
+            {
+                BarricadeDrop? drop = GetBarricadeDrop(id, pos);
+                if (drop is not null)
+                {
+                    if (drop.model.parent != null && drop.model.parent.CompareTag("Vehicle"))
                     {
-                        exists = false;
+                        ReportError(structure, "Unable to load a planted barricade.");
+                        return false;
+                    }
+                    Vector3 ea = drop.model.rotation.eulerAngles;
+                    if (drop.model.position != pos || rot != ea)
+                    {
+                        structure.Position = drop.model.position;
+                        structure.Rotation = ea;
                     }
                 }
-            }
-            else
-            {
-                SerializableTransform n = new SerializableTransform(sdrop!.model);
-                if (transform != n)
+                else
                 {
-                    transform = n;
-                    StructureSaver.SaveSingleton();
+                    drop = GetBarricadeDrop(pos, rot);
+                    if (drop is null)
+                    {
+                        Transform t = BarricadeManager.dropNonPlantedBarricade(
+                            new Barricade(barricadeAsset, barricadeAsset.health, GetBarricadeState(null, barricadeAsset, structure)), pos,
+                            Quaternion.Euler(rot), structure.Owner, structure.Group);
+                        drop = BarricadeManager.FindBarricadeByRootTransform(t);
+                        if (drop is null)
+                        {
+                            ReportError(structure, "Unable to spawn barricade.");
+                            return false;
+                        }
+                        L.LogDebug("[STRUCTURE SAVER] Spawned new barricade: " + barricadeAsset.itemName + " at " + pos.ToString("F0", Data.Locale));
+                        structure.Position = drop.model.position;
+                        structure.Rotation = drop.model.rotation.eulerAngles;
+                        structure.InstanceID = drop.instanceID;
+                        return true;
+                    }
+                    L.LogDebug("[STRUCTURE SAVER] Identified alternate barricade: " + barricadeAsset.itemName + " at " + pos.ToString("F0", Data.Locale));
+
+                    structure.Position = drop.model.position;
+                    structure.Rotation = drop.model.rotation.eulerAngles;
+                    structure.InstanceID = drop.instanceID;
                 }
-                exists = true;
-                float h = sdrop.GetServersideData().structure.health;
-                if (h < sdrop.asset.health)
-                    BarricadeManager.repair(sdrop.model, sdrop.asset.health - h, 1f);
+
+                BarricadeData bd = drop.GetServersideData();
+                bd.group = structure.Group;
+                bd.owner = structure.Owner;
+
+                if (drop.interactable != null)
+                {
+                    byte[] dropSt = GetBarricadeState(drop, barricadeAsset, structure);
+                    byte[] oldSt = drop.GetServersideData().barricade.state;
+                    if (dropSt.Length == oldSt.Length)
+                    {
+                        for (int i = 0; i < dropSt.Length; ++i)
+                            if (dropSt[i] != oldSt[i])
+                                goto next;
+                    }
+                    else goto next;
+                    structure.Metadata = oldSt;
+                    goto setHp;
+                next:
+                    L.LogDebug("[STRUCTURE SAVER] " + structure.InstanceID + " State: " + string.Join(" ", oldSt.Select(x => x.ToString("X2"))) +
+                           " to " + string.Join(" ", dropSt.Select(x => x.ToString("X2"))) + " at " + pos.ToString("F0", Data.Locale));
+                    if (drop.interactable is InteractableSign sign)
+                    {
+                        BarricadeManager.updateState(drop.model, dropSt, dropSt.Length);
+                        sign.updateState(barricadeAsset, dropSt);
+                        Signs.BroadcastSignUpdate(sign);
+                    }
+                    else
+                        BarricadeManager.updateReplicatedState(drop.model, dropSt, dropSt.Length);
+                    structure.Metadata = dropSt;
+                }
+            setHp:
+                if (drop.model.TryGetComponent(out Interactable2HP hp))
+                {
+                    hp.hp = 100;
+                }
+                BarricadeManager.changeOwnerAndGroup(drop.model, structure.Owner, structure.Group);
+                return true;
             }
+            else return false;
+        }
+        catch (Exception ex)
+        {
+            L.LogError("Error checking structure save: ");
+            L.LogError(ex);
+            return false;
         }
     }
-    public static void WriteStructure(Structure structure, Utf8JsonWriter writer)
+    private static void ReportError(SavedStructure structure, string reason)
     {
-        structure.WriteJson(writer);
+        L.LogWarning("Error loading " + structure.ToString() + ":", method: "STRUCTURE SAVER");
+        L.LogWarning(reason, method: "STRUCTURE SAVER");
     }
-    public static Structure ReadStructure(ref Utf8JsonReader reader)
+    private static byte[] GetBarricadeState(BarricadeDrop? drop, ItemBarricadeAsset asset, SavedStructure structure)
     {
-        Structure structure = new Structure();
-        structure.ReadJson(ref reader);
-        return structure;
-    }
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WriteProperty(nameof(id), id);
-        writer.WriteProperty(nameof(state), state);
-        writer.WriteProperty(nameof(transform), transform);
-        writer.WriteProperty(nameof(instance_id), instance_id);
-        writer.WriteProperty(nameof(type), (byte)type);
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        while (reader.Read())
+        byte[] st2 = drop != null ? drop.GetServersideData().barricade.state : (structure.Metadata is null || structure.Metadata.Length == 0 ? Array.Empty<byte>() : structure.Metadata);
+        byte[] owner = BitConverter.GetBytes(structure.Owner);
+        byte[] group = BitConverter.GetBytes(structure.Group);
+        byte[] state;
+        switch (asset.build)
         {
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString()!;
-                if (reader.Read())
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+                state = new byte[17];
+                Buffer.BlockCopy(owner, 0, state, 0, sizeof(ulong));
+                Buffer.BlockCopy(group, 0, state, sizeof(ulong), sizeof(ulong));
+                state[16] = (byte)(st2[16] > 0 ? 1 : 0);
+                break;
+            case EBuild.BED:
+                state = owner;
+                break;
+            case EBuild.STORAGE:
+            case EBuild.SENTRY:
+            case EBuild.SENTRY_FREEFORM:
+            case EBuild.SIGN:
+            case EBuild.SIGN_WALL:
+            case EBuild.NOTE:
+            case EBuild.LIBRARY:
+            case EBuild.MANNEQUIN:
+                state = F.CloneBytes(st2);
+                if (state.Length > 15)
                 {
-                    switch (prop)
+                    Buffer.BlockCopy(owner, 0, state, 0, sizeof(ulong));
+                    Buffer.BlockCopy(group, 0, state, sizeof(ulong), sizeof(ulong));
+                }
+                break;
+            case EBuild.SPIKE:
+            case EBuild.WIRE:
+            case EBuild.CHARGE:
+            case EBuild.BEACON:
+            case EBuild.CLAIM:
+                state = Array.Empty<byte>();
+                if (drop != null)
+                {
+                    if (drop.interactable is InteractableCharge charge)
                     {
-                        case nameof(id):
-                            id = reader.GetGuid();
-                            break;
-                        case nameof(state):
-                            state = reader.GetString()!;
-                            break;
-                        case nameof(transform):
-                            if (reader.TokenType == JsonTokenType.StartObject)
-                                transform.ReadJson(ref reader);
-                            break;
-                        case nameof(instance_id):
-                            instance_id = reader.GetUInt32();
-                            break;
-                        case nameof(type):
-                            type = (EStructType)reader.GetByte();
-                            break;
+                        charge.owner = structure.Owner;
+                        charge.group = structure.Group;
+                    }
+                    else if (drop.interactable is InteractableClaim claim)
+                    {
+                        claim.owner = structure.Owner;
+                        claim.group = structure.Group;
                     }
                 }
-            }
-            else if (reader.TokenType == JsonTokenType.EndObject)
+                break;
+            default:
+                state = F.CloneBytes(st2);
                 break;
         }
-        if (Level.isLoaded)
+
+        return state;
+    }
+    private static StructureDrop? GetStructureDrop(uint instanceId, Vector3 expectedPosition)
+    {
+        if (Regions.tryGetCoordinate(expectedPosition, out byte x, out byte y))
         {
-            Init();
+            List<StructureDrop> d = StructureManager.regions[x, y].drops;
+            for (int i = 0; i < d.Count; ++i)
+            {
+                if (d[i].instanceID == instanceId)
+                    return d[i];
+            }
         }
+        for (x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                List<StructureDrop> d = StructureManager.regions[x, y].drops;
+                for (int i = 0; i < d.Count; ++i)
+                {
+                    if (d[i].instanceID == instanceId)
+                        return d[i];
+                }
+            }
+        }
+
+        return null;
     }
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
+    private static StructureDrop? GetStructureDrop(Vector3 position, Vector3 euler)
     {
-        return Asset?.itemName ?? id.ToString("N");
+        if (Regions.tryGetCoordinate(position, out byte x, out byte y))
+        {
+            List<StructureDrop> d = StructureManager.regions[x, y].drops;
+            for (int i = 0; i < d.Count; ++i)
+            {
+                if (d[i].model.position == position && d[i].model.rotation.eulerAngles == euler)
+                    return d[i];
+            }
+        }
+
+        return null;
     }
-    public Structure(StructureDrop drop, StructureData data)
+    private static BarricadeDrop? GetBarricadeDrop(uint instanceId, Vector3 expectedPosition, bool vehicle = false)
     {
-        this.id = data.structure.asset.GUID;
-        this._metadata = new byte[0];
-        this.state = Convert.ToBase64String(_metadata);
-        this.transform = new SerializableTransform(drop.model.transform);
-        this.owner = data.owner;
-        this.group = data.group;
-        this.instance_id = data.instanceID;
-        this.type = EStructType.STRUCTURE;
+        if (!vehicle)
+        {
+            if (Regions.tryGetCoordinate(expectedPosition, out byte x, out byte y))
+            {
+                List<BarricadeDrop> d = BarricadeManager.regions[x, y].drops;
+                for (int i = 0; i < d.Count; ++i)
+                {
+                    if (d[i].instanceID == instanceId)
+                        return d[i];
+                }
+            }
+            for (x = 0; x < Regions.WORLD_SIZE; ++x)
+            {
+                for (y = 0; y < Regions.WORLD_SIZE; ++y)
+                {
+                    List<BarricadeDrop> d = BarricadeManager.regions[x, y].drops;
+                    for (int i = 0; i < d.Count; ++i)
+                    {
+                        if (d[i].instanceID == instanceId)
+                            return d[i];
+                    }
+                }
+            }
+        }
+
+        for (int v = 0; v < BarricadeManager.vehicleRegions.Count; ++v)
+        {
+            List<BarricadeDrop> d = BarricadeManager.vehicleRegions[v].drops;
+            for (int i = 0; i < d.Count; ++i)
+            {
+                if (d[i].instanceID == instanceId)
+                    return d[i];
+            }
+        }
+
+        return null;
     }
-    public Structure(BarricadeDrop drop, BarricadeData data)
+    private static BarricadeDrop? GetBarricadeDrop(Vector3 position, Vector3 euler)
     {
-        this.id = data.barricade.asset.GUID;
-        this._metadata = data.barricade.state;
-        this.state = Convert.ToBase64String(_metadata);
-        this.transform = new SerializableTransform(drop.model.transform);
-        this.owner = data.owner;
-        this.group = data.group;
-        this.instance_id = data.instanceID;
-        this.type = EStructType.BARRICADE;
+        if (Regions.tryGetCoordinate(position, out byte x, out byte y))
+        {
+            List<BarricadeDrop> d = BarricadeManager.regions[x, y].drops;
+            for (int i = 0; i < d.Count; ++i)
+            {
+                if (d[i].model.position == position && d[i].model.rotation.eulerAngles == euler)
+                    return d[i];
+            }
+        }
+
+        return null;
     }
+}
+
+public enum EStructType : byte
+{
+    UNKNOWN = 0,
+    STRUCTURE = 1,
+    BARRICADE = 2
 }

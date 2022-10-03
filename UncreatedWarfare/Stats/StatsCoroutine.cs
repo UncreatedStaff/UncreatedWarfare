@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Players;
-using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using UnityEngine;
@@ -54,9 +53,7 @@ namespace Uncreated.Warfare.Stats
                         /* ON DUTY AWARDER */
                         bool isOnDuty = ucplayer.OnDuty();
                         if (Points.XPConfig.OnDutyXP > 0 && isOnDuty)
-                        {
-                            Points.AwardXP(ucplayer.Player, Points.XPConfig.OnDutyXP, Localization.Translate("xp_on_duty", ucplayer.Steam64));
-                        }
+                            Points.AwardXP(ucplayer, Points.XPConfig.OnDutyXP, T.XPToastOnDuty);
 
 
                         Vector3 position = ucplayer.Position;
@@ -67,14 +64,13 @@ namespace Uncreated.Warfare.Stats
                                 if (afk.time == n)
                                 {
                                     FPlayerName names = F.GetPlayerOriginalNames(ucplayer);
-                                    L.Log(Localization.Translate("kick_kicked_console_operator", 0, out _, names.PlayerName,
-                                        ucplayer.Steam64.ToString(Data.Locale), "AFK Auto-Kick"), ConsoleColor.Cyan);
+                                    L.Log($"{names.PlayerName} ({ucplayer.Steam64}) was auto-kicked for being AFK.", ConsoleColor.Cyan);
                                     Provider.kick(ucplayer.CSteamID, "Auto-kick for being AFK.");
                                     previousPositions.Remove(ucplayer.Steam64);
                                 }
                                 else if (afk.time == Afk.Clamp(n + 1)) // one cycle left
                                 {
-                                    ucplayer.SendChat("afk_warning", UCWarfare.Config.StatsInterval.GetTimeFromMinutes(ucplayer.Steam64));
+                                    ucplayer.SendChat(T.InactivityWarning, UCWarfare.Config.StatsInterval.GetTimeFromMinutes(ucplayer.Steam64));
                                 }
                             }
                             else
@@ -97,11 +93,12 @@ namespace Uncreated.Warfare.Stats
                     StatsManager.ModifyTeam(2, t => t.AveragePlayers = (t.AveragePlayers * t.AveragePlayersCounter +
                     Provider.clients.Count(sp => sp.player.quests.groupID.m_SteamID == Teams.TeamManager.Team2ID)) / ++t.AveragePlayersCounter, false);
                     StatsManager.SaveTeams();
-                    long mem = GC.GetTotalMemory(false);
-                    L.Log("Memory usage: " + mem);
 
                     /* TICK STAT BACKUP */
                     StatsManager.BackupTick();
+
+                    long mem = GC.GetTotalMemory(false);
+                    L.LogDebug("Memory usage: " + mem);
 
                     if (mem >= 1000000000 /* ~1GB */)
                     {

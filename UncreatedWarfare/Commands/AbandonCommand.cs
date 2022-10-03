@@ -1,13 +1,9 @@
 ﻿using SDG.Unturned;
-using System;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using VehicleSpawn = Uncreated.Warfare.Vehicles.VehicleSpawn;
 
@@ -34,29 +30,29 @@ public class AbandonCommand : Command
             throw ctx.SendGamemodeError();
 
         if (!TeamManager.IsInMain(ctx.Caller))
-            throw ctx.Reply("abandon_not_in_main");
+            throw ctx.Reply(T.AbandonNotInMain);
 
         if (ctx.TryGetTarget(out InteractableVehicle vehicle) && VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
         {
             if (vehicleData.DisallowAbandons)
-                throw ctx.Reply("abandon_not_allowed");
+                throw ctx.Reply(T.AbandonNotAllowed);
 
             if (vehicle.lockedOwner.m_SteamID != ctx.Caller.Steam64)
-                throw ctx.Reply("abandon_not_owned", vehicle.asset.vehicleName);
+                throw ctx.Reply(T.AbandonNotOwned, vehicle);
 
             if ((float)vehicle.health / vehicle.asset.health < 0.9f)
-                throw ctx.Reply("abandon_damaged", vehicle.asset.vehicleName);
+                throw ctx.Reply(T.AbandonDamaged, vehicle);
 
             if ((float)vehicle.fuel / vehicle.asset.fuel < 0.9f)
-                throw ctx.Reply("abandon_needs_fuel", vehicle.asset.vehicleName);
+                throw ctx.Reply(T.AbandonNeedsFuel, vehicle);
 
             if (!VehicleSpawner.HasLinkedSpawn(vehicle.instanceID, out VehicleSpawn spawn))
-                throw ctx.Reply("abandon_no_space", vehicle.asset.vehicleName);
+                throw ctx.Reply(T.AbandonNoSpace, vehicle);
 
             VehicleBay.AbandonVehicle(vehicle, vehicleData, spawn, true);
 
-            ctx.Reply("abandon_success", vehicle.asset.vehicleName);
+            ctx.Reply(T.AbandonSuccess, vehicle);
         }
-        else throw ctx.Reply("abandon_no_target");
+        else throw ctx.Reply(T.AbandonNoTarget);
     }
 }

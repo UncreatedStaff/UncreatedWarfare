@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net48</TargetFramework>
+    <TargetFramework>net481</TargetFramework>
     <AssemblyTitle>UncreatedStats</AssemblyTitle>
     <Product>UncreatedStats</Product>
     <Copyright>Copyright ©  2021</Copyright>
@@ -15,7 +15,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="UncreatedNetworking">
-      <HintPath>..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UncreatedNetworking.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\..\..\SteamCMD\steamapps\common\U3DS\Modules\UncreatedWarfare\Libraries\UncreatedNetworking.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Unturned\Unturned_Data\Managed\UnityEngine.CoreModule.dll</HintPath>

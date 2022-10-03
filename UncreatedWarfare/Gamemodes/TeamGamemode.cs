@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Uncreated.Players;
 using Uncreated.Warfare.Deaths;
@@ -13,11 +14,10 @@ namespace Uncreated.Warfare.Gamemodes;
 /// <summary>Gamemode with 2 teams</summary>
 public abstract class TeamGamemode : Gamemode, ITeams
 {
-    protected const int AMC_TIME = 10;
     protected TeamSelector _teamSelector;
-    public List<ulong> InAMC = new List<ulong>();
     private Transform? _blockerBarricadeT1;
     private Transform? _blockerBarricadeT2;
+    private readonly List<ulong> mainCampers = new List<ulong>(24);
     public TeamSelector TeamSelector { get => _teamSelector; }
     public virtual bool UseTeamSelector { get => true; }
     public virtual bool EnableAMC { get => true; }
@@ -53,62 +53,53 @@ public abstract class TeamGamemode : Gamemode, ITeams
 
         base.PreGameStarting(isOnLoad);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
-    {
-        base.PlayerInit(player, wasAlreadyOnline);
-    }
     protected override void OnReady()
     {
         TeamManager.CheckGroups();
     }
-    protected void CheckPlayersAMC()
+    protected void CheckMainCampZones()
     {
-        if (EnableAMC)
+        if (!Config.GeneralAMCKillTime.HasValue || Config.GeneralAMCKillTime.Value < 0)
+            return;
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
         {
-            IEnumerator<SteamPlayer> players = Provider.clients.GetEnumerator();
-            while (players.MoveNext())
+            UCPlayer player = PlayerManager.OnlinePlayers[i];
+            ulong team = player.GetTeam();
+            if (!player.IsOnline || team is not 1 and not 2 || player.OnDuty() || player.Player.life.isDead)
+                goto notInMain;
+            Vector3 pos = player.Position;
+            if (team == 1 && !TeamManager.Team2AMC.IsInside(pos) || team == 2 && !TeamManager.Team1AMC.IsInside(pos))
+                goto notInMain;
+            if (!mainCampers.Contains(player.Steam64))
             {
-                ulong team = players.Current.GetTeam();
-                UCPlayer? player = UCPlayer.FromSteamPlayer(players.Current);
-                if (player == null) continue;
-                try
-                {
-                    if (!player.OnDutyOrAdmin() && !players.Current.player.life.isDead && ((team == 1 && TeamManager.Team2AMC.IsInside(players.Current.player.transform.position)) ||
-                        (team == 2 && TeamManager.Team1AMC.IsInside(players.Current.player.transform.position))))
-                    {
-                        if (!InAMC.Contains(players.Current.playerID.steamID.m_SteamID))
-                        {
-                            InAMC.Add(players.Current.playerID.steamID.m_SteamID);
-                            int a = Mathf.RoundToInt(AMC_TIME);
-                            ToastMessage.QueueMessage(players.Current,
-                                new ToastMessage(Localization.Translate("entered_enemy_territory", players.Current.playerID.steamID.m_SteamID, a.ToString(Data.Locale), a.S()),
-                                EToastMessageSeverity.WARNING));
-                            UCWarfare.I.StartCoroutine(KillPlayerInEnemyTerritory(players.Current));
-                        }
-                    }
-                    else
-                    {
-                        InAMC.Remove(players.Current.playerID.steamID.m_SteamID);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error checking for duty players on player " + players.Current.playerID.playerName);
-                    if (UCWarfare.Config.Debug)
-                        L.LogError(ex);
-                }
+                mainCampers.Add(player.Steam64);
+                OnPlayerMainCamping(player);
             }
-            players.Dispose();
+            continue;
+        notInMain:
+            mainCampers.Remove(player.Steam64);
         }
     }
-    public IEnumerator<WaitForSeconds> KillPlayerInEnemyTerritory(SteamPlayer player)
+    private void OnPlayerMainCamping(UCPlayer player)
     {
-        yield return new WaitForSeconds(AMC_TIME);
-        if (player != null && !player.player.life.isDead && InAMC.Contains(player.playerID.steamID.m_SteamID))
-        {
-            player.player.movement.forceRemoveFromVehicle();
-            player.player.life.askDamage(byte.MaxValue, Vector3.zero, DeathTracker.MAIN_DEATH, ELimb.SKULL, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
-        }
+        ToastMessage.QueueMessage(player, new ToastMessage(
+            T.EnteredEnemyTerritory.Translate(player, Mathf.RoundToInt(Config.GeneralAMCKillTime.Value).GetTimeFromSeconds(player)),
+            EToastMessageSeverity.WARNING));
+        player.Player.StartCoroutine(PlayerMainCampingCoroutine(player));
+    }
+    private IEnumerator PlayerMainCampingCoroutine(UCPlayer player)
+    {
+        ulong team = player.GetTeam();
+        if (Config.GeneralAMCKillTime.Value != 0)
+            yield return new WaitForSecondsRealtime(Config.GeneralAMCKillTime.Value);
+        if (player.Player == null || !mainCampers.Contains(player.Steam64) || player.Player.life.isDead || player.OnDuty())
+            yield break;
+        player.Player.movement.forceRemoveFromVehicle();
+        yield return null;
+        player.Player.life.askDamage(byte.MaxValue, Vector3.up / 8f, DeathTracker.MAIN_DEATH, ELimb.SPINE, Provider.server, out _, false, ERagdollEffect.NONE, false, true);
+        ActionLogger.Add(EActionLogType.MAIN_CAMP_ATTEMPT, $"Player team: {TeamManager.TranslateName(team, 0, false)}, " +
+                                                           $"Team: {TeamManager.TranslateName(TeamManager.Other(team), 0, false)}, " +
+                                                           $"Location: {player.Position.ToString("0.#", Data.Locale)}", player);
     }
     public void SpawnBlockers()
     {
@@ -117,14 +108,14 @@ public abstract class TeamGamemode : Gamemode, ITeams
     }
     public void SpawnBlockerOnT1()
     {
-        if (Config.Barricades.Team1ZoneBlocker is not null && Config.Barricades.Team1ZoneBlocker.HasValue && Config.Barricades.Team1ZoneBlocker.Value.Exists)
-            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.Barricades.Team1ZoneBlocker.Value.Asset),
+        if (Config.BarricadeZoneBlockerTeam1.ValidReference(out ItemBarricadeAsset asset))
+            _blockerBarricadeT1 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
                 TeamManager.Team1Main.Center3D + Vector3.up, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
     }
     public void SpawnBlockerOnT2()
     {
-        if (Config.Barricades.Team2ZoneBlocker is not null && Config.Barricades.Team2ZoneBlocker.HasValue && Config.Barricades.Team2ZoneBlocker.Value.Exists)
-            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(Config.Barricades.Team2ZoneBlocker.Value.Asset),
+        if (Config.BarricadeZoneBlockerTeam2.ValidReference(out ItemBarricadeAsset asset))
+            _blockerBarricadeT2 = BarricadeManager.dropNonPlantedBarricade(new Barricade(asset),
                 TeamManager.Team2Main.Center3D, Quaternion.Euler(BLOCKER_SPAWN_ROTATION), 0, 0);
     }
     public void DestoryBlockerOnT1()
@@ -140,10 +131,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
             _blockerBarricadeT1 = null;
         }
 
-        if (Config.Barricades.Team1ZoneBlocker is not null && Config.Barricades.Team1ZoneBlocker.HasValue &&
-            Config.Barricades.Team1ZoneBlocker.Value.Exists)
+        if (Config.BarricadeZoneBlockerTeam1.ValidReference(out Guid g))
         {
-            Guid g = Config.Barricades.Team1ZoneBlocker.Value.Guid;
             for (x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (y = 0; y < Regions.WORLD_SIZE; y++)
@@ -174,10 +163,8 @@ public abstract class TeamGamemode : Gamemode, ITeams
             _blockerBarricadeT2 = null;
         }
 
-        if (Config.Barricades.Team2ZoneBlocker is not null && Config.Barricades.Team2ZoneBlocker.HasValue &&
-            Config.Barricades.Team2ZoneBlocker.Value.Exists)
+        if (Config.BarricadeZoneBlockerTeam2.ValidReference(out Guid g))
         {
-            Guid g = Config.Barricades.Team2ZoneBlocker.Value.Guid;
             for (x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (y = 0; y < Regions.WORLD_SIZE; y++)
@@ -230,7 +217,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
             else backup = true;
             if (backup)
             {
-                if (!Config.Barricades.Team1ZoneBlocker.ValidReference(out Guid g1) || !Config.Barricades.Team1ZoneBlocker.ValidReference(out Guid g2)) return;
+                if (!Config.BarricadeZoneBlockerTeam1.ValidReference(out Guid g1) || !Config.BarricadeZoneBlockerTeam2.ValidReference(out Guid g2)) return;
                 bool l = false;
                 for (x = 0; x < Regions.WORLD_SIZE; x++)
                 {
@@ -259,7 +246,7 @@ public abstract class TeamGamemode : Gamemode, ITeams
     public override void OnPlayerDeath(PlayerDied e)
     {
         base.OnPlayerDeath(e);
-        InAMC.Remove(e.Player.Steam64);
+        mainCampers.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
     protected override void OnAsyncInitComplete(UCPlayer player)
@@ -269,10 +256,14 @@ public abstract class TeamGamemode : Gamemode, ITeams
 
         base.OnAsyncInitComplete(player);
     }
-
     public virtual void OnJoinTeam(UCPlayer player, ulong team)
     {
         if (team is 1 or 2 && _state == EState.STAGING)
             ShowStagingUI(player);
+    }
+    public override void PlayerLeave(UCPlayer player)
+    {
+        mainCampers.Remove(player.Steam64);
+        base.PlayerLeave(player);
     }
 }

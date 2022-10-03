@@ -1,5 +1,4 @@
 ﻿using SDG.NetTransport;
-using SDG.Unturned;
 using System;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 
@@ -16,7 +15,7 @@ public static class InsurgencyUI
         ITransportConnection c = player.Player.channel.owner.transportConnection;
         CTFUI.ListUI.SendToPlayer(c);
         CTFUI.ListUI.Header.SetVisibility(c, true);
-        CTFUI.ListUI.Header.SetText(c, Localization.Translate("caches_header", player));
+        CTFUI.ListUI.Header.SetText(c, T.CachesHeader.Translate(player));
         int i = 0;
         int num = Math.Min(gm.Caches.Count, CTFUI.ListUI.Parents.Length);
         for (; i < num; i++)
@@ -54,22 +53,22 @@ public static class InsurgencyUI
         {
             if (team == insurgency.AttackingTeam)
             {
-                return Localization.Translate("insurgency_ui_unknown_attack", player);
+                return T.InsurgencyUnknownCacheAttack.Translate(player);
             }
             else
             {
-                return Localization.Translate("insurgency_ui_unknown_defense", player);
+                return T.InsurgencyUnknownCacheDefense.Translate(player);
             }
         }
         else if (cache.IsDestroyed)
         {
             if (team == insurgency.AttackingTeam)
             {
-                return Localization.Translate("insurgency_ui_destroyed_attack", player);
+                return T.InsurgencyDestroyedCacheAttack.Translate(player);
             }
             else
             {
-                return Localization.Translate("insurgency_ui_destroyed_defense", player);
+                return T.InsurgencyDestroyedCacheDefense.Translate(player);
             }
         }
         else
@@ -78,22 +77,22 @@ public static class InsurgencyUI
             {
                 if (team == insurgency.AttackingTeam)
                 {
-                    return Localization.Translate("insurgency_ui_cache_attack", player, cache.Cache.Name, cache.Cache.ClosestLocation);
+                    return T.InsurgencyCacheAttack.Translate(player, cache.Cache, cache.Cache);
                 }
                 else
                 {
-                    return Localization.Translate("insurgency_ui_cache_defense_discovered", player, cache.Cache.Name, cache.Cache.ClosestLocation);
+                    return T.InsurgencyCacheDefense.Translate(player, cache.Cache, cache.Cache);
                 }
             }
             else
             {
                 if (team == insurgency.AttackingTeam)
                 {
-                    return Localization.Translate("insurgency_ui_unknown_attack", player);
+                    return T.InsurgencyUnknownCacheAttack.Translate(player);
                 }
                 else
                 {
-                    return Localization.Translate("insurgency_ui_cache_defense_undiscovered", player, cache.Cache.Name, cache.Cache.ClosestLocation);
+                    return T.InsurgencyUnknownCacheDefense.Translate(player);
                 }
             }
         }

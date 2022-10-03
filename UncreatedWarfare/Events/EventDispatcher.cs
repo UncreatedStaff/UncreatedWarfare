@@ -2,18 +2,15 @@
 using Steamworks;
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
+using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
@@ -27,11 +24,14 @@ public static class EventDispatcher
     public static event EventDelegate<ExitVehicle> OnExitVehicle;
     public static event EventDelegate<EnterVehicle> OnEnterVehicle;
     public static event EventDelegate<VehicleSwapSeat> OnVehicleSwapSeat;
+    public static event EventDelegate<VehicleDestroyed> OnVehicleDestroyed;
 
     public static event EventDelegate<BarricadeDestroyed> OnBarricadeDestroyed;
     public static event EventDelegate<PlaceBarricadeRequested> OnBarricadePlaceRequested;
     public static event EventDelegate<BarricadePlaced> OnBarricadePlaced;
     public static event EventDelegate<LandmineExploding> OnLandmineExploding;
+
+    public static event EventDelegate<ItemDropRequested> OnItemDropRequested;
 
     public static event EventDelegate<ThrowableSpawned> OnThrowableSpawned;
     public static event EventDelegate<ThrowableSpawned> OnThrowableDespawning;
@@ -52,6 +52,7 @@ public static class EventDispatcher
         VehicleManager.onExitVehicleRequested += VehicleManagerOnExitVehicleRequested;
         VehicleManager.onEnterVehicleRequested += VehicleManagerOnEnterVehicleRequested;
         VehicleManager.onSwapSeatRequested += VehicleManagerOnSwapSeatRequested;
+        VehicleManager.OnVehicleExploded += VehicleManagerOnVehicleExploded;
         InteractableVehicle.OnPassengerAdded_Global += InteractableVehicleOnPassengerAdded;
         InteractableVehicle.OnPassengerRemoved_Global += InteractableVehicleOnPassengerRemoved;
         InteractableVehicle.OnPassengerChangedSeats_Global += InteractableVehicleOnPassengerChangedSeats;
@@ -64,9 +65,11 @@ public static class EventDispatcher
         UseableThrowable.onThrowableSpawned += UseableThrowableOnThrowableSpawned;
         UseableGun.onProjectileSpawned += ProjectileOnProjectileSpawned;
         UseableGun.onBulletHit += OnBulletHit;
+        PlayerInput.onPluginKeyTick += OnPluginKeyTick;
     }
     internal static void UnsubscribeFromAll()
     {
+        PlayerInput.onPluginKeyTick -= OnPluginKeyTick;
         UseableGun.onProjectileSpawned -= ProjectileOnProjectileSpawned;
         UseableThrowable.onThrowableSpawned -= UseableThrowableOnThrowableSpawned;
         Provider.onBattlEyeKick -= ProviderOnBattlEyeKick;
@@ -78,6 +81,7 @@ public static class EventDispatcher
         InteractableVehicle.OnPassengerChangedSeats_Global -= InteractableVehicleOnPassengerChangedSeats;
         InteractableVehicle.OnPassengerRemoved_Global -= InteractableVehicleOnPassengerRemoved;
         InteractableVehicle.OnPassengerAdded_Global -= InteractableVehicleOnPassengerAdded;
+        VehicleManager.OnVehicleExploded -= VehicleManagerOnVehicleExploded;
         VehicleManager.onSwapSeatRequested -= VehicleManagerOnSwapSeatRequested;
         VehicleManager.onEnterVehicleRequested -= VehicleManagerOnEnterVehicleRequested;
         VehicleManager.onExitVehicleRequested -= VehicleManagerOnExitVehicleRequested;
@@ -141,6 +145,26 @@ public static class EventDispatcher
         }
         if (!request.CanContinue) shouldAllow = false;
         else toSeatIndex = request.FinalSeat;
+    }
+    private static void VehicleManagerOnVehicleExploded(InteractableVehicle vehicle)
+    {
+        SpottedComponent spotted = vehicle.transform.GetComponent<SpottedComponent>();
+
+        if (vehicle.gameObject.TryGetComponent(out BuiltBuildableComponent comp))
+            UnityEngine.Object.Destroy(comp);
+
+        if (OnVehicleDestroyed == null)
+            goto end;
+
+        VehicleDestroyed request = new VehicleDestroyed(vehicle, spotted);
+        foreach (EventDelegate<VehicleDestroyed> inv in OnVehicleDestroyed.GetInvocationList().Cast<EventDelegate<VehicleDestroyed>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnVehicleDestroyed));
+        }
+    end:
+        if (spotted != null)
+            UnityEngine.Object.Destroy(spotted);
     }
     private static void InteractableVehicleOnPassengerChangedSeats(InteractableVehicle vehicle, int fromSeatIndex, int toSeatIndex)
     {
@@ -218,6 +242,7 @@ public static class EventDispatcher
         if (OnPlayerLeaving == null) return;
         UCPlayer? player = UCPlayer.FromCSteamID(steamID);
         if (player is null) return;
+        player._isLeaving = true;
         PlayerEvent args = new PlayerEvent(player);
         foreach (EventDelegate<PlayerEvent> inv in OnPlayerLeaving.GetInvocationList().Cast<EventDelegate<PlayerEvent>>())
         {
@@ -385,7 +410,7 @@ public static class EventDispatcher
     }
     private static void ProjectileOnProjectileSpawned(UseableGun gun, GameObject projectile)
     {
-        foreach (SDG.Unturned.Rocket rocket in projectile.GetComponentsInChildren<SDG.Unturned.Rocket>(true))
+        foreach (Rocket rocket in projectile.GetComponentsInChildren<Rocket>(true))
         {
             ProjectileComponent c = rocket.gameObject.AddComponent<ProjectileComponent>();
 
@@ -404,7 +429,7 @@ public static class EventDispatcher
     }
     internal static void InvokeOnProjectileExploded(ProjectileComponent projectileComponent, Collider other)
     {
-        var vehicle = other.GetComponentInParent<InteractableVehicle>();
+        InteractableVehicle vehicle = other.GetComponentInParent<InteractableVehicle>();
 
         if (vehicle != null)
             VehicleDamageCalculator.RegisterForAdvancedDamage(vehicle, VehicleDamageCalculator.GetDamageMultiplier(projectileComponent, other));
@@ -439,6 +464,41 @@ public static class EventDispatcher
         }
         if (!request.CanContinue) shouldExplode = false;
     }
+
+    internal static void InvokeOnDropItemRequested(UCPlayer player, PlayerInventory inventory, Item item, ref bool shouldAllow)
+    {
+        if (OnItemDropRequested == null || !shouldAllow) return;
+        ItemJar? jar = null;
+        byte pageNum = default, index = default;
+        bool found = false;
+        for (byte i = 0; i < PlayerInventory.PAGES; ++i)
+        {
+            Items page = inventory.items[i];
+            for (byte j = 0; j < page.items.Count; ++j)
+            {
+                if (page.items[j].item == item)
+                {
+                    jar = page.items[j];
+                    pageNum = i;
+                    index = j;
+                    found = true;
+                    break;
+                }
+            }
+            if (found)
+                break;
+        }
+        if (found)
+        {
+            ItemDropRequested request = new ItemDropRequested(player, item, jar!, pageNum, index, shouldAllow);
+            foreach (EventDelegate<ItemDropRequested> inv in OnItemDropRequested.GetInvocationList().Cast<EventDelegate<ItemDropRequested>>())
+            {
+                if (!request.CanContinue) break;
+                TryInvoke(inv, request, nameof(OnItemDropRequested));
+            }
+            if (!request.CanContinue) shouldAllow = false;
+        }
+    }
     internal static void InvokeOnGroupChanged(UCPlayer player, ulong oldGroup, ulong newGroup)
     {
         if (OnGroupChanged == null || player is null) return;
@@ -457,6 +517,33 @@ public static class EventDispatcher
         {
             if (!args.CanContinue) break;
             TryInvoke(inv, args, nameof(OnUIRefreshRequested));
+        }
+    }
+    private static void OnPluginKeyTick(Player player, uint simulation, byte key, bool state)
+    {
+        if (key == 0)
+            PlayerManager.FromID(player.channel.owner.playerID.steamID.m_SteamID)?.Keys.Simulate();
+    }
+    internal static void OnKeyDown(UCPlayer player, PlayerKey key, KeyDown? callback)
+    {
+        L.LogDebug("On Key down " + player.Name.PlayerName + ", " + key);
+        if (callback == null || !player.IsOnline) return;
+        bool handled = false;
+        foreach (KeyDown inv in callback.GetInvocationList().Cast<KeyDown>())
+        {
+            inv?.Invoke(player, ref handled);
+            if (handled) break;
+        }
+    }
+    internal static void OnKeyUp(UCPlayer player, PlayerKey key, float timeDown, KeyUp? callback)
+    {
+        L.LogDebug("On Key up " + player.Name.PlayerName + ", " + key);
+        if (callback == null || !player.IsOnline) return;
+        bool handled = false;
+        foreach (KeyUp inv in callback.GetInvocationList().Cast<KeyUp>())
+        {
+            inv?.Invoke(player, timeDown, ref handled);
+            if (handled) break;
         }
     }
 }

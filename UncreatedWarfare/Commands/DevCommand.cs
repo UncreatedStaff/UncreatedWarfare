@@ -3,14 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -38,19 +36,19 @@ public class DevCommand : Command
 
             ctx.AssertHelpCheck(1, "/dev addcache (at current location)");
 
-            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.HasValue ||
-                !Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Exists)
-                throw ctx.Reply("Cache GUID is not set correctly.");
+            if (!Gamemode.Config.BarricadeInsurgencyCache.HasValue ||
+                !Gamemode.Config.BarricadeInsurgencyCache.Value.Exists)
+                throw ctx.ReplyString("Cache GUID is not set correctly.");
 
-            if (ctx.TryGetTarget(out BarricadeDrop cache) && cache != null && cache.asset.GUID == Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid)
+            if (ctx.TryGetTarget(out BarricadeDrop cache) && cache != null && cache.asset.GUID == Gamemode.Config.BarricadeInsurgencyCache.Value.Guid)
             {
                 SerializableTransform transform = new SerializableTransform(cache.model);
 
                 ins.AddCacheSpawn(transform);
-                ctx.Reply("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
+                ctx.ReplyString("Added new cache spawn: " + transform.ToString().Colorize("ebd491"));
                 ctx.LogAction(EActionLogType.ADD_CACHE, "ADDED CACHE SPAWN AT " + transform.ToString());
             }
-            else throw ctx.Reply("You must be looking at a CACHE barricade.".Colorize("c7a29f"));
+            else throw ctx.ReplyString("You must be looking at a CACHE barricade.".Colorize("c7a29f"));
         }
         else if (ctx.MatchParameter(0, "gencaches"))
         {
@@ -58,10 +56,10 @@ public class DevCommand : Command
 
             ctx.AssertHelpCheck(1, "/dev gencaches (generates a json file for all placed caches)");
 
-            if (!Gamemode.Config.Barricades.InsurgencyCacheGUID.HasValue ||
-                !Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Exists)
-                throw ctx.Reply("Cache GUID is not set correctly.");
-            Guid g = Gamemode.Config.Barricades.InsurgencyCacheGUID.Value.Guid;
+            if (!Gamemode.Config.BarricadeInsurgencyCache.HasValue ||
+                !Gamemode.Config.BarricadeInsurgencyCache.Value.Exists)
+                throw ctx.ReplyString("Cache GUID is not set correctly.");
+            Guid g = Gamemode.Config.BarricadeInsurgencyCache.Value.Guid;
             IEnumerable<BarricadeDrop> caches = UCBarricadeManager.AllBarricades.Where(b => b.asset.GUID == g);
 
             FileStream writer = File.Create("C" + Path.VolumeSeparatorChar + Path.DirectorySeparatorChar + Path.Combine("Users", "USER", "Desktop", "cachespanws.json"));
@@ -90,7 +88,7 @@ public class DevCommand : Command
             writer.Close();
             writer.Dispose();
 
-            ctx.Reply($"Written {bytes.Length} bytes to file.");
+            ctx.ReplyString($"Written {bytes.Length} bytes to file.");
         }
         else if (ctx.MatchParameter(0, "addintel"))
         {
@@ -103,9 +101,9 @@ public class DevCommand : Command
                 insurgency.AddIntelligencePoints(points);
 
                 ctx.LogAction(EActionLogType.ADD_INTEL, "ADDED " + points.ToString(Data.Locale) + " OF INTEL");
-                ctx.Reply($"Added {points} intelligence points.".Colorize("ebd491"));
+                ctx.ReplyString($"Added {points} intelligence points.".Colorize("ebd491"));
             }
-            else throw ctx.Reply($"You must supply a valid number of intelligence points (negative or positive).".Colorize("c7a29f"));
+            else throw ctx.ReplyString($"You must supply a valid number of intelligence points (negative or positive).".Colorize("c7a29f"));
         }
         else if (ctx.MatchParameter(0, "quickbuild", "build", "qb"))
         {
@@ -115,14 +113,14 @@ public class DevCommand : Command
 
             if (ctx.TryGetTarget(out BarricadeDrop drop))
             {
-                if (drop.model.TryGetComponent<BuildableComponent>(out var buildable))
+                if (drop.model.TryGetComponent<BuildableComponent>(out BuildableComponent? buildable))
                 {
                     buildable.Build();
-                    ctx.Reply($"Successfully built {drop.asset.itemName}".Colorize("ebd491"));
+                    ctx.ReplyString($"Successfully built {drop.asset.itemName}".Colorize("ebd491"));
                 }
-                else throw ctx.Reply($"This barricade ({drop.asset.itemName}) is not buildable.".Colorize("c7a29f"));
+                else throw ctx.ReplyString($"This barricade ({drop.asset.itemName}) is not buildable.".Colorize("c7a29f"));
             }
-            else throw ctx.Reply($"You are not looking at a barricade.".Colorize("c7a29f"));
+            else throw ctx.ReplyString($"You are not looking at a barricade.".Colorize("c7a29f"));
         }
         else if (ctx.MatchParameter(0, "logmeta", "logstate", "metadata"))
         {
@@ -132,12 +130,12 @@ public class DevCommand : Command
 
             if (ctx.TryGetTarget(out BarricadeDrop drop))
             {
-                var data = drop.GetServersideData();
+                BarricadeData data = drop.GetServersideData();
                 string state = Convert.ToBase64String(data.barricade.state);
                 L.Log($"BARRICADE STATE: {state}");
-                ctx.Reply($"Metadata state has been logged to console. State: {state}".Colorize("ebd491"));
+                ctx.ReplyString($"Metadata state has been logged to console. State: {state}".Colorize("ebd491"));
             }
-            else throw ctx.Reply($"You are not looking at a barricade.".Colorize("c7a29f"));
+            else throw ctx.ReplyString($"You are not looking at a barricade.".Colorize("c7a29f"));
         }
         else if (ctx.MatchParameter(0, "checkvehicle", "cv"))
         {
@@ -149,16 +147,16 @@ public class DevCommand : Command
 
             InteractableVehicle vehicle = ctx.Caller!.Player.movement.getVehicle();
             if (vehicle is null && !(ctx.TryGetTarget(out vehicle) && vehicle is not null))
-                throw ctx.Reply($"You are not inside or looking at a vehicle.".Colorize("c7a29f"));
+                throw ctx.ReplyString($"You are not inside or looking at a vehicle.".Colorize("c7a29f"));
             if (vehicle.transform.TryGetComponent(out VehicleComponent component))
             {
-                ctx.Reply($"Vehicle logged successfully. Check console".Colorize("ebd491"));
+                ctx.ReplyString($"Vehicle logged successfully. Check console".Colorize("ebd491"));
 
                 L.Log($"{vehicle.asset.vehicleName.ToUpper()}");
 
-                L.Log($"    Is In VehicleBay: {component.isInVehiclebay}\n");
+                L.Log($"    Is In VehicleBay: {component.IsInVehiclebay}\n");
 
-                if (component.isInVehiclebay)
+                if (component.IsInVehiclebay)
                 {
                     L.Log($"    Team: {component.Data.Team}");
                     L.Log($"    Type: {component.Data.Type}");
@@ -169,18 +167,18 @@ public class DevCommand : Command
                 L.Log($"    Quota: {component.Quota}/{component.RequiredQuota}\n");
 
                 L.Log($"    Usage Table:");
-                foreach (var entry in component.UsageTable)
+                foreach (KeyValuePair<ulong, double> entry in component.UsageTable)
                     L.Log($"        {entry.Key}'s time in vehicle: {entry.Value} s");
 
                 L.Log($"    Transport Table:");
-                foreach (var entry in component.TransportTable)
+                foreach (KeyValuePair<ulong, Vector3> entry in component.TransportTable)
                     L.Log($"        {entry.Key}'s starting position: {entry.Value}");
 
                 L.Log($"    Damage Table:");
-                foreach (var entry in component.DamageTable)
+                foreach (KeyValuePair<ulong, KeyValuePair<ushort, DateTime>> entry in component.DamageTable)
                     L.Log($"        {entry.Key}'s damage so far: {entry.Value.Key} ({(DateTime.Now - entry.Value.Value).TotalSeconds} seconds ago)");
             }
-            else throw ctx.Reply($"This vehicle does have a VehicleComponent".Colorize("c7a29f"));
+            else throw ctx.ReplyString($"This vehicle does have a VehicleComponent".Colorize("c7a29f"));
         }
         else if (ctx.MatchParameter(0, "getpos", "cvc"))
         {
@@ -188,7 +186,7 @@ public class DevCommand : Command
 
             ctx.AssertHelpCheck(1, "/dev <getpos|cvc>. Gets your current rotation and position (like /test zone).");
 
-            ctx.Reply($"Your position: {ctx.Caller!.Position} - Your rotation: {ctx.Caller!.Player.transform.eulerAngles.y}".Colorize("ebd491"));
+            ctx.ReplyString($"Your position: {ctx.Caller!.Position} - Your rotation: {ctx.Caller!.Player.transform.eulerAngles.y}".Colorize("ebd491"));
         }
         else if (ctx.MatchParameter(0, "onfob", "fob"))
         {
@@ -200,9 +198,9 @@ public class DevCommand : Command
 
             FOB? fob = FOB.GetNearestFOB(ctx.Caller!.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, ctx.Caller!.GetTeam());
             if (fob != null)
-                ctx.Reply($"Your nearest FOB is: {fob.Name.Colorize(fob.UIColor)} ({(ctx.Caller!.Position - fob.Position).magnitude}m away)".Colorize("ebd491"));
+                ctx.ReplyString($"Your nearest FOB is: {fob.Name.Colorize(fob.UIColor)} ({(ctx.Caller!.Position - fob.Position).magnitude}m away)".Colorize("ebd491"));
             else
-                ctx.Reply($"You are not near a FOB.".Colorize("ebd491"));
+                ctx.ReplyString($"You are not near a FOB.".Colorize("ebd491"));
         }
         else if (ctx.MatchParameter(0, "aatest", "aa"))
         {
@@ -213,12 +211,12 @@ public class DevCommand : Command
             if (ctx.TryGet(1, out VehicleAsset asset, out bool multipleResults, true))
             {
                 InteractableVehicle? vehicle = VehicleBay.SpawnLockedVehicle(asset.GUID, ctx.Caller!.Player.transform.TransformPoint(new Vector3(0, 300, 200)), Quaternion.Euler(0, 0, 0), out _);
-                ctx.Reply($"Successfully spawned AA target: {(vehicle == null ? asset.GUID.ToString("N") : vehicle.asset.vehicleName)}".Colorize("ebd491"));
+                ctx.ReplyString($"Successfully spawned AA target: {(vehicle == null ? asset.GUID.ToString("N") : vehicle.asset.vehicleName)}".Colorize("ebd491"));
             }
             else if (!ctx.HasArgs(2))
-                throw ctx.Reply($"Please specify a vehicle name.".Colorize("ebd491"));
+                throw ctx.ReplyString($"Please specify a vehicle name.".Colorize("ebd491"));
             else
-                throw ctx.Reply($"A vehicle called '{ctx.Get(1)!} does not exist".Colorize("ebd491"));
+                throw ctx.ReplyString($"A vehicle called '{ctx.Get(1)!} does not exist".Colorize("ebd491"));
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }

@@ -1,7 +1,4 @@
-﻿using SDG.Unturned;
-using System;
-using System.Threading.Tasks;
-using Uncreated.Framework;
+﻿using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -19,23 +16,23 @@ public class MuteCommand : Command
         ctx.AssertHelpCheck(1, SYNTAX + HELP);
 
         if (!ctx.HasArgs(4))
-            throw ctx.Reply("mute_syntax");
+            throw ctx.SendCorrectUsage(SYNTAX);
 
         EMuteType type = ctx.MatchParameter(0, "voice")
             ? EMuteType.VOICE_CHAT
             : (ctx.MatchParameter(0, "text")
                 ? EMuteType.TEXT_CHAT
                 : (ctx.MatchParameter(0, "both")
-                    ? EMuteType.BOTH 
-                    : throw ctx.Reply("mute_syntax")));
+                    ? EMuteType.BOTH
+                    : throw ctx.SendCorrectUsage(SYNTAX)));
 
         int duration = F.ParseTime(ctx.Get(2)!);
 
         if (duration < -1 || duration == 0)
-            throw ctx.Reply("mute_cant_read_duration");
+            throw ctx.Reply(T.InvalidTime);
 
         if (!ctx.TryGet(1, out ulong targetId, out _))
-            throw ctx.Reply("mute_no_player_found");
+            throw ctx.Reply(T.PlayerNotFound);
 
         OffenseManager.MutePlayer(targetId, ctx.CallerID, type, duration, ctx.GetRange(3)!);
         ctx.Defer();

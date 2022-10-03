@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Uncreated.Players;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Point;
 
@@ -44,12 +40,12 @@ public class OfficerStorage : ListSingleton<OfficerData>
 #endif
         bool isNewOfficer = false;
 
-        if (Singleton.ObjectExists(o => o.Steam64 == playerID && o.Team == newTeam, out var officer))
+        if (Singleton.ObjectExists(o => o.Steam64 == playerID && o.Team == newTeam, out OfficerData? officer))
         {
             if (officer.OfficerTier == newOfficerTier)
                 return;
 
-            Singleton.UpdateObjectsWhere(o => o.Steam64 == playerID, o => { o.Team = newTeam; o.OfficerTier = newOfficerTier; });                
+            Singleton.UpdateObjectsWhere(o => o.Steam64 == playerID, o => { o.Team = newTeam; o.OfficerTier = newOfficerTier; });
         }
         else
         {
@@ -60,33 +56,17 @@ public class OfficerStorage : ListSingleton<OfficerData>
         UCPlayer? player = UCPlayer.FromID(playerID);
         if (player != null)
         {
+            ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
+            FactionInfo f = TeamManager.GetFaction(newTeam);
             if (isNewOfficer || newOfficerTier >= officer.OfficerTier)
             {
-                ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
-                player.Message("officer_promoted", rankdata.GetName(playerID), Localization.Translate("team_" + newTeam, player));
-
-                FPlayerName names = F.GetPlayerOriginalNames(player);
-                foreach (LanguageSet set in Localization.EnumerateLanguageSets(player.Steam64))
-                {
-                    string name = rankdata.GetName(set.Language);
-                    string team = Localization.Translate("team_" + newTeam, set.Language);
-                    while (set.MoveNext())
-                        set.Next.SendChat("officer_announce_promoted", names.CharacterName, name, team);
-                }
+                player.SendChat(T.OfficerPromoted, rankdata, f);
+                Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.OfficerPromotedBroadcast, player, rankdata, f);
             }
             else
             {
-                ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
-                player.Message("officer_demoted", rankdata.GetName(playerID), Localization.Translate("team_" + newTeam, player));
-
-                FPlayerName names = F.GetPlayerOriginalNames(player);
-                foreach (LanguageSet set in Localization.EnumerateLanguageSets(player.Steam64))
-                {
-                    string name = rankdata.GetName(set.Language);
-                    string team = Localization.Translate("team_" + newTeam, set.Language);
-                    while (set.MoveNext())
-                        set.Next.SendChat("officer_announce_promoted", names.CharacterName, name, team);
-                }
+                player.SendChat(T.OfficerDemoted, rankdata, f);
+                Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.OfficerDemotedBroadcast, player, rankdata, f);
             }
             Points.UpdateXPUI(player);
         }
@@ -103,14 +83,8 @@ public class OfficerStorage : ListSingleton<OfficerData>
         if (player != null)
         {
             ref Ranks.RankData rankdata = ref Ranks.RankManager.GetRank(player, out _);
-            player.Message("officer_discharged", rankdata.GetName(playerID));
-            FPlayerName names = F.GetPlayerOriginalNames(player);
-            foreach (LanguageSet set in Localization.EnumerateLanguageSets(player.Steam64))
-            {
-                string name = rankdata.GetName(set.Language);
-                while (set.MoveNext())
-                    set.Next.SendChat("officer_announce_discharged", names.CharacterName, name);
-            }
+            player.SendChat(T.OfficerDischarged);
+            Chat.Broadcast(LanguageSet.AllBut(player.Steam64), T.OfficerDischargedBroadcast, player, rankdata);
             Points.UpdateXPUI(player);
         }
     }

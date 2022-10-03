@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Warfare.Kits;
 using UnityEngine;
 
@@ -215,8 +211,11 @@ public struct RankData : ITranslationArgument
         };
     }
 
+    [FormatDisplay("Numeric")]
     public const string NUMERIC_FORMAT = "x";
+    [FormatDisplay("Abbreviation")]
     public const string ABBREVIATION_FORMAT = "a";
+    [FormatDisplay("Name")]
     public const string NAME_FORMAT = "n";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {

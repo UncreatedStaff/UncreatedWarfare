@@ -4,9 +4,8 @@ using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
+using System.Reflection;
 using System.Threading;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
@@ -14,8 +13,10 @@ using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -26,22 +27,20 @@ using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
+using Uncreated.Warfare.Sync;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
+using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare;
 
 public delegate void VoidDelegate();
-public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
+public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version      = new Version(2, 6, 0, 2);
-    private readonly SystemConfig _config       = new SystemConfig();
-#if DEBUG
-    private readonly TestConfig _testConfig     = new TestConfig();
-#endif
+    public static readonly Version Version = new Version(2, 7, 0, 0);
+    private readonly SystemConfig _config = new SystemConfig();
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;
     public Coroutine? StatsRoutine;
@@ -49,6 +48,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     internal DebugComponent Debugger;
     public event EventHandler UCWarfareLoaded;
     public event EventHandler UCWarfareUnloading;
+    internal Projectiles.ProjectileSolver Solver;
+    public HomebaseClientComponent? NetClient;
     public bool CoroutineTiming = false;
     private bool InitialLoadEventSubscription;
     private DateTime NextRestartTime;
@@ -56,7 +57,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
     bool IUncreatedSingleton.IsLoaded => IsLoaded;
     public static bool IsLoaded => I is not null;
     public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
-    public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && Data.NetClient is not null && Data.NetClient.IsActive;
+    public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && I.NetClient != null && I.NetClient.IsActive;
     private void Awake()
     {
         if (I != null) throw new SingletonLoadException(ESingletonLoadType.LOAD, this, new Exception("Uncreated Warfare is already loaded."));
@@ -71,7 +72,15 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         L.Log("Started loading - Uncreated Warfare version " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
               "Please stop using this plugin now.", ConsoleColor.Green);
 
+        /* INITIALIZE UNCREATED NETWORKING */
+        Logging.OnLogInfo += L.NetLogInfo;
+        Logging.OnLogWarning += L.NetLogWarning;
+        Logging.OnLogError += L.NetLogError;
+        Logging.OnLogException += L.NetLogException;
+        NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
+
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
+
         CommandHandler.LoadCommands();
 
         DateTime loadTime = DateTime.Now;
@@ -88,8 +97,13 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         TeamManager.SetupConfig();
 
+        /* LOAD LOCALIZATION ASSETS */
+        L.Log("Loading Localization and Color Data...", ConsoleColor.Magenta);
+        Data.Colors = JSONMethods.LoadColors(out Data.ColorsHex);
+        Deaths.Localization.Reload();
+        Data.Languages = JSONMethods.LoadLanguagePreferences();
         Data.LanguageAliases = JSONMethods.LoadLangAliases();
-
+        Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
         Translation.ReadTranslations();
 
         /* PATCHES */
@@ -106,14 +120,49 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         UCInventoryManager.OnLoad();
 
+        if (Config.EnableSync)
+            gameObject.AddComponent<ConfigSync>();
         gameObject.AddComponent<ActionLogger>();
         Debugger = gameObject.AddComponent<DebugComponent>();
         Data.Singletons = gameObject.AddComponent<SingletonManager>();
 
 
-        Quests.DailyQuests.EarlyLoad();
+        if (Config.EnableSync)
+            ConfigSync.Reflect();
+
+        Data.RegisterInitialSyncs();
+
+        InitNetClient();
+
+        if (!Config.DisableDailyQuests)
+            Quests.DailyQuests.EarlyLoad();
 
         ActionLogger.Add(EActionLogType.SERVER_STARTUP, $"Name: {Provider.serverName}, Map: {Provider.map}, Max players: {Provider.maxPlayers.ToString(Data.Locale)}");
+    }
+
+    internal void InitNetClient()
+    {
+        if (NetClient != null)
+        {
+            Destroy(NetClient);
+            NetClient = null;
+        }
+        if (Config.TCPSettings.EnableTCPServer)
+        {
+            L.Log("Attempting connection with Homebase...", ConsoleColor.Magenta);
+            NetClient = gameObject.AddComponent<HomebaseClientComponent>();
+            NetClient.OnClientVerified += Data.OnClientConnected;
+            NetClient.OnClientDisconnected += Data.OnClientDisconnected;
+            NetClient.OnSentMessage += Data.OnClientSentMessage;
+            NetClient.OnReceivedMessage += Data.OnClientReceivedMessage;
+            NetClient.ModifyVerifyPacketCallback += OnVerifyPacketMade;
+            NetClient.Init(Config.TCPSettings.TCPServerIP, Config.TCPSettings.TCPServerPort, Config.TCPSettings.TCPServerIdentity);
+        }
+    }
+
+    private void OnVerifyPacketMade(ref VerifyPacket packet)
+    {
+        packet = new VerifyPacket(packet.Identity, packet.SecretKey, packet.ApiVersion, packet.TimezoneOffset, Config.Currency, Config.RegionKey, Version);
     }
 
     public void Load()
@@ -177,6 +226,8 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Data.ZoneProvider.Reload();
         Data.ZoneProvider.Save();
 
+        Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
+
         Announcer = Data.Singletons.LoadSingleton<UCAnnouncer>();
         Data.ExtraPoints = JSONMethods.LoadExtraPoints();
         //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
@@ -199,6 +250,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Data.Gamemode?.Subscribe();
         StatsManager.LoadEvents();
 
+        GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
         EventDispatcher.OnPlayerJoined += EventFunctions.OnPostPlayerConnected;
         EventDispatcher.OnPlayerLeaving += EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
@@ -228,13 +280,13 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         EventDispatcher.OnVehicleSwapSeat += EventFunctions.OnVehicleSwapSeat;
         EventDispatcher.OnExitVehicle += EventFunctions.OnPlayerLeavesVehicle;
         EventDispatcher.OnLandmineExploding += EventFunctions.OnLandmineExploding;
+        EventDispatcher.OnItemDropRequested += EventFunctions.OnItemDropRequested;
         VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
         UseableConsumeable.onConsumePerformed += EventFunctions.OnConsume;
         EventDispatcher.OnBarricadeDestroyed += EventFunctions.OnBarricadeDestroyed;
         Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
-        PlayerInput.onPluginKeyTick += EventFunctions.OnPluginKeyPressed;
         PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
     }
     private void UnsubscribeFromEvents()
@@ -245,6 +297,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Data.Gamemode?.Unsubscribe();
         EventDispatcher.UnsubscribeFromAll();
 
+        GameUpdateMonitor.OnGameUpdateDetected -= EventFunctions.OnGameUpdateDetected;
         ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
         EventDispatcher.OnPlayerJoined -= EventFunctions.OnPostPlayerConnected;
         EventDispatcher.OnPlayerLeaving -= EventFunctions.OnPlayerDisconnected;
@@ -270,6 +323,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
         BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
         StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
+        EventDispatcher.OnItemDropRequested -= EventFunctions.OnItemDropRequested;
         EventDispatcher.OnLandmineExploding -= EventFunctions.OnLandmineExploding;
         EventDispatcher.OnEnterVehicle -= EventFunctions.OnEnterVehicle;
         EventDispatcher.OnVehicleSwapSeat -= EventFunctions.OnVehicleSwapSeat;
@@ -280,7 +334,6 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         UseableConsumeable.onConsumePerformed -= EventFunctions.OnConsume;
         EventDispatcher.OnBarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
         Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
-        PlayerInput.onPluginKeyTick -= EventFunctions.OnPluginKeyPressed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
         StatsManager.UnloadEvents();
         if (!InitialLoadEventSubscription)
@@ -301,6 +354,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        player.OnLanguageChanged();
         EventDispatcher.InvokeUIRefreshRequest(player);
         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
         foreach (BarricadeRegion region in BarricadeManager.regions)
@@ -310,16 +364,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             {
                 if (drop.interactable is InteractableSign sign)
                 {
-                    bool found = false;
                     if (VehicleSpawner.Loaded && VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn))
-                    {
                         spawn.UpdateSign(player);
-                        found = true;
-                    }
-                    if (!found && sign.text.StartsWith("sign_"))
-                    {
-                        F.InvokeSignUpdateFor(player, sign, false);
-                    }
+                    else if (sign.text.StartsWith(Signs.PREFIX))
+                        Signs.BroadcastSignUpdate(drop);
                 }
             }
         }
@@ -356,6 +404,12 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
         {
             if (PlayerManager.OnlinePlayers[i].Player.TryGetComponent(out ZonePlayerComponent comp))
                 comp.ReloadLang();
+        }
+
+        if (TraitManager.Loaded)
+        {
+            if (player.GetTeam() is 1 or 2 && !player.HasUIHidden && !(Data.Is(out IImplementsLeaderboard<BasePlayerStats, BaseStatTracker<BasePlayerStats>> lb) && lb.IsScreenUp))
+                TraitManager.BuffUI.SendBuffs(player);
         }
     }
     private void Update()
@@ -409,7 +463,10 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
                 if (Announcer != null)
                     Data.Singletons.UnloadSingleton(ref Announcer);
             }
-
+            if (Solver != null)
+            {
+                Destroy(Solver);
+            }
             if (Maps.MapScheduler.Instance != null)
             {
                 Destroy(Maps.MapScheduler.Instance);
@@ -434,18 +491,16 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
             UnsubscribeFromEvents();
             CommandWindow.shouldLogDeaths = true;
-            try
+            if (NetClient != null)
             {
-                Data.NetClient?.Dispose();
-            }
-            finally
-            {
-                Data.NetClient = null!;
+                Destroy(NetClient);
+                NetClient = null;
             }
             Logging.OnLogInfo -= L.NetLogInfo;
             Logging.OnLogWarning -= L.NetLogWarning;
             Logging.OnLogError -= L.NetLogError;
             Logging.OnLogException -= L.NetLogException;
+            ConfigSync.UnpatchAll();
             try
             {
                 Patches.Unpatch();
@@ -465,8 +520,7 @@ public partial class UCWarfare : MonoBehaviour, IUncreatedSingleton
             L.LogError("Error unloading: ");
             L.LogError(ex);
         }
-        if (Data.Singletons is not null)
-            Data.Singletons.UnloadAll();
+        Data.Singletons?.UnloadAll();
         L.Log("Warfare unload complete", ConsoleColor.Blue);
 #if DEBUG
         profiler.Dispose();

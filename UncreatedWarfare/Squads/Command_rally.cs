@@ -1,6 +1,4 @@
-﻿using SDG.Unturned;
-using System;
-using System.Threading.Tasks;
+﻿using System;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -29,24 +27,24 @@ public class RallyCommand : Command
 
         if (!UCWarfare.Config.EnableSquads)
         {
-            ctx.Reply("squads_disabled");
+            ctx.Reply(T.SquadsDisabled);
             return;
         }
 
         if (ctx.Caller.Squad is null)
-            throw ctx.Reply("rally_e_notinsquad");
+            throw ctx.Reply(T.RallyNotInSquad);
 
         if (!RallyManager.HasRally(ctx.Caller.Squad, out RallyPoint rallypoint) || !rallypoint.IsActive)
-            throw ctx.Reply("rally_e_unavailable");
+            throw ctx.Reply(ctx.Caller.IsSquadLeader() ? T.RallyNotActiveSL : T.RallyNotActive);
 
         if (ctx.MatchParameter(0, "cancel", "c", "abort"))
         {
             if (rallypoint.AwaitingPlayers.RemoveAll(p => p.Steam64 == ctx.CallerID) > 0)
             {
                 rallypoint.ShowUIForPlayer(ctx.Caller);
-                ctx.Reply("rally_aborted");
+                ctx.Reply(T.RallyAbort);
             }
-            else throw ctx.Reply("rally_e_notwaiting");
+            else throw ctx.Reply(T.RallyNotQueued);
         }
         else if (ctx.HasArgsExact(0))
         {
@@ -56,9 +54,9 @@ public class RallyCommand : Command
             {
                 rallypoint.AwaitingPlayers.Add(ctx.Caller);
                 rallypoint.UpdateUIForAwaitingPlayers();
-                ctx.Reply("rally_wait", rallypoint.timer.ToString(Data.Locale));
+                ctx.Reply(T.RallyWait, rallypoint.timer);
             }
-            else throw ctx.Reply("rally_e_alreadywaiting");
+            else throw ctx.Reply(T.RallyAlreadyQueued);
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }

@@ -11,3 +11,6 @@ dotnet_diagnostic.CS8618.severity = silent
 
 # CS1591: Missing XML comment for publicly visible type or member
 dotnet_diagnostic.CS1591.severity = none
+
+# CS0252: Possible unintended reference comparison; left hand side needs cast
+dotnet_diagnostic.CS0252.severity = silent

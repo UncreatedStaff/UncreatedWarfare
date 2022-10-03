@@ -11,7 +11,7 @@ namespace Uncreated.Warfare.Commands.VanillaRework;
 public class ShutdownCommand : Command
 {
     private const string SYNTAX = "/shutdown [instant|after|cancel|*time*] [reason]";
-    private const string HELP = "Does nothing.";
+    private const string HELP = "Schedule shutdowns for the server.";
     public static Coroutine? Messager = null;
     public ShutdownCommand() : base("shutdown", EAdminType.VANILLA_ADMIN, 1) { }
     public override void Execute(CommandInteraction ctx)
@@ -42,8 +42,8 @@ public class ShutdownCommand : Command
         {
             ctx.LogAction(EActionLogType.SHUTDOWN_SERVER, $"CANCELLED");
             Data.Gamemode.CancelShutdownAfterGame();
-            Chat.Broadcast("shutdown_broadcast_after_game_canceled");
-            L.Log(Localization.Translate("shutdown_broadcast_after_game_canceled_console", 0, out _), ConsoleColor.Cyan);
+            Chat.Broadcast(T.ShutdownBroadcastCancelled);
+            L.Log("The scheduled shutdown was cancelled.", ConsoleColor.Cyan);
             if (Messager != null)
                 UCWarfare.I.StopCoroutine(Messager);
             NetCalls.SendCancelledShuttingDownAfter.NetInvoke(ctx.CallerID);
@@ -55,11 +55,11 @@ public class ShutdownCommand : Command
             {
                 ctx.LogAction(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
                 Data.Gamemode?.ShutdownAfterGame(reason, ctx.CallerID);
-                Chat.Broadcast("shutdown_broadcast_after_game", reason);
+                Chat.Broadcast(T.ShutdownBroadcastAfterGame, reason);
                 if (ctx.IsConsole)
-                    L.Log(Localization.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
+                    L.Log($"A shutdown has been scheduled after this game because: {reason}.", ConsoleColor.Cyan);
                 else
-                    L.Log(Localization.Translate("shutdown_broadcast_after_game_console_player", 0, out _, F.GetPlayerOriginalNames(ctx.Caller).PlayerName, reason), ConsoleColor.Cyan);
+                    L.Log($"A shutdown has been scheduled after this game by {ctx.Caller.Name.PlayerName} ({ctx.CallerID}) because: {reason}.", ConsoleColor.Cyan);
                 if (Messager != null)
                     UCWarfare.I.StopCoroutine(Messager);
                 Messager = UCWarfare.I.StartCoroutine(ShutdownMessageSender(reason));
@@ -68,32 +68,35 @@ public class ShutdownCommand : Command
             }
             else throw ctx.SendCorrectUsage("/shutdown after <reason>");
         }
-        else if (ctx.TryGet(0, out int seconds) && ctx.TryGetRange(1, out string reason))
+        else if (ctx.TryGet(0, out string time) && ctx.TryGetRange(1, out string reason))
         {
-            ShutdownIn(seconds, reason, ctx.CallerID);
+            int secs = F.ParseTime(time);
+            if (secs == 0)
+                throw ctx.Reply(T.InvalidTime, time);
+            ShutdownIn(secs, reason, ctx.CallerID);
             ctx.Defer();
         }
-        else throw ctx.Reply("shutdown_syntax");
+        else throw ctx.SendCorrectUsage(SYNTAX + " - " + HELP);
     }
     internal static void ShutdownIn(int seconds, string reason, ulong instigator = 0)
     {
         string time;
         bool a = false;
-        foreach (LanguageSet set in Localization.EnumerateLanguageSetsExclude(instigator))
+        foreach (LanguageSet set in LanguageSet.AllBut(instigator))
         {
             time = seconds.GetTimeFromSeconds(set.Language);
-            if (set.Language.Equals(JSONMethods.DEFAULT_LANGUAGE))
+            if (set.Language.Equals(L.DEFAULT))
             {
                 a = true;
-                L.Log(Localization.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
+                L.Log($"A shutdown has been scheduled in {time} by {instigator} because: {reason}.", ConsoleColor.Cyan);
                 ActionLogger.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
             }
-            Chat.Broadcast(set, "shutdown_broadcast_after_time", time, reason);
+            Chat.Broadcast(set, T.ShutdownBroadcastTime, time, reason);
         }
         if (!a)
         {
-            time = seconds.GetTimeFromSeconds(JSONMethods.DEFAULT_LANGUAGE);
-            L.Log(Localization.Translate("shutdown_broadcast_after_time_console", 0, out _, time, reason), ConsoleColor.Cyan);
+            time = seconds.GetTimeFromSeconds(L.DEFAULT);
+            L.Log($"A shutdown has been scheduled in {time} by {instigator} because: {reason}.", ConsoleColor.Cyan);
             ActionLogger.Add(EActionLogType.SHUTDOWN_SERVER, $"IN " + time.ToUpper() + ": " + reason, instigator);
         }
         NetCalls.SendShuttingDownInSeconds.NetInvoke(instigator, reason, (uint)seconds);
@@ -103,8 +106,8 @@ public class ShutdownCommand : Command
     public static void ShutdownAfterGame(string reason, bool isDaily)
     {
         ActionLogger.Add(EActionLogType.SHUTDOWN_SERVER, $"AFTER GAME " + (Data.Gamemode == null ? "null" : Data.Gamemode.GameID.ToString(Data.Locale)) + ": " + reason);
-        Chat.Broadcast(isDaily ? "shutdown_broadcast_after_game_daily" : "shutdown_broadcast_after_game", reason);
-        L.Log(Localization.Translate("shutdown_broadcast_after_game_console", 0, out _, reason), ConsoleColor.Cyan);
+        Chat.Broadcast(isDaily ? T.ShutdownBroadcastDaily : T.ShutdownBroadcastAfterGame, reason);
+        L.Log($"A shutdown has been scheduled after thi game because: {reason}.", ConsoleColor.Cyan);
         Data.Gamemode?.ShutdownAfterGame(reason, 0);
         if (Messager != null)
             UCWarfare.I.StopCoroutine(Messager);
@@ -117,7 +120,7 @@ public class ShutdownCommand : Command
         while (true)
         {
             yield return new WaitForSeconds(UCWarfare.Config.ModerationSettings.TimeBetweenShutdownMessages);
-            Chat.Broadcast("shutdown_broadcast_after_game_reminder", reason);
+            Chat.Broadcast(T.ShutdownBroadcastReminder, reason);
         }
     }
     public static class NetCalls

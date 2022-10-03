@@ -1,10 +1,6 @@
-﻿using SDG.Unturned;
-using System;
-using System.Threading.Tasks;
-using Uncreated.Framework;
+﻿using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Revives;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
@@ -31,7 +27,7 @@ public class HealCommand : Command
             if (Data.Is(out IRevives rev))
                 rev.ReviveManager.RevivePlayer(ctx.Caller);
 
-            ctx.Reply("heal_player", onlinePlayer.CharacterName, Teams.TeamManager.GetTeamHexColor(onlinePlayer.GetTeam()));
+            ctx.Reply(T.HealPlayer, onlinePlayer);
         }
         else
         {
@@ -40,7 +36,7 @@ public class HealCommand : Command
             if (Data.Is(out IRevives rev))
                 rev.ReviveManager.RevivePlayer(ctx.Caller);
 
-            ctx.Reply("heal_self");
+            ctx.Reply(T.HealSelf);
         }
     }
 }

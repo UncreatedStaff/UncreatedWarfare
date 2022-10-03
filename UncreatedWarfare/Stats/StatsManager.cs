@@ -133,8 +133,8 @@ public static class StatsManager
         {
             NetCalls.BackupWeapon.NetInvoke(Weapons[weaponCounter]);
             if (UCWarfare.Config.Debug)
-                L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[weaponCounter].ID) is ItemAsset asset ? 
-                    (asset.itemName + " - " + Weapons[weaponCounter].KitID) : 
+                L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[weaponCounter].ID) is ItemAsset asset ?
+                    (asset.itemName + " - " + Weapons[weaponCounter].KitID) :
                     (Weapons[weaponCounter].ID.ToString() + " - " + Weapons[weaponCounter].KitID)));
         }
         if (Vehicles.Count > 0)
@@ -503,14 +503,14 @@ public static class StatsManager
         {
             if (e.WasTeamkill)
             {
-                Task.Run(() => Data.DatabaseManager.AddTeamkill(e.Killer, e.KillerTeam));
-                ModifyStats(e.Killer, s => s.Teamkills++, false);
+                Task.Run(() => Data.DatabaseManager.AddTeamkill(e.Killer.Steam64, e.KillerTeam));
+                ModifyStats(e.Killer.Steam64, s => s.Teamkills++, false);
                 ModifyTeam(e.KillerTeam, t => t.Teamkills++, false);
             }
             else
             {
-                Task.Run(() => Data.DatabaseManager.AddKill(e.Killer, e.KillerTeam));
-                ModifyStats(e.Killer, s => s.Kills++, false);
+                Task.Run(() => Data.DatabaseManager.AddKill(e.Killer.Steam64, e.KillerTeam));
+                ModifyStats(e.Killer.Steam64, s => s.Kills++, false);
                 ModifyTeam(e.KillerTeam, t => t.Kills++, false);
                 if (e.TurretVehicleOwner != default && Assets.find(e.TurretVehicleOwner) is VehicleAsset vasset)
                     ModifyVehicle(vasset.id, v => v.KillsWithGunner++);
@@ -532,7 +532,7 @@ public static class StatsManager
                 }
                 if (KitManager.HasKit(e.Killer, out kit))
                 {
-                    ModifyStats(e.Killer, s =>
+                    ModifyStats(e.Killer.Steam64, s =>
                     {
                         s.Kills++;
                         WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == e.KillerTeam);
@@ -560,7 +560,7 @@ public static class StatsManager
                     }, false);
                 }
                 else
-                    ModifyStats(e.Killer, s =>
+                    ModifyStats(e.Killer.Steam64, s =>
                     {
                         s.Kills++;
                         if (atk) s.KillsWhileAttackingFlags++;
@@ -600,11 +600,11 @@ public static class StatsManager
             }
         }
 
-        Task.Run(() => Data.DatabaseManager.AddDeath(e.Player, e.DeadTeam));
+        Task.Run(() => Data.DatabaseManager.AddDeath(e.Player.Steam64, e.DeadTeam));
         ModifyTeam(e.DeadTeam, t => t.Deaths++, false);
         if (KitManager.HasKit(e.Player, out kit))
         {
-            ModifyStats(e.Player, s =>
+            ModifyStats(e.Player.Steam64, s =>
             {
                 s.Deaths++;
                 WarfareStats.KitData kitData = s.Kits.Find(k => k.KitID == kit.Name && k.Team == e.DeadTeam);
@@ -627,7 +627,7 @@ public static class StatsManager
             ModifyKit(kit.Name, k => k.Deaths++, true);
         }
         else
-            ModifyStats(e.Player, s => s.Deaths++, false);
+            ModifyStats(e.Player.Steam64, s => s.Deaths++, false);
     }
 
     internal static void OnFlagCaptured(Gamemodes.Flags.Flag flag, ulong capturedTeam, ulong lostTeam)
@@ -639,7 +639,7 @@ public static class StatsManager
         {
             for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
             {
-                ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                ModifyStats(flag.PlayersOnFlagTeam1[p].Steam64, s => s.FlagsCaptured++, false);
                 if (KitManager.HasKit(flag.PlayersOnFlagTeam1[p], out Kit kit) && !kits.Contains(kit.Name))
                 {
                     ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
@@ -648,16 +648,16 @@ public static class StatsManager
             }
             if (flag.IsObj(2))
                 for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
-                    ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+                    ModifyStats(flag.PlayersOnFlagTeam2[p].Steam64, s => s.FlagsLost++, false);
         }
         else if (capturedTeam == 2)
         {
             if (flag.IsObj(1))
                 for (int p = 0; p < flag.PlayersOnFlagTeam1.Count; p++)
-                    ModifyStats(flag.PlayersOnFlagTeam1[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsLost++, false);
+                    ModifyStats(flag.PlayersOnFlagTeam1[p].Steam64, s => s.FlagsLost++, false);
             for (int p = 0; p < flag.PlayersOnFlagTeam2.Count; p++)
             {
-                ModifyStats(flag.PlayersOnFlagTeam2[p].channel.owner.playerID.steamID.m_SteamID, s => s.FlagsCaptured++, false);
+                ModifyStats(flag.PlayersOnFlagTeam2[p].Steam64, s => s.FlagsCaptured++, false);
                 if (KitManager.HasKit(flag.PlayersOnFlagTeam2[p], out Kit kit) && !kits.Contains(kit.Name))
                 {
                     ModifyKit(kit.Name, k => k.FlagsCaptured++, true);
@@ -720,7 +720,7 @@ public static class StatsManager
             if (KitManager.KitExists(KitID, out Kit GameKit))
             {
                 @class = GameKit.Class;
-                if (!GameKit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out sname))
+                if (!GameKit.SignTexts.TryGetValue(L.DEFAULT, out sname))
                     if (GameKit.SignTexts.Count > 0)
                         sname = GameKit.SignTexts.Values.ElementAt(0);
             }
@@ -750,7 +750,7 @@ public static class StatsManager
                 string kitname;
                 if (KitManager.KitExists(KitID, out Kit kit))
                 {
-                    if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out kitname))
+                    if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitname))
                         if (kit.SignTexts.Count > 0)
                             kitname = kit.SignTexts.Values.ElementAt(0);
                 }
@@ -770,7 +770,7 @@ public static class StatsManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2010)]
-        internal static void ReceiveRequestKitList(MessageContext context) 
+        internal static void ReceiveRequestKitList(MessageContext context)
             => context.Reply(SendKitList, KitManager.GetKitsWhere(k => !k.IsLoadout).Select(k => k.Name).ToArray());
 
         [NetCall(ENetCall.FROM_SERVER, 2012)]
@@ -790,7 +790,7 @@ public static class StatsManager
                     weapons.Add(w);
                     string kitname = w.KitID;
                     if (KitManager.KitExists(w.KitID, out Kit kit))
-                        if (!kit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out kitname))
+                        if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitname))
                             if (kit.SignTexts.Count > 0)
                                 kitname = kit.SignTexts.Values.ElementAt(0);
                     kitnames.Add(kitname);
@@ -843,7 +843,7 @@ public static class StatsManager
                 {
                     classes[i] = (byte)GameKit.Class;
                     kitnames[i] = Kits[i].KitID;
-                    if (!GameKit.SignTexts.TryGetValue(JSONMethods.DEFAULT_LANGUAGE, out kitnames[i]))
+                    if (!GameKit.SignTexts.TryGetValue(L.DEFAULT, out kitnames[i]))
                         if (GameKit.SignTexts.Count > 0)
                             kitnames[i] = GameKit.SignTexts.Values.ElementAt(0);
                 }

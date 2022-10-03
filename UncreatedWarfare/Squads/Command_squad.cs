@@ -1,7 +1,5 @@
-﻿using SDG.Unturned;
-using System;
+﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -29,26 +27,26 @@ public class SquadCommand : Command
         ctx.AssertGamemode<ISquads>();
 
         if (!UCWarfare.Config.EnableSquads || !SquadManager.Loaded)
-            throw ctx.Reply("squads_disabled");
+            throw ctx.Reply(T.SquadsDisabled);
 
         ctx.AssertArgs(1, SYNTAX);
 
         ctx.AssertHelpCheck(0, SYNTAX + " - " + HELP);
 
         ulong team = ctx.Caller.GetTeam();
-        if (team is < 1 or > 2)
-            throw ctx.Reply("squad_not_in_team");
+        if (team is not 1 and not 2)
+            throw ctx.Reply(T.NotOnCaptureTeam);
 
         if (ctx.MatchParameter(0, "create"))
         {
             ctx.AssertHelpCheck(1, "/squad create (custom names for squads have been removed)");
             if (ctx.Caller.Squad is not null)
-                throw ctx.Reply("squad_e_insquad");
+                throw ctx.Reply(T.SquadAlreadyInSquad);
             if (SquadManager.Squads.Count(x => x.Team == team) >= SquadManager.ListUI.Squads.Length)
-                throw ctx.Reply("squad_too_many");
+                throw ctx.Reply(T.SquadsTooMany, SquadManager.ListUI.Squads.Length);
 
             Squad squad = SquadManager.CreateSquad(ctx.Caller, team);
-            ctx.Reply("squad_created", squad.Name);
+            ctx.Reply(T.SquadCreated, squad);
         }
         else if (ctx.MatchParameter(0, "join"))
         {
@@ -58,20 +56,19 @@ public class SquadCommand : Command
                 throw ctx.SendCorrectUsage("/squad join <name> - Join a squad, you can also just put the first letter of the squad name.");
 
             if (ctx.Caller.Squad is not null)
-                throw ctx.Reply("squad_e_insquad");
-            
+                throw ctx.Reply(T.SquadAlreadyInSquad);
+
             if (!SquadManager.FindSquad(name, team, out Squad squad))
-                throw ctx.Reply("squad_e_noexist", name);
+                throw ctx.Reply(T.SquadNotFound, name);
 
             if (squad.IsLocked && squad.Leader.SteamPlayer.playerID.group.m_SteamID != ctx.Caller.SteamPlayer.playerID.group.m_SteamID)
-                throw ctx.Reply("squad_e_locked");
-            else if (squad.IsFull())
-                throw ctx.Reply("squad_e_full");
-            else
-            {
-                SquadManager.JoinSquad(ctx.Caller, squad);
-                ctx.Defer();
-            }
+                throw ctx.Reply(T.SquadLocked, squad);
+
+            if (squad.IsFull())
+                throw ctx.Reply(T.SquadFull, squad);
+
+            SquadManager.JoinSquad(ctx.Caller, squad);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "promote"))
         {
@@ -80,12 +77,13 @@ public class SquadCommand : Command
             ctx.AssertArgs(2, "/squad promote <member> - Gives the provided player squad leader.");
 
             if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader.Steam64 != ctx.CallerID)
-                throw ctx.Reply("squad_e_notsquadleader");
+                throw ctx.Reply(T.SquadNotSquadLeader);
 
             if (!ctx.TryGet(1, out ulong playerId, out UCPlayer member, ctx.Caller.Squad.Members) || playerId == ctx.CallerID)
-                throw ctx.Reply("squad_e_playernotfound", ctx.Get(1)!);
+                throw ctx.Reply(T.PlayerNotFound);
 
             SquadManager.PromoteToLeader(ctx.Caller.Squad, member);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "kick"))
         {
@@ -94,43 +92,46 @@ public class SquadCommand : Command
             ctx.AssertArgs(2, "/squad kick <member> - Remove the provided player from your squad.");
 
             if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader.Steam64 != ctx.CallerID)
-                throw ctx.Reply("squad_e_notsquadleader");
+                throw ctx.Reply(T.SquadNotSquadLeader);
 
             if (!ctx.TryGet(1, out ulong playerId, out UCPlayer member, ctx.Caller.Squad.Members))
-                throw ctx.Reply("squad_e_playernotfound", ctx.Get(1)!);
+                throw ctx.Reply(T.PlayerNotFound);
 
             if (playerId == ctx.CallerID)
-                throw ctx.Reply("squad_e_playernotfound", ctx.Get(1)!);
+                throw ctx.Reply(T.PlayerNotFound);
 
             SquadManager.KickPlayerFromSquad(member, ctx.Caller.Squad);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "leave"))
         {
             ctx.AssertHelpCheck(1, "/squad leave - Leave your current squad.");
 
             if (ctx.Caller.Squad is null)
-                throw ctx.Reply("squad_e_notinsquad");
+                throw ctx.Reply(T.SquadNotInSquad);
 
             SquadManager.LeaveSquad(ctx.Caller, ctx.Caller.Squad);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "disband"))
         {
             ctx.AssertHelpCheck(1, "/squad disband - Kicks everyone from your squad and deletes it.");
 
             if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader.Steam64 != ctx.CallerID)
-                throw ctx.Reply("squad_e_notsquadleader");
+                throw ctx.Reply(T.SquadNotSquadLeader);
 
             SquadManager.DisbandSquad(ctx.Caller.Squad);
+            ctx.Defer();
         }
         else if (ctx.MatchParameter(0, "lock"))
         {
             ctx.AssertHelpCheck(1, "/squad lock - Lock your squad so only people from your steam group can join.");
 
             if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader.Steam64 != ctx.CallerID)
-                throw ctx.Reply("squad_e_notsquadleader");
+                throw ctx.Reply(T.SquadNotSquadLeader);
 
             SquadManager.SetLocked(ctx.Caller.Squad, true);
-            ctx.Reply("squad_locked");
+            ctx.Reply(T.SquadLockedSquad);
 
         }
         else if (ctx.MatchParameter(0, "unlock"))
@@ -138,10 +139,10 @@ public class SquadCommand : Command
             ctx.AssertHelpCheck(1, "/squad unlock - Allow anyone to join your squad.");
 
             if (ctx.Caller.Squad is null || ctx.Caller.Squad.Leader.Steam64 != ctx.CallerID)
-                throw ctx.Reply("squad_e_notsquadleader");
+                throw ctx.Reply(T.SquadNotSquadLeader);
 
             SquadManager.SetLocked(ctx.Caller.Squad, false);
-            ctx.Reply("squad_unlocked");
+            ctx.Reply(T.SquadUnlockedSquad);
         }
         else throw ctx.SendCorrectUsage(SYNTAX);
     }

@@ -4,8 +4,6 @@ using Uncreated.Warfare.Tickets;
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public abstract class BaseCTFTicketProvider : BaseTicketProvider
 {
-    public override void Load() { }
-    public override void Unload() { }
     public override void GetDisplayInfo(ulong team, out string message, out string tickets, out string bleed)
     {
         int intlBld = GetTeamBleed(team);

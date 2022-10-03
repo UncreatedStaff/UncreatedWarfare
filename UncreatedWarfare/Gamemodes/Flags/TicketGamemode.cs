@@ -1,6 +1,4 @@
 ﻿using SDG.NetTransport;
-using System;
-using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
@@ -26,7 +24,8 @@ public abstract class TicketGamemode<TProvider> : FlagGamemode, ITickets where T
     protected override void EventLoopAction()
     {
         base.EventLoopAction();
-        TicketManager.Provider.Tick();
+        if (State == EState.ACTIVE && TicketManager.Provider != null)
+            TicketManager.Provider.Tick();
     }
     public override void DeclareWin(ulong winner)
     {
@@ -38,17 +37,15 @@ public abstract class TicketGamemode<TProvider> : FlagGamemode, ITickets where T
         WinToastUI.SendToAllPlayers();
         string img1 = TeamManager.Team1Faction.FlagImageURL;
         string img2 = TeamManager.Team2Faction.FlagImageURL;
-        string tick1 = TicketManager.Team1Tickets.ToString(Data.Locale);
-        string tick2 = TicketManager.Team2Tickets.ToString(Data.Locale);
-        foreach (LanguageSet set in Localization.EnumerateLanguageSets())
+        foreach (LanguageSet set in LanguageSet.All())
         {
-            string t1tickets = Localization.Translate("win_ui_value_tickets", set.Language, tick1);
+            string t1tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team1Tickets);
             if (TicketManager.Team1Tickets <= 0)
                 t1tickets = t1tickets.Colorize("969696");
-            string t2tickets = Localization.Translate("win_ui_value_tickets", set.Language, tick2);
+            string t2tickets = T.WinUIValueTickets.Translate(set.Language, TicketManager.Team2Tickets);
             if (TicketManager.Team2Tickets <= 0)
                 t2tickets = t2tickets.Colorize("969696");
-            string header = Localization.Translate("win_ui_header_winner", set.Language, TeamManager.TranslateName(winner, set.Language, true));
+            string header = T.WinUIHeaderWinner.Translate(set.Language, TeamManager.GetFactionSafe(winner)!);
             while (set.MoveNext())
             {
                 if (!set.Next.IsOnline || set.Next.HasUIHidden) continue;

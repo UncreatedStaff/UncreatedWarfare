@@ -1,21 +1,19 @@
 ﻿using SDG.Unturned;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests.Types;
 using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Vehicles;
@@ -223,7 +221,8 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        DailyQuests.Tick();
+        if (!UCWarfare.Config.DisableDailyQuests)
+            DailyQuests.Tick();
         for (int i = 0; i < RegisteredTrackers.Count; i++)
         {
             BaseQuestTracker tracker = RegisteredTrackers[i];
@@ -254,7 +253,10 @@ public static class QuestManager
         }
         ActionLogger.Add(EActionLogType.COMPLETE_QUEST, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
-            DailyQuests.OnDailyQuestCompleted(tracker);
+        {
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.OnDailyQuestCompleted(tracker);
+        }
         else
         {
             if (tracker.PresetKey != default)
@@ -281,7 +283,10 @@ public static class QuestManager
         }
         ActionLogger.Add(EActionLogType.MAKE_QUEST_PROGRESS, tracker.QuestData.QuestType.ToString() + ": " + tracker.GetDisplayString(true), tracker.Player == null ? 0 : tracker.Player.Steam64);
         if (tracker.IsDailyQuest)
-            DailyQuests.OnDailyQuestUpdated(tracker);
+        {
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.OnDailyQuestUpdated(tracker);
+        }
         else
         {
             if (tracker.Preset != null)
@@ -330,7 +335,7 @@ public static class QuestManager
         {
             types = e.Types;
         }
-        
+
         foreach (Type type in types.Where<Type>(x => x != null && x.IsClass && x.IsSubclassOf(typeof(BaseQuestData)) && !x.IsAbstract))
         {
             QuestDataAttribute? attribute = type.GetCustomAttributes().OfType<QuestDataAttribute>().FirstOrDefault();
@@ -629,7 +634,7 @@ public static class QuestManager
                     }
                 }
             }
-            nextFile: ;
+        nextFile:;
         }
     }
     #endregion
@@ -684,10 +689,10 @@ public static class QuestManager
         foreach (INotifyBunkerSpawn tracker in RegisteredTrackers.OfType<INotifyBunkerSpawn>())
             tracker.OnPlayerSpawnedAtBunker(bunker, fob, spawner);
     }
-    public static void OnVehicleDestroyed(UCPlayer? owner, UCPlayer destroyer, VehicleData data, Components.VehicleComponent component)
+    public static void OnVehicleDestroyed(VehicleDestroyed e)
     {
         foreach (INotifyVehicleDestroyed tracker in RegisteredTrackers.OfType<INotifyVehicleDestroyed>())
-            tracker.OnVehicleDestroyed(owner, destroyer, data, component);
+            tracker.OnVehicleDestroyed(e);
     }
     public static void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
     {

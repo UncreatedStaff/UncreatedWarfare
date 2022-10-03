@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 
@@ -252,8 +255,133 @@ public struct SerializableTransform : IJsonReadWrite
         }
     }
 }
+
+/// <summary>Wrapper for a <see cref="Dictionary{string, string}"/>, has custom JSON reading to take a string or dictionary of translations.<br/><see langword="null"/> = empty list.</summary>
+/// <remarks>Extension methods located in <see cref="T"/>.</remarks>
+[JsonConverter(typeof(TranslationListConverter))]
+public sealed class TranslationList : Dictionary<string, string>
+{
+    public TranslationList() { }
+    public TranslationList(int capacity) : base(capacity) { }
+    public TranslationList(string @default)
+    {
+        Add(L.DEFAULT, @default);
+    }
+    public TranslationList(int capacity, string @default) : base(capacity)
+    {
+        Add(L.DEFAULT, @default);
+    }
+}
+public sealed class TranslationListConverter : JsonConverter<TranslationList>
+{
+    public override TranslationList? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        JsonTokenType token = reader.TokenType;
+        switch (token)
+        {
+            case JsonTokenType.Null:
+                return new TranslationList();
+            case JsonTokenType.String:
+                return new TranslationList(reader.GetString()!.Replace("\\n", "\n"));
+            case JsonTokenType.StartObject:
+                TranslationList list = new TranslationList(2);
+                while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    string? key = reader.GetString();
+                    if (!string.IsNullOrWhiteSpace(key) && reader.Read() && reader.TokenType == JsonTokenType.String)
+                    {
+                        string? val = reader.GetString();
+                        if (val is not null)
+                            list.Add(key!, val.Replace("\\n", "\n"));
+                    }
+                    else throw new JsonException("Invalid token type for TranslationList at key \"" + (key ?? "null") + "\".");
+                }
+                return list;
+            default:
+                throw new JsonException("Invalid token type for TranslationList.");
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, TranslationList value, JsonSerializerOptions options)
+    {
+        if (value == null || value.Count == 0)
+            writer.WriteNullValue();
+        else if (value.Count == 1 && value.TryGetValue(L.DEFAULT, out string v))
+            writer.WriteStringValue(v.Replace("\n", "\\n"));
+        else
+        {
+            writer.WriteStartObject();
+            foreach (KeyValuePair<string, string> kvp in value)
+            {
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteStringValue(kvp.Value.Replace("\n", "\\n"));
+            }
+            writer.WriteEndObject();
+        }
+    }
+}
+
 public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 {
+    public const string ENGLISH = "en-us";
+    public const string RUSSIAN = "ru-ru";
+    public const string SPANISH = "es-es";
+    public const string GERMAN = "de-de";
+    public const string ARABIC = "ar-sa";
+    public const string FRENCH = "fr-fr";
+    public const string POLISH = "pl-pl";
+    public const string PORTUGUESE = "pt-pt";
+    public const string FILIPINO = "fil";
+    public const string NORWEGIAN = "nb-no";
+    public const string ROMANIAN = "ro-ro";
+    public const string DUTCH = "nl-nl";
+    public const string CHINESE_SIMPLIFIED = "zh-cn";
+    public const string CHINESE_TRADITIONAL = "zh-tw";
+    public static readonly CultureInfo ENGLISH_C = new CultureInfo("en-US");
+    public static readonly CultureInfo RUSSIAN_C = new CultureInfo("ru-RU");
+    public static readonly CultureInfo SPANISH_C = new CultureInfo("es-ES");
+    public static readonly CultureInfo GERMAN_C = new CultureInfo("de-DE");
+    public static readonly CultureInfo ARABIC_C = new CultureInfo("ar-SA");
+    public static readonly CultureInfo FRENCH_C = new CultureInfo("fr-FR");
+    public static readonly CultureInfo POLISH_C = new CultureInfo("pl-PL");
+    public static readonly CultureInfo PORTUGUESE_C = new CultureInfo("pt-PT");
+    public static readonly CultureInfo FILIPINO_C = new CultureInfo("fil-PH");
+    public static readonly CultureInfo NORWEGIAN_C = new CultureInfo("nb-NO");
+    public static readonly CultureInfo ROMANIAN_C = new CultureInfo("ro-RO");
+    public static readonly CultureInfo DUTCH_C = new CultureInfo("nl-NL");
+    public static readonly CultureInfo CHINESE_C = new CultureInfo("zh-CN");
+
+    public static CultureInfo GetCultureInfo(string? language)
+    {
+        if (language is null)
+            return Data.Locale;
+        if (language.Equals(ENGLISH, StringComparison.Ordinal))
+            return ENGLISH_C;
+        if (language.Equals(RUSSIAN, StringComparison.Ordinal))
+            return RUSSIAN_C;
+        if (language.Equals(SPANISH, StringComparison.Ordinal))
+            return SPANISH_C;
+        if (language.Equals(GERMAN, StringComparison.Ordinal))
+            return GERMAN_C;
+        if (language.Equals(ARABIC, StringComparison.Ordinal))
+            return ARABIC_C;
+        if (language.Equals(FRENCH, StringComparison.Ordinal))
+            return FRENCH_C;
+        if (language.Equals(POLISH, StringComparison.Ordinal))
+            return POLISH_C;
+        if (language.Equals(PORTUGUESE, StringComparison.Ordinal))
+            return PORTUGUESE_C;
+        if (language.Equals(NORWEGIAN, StringComparison.Ordinal))
+            return NORWEGIAN_C;
+        if (language.Equals(ROMANIAN, StringComparison.Ordinal))
+            return ROMANIAN_C;
+        if (language.Equals(DUTCH, StringComparison.Ordinal))
+            return DUTCH_C;
+        if (language.Equals(CHINESE_SIMPLIFIED, StringComparison.Ordinal) ||
+            language.Equals(CHINESE_TRADITIONAL, StringComparison.Ordinal))
+            return CHINESE_C;
+        return Data.Locale;
+    }
     public string key;
     public string display_name;
     public string[] values;
@@ -293,7 +421,9 @@ public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
         }
     }
 
+    [FormatDisplay("Display Name")]
     public const string DISPLAY_NAME_FORMAT = "d";
+    [FormatDisplay("Key Code")]
     public const string KEY_FORMAT = "k";
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
@@ -317,8 +447,6 @@ public struct LanguageAliasSet : IJsonReadWrite, ITranslationArgument
 }
 public static partial class JSONMethods
 {
-    public const string DEFAULT_LANGUAGE = "en-us";
-
     public static Dictionary<string, Color> LoadColors(out Dictionary<string, string> HexValues)
     {
 #if DEBUG
@@ -417,7 +545,7 @@ public static partial class JSONMethods
             goto def;
         }
 
-        def:
+    def:
         Dictionary<string, Color> NewDefaults = new Dictionary<string, Color>(DefaultColors.Count);
         foreach (KeyValuePair<string, string> color in DefaultColors)
         {
@@ -425,116 +553,6 @@ public static partial class JSONMethods
         }
         HexValues = DefaultColors;
         return NewDefaults;
-    }
-    public static Dictionary<string, Dictionary<string, TranslationData>> LoadTranslations()
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        string[] langDirs = Directory.GetDirectories(Data.Paths.LangStorage, "*", SearchOption.TopDirectoryOnly);
-        Dictionary<string, Dictionary<string, TranslationData>> languages = new Dictionary<string, Dictionary<string, TranslationData>>();
-        string defLang = Path.Combine(Data.Paths.LangStorage, DEFAULT_LANGUAGE);
-        F.CheckDir(defLang, out bool folderIsThere);
-        if (folderIsThere)
-        {
-            string loc = Path.Combine(defLang, "localization.json");
-            if (!File.Exists(loc))
-            {
-                Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-                using (FileStream stream = new FileStream(loc, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None))
-                {
-                    Utf8JsonWriter writer = new Utf8JsonWriter(stream, JsonEx.writerOptions);
-                    writer.WriteStartObject();
-                    foreach (KeyValuePair<string, string> translation in DefaultTranslations)
-                    {
-                        writer.WritePropertyName(translation.Key);
-                        writer.WriteStringValue(translation.Value);
-                        defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
-                    }
-                    writer.WriteEndObject();
-                    writer.Dispose();
-                    stream.Close();
-                    stream.Dispose();
-                }
-
-                languages.Add(DEFAULT_LANGUAGE, defaultLocal);
-            }
-            foreach (string folder in langDirs)
-            {
-                DirectoryInfo directoryInfo = new DirectoryInfo(folder);
-                string lang = directoryInfo.Name;
-                FileInfo[] langFiles = directoryInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
-                foreach (FileInfo info in langFiles)
-                {
-                    if (info.Name == "localization.json")
-                    {
-                        if (languages.ContainsKey(lang)) continue;
-                        using (FileStream stream = new FileStream(info.FullName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        {
-                            long len = stream.Length;
-                            if (len > int.MaxValue)
-                            {
-                                L.LogError(info.FullName + " is too long to read.");
-                                if (lang == DEFAULT_LANGUAGE && !languages.ContainsKey(DEFAULT_LANGUAGE))
-                                {
-                                    Dictionary<string, TranslationData> defaultLocal = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-                                    foreach (KeyValuePair<string, string> translation in DefaultTranslations)
-                                    {
-                                        defaultLocal.Add(translation.Key, new TranslationData(translation.Value));
-                                    }
-                                    languages.Add(DEFAULT_LANGUAGE, defaultLocal);
-                                }
-                            }
-                            else
-                            {
-                                Dictionary<string, TranslationData> local = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-                                byte[] bytes = new byte[len];
-                                stream.Read(bytes, 0, (int)len);
-                                try
-                                {
-                                    Utf8JsonReader reader = new Utf8JsonReader(bytes, JsonEx.readerOptions);
-                                    while (reader.Read())
-                                    {
-                                        if (reader.TokenType == JsonTokenType.StartObject) continue;
-                                        else if (reader.TokenType == JsonTokenType.EndObject) break;
-                                        else if (reader.TokenType == JsonTokenType.PropertyName)
-                                        {
-                                            string key = reader.GetString()!;
-                                            if (reader.Read() && reader.TokenType == JsonTokenType.String)
-                                            {
-                                                string value = reader.GetString()!;
-                                                if (local.ContainsKey(key))
-                                                    L.LogWarning("Duplicate key \"" + key + "\" in localization file for " + lang);
-                                                else
-                                                    local.Add(key, new TranslationData(value));
-                                            }
-                                        }
-                                    }
-                                    languages.Add(lang, local);
-                                }
-                                catch (Exception e)
-                                {
-                                    L.LogError("Failed to read " + lang + " translations.");
-                                    L.LogError(e);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            L.Log($"Loaded {languages.Count} languages, " + DEFAULT_LANGUAGE + $" having {(languages.TryGetValue(DEFAULT_LANGUAGE, out Dictionary<string, TranslationData> d) ? d.Count.ToString(Data.Locale) : "0")} translations.");
-        }
-        else
-        {
-            L.LogError("Failed to load translations, see above.");
-            Dictionary<string, TranslationData> rtn = new Dictionary<string, TranslationData>(DefaultTranslations.Count);
-            foreach (KeyValuePair<string, string> kvp in DefaultTranslations)
-                rtn.Add(kvp.Key, new TranslationData(kvp.Value));
-            if (!languages.ContainsKey(DEFAULT_LANGUAGE))
-                languages.Add(DEFAULT_LANGUAGE, rtn);
-            return languages;
-        }
-        return languages;
     }
     public static Dictionary<string, Vector3> LoadExtraPoints()
     {
@@ -839,7 +857,7 @@ public static partial class JSONMethods
             L.LogError("Failed to load language aliases, see above. Loading default language aliases.");
             goto def;
         }
-        def:
+    def:
         Dictionary<string, LanguageAliasSet> defaultLanguageAliasSets = new Dictionary<string, LanguageAliasSet>(DefaultLanguageAliasSets.Count);
         for (int i = 0; i < DefaultLanguageAliasSets.Count; i++)
         {
@@ -847,5 +865,112 @@ public static partial class JSONMethods
             defaultLanguageAliasSets.Add(set.key, set);
         }
         return defaultLanguageAliasSets;
+    }
+}
+
+public sealed class Vector3JsonConverter : JsonConverter<Vector3>
+{
+    private static readonly char[] splitChars = new char[] { ',' };
+    private static readonly InstanceSetter<Utf8JsonWriter, JsonWriterOptions> SetOptions = F.GenerateInstanceSetter<Utf8JsonWriter, JsonWriterOptions>("_options", BindingFlags.NonPublic);
+    public override Vector3 Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        float x = 0f, y = 0f, z = 0f;
+        if (reader.TokenType == JsonTokenType.StartArray)
+        {
+            int ct = 0;
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndArray)
+                {
+                    if (ct == 3)
+                        break;
+                    throw new JsonException("Array notation for Vector3 must provide 3 float elements.");
+                }
+                if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out float fl))
+                {
+                    switch (++ct)
+                    {
+                        case 1:
+                            x = fl;
+                            break;
+                        case 2:
+                            y = fl;
+                            break;
+                        case 3:
+                            z = fl;
+                            break;
+                    }
+                }
+                else throw new JsonException("Invalid number in Vector3 array notation.");
+            }
+        }
+        else if (reader.TokenType == JsonTokenType.StartObject)
+        {
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                    break;
+                if (reader.TokenType == JsonTokenType.PropertyName)
+                {
+                    string? prop = reader.GetString()!;
+                    if (reader.Read() && prop is not null)
+                    {
+                        if (prop.Equals("x", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out float fl))
+                                x = fl;
+                            else
+                                throw new JsonException("Invalid x in Vector3 object notation.");
+                        }
+                        else if (prop.Equals("y", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out float fl))
+                                y = fl;
+                            else
+                                throw new JsonException("Invalid y in Vector3 object notation.");
+                        }
+                        else if (prop.Equals("z", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out float fl))
+                                z = fl;
+                            else
+                                throw new JsonException("Invalid z in Vector3 object notation.");
+                        }
+                    }
+                }
+            }
+        }
+        else if (reader.TokenType == JsonTokenType.String)
+        {
+            string[] strs = reader.GetString()!.Split(splitChars, StringSplitOptions.RemoveEmptyEntries);
+            if (strs.Length == 3)
+            {
+                if (!float.TryParse(strs[0].Replace('(', ' '), NumberStyles.Number, Data.Locale, out x))
+                    throw new JsonException("Invalid x in Vector3 string notation.");
+                if (!float.TryParse(strs[1], NumberStyles.Number, Data.Locale, out y))
+                    throw new JsonException("Invalid y in Vector3 string notation.");
+                if (!float.TryParse(strs[2].Replace(')', ' '), NumberStyles.Number, Data.Locale, out z))
+                    throw new JsonException("Invalid z in Vector3 string notation.");
+            }
+            else
+                throw new JsonException("String notation for Vector3 must provide 3 float elements.");
+        }
+        else
+            throw new JsonException("Unexpected token " + reader.TokenType + " for reading Vector3.");
+
+        return new Vector3(x, y, z);
+    }
+    public override void Write(Utf8JsonWriter writer, Vector3 value, JsonSerializerOptions options)
+    {
+        JsonWriterOptions opt2 = writer.Options;
+        if (opt2.Indented)
+            SetOptions(writer, opt2 with { Indented = false });
+        writer.WriteStartArray();
+        writer.WriteNumberValue(value.x);
+        writer.WriteNumberValue(value.y);
+        writer.WriteNumberValue(value.z);
+        writer.WriteEndArray();
+        if (opt2.Indented)
+            SetOptions(writer, opt2);
     }
 }

@@ -64,9 +64,9 @@ public static partial class Patches
                                         if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
                                         {
                                             if (owner!.Squad == null)
-                                                enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
+                                                enterer.SendChat(T.VehicleWaitForOwner, owner);
                                             else
-                                                enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
+                                                enterer.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
 
                                             __result = false;
                                         }
@@ -77,7 +77,7 @@ public static partial class Patches
                             {
                                 if (!VehicleBay.TryGetFirstNonCrewSeat(__instance, vehicleData, out seat))
                                 {
-                                    enterer.Message("vehicle_no_passenger_seats");
+                                    enterer.SendChat(T.VehicleNoPassengerSeats);
                                     __result = false;
                                 }
                             }
@@ -93,9 +93,9 @@ public static partial class Patches
                                     if (!VehicleBay.TryGetFirstNonDriverSeat(__instance, out seat))
                                     {
                                         if (owner!.Squad == null)
-                                            enterer.Message("vehicle_wait_for_owner", owner.CharacterName);
+                                            enterer.SendChat(T.VehicleWaitForOwner, owner);
                                         else
-                                            enterer.Message("vehicle_wait_for_owner_or_squad", owner.CharacterName, owner.Squad.Name);
+                                            enterer.SendChat(T.VehicleWaitForOwnerOrSquad, owner, owner.Squad);
 
                                         __result = false;
                                     }
@@ -106,7 +106,7 @@ public static partial class Patches
                     }
                 }
                 if (seat == 0 && __instance.transform.TryGetComponent(out VehicleComponent c))
-                {   
+                {
                     c.LastDriver = player.channel.owner.playerID.steamID.m_SteamID;
                     c.LastDriverTime = Time.realtimeSinceStartup;
                 }

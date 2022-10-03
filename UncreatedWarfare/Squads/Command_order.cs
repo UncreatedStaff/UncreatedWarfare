@@ -35,26 +35,28 @@ public class OrderCommand : Command
 
         ctx.AssertGamemode<ISquads>();
 
-        ctx.AssertArgs(1, "order_usage_1");
+        if (!ctx.HasArgs(1))
+            throw ctx.Reply(T.OrderUsageAll);
 
         if (ctx.MatchParameter(0, "actions"))
-            throw ctx.Reply("order_actions");
+            throw ctx.Reply(T.OrderActions, ACTIONS);
 
         string squadName = ctx.Get(0)!;
 
         if (ctx.Caller.Squad == null || ctx.Caller.Squad.Leader.Steam64 != ctx.Caller.Steam64)
-            throw ctx.Reply("order_e_not_squadleader");
+            throw ctx.Reply(T.OrderNotSquadleader);
 
         if (SquadManager.FindSquad(squadName, ctx.Caller.GetTeam(), out Squad squad))
         {
-            ctx.AssertArgs(2, "order_usage_3", squad.Name);
+            if (!ctx.HasArgs(2))
+                throw ctx.Reply(T.OrderUsageBadAction, squad);
 
             if (ctx.TryGet(1, out EOrder type))
             {
                 if (Orders.HasOrder(squad, out Order order) && order.Commander != ctx.Caller)
                 {
                     // TODO: check if order can be overwritten
-                    throw ctx.Reply("order_e_alreadyhasorder", squad.Name, order.Commander.CharacterName);
+                    throw ctx.Reply(T.OrderAlreadyHasOrder, squad, order.Commander);
                 }
                 else
                 {
@@ -67,8 +69,8 @@ public class OrderCommand : Command
                     if (Physics.Raycast(new Vector3(playerMarker.x, Level.HEIGHT, playerMarker.z), new Vector3(0f, -1, 0f), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
                     {
                         Vector3 marker = hit.point;
-                        string message;
-                        string[] formatting;
+                        Translation message;
+                        object[] formatting;
                         switch (type)
                         {
                             case EOrder.ATTACK or EOrder.DEFEND:
@@ -79,23 +81,23 @@ public class OrderCommand : Command
                                         throw ctx.SendGamemodeError();
                                     case IFlagRotation rot:
                                         Vector2 mkr = new Vector2(marker.x, marker.z);
-                                        Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                        Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.ZoneData.IsInside(mkr));
                                         if (flag is null)
                                             goto default;
-                                        formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
+                                        formatting = new object[] { flag };
                                         if (type is EOrder.ATTACK)
                                         {
                                             if (flag.IsAttackSite(team))
-                                                message = "order_attack_objective";
+                                                message = T.OrderUIAttackObjective;
                                             else
-                                                message = "order_attack_flag";
+                                                message = T.OrderUIAttackFlag;
                                         }
                                         else
                                         {
                                             if (flag.IsDefenseSite(team))
-                                                message = "order_defend_objective";
+                                                message = T.OrderUIDefendObjective;
                                             else
-                                                message = "order_defend_flag";
+                                                message = T.OrderUIDefendFlag;
                                         }
                                         break;
                                     case Insurgency ins:
@@ -117,19 +119,19 @@ public class OrderCommand : Command
                                             goto default;
                                         else
                                         {
-                                            formatting = new string[] { ins.Caches[ind].Cache.Name };
+                                            formatting = new object[] { ins.Caches[ind].Cache };
                                             if (type is EOrder.ATTACK)
-                                                message = "order_attack_cache";
+                                                message = T.OrderUIAttackCache;
                                             else
-                                                message = "order_defend_cache";
+                                                message = T.OrderUIDefendCache;
                                         }
                                         break;
                                     default:
-                                        formatting = new string[] { new GridLocation(marker).ToString() };
+                                        formatting = new object[] { new GridLocation(marker) };
                                         if (type is EOrder.ATTACK)
-                                            message = "order_attack_area";
+                                            message = T.OrderUIAttackNearArea;
                                         else
-                                            message = "order_defend_area";
+                                            message = T.OrderUIDefendNearArea;
                                         break;
                                 }
                                 ctx.LogAction(EActionLogType.CREATED_ORDER, (type is EOrder.ATTACK ? "ATTACK" : "DEFEND") + " AT " + marker.ToString("N2"));
@@ -138,9 +140,9 @@ public class OrderCommand : Command
                                 ctx.AssertGamemode<IFOBs>();
 
                                 if (FOB.GetNearestFOB(marker, EFOBRadius.FOB_PLACEMENT, team) != null)
-                                    throw ctx.Reply("order_e_buildfob_fobexists");
+                                    throw ctx.Reply(T.OrderBuildFOBExists);
                                 else if (FOB.GetFOBs(team).Count >= FOBManager.Config.FobLimit)
-                                    throw ctx.Reply("order_e_buildfob_foblimit");
+                                    throw ctx.Reply(T.OrderBuildFOBTooMany);
                                 else
                                 {
                                     switch (Data.Gamemode)
@@ -149,12 +151,12 @@ public class OrderCommand : Command
                                             throw ctx.SendGamemodeError();
                                         case IFlagRotation rot:
                                             Vector2 mkr = new Vector2(marker.x, marker.z);
-                                            Flag flag = rot.Rotation.Find(f => f.ZoneData.IsInside(mkr));
+                                            Flag flag = rot.Rotation.Find(f => f.Discovered(team) && f.ZoneData.IsInside(mkr));
                                             // flag is not discovered or is taken
-                                            if (flag is null || !flag.Discovered(team) || flag.IsFull(Teams.TeamManager.Other(team)))
+                                            if (flag is null || flag.IsFull(Teams.TeamManager.Other(team)))
                                                 goto default;
-                                            formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
-                                            message = "order_buildfob_flag";
+                                            formatting = new object[] { flag };
+                                            message = T.OrderUIBuildFobFlag;
                                             break;
                                         case Insurgency ins:
                                             float sqrDst = float.NaN;
@@ -173,13 +175,13 @@ public class OrderCommand : Command
                                                 goto default;
                                             else
                                             {
-                                                formatting = new string[] { ins.Caches[ind].Cache.Name };
-                                                message = "order_buildfob_cache";
+                                                formatting = new object[] { ins.Caches[ind].Cache };
+                                                message = T.OrderUIBuildFobNearCache;
                                             }
                                             break;
                                         default:
-                                            formatting = new string[] { new GridLocation(marker).ToString() };
-                                            message = "order_buildfob_area";
+                                            formatting = new object[] { new GridLocation(marker) };
+                                            message = T.OrderUIBuildFobNearArea;
                                             break;
                                     }
 
@@ -188,7 +190,7 @@ public class OrderCommand : Command
                                 break;
                             case EOrder.MOVE:
                                 Vector3 avgMemberPoint = Vector3.zero;
-                                foreach (var member in squad.Members)
+                                foreach (UCPlayer member in squad.Members)
                                     avgMemberPoint += member.Position;
 
                                 avgMemberPoint /= squad.Members.Count;
@@ -207,8 +209,8 @@ public class OrderCommand : Command
                                             // flag is not discovered or is taken
                                             if (flag is null || !flag.Discovered(team))
                                                 goto default;
-                                            formatting = new string[] { flag.ShortName.Colorize(flag.TeamSpecificHexColor) };
-                                            message = "order_move_flag";
+                                            formatting = new object[] { flag };
+                                            message = T.OrderUIMoveFlag;
                                             break;
                                         case Insurgency ins:
                                             float sqrDst = float.NaN;
@@ -227,22 +229,19 @@ public class OrderCommand : Command
                                                 goto default;
                                             else
                                             {
-                                                formatting = new string[] { ins.Caches[ind].Cache.Name };
-                                                message = "order_move_cache";
+                                                formatting = new object[] { ins.Caches[ind].Cache };
+                                                message = T.OrderUIMoveCache;
                                             }
                                             break;
                                         default:
-                                            formatting = new string[] { new GridLocation(marker).ToString() };
-                                            message = "order_move_area";
+                                            formatting = new object[] { new GridLocation(marker) };
+                                            message = T.OrderUIMoveNearArea;
                                             break;
                                     }
-                                    formatting = new string[] { new GridLocation(marker).ToString() };
-                                    message = "order_move_squad";
-
                                     ctx.LogAction(EActionLogType.CREATED_ORDER, "MOVE TO " + marker.ToString("N2"));
 
                                 }
-                                else throw ctx.Reply("order_e_squadtooclose", squad.Name);
+                                else throw ctx.Reply(T.OrderSquadTooClose, squad);
                                 break;
                             default:
                                 throw ctx.SendUnknownError();
@@ -255,22 +254,22 @@ public class OrderCommand : Command
             markerError:
                 throw ctx.Reply(type switch
                 {
-                    EOrder.ATTACK => Data.Is<Insurgency>() ? "order_e_attack_marker_ins" : "order_e_attack_marker",
-                    EOrder.DEFEND => Data.Is<Insurgency>() ? "order_e_defend_marker_ins" : "order_e_defend_marker",
-                    EOrder.BUILDFOB => "order_e_buildfob_marker",
-                    EOrder.MOVE => "order_e_move_marker",
-                    _ => "unknown_error"
+                    EOrder.ATTACK => Data.Is<Insurgency>() ? T.OrderAttackMarkerIns : T.OrderAttackMarkerCTF,
+                    EOrder.DEFEND => Data.Is<Insurgency>() ? T.OrderDefenseMarkerIns : T.OrderDefenseMarkerCTF,
+                    EOrder.BUILDFOB => T.OrderBuildFOBError,
+                    EOrder.MOVE => T.OrderMoveError,
+                    _ => T.UnknownError
                 });
             }
             else
-                ctx.Reply("order_e_actioninvalid", ctx.Get(1)!, ACTIONS);
+                ctx.Reply(T.OrderActionInvalid, ctx.Get(1)!, ACTIONS);
         }
         else
         {
             if (ctx.HasArgsExact(1))
-                ctx.Reply("order_usage_2", "squad_name");
+                ctx.Reply(T.OrderUsageNoAction);
             else
-                ctx.Reply("order_e_squadnoexist", ctx.Get(0)!);
+                ctx.Reply(T.OrderSquadNoExist, ctx.Get(0)!);
         }
 #endif
     }

@@ -2,9 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
+using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Structures;
@@ -73,7 +73,7 @@ public class VehicleBayCommand : Command
                         VehicleSpawner.UpdateSigns(data.VehicleID);
                         VehicleBay.SaveSingleton();
                     }
-                    ctx.Reply("vehiclebay_delay_removed", rem.ToString(Data.Locale));
+                    ctx.Reply(T.VehicleBayRemovedDelay, rem);
                     return;
                 }
                 EDelayType type;
@@ -111,7 +111,7 @@ public class VehicleBayCommand : Command
                 }
                 else if (ctx.ArgumentCount < 4)
                 {
-                    ctx.Reply("correct_usage", "/vehiclebay delay " + ctx.Get(1)!.ToLower() + " " + ctx.Get(1)!.ToLower() + " <value> [gamemode]");
+                    ctx.SendCorrectUsage("/vehiclebay delay " + ctx.Get(1)!.ToLower() + " " + ctx.Get(1)!.ToLower() + " <value> [gamemode]");
                     return;
                 }
                 else if (ctx.ArgumentCount > 4)
@@ -120,10 +120,10 @@ public class VehicleBayCommand : Command
                 if (string.IsNullOrEmpty(gamemode) && type == EDelayType.NONE)
                 {
                     gamemode = "<";
-                    foreach (string key in Gamemode.GAMEMODES.Keys)
+                    foreach (KeyValuePair<string, Type> gm in Gamemode.GAMEMODES)
                     {
                         if (gamemode.Length != 1) gamemode += "|";
-                        gamemode += key;
+                        gamemode += gm.Key;
                     }
                     gamemode += ">";
                     if (adding)
@@ -135,21 +135,21 @@ public class VehicleBayCommand : Command
                 if (!string.IsNullOrEmpty(gamemode))
                 {
                     string? gm = null;
-                    foreach (string key in Gamemode.GAMEMODES.Keys)
+                    foreach (KeyValuePair<string, Type> gm2 in Gamemode.GAMEMODES)
                     {
-                        if (key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
+                        if (gm2.Key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
                         {
-                            gm = key;
+                            gm = gm2.Key;
                             break;
                         }
                     }
                     if (string.IsNullOrEmpty(gm))
                     {
                         gamemode = "<";
-                        foreach (string key in Gamemode.GAMEMODES.Keys)
+                        foreach (KeyValuePair<string, Type> gm2 in Gamemode.GAMEMODES)
                         {
                             if (gamemode.Length != 1) gamemode += "|";
-                            gamemode += key;
+                            gamemode += gm2.Key;
                         }
                         gamemode += ">";
                         if (adding)
@@ -172,7 +172,7 @@ public class VehicleBayCommand : Command
                 {
                     ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "ADDED DELAY " + type.ToString() + " VALUE: " + val.ToString()
                         + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
-                    data.AddDelay(type, val, gamemode);
+                    Delay.AddDelay(ref data.Delays, type, val, gamemode);
                     VehicleBay.SaveSingleton();
                     if (VehicleSigns.Loaded)
                         VehicleSpawner.UpdateSigns(data.VehicleID);
@@ -181,12 +181,12 @@ public class VehicleBayCommand : Command
                         VehicleBayComponent? svc = spawn.Component;
                         if (svc != null) svc.UpdateTimeDelay();
                     }
-                    ctx.Reply("vehiclebay_delay_added", type.ToString().ToLower(), val.ToString(Data.Locale), string.IsNullOrEmpty(gamemode) ? "any" : gamemode!);
+                    ctx.Reply(T.VehicleBayAddedDelay, type, val, string.IsNullOrEmpty(gamemode) ? "any" : gamemode!);
                 }
                 else
                 {
                     int rem = 0;
-                    while (data.RemoveDelay(type, val, gamemode)) rem++;
+                    while (Delay.RemoveDelay(ref data.Delays, type, val, gamemode)) rem++;
                     if (rem > 0)
                     {
                         if (VehicleSigns.Loaded)
@@ -195,11 +195,11 @@ public class VehicleBayCommand : Command
                         ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, "REMOVED " + rem.ToString(Data.Locale) + " DELAY(S) " + type.ToString() + " VALUE: " + val.ToString()
                             + " GAMEMODE?: " + (gamemode == null ? "ANY" : gamemode.ToUpper()));
                     }
-                    ctx.Reply("vehiclebay_delay_removed", rem.ToString(Data.Locale));
+                    ctx.Reply(T.VehicleBayRemovedDelay, rem);
                 }
             }
             else
-                ctx.Reply("vehiclebay_e_noexist");
+                ctx.Reply(T.VehicleBayNoTarget);
         }
         else if (ctx.MatchParameter(0, "add", "a", "create"))
         {
@@ -213,13 +213,13 @@ public class VehicleBayCommand : Command
                 {
                     ctx.LogAction(EActionLogType.CREATE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
                     VehicleBay.AddRequestableVehicle(vehicle);
-                    ctx.Reply("vehiclebay_added", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                    ctx.Reply(T.VehicleBayAdded, vehicle.asset);
                 }
                 else
-                    ctx.Reply("vehiclebay_e_exist", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                    ctx.Reply(T.VehicleBayAlreadyAdded, vehicle.asset);
             }
             else
-                ctx.Reply("vehiclebay_e_novehicle");
+                ctx.Reply(T.VehicleBayNoTarget);
         }
         else if (ctx.MatchParameter(0, "remove", "r", "delete"))
         {
@@ -233,13 +233,13 @@ public class VehicleBayCommand : Command
                 {
                     ctx.LogAction(EActionLogType.DELETE_VEHICLE_DATA, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N}");
                     VehicleBay.RemoveRequestableVehicle(vehicle.asset.GUID);
-                    ctx.Reply("vehiclebay_removed", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                    ctx.Reply(T.VehicleBayRemoved, vehicle.asset);
                 }
                 else
-                    ctx.Reply("vehiclebay_e_noexist");
+                    ctx.Reply(T.VehicleBayNotAdded, vehicle.asset);
             }
             else
-                ctx.Reply("vehiclebay_e_novehicle");
+                ctx.Reply(T.VehicleBayNoTarget);
         }
         else if (ctx.MatchParameter(0, "savemeta", "savemetadata", "metadata"))
         {
@@ -254,13 +254,13 @@ public class VehicleBayCommand : Command
                     ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{vehicle.asset.vehicleName} / {vehicle.asset.id} / {vehicle.asset.GUID:N} - SAVED METADATA");
                     data.SaveMetaData(vehicle);
                     VehicleBay.SaveSingleton();
-                    ctx.Reply("vehiclebay_savemeta", vehicle.asset == null || vehicle.asset.vehicleName == null ? vehicle.id.ToString(Data.Locale) : vehicle.asset.vehicleName);
+                    ctx.Reply(T.VehicleBaySavedMeta, vehicle.asset);
                 }
                 else
-                    ctx.Reply("vehiclebay_e_noexist");
+                    ctx.Reply(T.VehicleBayNotAdded);
             }
             else
-                ctx.Reply("vehiclebay_e_novehicle");
+                ctx.Reply(T.VehicleBayNoTarget);
         }
         else if (ctx.MatchParameter(0, "set", "s"))
         {
@@ -294,46 +294,46 @@ public class VehicleBayCommand : Command
                     VehicleBay.SetItems(data.VehicleID, items.ToArray());
 
                     if (items.Count == 0)
-                        ctx.Reply("vehiclebay_cleareditems", asset?.vehicleName ?? data.VehicleID.ToString("N"), items.Count.ToString(Data.Locale));
+                        ctx.Reply(T.VehicleBayClearedItems, asset!);
                     else
-                        ctx.Reply("vehiclebay_setitems", asset?.vehicleName ?? data.VehicleID.ToString("N"), items.Count.ToString(Data.Locale));
+                        ctx.Reply(T.VehicleBaySetItems, asset!, items.Count);
                 }
                 else
-                    ctx.Reply("vehiclebay_e_novehicle");
+                    ctx.Reply(T.VehicleBayNoTarget);
             }
             else if (ctx.TryGet(2, out string value) && ctx.TryGet(1, out string property))
             {
                 VehicleData? data = GetVehicleTarget(ctx);
                 if (data is not null)
                 {
-                    ESetFieldResult result = VehicleBay.SetProperty(data, property, value);
+                    ESetFieldResult result = VehicleBay.SetProperty(data, ref property, value);
                     switch (result)
                     {
                         case ESetFieldResult.SUCCESS:
                             VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
                             ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.VehicleID:N} - SET " + property.ToUpper() + " >> " + value.ToUpper());
-                            ctx.Reply("vehiclebay_setprop", property.ToUpper(), asset == null || asset.vehicleName == null ? data.VehicleID.ToString("N") : asset.vehicleName, value.ToUpper());
+                            ctx.Reply(T.VehicleBaySetProperty!, property, asset, value);
                             VehicleSpawner.UpdateSigns(data.VehicleID);
                             VehicleBay.SaveSingleton();
                             break;
                         default:
                         case ESetFieldResult.OBJECT_NOT_FOUND:
-                            ctx.Reply("vehiclebay_e_noexist");
+                            ctx.Reply(T.VehicleBayNotAdded);
                             break;
                         case ESetFieldResult.FIELD_NOT_FOUND:
-                            ctx.Reply("vehiclebay_e_invalidprop", property);
+                            ctx.Reply(T.VehicleBayInvalidProperty, property);
                             break;
                         case ESetFieldResult.FIELD_NOT_SERIALIZABLE:
                         case ESetFieldResult.INVALID_INPUT:
-                            ctx.Reply("vehiclebay_e_invalidarg", value, property);
+                            ctx.Reply(T.VehicleBayInvalidSetValue, value, property);
                             break;
                         case ESetFieldResult.FIELD_PROTECTED:
-                            ctx.Reply("vehiclebay_e_not_settable", property);
+                            ctx.Reply(T.VehicleBayNotJsonSettable, property);
                             break;
                     }
                 }
                 else
-                    ctx.Reply("vehiclebay_e_novehicle");
+                    ctx.Reply(T.VehicleBayNoTarget);
             }
             else
                 ctx.SendCorrectUsage("/vehiclebay set <items|property> [value]");
@@ -351,21 +351,21 @@ public class VehicleBayCommand : Command
                 {
                     if (ctx.TryGet(2, out byte seat))
                     {
+                        VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
                         if (!data.CrewSeats.Contains(seat))
                         {
-                            VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
                             ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} / {(asset == null ? "null" : asset.id.ToString(Data.Locale))} / {data.VehicleID:N} - ADDED CREW SEAT {seat}.");
                             VehicleBay.AddCrewmanSeat(data.VehicleID, seat);
-                            ctx.Reply("vehiclebay_seatadded", seat.ToString(Data.Locale));
+                            ctx.Reply(T.VehicleBaySeatAdded, seat, asset!);
                         }
                         else
-                            ctx.Reply("vehiclebay_seatexist", seat.ToString(Data.Locale));
+                            ctx.Reply(T.VehicleBaySeatAlreadyAdded, seat, asset!);
                     }
                     else
                         ctx.SendCorrectUsage("/vehiclebay crewseats add <seat index>");
                 }
                 else
-                    ctx.Reply("vehiclebay_e_novehicle");
+                    ctx.Reply(T.VehicleBayNoTarget);
             }
             else if (ctx.MatchParameter(1, "remove", "r", "delete"))
             {
@@ -374,21 +374,21 @@ public class VehicleBayCommand : Command
                 {
                     if (ctx.TryGet(2, out byte seat))
                     {
+                        VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
                         if (data.CrewSeats.Contains(seat))
                         {
-                            VehicleAsset? asset = Assets.find<VehicleAsset>(data.VehicleID);
                             ctx.LogAction(EActionLogType.SET_VEHICLE_DATA_PROPERTY, $"{asset?.vehicleName ?? "null"} / {(asset == null ? "null" : asset.id.ToString(Data.Locale))} / {data.VehicleID:N} - REMOVED CREW SEAT {seat}.");
                             VehicleBay.RemoveCrewmanSeat(data.VehicleID, seat);
-                            ctx.Reply("vehiclebay_seatremoved", seat.ToString(Data.Locale));
+                            ctx.Reply(T.VehicleBaySeatRemoved, seat, asset!);
                         }
                         else
-                            ctx.Reply("vehiclebay_e_seatnoexist", seat.ToString(Data.Locale));
+                            ctx.Reply(T.VehicleBaySeatNotAdded, seat, asset!);
                     }
                     else
                         ctx.SendCorrectUsage("/vehiclebay crewseats remove <seat index>");
                 }
                 else
-                    ctx.Reply("vehiclebay_e_novehicle");
+                    ctx.Reply(T.VehicleBayNoTarget);
             }
             else
                 ctx.SendCorrectUsage("/vehiclebay crewseats <add|remove> <seat index>");
@@ -411,7 +411,7 @@ public class VehicleBayCommand : Command
             else
             {
                 if (ctx.HasArg(1))
-                    ctx.Reply("vehiclebay_e_invalidid");
+                    ctx.Reply(T.VehicleBayInvalidInput, ctx.Get(0)!);
                 else
                     ctx.SendCorrectUsage("/vehiclebay register <vehicle id or guid>");
                 return;
@@ -420,47 +420,47 @@ public class VehicleBayCommand : Command
             {
                 if (ctx.TryGetTarget(out BarricadeDrop barricade))
                 {
-                    if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(barricade.asset.GUID))
+                    if (Gamemode.Config.StructureVehicleBay.MatchGuid(barricade.asset.GUID))
                     {
                         if (!VehicleSpawner.IsRegistered(barricade.instanceID, out _, EStructType.BARRICADE))
                         {
                             ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                 $"REGISTERED BARRICADE SPAWN AT {barricade.model.transform.position:N2} ID: {barricade.instanceID}");
                             VehicleSpawner.CreateSpawn(barricade, barricade.GetServersideData(), asset.GUID);
-                            ctx.Reply("vehiclebay_spawn_registered", asset.vehicleName);
+                            ctx.Reply(T.VehicleBaySpawnRegistered, asset);
                         }
                         else
-                            ctx.Reply("vehiclebay_e_spawnexist", asset.vehicleName);
+                            ctx.Reply(T.VehicleBaySpawnAlreadyRegistered, asset);
                     }
                     else
                     {
-                        ctx.Reply("vehiclebay_e_invalidbayid", barricade.asset.itemName);
+                        ctx.Reply(T.VehicleBayInvalidBayItem, barricade.asset);
                     }
                 }
                 else if (ctx.TryGetTarget(out StructureDrop structure))
                 {
-                    if (Gamemode.Config.Barricades.VehicleBayGUID.MatchGuid(structure.asset.GUID))
+                    if (Gamemode.Config.StructureVehicleBay.MatchGuid(structure.asset.GUID))
                     {
                         if (!VehicleSpawner.IsRegistered(structure.instanceID, out _, EStructType.STRUCTURE))
                         {
                             ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
                                 $"REGISTERED STRUCTURE SPAWN AT {structure.model.transform.position:N2} ID: {structure.instanceID}");
                             VehicleSpawner.CreateSpawn(structure, structure.GetServersideData(), asset.GUID);
-                            ctx.Reply("vehiclebay_spawn_registered", asset.vehicleName);
+                            ctx.Reply(T.VehicleBaySpawnRegistered, asset);
                         }
                         else
-                            ctx.Reply("vehiclebay_e_spawnexist", asset.vehicleName);
+                            ctx.Reply(T.VehicleBaySpawnAlreadyRegistered, asset);
                     }
                     else
                     {
-                        ctx.Reply("vehiclebay_e_invalidbayid", structure.asset.itemName);
+                        ctx.Reply(T.VehicleBayInvalidBayItem, structure.asset);
                     }
                 }
                 else
-                    ctx.Reply("vehiclebay_e_novehicle");
+                    ctx.Reply(T.VehicleBayNoTarget);
             }
             else
-                ctx.Reply("vehiclebay_e_idnotfound", ctx.Get(1)!);
+                ctx.Reply(T.VehicleBayInvalidInput, ctx.Get(1)!);
         }
         else if (ctx.MatchParameter(0, "deregister", "dereg"))
         {
@@ -471,19 +471,20 @@ public class VehicleBayCommand : Command
             VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
-                VehicleSpawner.DeleteSpawn(spawn.SpawnPadInstanceID, spawn.type);
-                if (Assets.find(spawn.VehicleID) is VehicleAsset asset)
+                VehicleSpawner.DeleteSpawn(spawn.InstanceId, spawn.StructureType);
+                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleGuid);
+                if (asset is not null)
                     ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                                               $"UNREGISTERED SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                                                               $"UNREGISTERED SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{spawn.VehicleID:N} - " +
-                        $"UNREGISTERED SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
-                ctx.Reply("vehiclebay_spawn_deregistered");
+                    ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{spawn.VehicleGuid:N} - " +
+                        $"UNREGISTERED SPAWN ID: {spawn.InstanceId}");
+                ctx.Reply(T.VehicleBaySpawnDeregistered, asset!);
             }
             else if (ctx.TryGetTarget(out BarricadeDrop _) || ctx.TryGetTarget(out StructureDrop _))
-                ctx.Reply("vehiclebay_e_spawnnoexist");
+                ctx.Reply(T.VehicleBaySpawnNotRegistered);
             else
-                ctx.Reply("vehiclebay_e_novehicle");
+                ctx.Reply(T.VehicleBayNoTarget);
         }
         else if (ctx.MatchParameter(0, "force", "respawn"))
         {
@@ -502,18 +503,18 @@ public class VehicleBayCommand : Command
                 }
                 else
                 {
-                    asset = Assets.find(spawn.VehicleID) as VehicleAsset;
+                    asset = Assets.find(spawn.VehicleGuid) as VehicleAsset;
                 }
                 if (asset != null)
                     ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                                               $"FORCED VEHICLE TO SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                                                               $"FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleID:N} - FORCED VEHICLE TO SPAWN AT {spawn.SpawnpadLocation.position:N2} ID: {spawn.SpawnPadInstanceID}");
+                    ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleGuid:N} - FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
                 spawn.SpawnVehicle();
-                ctx.Reply("vehiclebay_spawn_forced", asset == null || asset.vehicleName == null ? spawn.VehicleID.ToString("N") : asset.vehicleName);
+                ctx.Reply(T.VehicleBayForceSuccess, asset!);
             }
             else
-                ctx.Reply("vehiclebay_e_novehicle");
+                ctx.Reply(T.VehicleBayNoTarget);
         }
         else if (ctx.MatchParameter(0, "link"))
         {
@@ -536,19 +537,24 @@ public class VehicleBayCommand : Command
                         if (c2 != null)
                         {
                             ctx.LogAction(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
-                                $"LINKED TO SPAWN AT {c2.transform.position:N2} ID: {c.currentlylinking.SpawnPadInstanceID}");
+                                $"LINKED TO SPAWN AT {c2.transform.position:N2} ID: {c.currentlylinking.InstanceId}");
                         }
                         else
                         {
                             ctx.LogAction(EActionLogType.LINKED_VEHICLE_BAY_SIGN, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} ID: {drop.instanceID}- " +
-                                $"LINKED TO SPAWN ID: {c.currentlylinking.SpawnPadInstanceID}");
+                                $"LINKED TO SPAWN ID: {c.currentlylinking.InstanceId}");
                         }
                         VehicleSigns.LinkSign(sign, c.currentlylinking);
-                        ctx.Reply("vehiclebay_link_finished");
+                        ctx.Reply(T.VehicleBayLinkFinished,
+                            (c2 == null
+                                ? null
+                                : (c2.Spawn is null
+                                    ? null
+                                    : Assets.find<VehicleAsset>(c2.Spawn.VehicleGuid)))!);
                         c.currentlylinking = null;
                     }
                     else
-                        ctx.Reply("vehiclebay_link_not_started");
+                        ctx.Reply(T.VehicleBayLinkNotStarted);
                 }
                 else
                     ctx.SendUnknownError();
@@ -561,13 +567,13 @@ public class VehicleBayCommand : Command
                     if (ctx.Caller!.Player.TryGetPlayerData(out Components.UCPlayerData c))
                     {
                         c.currentlylinking = spawn;
-                        ctx.Reply("vehiclebay_link_started");
+                        ctx.Reply(T.VehicleBayLinkStarted);
                     }
                     else
                         ctx.SendUnknownError();
                 }
                 else
-                    ctx.Reply("vehiclebay_e_spawnnoexist");
+                    ctx.Reply(T.VehicleBaySpawnNotRegistered);
             }
         }
         else if (ctx.MatchParameter(0, "unlink"))
@@ -583,10 +589,10 @@ public class VehicleBayCommand : Command
             if (sign is not null && sign.SignDrop is not null && sign.SignDrop.interactable is InteractableSign sign2)
             {
                 VehicleSigns.UnlinkSign(sign2);
-                ctx.Reply("vehiclebay_unlink_success");
+                ctx.Reply(T.VehicleBayUnlinked, (sign.VehicleBay is null ? null : Assets.find<VehicleAsset>(sign.VehicleBay.VehicleGuid))!);
             }
             else
-                ctx.Reply("vehiclebay_e_novehicle");
+                ctx.Reply(T.VehicleBayNoTarget);
         }
         else if (ctx.MatchParameter(0, "check", "id", "wtf"))
         {
@@ -595,13 +601,11 @@ public class VehicleBayCommand : Command
             VehicleSpawn? spawn = GetBayTarget(ctx);
             if (spawn is not null)
             {
-                if (Assets.find(spawn.VehicleID) is VehicleAsset asset)
-                    ctx.Reply("vehiclebay_check_registered", spawn.SpawnPadInstanceID.ToString(Data.Locale), asset.vehicleName, asset.id.ToString(Data.Locale) + " (" + spawn.VehicleID.ToString("N") + ")");
-                else
-                    ctx.Reply("vehiclebay_e_idnotfound", spawn.VehicleID.ToString("N"));
+                VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleGuid);
+                ctx.Reply(T.VehicleBayCheck, spawn.InstanceId, asset!, asset == null ? (ushort)0 : asset.id);
             }
             else
-                ctx.Reply("vehiclebay_check_notregistered");
+                ctx.Reply(T.VehicleBaySpawnNotRegistered);
         }
         else ctx.SendCorrectUsage("/vehiclebay <help|add|remove|savemeta|set|delay|crewseats|register|deregister|force|link|unlink|check> [help|parameters...]");
     }
@@ -623,23 +627,23 @@ public class VehicleBayCommand : Command
                 {
                     if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
                     {
-                        if (sign2.bay is not null && VehicleBay.VehicleExists(sign2.bay.VehicleID, out data))
+                        if (sign2.VehicleBay is not null && VehicleBay.VehicleExists(sign2.VehicleBay.VehicleGuid, out data))
                         {
                             return data;
                         }
                     }
                 }
             }
-            if ((VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn) && 
-                VehicleBay.VehicleExists(spawn.VehicleID, out data)) || 
-                (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) && 
-                VehicleBay.VehicleExists(spawn.VehicleID, out data)))
+            if ((VehicleSpawner.SpawnExists(drop.instanceID, EStructType.BARRICADE, out spawn) &&
+                VehicleBay.VehicleExists(spawn.VehicleGuid, out data)) ||
+                (ctx.TryGetTarget(out drop2) && VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) &&
+                VehicleBay.VehicleExists(spawn.VehicleGuid, out data)))
                 return data;
             else return null;
         }
         if (ctx.TryGetTarget(out drop2))
         {
-            return VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) && VehicleBay.VehicleExists(spawn.VehicleID, out data) ? data : null;
+            return VehicleSpawner.SpawnExists(drop2.instanceID, EStructType.STRUCTURE, out spawn) && VehicleBay.VehicleExists(spawn.VehicleGuid, out data) ? data : null;
         }
         return null;
     }
@@ -659,8 +663,8 @@ public class VehicleBayCommand : Command
                 {
                     if (VehicleSigns.SignExists(sign, out VehicleSign sign2))
                     {
-                        if (sign2.bay is not null)
-                            return sign2.bay;
+                        if (sign2.VehicleBay is not null)
+                            return sign2.VehicleBay;
                     }
                 }
             }

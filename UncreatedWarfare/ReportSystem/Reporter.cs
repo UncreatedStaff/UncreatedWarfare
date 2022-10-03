@@ -128,7 +128,7 @@ public class Reporter : MonoBehaviour
                     times.Add(time);
                 }
             }
-            timeAdj:
+        timeAdj:
             foreach (KeyValuePair<Guid, List<float>> kvp in data.soloTime)
             {
                 List<float> times = kvp.Value;
@@ -224,7 +224,7 @@ public class Reporter : MonoBehaviour
     {
         if (e.WasTeamkill && e.Killer is not null)
         {
-            ulong k = e.Killer;
+            ulong k = e.Killer.Steam64;
             for (int i = 0; i < data.Count; ++i)
             {
                 if (data[i].Steam64 == k)
@@ -232,7 +232,7 @@ public class Reporter : MonoBehaviour
                     data[i].teamkills.Add(new Teamkill()
                     {
                         cause = e.Cause,
-                        dead = e.Player,
+                        dead = e.Player.Steam64,
                         time = Time.realtimeSinceStartup,
                         weapon = e.PrimaryAsset
                     });
@@ -327,7 +327,7 @@ public class Reporter : MonoBehaviour
                 return;
             }
         }
-        data.Add(new PlayerData(player.playerID.steamID.m_SteamID) 
+        data.Add(new PlayerData(player.playerID.steamID.m_SteamID)
         {
             isOnline = true,
             characterName = player.playerID.characterName,
@@ -496,7 +496,7 @@ public class Reporter : MonoBehaviour
         public List<Teamkill> teamkills = new List<Teamkill>();
         public List<VehicleTeamkill> vehicleTeamkills = new List<VehicleTeamkill>();
         //public List<byte[]> voiceHistory = new List<byte[]>(0);
-        
+
         public void InsertChat(string message)
         {
 #if DEBUG

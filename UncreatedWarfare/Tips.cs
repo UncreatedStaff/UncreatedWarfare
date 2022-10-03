@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Singletons;
 
@@ -23,7 +20,7 @@ public class Tips : BaseSingleton
         _tips.Clear();
         _tips = null!;
     }
-    public static void TryGiveTip(UCPlayer player, ETip type, params string[] translationArgs)
+    public static void TryGiveTip(UCPlayer player, ETip type, params object[] translationArgs)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -33,7 +30,8 @@ public class Tips : BaseSingleton
         if (tip is null)
         {
             tip = new Tip(player.Steam64, type, translationArgs);
-            _singleton._tips.Add(tip);
+            if (tip.Cooldown > 0)
+                _singleton._tips.Add(tip);
             GiveTip(player, tip);
         }
         else if ((DateTime.Now - tip.LastSent).TotalSeconds > tip.Cooldown)
@@ -50,7 +48,12 @@ public class Tips : BaseSingleton
     }
     private static void GiveTip(UCPlayer player, Tip tip)
     {
-        ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(tip.TranslationKey, player, tip.TranslationArgs), EToastMessageSeverity.TIP));
+        ToastMessage.QueueMessage(player,
+            new ToastMessage(
+                tip.TranslationKey.TranslateUnsafe(
+                    Localization.GetLang(player.Steam64), tip.TranslationArgs, player, player.GetTeam()),
+            EToastMessageSeverity.TIP));
+
     }
 }
 public class Tip
@@ -59,10 +62,10 @@ public class Tip
     public readonly ETip Type;
     public DateTime LastSent;
     public readonly float Cooldown;
-    public readonly string TranslationKey;
-    public string[] TranslationArgs;
+    public readonly Translation TranslationKey;
+    public object[] TranslationArgs;
 
-    public Tip(ulong steam64, ETip type, params string[] translationArgs)
+    public Tip(ulong steam64, ETip type, params object[] translationArgs)
     {
         Steam64 = steam64;
         Type = type;
@@ -70,11 +73,12 @@ public class Tip
         TranslationArgs = translationArgs;
         switch (Type)
         {
-            case ETip.PLACE_RADIO: Cooldown = 300; TranslationKey = "tip_place_radio";  break;
-            case ETip.PLACE_BUNKER: Cooldown = 3; TranslationKey = "tip_place_bunker";  break;
-            case ETip.UNLOAD_SUPPLIES: Cooldown = 120; TranslationKey = "tip_unload_supplies";  break;
-            case ETip.HELP_BUILD: Cooldown = 120; TranslationKey = "tip_help_build";  break;
-            case ETip.LOGI_RESUPPLIED: Cooldown = 120; TranslationKey = "tip_logi_resupplied";  break;
+            case ETip.UAV_REQUEST: Cooldown = 0; TranslationKey = T.TipUAVRequest; break;
+            case ETip.PLACE_RADIO: Cooldown = 300; TranslationKey = T.TipPlaceRadio; break;
+            case ETip.PLACE_BUNKER: Cooldown = 3; TranslationKey = T.TipPlaceBunker; break;
+            case ETip.UNLOAD_SUPPLIES: Cooldown = 120; TranslationKey = T.TipUnloadSupplies; break;
+            case ETip.HELP_BUILD: Cooldown = 120; TranslationKey = T.TipHelpBuild; break;
+            case ETip.LOGI_RESUPPLIED: Cooldown = 120; TranslationKey = T.TipLogisticsVehicleResupplied; break;
         }
     }
 }
@@ -84,5 +88,6 @@ public enum ETip
     PLACE_BUNKER,
     UNLOAD_SUPPLIES,
     HELP_BUILD,
-    LOGI_RESUPPLIED
+    LOGI_RESUPPLIED,
+    UAV_REQUEST
 }

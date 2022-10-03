@@ -43,13 +43,16 @@ public class OfficerCommand : Command
                     throw ctx.SendPlayerNotFound();
 
                 OfficerStorage.ChangeOfficerRank(steam64, level, team);
-                FPlayerName name = F.GetPlayerOriginalNames(steam64);
                 if (onlinePlayer is not null)
                 {
                     ref Ranks.RankData data = ref Ranks.RankManager.GetRank(onlinePlayer, out _);
-                    ctx.Reply("officer_s_changedrank", name.CharacterName, data.GetName(steam64), Teams.TeamManager.TranslateName(team, ctx.CallerID));
+                    ctx.Reply(T.OfficerChangedRankFeedback, onlinePlayer, data, Teams.TeamManager.GetFactionSafe(team)!);
                 }
-                else ctx.Reply("officer_s_changedrank", name.CharacterName, level.ToString(Data.Locale), Teams.TeamManager.TranslateName(team, ctx.CallerID));
+                else
+                {
+                    FPlayerName name = F.GetPlayerOriginalNames(steam64);
+                    ctx.Reply(T.OfficerChangedRankFeedback, name, Ranks.RankManager.GetRank(level), Teams.TeamManager.GetFactionSafe(team)!);
+                }
                 ctx.LogAction(EActionLogType.SET_OFFICER_RANK, steam64.ToString(Data.Locale) + " to " + level + " on team " + Teams.TeamManager.TranslateName(team, 0));
             }
             else throw ctx.SendCorrectUsage("/officer set <player> <rank> [team = current team]");
@@ -64,8 +67,7 @@ public class OfficerCommand : Command
             if (ctx.TryGet(1, out ulong steam64, out UCPlayer? onlinePlayer))
             {
                 OfficerStorage.DischargeOfficer(steam64);
-                FPlayerName name = F.GetPlayerOriginalNames(steam64);
-                ctx.Reply("officer_s_discharged", name.CharacterName);
+                ctx.Reply(T.OfficerDischargedFeedback, onlinePlayer as IPlayer ?? F.GetPlayerOriginalNames(steam64));
                 ctx.LogAction(EActionLogType.DISCHARGE_OFFICER, steam64.ToString(Data.Locale));
             }
             else throw ctx.SendPlayerNotFound();

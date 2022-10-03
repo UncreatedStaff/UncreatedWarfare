@@ -63,7 +63,7 @@ public class ICommand : Command
                     // success
                     goto foundItem;
                 }
-                else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+                else throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
             }
         }
         else // there are at least 2 arguments
@@ -109,7 +109,7 @@ public class ICommand : Command
                     // success
                     goto foundItem;
                 }
-                else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+                else throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
             }
             else
             {
@@ -122,7 +122,7 @@ public class ICommand : Command
                     // success
                     goto foundItem;
                 }
-                else throw ctx.Reply($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
+                else throw ctx.ReplyString($"No item found by the name or ID of '<color=#cca69d>{itemName}</color>'".Colorize("8f9494"));
             }
         }
 
@@ -142,7 +142,7 @@ public class ICommand : Command
         else if (similarNamesCount > 0)
             message += $" ({similarNamesCount} similarly named items exist)".Colorize("7f8182");
 
-        ctx.Reply(message);
+        ctx.ReplyString(message);
         ctx.LogAction(EActionLogType.GIVE_ITEM, $"GAVE {amount}x {asset.itemName} / {asset.id} / {asset.GUID}");
     }
 }

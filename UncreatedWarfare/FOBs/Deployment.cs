@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using UnityEngine;
@@ -25,7 +20,7 @@ internal static class Deployment
             if (data.CurrentTeleportRequest != null && delay > TICK_SPEED)
             {
                 if (ctx is not null)
-                    throw ctx.Reply("deploy_e_alreadydeploying");
+                    throw ctx.Reply(T.DeployAlreadyActive);
                 return false;
             }
             if (!location.CheckDeployable(player, ctx))
@@ -34,8 +29,7 @@ internal static class Deployment
             {
                 if (ctx is not null)
                 {
-                    TranslationFlags flags = TranslationFlags.None;
-                    ctx.Reply("deploy_standby", location.Translate(JSONMethods.DEFAULT_LANGUAGE, FOB.COLORED_NAME_FORMAT, null, ref flags));
+                    ctx.Reply(T.DeployStandby, location, Mathf.CeilToInt(delay));
                 }
                 data.CurrentTeleportRequest = player.Player.StartCoroutine(DeployToCoroutine(player, location, delay, ctx is not null));
             }
