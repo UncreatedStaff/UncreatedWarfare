@@ -81,6 +81,8 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
 
+        OffenseManager.Init();
+
         CommandHandler.LoadCommands();
 
         DateTime loadTime = DateTime.Now;
@@ -171,8 +173,6 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         EventDispatcher.SubscribeToAll();
-
-        OffenseManager.Init();
 
         try
         {
