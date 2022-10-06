@@ -579,7 +579,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                 }
                 else
                 {
-                    e.Player.SendChat(T.VehicleMissingKit, vehicleData.RequiredClass);
+                    e.Player.SendChat(T.VehicleMissingKit, c.Data.RequiredClass);
                     e.Break();
                 }
             }
@@ -662,8 +662,101 @@ public struct Delay : IJsonReadWrite
             }
         }
     }
-
-    public static void AddDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
+}
+public class VehicleData : IJsonReadWrite, ITranslationArgument
+{
+    [JsonSettable]
+    public string Name;
+    [JsonSettable]
+    public Guid VehicleID;
+    [JsonSettable]
+    public ulong Team;
+    [JsonSettable]
+    public ushort RespawnTime;
+    [JsonSettable]
+    public ushort TicketCost;
+    [JsonSettable]
+    public ushort CreditCost;
+    [JsonSettable]
+    public ushort Cooldown;
+    [JsonSettable]
+    public EBranch Branch;
+    [JsonSettable]
+    public EClass RequiredClass;
+    [JsonSettable]
+    public byte RearmCost;
+    [JsonSettable]
+    public EVehicleType Type;
+    [JsonSettable]
+    public bool RequiresSL;
+    [JsonSettable]
+    public ushort UnlockLevel;
+    [JsonSettable]
+    public bool DisallowAbandons;
+    [JsonSettable]
+    public float AbandonValueLossSpeed = 0.125f;
+    public BaseUnlockRequirement[] UnlockRequirements;
+    public Guid[] Items;
+    public Delay[] Delays;
+    public List<byte> CrewSeats;
+    public MetaSave? Metadata;
+    public VehicleData(Guid vehicleID)
+    {
+        VehicleID = vehicleID;
+        Team = 0;
+        RespawnTime = 600;
+        TicketCost = 0;
+        CreditCost = 0;
+        Cooldown = 0;
+        if (Assets.find(vehicleID) is VehicleAsset va)
+        {
+            Name = va.name;
+            if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
+                Branch = EBranch.AIRFORCE;
+            else if (va.engine == EEngine.BOAT)
+                Branch = (EBranch)5; // navy
+            else
+                Branch = EBranch.DEFAULT;
+        }
+        else Branch = EBranch.DEFAULT;
+        RequiredClass = EClass.NONE;
+        UnlockRequirements = new BaseUnlockRequirement[0];
+        RearmCost = 3;
+        Type = EVehicleType.NONE;
+        RequiresSL = false;
+        UnlockLevel = 0;
+        Items = new Guid[0];
+        CrewSeats = new List<byte>();
+        Metadata = null;
+        Delays = new Delay[0];
+    }
+    public VehicleData()
+    {
+        Name = "";
+        VehicleID = Guid.Empty;
+        Team = 0;
+        UnlockRequirements = new BaseUnlockRequirement[0];
+        RespawnTime = 600;
+        TicketCost = 0;
+        CreditCost = 0;
+        Cooldown = 0;
+        Branch = EBranch.DEFAULT;
+        RequiredClass = EClass.NONE;
+        RearmCost = 3;
+        Type = EVehicleType.NONE;
+        RequiresSL = false;
+        UnlockLevel = 0;
+        Items = new Guid[0];
+        CrewSeats = new List<byte>();
+        Metadata = null;
+        Delays = new Delay[0];
+    }
+    public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
+    public static bool IsArmor(EVehicleType type) => type == EVehicleType.APC || type == EVehicleType.IFV || type == EVehicleType.MBT || type == EVehicleType.SCOUT_CAR;
+    public static bool IsLogistics(EVehicleType type) => type == EVehicleType.LOGISTICS || type == EVehicleType.HELI_TRANSPORT;
+    public static bool IsAircraft(EVehicleType type) =>  type == EVehicleType.HELI_TRANSPORT || type == EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
+    public static bool IsEmplacement(EVehicleType type) => type == EVehicleType.HMG || type == EVehicleType.ATGM || type == EVehicleType.AA || type == EVehicleType.MORTAR;
+    public void AddDelay(EDelayType type, float value, string? gamemode = null)
     {
         int index = -1;
         for (int i = 0; i < delays.Length; i++)
@@ -1506,10 +1599,32 @@ public enum EVehicleType
     [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("Jet")]
     JET,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
-    [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
-    [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
-    EMPLACEMENT,
+    [Translatable(LanguageAliasSet.RUSSIAN, "зенитный")]
+    [Translatable(LanguageAliasSet.SPANISH, "")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
+    [Translatable(LanguageAliasSet.POLISH, "")]
+    [Translatable("Anti-Aircraft")]
+    AA,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Тяжелый пулемет")]
+    [Translatable(LanguageAliasSet.SPANISH, "")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
+    [Translatable(LanguageAliasSet.POLISH, "")]
+    [Translatable("Heavy Machine Gun")]
+    HMG,
+    [Translatable(LanguageAliasSet.RUSSIAN, "противотанковая ракета")]
+    [Translatable(LanguageAliasSet.SPANISH, "")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
+    [Translatable(LanguageAliasSet.POLISH, "")]
+    [Translatable("ATGM")]
+    ATGM,
+    [Translatable(LanguageAliasSet.RUSSIAN, "Миномет")]
+    [Translatable(LanguageAliasSet.SPANISH, "Mortero")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
+    [Translatable(LanguageAliasSet.POLISH, "")]
+    [Translatable("Mortar")]
+    MORTAR
 }
