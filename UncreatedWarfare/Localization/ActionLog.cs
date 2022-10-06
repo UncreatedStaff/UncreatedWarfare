@@ -193,6 +193,7 @@ public class ActionLogger : MonoBehaviour
         [NetCall(ENetCall.FROM_SERVER, 1128)]
         internal static void ReceiveAckLog(MessageContext context, DateTime fileReceived)
         {
+            L.LogDebug("Acknowledged " + fileReceived.ToString("G"));
             string path = Path.Combine(Data.Paths.ActionLog, fileReceived.ToLocalTime().ToString(DATE_HEADER_FORMAT, Data.Locale) + ".txt");
             if (Instance == null)
             {

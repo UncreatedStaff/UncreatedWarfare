@@ -361,7 +361,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp,
                                     10000)).Responded)
                             {
-                                _pendingBans.RemoveAt(i);
+                                _pendingBans.Remove(ban);
                                 Save<Ban>(0);
                             }
                             else
@@ -374,7 +374,7 @@ public static class OffenseManager
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.Request(NetCalls.AckPlayerUnbanned,
                                     UCWarfare.I.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
                             {
-                                _pendingUnbans.RemoveAt(i);
+                                _pendingUnbans.Remove(unban);
                                 Save<Unban>(1);
                             }
                             else
@@ -388,7 +388,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000))
                                 .Responded)
                             {
-                                _pendingKicks.RemoveAt(i);
+                                _pendingKicks.Remove(kick);
                                 Save<Kick>(2);
                             }
                             else
@@ -402,7 +402,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000))
                                 .Responded)
                             {
-                                _pendingWarnings.RemoveAt(i);
+                                _pendingWarnings.Remove(warn);
                                 Save<Warn>(3);
                             }
                             else
@@ -416,7 +416,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason,
                                     mute.Timestamp, 10000)).Responded)
                             {
-                                _pendingMutes.RemoveAt(i);
+                                _pendingMutes.Remove(mute);
                                 Save<Mute>(4);
                             }
                             else
@@ -431,7 +431,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, bekick.Violator, bekick.Reason, bekick.Timestamp,
                                     10000)).Responded)
                             {
-                                _pendingBattlEyeKicks.RemoveAt(i);
+                                _pendingBattlEyeKicks.Remove(bekick);
                                 Save<BattlEyeKick>(5);
                             }
                             else
@@ -445,7 +445,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause,
                                     teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
                             {
-                                _pendingTeamkills.RemoveAt(i);
+                                _pendingTeamkills.Remove(teamkill);
                                 Save<BattlEyeKick>(6);
                             }
                             else
@@ -460,7 +460,7 @@ public static class OffenseManager
                                     vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000))
                                 .Responded)
                             {
-                                _pendingVehicleTeamkills.RemoveAt(i);
+                                _pendingVehicleTeamkills.Remove(vehicleTeamkill);
                                 Save<VehicleTeamkill>(7);
                             }
                             else
@@ -473,7 +473,7 @@ public static class OffenseManager
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.Request(NetCalls.AckPlayerUnmuted,
                                     UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
                             {
-                                _pendingUnmutes.RemoveAt(i);
+                                _pendingUnmutes.Remove(unmute);
                                 Save<Unmute>(8);
                             }
                             else

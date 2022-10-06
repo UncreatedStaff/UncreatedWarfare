@@ -408,7 +408,7 @@ public class UAV : MonoBehaviour, IBuff
         float rad = radius * radius;
         foreach (SpottedComponent spot in SpottedComponent.AllMarkers)
         {
-            if (spot.OwnerTeam != team && spot.isActiveAndEnabled && CanUAVSpot(spot.Type))
+            if (spot.OwnerTeam != team && spot.isActiveAndEnabled && spot.Type.HasValue && CanUAVSpot(spot.Type.Value))
             {
                 float dist = F.SqrDistance2D(deployPosition, spot.transform.position);
                 if (dist < rad)

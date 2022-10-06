@@ -24,9 +24,13 @@ public class RequestSigns : ListSingleton<RequestSign>
     {
         Singleton = this;
         EventDispatcher.OnGroupChanged += OnGroupChanged;
+        EventDispatcher.OnPlayerJoined += OnPlayerJoined;
+        EventDispatcher.OnPlayerLeaving += OnPlayerLeaving;
     }
     public override void Unload()
     {
+        EventDispatcher.OnPlayerLeaving -= OnPlayerLeaving;
+        EventDispatcher.OnPlayerJoined -= OnPlayerJoined;
         EventDispatcher.OnGroupChanged -= OnGroupChanged;
         Singleton = null!;
     }
@@ -118,8 +122,10 @@ public class RequestSigns : ListSingleton<RequestSign>
     }
     private void OnGroupChanged(GroupChanged e)
     {
-        UpdateAllSigns(e.Player);
+        OnTeamPlayerCountChanged(e.Player);
     }
+    private void OnPlayerLeaving(PlayerEvent e) => OnTeamPlayerCountChanged();
+    private void OnPlayerJoined(PlayerJoined e) => OnTeamPlayerCountChanged();
     public static bool SignExists(uint instance_id, out RequestSign found)
     {
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
@@ -129,6 +135,29 @@ public class RequestSigns : ListSingleton<RequestSign>
     {
         Singleton.AssertLoaded<RequestSigns, RequestSign>();
         return Singleton.ObjectExists(x => x.KitName.Equals(kitName, StringComparison.OrdinalIgnoreCase), out sign);
+    }
+    internal static void OnTeamPlayerCountChanged(UCPlayer? allPlayer = null)
+    {
+        if (allPlayer is null)
+        {
+            for (int i = 0; i < Singleton.Count; i++)
+            {
+                RequestSign kn = Singleton[i];
+                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out Kit kit) && kit.TeamLimit < 1f))
+                    kn.InvokeUpdate();
+            }
+        }
+        else
+        {
+            for (int i = 0; i < Singleton.Count; i++)
+            {
+                RequestSign kn = Singleton[i];
+                if (kn.KitName.StartsWith(Signs.LOADOUT_PREFIX, StringComparison.Ordinal) || (KitManager.KitExists(kn.KitName, out Kit kit) && kit.TeamLimit < 1f))
+                    kn.InvokeUpdate();
+                else
+                    kn.InvokeUpdate(allPlayer);
+            }
+        }
     }
     public static void UpdateAllSigns(UCPlayer? player = null)
     {

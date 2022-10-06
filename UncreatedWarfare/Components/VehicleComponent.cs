@@ -35,12 +35,12 @@ public class VehicleComponent : MonoBehaviour
     private bool IsResupplied;
     private Coroutine? quotaLoop;
     private Coroutine? autoSupplyLoop;
-    public Coroutine? forceSupplyLoop { get; private set; }
-    public bool IsGroundVehicle => Data == null ? false : VehicleData.IsGroundVehicle(Data.Type);
-    public bool IsArmor => Data == null ? false : VehicleData.IsArmor(Data.Type);
-    public bool IsLogistics => Data == null ? false : VehicleData.IsLogistics(Data.Type);
-    public bool IsAircraft => Data == null ? false : VehicleData.IsAircraft(Data.Type);
-    public bool IsEmplacement => Data == null ? false : VehicleData.IsEmplacement(Data.Type);
+    public Coroutine? ForceSupplyLoop { get; private set; }
+    public bool IsGroundVehicle => Data != null && VehicleData.IsGroundVehicle(Data.Type);
+    public bool IsArmor => Data != null && VehicleData.IsArmor(Data.Type);
+    public bool IsLogistics => Data != null && VehicleData.IsLogistics(Data.Type);
+    public bool IsAircraft => Data != null && VehicleData.IsAircraft(Data.Type);
+    public bool IsEmplacement => Data != null && VehicleData.IsEmplacement(Data.Type);
     public bool CanTransport
     {
         get
@@ -69,7 +69,7 @@ public class VehicleComponent : MonoBehaviour
             if (data.Team is 1 or 2)
                 team = data.Team;
             Data = data;
-            isInVehiclebay = true;
+            IsInVehiclebay = true;
 
             vehicle.transform.gameObject.AddComponent<SpottedComponent>().Initialize(data.Type);
         }

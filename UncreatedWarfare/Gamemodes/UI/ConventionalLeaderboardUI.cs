@@ -670,6 +670,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string color = TeamManager.GetTeamHexColor(winner);
         string lang = set.Language;
         int len = 47;
@@ -690,15 +691,15 @@ public class ConventionalLeaderboardUI : UnturnedUI
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.CTFWarStats0.Translate(lang);
-        values[6] = T.CTFWarStats1.Translate(lang);
-        values[7] = T.CTFWarStats2.Translate(lang);
+        values[6] = T.CTFWarStats1.Translate(lang, t1);
+        values[7] = T.CTFWarStats2.Translate(lang, t2);
         values[8] = T.CTFWarStats3.Translate(lang);
-        values[9] = T.CTFWarStats4.Translate(lang);
-        values[10] = T.CTFWarStats5.Translate(lang);
-        values[11] = T.CTFWarStats6.Translate(lang);
-        values[12] = T.CTFWarStats7.Translate(lang);
-        values[13] = T.CTFWarStats8.Translate(lang);
-        values[14] = T.CTFWarStats9.Translate(lang);
+        values[9] = T.CTFWarStats4.Translate(lang, t1);
+        values[10] = T.CTFWarStats5.Translate(lang, t2);
+        values[11] = T.CTFWarStats6.Translate(lang, t1);
+        values[12] = T.CTFWarStats7.Translate(lang, t2);
+        values[13] = T.CTFWarStats8.Translate(lang, t1);
+        values[14] = T.CTFWarStats9.Translate(lang, t2);
         values[15] = T.CTFWarStats10.Translate(lang);
         values[16] = T.CTFWarStats11.Translate(lang);
 
@@ -986,6 +987,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string color = TeamManager.GetTeamHexColor(winner);
         string lang = set.Language;
         int len = 47;
@@ -1006,15 +1008,15 @@ public class ConventionalLeaderboardUI : UnturnedUI
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.InsurgencyWarStats0.Translate(lang);
-        values[6] = T.InsurgencyWarStats1.Translate(lang);
-        values[7] = T.InsurgencyWarStats2.Translate(lang);
+        values[6] = T.InsurgencyWarStats1.Translate(lang, t1);
+        values[7] = T.InsurgencyWarStats2.Translate(lang, t2);
         values[8] = T.InsurgencyWarStats3.Translate(lang);
-        values[9] = T.InsurgencyWarStats4.Translate(lang);
-        values[10] = T.InsurgencyWarStats5.Translate(lang);
-        values[11] = T.InsurgencyWarStats6.Translate(lang);
-        values[12] = T.InsurgencyWarStats7.Translate(lang);
-        values[13] = T.InsurgencyWarStats8.Translate(lang);
-        values[14] = T.InsurgencyWarStats9.Translate(lang);
+        values[9] = T.InsurgencyWarStats4.Translate(lang, t1);
+        values[10] = T.InsurgencyWarStats5.Translate(lang, t2);
+        values[11] = T.InsurgencyWarStats6.Translate(lang, t1);
+        values[12] = T.InsurgencyWarStats7.Translate(lang, t2);
+        values[13] = T.InsurgencyWarStats8.Translate(lang, t1);
+        values[14] = T.InsurgencyWarStats9.Translate(lang, t2);
         values[15] = T.InsurgencyWarStats10.Translate(lang);
         values[16] = T.InsurgencyWarStats11.Translate(lang);
 
@@ -1306,6 +1308,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
         string color = TeamManager.GetTeamHexColor(winner);
         string lang = set.Language;
         int len = 47;
@@ -1326,15 +1329,15 @@ public class ConventionalLeaderboardUI : UnturnedUI
         values[4] = T.WarstatsHeader.Translate(lang, TeamManager.GetFaction(1), TeamManager.GetFaction(2));
 
         values[5] = T.ConquestWarStats0.Translate(lang);
-        values[6] = T.ConquestWarStats1.Translate(lang);
-        values[7] = T.ConquestWarStats2.Translate(lang);
+        values[6] = T.ConquestWarStats1.Translate(lang, t1);
+        values[7] = T.ConquestWarStats2.Translate(lang, t2);
         values[8] = T.ConquestWarStats3.Translate(lang);
-        values[9] = T.ConquestWarStats4.Translate(lang);
-        values[10] = T.ConquestWarStats5.Translate(lang);
-        values[11] = T.ConquestWarStats6.Translate(lang);
-        values[12] = T.ConquestWarStats7.Translate(lang);
-        values[13] = T.ConquestWarStats8.Translate(lang);
-        values[14] = T.ConquestWarStats9.Translate(lang);
+        values[9] = T.ConquestWarStats4.Translate(lang, t1);
+        values[10] = T.ConquestWarStats5.Translate(lang, t2);
+        values[11] = T.ConquestWarStats6.Translate(lang, t1);
+        values[12] = T.ConquestWarStats7.Translate(lang, t2);
+        values[13] = T.ConquestWarStats8.Translate(lang, t1);
+        values[14] = T.ConquestWarStats9.Translate(lang, t2);
         values[15] = T.ConquestWarStats10.Translate(lang);
         values[16] = T.ConquestWarStats11.Translate(lang);
 
