@@ -947,12 +947,14 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
     [JsonSettable]
     public ushort Cooldown;
     [JsonSettable]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public EBranch Branch;
     [JsonSettable]
     public EClass RequiredClass;
     [JsonSettable]
     public byte RearmCost;
     [JsonSettable]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
     public EVehicleType Type;
     [JsonSettable]
     public bool RequiresSL;
@@ -1025,6 +1027,7 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
     public static bool IsEmplacement(EVehicleType type) => type is EVehicleType.HMG or EVehicleType.ATGM or EVehicleType.AA or EVehicleType.MORTAR;
     public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
+    [JsonIgnore]
     public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
     public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
     public void SaveMetaData(InteractableVehicle vehicle)
@@ -1059,7 +1062,7 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
             barricades = new List<VBarricade>();
             for (int i = 0; i < vehicleRegion.drops.Count; i++)
             {
-                SDG.Unturned.BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
+                BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
                 barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
                     bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
             }
@@ -1083,10 +1086,10 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         writer.WriteNumber(nameof(RespawnTime), RespawnTime);
         writer.WriteNumber(nameof(TicketCost), TicketCost);
         writer.WriteNumber(nameof(Cooldown), Cooldown);
-        writer.WriteNumber(nameof(Branch), (int)Branch);
-        writer.WriteNumber(nameof(RequiredClass), (int)RequiredClass);
+        writer.WriteString(nameof(Branch), Branch.ToString());
+        writer.WriteString(nameof(RequiredClass), RequiredClass.ToString());
         writer.WriteNumber(nameof(RearmCost), RearmCost);
-        writer.WriteNumber(nameof(Type), (int)Type);
+        writer.WriteString(nameof(Type), Type.ToString());
         writer.WriteBoolean(nameof(RequiresSL), RequiresSL);
         writer.WriteNumber(nameof(CreditCost), CreditCost);
         writer.WriteNumber(nameof(UnlockLevel), UnlockLevel);
@@ -1167,16 +1170,19 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
                             Cooldown = reader.GetUInt16();
                             break;
                         case nameof(Branch):
-                            Branch = (EBranch)reader.GetByte();
+                            if (reader.TokenType != JsonTokenType.String || !Enum.TryParse(reader.GetString()!, true, out Branch))
+                                Branch = (EBranch)reader.GetByte();
                             break;
                         case nameof(RequiredClass):
-                            RequiredClass = (EClass)reader.GetByte();
+                            if (reader.TokenType != JsonTokenType.String || !Enum.TryParse(reader.GetString()!, true, out RequiredClass))
+                                RequiredClass = (EClass)reader.GetByte();
                             break;
                         case nameof(RearmCost):
                             RearmCost = reader.GetByte();
                             break;
                         case nameof(Type):
-                            Type = (EVehicleType)reader.GetByte();
+                            if (reader.TokenType != JsonTokenType.String || !Enum.TryParse(reader.GetString()!, true, out Type))
+                                Type = (EVehicleType)reader.GetByte();
                             break;
                         case nameof(RequiresSL):
                             RequiresSL = reader.TokenType == JsonTokenType.True;
@@ -1505,17 +1511,9 @@ public enum EVehicleType
     [Translatable("Attack Heli")]
     HELI_ATTACK,
     [Translatable(LanguageAliasSet.RUSSIAN, "реактивный")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
     [Translatable("Jet")]
     JET,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
-    [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
-    [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
+    [Obsolete]
     EMPLACEMENT,
     [Translatable("Mortar")]
     MORTAR,
