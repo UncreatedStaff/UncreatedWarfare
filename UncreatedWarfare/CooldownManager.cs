@@ -223,5 +223,7 @@ public enum ECooldownType
     [Translatable("Request Trait")]
     REQUEST_TRAIT_GLOBAL,
     [Translatable("Request Single Trait")]
-    REQUEST_TRAIT_SINGLE
+    REQUEST_TRAIT_SINGLE,
+    [Translatable("Announce Action")]
+    ACTION_ANNOUNCE
 }

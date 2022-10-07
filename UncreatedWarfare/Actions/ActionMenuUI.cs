@@ -26,7 +26,7 @@ public class ActionMenuUI : UnturnedUI
 
     public readonly UnturnedButton Cancel = new UnturnedButton("AC_Cancel");
 
-    public ActionMenuUI() : base(16051, Gamemode.Config.UI.ActionMenuGUID)
+    public ActionMenuUI() : base(16051, Gamemode.Config.UIActionMenu)
     {
 
     }   

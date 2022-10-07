@@ -456,7 +456,7 @@ public class FOB : IFOB, IDeployable
             (data.Type == EVehicleType.LOGISTICS ||
             data.Type == EVehicleType.HELI_TRANSPORT))
         {
-            Tips.TryGiveTip(player, ETip.UNLOAD_SUPPLIES);
+            Tips.TryGiveTip(player, 120, T.TipUnloadSupplies);
         }
     }
     internal void OnPlayerLeftFOB(UCPlayer player)

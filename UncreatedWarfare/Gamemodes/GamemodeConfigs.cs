@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Text.Json.Serialization;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
@@ -195,6 +196,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("ui_toast_win")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIToastWin { get; set; }
 
+    [Sync(459, OnPullMethod = nameof(OnUIActionMenuUpdated))]
+    [JsonPropertyName("ui_action_menu")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UIActionMenu { get; set; }
+
     [Sync(500)]
     [JsonPropertyName("effect_marker_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerAmmo { get; set; }
@@ -226,6 +231,70 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(507)]
     [JsonPropertyName("effect_marker_buildable")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectMarkerBuildable { get; set; }
+
+    [Sync(508)]
+    [JsonPropertyName("effect_action_need_medic")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNeedMedic { get; set; }
+
+    [Sync(509)]
+    [JsonPropertyName("effect_action_nearby_medic")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNearbyMedic { get; set; }
+
+    [Sync(510)]
+    [JsonPropertyName("effect_action_need_ammo")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNeedAmmo { get; set; }
+
+    [Sync(511)]
+    [JsonPropertyName("effect_action_nearby_ammo")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNearbyAmmo { get; set; }
+
+    [Sync(512)]
+    [JsonPropertyName("effect_action_need_ride")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNeedRide { get; set; }
+
+    [Sync(513)]
+    [JsonPropertyName("effect_action_need_support")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionNeedSupport { get; set; }
+
+    [Sync(514)]
+    [JsonPropertyName("effect_action_heli_pickup")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionHeliPickup { get; set; }
+
+    [Sync(515)]
+    [JsonPropertyName("effect_action_heli_dropoff")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionHeliDropoff { get; set; }
+
+    [Sync(516)]
+    [JsonPropertyName("effect_action_supplies_build")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionSuppliesBuild { get; set; }
+
+    [Sync(517)]
+    [JsonPropertyName("effect_action_supplies_ammo")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionSuppliesAmmo { get; set; }
+
+    [Sync(518)]
+    [JsonPropertyName("effect_action_air_support")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionAirSupport { get; set; }
+
+    [Sync(519)]
+    [JsonPropertyName("effect_action_armor_support")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionArmorSupport { get; set; }
+
+    [Sync(520)]
+    [JsonPropertyName("effect_action_attack")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionAttack { get; set; }
+
+    [Sync(521)]
+    [JsonPropertyName("effect_action_defend")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionDefend { get; set; }
+
+    [Sync(522)]
+    [JsonPropertyName("effect_action_move")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionMove { get; set; }
+
+    [Sync(523)]
+    [JsonPropertyName("effect_action_build")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionBuild { get; set; }
 
     [Sync(550)]
     [JsonPropertyName("ui_capture_enable_player_count")]
@@ -540,6 +609,22 @@ public sealed class GamemodeConfigData : JSONConfigData
         EffectMarkerCacheAttack = new JsonAssetReference<EffectAsset>("26b60044bc1442eb9d0521bfea306517");
         EffectMarkerCacheDefend = new JsonAssetReference<EffectAsset>("06efa2c2f9ec413aa417c717a7be3364");
         EffectMarkerBuildable = new JsonAssetReference<EffectAsset>("35ab4b71bfb74755b318ce62935f58c9");
+        EffectActionNeedMedic = new JsonAssetReference<EffectAsset>("4d9167abea4f4f009c6db4417e7efcdf");
+        EffectActionNearbyMedic = new JsonAssetReference<EffectAsset>("eec285561d6040c7bbfcfa6b48f4b5ba");
+        EffectActionNeedAmmo = new JsonAssetReference<EffectAsset>("6e7dadbfafbe46ecbe565499f901670f");
+        EffectActionNearbyAmmo = new JsonAssetReference<EffectAsset>("8caccb6344924fbab842625e5b1f5932");
+        EffectActionNeedRide = new JsonAssetReference<EffectAsset>("2a4748c3e5464b2d93132e2ed15b57b2");
+        EffectActionNeedSupport = new JsonAssetReference<EffectAsset>("eec285561d6040c7bbfcfa6b48f4b5ba");
+        EffectActionHeliPickup = new JsonAssetReference<EffectAsset>("b6d1841936824065a99bcaa8152a7877");
+        EffectActionHeliDropoff = new JsonAssetReference<EffectAsset>("c320d02aca914efb96dfbda6663940c5");
+        EffectActionSuppliesBuild = new JsonAssetReference<EffectAsset>("d9861b9123bb4da9a72851b20ecab236");
+        EffectActionSuppliesAmmo = new JsonAssetReference<EffectAsset>("50dbb9c23ae647b8adb829a771742d4c");
+        EffectActionAirSupport = new JsonAssetReference<EffectAsset>("706671c9e5c24bae8eb74c9c4631cc59");
+        EffectActionArmorSupport = new JsonAssetReference<EffectAsset>("637f0f25fd4b4180a04b2ecd1541ca37");
+        EffectActionAttack = new JsonAssetReference<EffectAsset>("7ae60fdeeff447fdb1f0eb6582537f12");
+        EffectActionDefend = new JsonAssetReference<EffectAsset>("16371fab7e8247619c6a6ec9a3e48e41");
+        EffectActionMove = new JsonAssetReference<EffectAsset>("4077d5eea255435d8ed0133ec833b86a");
+        EffectActionBuild = new JsonAssetReference<EffectAsset>("793bd80007f3484882284a6994e80bb3");
         UICaptureEnablePlayerCount = true;
         UICaptureShowPointCount = false;
         UICircleFontCharacters = "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀ";
@@ -614,6 +699,7 @@ public sealed class GamemodeConfigData : JSONConfigData
     }
     private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();
     private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
+    private void OnUIActionMenuUpdated() => ActionManager.ActionMenuUI.LoadFromConfig(UIActionMenu);
     private void OnUIMutedUpdated() => UCPlayer.MutedUI.LoadFromConfig(UIMuted);
     private void OnUITicketsUpdated() => TicketManager.TicketUI.LoadFromConfig(UITickets);
     private void OnUITeamSelectorUpdated() => Teams.TeamSelector.JoinUI.LoadFromConfig(UITeamSelector);

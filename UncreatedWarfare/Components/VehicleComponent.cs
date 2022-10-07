@@ -140,7 +140,7 @@ public class VehicleComponent : MonoBehaviour
             FOB.GetNearestFOB(e.Player.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
             )
         {
-            Tips.TryGiveTip(e.Player, ETip.PLACE_RADIO);
+            Tips.TryGiveTip(e.Player, 300, T.TipPlaceRadio);
         }
 
         if (e.Vehicle.passengers[0] == null || e.Vehicle.passengers[0].player == null ||
@@ -459,7 +459,7 @@ public class VehicleComponent : MonoBehaviour
 
         if (shouldMessagePlayer && driver is not null && driver.IsOnline && F.IsInMain(driver.Position))
         {
-            Tips.TryGiveTip(driver, ETip.LOGI_RESUPPLIED, Data.Type);
+            Tips.TryGiveTip(driver, 120, T.TipLogisticsVehicleResupplied, Data.Type);
         }
     }
     private IEnumerator<WaitForSeconds> QuotaLoop()

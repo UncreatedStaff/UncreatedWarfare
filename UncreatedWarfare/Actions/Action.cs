@@ -1,6 +1,7 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Players;
 using UnityEngine;
 using static System.Collections.Specialized.BitVector32;
@@ -13,8 +14,8 @@ namespace Uncreated.Warfare.Actions
         public readonly UCPlayer Caller;
         public readonly JsonAssetReference<EffectAsset> ViewerEffect;
         public readonly JsonAssetReference<EffectAsset>? CallerEffect;
-        public readonly IEnumerable<UCPlayer> Viewers;
-        public readonly IEnumerable<UCPlayer> ToastReceivers;
+        public readonly List<UCPlayer> Viewers;
+        public readonly List<UCPlayer> ToastReceivers;
         public readonly EActionOrigin Origin;
         public readonly Vector3? InitialPosition;
         protected readonly int LifeTime;
@@ -33,8 +34,8 @@ namespace Uncreated.Warfare.Actions
             ViewerEffect = viewerEffect;
             CallerEffect = callerEffect;
             LifeTime = lifeTime;
-            Viewers = viewers;
-            ToastReceivers = toastReceivers;
+            Viewers = viewers is List<UCPlayer> pl ? pl : viewers.ToList();
+            ToastReceivers = toastReceivers is List<UCPlayer> pl2 ? pl2 : toastReceivers.ToList();
             UpdateFrequency = updateFrequency;
             SquadWide = squadWide;
             Origin = origin;
@@ -143,13 +144,16 @@ namespace Uncreated.Warfare.Actions
             private void SendMarkers()
             {
                 Vector3 position = _action.Origin == EActionOrigin.FOLLOW_CALLER ? transform.position : _action.InitialPosition!.Value;
-
-                foreach (var player in _action.Viewers)
+                _action.CallerEffect.ValidReference(out ushort callerEffect);
+                if (_action.ViewerEffect.ValidReference(out ushort viewerEffect))
                 {
-                    EffectManager.sendEffect(_action.ViewerEffect.Id, player.Connection, position);
+                    foreach (UCPlayer player in _action.Viewers)
+                    {
+                        EffectManager.sendEffect(viewerEffect, player.Connection, position);
 
-                    if (_action.CallerEffect != null)
-                        EffectManager.sendEffect(_action.CallerEffect.Id, _action.Caller.Connection, player.Position);
+                        if (callerEffect != 0)
+                            EffectManager.sendEffect(callerEffect, _action.Caller.Connection, player.Position);
+                    }
                 }
             }
             public void Destroy()

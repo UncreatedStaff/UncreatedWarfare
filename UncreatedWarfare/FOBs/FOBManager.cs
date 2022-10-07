@@ -277,7 +277,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             if (Gamemode.Config.BarricadeAmmoCrateBase.ValidReference(out ItemBarricadeAsset ammoBase))
                 ItemManager.dropItem(new Item(ammoBase.id, true), placer.Position, true, true, true);
             QuestManager.OnFOBBuilt(placer, fob);
-            Tips.TryGiveTip(placer, ETip.PLACE_BUNKER);
+            Tips.TryGiveTip(placer, 3, T.TipPlaceBunker);
         }
         SendFOBListToTeam(fob.Team);
         return fob;

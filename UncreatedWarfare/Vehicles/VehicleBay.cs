@@ -33,7 +33,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
     public static bool Loaded => Singleton.IsLoaded<VehicleBay, VehicleData>();
     public static VehicleBayData Config => _config.Data;
 
-    public VehicleBay() : base("vehiclebay", Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"), VehicleData.Write, VehicleData.Read)
+    public VehicleBay() : base("vehiclebay", Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"))
     {
     }
     private bool hasWhitelisted = false;
@@ -662,101 +662,7 @@ public struct Delay : IJsonReadWrite
             }
         }
     }
-}
-public class VehicleData : IJsonReadWrite, ITranslationArgument
-{
-    [JsonSettable]
-    public string Name;
-    [JsonSettable]
-    public Guid VehicleID;
-    [JsonSettable]
-    public ulong Team;
-    [JsonSettable]
-    public ushort RespawnTime;
-    [JsonSettable]
-    public ushort TicketCost;
-    [JsonSettable]
-    public ushort CreditCost;
-    [JsonSettable]
-    public ushort Cooldown;
-    [JsonSettable]
-    public EBranch Branch;
-    [JsonSettable]
-    public EClass RequiredClass;
-    [JsonSettable]
-    public byte RearmCost;
-    [JsonSettable]
-    public EVehicleType Type;
-    [JsonSettable]
-    public bool RequiresSL;
-    [JsonSettable]
-    public ushort UnlockLevel;
-    [JsonSettable]
-    public bool DisallowAbandons;
-    [JsonSettable]
-    public float AbandonValueLossSpeed = 0.125f;
-    public BaseUnlockRequirement[] UnlockRequirements;
-    public Guid[] Items;
-    public Delay[] Delays;
-    public List<byte> CrewSeats;
-    public MetaSave? Metadata;
-    public VehicleData(Guid vehicleID)
-    {
-        VehicleID = vehicleID;
-        Team = 0;
-        RespawnTime = 600;
-        TicketCost = 0;
-        CreditCost = 0;
-        Cooldown = 0;
-        if (Assets.find(vehicleID) is VehicleAsset va)
-        {
-            Name = va.name;
-            if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
-                Branch = EBranch.AIRFORCE;
-            else if (va.engine == EEngine.BOAT)
-                Branch = (EBranch)5; // navy
-            else
-                Branch = EBranch.DEFAULT;
-        }
-        else Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        RearmCost = 3;
-        Type = EVehicleType.NONE;
-        RequiresSL = false;
-        UnlockLevel = 0;
-        Items = new Guid[0];
-        CrewSeats = new List<byte>();
-        Metadata = null;
-        Delays = new Delay[0];
-    }
-    public VehicleData()
-    {
-        Name = "";
-        VehicleID = Guid.Empty;
-        Team = 0;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        RespawnTime = 600;
-        TicketCost = 0;
-        CreditCost = 0;
-        Cooldown = 0;
-        Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
-        RearmCost = 3;
-        Type = EVehicleType.NONE;
-        RequiresSL = false;
-        UnlockLevel = 0;
-        Items = new Guid[0];
-        CrewSeats = new List<byte>();
-        Metadata = null;
-        Delays = new Delay[0];
-    }
-    public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
-    public static bool IsArmor(EVehicleType type) => type == EVehicleType.APC || type == EVehicleType.IFV || type == EVehicleType.MBT || type == EVehicleType.SCOUT_CAR;
-    public static bool IsLogistics(EVehicleType type) => type == EVehicleType.LOGISTICS || type == EVehicleType.HELI_TRANSPORT;
-    public static bool IsAircraft(EVehicleType type) =>  type == EVehicleType.HELI_TRANSPORT || type == EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
-    public static bool IsEmplacement(EVehicleType type) => type == EVehicleType.HMG || type == EVehicleType.ATGM || type == EVehicleType.AA || type == EVehicleType.MORTAR;
-    public void AddDelay(EDelayType type, float value, string? gamemode = null)
+    public static void AddDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
     {
         int index = -1;
         for (int i = 0; i < delays.Length; i++)
@@ -1022,8 +928,7 @@ public sealed class DelayConverter : JsonConverter<Delay>
         writer.WriteEndObject();
     }
 }
-
-public class VehicleData : IJsonReadWrite, ITranslationArgument
+public class VehicleData : ITranslationArgument
 {
     [JsonSettable]
     public string Name;
@@ -1040,14 +945,12 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
     [JsonSettable]
     public ushort Cooldown;
     [JsonSettable]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public EBranch Branch;
     [JsonSettable]
     public EClass RequiredClass;
     [JsonSettable]
     public byte RearmCost;
     [JsonSettable]
-    [JsonConverter(typeof(JsonStringEnumConverter))]
     public EVehicleType Type;
     [JsonSettable]
     public bool RequiresSL;
@@ -1062,6 +965,8 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
     public Delay[] Delays;
     public List<byte> CrewSeats;
     public MetaSave? Metadata;
+    [JsonIgnore]
+    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
     public VehicleData(Guid vehicleID)
     {
         VehicleID = vehicleID;
@@ -1114,14 +1019,12 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         Delays = new Delay[0];
     }
     public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
-    public static bool IsArmor(EVehicleType type) => type is EVehicleType.APC or EVehicleType.IFV or EVehicleType.MBT or EVehicleType.SCOUT_CAR;
-    public static bool IsLogistics(EVehicleType type) => type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT;
-    public static bool IsAircraft(EVehicleType type) => type is EVehicleType.HELI_TRANSPORT or EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
-    public static bool IsEmplacement(EVehicleType type) => type is EVehicleType.HMG or EVehicleType.ATGM or EVehicleType.AA or EVehicleType.MORTAR;
+    public static bool IsArmor(EVehicleType type) => type == EVehicleType.APC || type == EVehicleType.IFV || type == EVehicleType.MBT || type == EVehicleType.SCOUT_CAR;
+    public static bool IsLogistics(EVehicleType type) => type == EVehicleType.LOGISTICS || type == EVehicleType.HELI_TRANSPORT;
+    public static bool IsAircraft(EVehicleType type) =>  type == EVehicleType.HELI_TRANSPORT || type == EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
+    public static bool IsEmplacement(EVehicleType type) => type == EVehicleType.HMG || type == EVehicleType.ATGM || type == EVehicleType.AA || type == EVehicleType.MORTAR;
     public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
-    [JsonIgnore]
-    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
     public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
     public void SaveMetaData(InteractableVehicle vehicle)
     {
@@ -1164,190 +1067,6 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
         if (barricades is not null || trunk is not null)
             Metadata = new MetaSave(barricades, trunk);
     }
-    public static void Write(VehicleData data, Utf8JsonWriter writer) => data.WriteJson(writer);
-    public static VehicleData Read(ref Utf8JsonReader reader)
-    {
-        VehicleData data = new VehicleData();
-        data.ReadJson(ref reader);
-        return data;
-    }
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WriteString(nameof(Name), Name);
-        writer.WriteString(nameof(VehicleID), VehicleID);
-        writer.WriteNumber(nameof(Team), Team);
-        writer.WriteNumber(nameof(RespawnTime), RespawnTime);
-        writer.WriteNumber(nameof(TicketCost), TicketCost);
-        writer.WriteNumber(nameof(Cooldown), Cooldown);
-        writer.WriteString(nameof(Branch), Branch.ToString());
-        writer.WriteString(nameof(RequiredClass), RequiredClass.ToString());
-        writer.WriteNumber(nameof(RearmCost), RearmCost);
-        writer.WriteString(nameof(Type), Type.ToString());
-        writer.WriteBoolean(nameof(RequiresSL), RequiresSL);
-        writer.WriteNumber(nameof(CreditCost), CreditCost);
-        writer.WriteNumber(nameof(UnlockLevel), UnlockLevel);
-
-        writer.WritePropertyName(nameof(UnlockRequirements));
-        writer.WriteStartArray();
-        for (int i = 0; i < UnlockRequirements.Length; i++)
-        {
-            writer.WriteStartObject();
-            BaseUnlockRequirement.Write(writer, UnlockRequirements[i]);
-            writer.WriteEndObject();
-        }
-        writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(Items));
-        writer.WriteStartArray();
-        for (int i = 0; i < Items.Length; i++)
-            writer.WriteStringValue(Items[i]);
-        writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(Delays));
-        writer.WriteStartArray();
-        for (int i = 0; i < Delays.Length; i++)
-        {
-            writer.WriteStartObject();
-            ref Delay del = ref Delays[i];
-            del.WriteJson(writer);
-            writer.WriteEndObject();
-        }
-        writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(CrewSeats));
-        writer.WriteStartArray();
-        for (int i = 0; i < CrewSeats.Count; i++)
-            writer.WriteNumberValue(CrewSeats[i]);
-        writer.WriteEndArray();
-
-        writer.WritePropertyName(nameof(Metadata));
-        if (Metadata == null) writer.WriteNullValue();
-        else
-        {
-            writer.WriteStartObject();
-            Metadata.WriteJson(writer);
-            writer.WriteEndObject();
-        }
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string? prop = reader.GetString();
-                if (reader.Read() && prop != null)
-                {
-                    switch (prop)
-                    {
-                        case nameof(Name):
-                            Name = reader.GetString()!;
-                            break;
-                        case nameof(VehicleID):
-                            VehicleID = reader.GetGuid();
-                            break;
-                        case nameof(Team):
-                            Team = reader.GetUInt64();
-                            break;
-                        case nameof(RespawnTime):
-                            RespawnTime = reader.GetUInt16();
-                            break;
-                        case nameof(TicketCost):
-                            TicketCost = reader.GetUInt16();
-                            break;
-                        case nameof(CreditCost):
-                            CreditCost = reader.GetUInt16();
-                            break;
-                        case nameof(Cooldown):
-                            Cooldown = reader.GetUInt16();
-                            break;
-                        case nameof(Branch):
-                            if (reader.TokenType != JsonTokenType.String || !Enum.TryParse(reader.GetString()!, true, out Branch))
-                                Branch = (EBranch)reader.GetByte();
-                            break;
-                        case nameof(RequiredClass):
-                            if (reader.TokenType != JsonTokenType.String || !Enum.TryParse(reader.GetString()!, true, out RequiredClass))
-                                RequiredClass = (EClass)reader.GetByte();
-                            break;
-                        case nameof(RearmCost):
-                            RearmCost = reader.GetByte();
-                            break;
-                        case nameof(Type):
-                            if (reader.TokenType != JsonTokenType.String || !Enum.TryParse(reader.GetString()!, true, out Type))
-                                Type = (EVehicleType)reader.GetByte();
-                            break;
-                        case nameof(RequiresSL):
-                            RequiresSL = reader.TokenType == JsonTokenType.True;
-                            break;
-                        case nameof(UnlockLevel):
-                            UnlockLevel = reader.GetUInt16();
-                            break;
-                        case nameof(UnlockRequirements):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                List<BaseUnlockRequirement> reqs = new List<BaseUnlockRequirement>(2);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    BaseUnlockRequirement? bur = BaseUnlockRequirement.Read(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    if (bur != null) reqs.Add(bur);
-                                }
-                                UnlockRequirements = reqs.ToArray();
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(Items):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                List<Guid> items = new List<Guid>(16);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.String)
-                                {
-                                    if (reader.TryGetGuid(out Guid guid))
-                                        items.Add(guid);
-                                }
-                                Items = items.ToArray();
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(Delays):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                List<Delay> delays = new List<Delay>(1);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    Delay delay = new Delay();
-                                    delay.ReadJson(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    delays.Add(delay);
-                                }
-                                Delays = delays.ToArray();
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(CrewSeats):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                CrewSeats = new List<byte>(0);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.Number)
-                                    CrewSeats.Add(reader.GetByte());
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            break;
-                        case nameof(Metadata):
-                            if (reader.TokenType == JsonTokenType.Null)
-                                Metadata = null;
-                            else if (reader.TokenType == JsonTokenType.StartObject)
-                            {
-                                Metadata = new MetaSave(null, null);
-                                Metadata.ReadJson(ref reader);
-                            }
-                            break;
-                    }
-                }
-            }
-        }
-    }
     public string GetCostLine(UCPlayer ucplayer)
     {
         if (UnlockRequirements == null || UnlockRequirements.Length == 0)
@@ -1377,7 +1096,7 @@ public class VehicleData : IJsonReadWrite, ITranslationArgument
     }
 }
 
-public class MetaSave : IJsonReadWrite
+public class MetaSave
 {
     public List<VBarricade>? Barricades;
     public List<KitItem>? TrunkItems;
@@ -1386,75 +1105,9 @@ public class MetaSave : IJsonReadWrite
         Barricades = barricades;
         TrunkItems = trunkItems;
     }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.Read())
-        {
-            if (reader.TokenType == JsonTokenType.EndObject) return;
-            if (reader.TokenType == JsonTokenType.PropertyName)
-            {
-                string prop = reader.GetString()!;
-                if (reader.Read())
-                {
-                    switch (prop)
-                    {
-                        case nameof(TrunkItems):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                TrunkItems = JsonSerializer.Deserialize<List<KitItem>>(ref reader, JsonEx.serializerSettings);
-                            }
-                            else if (reader.TokenType == JsonTokenType.Null)
-                                TrunkItems = null;
-                            break;
-                        case nameof(Barricades):
-                            if (reader.TokenType == JsonTokenType.StartArray)
-                            {
-                                Barricades = new List<VBarricade>(0);
-                                while (reader.Read() && reader.TokenType == JsonTokenType.StartObject)
-                                {
-                                    VBarricade barricade = new VBarricade();
-                                    barricade.ReadJson(ref reader);
-                                    while (reader.TokenType != JsonTokenType.EndObject) if (!reader.Read()) break;
-                                    Barricades.Add(barricade);
-                                }
-                                while (reader.TokenType != JsonTokenType.EndArray) if (!reader.Read()) break;
-                            }
-                            else if (reader.TokenType == JsonTokenType.Null)
-                                Barricades = null;
-                            break;
-                    }
-                }
-            }
-        }
-    }
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WritePropertyName(nameof(TrunkItems));
-        if (TrunkItems != null)
-        {
-            JsonSerializer.Serialize(TrunkItems, JsonEx.serializerSettings);
-        }
-        else
-            writer.WriteNullValue();
-
-        writer.WritePropertyName(nameof(Barricades));
-        if (Barricades != null)
-        {
-            writer.WriteStartArray();
-            for (int i = 0; i < Barricades.Count; i++)
-            {
-                writer.WriteStartObject();
-                Barricades[i].WriteJson(writer);
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
-        }
-        else
-            writer.WriteNullValue();
-    }
 }
 
-public class VBarricade : IJsonReadWrite
+public class VBarricade
 {
     public Guid BarricadeID;
     public ushort Health;
@@ -1481,66 +1134,6 @@ public class VBarricade : IJsonReadWrite
         AngleY = angleY;
         AngleZ = angleZ;
         State = state;
-    }
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WriteString(nameof(BarricadeID), BarricadeID);
-        writer.WriteNumber(nameof(Health), Health);
-        writer.WriteNumber(nameof(OwnerID), OwnerID);
-        writer.WriteNumber(nameof(GroupID), GroupID);
-        writer.WriteNumber(nameof(PosX), PosX);
-        writer.WriteNumber(nameof(PosY), PosY);
-        writer.WriteNumber(nameof(PosZ), PosZ);
-        writer.WriteNumber(nameof(AngleX), AngleX);
-        writer.WriteNumber(nameof(AngleY), AngleY);
-        writer.WriteNumber(nameof(AngleZ), AngleZ);
-        writer.WriteString(nameof(State), State);
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.TokenType == JsonTokenType.PropertyName || (reader.Read() && reader.TokenType == JsonTokenType.PropertyName))
-        {
-            string? prop = reader.GetString();
-            if (reader.Read() && prop != null)
-            {
-                switch (prop)
-                {
-                    case nameof(BarricadeID):
-                        reader.TryGetGuid(out BarricadeID);
-                        break;
-                    case nameof(Health):
-                        reader.TryGetUInt16(out Health);
-                        break;
-                    case nameof(OwnerID):
-                        reader.TryGetUInt64(out OwnerID);
-                        break;
-                    case nameof(GroupID):
-                        reader.TryGetUInt64(out GroupID);
-                        break;
-                    case nameof(PosX):
-                        reader.TryGetSingle(out PosX);
-                        break;
-                    case nameof(PosY):
-                        reader.TryGetSingle(out PosY);
-                        break;
-                    case nameof(PosZ):
-                        reader.TryGetSingle(out PosZ);
-                        break;
-                    case nameof(AngleX):
-                        reader.TryGetSingle(out AngleX);
-                        break;
-                    case nameof(AngleY):
-                        reader.TryGetSingle(out AngleY);
-                        break;
-                    case nameof(AngleZ):
-                        reader.TryGetSingle(out AngleZ);
-                        break;
-                    case nameof(State):
-                        State = reader.GetString() ?? string.Empty;
-                        break;
-                }
-            }
-        }
     }
 }
 
@@ -1606,7 +1199,12 @@ public enum EVehicleType
     [Translatable(LanguageAliasSet.RUSSIAN, "реактивный")]
     [Translatable("Jet")]
     JET,
-    [Obsolete]
+    [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
+    [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
+    [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
+    [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
+    [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
+    [Obsolete("Use the individual emplacement types instead.", true)]
     EMPLACEMENT,
     [Translatable(LanguageAliasSet.RUSSIAN, "зенитный")]
     [Translatable(LanguageAliasSet.SPANISH, "")]

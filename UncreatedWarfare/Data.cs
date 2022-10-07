@@ -83,6 +83,7 @@ public static class Data
         public const PlayerKey GiveUp = PlayerKey.PluginKey3;
         public const PlayerKey SelfRevive = PlayerKey.PluginKey2;
         public const PlayerKey SpawnCountermeasures = PlayerKey.PluginKey3;
+        public const PlayerKey ActionMenu = PlayerKey.PluginKey2;
     }
 
     public const string SUPPRESS_CATEGORY = "Microsoft.Performance";

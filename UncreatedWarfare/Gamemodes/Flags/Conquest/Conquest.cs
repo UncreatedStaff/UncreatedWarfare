@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -48,6 +49,7 @@ public sealed partial class Conquest :
     private ConquestLeaderboard? _endScreen;
     private ConquestStatTracker _gameStats;
     private TraitManager _traitManager;
+    private ActionManager _actionManager;
     private bool _isScreenUp = false;
     public override bool EnableAMC => true;
     public override bool ShowOFPUI => true;
@@ -67,6 +69,7 @@ public sealed partial class Conquest :
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
+    public ActionManager ActionManager => _actionManager;
     Leaderboard<ConquestStats, ConquestStatTracker>? IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.Leaderboard => _endScreen;
     public bool IsScreenUp => _isScreenUp;
     public ConquestStatTracker WarstatsTracker => _gameStats;
@@ -86,6 +89,8 @@ public sealed partial class Conquest :
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _requestSigns);
         AddSingletonRequirement(ref _traitManager);
+        if (UCWarfare.Config.EnableActionMenu)
+            AddSingletonRequirement(ref _actionManager);
         base.PreInit();
     }
     protected override void PostInit()

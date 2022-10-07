@@ -37,7 +37,7 @@ public class AmmoCommand : Command
                 throw ctx.Reply(T.AmmoAutoSupply);
 
             bool isInMain = F.IsInMain(vehicle.transform.position);
-            if (VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
+            if (!VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
             {
                 BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.BarricadeRepairStation.Value.Guid,
                 10,
@@ -82,7 +82,7 @@ public class AmmoCommand : Command
         {
             ctx.AssertGamemode<IKitRequests>();
 
-            if (!ctx.Caller.IsTeam1() && !ctx.Caller.IsTeam2())
+            if (!ctx.Caller.IsOnTeam)
                 throw ctx.Reply(T.NotOnCaptureTeam);
 
             if (!KitManager.HasKit(ctx.Caller.Steam64, out Kit kit))

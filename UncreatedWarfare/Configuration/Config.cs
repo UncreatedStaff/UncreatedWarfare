@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using SDG.Unturned;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Uncreated.SQL;
 
@@ -68,6 +69,8 @@ public class SystemConfigData : JSONConfigData
     public bool EnableSquads;
     [JsonPropertyName("enableSync")]
     public bool EnableSync;
+    [JsonPropertyName("enableActionMenu")]
+    public bool EnableActionMenu;
     [JsonPropertyName("loadoutPremiumCost")]
     public float LoadoutCost;
     [JsonPropertyName("vehicleAbandonmentDistance")]
@@ -116,6 +119,7 @@ public class SystemConfigData : JSONConfigData
         ClearItemsOnAmmoBoxUse = true;
         RelayMicsDuringEndScreen = true;
         EnableSquads = true;
+        EnableActionMenu = true;
         LoadoutCost = 10;
         MaxVehicleAbandonmentDistance = 300f;
         MaxVehicleHeightToLeave = 50f;

@@ -47,7 +47,7 @@ public class BuildableComponent : MonoBehaviour
             p.Player.movement.getVehicle() == null &&
             (p.Position - foundation.model.position).sqrMagnitude < Math.Pow(80, 2)))
             {
-                Tips.TryGiveTip(player, ETip.HELP_BUILD, placer.CharacterName);
+                Tips.TryGiveTip(player, 120, T.TipHelpBuild, placer);
             }
         }
     }

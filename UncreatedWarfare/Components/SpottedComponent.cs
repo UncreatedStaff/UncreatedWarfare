@@ -419,6 +419,10 @@ public class SpottedComponent : MonoBehaviour
     {
         INFANTRY,
         FOB,
+        LIGHT_VEHICLE,
+        ARMOR,
+        AIRCRAFT,
+        EMPLACEMENT
     }
 
     private sealed class SpottedBuff : IBuff

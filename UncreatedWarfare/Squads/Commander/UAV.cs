@@ -93,7 +93,7 @@ public class UAV : MonoBehaviour, IBuff
                 else if (team == 2) isRequestActiveT2 = true;
                 requester.SendChat(T.RequestUAVSent, activeCommander);
                 activeCommander.SendChat(T.RequestUAVTell, requester, requester.Squad!, new GridLocation(pos));
-                Tips.TryGiveTip(activeCommander, ETip.UAV_REQUEST, requester);
+                Tips.TryGiveTip(activeCommander, 0, T.TipUAVRequest, requester);
                 UCWarfare.I.StartCoroutine(RequestUAVCoroutine(team, requester, activeCommander, isMarker, pos));
             }
             else

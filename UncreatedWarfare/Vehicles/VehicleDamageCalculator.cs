@@ -10,7 +10,7 @@ namespace Uncreated.Warfare.Vehicles
     {
         private const float maxAngleBeforeDropOff = 20;
 
-        private static Dictionary<InteractableVehicle, float> damageRegister = new Dictionary<InteractableVehicle, float>();
+        private static readonly Dictionary<InteractableVehicle, float> damageRegister = new Dictionary<InteractableVehicle, float>();
 
         public static float GetDamageMultiplier(ProjectileComponent projectileComponent, Collider vehicleCollider)
         {

@@ -51,7 +51,7 @@ public static class Points
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!isnewGame && (player.IsTeam1() || player.IsTeam2()))
+        if (!isnewGame && (player.IsTeam1 || player.IsTeam2))
         {
             UpdateXPUI(player);
             UpdateCreditsUI(player);
@@ -850,7 +850,6 @@ public static class Points
                     e.Component.LastDamageOrigin, vehicleWasFriendly);
         }
     }
-
 }
 
 public class XPConfig : JSONConfigData

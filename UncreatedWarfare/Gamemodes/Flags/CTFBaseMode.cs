@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -57,6 +58,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     protected SquadManager _squadManager;
     protected StructureSaver _structureSaver;
     protected TraitManager _traitManager;
+    protected ActionManager _actionManager;
     protected Leaderboard? _endScreen;
     private StatTracker _gameStats;
     protected Transform? _blockerBarricadeT1 = null;
@@ -83,6 +85,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
+    public ActionManager ActionManager => _actionManager;
     Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
     public bool IsScreenUp => _isScreenUp;
     public StatTracker WarstatsTracker => _gameStats;
@@ -103,6 +106,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         AddSingletonRequirement(ref _structureSaver);
         AddSingletonRequirement(ref _requestSigns);
         AddSingletonRequirement(ref _traitManager);
+        if (UCWarfare.Config.EnableActionMenu)
+            AddSingletonRequirement(ref _actionManager);
         base.PreInit();
     }
     protected override void PostInit()

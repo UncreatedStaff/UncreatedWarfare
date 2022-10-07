@@ -1218,9 +1218,9 @@ public class KitManager : BaseReloadSingleton
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         string unarmedKit = string.Empty;
-        if (player.IsTeam1())
+        if (player.IsTeam1)
             unarmedKit = TeamManager.Team1UnarmedKit;
-        if (player.IsTeam2())
+        else if (player.IsTeam2)
             unarmedKit = TeamManager.Team2UnarmedKit;
 
         if (KitExists(unarmedKit, out Kit kit))

@@ -57,9 +57,9 @@ namespace Uncreated.Warfare.Squads
                         int nearbyEnemiesCount = 0;
                         float sqrdst = SquadManager.Config.RallyDespawnDistance *
                                        SquadManager.Config.RallyDespawnDistance;
-                        if (player.IsTeam1())
+                        if (player.IsTeam1)
                             nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == 2 && (p.Position - player.Position).sqrMagnitude < sqrdst);
-                        if (player.IsTeam2())
+                        else if (player.IsTeam2)
                             nearbyEnemiesCount = PlayerManager.OnlinePlayers.Count(p => p.Player.quests.groupID.m_SteamID == 1 && (p.Position - player.Position).sqrMagnitude < sqrdst);
 
                         if (nearbyEnemiesCount > 0)

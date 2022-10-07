@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using Uncreated.Players;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
@@ -59,6 +60,7 @@ public class Insurgency :
     protected InsurgencyTracker _gameStats;
     protected InsurgencyLeaderboard _endScreen;
     protected TraitManager _traitManager;
+    protected ActionManager _actionManager;
     private TicketManager _ticketManager;
     protected ulong _attackTeam;
     protected ulong _defendTeam;
@@ -86,6 +88,7 @@ public class Insurgency :
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
+    public ActionManager ActionManager => _actionManager;
     public ulong AttackingTeam => _attackTeam;
     public ulong DefendingTeam => _defendTeam;
     public int CachesLeft { get; private set; }
@@ -113,6 +116,8 @@ public class Insurgency :
         AddSingletonRequirement(ref _vehicleSigns);
         AddSingletonRequirement(ref _requestSigns);
         AddSingletonRequirement(ref _traitManager);
+        if (UCWarfare.Config.EnableActionMenu)
+            AddSingletonRequirement(ref _actionManager);
         base.PreInit();
     }
     protected override void PostInit()
