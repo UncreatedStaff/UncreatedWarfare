@@ -166,9 +166,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             UnityEngine.Object.Destroy(comp);
         if (Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid) && guid == e.ServersideData.barricade.asset.GUID)
         {
-            FOB? fob = FOB.GetNearestFOB(e.ServersideData.point, EFOBRadius.SHORT, e.ServersideData.group);
-
-            fob?.UpdateBunker(null);
+            FOB.GetNearestFOB(e.ServersideData.point, EFOBRadius.SHORT, e.ServersideData.group)?.UpdateBunker(null);
         }
         if (e.Transform.TryGetComponent(out FOBComponent f))
         {

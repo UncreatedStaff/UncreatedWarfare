@@ -645,9 +645,12 @@ public class KitManager : BaseReloadSingleton
         }
         if (res)
         {
-            player.AccessibleKits?.RemoveAll(x => x.Equals(kit.Name, StringComparison.Ordinal));
-            if ((kit.IsPremium || kit.IsLoadout) && Data.Is(out ITeams teams) && teams.UseTeamSelector && teams.TeamSelector is not null)
-                teams.TeamSelector.OnKitsUpdated(player);
+            UCWarfare.RunOnMainThread(() =>
+            {
+                player.AccessibleKits?.RemoveAll(x => x.Equals(kit.Name, StringComparison.Ordinal));
+                if ((kit.IsPremium || kit.IsLoadout) && Data.Is(out ITeams teams) && teams.UseTeamSelector && teams.TeamSelector is not null)
+                    teams.TeamSelector.OnKitsUpdated(player);
+            });
         }
         return res;
     }

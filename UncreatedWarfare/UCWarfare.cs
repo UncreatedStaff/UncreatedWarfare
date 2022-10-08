@@ -346,6 +346,12 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
     public static void RunOnMainThread(System.Action action)
     {
+        if (IsMainThread)
+        {
+            action();
+            return;
+        }
+            
         MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask());
         res.OnCompleted(action);
     }

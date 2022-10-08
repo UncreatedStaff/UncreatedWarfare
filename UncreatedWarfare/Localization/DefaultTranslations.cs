@@ -240,7 +240,7 @@ internal static class T
     [TranslationData(SECTION_LEADERBOARD)]
     public static readonly Translation<FactionInfo, FactionInfo> WarstatsHeader = new Translation<FactionInfo, FactionInfo>("{0} vs {1}", TranslationFlags.UnityUI, FactionInfo.COLOR_SHORT_NAME_FORMAT, FactionInfo.COLOR_SHORT_NAME_FORMAT);
     [TranslationData(SECTION_LEADERBOARD)]
-    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1}% presence", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT, "P0");
+    public static readonly Translation<IPlayer, float> PlayerstatsHeader       = new Translation<IPlayer, float>("{0} - {1} presence", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT, "P0");
     [TranslationData(SECTION_LEADERBOARD)]
     public static readonly Translation<FactionInfo> WinnerTitle                 = new Translation<FactionInfo>("{0} Wins!", TranslationFlags.UnityUI, FactionInfo.COLOR_SHORT_NAME_FORMAT);
 
