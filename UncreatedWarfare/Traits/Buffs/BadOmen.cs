@@ -76,7 +76,6 @@ public class BadOmen : Buff
         if (ammoType != null)
             blastRadius *= ammoType.projectileBlastRadiusMultiplier;
         blastRadius += 5;
-        L.Log("blast radius: " + blastRadius);
         blastRadius *= blastRadius;
         List<ulong> warned = new List<ulong>(8);
         ulong team = owner.GetTeam();

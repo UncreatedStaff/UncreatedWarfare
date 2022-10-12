@@ -18,7 +18,7 @@ public class VehicleComponent : MonoBehaviour
     public Guid LastItem;
     public bool LastItemIsVehicle;
     public InteractableVehicle Vehicle;
-    public ulong Team { get => Vehicle.lockedGroup.m_SteamID; }
+    public ulong Team { get => Vehicle.lockedGroup.m_SteamID.GetTeam(); }
     public VehicleData Data;
     public bool IsInVehiclebay { get; private set; }
     public EDamageOrigin LastDamageOrigin;
@@ -328,7 +328,7 @@ public class VehicleComponent : MonoBehaviour
         int addedBackCount = 0;
         int addedNewCount = 0;
         int loaderBreak = 0;
-
+        /*
         List<ItemJar> oldTrunkItems = new List<ItemJar>();
         for (int i = Vehicle.trunkItems.items.Count - 1; i >= 0; i--)
         {
@@ -337,7 +337,6 @@ public class VehicleComponent : MonoBehaviour
 
             oldTrunkItems.Add(Vehicle.trunkItems.items[i]);
             Vehicle.trunkItems.removeItem(Vehicle.trunkItems.getIndex(Vehicle.trunkItems.items[i].x, Vehicle.trunkItems.items[i].y));
-
         }
 
         bool shouldAddMoreItems = true;
@@ -369,9 +368,9 @@ public class VehicleComponent : MonoBehaviour
                     }
                 }
             }
-        }
+        }*/
 
-        if (shouldAddMoreItems)
+        //if (shouldAddMoreItems)
         {
             for (int i = 0; i < amount - existingCount; i++)
             {
@@ -396,13 +395,13 @@ public class VehicleComponent : MonoBehaviour
                 }
             }
         }
-        foreach (ItemJar item in oldTrunkItems)
+        /*foreach (ItemJar item in oldTrunkItems)
         {
             if (item.item.id != supplyAsset.id)
             {
                 Vehicle.trunkItems.tryAddItem(item.item);
             }
-        }
+        }*/
 
         caller.SendChat(type is ESupplyType.BUILD ? T.LoadCompleteBuild : T.LoadCompleteAmmo, addedBackCount + addedNewCount);
 

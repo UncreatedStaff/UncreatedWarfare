@@ -123,12 +123,10 @@ internal class ProjectileSolver : MonoBehaviour
         c.ignoreTransform = rocket.ignoreTransform;
         c.OriginalRocketData = rocket;
 
-        Stopwatch st = new Stopwatch();
-        st.Start();
         int i = 0;
         float lastSent = 0f;
         int iter = Mathf.CeilToInt(MAX_TIME / Time.fixedDeltaTime);
-        int skip = Mathf.CeilToInt(1f / Time.fixedDeltaTime);
+        int skip = Mathf.CeilToInt(1f / (Time.fixedDeltaTime * 1.5f));
         float seconds = 0f;
         for (; !c.isExploded && i < iter; ++i)
         {
@@ -149,7 +147,6 @@ internal class ProjectileSolver : MonoBehaviour
                     yield break;
             }
         }
-        st.Stop();
 
         Vector3 pos = transform.gameObject.transform.position;
         float landTime = data.launchTime + seconds;

@@ -450,23 +450,26 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 }
             }
         }
-        if (lastOwner == 1)
+        else
         {
-            int oldindex = _objectiveT1Index;
-            _objectiveT1Index = flag.index;
-            if (oldindex != flag.index)
+            if (lastOwner == 1)
             {
-                InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                int oldindex = _objectiveT1Index;
+                _objectiveT1Index = flag.index;
+                if (oldindex != flag.index)
+                {
+                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                }
                 InvokeOnFlagNeutralized(flag, 2, 1);
             }
-        }
-        else if (lastOwner == 2)
-        {
-            int oldindex = _objectiveT2Index;
-            _objectiveT2Index = flag.index;
-            if (oldindex != flag.index)
+            else if (lastOwner == 2)
             {
-                InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                int oldindex = _objectiveT2Index;
+                _objectiveT2Index = flag.index;
+                if (oldindex != flag.index)
+                {
+                    InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
+                }
                 InvokeOnFlagNeutralized(flag, 1, 2);
             }
         }

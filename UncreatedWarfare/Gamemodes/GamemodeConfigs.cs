@@ -594,6 +594,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         UINearbyResources = new JsonAssetReference<EffectAsset>("3775a1e7d84b47e79cacecd5e6b2a224");
         UITickets = new JsonAssetReference<EffectAsset>("aba88eedb84448e8a30bb803a53a7236");
         UIBuffs = new JsonAssetReference<EffectAsset>("f298af0b4d34405b98a539b8d2ff0505");
+        UIActionMenu = new JsonAssetReference<EffectAsset>("bf4bc4e1a6a849c29e9f7a6de3a943e4");
         UIToastInfo = new JsonAssetReference<EffectAsset>("d75046834b324ed491914b4136ab1bc8");
         UIToastWarning = new JsonAssetReference<EffectAsset>("5678a559695e4d999dfea9a771b6616f");
         UIToastSevere = new JsonAssetReference<EffectAsset>("26fed6564ccf4c46aac1df01dbba0aab");

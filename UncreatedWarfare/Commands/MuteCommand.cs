@@ -1,4 +1,6 @@
-﻿using Uncreated.Framework;
+﻿using System;
+using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
@@ -33,8 +35,18 @@ public class MuteCommand : Command
 
         if (!ctx.TryGet(1, out ulong targetId, out _))
             throw ctx.Reply(T.PlayerNotFound);
-
-        OffenseManager.MutePlayer(targetId, ctx.CallerID, type, duration, ctx.GetRange(3)!);
+        Task.Run(async () =>
+        {
+            try
+            {
+                await OffenseManager.MutePlayerAsync(targetId, ctx.CallerID, type, duration, ctx.GetRange(3)!, DateTimeOffset.UtcNow);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Error muting " + targetId + ".");
+                L.LogError(ex);
+            }
+        });
         ctx.Defer();
     }
 }

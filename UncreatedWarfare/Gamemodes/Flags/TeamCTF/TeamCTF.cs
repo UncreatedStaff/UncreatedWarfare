@@ -3,6 +3,7 @@ using System.Linq;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Singletons;
+using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -97,22 +98,8 @@ public sealed class TeamCTFTicketProvider : BaseCTFTicketProvider, IFlagCaptured
     }
     public void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner)
     {
-        if (!Data.Is(out IFlagRotation r)) return;
-
-        if (r.Rotation.Count / 2f + 0.5f == flag.index) // if is middle flag
-        {
-            if (newOwner == 1) Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagCaptured;
-            else if (newOwner == 2) Manager.Team2Tickets += Gamemode.Config.AASTicketsFlagCaptured;
-        }
-
-        if (GetTeamBleed(2ul) < 0)
-        {
-            Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagCaptured;
-        }
-        else if (GetTeamBleed(1ul) < 0)
-        {
-            Manager.Team2Tickets += Gamemode.Config.AASTicketsFlagCaptured;
-        }
+        if (newOwner == 1) Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagCaptured;
+        else if (newOwner == 2) Manager.Team2Tickets += Gamemode.Config.AASTicketsFlagCaptured;
 
         if (oldOwner == 1) Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagLost;
         else if (oldOwner == 2) Manager.Team2Tickets += Gamemode.Config.AASTicketsFlagLost;

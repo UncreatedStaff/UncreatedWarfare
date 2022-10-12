@@ -20,12 +20,12 @@ public class Invasion :
 {
     protected ulong _attackTeam;
     protected ulong _defenseTeam;
-    protected SpecialFOB _vcp;
+    protected SpecialFOB? _vcp;
     public override string DisplayName => "Invasion";
     public override EGamemode GamemodeType => EGamemode.INVASION;
     public ulong AttackingTeam => _attackTeam;
     public ulong DefendingTeam => _defenseTeam;
-    public SpecialFOB FirstPointFOB => _vcp;
+    public SpecialFOB? FirstPointFOB => _vcp;
     public Invasion() : base(nameof(Invasion), Config.AASEvaluateTime) { }
     protected override void PostDispose()
     {
@@ -371,7 +371,7 @@ public class Invasion :
         }
         else
         {
-            FactionInfo info = TeamManager.GetFactionSafe(NewOwner)!;
+            FactionInfo info = TeamManager.GetFaction(NewOwner);
             Chat.Broadcast(LanguageSet.OnTeam(1), T.TeamCaptured, info, flag);
             Chat.Broadcast(LanguageSet.OnTeam(2), T.TeamCaptured, info, flag);
         }
@@ -483,5 +483,10 @@ public sealed class InvasionTicketProvider : BaseCTFTicketProvider, IFlagCapture
             Manager.Team1Tickets += Gamemode.Config.InvasionTicketsFlagCaptured;
         else if (newOwner == 2)
             Manager.Team2Tickets += Gamemode.Config.InvasionTicketsFlagCaptured;
+
+        if (oldOwner == 1)
+            Manager.Team1Tickets += Gamemode.Config.AASTicketsFlagLost;
+        else if (oldOwner == 2)
+            Manager.Team2Tickets += Gamemode.Config.AASTicketsFlagLost;
     }
 }

@@ -44,12 +44,13 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #endif
         for (int i = 0; i < _rotation.Count; i++)
         {
-            if (_rotation[i] == null) continue;
-            _rotation[i].GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departingPlayers);
+            Flag f = _rotation[i];
+            if (f == null) continue;
+            f.GetUpdatedPlayers(out List<Player> newPlayers, out List<Player> departingPlayers);
             foreach (Player player in departingPlayers)
-                RemovePlayerFromFlag(player, _rotation[i]);
+                RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, f);
             foreach (Player player in newPlayers)
-                AddPlayerOnFlag(player, _rotation[i]);
+                AddPlayerOnFlag(player, f);
         }
         if (TimeToEvaluatePoints())
         {
@@ -123,15 +124,18 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         }
         _rotation.Clear();
     }
-    protected virtual void RemovePlayerFromFlag(Player player, Flag flag)
+    protected virtual void RemovePlayerFromFlag(ulong playerId, Player? player, Flag flag)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_onFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID) && _onFlag[player.channel.owner.playerID.steamID.m_SteamID] == flag.ID)
+        if (flag == null)
+            return;
+        if (_onFlag.TryGetValue(playerId, out int fid) && fid == flag.ID)
         {
-            _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
-            flag.ExitPlayer(player);
+            _onFlag.Remove(playerId);
+            if (player != null)
+                flag.ExitPlayer(player);
         }
     }
     public virtual void AddPlayerOnFlag(Player player, Flag flag)
@@ -139,13 +143,13 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (_onFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID))
+        if (_onFlag.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out int fid))
         {
-            if (_onFlag[player.channel.owner.playerID.steamID.m_SteamID] != flag.ID)
+            if (fid != flag.ID)
             {
-                Flag oldFlag = _rotation.FirstOrDefault(f => f.ID == _onFlag[player.channel.owner.playerID.steamID.m_SteamID]);
+                Flag oldFlag = _rotation.FirstOrDefault(f => f.ID == fid);
                 if (oldFlag == default(Flag)) _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
-                else RemovePlayerFromFlag(player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
+                else RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
                 _onFlag.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
             }
         }

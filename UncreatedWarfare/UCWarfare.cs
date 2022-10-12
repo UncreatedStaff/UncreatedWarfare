@@ -39,7 +39,7 @@ public delegate void VoidDelegate();
 public class UCWarfare : MonoBehaviour, IUncreatedSingleton
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
-    public static readonly Version Version = new Version(2, 7, 0, 0);
+    public static readonly Version Version = new Version(2, 7, 1, 1);
     private readonly SystemConfig _config = new SystemConfig();
     public static UCWarfare I;
     internal static UCWarfareNexus Nexus;

@@ -25,14 +25,14 @@ public static class Signs
     }
     public static void SendSignUpdate(InteractableSign sign, UCPlayer player)
     {
-        if (sign != null)
+        if (sign != null && player.IsOnline)
         {
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, GetClientText(sign.text, player, sign));
         }
     }
     public static void SendSignUpdate(BarricadeDrop drop, UCPlayer player)
     {
-        if (drop != null && drop.interactable is InteractableSign sign)
+        if (drop != null && drop.interactable is InteractableSign sign && player.IsOnline)
         {
             Data.SendChangeText.Invoke(sign.GetNetId(), ENetReliability.Unreliable, player.Connection, GetClientText(sign.text, player, sign));
         }

@@ -25,8 +25,16 @@ public class FOBComponent : MonoBehaviour
     {
         this.Parent = parent;
         Data.Gamemode.OnGameTick += OnTick;
+        Restock();
     }
-
+    public void Restock()
+    {
+        if (Parent.Team is not 1 and not 2)
+            return;
+        byte[] state = Convert.FromBase64String(Parent.Team == 1 ? FOBManager.Config.T1RadioState : FOBManager.Config.T2RadioState);
+        Parent.Radio.GetServersideData().barricade.state = state;
+        Parent.Radio.ReceiveUpdateState(state);
+    }
     private void OnTick()
     {
 #if DEBUG
@@ -105,14 +113,7 @@ public class FOBComponent : MonoBehaviour
                 {
                     if (!Parent.IsBleeding)
                     {
-                        byte[] state = new byte[0];
-                        if (Parent.Team == 1)
-                            state = Convert.FromBase64String(FOBManager.Config.T1RadioState);
-                        else if (Parent.Team == 2)
-                            state = Convert.FromBase64String(FOBManager.Config.T2RadioState);
-
-                        Parent.Radio.GetServersideData().barricade.state = state;
-                        Parent.Radio.ReceiveUpdateState(state);
+                        Restock();
                     }
                 }
             }

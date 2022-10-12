@@ -1262,7 +1262,7 @@ public class CommandInteraction : BaseCommandInteraction
             throw Reply(T.NotOnDuty);
     }
     /// <exception cref="CommandInteraction"/>
-    public void AssertHelpCheck(int parameter, string helpMessage, params string[] formatting)
+    public void AssertHelpCheckNoUsage(int parameter, string helpMessage)
     {
         if (MatchParameter(parameter, "help"))
             throw ReplyString(helpMessage);
@@ -1272,6 +1272,18 @@ public class CommandInteraction : BaseCommandInteraction
     {
         if (MatchParameter(parameter, "help"))
             throw SendCorrectUsage(usage);
+    }
+    /// <exception cref="CommandInteraction"/>
+    public void AssertHelpCheckNoUsage(int parameter, Translation helpMessage)
+    {
+        if (MatchParameter(parameter, "help"))
+            throw Reply(helpMessage);
+    }
+    /// <exception cref="CommandInteraction"/>
+    public void AssertHelpCheck(int parameter, Translation usage)
+    {
+        if (MatchParameter(parameter, "help"))
+            throw SendCorrectUsage(usage.Translate(Caller));
     }
 
     public Exception SendNotImplemented() => Reply(T.NotImplemented);

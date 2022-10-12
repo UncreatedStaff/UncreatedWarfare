@@ -1105,7 +1105,7 @@ internal class _DebugCommand : Command
         ctx.Defer();
     }
 
-    private void squadsetup(CommandInteraction ctx)
+    private void squad(CommandInteraction ctx)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();

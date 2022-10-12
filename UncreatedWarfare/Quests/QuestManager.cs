@@ -221,6 +221,10 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        // no clue why this is running after unload...
+        if (!UCWarfare.IsLoaded)
+            return;
+
         if (!UCWarfare.Config.DisableDailyQuests)
             DailyQuests.Tick();
         for (int i = 0; i < RegisteredTrackers.Count; i++)

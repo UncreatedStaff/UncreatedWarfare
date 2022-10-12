@@ -55,11 +55,23 @@ public class ActionManager : BaseSingleton
 
         ActionMenuUI.Cancel.OnClicked -= Cancel;
     }
-
+    private static bool uiWarnSent = false;
     public static void OpenUI(UCPlayer player, ref bool handled)
     {
+        if (!ActionMenuUI.UIAsset.ValidReference(out EffectAsset _))
+        {
+            if (!uiWarnSent)
+            {
+                L.LogWarning("Skipping sending action UI, effect not found.");
+                uiWarnSent = true;
+            }
+            return;
+        }
+        if (player.IsActionMenuOpen)
+            return;
         ActionMenuUI.SendToPlayer(player.Connection);
 
+        player.IsActionMenuOpen = true;
         if (player.IsSquadLeader())
         {
             ActionMenuUI.SquadSection.SetVisibility(player.Connection, true);
@@ -72,19 +84,24 @@ public class ActionManager : BaseSingleton
 
         player.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
     }
-    public static void CloseUI(Player player)
+    public static void CloseUI(UCPlayer player)
     {
-        ActionMenuUI.ClearFromPlayer(player.channel.owner.transportConnection);
-        player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+        player.IsActionMenuOpen = false;
+        ActionMenuUI.ClearFromPlayer(player.Connection);
+        player.Player.disablePluginWidgetFlag(EPluginWidgetFlags.Modal);
     }
     public static void Cancel(UnturnedButton button, Player player)
     {
-        CloseUI(player);
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
+        CloseUI(caller);
     }
     public static void NeedMedic(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Kits.EClass.MEDIC &&
@@ -98,8 +115,9 @@ public class ActionManager : BaseSingleton
 
     public static void NeedAmmo(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Kits.EClass.RIFLEMAN &&
@@ -113,8 +131,9 @@ public class ActionManager : BaseSingleton
 
     public static void NeedRide(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             p.IsDriver && 
@@ -131,8 +150,9 @@ public class ActionManager : BaseSingleton
 
     public static void NeedSupport(UnturnedButton button, Player player)
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
@@ -145,8 +165,9 @@ public class ActionManager : BaseSingleton
 
     public static void HeliPickup(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Kits.EClass.PILOT) ||
@@ -178,8 +199,9 @@ public class ActionManager : BaseSingleton
 
     public static void HeliDropoff(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             p.KitClass == Kits.EClass.PILOT) ||
@@ -211,8 +233,9 @@ public class ActionManager : BaseSingleton
     }
     public static void SuppliesBuild(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             (p.KitClass == Kits.EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.Data.Type == Vehicles.EVehicleType.LOGISTICS))) ||
@@ -251,8 +274,9 @@ public class ActionManager : BaseSingleton
     }
     public static void SuppliesAmmo(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             (p.KitClass == Kits.EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.Data.Type == Vehicles.EVehicleType.LOGISTICS))) ||
@@ -291,8 +315,9 @@ public class ActionManager : BaseSingleton
     }
     public static void AirSupport(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && (c.Data.Type == Vehicles.EVehicleType.HELI_ATTACK || c.Data.Type == Vehicles.EVehicleType.JET)) ||
@@ -322,8 +347,9 @@ public class ActionManager : BaseSingleton
     }
     public static void ArmorSupport(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
-
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         var viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsArmor) ||
@@ -354,25 +380,33 @@ public class ActionManager : BaseSingleton
     
     public static void UnloadBuild(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         TryUnloadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build);
         CloseUI(caller);
     }
     public static void UnloadAmmo(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         TryUnloadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo);
         CloseUI(caller);
     }
     public static void LoadBuild(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build, false);
         CloseUI(caller);
     }
     public static void LoadAmmo(UnturnedButton button, Player player) // WIP
     {
-        UCPlayer caller = UCPlayer.FromPlayer(player)!;
+        UCPlayer? caller = UCPlayer.FromPlayer(player);
+        if (caller == null)
+            return;
         TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo, true);
         CloseUI(caller);
     }

@@ -90,9 +90,6 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private EAdminType? _pLvl = null;
     private RankData? _rank;
     private FPlayerName cachedName = FPlayerName.Nil;
-    public InteractableVehicle? CurrentVehicle => Player.movement.getVehicle();
-    public bool IsInVehicle => CurrentVehicle != null;
-    public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
     public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName, bool donator)
     {
         Steam64 = steamID.m_SteamID;
@@ -169,11 +166,14 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     end:
         return Name.CharacterName;
     }
+    public InteractableVehicle? CurrentVehicle => Player.movement.getVehicle();
+    public bool IsInVehicle => CurrentVehicle != null;
+    public bool IsDriver => CurrentVehicle != null && CurrentVehicle.passengers.Length > 0 && CurrentVehicle.passengers[0].player != null && CurrentVehicle.passengers[0].player.playerID.steamID.m_SteamID == Steam64;
     bool IEquatable<UCPlayer>.Equals(UCPlayer other) => other == this || other.Steam64 == Steam64; 
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public Player Player { get; internal set; }
     public CSteamID CSteamID { get; internal set; }
-    public ITransportConnection Connection => Player.channel.owner.transportConnection;
+    public ITransportConnection Connection => Player?.channel?.owner?.transportConnection!;
     public ushort LastPingID { get; internal set; }
     ulong IPlayer.Steam64 => Steam64;
     public bool IsAdmin => Player.channel.owner.isAdmin;
@@ -183,6 +183,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public bool IsTalking => !lastMuted && isTalking && IsOnline;
     public bool IsLeaving => _isLeaving;
     public bool VanishMode { get => _vanishMode; set => _vanishMode = value; }
+    public bool IsActionMenuOpen { get; internal set; }
     public bool IsOtherDonator { get; set; }
     public bool GodMode { get => _godMode; set => _godMode = value; }
     public Dictionary<Buff, float> ShovelSpeedMultipliers { get; } = new Dictionary<Buff, float>(6);

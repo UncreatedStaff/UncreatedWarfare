@@ -356,6 +356,8 @@ public static class EventFunctions
             Items? trunk = e.Player.Player.inventory.items[PlayerInventory.STORAGE];
             if (trunk is null)
                 return;
+            if (e.Player.Keys.IsKeyDown(Data.Keys.DropSupplyOverride))
+                return;
             for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
             {
                 if (VehicleManager.vehicles[i].trunkItems == trunk)

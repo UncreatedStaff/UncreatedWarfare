@@ -692,8 +692,7 @@ public class Translation
         if (last is 'y')
             if (!(slast is 'a' or 'e' or 'i' or 'o' or 'u'))
                 return word.Substring(0, word.Length - 1) + "ies";
-            else
-                return word + "s";
+            else goto s;
 
         if (str.Equals("photo", StringComparison.OrdinalIgnoreCase) ||
             str.Equals("piano", StringComparison.OrdinalIgnoreCase) ||
@@ -866,7 +865,7 @@ public class Translation
         ref TranslationValue data = ref this[language];
         return data.Processed;
     }
-    public string Translate(IPlayer player) => Translate(Localization.GetLang(player.Steam64));
+    public string Translate(IPlayer? player) => player is null ? Translate(L.DEFAULT) : Translate(Localization.GetLang(player.Steam64));
     public string Translate(ulong player) => Translate(Localization.GetLang(player));
     public string Translate(ulong player, out Color color) => Translate(Localization.GetLang(player), out color);
     public string Translate(string? language, out Color color)

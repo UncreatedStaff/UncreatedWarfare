@@ -166,11 +166,11 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             UnityEngine.Object.Destroy(comp);
         if (Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid) && guid == e.ServersideData.barricade.asset.GUID)
         {
-            FOB.GetNearestFOB(e.ServersideData.point, EFOBRadius.SHORT, e.ServersideData.group)?.UpdateBunker(null);
+            FOB.GetNearestFOB(e.ServersideData.point, EFOBRadius.SHORT, e.ServersideData.group.GetTeam())?.UpdateBunker(null);
         }
-        if (e.Transform.TryGetComponent(out FOBComponent f))
+        if (e.Transform.TryGetComponent(out FOBComponent f) && f.Parent != null)
         {
-            ulong team = e.Barricade.GetServersideData().group.GetTeam();
+            ulong team = e.ServersideData.group.GetTeam();
             FactionInfo? info = TeamManager.GetFactionSafe(team);
             if (info is not null)
             {

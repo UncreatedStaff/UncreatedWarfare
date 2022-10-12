@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
@@ -28,7 +29,18 @@ public class UnmuteCommand : Command
                 }
             }
 
-            OffenseManager.UnmutePlayer(playerId, ctx.CallerID);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await OffenseManager.UnmutePlayerAsync(playerId, ctx.CallerID, DateTimeOffset.UtcNow);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error unmuting " + playerId + ".");
+                    L.LogError(ex);
+                }
+            });
             ctx.Defer();
         }
         else ctx.Reply(T.PlayerNotFound);

@@ -30,7 +30,14 @@ public static class PlayerManager
         _dict = new Dictionary<ulong, UCPlayer>(50);
         EventDispatcher.OnGroupChanged += OnGroupChagned;
     }
-    public static UCPlayer? FromID(ulong steam64) => _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
+    public static UCPlayer? FromID(ulong steam64)
+    {
+        lock (_dict)
+        {
+            return _dict.TryGetValue(steam64, out UCPlayer pl) ? pl : null;
+        }
+    }
+
     public static bool HasSave(ulong playerID, out PlayerSave save) => PlayerSave.TryReadSaveFile(playerID, out save!);
     public static PlayerSave? GetSave(ulong playerID) => PlayerSave.TryReadSaveFile(playerID, out PlayerSave? save) ? save : null;
     public static void ApplyToOnline()
@@ -96,7 +103,10 @@ public static class PlayerManager
 
 
         OnlinePlayers.Add(ucplayer);
-        _dict.Add(ucplayer.Steam64, ucplayer);
+        lock (_dict)
+        {
+            _dict.Add(ucplayer.Steam64, ucplayer);
+        }
 
         SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
         FOBManager.SendFOBList(ucplayer);
@@ -117,7 +127,10 @@ public static class PlayerManager
         player.Events.Dispose();
 
         OnlinePlayers.RemoveAll(s => s == default || s.Steam64 == player.Steam64);
-        _dict.Remove(player.Steam64);
+        lock (_dict)
+        {
+            _dict.Remove(player.Steam64);
+        }
         player.Player = null!;
     }
     public static IEnumerable<UCPlayer> GetNearbyPlayers(float range, Vector3 point)

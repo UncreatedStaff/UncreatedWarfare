@@ -50,10 +50,6 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
     public event PointsChangedDelegate OnPointsChanged;
     public delegate void OwnerChangedDelegate(ulong lastOwner, ulong newOwner, Flag flag);
     public event OwnerChangedDelegate OnOwnerChanged;
-    public event DiscoveryDelegate OnDiscovered;
-    public event DiscoveryDelegate OnHidden;
-    public event EventHandler OnDisposed;
-    public event EventHandler OnReset;
 
     public List<UCPlayer> PlayersOnFlag { get; private set; }
     public Zone ZoneData { get; protected set; }
@@ -148,13 +144,11 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         {
             if (value == true && _discovered1 == false)
             {
-                OnDiscovered?.Invoke(1);
                 _discovered1 = true;
                 return;
             }
             if (value == false && _discovered1 == true)
             {
-                OnHidden?.Invoke(1);
                 _discovered1 = false;
                 return;
             }
@@ -167,13 +161,11 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         {
             if (value == true && _discovered2 == false)
             {
-                OnDiscovered?.Invoke(2);
                 _discovered2 = true;
                 return;
             }
             if (value == false && _discovered2 == true)
             {
-                OnHidden?.Invoke(2);
                 _discovered2 = false;
                 return;
             }
@@ -194,13 +186,10 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         IsContestedOverride = null;
         Hide(1);
         Hide(2);
-        if (OnReset != null)
-            OnReset.Invoke(this, EventArgs.Empty);
         RecalcCappers();
     }
     public void Dispose()
     {
-        OnDisposed?.Invoke(this, EventArgs.Empty);
         GC.SuppressFinalize(this);
     }
     public void SetOwner(ulong value, bool invokeEvent = true)
@@ -283,7 +272,8 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
             for (int j = 0; j < PlayersOnFlag.Count; j++)
                 if (player.Steam64 == PlayersOnFlag[j].Steam64)
                     goto done;
-            departedPlayers.Add(player);
+            if (player.IsOnline)
+                departedPlayers.Add(player);
         done:;
         }
     }

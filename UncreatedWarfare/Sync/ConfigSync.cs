@@ -957,6 +957,8 @@ public class ConfigSync : MonoBehaviour
     }
     internal static void OnConnected(IConnection connection)
     {
+        if (!UCWarfare.Config.EnableSync)
+            return;
         NetCalls.RequestFullSyncPacket.NetInvoke();
         foreach (ConfigSyncInst inst in RegisteredTypes.Values)
         {
