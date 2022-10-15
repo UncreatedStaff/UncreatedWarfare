@@ -7,8 +7,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -31,7 +33,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 namespace Uncreated.Warfare.Commands;
 
 #pragma warning disable IDE1006 // Naming Styles
-internal class _DebugCommand : Command
+public class _DebugCommand : Command
 #pragma warning restore IDE1006 // Naming Styles
 {
     public static int currentstep = 0;

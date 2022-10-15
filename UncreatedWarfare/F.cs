@@ -942,7 +942,7 @@ public static class F
         if (UCWarfare.CanUseNetCall)
             call.Invoke(UCWarfare.I.NetClient!);
     }
-    public static void NetInvoke<T>(this NetCallCustom call, NetCallCustom.WriterTask task)
+    public static void NetInvoke(this NetCallCustom call, NetCallCustom.WriterTask task)
     {
         if (UCWarfare.CanUseNetCall)
             call.Invoke(UCWarfare.I.NetClient!, task);

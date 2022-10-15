@@ -258,9 +258,11 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     private void InternalSubscribe()
     {
         EventDispatcher.OnGroupChanged += OnGroupChangedIntl;
+        EventDispatcher.OnPlayerDied += OnPlayerDeath;
     }
     private void InternalUnsubscribe()
     {
+        EventDispatcher.OnPlayerDied -= OnPlayerDeath;
         EventDispatcher.OnGroupChanged -= OnGroupChangedIntl;
     }
     /// <summary>Adds a singleton to be loaded at the end of PreInit</summary>

@@ -11,7 +11,6 @@ using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using static Uncreated.Framework.Report;
 
 namespace Uncreated.Warfare.Components;
 
@@ -21,7 +20,8 @@ public class SpottedComponent : MonoBehaviour
     public ESpotted? Type { get; private set; }
     public EVehicleType? VehicleType { get; private set; }
     public ushort EffectID { get; private set; }
-    // CAN BE OFFLINE
+    /// <summary>Player who spotted the object.</summary>
+    /// <remarks>May not always be online or have a value at all.</remarks>
     public UCPlayer? CurrentSpotter { get; private set; }
     public ulong SpottingTeam => team;
     public ulong OwnerTeam { get => ownerTeam; set => ownerTeam = value; }

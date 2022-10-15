@@ -95,6 +95,8 @@ public class SystemConfigData : JSONConfigData
     public bool EnablePlayerJoinLeaveTeamMessages;
     [JsonPropertyName("timeBetweenAnnouncements")]
     public float SecondsBetweenAnnouncements;
+    [JsonPropertyName("sendActionLogs")]
+    public bool SendActionLogs;
 
     public override void SetDefaults()
     {
@@ -136,6 +138,7 @@ public class SystemConfigData : JSONConfigData
         RegionKey = 255;
         EnableSync = true;
         SecondsBetweenAnnouncements = 60f;
+        SendActionLogs = true;
     }
     public class ModerationConfig
     {
