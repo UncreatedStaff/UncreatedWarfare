@@ -199,13 +199,13 @@ public class KitManager : BaseReloadSingleton
                 KitItem item = new KitItem();
                 ReadToKitItem(R, item);
                 kit.Items.Add(item);
-            });
+            }).ConfigureAwait(false);
             await Data.AdminSql.QueryAsync("SELECT * FROM `kit_clothes` WHERE `Kit` = @0;", parameters, R =>
             {
                 KitClothing clothing = new KitClothing();
                 ReadToKitClothing(R, clothing);
                 kit.Clothes.Add(clothing);
-            });
+            }).ConfigureAwait(false);
             await Data.AdminSql.QueryAsync("SELECT * FROM `kit_skillsets` WHERE `Kit` = @0;", parameters, R =>
             {
                 Skillset set = ReadSkillset(R);
@@ -213,7 +213,7 @@ public class KitManager : BaseReloadSingleton
                     kit.AddSkillset(set);
                 else
                     L.LogWarning("Invalid skillset for kit " + kit.Name!.ToString());
-            });
+            }).ConfigureAwait(false);
             await Data.AdminSql.QueryAsync("SELECT * FROM `kit_lang` WHERE `Kit` = @0;", parameters, R =>
             {
                 string lang = R.GetString(2);
@@ -222,7 +222,7 @@ public class KitManager : BaseReloadSingleton
                 else
                     L.LogWarning("Duplicate translation for kit " + kit.Name + " (" + kit.PrimaryKey +
                                  ") for language " + lang);
-            });
+            }).ConfigureAwait(false);
             await Data.AdminSql.QueryAsync("SELECT `Kit`, `JSON` FROM `kit_unlock_requirements` WHERE `Kit` = @0;", parameters, R =>
             {
                 int kitPk = R.GetInt32(0);
@@ -232,7 +232,7 @@ public class KitManager : BaseReloadSingleton
                     if (req != null)
                         kit.AddUnlockRequirement(req);
                 }
-            });
+            }).ConfigureAwait(false);
             UpdateSigns(kit);
         }
         finally

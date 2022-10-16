@@ -221,7 +221,10 @@ internal static class T
     public static readonly Translation ProhibitedSignEditing = new Translation("<#ff8c69>You are not allowed to edit that sign.");
     
     [TranslationData(SECTION_PLAYERS, "Sent when a player tries to use a command while not in main.")]
-        public static readonly Translation NotInMain = new Translation("<#b3a6a2>You must be in <#cedcde>MAIN</color> to use this command.");
+    public static readonly Translation NotInMain = new Translation("<#b3a6a2>You must be in <#cedcde>MAIN</color> to use this command.");
+    
+    [TranslationData(SECTION_PLAYERS, "Sent when a player tries to craft a blacklisted blueprint.")]
+    public static readonly Translation NoCraftingBlueprint = new Translation("<#b3a6a2>Crafting is disabled for this item.");
     #endregion
 
     #region Leaderboards

@@ -14,6 +14,7 @@ using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
@@ -1529,7 +1530,7 @@ public static class EventFunctions
             explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening.";
         }
     }
-    internal static void OnStructureDestroyed(SDG.Unturned.StructureData data, StructureDrop drop, uint instanceID)
+    internal static void OnStructureDestroyed(StructureData data, StructureDrop drop, uint instanceID)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -1631,11 +1632,40 @@ public static class EventFunctions
             r.ReviveManager.OnPlayerHealed(instigator, target);
         }
     }
-
     internal static void OnGameUpdateDetected(string newVersion, ref bool shouldShutdown)
     {
         shouldShutdown = false;
         ShutdownCommand.ShutdownAfterGame("Unturned update \"v" + newVersion + "\".", false);
+    }
+    internal static void OnCraftRequested(CraftRequested e)
+    {
+        if (Data.Gamemode is null)
+            goto skip;
+
+        Data.Gamemode.OnCraftRequestedIntl(e);
+        if (!e.CanContinue)
+            return;
+
+        EBlueprintType type = e.Blueprint.type;
+        switch (type)
+        {
+            case EBlueprintType.AMMO:
+                if (!Gamemode.Config.GeneralAllowCraftingAmmo)
+                    goto skip;
+                break;
+            case EBlueprintType.REPAIR:
+                if (!Gamemode.Config.GeneralAllowCraftingRepair)
+                    goto skip;
+                break;
+            default:
+                if (!Gamemode.Config.GeneralAllowCraftingOthers)
+                    goto skip;
+                break;
+        }
+        return;
+    skip:
+        Chat.SendChat(e.Player, T.NoCraftingBlueprint);
+        e.Break();
     }
 }
 #pragma warning restore IDE0060 // Remove unused parameter

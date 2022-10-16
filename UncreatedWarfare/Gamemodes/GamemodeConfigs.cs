@@ -365,6 +365,18 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(607)]
     [JsonPropertyName("general_uav_alive_time")]
     public RotatableConfig<float> GeneralUAVAliveTime { get; set; }
+
+    [Sync(608)]
+    [JsonPropertyName("general_allow_crafting_ammo")]
+    public RotatableConfig<bool> GeneralAllowCraftingAmmo { get; set; }
+
+    [Sync(609)]
+    [JsonPropertyName("general_allow_crafting_repair")]
+    public RotatableConfig<bool> GeneralAllowCraftingRepair { get; set; }
+
+    [Sync(610)]
+    [JsonPropertyName("general_allow_crafting_others")]
+    public RotatableConfig<bool> GeneralAllowCraftingOthers { get; set; }
     #endregion
 
     #region Advance and Secure (1001 to 1100)
@@ -646,6 +658,9 @@ public sealed class GamemodeConfigData : JSONConfigData
         GeneralUAVRadius = 350f;
         GeneralUAVScanSpeed = 1f;
         GeneralUAVAliveTime = 60f;
+        GeneralAllowCraftingAmmo = true;
+        GeneralAllowCraftingRepair = true;
+        GeneralAllowCraftingOthers = false;
         #endregion
 
         #region Advance and Secure
