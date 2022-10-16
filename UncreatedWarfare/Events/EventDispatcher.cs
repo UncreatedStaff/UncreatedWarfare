@@ -8,6 +8,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
@@ -32,6 +33,7 @@ public static class EventDispatcher
     public static event EventDelegate<LandmineExploding> OnLandmineExploding;
 
     public static event EventDelegate<ItemDropRequested> OnItemDropRequested;
+    public static event EventDelegate<CraftRequested> OnCraftRequested;
 
     public static event EventDelegate<ThrowableSpawned> OnThrowableSpawned;
     public static event EventDelegate<ThrowableSpawned> OnThrowableDespawning;
@@ -66,9 +68,12 @@ public static class EventDispatcher
         UseableGun.onProjectileSpawned += ProjectileOnProjectileSpawned;
         UseableGun.onBulletHit += OnBulletHit;
         PlayerInput.onPluginKeyTick += OnPluginKeyTick;
+        PlayerCrafting.onCraftBlueprintRequested += PlayerCraftingOnCraftRequested;
     }
     internal static void UnsubscribeFromAll()
     {
+        PlayerCrafting.onCraftBlueprintRequested -= PlayerCraftingOnCraftRequested;
+        UseableGun.onBulletHit -= OnBulletHit;
         PlayerInput.onPluginKeyTick -= OnPluginKeyTick;
         UseableGun.onProjectileSpawned -= ProjectileOnProjectileSpawned;
         UseableThrowable.onThrowableSpawned -= UseableThrowableOnThrowableSpawned;
@@ -464,7 +469,25 @@ public static class EventDispatcher
         }
         if (!request.CanContinue) shouldExplode = false;
     }
-
+    private static void PlayerCraftingOnCraftRequested(PlayerCrafting crafting, ref ushort itemID, ref byte blueprintIndex, ref bool shouldAllow)
+    {
+        if (OnCraftRequested == null || !shouldAllow) return;
+        UCPlayer? pl = UCPlayer.FromPlayer(crafting.player);
+        if (pl == null || Assets.find(EAssetType.ITEM, itemID) is not ItemAsset asset || asset.blueprints.Count <= blueprintIndex)
+            return;
+        Blueprint bp = asset.blueprints[blueprintIndex];
+        if (bp is null)
+            return;
+        CraftRequested request = new CraftRequested(pl, asset, bp, shouldAllow);
+        foreach (EventDelegate<CraftRequested> inv in OnCraftRequested.GetInvocationList().Cast<EventDelegate<CraftRequested>>())
+        {
+            if (!request.CanContinue) break;
+            TryInvoke(inv, request, nameof(OnCraftRequested));
+        }
+        itemID = request.ItemId;
+        blueprintIndex = request.BlueprintIndex;
+        if (!request.CanContinue) shouldAllow = false;
+    }
     internal static void InvokeOnDropItemRequested(UCPlayer player, PlayerInventory inventory, Item item, ref bool shouldAllow)
     {
         if (OnItemDropRequested == null || !shouldAllow) return;
@@ -473,7 +496,7 @@ public static class EventDispatcher
         bool found = false;
         for (byte i = 0; i < PlayerInventory.PAGES; ++i)
         {
-            Items page = inventory.items[i];
+            SDG.Unturned.Items page = inventory.items[i];
             for (byte j = 0; j < page.items.Count; ++j)
             {
                 if (page.items[j].item == item)

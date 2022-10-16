@@ -2,6 +2,7 @@
 using System.Reflection;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
 using UnityEngine;
@@ -30,6 +31,11 @@ public interface IFlagCapturedListener
 {
     void OnFlagCaptured(Flag flag, ulong newOwner, ulong oldOwner);
 }
+public interface ICraftingSettingsOverride
+{
+    void OnCraftRequested(CraftRequested e);
+}
+
 public interface IFlagNeutralizedListener
 {
     void OnFlagNeutralized(Flag flag, ulong newOwner, ulong oldOwner);

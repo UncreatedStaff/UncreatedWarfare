@@ -281,6 +281,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         EventDispatcher.OnExitVehicle += EventFunctions.OnPlayerLeavesVehicle;
         EventDispatcher.OnLandmineExploding += EventFunctions.OnLandmineExploding;
         EventDispatcher.OnItemDropRequested += EventFunctions.OnItemDropRequested;
+        EventDispatcher.OnCraftRequested += EventFunctions.OnCraftRequested;
         VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
@@ -346,12 +347,6 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
     public static void RunOnMainThread(System.Action action)
     {
-        if (IsMainThread)
-        {
-            action();
-            return;
-        }
-            
         MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask());
         res.OnCompleted(action);
     }

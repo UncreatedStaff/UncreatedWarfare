@@ -1,7 +1,7 @@
 ﻿using SDG.Unturned;
 using UnityEngine;
 
-namespace Uncreated.Warfare.Events.Barricades;
+namespace Uncreated.Warfare.Events.Items;
 public class ItemDropRequested : BreakablePlayerEvent
 {
     private readonly Item _item;

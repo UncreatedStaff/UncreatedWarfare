@@ -7,6 +7,7 @@ using Uncreated.Players;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
@@ -173,6 +174,10 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     /// <remarks>No base, guranteed to be called after all registered <see cref="ILevelStartListener.OnLevelReady"/>'s have been called.</remarks>
     protected virtual void OnReady() { }
 
+    /// <summary>Called when a player tries to craft something.</summary>
+    /// <remarks>No base, guranteed to be called before all registered <see cref="ICraftingSettingsOverride.OnCraftRequested(CraftRequested)"/>'s have been called.</remarks>
+    protected virtual void OnCraftRequested(CraftRequested e) { }
+
     /// <summary>Runs just before a game starts.</summary>
     /// <param name="isOnLoad">Whether this is the first game played on this singleton since running <see cref="Load"/>.</param>
     /// <remarks>Called from <see cref="StartNextGame(bool)"/></remarks>
@@ -254,7 +259,22 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         }
         _hasTimeSynced = false;
     }
+    internal void OnCraftRequestedIntl(CraftRequested e)
+    {
+        OnCraftRequested(e);
+        if (!e.CanContinue)
+            return;
 
+        for (int i = 0; i < _singletons.Count; i++)
+        {
+            if (_singletons[i] is ICraftingSettingsOverride craftingOverride)
+            {
+                craftingOverride.OnCraftRequested(e);
+                if (!e.CanContinue)
+                    return;
+            }
+        }
+    }
     private void InternalSubscribe()
     {
         EventDispatcher.OnGroupChanged += OnGroupChangedIntl;
