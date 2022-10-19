@@ -120,7 +120,7 @@ public class VehicleBayCommand : Command
                 if (string.IsNullOrEmpty(gamemode) && type == EDelayType.NONE)
                 {
                     gamemode = "<";
-                    foreach (KeyValuePair<string, Type> gm in Gamemode.GAMEMODES)
+                    foreach (KeyValuePair<string, Type> gm in Gamemode.Gamemodes)
                     {
                         if (gamemode.Length != 1) gamemode += "|";
                         gamemode += gm.Key;
@@ -135,7 +135,7 @@ public class VehicleBayCommand : Command
                 if (!string.IsNullOrEmpty(gamemode))
                 {
                     string? gm = null;
-                    foreach (KeyValuePair<string, Type> gm2 in Gamemode.GAMEMODES)
+                    foreach (KeyValuePair<string, Type> gm2 in Gamemode.Gamemodes)
                     {
                         if (gm2.Key.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
                         {
@@ -146,7 +146,7 @@ public class VehicleBayCommand : Command
                     if (string.IsNullOrEmpty(gm))
                     {
                         gamemode = "<";
-                        foreach (KeyValuePair<string, Type> gm2 in Gamemode.GAMEMODES)
+                        foreach (KeyValuePair<string, Type> gm2 in Gamemode.Gamemodes)
                         {
                             if (gamemode.Length != 1) gamemode += "|";
                             gamemode += gm2.Key;

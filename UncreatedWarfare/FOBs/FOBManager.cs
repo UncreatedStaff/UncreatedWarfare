@@ -26,7 +26,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.FOBs;
 [SingletonDependency(typeof(Whitelister))]
-public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener
+public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener, IPlayerDisconnectListener, IGameTickListener
 {
     private static FOBManager Singleton;
     private static readonly FOBConfig _config = new FOBConfig();
@@ -140,19 +140,22 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
         }
         IconManager.OnBarricadePlaced(e.Barricade, isRadio);
     }
-    public void Tick()
+    void IGameTickListener.Tick()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        for (int i = SpecialFOBs.Count - 1; i >= 0; i--)
+        if (Data.Gamemode.EveryXSeconds(5f))
         {
-            SpecialFOB special = SpecialFOBs[i];
-            if (special.DisappearAroundEnemies)
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            for (int i = SpecialFOBs.Count - 1; i >= 0; i--)
             {
-                if (Provider.clients.Count(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Position).sqrMagnitude < Math.Pow(70, 2)) > 0)
+                SpecialFOB special = SpecialFOBs[i];
+                if (special.DisappearAroundEnemies)
                 {
-                    DeleteSpecialFOB(special.Name, special.Team);
+                    if (Provider.clients.Count(p => p.GetTeam() != special.Team && (p.player.transform.position - special.Position).sqrMagnitude < Math.Pow(70, 2)) > 0)
+                    {
+                        DeleteSpecialFOB(special.Name, special.Team);
+                    }
                 }
             }
         }

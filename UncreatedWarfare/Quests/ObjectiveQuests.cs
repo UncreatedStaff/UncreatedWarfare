@@ -173,9 +173,17 @@ public class XPInGamemodeQuest : BaseQuestData<XPInGamemodeQuest.Tracker, XPInGa
         {
             if (Gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
-                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2 &&
-                    st2.stats.TryGetValue(_player.Steam64, out BasePlayerStats st3) && st3 is IExperienceStats exp4)
-                    _currentXp = exp4.XPGained;
+                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2)
+                {
+                    for (int i = 0; i < st2.stats.Count; i++)
+                    {
+                        if (st2.stats[i].Steam64 == _player.Steam64 && st2.stats[i] is IExperienceStats exp4)
+                        {
+                            _currentXp = exp4.XPGained;
+                            break;
+                        }
+                    }
+                }
                 if (_currentXp >= XPCount)
                 {
                     _gamesCompleted++;
@@ -351,15 +359,34 @@ public class WinGamemodeQuest : BaseQuestData<WinGamemodeQuest.Tracker, WinGamem
             ulong team = _player.GetTeam();
             if (winner == team && Gamemode.IsMatch(Data.Gamemode.GamemodeType))
             {
-                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2 &&
-                    st2.stats.TryGetValue(_player.Steam64, out BasePlayerStats st3) && st3 is TeamPlayerStats teamstats &&
-                    st2.GetPresence(teamstats, winner) > Gamemodes.Gamemode.MATCH_PRESENT_THRESHOLD)
+                if (Data.Is(out IGameStats st) && st.GameStats is BaseStatTracker<BasePlayerStats> st2)
                 {
-                    _wins++;
-                    if (_wins >= WinCount)
-                        TellCompleted();
-                    else
-                        TellUpdated();
+                    bool award = false;
+                    for (int i = 0; i < st2.stats.Count; ++i)
+                    {
+                        if (st2.stats[i].Steam64 == _player.Steam64)
+                        {
+                            if (st2.stats[i] is ITeamPresenceStats tps)
+                            {
+                                if (st2.GetPresence(tps, winner) > Gamemodes.Gamemode.MATCH_PRESENT_THRESHOLD)
+                                    award = true;
+                            }
+                            else if (st2.stats[i] is IPresenceStats ps)
+                            {
+                                if (st2.GetPresence(ps) > Gamemodes.Gamemode.MATCH_PRESENT_THRESHOLD && Data.Gamemode.IsWinner(_player))
+                                    award = true;
+                            }
+                            break;
+                        }
+                    }
+                    if (award)
+                    {
+                        _wins++;
+                        if (_wins >= WinCount)
+                            TellCompleted();
+                        else
+                            TellUpdated();
+                    }
                 }
             }
         }

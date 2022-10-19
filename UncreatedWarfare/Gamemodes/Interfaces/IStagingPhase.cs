@@ -6,9 +6,9 @@ namespace Uncreated.Warfare.Gamemodes.Interfaces;
 
 public interface IStagingPhase : IGamemode
 {
-    int StagingSeconds { get; }
+    float StagingSeconds { get; }
 
-    void StartStagingPhase(int seconds);
+    void StartStagingPhase(float seconds);
     IEnumerator<WaitForSeconds> StagingPhaseLoop();
     void ShowStagingUI(UCPlayer player);
     void ShowStagingUIForAll();

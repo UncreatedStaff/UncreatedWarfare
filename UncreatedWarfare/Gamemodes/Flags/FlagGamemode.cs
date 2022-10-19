@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Traits.Buffs;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 
@@ -37,11 +38,8 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         LoadRotation();
         base.PreGameStarting(isOnLoad);
     }
-    protected override void EventLoopAction()
+    protected virtual void FlagCheck()
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
         for (int i = 0; i < _rotation.Count; i++)
         {
             Flag f = _rotation[i];
@@ -58,7 +56,6 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             if (EnableAMC)
                 CheckMainCampZones();
             OnEvaluate();
-            TeamManager.EvaluateBases();
         }
     }
     protected void ConvertFlags()
@@ -176,5 +173,36 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         }
 
         return flags.ToString();
+    }
+    protected static bool ConventionalIsContested(Flag flag, out ulong winner)
+    {
+        int t1 = flag.Team1TotalCappers, t2 = flag.Team2TotalCappers;
+        if (t1 == 0 && t2 == 0)
+        {
+            winner = 0;
+            return false;
+        }
+        else if (t1 == t2)
+            winner = Intimidation.CheckSquadsForContestBoost(flag);
+        else if (t1 == 0 && t2 > 0)
+            winner = 2;
+        else if (t2 == 0 && t1 > 0)
+            winner = 1;
+        else if (t1 > t2)
+        {
+            if (t1 - Config.AASRequiredCapturingPlayerDifference >= t2)
+                winner = 1;
+            else
+                winner = Intimidation.CheckSquadsForContestBoost(flag);
+        }
+        else
+        {
+            if (t2 - Config.AASRequiredCapturingPlayerDifference >= t1)
+                winner = 2;
+            else
+                winner = Intimidation.CheckSquadsForContestBoost(flag);
+        }
+
+        return winner == 0;
     }
 }

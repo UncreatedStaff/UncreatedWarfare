@@ -1453,6 +1453,13 @@ internal static class T
     public static readonly Translation<Cache, Cache> InsurgencyCacheDefenseUndiscovered = new Translation<Cache, Cache>("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.NAME_FORMAT, FOB.CLOSEST_LOCATION_FORMAT);
     #endregion
 
+    #region Hardpoint
+    public static readonly Translation<IObjective> HardpointObjectiveChanged = new Translation<IObjective>("New objective: {0}!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateCaptured = new Translation<IObjective, FactionInfo>("{0} is being held by {1}!", Flag.COLOR_NAME_FORMAT, FactionInfo.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateLost = new Translation<IObjective, FactionInfo>("{0} is no longer being held by {1}!", Flag.COLOR_NAME_FORMAT, FactionInfo.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective> HardpointObjectiveStateContested = new Translation<IObjective>("{0} is <#c$contested$>contested</color>!", Flag.COLOR_NAME_FORMAT);
+    #endregion
+
     #region Report Command
     public static readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob greifing\", \"cheating\".");
     public static readonly Translation<IPlayer> ReportDiscordNotLinked = new Translation<IPlayer>("<#9cffb3>Your account must be linked in our Discord server to use this command. Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", UCPlayer.COLOR_STEAM_64_FORMAT);

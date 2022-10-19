@@ -82,7 +82,7 @@ public abstract class BaseCTFTracker<T> : TeamStatTracker<T>, ILongestShotTracke
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<T> stats = this.stats.Values.ToList();
+        List<T> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>
         {
