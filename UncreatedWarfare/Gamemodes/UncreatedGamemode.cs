@@ -113,6 +113,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
         TraitSigns.BroadcastAllTraitSigns();
         TimeSync();
     }
+    protected virtual void OnAdvanceDelays(float seconds) { }
     public override void Load()
     {
 #if DEBUG
@@ -228,7 +229,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     /// <summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
     /// <remarks>Returns true if the second mark passed between the end of last tick and the start of this tick. Inlined when possible.</remarks>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool EveryXSeconds(float seconds) => _ticks * _eventLoopSpeed % seconds < _eventLoopSpeed;
+    public bool EveryXSeconds(float seconds) => seconds <= 0f || _ticks * _eventLoopSpeed % seconds < _eventLoopSpeed;
     private void InternalPreInit()
     {
         AddSingletonRequirement(ref Cooldowns);
@@ -417,7 +418,7 @@ public abstract class Gamemode : BaseSingletonComponent, IGamemode, ILevelStartL
     /// Used to line up all 'animated' sections of the plugin.<br/>
     /// Seconds tick on vehicle signs at the same time as they do on the staging phase UI, for example.
     /// </summary>
-    private void TimeSync()
+    protected virtual void TimeSync()
     {
         float time = Time.realtimeSinceStartup;
         for (int i = 0; i < _singletons.Count; ++i)

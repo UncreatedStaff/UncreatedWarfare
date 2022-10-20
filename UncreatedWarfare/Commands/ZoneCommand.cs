@@ -312,21 +312,30 @@ public class ZoneCommand : Command
         }
         else if (nameInput.Equals("obj", StringComparison.OrdinalIgnoreCase))
         {
-            if (Data.Is(out IAttackDefense atdef) && Data.Is(out IFlagTeamObjectiveGamemode rot))
+            if (Data.Is(out IFlagTeamObjectiveGamemode rot))
             {
-                ulong t = atdef.DefendingTeam;
-                if (t == 1)
+                if (Data.Is(out IAttackDefense atdef))
                 {
-                    Gamemodes.Flags.Flag? fl = rot.ObjectiveTeam1;
-                    if (fl != null)
-                        return fl.ZoneData;
+                    ulong t = atdef.DefendingTeam;
+                    if (t == 1)
+                    {
+                        Gamemodes.Flags.Flag? fl = rot.ObjectiveTeam1;
+                        if (fl != null)
+                            return fl.ZoneData;
+                    }
+                    else
+                    {
+                        Gamemodes.Flags.Flag? fl = rot.ObjectiveTeam2;
+                        if (fl != null)
+                            return fl.ZoneData;
+                    }
                 }
-                else
-                {
-                    Gamemodes.Flags.Flag? fl = rot.ObjectiveTeam2;
-                    if (fl != null)
-                        return fl.ZoneData;
-                }
+            }
+            else if (Data.Is(out IFlagObjectiveGamemode obj))
+            {
+                Gamemodes.Flags.Flag? fl = obj.Objective;
+                if (fl != null)
+                    return fl.ZoneData;
             }
         }
         return null;

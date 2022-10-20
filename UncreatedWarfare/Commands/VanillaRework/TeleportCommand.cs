@@ -61,7 +61,7 @@ public class TeleportCommand : Command
 
                     if (n is null)
                         throw ctx.Reply(T.TeleportLocationNotFound, input);
-                    if (ctx.Caller.Player.teleportToLocation(n.point, 0f))
+                    if (ctx.Caller.Player.teleportToLocation(new Vector3(n.point.x, F.GetTerrainHeightAt2DPoint(n.point.x, n.point.z, 1f), n.point.z), 0f))
                         throw ctx.Reply(T.TeleportSelfLocationSuccess, n.name);
                     else
                         throw ctx.Reply(T.TeleportSelfLocationObstructed, n.name);
@@ -111,7 +111,7 @@ public class TeleportCommand : Command
 
                         if (n is null)
                             throw ctx.Reply(T.TeleportLocationNotFound, input);
-                        if (target.Player.teleportToLocation(n.point, 0f))
+                        if (target.Player.teleportToLocation(new Vector3(n.point.x, F.GetTerrainHeightAt2DPoint(n.point.x, n.point.z, 1f), n.point.z), 0f))
                         {
                             target.SendChat(T.TeleportSelfLocationSuccess, n.name);
                             throw ctx.Reply(T.TeleportOtherSuccessLocation, target, n.name);

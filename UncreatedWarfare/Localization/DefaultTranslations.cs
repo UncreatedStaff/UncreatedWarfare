@@ -1454,9 +1454,11 @@ internal static class T
     #endregion
 
     #region Hardpoint
-    public static readonly Translation<IObjective> HardpointObjectiveChanged = new Translation<IObjective>("New objective: {0}!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<IObjective, float> HardpointFirstObjective = new Translation<IObjective, float>("Hold {0} to win! A new objective will be chosen in <#cedcde>{1}</color>.", Flag.COLOR_NAME_FORMAT, TIME_LONG);
+    public static readonly Translation<IObjective, float> HardpointObjectiveChanged = new Translation<IObjective, float>("New objective: {0}! The next objective will be chosen in <#cedcde>{1}</color>.", Flag.COLOR_NAME_FORMAT, TIME_LONG);
     public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateCaptured = new Translation<IObjective, FactionInfo>("{0} is being held by {1}!", Flag.COLOR_NAME_FORMAT, FactionInfo.COLOR_SHORT_NAME_FORMAT);
     public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateLost = new Translation<IObjective, FactionInfo>("{0} is no longer being held by {1}!", Flag.COLOR_NAME_FORMAT, FactionInfo.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective> HardpointObjectiveStateLostContest = new Translation<IObjective>("{0} is no longer <#c$contested$>contested</color>!", Flag.COLOR_NAME_FORMAT);
     public static readonly Translation<IObjective> HardpointObjectiveStateContested = new Translation<IObjective>("{0} is <#c$contested$>contested</color>!", Flag.COLOR_NAME_FORMAT);
     #endregion
 
@@ -1808,6 +1810,21 @@ internal static class T
     internal const string LOWERCASE = "lower";
     [FormatDisplay(typeof(object), "Proper Case")]
     internal const string PROPERCASE = "proper";
+    [FormatDisplay(typeof(float),    "Time (Long, seconds)")]
+    [FormatDisplay(typeof(uint),     "Time (Long, seconds)")]
+    [FormatDisplay(typeof(int),      "Time (Long, seconds)")]
+    [FormatDisplay(typeof(TimeSpan), "Time (Long)")]
+    internal const string TIME_LONG = "tlong";
+    [FormatDisplay(typeof(float),    "Time (Short mm:ss, seconds)")]
+    [FormatDisplay(typeof(uint),     "Time (Short mm:ss, seconds)")]
+    [FormatDisplay(typeof(int),      "Time (Short mm:ss, seconds)")]
+    [FormatDisplay(typeof(TimeSpan), "Time (Short mm:ss)")]
+    internal const string TIME_SHORT_MM_SS = "tshort1";
+    [FormatDisplay(typeof(float),    "Time (Short hh:mm:ss, seconds)")]
+    [FormatDisplay(typeof(uint),     "Time (Short hh:mm:ss, seconds)")]
+    [FormatDisplay(typeof(int),      "Time (Short hh:mm:ss, seconds)")]
+    [FormatDisplay(typeof(TimeSpan), "Time (Short hh:mm:ss)")]
+    internal const string TIME_SHORT_HH_MM_SS = "tshort2";
     [FormatDisplay(typeof(QuestAsset), "Asset Rarity")]
     [FormatDisplay(typeof(VehicleAsset), "Asset Rarity")]
     [FormatDisplay(typeof(ItemAsset), "Asset Rarity")]

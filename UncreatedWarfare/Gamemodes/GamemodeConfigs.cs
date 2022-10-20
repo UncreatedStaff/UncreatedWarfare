@@ -755,12 +755,11 @@ public sealed class GamemodeConfigData : JSONConfigData
         HardpointFlagTickSeconds = 4f;
         HardpointFlagAmount = 6;
         HardpointFlagTolerance = 1;
-        HardpointObjectiveChangeTime = 700;
-        HardpointObjectiveChangeTimeTolerance = 250;
-        HardpointTicketTickSeconds = 60f;
+        HardpointObjectiveChangeTime = 450;
+        HardpointObjectiveChangeTimeTolerance = 90;
+        HardpointTicketTickSeconds = 45f;
         HardpointStartingTickets = 300;
         HardpointStagingPhaseSeconds = 60;
-
         #endregion
     }
     private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();

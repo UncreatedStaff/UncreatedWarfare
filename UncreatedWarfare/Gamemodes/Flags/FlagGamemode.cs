@@ -38,6 +38,11 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         LoadRotation();
         base.PreGameStarting(isOnLoad);
     }
+    protected override void EventLoopAction()
+    {
+        base.EventLoopAction();
+        FlagCheck();
+    }
     protected virtual void FlagCheck()
     {
         for (int i = 0; i < _rotation.Count; i++)
