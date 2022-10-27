@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Uncreated.Framework;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
@@ -431,7 +432,7 @@ public class VehicleComponent : MonoBehaviour
                 if (asset is not null && Vehicle.trunkItems.checkSpaceEmpty(trunk[i].X, trunk[i].Y, asset.size_x,
                         asset.size_y, trunk[i].Rotation))
                 {
-                    Item item = new Item(asset.id, trunk[i].Amount, 100, F.CloneBytes(trunk[i].Metadata));
+                    Item item = new Item(asset.id, trunk[i].Amount, 100, Util.CloneBytes(trunk[i].Metadata));
                     Vehicle.trunkItems.addItem(trunk[i].X, trunk[i].Y, trunk[i].Rotation, item);
                     loaderCount++;
 

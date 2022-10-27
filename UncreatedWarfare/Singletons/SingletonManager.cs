@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using Uncreated.Framework;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;

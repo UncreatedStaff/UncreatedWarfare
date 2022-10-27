@@ -1301,8 +1301,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (message is null) throw new ArgumentNullException(nameof(message));
         if (IsConsole || Caller is null)
         {
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1316,11 +1316,11 @@ public class CommandInteraction : BaseCommandInteraction
         if (message is null) throw new ArgumentNullException(nameof(message));
         if (IsConsole || Caller is null)
         {
-            message = F.RemoveRichText(message);
+            message = Util.RemoveRichText(message);
             L.Log(message, color);
         }
         else
-            Caller.SendString(message, F.GetColor(color));
+            Caller.SendString(message, Util.GetColor(color));
         _responded = true;
         return this;
     }
@@ -1329,8 +1329,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (message is null) throw new ArgumentNullException(nameof(message));
         if (IsConsole || Caller is null)
         {
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(hex.Hex());
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(hex.Hex());
             L.Log(message, clr);
         }
         else
@@ -1343,7 +1343,7 @@ public class CommandInteraction : BaseCommandInteraction
         if (message is null) throw new ArgumentNullException(nameof(message));
         if (IsConsole || Caller is null)
         {
-            message = F.RemoveRichText(message);
+            message = Util.RemoveRichText(message);
             L.Log(message, ConsoleColor.Gray);
         }
         else
@@ -1357,8 +1357,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1372,8 +1372,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1387,8 +1387,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1402,8 +1402,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1417,8 +1417,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1432,8 +1432,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1447,8 +1447,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1462,8 +1462,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1477,8 +1477,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1492,8 +1492,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else
@@ -1507,8 +1507,8 @@ public class CommandInteraction : BaseCommandInteraction
         if (IsConsole || Caller is null)
         {
             string message = translation.Translate(L.DEFAULT, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, out Color color);
-            message = F.RemoveRichText(message);
-            ConsoleColor clr = F.GetClosestConsoleColor(color);
+            message = Util.RemoveRichText(message);
+            ConsoleColor clr = Util.GetClosestConsoleColor(color);
             L.Log(message, clr);
         }
         else

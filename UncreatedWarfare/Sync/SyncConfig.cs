@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using Uncreated.Json;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 

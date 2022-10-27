@@ -3,6 +3,7 @@ using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
+using Uncreated.Framework;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Traits;
 using UnityEngine;
@@ -55,7 +56,7 @@ namespace Uncreated.Warfare
                     Signs.BroadcastSign(trimmedText, sign, x, y);
                     if (StructureSaver.Loaded && StructureSaver.SaveExists(drop, out SavedStructure structure))
                     {
-                        structure.Metadata = F.CloneBytes(newState);
+                        structure.Metadata = Util.CloneBytes(newState);
                         StructureSaver.SaveSingleton();
                     }
 

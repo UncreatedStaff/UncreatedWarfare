@@ -10,6 +10,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Uncreated.Json;
 
 namespace Uncreated.Warfare.Deaths;
 internal static class Localization
@@ -501,7 +502,7 @@ internal static class Localization
     }
     private static void Log(bool tk, string msg, PlayerDied e)
     {
-        string log = F.RemoveRichText(msg);
+        string log = Util.RemoveRichText(msg);
         L.Log(log, tk ? ConsoleColor.Cyan : ConsoleColor.DarkCyan);
         if (OffenseManager.IsValidSteam64ID(e.Instigator))
         {

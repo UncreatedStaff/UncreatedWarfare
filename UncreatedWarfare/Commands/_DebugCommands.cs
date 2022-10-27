@@ -796,14 +796,14 @@ public class _DebugCommand : Command
         ctx.AssertArgs(1, "/test gettime <timestr>");
 
         string t = ctx.GetRange(0)!;
-        ctx.ReplyString("Time: " + F.ParseTimespan(t).ToString("g"));
+        ctx.ReplyString("Time: " + Util.ParseTimespan(t).ToString("g"));
     }
     private void getperms(CommandInteraction ctx)
     {
         ctx.ReplyString("Permission: " + ctx.Caller.GetPermissions());
     }
 #if DEBUG
-    private static readonly InstanceSetter<InteractableVehicle, bool> SetEngineOn = F.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly InstanceSetter<InteractableVehicle, bool> SetEngineOn = Util.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
     private void drivetest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();

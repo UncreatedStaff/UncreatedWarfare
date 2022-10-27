@@ -7,6 +7,7 @@ using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
+using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 

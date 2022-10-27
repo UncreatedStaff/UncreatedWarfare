@@ -6,7 +6,7 @@ namespace Uncreated.Warfare.Stats;
 
 public class WarfareStats
 {
-    public readonly static RawByteIO<WarfareStats> IO = new RawByteIO<WarfareStats>(Read, Write, null, 85);
+    public readonly static RawByteIO<WarfareStats> IO = new RawByteIO<WarfareStats>(Read, Write, null!, 85);
     public const uint CURRENT_DATA_VERSION = 1;
     public uint DATA_VERSION;
     public ulong Steam64;
@@ -133,7 +133,7 @@ public class WarfareStats
 }
 public class WarfareWeapon
 {
-    public readonly static RawByteIO<WarfareWeapon> IO = new RawByteIO<WarfareWeapon>(Read, Write, null, 49);
+    public readonly static RawByteIO<WarfareWeapon> IO = new RawByteIO<WarfareWeapon>(Read, Write, null!, 49);
     public const uint CURRENT_DATA_VERSION = 1;
     public uint DATA_VERSION;
     public ushort ID;
@@ -184,7 +184,7 @@ public class WarfareWeapon
 }
 public class WarfareKit
 {
-    public readonly static RawByteIO<WarfareKit> IO = new RawByteIO<WarfareKit>(Read, Write, null, 34);
+    public readonly static RawByteIO<WarfareKit> IO = new RawByteIO<WarfareKit>(Read, Write, null!, 34);
     public const uint CURRENT_DATA_VERSION = 1;
     public uint DATA_VERSION;
     public string KitID;
@@ -223,7 +223,7 @@ public class WarfareKit
 }
 public class WarfareTeam
 {
-    public readonly static RawByteIO<WarfareTeam> IO = new RawByteIO<WarfareTeam>(Read, Write, null, 65);
+    public readonly static RawByteIO<WarfareTeam> IO = new RawByteIO<WarfareTeam>(Read, Write, null!, 65);
     public const uint CURRENT_DATA_VERSION = 1;
     public uint DATA_VERSION;
     public byte Team;
@@ -295,7 +295,7 @@ public class WarfareTeam
 }
 public class WarfareVehicle
 {
-    public readonly static RawByteIO<WarfareVehicle> IO = new RawByteIO<WarfareVehicle>(Read, Write, null, 22);
+    public readonly static RawByteIO<WarfareVehicle> IO = new RawByteIO<WarfareVehicle>(Read, Write, null!, 22);
     public const uint CURRENT_DATA_VERSION = 1;
     public uint DATA_VERSION;
     public ushort ID;

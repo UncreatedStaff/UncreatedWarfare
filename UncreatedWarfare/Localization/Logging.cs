@@ -27,6 +27,7 @@ public static class L
     {
         if (_init) return;
         _init = true;
+        F.CheckDir(Data.Paths.Logs, out _, true);
         if (File.Exists(Data.Paths.CurrentLog))
         {
             string n = Path.Combine(Data.Paths.Logs, File.GetCreationTime(Data.Paths.CurrentLog).ToString(ActionLogger.DATE_HEADER_FORMAT) + ".txt");
@@ -108,9 +109,9 @@ public static class L
         else if (UCWarfare.Config.Debug)
             Log(info, color);
     }
-    internal static void NetLogInfo(string message) => LogDebug(message);
-    internal static void NetLogWarning(string message) => LogWarning(message, method: "UncreatedNetworking");
-    internal static void NetLogError(string message) => LogError(message, method: "UncreatedNetworking");
+    internal static void NetLogInfo(string message, ConsoleColor color) => LogDebug(message, color);
+    internal static void NetLogWarning(string message, ConsoleColor color) => LogWarning(message, color, method: "UncreatedNetworking");
+    internal static void NetLogError(string message, ConsoleColor color) => LogError(message, color, method: "UncreatedNetworking");
     internal static void NetLogException(Exception ex) => LogError(ex, method: "UncreatedNetworking", filepath: "unknown");
     public static void Log(string info, ConsoleColor color = ConsoleColor.Gray)
     {

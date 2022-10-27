@@ -12,6 +12,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Warfare.Configuration;
