@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace Uncreated.Warfare.Teams;
 
-public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
+public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 {
     public static TeamSelector Instance;
     public static readonly JoinUI JoinUI = new JoinUI();
@@ -50,7 +50,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
             UpdateList();
         }
     }
-    public void OnAsyncInitComplete(UCPlayer player)
+    public void OnPostPlayerInit(UCPlayer player)
     {
         bool t1Donor = false, t2Donor = false;
         if (player.IsOtherDonator)
@@ -359,7 +359,7 @@ public class TeamSelector : BaseSingletonComponent, IPlayerAsyncInitListener
     public void OnKitsUpdated(UCPlayer player)
     {
         if (player.TeamSelectorData is not null && player.TeamSelectorData.IsSelecting)
-            OnAsyncInitComplete(player);
+            OnPostPlayerInit(player);
     }
     private void OnDonorsChanged(UCPlayer player)
     {

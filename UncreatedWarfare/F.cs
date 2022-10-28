@@ -5,24 +5,20 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
-using Color = UnityEngine.Color;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare;
@@ -675,7 +671,10 @@ public static class F
                 L.LogError("Unable to create data directory " + path + ". Check permissions: " + ex.Message);
                 success = false;
                 if (unloadIfFail)
-                    throw new SingletonLoadException(ESingletonLoadType.LOAD, UCWarfare.I, ex);
+                {
+                    _ = Gamemode.FailToLoadGame(ex);
+                    throw new SingletonLoadException(ESingletonLoadType.LOAD, null, ex);
+                }
             }
         }
         else success = true;
@@ -729,7 +728,7 @@ public static class F
             if (LevelNodes.nodes[i] is LocationNode node)
             {
                 float amt = (point - node.point).sqrMagnitude;
-                if (smallest == -1 || amt < smallest)
+                if (smallest < 0f || amt < smallest)
                 {
                     index = i;
                     smallest = amt;
@@ -829,11 +828,9 @@ public static class F
             return false;
         }
         IEnumerator<char> charenum = original.GetEnumerator();
-        int counter = 0;
         int alphanumcount = 0;
         while (charenum.MoveNext())
         {
-            counter++;
             char ch = charenum.Current;
             int c = ch;
             if (c > 31 && c < 127)
@@ -844,10 +841,7 @@ public static class F
                     charenum.Dispose();
                     return false;
                 }
-                else
-                {
-                    alphanumcount++;
-                }
+                alphanumcount++;
             }
             else
             {

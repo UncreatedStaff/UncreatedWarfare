@@ -1,7 +1,9 @@
-﻿using SDG.Unturned;
+﻿using MySqlConnector;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -12,7 +14,6 @@ using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Quests;
-using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -22,6 +23,7 @@ namespace Uncreated.Warfare.Point;
 
 public static class Points
 {
+    private const string UPDATE_ALL_POINTS_QUERY = "SELECT `Steam64`, `Team`, `Experience`, `Credits` FROM `s2_levels` WHERE `Steam64` in (";
     private const int XPUI_KEY = 26969;
     private const int CREDITSUI_KEY = 26971;
     private static readonly Config<XPConfig> _xpconfig = UCWarfare.IsLoaded ? new Config<XPConfig>(Data.Paths.PointsStorage, "xp.json") : null!;
@@ -215,13 +217,13 @@ public static class Points
                 player.PurchaseSync.Release();
         }
     }
-    public static void AwardXP(UCPlayer player, int amount, Translation message, bool awardCredits = true) =>
-        AwardXP(player, amount, Localization.Translate(message, player), awardCredits);
-    public static void AwardXP<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool awardCredits = true) =>
-        AwardXP(player, amount, Localization.Translate(message, player, arg), awardCredits);
-    public static void AwardXP<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool awardCredits = true) =>
-        AwardXP(player, amount, Localization.Translate(message, player, arg1, arg2), awardCredits);
-    public static void AwardXP(UCPlayer player, int amount, string? message = null, bool awardCredits = true)
+    public static void AwardXP(UCPlayer player, int amount, Translation message, bool awardCredits = true, ulong team = 0) =>
+        AwardXP(player, amount, Localization.Translate(message, player), awardCredits, team);
+    public static void AwardXP<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool awardCredits = true, ulong team = 0) =>
+        AwardXP(player, amount, Localization.Translate(message, player, arg), awardCredits, team);
+    public static void AwardXP<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool awardCredits = true, ulong team = 0) =>
+        AwardXP(player, amount, Localization.Translate(message, player, arg1, arg2), awardCredits, team);
+    public static void AwardXP(UCPlayer player, int amount, string? message = null, bool awardCredits = true, ulong team = 0)
     {
         if (!Data.TrackStats || amount == 0 || _xpconfig.Data.XPMultiplier == 0f) return;
 #if DEBUG
@@ -241,6 +243,8 @@ public static class Points
         if (multiplier < 0f)
             multiplier = 1f;
         amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier * multiplier);
+        if (team is < 1 or > 2)
+            team = player.GetTeam();
         Task.Run(async () =>
         {
             RankData oldRank = default;
@@ -248,7 +252,7 @@ public static class Points
             {
                 await player.PurchaseSync.WaitAsync().ConfigureAwait(false);
                 oldRank = player.Rank;
-                int currentAmount = await Data.DatabaseManager.AddXP(player.Steam64, player.GetTeam(), amount).ConfigureAwait(false);
+                int currentAmount = await Data.DatabaseManager.AddXP(player.Steam64, team, amount).ConfigureAwait(false);
                 if (awardCredits)
                     await AwardCreditsAsyncIntl(player, Mathf.RoundToInt(0.15f * amount), redmessage: true, @lock: false).ConfigureAwait(false);
                 await UCWarfare.ToUpdate();
@@ -458,8 +462,6 @@ public static class Points
     }
     public static void FlagCaptured(Flag flag, ulong team)
     {
-        Dictionary<Squad, int> alreadyUpdated = new Dictionary<Squad, int>();
-
         foreach (Player nelsonplayer in flag.PlayersOnFlag.Where(p => p.GetTeam() == team))
         {
             UCPlayer? player = UCPlayer.FromPlayer(nelsonplayer);
@@ -546,6 +548,84 @@ public static class Points
                 }
             });
     }
+    public static async Task UpdateAllPointsAsync()
+    {
+        if (PlayerManager.OnlinePlayers.Count < 1)
+            return;
+        // no the 69 isn't just a random value
+        StringBuilder builder = new StringBuilder(UPDATE_ALL_POINTS_QUERY.Length + PlayerManager.OnlinePlayers.Count * 18);
+        builder.Append(UPDATE_ALL_POINTS_QUERY);
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            PlayerManager.OnlinePlayers[i].IsDownloadingXP = true;
+            if (i != 0)
+                builder.Append(',');
+            builder.Append(PlayerManager.OnlinePlayers[i].Steam64);
+        }
+
+        builder.Append(");");
+        
+        string query = builder.ToString();
+        List<XPData> data = new List<XPData>(PlayerManager.OnlinePlayers.Count);
+        void ReadLoop(MySqlDataReader R)
+        {
+            data.Add(new XPData(R.GetUInt64(0), R.GetUInt64(1), R.GetUInt32(2), R.GetUInt32(3)));
+        }
+
+        if (Data.AdminSql.Opened)
+        {
+            await Data.AdminSql.QueryAsync(query, null, ReadLoop);
+        }
+        else if (Data.AdminSql != Data.DatabaseManager && Data.DatabaseManager.Opened)
+        {
+            await Data.DatabaseManager.QueryAsync(query, null, ReadLoop);
+        }
+        else
+        {
+            L.LogWarning("No SQL connections to download levels.");
+            return;
+        }
+        
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            ulong id = PlayerManager.OnlinePlayers[i].Steam64;
+            for (int j = 0; j < data.Count; ++j)
+            {
+                if (data[j].Steam64 == id)
+                    goto c;
+            }
+            await UpdatePointsAsync(PlayerManager.OnlinePlayers[i], true);
+            c:;
+        }
+
+        for (int j = 0; j < data.Count; ++j)
+        {
+            XPData levels = data[j];
+            UCPlayer? pl = UCPlayer.FromID(levels.Steam64);
+            if (pl is null || pl.GetTeam() != levels.Team)
+                continue;
+            await pl.PurchaseSync.WaitAsync();
+            try
+            {
+                pl.UpdatePoints(levels.XP, levels.Credits);
+            }
+            finally
+            {
+                pl.PurchaseSync.Release();
+            }
+        }
+
+        await UCWarfare.ToUpdate();
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+        {
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            pl.IsDownloadingXP = false;
+            UpdateXPUI(pl);
+            UpdateCreditsUI(pl);
+        }
+    }
+
+    private record struct XPData(ulong Steam64, ulong Team, uint XP, uint Credits);
     public static async Task UpdatePointsAsync(UCPlayer caller, bool @lock)
     {
         if (caller is null) throw new ArgumentNullException(nameof(caller));
@@ -794,12 +874,7 @@ public static class Points
             }
             else if (vehicleWasFriendly)
             {
-                Translation<EVehicleType> message;
-
-                if (e.Component.IsAircraft)
-                    message = T.XPToastFriendlyAircraftDestroyed;
-                else
-                    message = T.XPToastFriendlyVehicleDestroyed;
+                Translation<EVehicleType> message = e.Component.IsAircraft ? T.XPToastFriendlyAircraftDestroyed : T.XPToastFriendlyVehicleDestroyed;
                 Chat.Broadcast(T.VehicleTeamkilled, e.Instigator, e.Vehicle.asset);
 
                 ActionLogger.Add(EActionLogType.OWNED_VEHICLE_DIED, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.id} / {e.Vehicle.asset.GUID:N} ID: {e.Vehicle.instanceID}" +
@@ -954,8 +1029,6 @@ public class TWConfig : JSONConfigData
         ReviveFriendlyTW = 20;
         UnloadSuppliesPoints = 10;
     }
-    public TWConfig()
-    { }
 }
 public class CreditsConfig : JSONConfigData
 {
@@ -967,6 +1040,4 @@ public class CreditsConfig : JSONConfigData
         CreditsUI = 36070;
         StartingCredits = 500;
     }
-    public CreditsConfig()
-    { }
 }

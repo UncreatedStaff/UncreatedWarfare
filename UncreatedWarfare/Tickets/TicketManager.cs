@@ -9,7 +9,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
 
-public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener
+public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener
 {
     public static TicketManager Singleton;
     public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
@@ -126,10 +126,10 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         else
             ClearUI(e.Player);
     }
-    void IPlayerInitListener.OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    void IPlayerPreInitListener.OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
-        if (Provider is IPlayerInitListener il)
-            il.OnPlayerInit(player, wasAlreadyOnline);
+        if (Provider is IPlayerPreInitListener il)
+            il.OnPrePlayerInit(player, wasAlreadyOnline);
         SendUI(player);
     }
     void IGameStartListener.OnGameStarting(bool isOnLoad)

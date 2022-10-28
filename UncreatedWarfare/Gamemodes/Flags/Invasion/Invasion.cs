@@ -2,6 +2,7 @@
 using SDG.Unturned;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -27,8 +28,9 @@ public class Invasion :
     public ulong DefendingTeam => _defenseTeam;
     public SpecialFOB? FirstPointFOB => _vcp;
     public Invasion() : base(nameof(Invasion), Config.AASEvaluateTime) { }
-    protected override void PostDispose()
+    protected override Task PostDispose()
     {
+        ThreadUtil.assertIsGameThread();
         foreach (SteamPlayer player in Provider.clients)
         {
             CTFUI.ClearFlagList(player.transportConnection);
@@ -36,16 +38,17 @@ public class Invasion :
                 c.stats = null!;
         }
         CTFUI.CaptureUI.ClearFromAllPlayers();
-        base.PostDispose();
+        return base.PostDispose();
     }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad)
     {
+        ThreadUtil.assertIsGameThread();
         PickTeams();
-        base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad);
     }
-    protected override void PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad)
     {
-        base.PostGameStarting(isOnLoad);
+        ThreadUtil.assertIsGameThread();
         Flag? firstFlag = null;
         if (DefendingTeam == 1)
             firstFlag = Rotation.LastOrDefault();
@@ -59,6 +62,7 @@ public class Invasion :
         if (firstFlag != null)
             _vcp = FOBManager.RegisterNewSpecialFOB(Config.InvasionSpecialFOBName, new Vector3(firstFlag.ZoneData.Center.x, F.GetHeight(firstFlag.ZoneData.Center, firstFlag.ZoneData.MinHeight) + 2f, firstFlag.ZoneData.Center.y), _defenseTeam, UCWarfare.GetColorHex("invasion_special_fob"), true);
         StartStagingPhase(Config.InvasionStagingTime);
+        return base.PostGameStarting(isOnLoad);
     }
     protected void PickTeams()
     {
@@ -149,7 +153,6 @@ public class Invasion :
         {
             if (flag.ID == (AttackingTeam == 1ul ? ObjectiveTeam1!.ID : ObjectiveTeam2!.ID))
             {
-                //bool atkOnFlag = (AttackingTeam == 1ul && flag.Team1TotalCappers > 0) || (AttackingTeam == 2ul && flag.Team2TotalCappers > 0);
                 if (!flag.IsContested(out ulong winner))
                 {
                     if (winner == AttackingTeam || AttackingTeam != flag.Owner)
@@ -196,32 +199,21 @@ public class Invasion :
             }
             else if (flag.Team1TotalCappers > flag.Team2TotalCappers)
             {
-                if (flag.Team1TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team2TotalCappers)
-                {
-                    winner = 1;
-                }
-                else
-                {
-                    winner = Intimidation.CheckSquadsForContestBoost(flag);
-                }
+                winner = flag.Team1TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team2TotalCappers
+                    ? 1
+                    : Intimidation.CheckSquadsForContestBoost(flag);
             }
             else
             {
-                if (flag.Team2TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team1TotalCappers)
-                {
-                    winner = 2;
-                }
-                else
-                {
-                    winner = Intimidation.CheckSquadsForContestBoost(flag);
-                }
+                winner = flag.Team2TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team1TotalCappers
+                    ? 2
+                    : Intimidation.CheckSquadsForContestBoost(flag);
             }
             return winner == 0;
         }
         else
         {
-            if (flag.ObjectivePlayerCountCappers == 0) winner = 0;
-            else winner = flag.WhosObj();
+            winner = flag.ObjectivePlayerCountCappers == 0 ? 0 : flag.WhosObj();
             if (!flag.IsObj(winner)) winner = 0;
             return false;
         }
@@ -231,7 +223,6 @@ public class Invasion :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = player.GetTeam();
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
     }
@@ -275,7 +266,6 @@ public class Invasion :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = player.GetTeam();
         player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(player.channel.owner.transportConnection);
         UpdateFlag(flag);
@@ -341,24 +331,10 @@ public class Invasion :
             {
                 if (OldOwner == 1)
                 {
-                    //int oldindex = ObjectiveT1Index;
-                    //_objectiveT1Index = flag.index;
-                    //if (oldindex != flag.index)
-                    //{
-                    //    //InvokeOnObjectiveChanged(flag, flag, 0, oldindex, flag.index);
-                    //    InvokeOnFlagNeutralized(flag, 2, 1);
-                    //}
                     InvokeOnFlagNeutralized(flag, 2, 1);
                 }
                 else if (OldOwner == 2)
                 {
-                    //int oldindex = ObjectiveT2Index;
-                    //_objectiveT2Index = flag.index;
-                    //if (oldindex != flag.index)
-                    //{
-                    //    //InvokeOnObjectiveChanged(_rotation[oldindex], flag, 0, oldindex, flag.index);
-                    //    InvokeOnFlagNeutralized(flag, 1, 2);
-                    //}
                     InvokeOnFlagNeutralized(flag, 1, 2);
                 }
             }

@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
 using System;
 using System.Collections.Generic;
@@ -106,6 +107,7 @@ public static partial class Patches
         }
 
         [SuppressMessage(Data.SUPPRESS_CATEGORY, Data.SUPPRESS_ID)]
+        [UsedImplicitly]
         private static void OnPreProject(UseableGun gun, ItemMagazineAsset magazine)
         {
             if (gun.player.TryGetPlayerData(out UCPlayerData data))

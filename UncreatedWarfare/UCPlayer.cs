@@ -46,14 +46,18 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
 
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UIMuted, false, false);
-    public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 5);
+    public static readonly UnturnedUI LoadingUI = new UnturnedUI(15624, Gamemode.Config.UILoading, false, false, false);
+    public readonly SemaphoreSlim PurchaseSync = new SemaphoreSlim(1, 1);
     public readonly UCPlayerKeys Keys;
     public readonly UCPlayerEvents Events;
     public readonly ulong Steam64;
+    public volatile bool HasInitedOnce;
     public volatile bool HasDownloadedKits;
     public volatile bool HasDownloadedXP;
     public volatile bool IsDownloadingXP;
     public volatile bool IsDownloadingKits;
+    public volatile bool Loading;
+    public bool Loaded;
     public int SuppliesUnloaded;
     public int LifeCounter;
     public int CachedCredits;

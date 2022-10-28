@@ -32,11 +32,13 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
+using System.Threading.Tasks;
+using System.Collections;
 
 namespace Uncreated.Warfare;
 
 public delegate void VoidDelegate();
-public class UCWarfare : MonoBehaviour, IUncreatedSingleton
+public class UCWarfare : MonoBehaviour
 {
     public static readonly TimeSpan RestartTime = new TimeSpan(1, 00, 0); // 9:00 PM EST
     public static readonly Version Version = new Version(2, 7, 1, 1);
@@ -51,17 +53,15 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
     internal Projectiles.ProjectileSolver Solver;
     public HomebaseClientComponent? NetClient;
     public bool CoroutineTiming = false;
-    private bool InitialLoadEventSubscription;
     private DateTime NextRestartTime;
     public static int Season => Version.Major;
-    bool IUncreatedSingleton.IsLoaded => IsLoaded;
     public static bool IsLoaded => I is not null;
     public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
     public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && I.NetClient != null && I.NetClient.IsActive;
     [UsedImplicitly]
     private void Awake()
     {
-        if (I != null) throw new SingletonLoadException(ESingletonLoadType.LOAD, this, new Exception("Uncreated Warfare is already loaded."));
+        if (I != null) throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Uncreated Warfare is already loaded."));
         I = this;
     }
     [UsedImplicitly]
@@ -110,11 +110,14 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Localization.ReadEnumTranslations(Data.TranslatableEnumTypes);
         Translation.ReadTranslations();
 
+        CommandWindow.shouldLogDeaths = false;
+
         /* PATCHES */
         L.Log("Patching methods...", ConsoleColor.Magenta);
         try
         {
             Patches.DoPatching();
+            LoadingQueueBlockerPatches.Patch();
         }
         catch (Exception ex)
         {
@@ -168,25 +171,28 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
     {
         packet = new VerifyPacket(packet.Identity, packet.SecretKey, packet.ApiVersion, packet.TimezoneOffset, Config.Currency, Config.RegionKey, Version);
     }
-
-    public void Load()
+    public async Task LoadAsync()
     {
+        await ToUpdate();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         EventDispatcher.SubscribeToAll();
 
+        Zone.OnLevelLoaded();
+
         try
         {
             /* DATA CONSTRUCTION */
-            Data.LoadVariables();
+            await Data.LoadVariables();
         }
         catch (Exception ex)
         {
             L.LogError("Startup error");
             L.LogError(ex);
-            throw new SingletonLoadException(ESingletonLoadType.LOAD, this, ex);
+            throw new SingletonLoadException(ESingletonLoadType.LOAD, null, ex);
         }
+        await ToUpdate();
 
         /* START STATS COROUTINE */
         StatsRoutine = StartCoroutine(StatsCoroutine.StatsRoutine());
@@ -194,8 +200,37 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         L.Log("Subscribing to events...", ConsoleColor.Magenta);
         SubscribeToEvents();
 
-        OnLevelLoaded(Level.BUILD_INDEX_GAME);
-        InitialLoadEventSubscription = true;
+        F.CheckDir(Data.Paths.FlagStorage, out _, true);
+        F.CheckDir(Data.Paths.StructureStorage, out _, true);
+        F.CheckDir(Data.Paths.VehicleStorage, out _, true);
+        ZonePlayerComponent.UIInit();
+
+        Data.ZoneProvider.Reload();
+        Data.ZoneProvider.Save();
+
+        Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
+
+        Announcer = await Data.Singletons.LoadSingletonAsync<UCAnnouncer>();
+        await ToUpdate();
+
+        Data.ExtraPoints = JSONMethods.LoadExtraPoints();
+        //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
+        if (Data.Gamemode != null)
+        {
+            await Data.Gamemode.OnLevelReady();
+            await ToUpdate();
+        }
+
+#if DEBUG
+        if (Config.Debug && File.Exists(@"C:\orb.wav"))
+        {
+            System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"C:\orb.wav");
+            player.Load();
+            player.Play();
+        }
+#endif
+
+        Debugger.Reset();
 
         UCPlayerData.ReloadToastIDs();
 
@@ -213,36 +248,6 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
     {
         yield return new WaitForSecondsRealtime(seconds);
         ShutdownCommand.ShutdownAfterGameDaily();
-    }
-    private void OnLevelLoaded(int level)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        F.CheckDir(Data.Paths.FlagStorage, out _, true);
-        F.CheckDir(Data.Paths.StructureStorage, out _, true);
-        F.CheckDir(Data.Paths.VehicleStorage, out _, true);
-        ZonePlayerComponent.UIInit();
-        Zone.OnLevelLoaded();
-
-        Data.ZoneProvider.Reload();
-        Data.ZoneProvider.Save();
-
-        Solver = gameObject.AddComponent<Projectiles.ProjectileSolver>();
-
-        Announcer = Data.Singletons.LoadSingleton<UCAnnouncer>();
-        Data.ExtraPoints = JSONMethods.LoadExtraPoints();
-        //L.Log("Wiping unsaved barricades...", ConsoleColor.Magenta);
-        if (Data.Gamemode is not null) Data.Gamemode.OnLevelReady();
-
-        if (Config.Debug && File.Exists(@"C:\orb.wav"))
-        {
-            System.Media.SoundPlayer player = new System.Media.SoundPlayer(@"C:\orb.wav");
-            player.Load();
-            player.Play();
-        }
-
-        Debugger.Reset();
     }
     private void SubscribeToEvents()
     {
@@ -339,10 +344,6 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
         StatsManager.UnloadEvents();
-        if (!InitialLoadEventSubscription)
-        {
-            Level.onLevelLoaded -= OnLevelLoaded;
-        }
     }
     internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests = new Queue<MainThreadTask.MainThreadResult>();
     public static MainThreadTask ToUpdate() => new MainThreadTask();
@@ -444,8 +445,9 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         Nexus.UnloadNow();
         throw new SingletonUnloadedException(typeof(UCWarfare));
     }
-    public void Unload()
+    public async Task UnloadAsync()
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -460,11 +462,20 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
             L.Log("Unloading Uncreated Warfare", ConsoleColor.Magenta);
             if (Data.Singletons is not null)
             {
-                Data.Singletons.UnloadSingleton(ref Data.DeathTracker, false);
-                Data.Singletons.UnloadSingleton(ref Data.Gamemode);
+                await Data.Singletons.UnloadSingletonAsync(Data.DeathTracker, false);
+                Data.DeathTracker = null!;
+                await Data.Singletons.UnloadSingletonAsync(Data.Gamemode);
+                Data.Gamemode = null!;
                 if (Announcer != null)
-                    Data.Singletons.UnloadSingleton(ref Announcer);
+                {
+                    await Data.Singletons.UnloadSingletonAsync(Announcer);
+                    Announcer = null!;
+                }
+
+                await ToUpdate();
             }
+
+            ThreadUtil.assertIsGameThread();
             if (Solver != null)
             {
                 Destroy(Solver);
@@ -478,14 +489,20 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
             if (Debugger != null)
                 Destroy(Debugger);
             OffenseManager.Deinit();
-            try
+            if (Data.DatabaseManager != null)
             {
-                Data.DatabaseManager?.Dispose();
+                try
+                {
+                    await Data.DatabaseManager.CloseAsync();
+                    Data.DatabaseManager.Dispose();
+                }
+                finally
+                {
+                    Data.DatabaseManager = null!;
+                }
+                await ToUpdate();
             }
-            finally
-            {
-                Data.DatabaseManager = null!;
-            }
+            ThreadUtil.assertIsGameThread();
             L.Log("Stopping Coroutines...", ConsoleColor.Magenta);
             StopAllCoroutines();
             L.Log("Unsubscribing from events...", ConsoleColor.Magenta);
@@ -503,6 +520,7 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
             ConfigSync.UnpatchAll();
             try
             {
+                LoadingQueueBlockerPatches.Unpatch();
                 Patches.Unpatch();
             }
             catch (Exception ex)
@@ -520,13 +538,18 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
             L.LogError("Error unloading: ");
             L.LogError(ex);
         }
-        Data.Singletons?.UnloadAll();
+        if (Data.Singletons != null)
+        {
+            await Data.Singletons.UnloadAllAsync();
+            await ToUpdate();
+            ThreadUtil.assertIsGameThread();
+        }
         L.Log("Warfare unload complete", ConsoleColor.Blue);
 #if DEBUG
         profiler.Dispose();
         F.SaveProfilingData();
 #endif
-        Thread.Sleep(1000);
+        await Task.Delay(1000);
     }
     public static Color GetColor(string key)
     {
@@ -562,29 +585,36 @@ public class UCWarfare : MonoBehaviour, IUncreatedSingleton
         }
         else
         {
-            Nexus.Unload();
-            Provider.shutdown(2, reason);
+            ShutdownInAwaitUnload(2, reason);
         }
     }
     private static IEnumerator<WaitForSeconds> ShutdownIn(string reason, float seconds)
     {
-        yield return new WaitForSeconds(seconds / 2);
-        Nexus.Unload();
-        Provider.shutdown(Mathf.RoundToInt(seconds / 2), reason);
+        yield return new WaitForSeconds(seconds / 2f);
+        ShutdownInAwaitUnload(Mathf.RoundToInt(seconds / 2f), reason);
+    }
+    private static void ShutdownInAwaitUnload(int seconds, string reason)
+    {
+        Task.Run(async () =>
+        {
+            await ToUpdate();
+            await Nexus.Unload();
+            Provider.shutdown(seconds, reason);
+        });
     }
     private static IEnumerator<WaitForSeconds> ShutdownIn2(string reason, ulong instigator, float seconds)
     {
         yield return new WaitForSeconds(seconds);
         ShutdownCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
         yield return new WaitForSeconds(1f);
-        Nexus.Unload();
-        Provider.shutdown(2, reason);
+        ShutdownInAwaitUnload(2, reason);
     }
 }
 
 public class UCWarfareNexus : IModuleNexus
 {
     public bool Loaded { get; private set; } = false;
+
     void IModuleNexus.initialize()
     {
         CommandWindow.Log("Initializing UCWarfareNexus...");
@@ -597,45 +627,85 @@ public class UCWarfareNexus : IModuleNexus
         UnityEngine.Object.DontDestroyOnLoad(go);
         go.AddComponent<UCWarfare>();
     }
+
     private void Load()
+    {
+        Task.Run(LoadAsync);
+    }
+
+    private async Task LoadAsync()
     {
         try
         {
-            UCWarfare.I.Load();
+            await UCWarfare.I.LoadAsync().ConfigureAwait(false);
+            await UCWarfare.ToUpdate();
             Loaded = true;
         }
         catch (Exception ex)
         {
+            if (UCWarfare.I != null)
+                await UCWarfare.ToUpdate();
             L.LogError(ex);
             Loaded = false;
-            Type t = ex.GetType();
-            ShutdownCommand.ShutdownIn(10, "Uncreated Warfare failed to load: " + t.Name);
-            if (typeof(SingletonLoadException).IsAssignableFrom(t))
+            if (UCWarfare.I != null)
+            {
+                try
+                {
+                    await UCWarfare.I.UnloadAsync().ConfigureAwait(false);
+                    await UCWarfare.ToUpdate();
+                }
+                catch (Exception e)
+                {
+                    L.LogError("Unload error: ");
+                    L.LogError(e);
+                }
+
+                UnityEngine.Object.Destroy(UCWarfare.I);
+                UCWarfare.I = null!;
+            }
+
+            ShutdownCommand.ShutdownIn(10, "Uncreated Warfare failed to load: " + ex.GetType().Name);
+            if (ex is SingletonLoadException)
                 throw;
             else
-                throw new SingletonLoadException(ESingletonLoadType.LOAD, UCWarfare.I, ex);
+                throw new SingletonLoadException(ESingletonLoadType.LOAD, null, ex);
         }
+    }
+
+    private IEnumerator Coroutine()
+    {
+        while (!Level.isLoaded)
+            yield return null;
+        Load();
     }
 
     private void OnLevelLoaded(int level)
     {
         if (level == Level.BUILD_INDEX_GAME)
         {
-            Load();
+            UCWarfare.I.StartCoroutine(Coroutine());
         }
     }
 
     public void UnloadNow()
     {
-        Unload();
-        ShutdownCommand.ShutdownIn(10, "Uncreated Warfare unloading.");
+        Task.Run(async () =>
+        {
+            await UCWarfare.ToUpdate();
+            await Unload().ConfigureAwait(false);
+            ShutdownCommand.ShutdownIn(10, "Uncreated Warfare unloading.");
+        });
     }
-    public void Unload()
+    public async Task Unload()
     {
         try
         {
-            UCWarfare.I.Unload();
-            UnityEngine.Object.Destroy(UCWarfare.I.gameObject);
+            await UCWarfare.I.UnloadAsync().ConfigureAwait(false);
+            await UCWarfare.ToUpdate();
+            if (UCWarfare.I.gameObject != null)
+            {
+                UnityEngine.Object.Destroy(UCWarfare.I.gameObject);
+            }
             UCWarfare.I = null!;
         }
         catch (Exception ex)
@@ -644,13 +714,13 @@ public class UCWarfareNexus : IModuleNexus
             if (ex is SingletonLoadException)
                 throw;
             else
-                throw new SingletonLoadException(ESingletonLoadType.UNLOAD, UCWarfare.I, ex);
+                throw new SingletonLoadException(ESingletonLoadType.UNLOAD, null, ex);
         }
     }
     void IModuleNexus.shutdown()
     {
-        Level.onLevelLoaded -= OnLevelLoaded;
+        Level.onPostLevelLoaded -= OnLevelLoaded;
         if (!UCWarfare.IsLoaded) return;
-        Unload();
+        Unload().Wait();
     }
 }
