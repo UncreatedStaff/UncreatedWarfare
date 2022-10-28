@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Uncreated.Framework;
 using Uncreated.Warfare.Singletons;
 using UnityEngine;
 
@@ -334,7 +335,7 @@ public class StructureSaver : ListSingleton<SavedStructure>, ILevelStartListener
             case EBuild.NOTE:
             case EBuild.LIBRARY:
             case EBuild.MANNEQUIN:
-                state = F.CloneBytes(st2);
+                state = Util.CloneBytes(st2);
                 if (state.Length > 15)
                 {
                     Buffer.BlockCopy(owner, 0, state, 0, sizeof(ulong));
@@ -362,7 +363,7 @@ public class StructureSaver : ListSingleton<SavedStructure>, ILevelStartListener
                 }
                 break;
             default:
-                state = F.CloneBytes(st2);
+                state = Util.CloneBytes(st2);
                 break;
         }
 

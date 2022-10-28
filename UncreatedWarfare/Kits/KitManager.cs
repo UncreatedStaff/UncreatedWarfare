@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
@@ -1036,7 +1037,7 @@ public class KitManager : BaseReloadSingleton
             {
                 KitItem item = kit.Items[i];
                 if (item.Page < PlayerInventory.PAGES - 2 && Assets.find(TeamManager.CheckAssetRedirect(item.Id, team)) is ItemAsset asset)
-                    p[item.Page].addItem(item.X, item.Y, item.Rotation, new Item(asset.id, item.Amount, 100, F.CloneBytes(item.Metadata)));
+                    p[item.Page].addItem(item.X, item.Y, item.Rotation, new Item(asset.id, item.Amount, 100, Util.CloneBytes(item.Metadata)));
                 else
                     L.LogWarning("Invalid item {" + item.Id.ToString("N") + "} in kit " + kit.Name + " for team " + team);
             }
@@ -1071,7 +1072,7 @@ public class KitManager : BaseReloadSingleton
             {
                 if (Assets.find(TeamManager.CheckAssetRedirect(k.Id, team)) is ItemAsset asset)
                 {
-                    Item item = new Item(asset.id, k.Amount, 100, F.CloneBytes(k.Metadata));
+                    Item item = new Item(asset.id, k.Amount, 100, Util.CloneBytes(k.Metadata));
                     if (!player.Player.inventory.tryAddItem(item, k.X, k.Y, k.Page, k.Rotation))
                         if (player.Player.inventory.tryAddItem(item, true))
                             ItemManager.dropItem(item, player.Position, true, true, true);
@@ -1203,7 +1204,7 @@ public class KitManager : BaseReloadSingleton
                 continue;
             if (Assets.find(i.Id) is ItemAsset itemasset)
             {
-                Item item = new Item(itemasset.id, i.Amount, 100, F.CloneBytes(i.Metadata));
+                Item item = new Item(itemasset.id, i.Amount, 100, Util.CloneBytes(i.Metadata));
 
                 if (!player.Player.inventory.tryAddItem(item, i.X, i.Y, i.Page, i.Rotation))
                     player.Player.inventory.tryAddItem(item, true);
@@ -1567,7 +1568,7 @@ public static class KitEx
         field = GetField(property, out ESetFieldResult reason);
         if (field is not null && reason == ESetFieldResult.SUCCESS)
         {
-            if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
+            if (Util.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
             {
                 try
                 {

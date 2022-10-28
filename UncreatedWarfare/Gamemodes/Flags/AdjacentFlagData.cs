@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Warfare.Configuration;
 
 namespace Uncreated.Warfare.Gamemodes.Flags

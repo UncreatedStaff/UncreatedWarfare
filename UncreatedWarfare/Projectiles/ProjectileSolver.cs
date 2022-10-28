@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using Uncreated.Framework;
 using Uncreated.Warfare.Components;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -99,9 +100,9 @@ internal class ProjectileSolver : MonoBehaviour
         }
     }
 
-    //private static readonly InstanceGetter<UseableGun, Attachments> getAttachments = F.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments", BindingFlags.NonPublic);
-    private static readonly InstanceGetter<LevelObject, bool> getIsDecal = F.GenerateInstanceGetter<LevelObject, bool>("isDecal", BindingFlags.NonPublic);
-    private static readonly InstanceGetter<Rocket, bool> getIsExploded = F.GenerateInstanceGetter<Rocket, bool>("isExploded", BindingFlags.NonPublic);
+    //private static readonly InstanceGetter<UseableGun, Attachments> getAttachments = Util.GenerateInstanceGetter<UseableGun, Attachments>("thirdAttachments", BindingFlags.NonPublic);
+    private static readonly InstanceGetter<LevelObject, bool> getIsDecal = Util.GenerateInstanceGetter<LevelObject, bool>("isDecal", BindingFlags.NonPublic);
+    private static readonly InstanceGetter<Rocket, bool> getIsExploded = Util.GenerateInstanceGetter<Rocket, bool>("isExploded", BindingFlags.NonPublic);
     private IEnumerator Simulate()
     {
         ProjectileData data = _current;

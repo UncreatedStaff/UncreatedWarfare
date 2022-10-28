@@ -1,5 +1,4 @@
 ﻿#define USE_DEBUGGER
-
 using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
@@ -7,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading;
+using JetBrains.Annotations;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -58,11 +58,13 @@ public class UCWarfare : MonoBehaviour
     public static bool IsLoaded => I is not null;
     public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
     public static bool CanUseNetCall => IsLoaded && Config.TCPSettings.EnableTCPServer && I.NetClient != null && I.NetClient.IsActive;
+    [UsedImplicitly]
     private void Awake()
     {
         if (I != null) throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Uncreated Warfare is already loaded."));
         I = this;
     }
+    [UsedImplicitly]
     private void Start() => EarlyLoad();
     private void EarlyLoad()
     {
@@ -86,7 +88,7 @@ public class UCWarfare : MonoBehaviour
         CommandHandler.LoadCommands();
 
         DateTime loadTime = DateTime.Now;
-        if (loadTime.TimeOfDay > RestartTime - TimeSpan.FromHours(2)) // dont restart if the restart would be in less than 2 hours
+        if (loadTime.TimeOfDay > RestartTime - TimeSpan.FromHours(2)) // don't restart if the restart would be in less than 2 hours
             NextRestartTime = loadTime.Date + RestartTime + TimeSpan.FromDays(1);
         else
             NextRestartTime = loadTime.Date + RestartTime;
@@ -361,7 +363,6 @@ public class UCWarfare : MonoBehaviour
         UCPlayer? ucplayer = UCPlayer.FromSteamPlayer(player);
         foreach (BarricadeRegion region in BarricadeManager.regions)
         {
-            List<BarricadeDrop> signs = new List<BarricadeDrop>();
             foreach (BarricadeDrop drop in region.drops)
             {
                 if (drop.interactable is InteractableSign sign)
@@ -382,7 +383,7 @@ public class UCWarfare : MonoBehaviour
         {
             InvasionUI.SendFlagList(ucplayer);
         }
-        else if (Data.Is(out Insurgency ins))
+        else if (Data.Is<Insurgency>())
         {
             InsurgencyUI.SendCacheList(ucplayer);
         }
@@ -414,6 +415,7 @@ public class UCWarfare : MonoBehaviour
                 TraitManager.BuffUI.SendBuffs(player);
         }
     }
+    [UsedImplicitly]
     private void Update()
     {
         while (ThreadActionRequests.Count > 0)
@@ -426,7 +428,7 @@ public class UCWarfare : MonoBehaviour
             }
             catch (Exception ex)
             {
-                L.LogError("ERROR DEQUEING AND RUNNING MAIN THREAD OPERATION");
+                L.LogError("ERROR DEQUEUEING AND RUNNING MAIN THREAD OPERATION");
                 L.LogError(ex);
             }
             finally
@@ -457,7 +459,6 @@ public class UCWarfare : MonoBehaviour
                 StatsRoutine = null;
             }
             UCWarfareUnloading?.Invoke(this, EventArgs.Empty);
-
             L.Log("Unloading Uncreated Warfare", ConsoleColor.Magenta);
             if (Data.Singletons is not null)
             {
@@ -559,15 +560,15 @@ public class UCWarfare : MonoBehaviour
     }
     public static string GetColorHex(string key)
     {
-        if (Data.ColorsHex == null) return "ffffff";
+        if (Data.ColorsHex == null) return @"ffffff";
         if (Data.ColorsHex.TryGetValue(key, out string color)) return color;
         else if (Data.ColorsHex.TryGetValue("default", out color)) return color;
-        else return "ffffff";
+        else return @"ffffff";
     }
 
     public static void ShutdownIn(string reason, ulong instigator, int seconds)
     {
-        I.StartCoroutine(I.ShutdownIn2(reason, instigator, seconds));
+        I.StartCoroutine(ShutdownIn2(reason, instigator, seconds));
     }
     public static void ShutdownNow(string reason, ulong instigator)
     {
@@ -580,14 +581,14 @@ public class UCWarfare : MonoBehaviour
         if (CanUseNetCall)
         {
             ShutdownCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
-            I.StartCoroutine(I.ShutdownIn(reason, 4));
+            I.StartCoroutine(ShutdownIn(reason, 4));
         }
         else
         {
             ShutdownInAwaitUnload(2, reason);
         }
     }
-    private IEnumerator<WaitForSeconds> ShutdownIn(string reason, float seconds)
+    private static IEnumerator<WaitForSeconds> ShutdownIn(string reason, float seconds)
     {
         yield return new WaitForSeconds(seconds / 2f);
         ShutdownInAwaitUnload(Mathf.RoundToInt(seconds / 2f), reason);
@@ -601,7 +602,7 @@ public class UCWarfare : MonoBehaviour
             Provider.shutdown(seconds, reason);
         });
     }
-    private IEnumerator<WaitForSeconds> ShutdownIn2(string reason, ulong instigator, float seconds)
+    private static IEnumerator<WaitForSeconds> ShutdownIn2(string reason, ulong instigator, float seconds)
     {
         yield return new WaitForSeconds(seconds);
         ShutdownCommand.NetCalls.SendShuttingDownInstant.NetInvoke(instigator, reason);
@@ -616,13 +617,15 @@ public class UCWarfareNexus : IModuleNexus
 
     void IModuleNexus.initialize()
     {
+        CommandWindow.Log("Initializing UCWarfareNexus...");
+        Thread.Sleep(1000);
         Data.LoadColoredConsole();
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;
         GameObject go = new GameObject("UCWarfare " + UCWarfare.Version.ToString());
         go.AddComponent<Maps.MapScheduler>();
         UnityEngine.Object.DontDestroyOnLoad(go);
-        UCWarfare warfare = go.AddComponent<UCWarfare>();
+        go.AddComponent<UCWarfare>();
     }
 
     private void Load()
@@ -708,7 +711,7 @@ public class UCWarfareNexus : IModuleNexus
         catch (Exception ex)
         {
             L.LogError(ex);
-            if (typeof(SingletonLoadException).IsAssignableFrom(ex.GetType()))
+            if (ex is SingletonLoadException)
                 throw;
             else
                 throw new SingletonLoadException(ESingletonLoadType.UNLOAD, null, ex);

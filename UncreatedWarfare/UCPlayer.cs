@@ -83,7 +83,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal bool _isLeaving;
     internal Action<byte, ItemJar> SendItemRemove;
     internal List<Guid>? _completedQuests;
-    private static readonly InstanceGetter<Dictionary<Buff, float>, int> _versionGetter = F.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
+    private static readonly InstanceGetter<Dictionary<Buff, float>, int> _versionGetter = Util.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
     private int multVersion = -1;
     private bool isTalking = false;
     private bool lastMuted = false;

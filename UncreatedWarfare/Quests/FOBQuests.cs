@@ -4,6 +4,8 @@ using System.Text.Json;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Json;
+using Uncreated.Framework;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -154,16 +156,16 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
                 ulong team = _player.GetTeam();
                 if (Data.Is(out Gamemodes.Flags.TeamCTF.TeamCTF ctf))
                 {
-                    if ((team == 1 && ctf.ObjectiveTeam1 != null && F.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
-                        (team == 2 && ctf.ObjectiveTeam2 != null && F.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
+                    if ((team == 1 && ctf.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam1.Position) <= SqrBuildRange) ||
+                        (team == 2 && ctf.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.Position, ctf.ObjectiveTeam2.Position) <= SqrBuildRange))
                     {
                         goto add;
                     }
                 }
                 else if (Data.Is(out Gamemodes.Flags.Invasion.Invasion inv))
                 {
-                    if ((inv.AttackingTeam == 1 && inv.ObjectiveTeam1 != null && F.SqrDistance2D(fob.Position, inv.ObjectiveTeam1.Position) <= SqrBuildRange) ||
-                        (inv.AttackingTeam == 2 && inv.ObjectiveTeam2 != null && F.SqrDistance2D(fob.Position, inv.ObjectiveTeam2.Position) <= SqrBuildRange))
+                    if ((inv.AttackingTeam == 1 && inv.ObjectiveTeam1 != null && Util.SqrDistance2D(fob.Position, inv.ObjectiveTeam1.Position) <= SqrBuildRange) ||
+                        (inv.AttackingTeam == 2 && inv.ObjectiveTeam2 != null && Util.SqrDistance2D(fob.Position, inv.ObjectiveTeam2.Position) <= SqrBuildRange))
                     {
                         goto add;
                     }
@@ -173,7 +175,7 @@ public class BuildFOBsNearObjQuest : BaseQuestData<BuildFOBsNearObjQuest.Tracker
                     for (int i = 0; i < ins.Caches.Count; i++)
                     {
                         Gamemodes.Insurgency.Insurgency.CacheData cache = ins.Caches[i];
-                        if (cache != null && cache.IsActive && F.SqrDistance2D(fob.Position, cache.Cache.Position) <= SqrBuildRange)
+                        if (cache != null && cache.IsActive && Util.SqrDistance2D(fob.Position, cache.Cache.Position) <= SqrBuildRange)
                             goto add;
                     }
                 }
@@ -273,7 +275,7 @@ public class BuildFOBsOnObjQuest : BaseQuestData<BuildFOBsOnObjQuest.Tracker, Bu
                     for (int i = 0; i < ins.Caches.Count; i++)
                     {
                         Gamemodes.Insurgency.Insurgency.CacheData cache = ins.Caches[i];
-                        if (cache != null && cache.IsActive && F.SqrDistance2D(fob.Position, cache.Cache.Position) <= 100f)
+                        if (cache != null && cache.IsActive && Util.SqrDistance2D(fob.Position, cache.Cache.Position) <= 100f)
                             goto add;
                     }
                 }

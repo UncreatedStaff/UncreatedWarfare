@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -410,7 +411,7 @@ public class UAV : MonoBehaviour, IBuff
         {
             if (spot.OwnerTeam != team && spot.isActiveAndEnabled && spot.Type.HasValue && CanUAVSpot(spot.Type.Value))
             {
-                float dist = F.SqrDistance2D(deployPosition, spot.transform.position);
+                float dist = Util.SqrDistance2D(deployPosition, spot.transform.position);
                 if (dist < rad)
                     scanOutput.Add(new KeyValuePair<float, SpottedComponent>(dist, spot));
             }

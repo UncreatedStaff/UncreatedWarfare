@@ -3,6 +3,7 @@ using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
+using Uncreated.Framework;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Traits;
 using UnityEngine;

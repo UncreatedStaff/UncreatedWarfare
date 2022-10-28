@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -68,7 +69,7 @@ public class FOBComponent : MonoBehaviour
                 if (Parent.Bunker != null)
                 {
                     // keeps people from being able to block FOBs from the floor above
-                    if (Mathf.Abs(player.Position.y - pos.y) < 4 && F.SqrDistance2D(player.Position, Parent.Bunker.model.position) < 49)
+                    if (Mathf.Abs(player.Position.y - pos.y) < 4 && Util.SqrDistance2D(player.Position, Parent.Bunker.model.position) < 49)
                     {
                         if (!Parent.NearbyEnemies.Contains(player))
                         {

@@ -28,7 +28,7 @@ public class MuteCommand : Command
                     ? EMuteType.BOTH
                     : throw ctx.SendCorrectUsage(SYNTAX)));
 
-        int duration = F.ParseTime(ctx.Get(2)!);
+        int duration = Util.ParseTime(ctx.Get(2)!);
 
         if (duration < -1 || duration == 0)
             throw ctx.Reply(T.InvalidTime);
