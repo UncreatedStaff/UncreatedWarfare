@@ -19,7 +19,7 @@ public abstract class BaseCTFTicketProvider : BaseTicketProvider
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (oldValue > 0 && newValue <= 0)
-            Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
     }
     public override void Tick()
     {

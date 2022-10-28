@@ -517,8 +517,9 @@ public static class EventFunctions
         {
             // reset the player to spawn if they have joined in a different game as they last played in.
             UCPlayer ucplayer = e.Player;
-
-            bool g = Data.Is(out ITeams t);
+            ucplayer.Loading = true;
+            ucplayer.Player.enablePluginWidgetFlag(EPluginWidgetFlags.Modal);
+            UCPlayer.LoadingUI.SendToPlayer(ucplayer.Connection, T.LoadingOnJoin.Translate(ucplayer));
             bool shouldRespawn = false;
             bool isNewPlayer = e.IsNewPlayer;
             if (!isNewPlayer && (e.SaveData!.LastGame != Data.Gamemode.GameID || e.SaveData.ShouldRespawnOnJoin))
@@ -527,7 +528,6 @@ public static class EventFunctions
 
                 e.SaveData.ShouldRespawnOnJoin = false;
             }
-
             if (e.SaveData is not null)
                 e.SaveData.LastGame = Data.Gamemode.GameID;
 
@@ -536,15 +536,14 @@ public static class EventFunctions
             else if (shouldRespawn)
             {
                 ucplayer.Player.life.sendRevive();
-                ucplayer.Player.teleportToLocation(F.GetBaseSpawn(ucplayer.Player, out ulong team2), team2.GetBaseAngle());
+                ucplayer.Player.teleportToLocation(ucplayer.Player.GetBaseSpawn(out ulong team2), team2.GetBaseAngle());
             }
-
             PlayerManager.ApplyTo(ucplayer);
 
             ulong team = ucplayer.GetTeam();
             FPlayerName names = ucplayer.Name;
-            ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? T.WelcomeMessage : T.WelcomeBackMessage, ucplayer, ucplayer), EToastMessageSeverity.INFO));
 
+            bool g = Data.Is(out ITeams t);
             if (Data.PlaytimeComponents.ContainsKey(ucplayer.Steam64))
             {
                 UnityEngine.Object.DestroyImmediate(Data.PlaytimeComponents[ucplayer.Steam64]);
@@ -553,81 +552,50 @@ public static class EventFunctions
             ucplayer.Player.transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.INFANTRY, team);
             if (e.Steam64 == 76561198267927009) ucplayer.Player.channel.owner.isAdmin = true;
             UCPlayerData pt = ucplayer.Player.transform.gameObject.AddComponent<UCPlayerData>();
+
             pt.StartTracking(ucplayer.Player);
             Data.PlaytimeComponents.Add(ucplayer.Steam64, pt);
             Task.Run(async () =>
             {
-                await ucplayer.PurchaseSync.WaitAsync();
+                await ucplayer.PurchaseSync.WaitAsync().ConfigureAwait(false);
+                await UCWarfare.ToUpdate();
                 try
                 {
-                    Task t1 = Data.DatabaseManager.CheckUpdateUsernames(names);
-                    Task t2 = Points.UpdatePointsAsync(ucplayer, false);
-                    Task t3 = ucplayer.DownloadKits(false);
-                    Task t4 = OffenseManager.ApplyMuteSettings(ucplayer);
-                    await Data.DatabaseManager.RegisterLogin(ucplayer.Player);
-                    await t1;
-                    await t3;
-                    await t4;
-                    await t2;
+                    await Data.Gamemode.OnPlayerJoined(ucplayer).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error initalizing player: " + ucplayer);
+                    L.LogError(ex);
                 }
                 finally
                 {
                     ucplayer.PurchaseSync.Release();
                 }
-                await UCWarfare.ToUpdate();
-                try
-                {
-                    RequestSigns.UpdateAllSigns(ucplayer);
-                    VehicleSpawner.UpdateSigns(ucplayer);
-                    Points.UpdateCreditsUI(ucplayer);
-                    Points.UpdateXPUI(ucplayer);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error updating GUI after OnAsyncInitComplete:");
-                    L.LogError(ex);
-                }
-                try
-                {
-                    Data.Gamemode.InternalOnAsyncInitComplete(ucplayer);
-                }
-                catch (Exception ex)
-                {
-                    L.LogError("Error in the " + Data.Gamemode.Name + " OnAsyncInitComplete:");
-                    L.LogError(ex);
-                }
-            }).ConfigureAwait(false);
 
-            try
-            {
-                Data.Gamemode.OnPlayerJoined(ucplayer);
-            }
-            catch (Exception ex)
-            {
-                L.LogError("Error in the " + Data.Gamemode.Name + " OnPlayerJoined:");
-                L.LogError(ex);
-            }
+                await UCWarfare.ToUpdate();
+                if (ucplayer.IsOnline)
+                    UCPlayer.LoadingUI.ClearFromPlayer(ucplayer.Connection);
+                ToastMessage.QueueMessage(ucplayer, new ToastMessage(Localization.Translate(isNewPlayer ? T.WelcomeMessage : T.WelcomeBackMessage, ucplayer, ucplayer), EToastMessageSeverity.INFO));
+            });
             ucplayer.Player.gameObject.AddComponent<ZonePlayerComponent>().Init(ucplayer);
             ActionLogger.Add(EActionLogType.CONNECT, $"Players online: {Provider.clients.Count}", ucplayer);
             if (UCWarfare.Config.EnablePlayerJoinLeaveMessages)
                 Chat.Broadcast(T.PlayerConnected, ucplayer);
             Data.Reporter?.OnPlayerJoin(ucplayer.SteamPlayer);
-            if (ucplayer != null)
+            PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new PlayerListEntry
             {
-                PlayerManager.NetCalls.SendPlayerJoined.NetInvoke(new PlayerListEntry
-                {
-                    Duty = ucplayer.OnDuty(),
-                    Name = names.CharacterName,
-                    Steam64 = ucplayer.Steam64,
-                    Team = ucplayer.Player.GetTeamByte()
-                });
-                if (!UCWarfare.Config.DisableDailyQuests)
-                    DailyQuests.RegisterDailyTrackers(ucplayer);
-                //KitManager.OnPlayerJoinedQuestHandling(ucplayer);
-                //VehicleBay.OnPlayerJoinedQuestHandling(ucplayer);
-                //Ranks.RankManager.OnPlayerJoin(ucplayer);
-                IconManager.DrawNewMarkers(ucplayer, false);
-            }
+                Duty = ucplayer.OnDuty(),
+                Name = names.CharacterName,
+                Steam64 = ucplayer.Steam64,
+                Team = ucplayer.Player.GetTeamByte()
+            });
+            if (!UCWarfare.Config.DisableDailyQuests)
+                DailyQuests.RegisterDailyTrackers(ucplayer);
+            //KitManager.OnPlayerJoinedQuestHandling(ucplayer);
+            //VehicleBay.OnPlayerJoinedQuestHandling(ucplayer);
+            //Ranks.RankManager.OnPlayerJoin(ucplayer);
+            IconManager.DrawNewMarkers(ucplayer, false);
         }
         catch (Exception ex)
         {

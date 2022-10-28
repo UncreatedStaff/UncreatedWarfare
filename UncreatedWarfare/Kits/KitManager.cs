@@ -826,7 +826,7 @@ public class KitManager : BaseReloadSingleton
     {
         KitManager singleton = GetSingleton();
         singleton._threadLocker.Wait();
-        kit = singleton.Kits.Values.FirstOrDefault(x => x.Name.Equals(kitName, StringComparison.Ordinal));
+        kit = singleton.Kits.Values.FirstOrDefault(x => x.Name.Equals(kitName, StringComparison.Ordinal))!;
         singleton._threadLocker.Release();
         return kit != null;
     }
@@ -834,7 +834,7 @@ public class KitManager : BaseReloadSingleton
     {
         KitManager singleton = GetSingleton();
         singleton._threadLocker.Wait();
-        kit = singleton.Kits.Values.FirstOrDefault(predicate);
+        kit = singleton.Kits.Values.FirstOrDefault(predicate)!;
         singleton._threadLocker.Release();
         return kit != null;
     }
@@ -843,7 +843,7 @@ public class KitManager : BaseReloadSingleton
     {
         if (_singleton is null)
         {
-            _singleton = Data.Singletons.GetSingleton<KitManager>();
+            _singleton = Data.Singletons.GetSingleton<KitManager>()!;
             if (_singleton is null)
                 throw new SingletonUnloadedException(typeof(KitManager));
         }

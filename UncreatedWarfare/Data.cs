@@ -67,9 +67,9 @@ public static class Data
         public static readonly string KitSync = Path.Combine(Sync, "kits.json");
         public static readonly string PlayersSync = Path.Combine(Sync, "players.json");
         public static readonly string CurrentLog = Path.Combine(Logs, "current.txt");
-        public static string FlagStorage => _flagCache is null ? (_flagCache = Path.Combine(MapStorage, "Flags") + Path.DirectorySeparatorChar) : _flagCache;
-        public static string StructureStorage => _structureCache is null ? (_structureCache = Path.Combine(MapStorage, "Structures") + Path.DirectorySeparatorChar) : _structureCache;
-        public static string VehicleStorage => _vehicleCache is null ? (_vehicleCache = Path.Combine(MapStorage, "Vehicles") + Path.DirectorySeparatorChar) : _vehicleCache;
+        public static string FlagStorage => _flagCache ??= Path.Combine(MapStorage, "Flags") + Path.DirectorySeparatorChar;
+        public static string StructureStorage => _structureCache ??= Path.Combine(MapStorage, "Structures") + Path.DirectorySeparatorChar;
+        public static string VehicleStorage => _vehicleCache ??= Path.Combine(MapStorage, "Vehicles") + Path.DirectorySeparatorChar;
         public static void OnMapChanged()
         {
             mapCache = null;
@@ -108,7 +108,6 @@ public static class Data
     internal static ICommandInputOutput? defaultIOHandler;
     public static Reporter Reporter;
     public static DeathTracker DeathTracker;
-    //internal static HomebaseClient? NetClient;
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearShirt;
     internal static ClientInstanceMethod<Guid, byte, byte[], bool>? SendWearPants;
@@ -144,11 +143,11 @@ public static class Data
     {
         try
         {
-            FieldInfo defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
+            FieldInfo? defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
             if (defaultIoHandlerFieldInfo != null)
             {
                 defaultIOHandler = (ICommandInputOutput)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
-                MethodInfo appendConsoleMethod = defaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
+                MethodInfo? appendConsoleMethod = defaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
                 if (appendConsoleMethod != null)
                 {
                     OutputToConsoleMethod = (OutputToConsole)appendConsoleMethod.CreateDelegate(typeof(OutputToConsole), defaultIOHandler);
@@ -166,7 +165,7 @@ public static class Data
         }
     }
 
-    public static void LoadVariables()
+    internal static async Task LoadVariables()
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -187,6 +186,7 @@ public static class Data
         F.CheckDir(Paths.OfficerStorage, out _, true);
 
         ZoneProvider = new JsonZoneProvider(new FileInfo(Path.Combine(Paths.FlagStorage, "zones.json")));
+        L.Log("Read " + ZoneProvider.Zones.Count + " zones.", ConsoleColor.Magenta);
 
         /* CONSTRUCT FRAMEWORK */
         L.Log("Instantiating Framework...", ConsoleColor.Magenta);
@@ -194,40 +194,49 @@ public static class Data
         //L.Log("Connection string: " + UCWarfare.Config.SQL.GetConnectionString(), ConsoleColor.DarkGray);
 #endif
         DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
-        DatabaseManager.Open();
+        bool status = await DatabaseManager.OpenAsync();
+        L.Log("Local MySql database status: " + status + ".", ConsoleColor.Magenta);
         if (UCWarfare.Config.RemoteSQL != null)
         {
             RemoteSQL = new WarfareSQL(UCWarfare.Config.RemoteSQL);
-            RemoteSQL.Open();
+            status = await RemoteSQL.OpenAsync();
+            L.Log("Remote MySql database status: " + status + ".", ConsoleColor.Magenta);
         }
+        else
+            L.Log("Using local as remote MySql database.", ConsoleColor.Magenta);
+
+        await UCWarfare.ToUpdate();
         Points.Initialize();
-        CommandWindow.shouldLogDeaths = false;
         Gamemode.ReadGamemodes();
 
-        if (!Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF))) throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Failed to load gamemode"));
+        L.Log("Loading first gamemode...", ConsoleColor.Magenta);
+        if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF)))
+            throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Failed to load gamemode"));
 
+        await UCWarfare.ToUpdate();
         if (UCWarfare.Config.EnableReporter)
             Reporter = UCWarfare.I.gameObject.AddComponent<Reporter>();
 
 
-        DeathTracker = Singletons.LoadSingleton<DeathTracker>(false);
+        DeathTracker = await Singletons.LoadSingletonAsync<DeathTracker>(false);
+        await UCWarfare.ToUpdate();
 
         /* REFLECT PRIVATE VARIABLES */
         L.Log("Getting RPCs...", ConsoleColor.Magenta);
         IDisposable indent = L.IndentLog(1);
-        SendChangeText          = F.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
-        SendMultipleBarricades  = F.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
-        SendChatIndividual      = F.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
-        SendEffectClearAll      = F.GetRPC<ClientStaticMethod, EffectManager>("SendEffectClearAll", true)!;
-        SendDestroyItem         = F.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
-        SendInventory           = F.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
-        SendWearShirt           = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
-        SendWearPants           = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
-        SendWearHat             = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearHat");
-        SendWearBackpack        = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearBackpack");
-        SendWearVest            = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
-        SendWearMask            = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
-        SendWearGlasses         = F.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
+        SendChangeText         = Util.GetRPC<ClientInstanceMethod<string>, InteractableSign>("SendChangeText", true)!;
+        SendMultipleBarricades = Util.GetRPC<ClientStaticMethod, BarricadeManager>("SendMultipleBarricades", true)!;
+        SendChatIndividual     = Util.GetRPC<ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string>, ChatManager>("SendChatEntry", true)!;
+        SendEffectClearAll     = Util.GetRPC<ClientStaticMethod, EffectManager>("SendEffectClearAll", true)!;
+        SendDestroyItem        = Util.GetRPC<ClientStaticMethod<byte, byte, uint, bool>, ItemManager>("SendDestroyItem", true)!;
+        SendInventory          = Util.GetRPC<ClientInstanceMethod, PlayerInventory>("SendInventory");
+        SendWearShirt          = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearShirt");
+        SendWearPants          = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearPants");
+        SendWearHat            = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearHat");
+        SendWearBackpack       = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearBackpack");
+        SendWearVest           = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearVest");
+        SendWearMask           = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearMask");
+        SendWearGlasses        = Util.GetRPC<ClientInstanceMethod<Guid, byte, byte[], bool>, PlayerClothing>("SendWearGlasses");
         UseFastKits = true;
         if (SendWearShirt is null || SendWearPants is null || SendWearHat is null || SendWearBackpack is null || SendWearVest is null || SendWearMask is null || SendWearGlasses is null || SendInventory is null)
         {
@@ -251,7 +260,7 @@ public static class Data
         }
         try
         {
-            ReplicateStance = typeof(PlayerStance).GetMethod("replicateStance", BindingFlags.Instance | BindingFlags.NonPublic);
+            ReplicateStance = typeof(PlayerStance).GetMethod("replicateStance", BindingFlags.Instance | BindingFlags.NonPublic)!;
         }
         catch (Exception ex)
         {

@@ -5,11 +5,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Uncreated.Json;
 using Uncreated.Players;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -34,14 +35,12 @@ namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
 public class Insurgency :
     TeamGamemode,
-    ITeams,
     IFOBs,
     IVehicles,
     IKitRequests,
     IRevives,
     ISquads,
     IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>,
-    IStructureSaving,
     ITickets,
     IStagingPhase,
     IAttackDefense,
@@ -100,7 +99,7 @@ public class Insurgency :
     public InsurgencyTracker WarstatsTracker => _gameStats;
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
     object IGameStats.GameStats => _gameStats;
-    public TicketManager TicketManager { get => _ticketManager; }
+    public TicketManager TicketManager => _ticketManager;
     public Insurgency() : base("Insurgency", 0.25F) { }
     protected override void PreInit()
     {
@@ -120,7 +119,7 @@ public class Insurgency :
             AddSingletonRequirement(ref _actionManager);
         base.PreInit();
     }
-    protected override void PostInit()
+    protected override Task PostInit()
     {
         Commands.ReloadCommand.ReloadKits();
         string file = Path.Combine(Data.Paths.MapStorage, "insurgency_caches.json");
@@ -128,8 +127,8 @@ public class Insurgency :
         {
             try
             {
-                using (FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    CacheSpawns = JsonSerializer.Deserialize<List<SerializableTransform>>(str, JsonEx.serializerSettings)!;
+                using FileStream str = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
+                CacheSpawns = JsonSerializer.Deserialize<List<SerializableTransform>>(str, JsonEx.serializerSettings)!;
             }
             catch (Exception ex)
             {
@@ -185,8 +184,8 @@ public class Insurgency :
             {
                 try
                 {
-                    using (FileStream str = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read))
-                        JsonSerializer.Serialize(str, CacheSpawns, JsonEx.serializerSettings);
+                    using FileStream str = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read);
+                    JsonSerializer.Serialize(str, CacheSpawns, JsonEx.serializerSettings);
                 }
                 catch (Exception ex)
                 {
@@ -195,21 +194,24 @@ public class Insurgency :
                 }
             }
         }
+
+        return base.PostInit();
     }
-    protected override void OnReady()
+    protected override Task OnReady()
     {
         _gameStats = UCWarfare.I.gameObject.AddComponent<InsurgencyTracker>();
         RepairManager.LoadRepairStations();
         RallyManager.WipeAllRallies();
         VehicleSigns.InitAllSigns();
-        base.OnReady();
+        return base.OnReady();
     }
-    protected override void PostDispose()
+    protected override Task PostDispose()
     {
+        ThreadUtil.assertIsGameThread();
         Destroy(_gameStats);
-        base.PostDispose();
+        return base.PostDispose();
     }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad)
     {
         _gameStats.Reset();
 
@@ -226,11 +228,10 @@ public class Insurgency :
         CachesLeft = UnityEngine.Random.Range(Config.InsurgencyMinStartingCaches, Config.InsurgencyMaxStartingCaches + 1);
         for (int i = 0; i < CachesLeft; i++)
             Caches.Add(new CacheData());
-        base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad);
     }
-    protected override void PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad)
     {
-        base.PostGameStarting(isOnLoad);
         RallyManager.WipeAllRallies();
 
         SpawnNewCache();
@@ -239,16 +240,17 @@ public class Insurgency :
         else
             SpawnBlockerOnT2();
         StartStagingPhase(Config.InsurgencyStagingTime);
+        return base.PostGameStarting(isOnLoad);
     }
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         SendWinUI(winner);
-        base.DeclareWin(winner);
 
         StartCoroutine(EndGameCoroutine(winner));
+        return base.DeclareWin(winner);
     }
     private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
     {
@@ -314,19 +316,15 @@ public class Insurgency :
         }
         base.OnPlayerDeath(e);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        base.PlayerInit(player, wasAlreadyOnline);
-        if (KitManager.KitExists(player.KitName, out Kit kit))
+        if (!KitManager.KitExists(player.KitName, out Kit kit) || kit.IsLimited(out _, out _, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
         {
-            if (kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam()) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
-            {
-                if (!KitManager.TryGiveRiflemanKit(player))
-                    KitManager.TryGiveUnarmedKit(player);
-            }
+            if (!KitManager.TryGiveRiflemanKit(player))
+                KitManager.TryGiveUnarmedKit(player);
         }
         if (!AllowCosmetics)
             player.SetCosmeticStates(false);
@@ -334,9 +332,9 @@ public class Insurgency :
         if (UCWarfare.Config.ModifySkillLevels)
             Skillset.SetDefaultSkills(player);
 
-        ulong team = player.GetTeam();
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
+        return base.PlayerInit(player, wasAlreadyOnline);
     }
     public override void OnJoinTeam(UCPlayer player, ulong newTeam)
     {
@@ -347,7 +345,7 @@ public class Insurgency :
     {
         ulong team = player.GetTeam();
         FPlayerName names = F.GetPlayerOriginalNames(player);
-        if ((player.KitName == null || player.KitName == string.Empty) && team > 0 && team < 3)
+        if (string.IsNullOrEmpty(player.KitName) && team is > 0 and < 3)
         {
             if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
                 KitManager.GiveKit(player, unarmed);
@@ -465,14 +463,21 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        IEnumerable<SerializableTransform> viableSpawns = CacheSpawns.Where(c1 => !SeenCaches.Contains(c1.Position) && SeenCaches.All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)));
+        SerializableTransform[] viableSpawns = CacheSpawns
+            .Where(c1 =>
+                !SeenCaches.Contains(c1.Position) &&
+                SeenCaches
+                    .All(c => (c1.Position - c).sqrMagnitude > Math.Pow(300, 2)
+                    )
+                )
+            .ToArray();
 
-        if (viableSpawns.Count() == 0)
+        if (viableSpawns.Length == 0)
         {
             L.LogWarning("NO VIABLE CACHE SPAWNS");
             return;
         }
-        SerializableTransform transform = viableSpawns.ElementAt(UnityEngine.Random.Range(0, viableSpawns.Count()));
+        SerializableTransform transform = viableSpawns[UnityEngine.Random.Range(0, viableSpawns.Length)];
 
         if (!Config.BarricadeInsurgencyCache.ValidReference(out ItemBarricadeAsset asset))
         {
@@ -502,9 +507,12 @@ public class Insurgency :
 
         if (message)
         {
-            foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-                if (player.GetTeam() == DefendingTeam)
-                    ToastMessage.QueueMessage(player, new ToastMessage(Localization.Translate(T.CacheSpawnedDefense, player), EToastMessageSeverity.BIG));
+            foreach (LanguageSet set in LanguageSet.OnTeam(DefendingTeam))
+            {
+                ToastMessage msg = new ToastMessage(T.CacheSpawnedDefense.Translate(set.Language), EToastMessageSeverity.BIG);
+                while (set.MoveNext())
+                    ToastMessage.QueueMessage(set.Next, msg);
+            }
         }
 
         InsurgencyUI.ReplicateCacheUpdate(d);
@@ -512,40 +520,43 @@ public class Insurgency :
 
         SpawnCacheItems(cache);
     }
-    void SpawnCacheItems(Cache cache)
+    private void SpawnCacheItems(Cache cache)
     {
-        //try
-        //{
-        //    Guid ammoID;
-        //    Guid buildID;
-        //    if (DefendingTeam == 1)
-        //    {
-        //        ammoID = Config.Items.T1Ammo;
-        //        buildID = Config.Items.T1Build;
-        //    }
-        //    else if (DefendingTeam == 2)
-        //    {
-        //        ammoID = Config.Items.T2Ammo;
-        //        buildID = Config.Items.T2Build;
-        //    }
-        //    else return;
-        //    if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
-        //        return;
-        //    Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
+        _ = cache;
+#if false
+        try
+        {
+            Guid ammoID;
+            Guid buildID;
+            if (DefendingTeam == 1)
+            {
+                ammoID = Config.Items.T1Ammo;
+                buildID = Config.Items.T1Build;
+            }
+            else if (DefendingTeam == 2)
+            {
+                ammoID = Config.Items.T2Ammo;
+                buildID = Config.Items.T2Build;
+            }
+            else return;
+            if (!(Assets.find(ammoID) is ItemAsset ammo) || !(Assets.find(buildID) is ItemAsset build))
+                return;
+            Vector3 point = cache.Structure.model.TransformPoint(new Vector3(0, 2, 0));
 
-        //    for (int i = 0; i < 15; i++)
-        //        ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
+            for (int i = 0; i < 15; i++)
+                ItemManager.dropItem(new Item(build.id, true), point, false, true, false);
 
-        //    foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
-        //    {
-        //        for (int i = 0; i < entry.Value; i++)
-        //            ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
-        //    }
-        //}
-        //catch(Exception ex)
-        //{
-        //    L.LogError(ex.ToString());
-        //}
+            foreach (KeyValuePair<ushort, int> entry in Config.Insurgency.CacheItems)
+            {
+                for (int i = 0; i < entry.Value; i++)
+                    ItemManager.dropItem(new Item(entry.Key, true), point, false, true, true);
+            }
+        }
+        catch(Exception ex)
+        {
+            L.LogError(ex.ToString());
+        }
+#endif
     }
     private IEnumerator<WaitForSeconds> WaitToSpawnNewCache()
     {
@@ -652,8 +663,8 @@ public class Insurgency :
         string file = Path.Combine(Data.Paths.MapStorage, "insurgency_caches.json");
         try
         {
-            using (FileStream str = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read))
-                JsonSerializer.Serialize(str, CacheSpawns, JsonEx.serializerSettings);
+            using FileStream str = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.Read);
+            JsonSerializer.Serialize(str, CacheSpawns, JsonEx.serializerSettings);
         }
         catch (Exception ex)
         {
@@ -704,10 +715,10 @@ public class Insurgency :
 
     public class CacheData : IObjective, IDeployable, IFOB
     {
-        public int Number { get => Cache != null ? Cache.Number : 0; }
-        public bool IsActive { get => Cache != null; }
-        public bool IsDestroyed { get => Cache != null && Cache.Structure.GetServersideData().barricade.isDead; }
-        public bool IsDiscovered { get => Cache != null && Cache.IsDiscovered; }
+        public int Number => Cache != null ? Cache.Number : 0;
+        public bool IsActive => Cache != null;
+        public bool IsDestroyed => Cache != null && Cache.Structure.GetServersideData().barricade.isDead;
+        public bool IsDiscovered => Cache != null && Cache.IsDiscovered;
         public Cache Cache { get; private set; }
         public string Name => ((IObjective)Cache).Name;
         public Vector3 Position => ((IObjective)Cache).Position;
@@ -727,11 +738,10 @@ public class Insurgency :
         public bool CheckDeployableTick(UCPlayer player, bool chat) => ((IDeployable)Cache).CheckDeployableTick(player, chat);
         public void OnDeploy(UCPlayer player, bool chat) => ((IDeployable)Cache).OnDeploy(player, chat);
     }
-    #region DEFAULT CACHE SPAWNS
+#region DEFAULT CACHE SPAWNS
     private static readonly KeyValuePair<string, SerializableTransform[]>[] DefaultCacheSpawns =
-        new KeyValuePair<string, SerializableTransform[]>[]
         {
-            new KeyValuePair<string, SerializableTransform[]>(MapScheduler.Nuijamaa, new SerializableTransform[91]
+            new KeyValuePair<string, SerializableTransform[]>(MapScheduler.Nuijamaa, new SerializableTransform[]
             {
                 new SerializableTransform(211.300583f, 37.7143173f, 61.399395f, 0f, 179.149933f, 0f),
                 new SerializableTransform(-11.5022888f, 70.63667f, -261.72052f, 0f, 88.94999f, 0f),
@@ -825,7 +835,7 @@ public class Insurgency :
                 new SerializableTransform(265.075653f, 42.2353f, 389.17807f, 0f, 177.650055f, 0f),
                 new SerializableTransform(269.669922f, 42.2353f, 380.341553f, 0f, 268.8501f, 0f)
             }),
-            new KeyValuePair<string, SerializableTransform[]>(MapScheduler.GulfOfAqaba, new SerializableTransform[62]
+            new KeyValuePair<string, SerializableTransform[]>(MapScheduler.GulfOfAqaba, new SerializableTransform[]
             {
                 new SerializableTransform(-712.8696f, 36.70459f, -210.1968f, 270f, 2f, 0f),
                 new SerializableTransform(-694.0713f, 36.70459f, -210.6987f, 270f, 92f, 0f),
@@ -891,7 +901,7 @@ public class Insurgency :
                 new SerializableTransform(810.2891f, 70.18408f, 277.5303f, 270f, 92f, 0f)
             })
         };
-    #endregion
+#endregion
 }
 
 public sealed class InsurgencyTicketProvider : BaseTicketProvider
@@ -900,6 +910,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     {
         int b = GetTeamBleed(team);
         bleed = b == 0 ? string.Empty : b.ToString(Data.Locale);
+        // todo translations
         if (Data.Is(out Insurgency ins))
         {
             if (ins.DefendingTeam == team)
@@ -911,10 +922,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
             else if (ins.AttackingTeam == team)
             {
                 tickets = string.Empty;
-                if (ins.DiscoveredCaches.Count == 0)
-                    message = "FIND THE WEAPONS CACHES\n(kill enemies for intel)";
-                else
-                    message = "DESTROY THE WEAPONS CACHES";
+                message = ins.DiscoveredCaches.Count == 0 ? "FIND THE WEAPONS CACHES\n(kill enemies for intel)" : "DESTROY THE WEAPONS CACHES";
                 return;
             }
         }
@@ -928,15 +936,15 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
     {
         if (!Data.Is(out Insurgency ins)) return;
         int attack = Gamemode.Config.InsurgencyAttackStartingTickets;
-        int defence = ins.CachesLeft;
 
-        if (ins.AttackingTeam == 1)
+        switch (ins.AttackingTeam)
         {
-            Manager.Team1Tickets = attack;
-        }
-        else if (ins.AttackingTeam == 2)
-        {
-            Manager.Team2Tickets = attack;
+            case 1:
+                Manager.Team1Tickets = attack;
+                break;
+            case 2:
+                Manager.Team2Tickets = attack;
+                break;
         }
     }
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
@@ -944,7 +952,7 @@ public sealed class InsurgencyTicketProvider : BaseTicketProvider
         if (Data.Is(out Insurgency ins) && ins.DefendingTeam == team)
             throw new InvalidOperationException("Tried to change tickets of defending team during Insurgency.");
         if (oldValue > 0 && newValue <= 0)
-            Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
     }
     public override void Tick()
     {

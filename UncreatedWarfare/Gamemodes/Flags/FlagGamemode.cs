@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 
@@ -13,29 +14,32 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
     protected List<Flag> _rotation = new List<Flag>();
     protected List<Flag> _allFlags = new List<Flag>();
     public Dictionary<ulong, int> _onFlag = new Dictionary<ulong, int>();
-    public List<Flag> Rotation { get => _rotation; }
-    public List<Flag> LoadedFlags { get => _allFlags; }
-    public Dictionary<ulong, int> OnFlag { get => _onFlag; }
+    public List<Flag> Rotation => _rotation;
+    public List<Flag> LoadedFlags => _allFlags;
+    public Dictionary<ulong, int> OnFlag => _onFlag;
     public virtual bool AllowPassengersToCapture => false;
-    public FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
+    protected FlagGamemode(string Name, float EventLoopSpeed) : base(Name, EventLoopSpeed)
     { }
     protected abstract bool TimeToEvaluatePoints();
-    protected override void PostDispose()
+    protected override Task PostDispose()
     {
+        ThreadUtil.assertIsGameThread();
         ResetFlags();
         _onFlag.Clear();
         _rotation.Clear();
-        base.PostDispose();
+        return base.PostDispose();
     }
-    protected override void OnReady()
+    protected override Task OnReady()
     {
+        ThreadUtil.assertIsGameThread();
         LoadAllFlags();
-        base.OnReady();
+        return base.OnReady();
     }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad)
     {
+        ThreadUtil.assertIsGameThread();
         LoadRotation();
-        base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad);
     }
     protected override void EventLoopAction()
     {
@@ -77,7 +81,7 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
                 _allFlags.Add(new Flag(Data.ZoneProvider.Zones[i], this) { index = -1 });
             }
         }
-        _allFlags.Sort((Flag a, Flag b) => a.ID.CompareTo(b.ID));
+        _allFlags.Sort((a, b) => a.ID.CompareTo(b.ID));
     }
     public virtual void OnEvaluate()
     { }
@@ -147,8 +151,8 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
         {
             if (fid != flag.ID)
             {
-                Flag oldFlag = _rotation.FirstOrDefault(f => f.ID == fid);
-                if (oldFlag == default(Flag)) _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
+                Flag? oldFlag = _rotation.FirstOrDefault(f => f.ID == fid);
+                if (oldFlag == null) _onFlag.Remove(player.channel.owner.playerID.steamID.m_SteamID);
                 else RemovePlayerFromFlag(player.channel.owner.playerID.steamID.m_SteamID, player, oldFlag); // remove the player from their old flag first in the case of teleporting from one flag to another.
                 _onFlag.Add(player.channel.owner.playerID.steamID.m_SteamID, flag.ID);
             }

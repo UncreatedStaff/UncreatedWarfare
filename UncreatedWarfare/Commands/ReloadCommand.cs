@@ -113,15 +113,21 @@ public class ReloadCommand : Command
             }
             else
             {
-                IReloadableSingleton? reloadable = Data.Singletons.ReloadSingleton(module);
-                if (reloadable is null) goto notFound;
-                ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
-                ctx.LogAction(EActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
+                ctx.Defer();
+                Task.Run(async () =>
+                {
+                    IReloadableSingleton? reloadable = await Data.Singletons.ReloadSingletonAsync(module);
+                    await UCWarfare.ToUpdate();
+                    if (reloadable is null)
+                        ctx.SendCorrectUsage(SYNTAX);
+                    else
+                    {
+                        ctx.Reply(T.ReloadedGeneric, module.ToProperCase());
+                        ctx.LogAction(EActionLogType.RELOAD_COMPONENT, module.ToUpperInvariant());
+                    }
+                });
             }
         }
-        return;
-    notFound:
-        ctx.SendCorrectUsage(SYNTAX);
     }
 
     private void ReloadColors()
@@ -242,15 +248,17 @@ public class ReloadCommand : Command
 #endif
         try
         {
-            Data.Singletons.ReloadSingleton("announcer");
+            _ = Data.Singletons.ReloadSingletonAsync("announcer");
             IEnumerable<FieldInfo> objects = typeof(Data).GetFields(BindingFlags.Static | BindingFlags.Public).Where(x => x.FieldType.IsClass);
             foreach (FieldInfo obj in objects)
             {
                 try
                 {
                     object o = obj.GetValue(null);
-                    IEnumerable<FieldInfo> configfields = o.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static).
-                        Where(x => x.FieldType.GetInterfaces().Contains(typeof(IConfiguration)));
+                    IEnumerable<FieldInfo> configfields = o.GetType()
+                        .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance |
+                                   BindingFlags.Static).Where(x =>
+                            x.FieldType.GetInterfaces().Contains(typeof(IConfiguration)));
                     foreach (FieldInfo config in configfields)
                     {
                         IConfiguration c;
@@ -262,17 +270,22 @@ public class ReloadCommand : Command
                         {
                             c = (IConfiguration)config.GetValue(o);
                         }
+
                         c.Reload();
                     }
                 }
-                catch (Exception) { }
+                catch (Exception ex)
+                {
+                    L.LogError("Error reloading config file.");
+                    L.LogError(ex);
+                }
             }
-            // FIX: Invocations
+            // todo FIX: Invocations
             //Invocations.Warfare.SendRankInfo.NetInvoke(XPManager.config.Data.Ranks, OfficerManager.config.Data.OfficerRanks, OfficerManager.config.Data.FirstStarPoints, OfficerManager.config.Data.PointsIncreasePerStar);
         }
         catch (Exception ex)
         {
-            L.LogError("Failed to find all objects in type " + typeof(Data).Name);
+            L.LogError("Failed to find all objects in type " + nameof(Data));
             L.LogError(ex);
         }
     }

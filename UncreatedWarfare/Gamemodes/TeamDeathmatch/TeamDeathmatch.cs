@@ -1,11 +1,13 @@
-﻿using System;
+﻿using SDG.Unturned;
+using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
-using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Revives;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Structures;
@@ -17,7 +19,8 @@ namespace Uncreated.Warfare.Gamemodes.TeamDeathmatch;
 
 public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISquads, IRevives, ITeamScore, ITraits
 {
-    private TraitManager _traitManager;
+    protected TraitManager _traitManager;
+    protected ActionManager _actionManager;
     protected VehicleSpawner _vehicleSpawner;
     protected VehicleBay _vehicleBay;
     protected VehicleSigns _vehicleSigns;
@@ -49,6 +52,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public SquadManager SquadManager => _squadManager;
     public StructureSaver StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
+    public ActionManager ActionManager => _actionManager;
     public int Team1Score => _t1score;
     public int Team2Score => _t2score;
     protected int _t1score = 0;
@@ -66,42 +70,40 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         AddSingletonRequirement(ref _reviveManager);
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _traitManager);
+        if (UCWarfare.Config.EnableActionMenu)
+            AddSingletonRequirement(ref _actionManager);
     }
-    protected override void PostInit()
+    protected override Task PostInit()
     {
+        ThreadUtil.assertIsGameThread();
         Commands.ReloadCommand.ReloadKits();
+        return base.PostInit();
     }
-    protected override void OnReady()
+    protected override Task OnReady()
     {
-        base.OnReady();
+        ThreadUtil.assertIsGameThread();
         RepairManager.LoadRepairStations();
         RallyManager.WipeAllRallies();
         VehicleSigns.InitAllSigns();
+        return base.OnReady();
     }
     public override void Subscribe()
     {
         base.Subscribe();
         EventDispatcher.OnPlayerDied += OnDeath;
     }
-    protected override void PostDispose()
-    {
-        base.PostDispose();
-    }
     public override void Unsubscribe()
     {
         EventDispatcher.OnPlayerDied -= OnDeath;
         base.Unsubscribe();
     }
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
-        if (this._state == EState.FINISHED) return;
-        this._state = EState.FINISHED;
-
-        QuestManager.OnGameOver(winner);
-        ActionLogger.Add(EActionLogType.TEAM_WON, Teams.TeamManager.TranslateName(winner, 0));
-        StartCoroutine(EndGameCoroutine(winner));
+        ThreadUtil.assertIsGameThread();
+        StartCoroutine(EndGameCoroutine());
+        return base.DeclareWin(winner);
     }
-    private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
+    private IEnumerator<WaitForSeconds> EndGameCoroutine()
     {
         yield return new WaitForSeconds(Config.GeneralLeaderboardDelay);
 #if DEBUG
@@ -116,11 +118,11 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     {
         // todo update ui?
     }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad)
     {
         _t1score = 0;
         _t2score = 0;
-        base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad);
     }
     protected override void EventLoopAction()
     {

@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Reflection;
+using System.Threading.Tasks;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Items;
@@ -11,7 +13,13 @@ namespace Uncreated.Warfare.Singletons;
 
 public interface IUncreatedSingleton
 {
+    bool LoadAsynchrounously { get; }
+    bool AwaitLoad { get; }
     bool IsLoaded { get; }
+    bool IsLoading { get; }
+    bool IsUnloading { get; }
+    Task LoadAsync();
+    Task UnloadAsync();
     void Load();
     void Unload();
 }
@@ -19,13 +27,25 @@ public interface ILevelStartListener
 {
     void OnLevelReady();
 }
+public interface ILevelStartListenerAsync
+{
+    Task OnLevelReady();
+}
 public interface IDeclareWinListener
 {
     void OnWinnerDeclared(ulong winner);
 }
+public interface IDeclareWinListenerAsync
+{
+    Task OnWinnerDeclared(ulong winner);
+}
 public interface IGameStartListener
 {
     void OnGameStarting(bool isOnLoad);
+}
+public interface IGameStartListenerAsync
+{
+    Task OnGameStarting(bool isOnLoad);
 }
 public interface IFlagCapturedListener
 {
@@ -48,17 +68,29 @@ public interface IPlayerConnectListener
 {
     void OnPlayerConnecting(UCPlayer player);
 }
-public interface IPlayerAsyncInitListener
+public interface IPlayerConnectListenerAsync
 {
-    void OnAsyncInitComplete(UCPlayer player);
+    Task OnPlayerConnecting(UCPlayer player);
+}
+public interface IPlayerPostInitListener
+{
+    void OnPostPlayerInit(UCPlayer player);
+}
+public interface IPlayerPostInitListenerAsync
+{
+    Task OnPostPlayerInit(UCPlayer player);
 }
 public interface IJoinedTeamListener
 {
     void OnJoinTeam(UCPlayer player, ulong team);
 }
-public interface IPlayerInitListener
+public interface IPlayerPreInitListener
 {
-    void OnPlayerInit(UCPlayer player, bool wasAlreadyOnline);
+    void OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline);
+}
+public interface IPlayerPreInitListenerAsync
+{
+    Task OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline);
 }
 public interface IPlayerDeathListener
 {
@@ -69,11 +101,144 @@ public interface IReloadableSingleton : IUncreatedSingleton
 {
     string? ReloadKey { get; }
     void Reload();
+    Task ReloadAsync();
+}
+public abstract class BaseAsyncSingleton : IUncreatedSingleton
+{
+    protected bool _isLoaded;
+    protected bool _isLoading;
+    protected bool _isUnloading;
+    public bool IsLoading => _isLoading;
+    public bool IsLoaded => _isLoaded;
+    public bool IsUnloading => _isUnloading;
+    public bool LoadAsynchrounously => true;
+    public abstract bool AwaitLoad { get; }
+    public void Load() => throw new NotImplementedException();
+    public void Unload() => throw new NotImplementedException();
+    public abstract Task LoadAsync();
+    public abstract Task UnloadAsync();
+    async Task IUncreatedSingleton.LoadAsync()
+    {
+        _isLoading = true;
+        await LoadAsync();
+        _isLoading = false;
+        _isLoaded = true;
+    }
+    async Task IUncreatedSingleton.UnloadAsync()
+    {
+        _isUnloading = true;
+        _isLoaded = false;
+        await UnloadAsync();
+        _isUnloading = false;
+    }
+}
+public abstract class BaseAsyncSingletonComponent : MonoBehaviour, IUncreatedSingleton
+{
+    protected bool _isLoaded;
+    protected bool _isLoading;
+    protected bool _isUnloading;
+    public bool IsLoading => _isLoading;
+    public bool IsLoaded => _isLoaded;
+    public bool IsUnloading => _isUnloading;
+    public bool LoadAsynchrounously => true;
+    public abstract bool AwaitLoad { get; }
+    public void Load() => throw new NotImplementedException();
+    public void Unload() => throw new NotImplementedException();
+    public abstract Task LoadAsync();
+    public abstract Task UnloadAsync();
+    async Task IUncreatedSingleton.LoadAsync()
+    {
+        _isLoading = true;
+        await LoadAsync();
+        _isLoading = false;
+        _isLoaded = true;
+    }
+    async Task IUncreatedSingleton.UnloadAsync()
+    {
+        _isUnloading = true;
+        _isLoaded = false;
+        await UnloadAsync();
+        _isUnloading = false;
+    }
+}
+public abstract class BaseAsyncReloadSingleton : BaseAsyncSingleton, IReloadableSingleton
+{
+    public string? ReloadKey { get; }
+    protected BaseAsyncReloadSingleton(string? reloadKey)
+    {
+        this.ReloadKey = reloadKey;
+    }
+    public void Reload() => throw new NotImplementedException();
+    public abstract Task ReloadAsync();
+    async Task IReloadableSingleton.ReloadAsync()
+    {
+        _isLoaded = false;
+        await ReloadAsync();
+    }
+}
+
+public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadableSingleton where TItem : class, IListItem, new()
+{
+    private volatile bool _isLoading;
+    private volatile bool _isUnloading;
+    private volatile bool _isLoaded;
+    public abstract bool AwaitLoad { get; }
+    public bool LoadAsynchrounously => true;
+    public bool IsLoaded => _isLoaded;
+    public bool IsLoading => _isLoading;
+    public bool IsUnloading => _isUnloading;
+    string IReloadableSingleton.ReloadKey => ReloadKey!;
+    protected ListSqlSingleton(Schema[] schemas) : base(schemas) { }
+    protected ListSqlSingleton(string reloadKey, Schema[] schemas) : base(reloadKey, schemas) { }
+    public async Task ReloadAsync()
+    {
+        if (_isLoading || _isUnloading)
+            throw new InvalidOperationException("Already loading or unloading.");
+        if (_isLoaded)
+        {
+            _isLoaded = false;
+            _isUnloading = true;
+            await UnloadAll().ConfigureAwait(false);
+            _isUnloading = false;
+        }
+        _isLoading = true;
+        await Init().ConfigureAwait(false);
+        _isLoading = false;
+        _isLoaded = true;
+    }
+    public async Task LoadAsync()
+    {
+        if (_isLoading || _isUnloading)
+            throw new InvalidOperationException("Already loading or unloading.");
+        _isLoading = true;
+        await Init().ConfigureAwait(false);
+        _isLoading = false;
+        _isLoaded = true;
+    }
+    public async Task UnloadAsync()
+    {
+        if (_isLoading || _isUnloading)
+            throw new InvalidOperationException("Already loading or unloading.");
+        _isLoaded = false;
+        _isUnloading = true;
+        await UnloadAll().ConfigureAwait(false);
+        _isUnloading = false;
+    }
+    public void Reload() => throw new NotImplementedException();
+    public void Load() => throw new NotImplementedException();
+    public void Unload() => throw new NotImplementedException();
 }
 public abstract class BaseSingleton : IUncreatedSingleton
 {
-    public bool IsLoaded => _isLoaded;
     protected bool _isLoaded;
+    protected bool _isLoading;
+    protected bool _isUnloading;
+    public bool IsLoading => _isLoading;
+    public bool IsLoaded => _isLoaded;
+    public bool IsUnloading => _isUnloading;
+    public bool AwaitLoad => false;
+    public bool LoadAsynchrounously => false;
+
     /// <exception cref="SingletonUnloadedException"/>
     internal void AssertLoadedIntl()
     {
@@ -82,21 +247,34 @@ public abstract class BaseSingleton : IUncreatedSingleton
     }
     public abstract void Load();
     public abstract void Unload();
+    public Task LoadAsync() => throw new NotImplementedException();
+    public Task UnloadAsync() => throw new NotImplementedException();
     void IUncreatedSingleton.Load()
     {
+        _isLoading = true;
         Load();
+        _isLoading = false;
         _isLoaded = true;
     }
     void IUncreatedSingleton.Unload()
     {
+        _isUnloading = true;
         _isLoaded = false;
         Unload();
+        _isUnloading = false;
     }
 }
 public abstract class BaseSingletonComponent : MonoBehaviour, IUncreatedSingleton
 {
-    public bool IsLoaded => _isLoaded;
     protected bool _isLoaded;
+    protected bool _isLoading;
+    protected bool _isUnloading;
+    public bool IsLoading => _isLoading;
+    public bool IsLoaded => _isLoaded;
+    public bool IsUnloading => _isUnloading;
+    public bool AwaitLoad => false;
+    public bool LoadAsynchrounously => false;
+
     /// <exception cref="SingletonUnloadedException"/>
     internal void AssertLoadedIntl()
     {
@@ -105,26 +283,32 @@ public abstract class BaseSingletonComponent : MonoBehaviour, IUncreatedSingleto
     }
     public abstract void Load();
     public abstract void Unload();
+    public Task LoadAsync() => throw new NotImplementedException();
+    public Task UnloadAsync() => throw new NotImplementedException();
     void IUncreatedSingleton.Load()
     {
+        _isLoading = true;
         Load();
+        _isLoading = false;
         _isLoaded = true;
     }
     void IUncreatedSingleton.Unload()
     {
+        _isUnloading = true;
         _isLoaded = false;
         Unload();
+        _isUnloading = false;
     }
 }
 public abstract class BaseReloadSingleton : BaseSingleton, IReloadableSingleton
 {
-    public string? ReloadKey => reloadKey;
-    private readonly string? reloadKey;
-    public BaseReloadSingleton(string? reloadKey)
+    public string? ReloadKey { get; }
+    protected BaseReloadSingleton(string? reloadKey)
     {
-        this.reloadKey = reloadKey;
+        this.ReloadKey = reloadKey;
     }
     public abstract void Reload();
+    public Task ReloadAsync() => throw new NotImplementedException();
     void IReloadableSingleton.Reload()
     {
         _isLoaded = false;
@@ -134,10 +318,15 @@ public abstract class BaseReloadSingleton : BaseSingleton, IReloadableSingleton
 }
 public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingleton where TData : class, new()
 {
-    public string? ReloadKey => reloadKey;
-    private readonly string? reloadKey;
-    public bool IsLoaded => _isLoaded;
     protected bool _isLoaded;
+    protected bool _isLoading;
+    protected bool _isUnloading;
+    public bool IsLoading => _isLoading;
+    public bool IsLoaded => _isLoaded;
+    public bool IsUnloading => _isUnloading;
+    public string? ReloadKey { get; }
+    public bool AwaitLoad => false;
+    public bool LoadAsynchrounously => false;
     /// <exception cref="SingletonUnloadedException"/>
     internal void AssertLoadedIntl()
     {
@@ -146,34 +335,45 @@ public abstract class ListSingleton<TData> : JSONSaver<TData>, IReloadableSingle
     }
     protected ListSingleton(string? reloadKey, string file) : base(file, false)
     {
-        this.reloadKey = reloadKey;
+        this.ReloadKey = reloadKey;
     }
     protected ListSingleton(string file) : this(null, file) { }
     protected ListSingleton(string? reloadKey, string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : base(file, serializer, deserializer, false)
     {
-        this.reloadKey = reloadKey;
+        this.ReloadKey = reloadKey;
     }
     protected ListSingleton(string file, CustomSerializer? serializer, CustomDeserializer? deserializer) : this(null, file, serializer, deserializer) { }
     public virtual void Reload() { }
     public abstract void Load();
     public abstract void Unload();
+    public Task LoadAsync() => throw new NotImplementedException();
+    public Task UnloadAsync() => throw new NotImplementedException();
+    public Task ReloadAsync() => throw new NotImplementedException();
     void IReloadableSingleton.Reload()
     {
+        _isLoading = true;
         _isLoaded = false;
         Init();
+        _isUnloading = true;
         Reload();
         _isLoaded = true;
+        _isLoading = false;
+        _isUnloading = false;
     }
     void IUncreatedSingleton.Load()
     {
+        _isLoading = true;
         Init();
         Load();
         _isLoaded = true;
+        _isLoading = false;
     }
     void IUncreatedSingleton.Unload()
     {
+        _isUnloading = true;
         _isLoaded = false;
         Unload();
+        _isUnloading = false;
     }
 }
 public abstract class ConfigSingleton<TConfig, TData> : BaseReloadSingleton where TConfig : Config<TData> where TData : JSONConfigData, new()

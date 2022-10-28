@@ -1,4 +1,6 @@
 ﻿using SDG.NetTransport;
+using SDG.Unturned;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
@@ -17,20 +19,17 @@ public abstract class TicketGamemode<TProvider> : FlagGamemode, ITickets where T
         _ticketManager.Provider = new TProvider();
         base.PreInit();
     }
-    protected override void PostInit()
-    {
-        base.PostInit();
-    }
     protected override void EventLoopAction()
     {
         base.EventLoopAction();
         if (State == EState.ACTIVE && TicketManager.Provider != null)
             TicketManager.Provider.Tick();
     }
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
-        base.DeclareWin(winner);
+        ThreadUtil.assertIsGameThread();
         SendWinUI(winner);
+        return base.DeclareWin(winner);
     }
     protected void SendWinUI(ulong winner)
     {
