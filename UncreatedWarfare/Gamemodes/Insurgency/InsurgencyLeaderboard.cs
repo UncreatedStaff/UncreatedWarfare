@@ -47,7 +47,7 @@ public class InsurgencyTracker : TeamStatTracker<InsurgencyPlayerStats>, ILonges
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<InsurgencyPlayerStats> stats = this.stats.Values.ToList();
+        List<InsurgencyPlayerStats> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>
         {

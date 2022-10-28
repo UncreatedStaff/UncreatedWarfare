@@ -67,25 +67,10 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _traitManager);
     }
-    protected override void PostInit()
-    {
-        Commands.ReloadCommand.ReloadKits();
-    }
-    protected override void OnReady()
-    {
-        base.OnReady();
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        VehicleSigns.InitAllSigns();
-    }
     public override void Subscribe()
     {
         base.Subscribe();
         EventDispatcher.OnPlayerDied += OnDeath;
-    }
-    protected override void PostDispose()
-    {
-        base.PostDispose();
     }
     public override void Unsubscribe()
     {
@@ -121,10 +106,6 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         _t1score = 0;
         _t2score = 0;
         base.PreGameStarting(isOnLoad);
-    }
-    protected override void EventLoopAction()
-    {
-
     }
     private void OnDeath(PlayerDied e)
     {

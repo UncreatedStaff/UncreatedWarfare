@@ -694,6 +694,7 @@ public class SingletonLoadException : Exception
 {
     public readonly ESingletonLoadType LoadType;
     public readonly IUncreatedSingleton? Singleton;
+    public SingletonLoadException(ESingletonLoadType loadType, IUncreatedSingleton? singleton, string message) : this(loadType, singleton, new Exception(message)) { }
     public SingletonLoadException(ESingletonLoadType loadType, IUncreatedSingleton? singleton, Exception inner) : base(GetMessage(loadType, singleton, inner, inner.StackTrace), inner)
     {
         LoadType = loadType;

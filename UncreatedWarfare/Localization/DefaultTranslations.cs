@@ -1453,6 +1453,15 @@ internal static class T
     public static readonly Translation<Cache, Cache> InsurgencyCacheDefenseUndiscovered = new Translation<Cache, Cache>("<color=#b780d9>{0}</color> <color=#c2c2c2>{1}</color>", TranslationFlags.UnityUI, FOB.NAME_FORMAT, FOB.CLOSEST_LOCATION_FORMAT);
     #endregion
 
+    #region Hardpoint
+    public static readonly Translation<IObjective, float> HardpointFirstObjective = new Translation<IObjective, float>("Hold {0} to win! A new objective will be chosen in <#cedcde>{1}</color>.", Flag.COLOR_NAME_FORMAT, TIME_LONG);
+    public static readonly Translation<IObjective, float> HardpointObjectiveChanged = new Translation<IObjective, float>("New objective: {0}! The next objective will be chosen in <#cedcde>{1}</color>.", Flag.COLOR_NAME_FORMAT, TIME_LONG);
+    public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateCaptured = new Translation<IObjective, FactionInfo>("{0} is being held by {1}!", Flag.COLOR_NAME_FORMAT, FactionInfo.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective, FactionInfo> HardpointObjectiveStateLost = new Translation<IObjective, FactionInfo>("{0} is no longer being held by {1}!", Flag.COLOR_NAME_FORMAT, FactionInfo.COLOR_SHORT_NAME_FORMAT);
+    public static readonly Translation<IObjective> HardpointObjectiveStateLostContest = new Translation<IObjective>("{0} is no longer <#c$contested$>contested</color>!", Flag.COLOR_NAME_FORMAT);
+    public static readonly Translation<IObjective> HardpointObjectiveStateContested = new Translation<IObjective>("{0} is <#c$contested$>contested</color>!", Flag.COLOR_NAME_FORMAT);
+    #endregion
+
     #region Report Command
     public static readonly Translation ReportReasons = new Translation("<#9cffb3>Report reasons: -none-, \"chat abuse\", \"voice chat abuse\", \"soloing vehicles\", \"wasteing assets\", \"teamkilling\", \"fob greifing\", \"cheating\".");
     public static readonly Translation<IPlayer> ReportDiscordNotLinked = new Translation<IPlayer>("<#9cffb3>Your account must be linked in our Discord server to use this command. Type <#7483c4>/discord</color> then type <#fff>/link {0}</color> in <#c480d9>#warfare-stats</color>.", UCPlayer.COLOR_STEAM_64_FORMAT);
@@ -1801,6 +1810,21 @@ internal static class T
     internal const string LOWERCASE = "lower";
     [FormatDisplay(typeof(object), "Proper Case")]
     internal const string PROPERCASE = "proper";
+    [FormatDisplay(typeof(float),    "Time (Long, seconds)")]
+    [FormatDisplay(typeof(uint),     "Time (Long, seconds)")]
+    [FormatDisplay(typeof(int),      "Time (Long, seconds)")]
+    [FormatDisplay(typeof(TimeSpan), "Time (Long)")]
+    internal const string TIME_LONG = "tlong";
+    [FormatDisplay(typeof(float),    "Time (Short mm:ss, seconds)")]
+    [FormatDisplay(typeof(uint),     "Time (Short mm:ss, seconds)")]
+    [FormatDisplay(typeof(int),      "Time (Short mm:ss, seconds)")]
+    [FormatDisplay(typeof(TimeSpan), "Time (Short mm:ss)")]
+    internal const string TIME_SHORT_MM_SS = "tshort1";
+    [FormatDisplay(typeof(float),    "Time (Short hh:mm:ss, seconds)")]
+    [FormatDisplay(typeof(uint),     "Time (Short hh:mm:ss, seconds)")]
+    [FormatDisplay(typeof(int),      "Time (Short hh:mm:ss, seconds)")]
+    [FormatDisplay(typeof(TimeSpan), "Time (Short hh:mm:ss)")]
+    internal const string TIME_SHORT_HH_MM_SS = "tshort2";
     [FormatDisplay(typeof(QuestAsset), "Asset Rarity")]
     [FormatDisplay(typeof(VehicleAsset), "Asset Rarity")]
     [FormatDisplay(typeof(ItemAsset), "Asset Rarity")]

@@ -24,7 +24,7 @@ using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
 public sealed partial class Conquest :
-    TicketGamemode<ConquestTicketProvider>,
+    TicketFlagGamemode<ConquestTicketProvider>,
     IFlagRotation,
     IVehicles,
     IFOBs,
@@ -71,8 +71,8 @@ public sealed partial class Conquest :
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     Leaderboard<ConquestStats, ConquestStatTracker>? IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.Leaderboard => _endScreen;
+    ConquestStatTracker IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     public bool IsScreenUp => _isScreenUp;
-    public ConquestStatTracker WarstatsTracker => _gameStats;
     object IGameStats.GameStats => _gameStats;
     public override string DisplayName => "Conquest";
     public override EGamemode GamemodeType => EGamemode.CONQUEST;
@@ -92,43 +92,6 @@ public sealed partial class Conquest :
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
         base.PreInit();
-    }
-    protected override void PostInit()
-    {
-        Commands.ReloadCommand.ReloadKits();
-        _gameStats = gameObject.AddComponent<ConquestStatTracker>();
-    }
-    protected override void OnReady()
-    {
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        base.OnReady();
-    }
-    protected override void PostDispose()
-    {
-        CTFUI.StagingUI.ClearFromAllPlayers();
-        Destroy(_gameStats);
-        base.PostDispose();
-    }
-    protected override void EventLoopAction()
-    {
-        base.EventLoopAction();
-
-        if (EveryXSeconds(5f))
-            FOBManager.Tick();
-    }
-    private void GetTeamBleed(out int t1Bleed, out int t2Bleed)
-    {
-        t1Bleed = 0;
-        t2Bleed = 0;
-        for (int i = 0; i < _rotation.Count; ++i)
-        {
-            Flag f = _rotation[i];
-            if (f.Owner == 1)
-                ++t2Bleed;
-            else if (f.Owner == 2)
-                ++t1Bleed;
-        }
     }
     protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.ConquestFlagTickSeconds);
     public override bool IsAttackSite(ulong team, Flag flag) => true;
@@ -174,8 +137,11 @@ public sealed partial class Conquest :
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
-        SpawnBlockers();
-        StartStagingPhase(Config.ConquestStagingPhaseSeconds);
+        if (Config.ConquestStagingPhaseSeconds > 0)
+        {
+            SpawnBlockers();
+            StartStagingPhase(Config.ConquestStagingPhaseSeconds);
+        }
         base.PostGameStarting(isOnLoad);
     }
     protected override void EndStagingPhase()
@@ -208,7 +174,7 @@ public sealed partial class Conquest :
         base.InitFlag(flag);
         flag.Discover(1);
         flag.Discover(2);
-        flag.IsContestedOverride = IsContested;
+        flag.IsContestedOverride = ConventionalIsContested;
         flag.EvaluatePointsOverride = EvaluatePoints;
     }
     private void EvaluatePoints(Flag flag, bool overrideInactiveCheck)
@@ -224,36 +190,6 @@ public sealed partial class Conquest :
             }
             else flag.SetPoints(flag.Points);
         }
-    }
-    private static bool IsContested(Flag flag, out ulong winner)
-    {
-        if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers == 0)
-        {
-            winner = 0;
-            return false;
-        }
-        else if (flag.Team1TotalCappers == flag.Team2TotalCappers)
-            winner = Intimidation.CheckSquadsForContestBoost(flag);
-        else if (flag.Team1TotalCappers == 0 && flag.Team2TotalCappers > 0)
-            winner = 2;
-        else if (flag.Team2TotalCappers == 0 && flag.Team1TotalCappers > 0)
-            winner = 1;
-        else if (flag.Team1TotalCappers > flag.Team2TotalCappers)
-        {
-            if (flag.Team1TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team2TotalCappers)
-                winner = 1;
-            else
-                winner = Intimidation.CheckSquadsForContestBoost(flag);
-        }
-        else
-        {
-            if (flag.Team2TotalCappers - Config.AASRequiredCapturingPlayerDifference >= flag.Team1TotalCappers)
-                winner = 2;
-            else
-                winner = Intimidation.CheckSquadsForContestBoost(flag);
-        }
-
-        return winner == 0;
     }
 
     protected override void FlagOwnerChanged(ulong oldOwner, ulong newOwner, Flag flag)

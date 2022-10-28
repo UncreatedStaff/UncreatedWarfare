@@ -3,13 +3,14 @@ using System;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
 
-public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener
+public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener, IGameTickListener
 {
     public static TicketManager Singleton;
     public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
@@ -76,6 +77,13 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         EventDispatcher.OnGroupChanged -= OnGroupChanged;
         EventDispatcher.OnPlayerDied -= OnPlayerDeath;
     }
+    void IGameTickListener.Tick()
+    {
+        if (Data.Gamemode.State == EState.ACTIVE && Provider != null)
+        {
+            Provider.Tick();
+        }
+    }
     private void ReloadUI(PlayerEvent e)
     {
         SendUI(e.Player);
@@ -139,6 +147,32 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     }
     public void ClearUI(UCPlayer player) => TicketUI.ClearFromPlayer(player.Connection);
     public void ClearUI(ITransportConnection connection) => TicketUI.ClearFromPlayer(connection);
+    internal void SendWinUI(ulong winner)
+    {
+        Gamemode.WinToastUI.SendToAllPlayers();
+        string img1 = TeamManager.Team1Faction.FlagImageURL;
+        string img2 = TeamManager.Team2Faction.FlagImageURL;
+        foreach (LanguageSet set in LanguageSet.All())
+        {
+            string t1tickets = T.WinUIValueTickets.Translate(set.Language, this.Team1Tickets);
+            if (this.Team1Tickets <= 0)
+                t1tickets = t1tickets.Colorize("969696");
+            string t2tickets = T.WinUIValueTickets.Translate(set.Language, this.Team2Tickets);
+            if (this.Team2Tickets <= 0)
+                t2tickets = t2tickets.Colorize("969696");
+            string header = T.WinUIHeaderWinner.Translate(set.Language, TeamManager.GetFactionSafe(winner)!);
+            while (set.MoveNext())
+            {
+                if (!set.Next.IsOnline || set.Next.HasUIHidden) continue;
+                ITransportConnection c = set.Next.Connection;
+                Gamemode.WinToastUI.Team1Flag.SetImage(c, img1);
+                Gamemode.WinToastUI.Team2Flag.SetImage(c, img2);
+                Gamemode.WinToastUI.Team1Tickets.SetText(c, t1tickets);
+                Gamemode.WinToastUI.Team2Tickets.SetText(c, t2tickets);
+                Gamemode.WinToastUI.Header.SetText(c, header);
+            }
+        }
+    }
 }
 public class TicketData : JSONConfigData
 {

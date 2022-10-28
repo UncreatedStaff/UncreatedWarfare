@@ -53,9 +53,15 @@ public abstract class TeamGamemode : Gamemode, ITeams
 
         base.PreGameStarting(isOnLoad);
     }
+    protected override void EventLoopAction()
+    {
+        if (EveryXSeconds(Config.GeneralMainCheckSeconds))
+            TeamManager.EvaluateBases();
+    }
     protected override void OnReady()
     {
         TeamManager.CheckGroups();
+        base.OnReady();
     }
     protected void CheckMainCampZones()
     {

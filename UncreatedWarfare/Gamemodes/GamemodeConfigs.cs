@@ -377,6 +377,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(610)]
     [JsonPropertyName("general_allow_crafting_others")]
     public RotatableConfig<bool> GeneralAllowCraftingOthers { get; set; }
+
+    [Sync(611)]
+    [JsonPropertyName("general_main_check_seconds")]
+    public RotatableConfig<float> GeneralMainCheckSeconds { get; set; }
     #endregion
 
     #region Advance and Secure (1001 to 1100)
@@ -537,6 +541,40 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(1312)]
     [JsonPropertyName("insurgency_starting_build")]
     public RotatableConfig<int> InsurgencyCacheStartingBuild { get; set; }
+    #endregion
+
+    #region Hardpoint (1401 to 1500)
+    [Sync(1401)]
+    [JsonPropertyName("hardpoint_flag_tick_interval")]
+    public RotatableConfig<float> HardpointFlagTickSeconds { get; set; }
+
+    [Sync(1402)]
+    [JsonPropertyName("hardpoint_flag_amount")]
+    public RotatableConfig<int> HardpointFlagAmount { get; set; }
+
+    [Sync(1403)]
+    [JsonPropertyName("hardpoint_flag_tolerance")]
+    public RotatableConfig<int> HardpointFlagTolerance { get; set; }
+
+    [Sync(1404)]
+    [JsonPropertyName("hardpoint_objective_change_time_seconds")]
+    public RotatableConfig<float> HardpointObjectiveChangeTime { get; set; }
+
+    [Sync(1405)]
+    [JsonPropertyName("hardpoint_objective_change_time_tolerance")]
+    public RotatableConfig<float> HardpointObjectiveChangeTimeTolerance { get; set; }
+
+    [Sync(1406)]
+    [JsonPropertyName("hardpoint_ticket_tick_seconds")]
+    public RotatableConfig<float> HardpointTicketTickSeconds { get; set; }
+
+    [Sync(1407)]
+    [JsonPropertyName("hardpoint_starting_tickets")]
+    public RotatableConfig<int> HardpointStartingTickets { get; set; }
+
+    [Sync(1408)]
+    [JsonPropertyName("hardpoint_staging_phase_seconds")]
+    public RotatableConfig<float> HardpointStagingPhaseSeconds { get; set; }
     #endregion
 
     public override void SetDefaults()
@@ -711,6 +749,17 @@ public sealed class GamemodeConfigData : JSONConfigData
         InsurgencyXPCacheTeamkilled = -8000;
         InsurgencyTicketsCache = 70;
         InsurgencyCacheStartingBuild = 15;
+        #endregion
+
+        #region Hardpoint
+        HardpointFlagTickSeconds = 4f;
+        HardpointFlagAmount = 6;
+        HardpointFlagTolerance = 1;
+        HardpointObjectiveChangeTime = 450;
+        HardpointObjectiveChangeTimeTolerance = 90;
+        HardpointTicketTickSeconds = 45f;
+        HardpointStartingTickets = 300;
+        HardpointStagingPhaseSeconds = 60;
         #endregion
     }
     private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();

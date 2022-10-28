@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -1623,6 +1624,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             }
         }
     }
+    public void SendHardpointLeaderboard(LanguageSet set, in LongestShot info, List<HardpointPlayerStats>? t1Stats, List<HardpointPlayerStats>? t2Stats, HardpointTracker tracker, string? shutdownReason, ulong winner)
+    {
+        throw new NotImplementedException(); // todo
+    }
+
     public void UpdateTime(LanguageSet set, int secondsLeft)
     {
         int time = Mathf.RoundToInt(Gamemodes.Gamemode.Config.GeneralLeaderboardTime);

@@ -601,4 +601,5 @@ public class Flag : IDisposable, ITranslationArgument, IObjective
         end:
         return Name;
     }
+    public override string ToString() => Name;
 }

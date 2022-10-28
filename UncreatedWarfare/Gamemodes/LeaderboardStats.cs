@@ -115,7 +115,7 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
     public TimeSpan Duration { get => DateTime.Now - start; }
     public int Ticks => coroutinect;
     protected int coroutinect;
-    public Dictionary<ulong, IndividualStats> stats;
+    public List<IndividualStats> stats;
     protected Coroutine ticker;
     public void Awake() => Reset();
     public float GetPresence(IPresenceStats stats) => (float)stats.OnlineTicks / coroutinect;
@@ -125,54 +125,84 @@ public abstract class BaseStatTracker<IndividualStats> : MonoBehaviour where Ind
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (stats == null)
-            stats = new Dictionary<ulong, IndividualStats>();
+        stats ??= new List<IndividualStats>();
         coroutinect = 0;
 
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
             UCPlayer pl = PlayerManager.OnlinePlayers[i];
-            if (stats.TryGetValue(pl.Steam64, out IndividualStats p))
+            bool found = false;
+            for (int j = 0; j < stats.Count; ++j)
             {
-                p.Player = pl;
-                p.Reset();
+                if (stats[j].Steam64 == pl.Steam64)
+                {
+                    IndividualStats st = stats[j];
+                    st.Player = pl;
+                    if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
+                        pt.stats = st;
+                    st.Reset();
+                    found = true;
+                }
             }
-            else
+            if (!found)
             {
                 IndividualStats s = BasePlayerStats.New<IndividualStats>(pl);
-                stats.Add(pl.Steam64, s);
+                stats.Add(s);
                 if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
                     pt.stats = s;
             }
         }
-        foreach (KeyValuePair<ulong, IndividualStats> c in stats.ToList())
+
+        for (int i = stats.Count - 1; i >= 0; --i)
         {
-            if (c.Value.Player != null) continue;
-            SteamPlayer player = PlayerTool.getSteamPlayer(c.Key);
-            if (player == null) stats.Remove(c.Key);
+            IndividualStats s = stats[i];
+            if (s.Player != null) continue;
+            SteamPlayer player = PlayerTool.getSteamPlayer(s.Steam64);
+            if (player == null) stats.RemoveAt(i);
         }
         StartTracking();
-        L.Log("Reset game stats, " + stats.Count + " trackers");
+        L.LogDebug("Reset game stats, " + stats.Count + " trackers");
     }
     public void OnPlayerJoin(UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!stats.TryGetValue(player.Steam64, out IndividualStats s))
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
         {
-            s = BasePlayerStats.New<IndividualStats>(player);
-            stats.Add(player.Steam64, s);
-            if (player.Player.TryGetPlayerData(out UCPlayerData c))
-                c.stats = s;
-        }
-        else
-        {
-            s.Player = player;
-            if (player.Player.TryGetPlayerData(out UCPlayerData c))
-                c.stats = s;
+            UCPlayer pl = PlayerManager.OnlinePlayers[i];
+            bool found = false;
+            for (int j = 0; j < stats.Count; ++j)
+            {
+                if (stats[j].Steam64 == pl.Steam64)
+                {
+                    IndividualStats st = stats[j];
+                    st.Player = pl;
+                    if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
+                        pt.stats = st;
+                    found = true;
+                }
+            }
+            if (!found)
+            {
+                IndividualStats s = BasePlayerStats.New<IndividualStats>(pl);
+                stats.Add(s);
+                if (pl.Player.TryGetPlayerData(out UCPlayerData pt))
+                    pt.stats = s;
+            }
         }
         L.LogDebug(player.CharacterName + " added to playerstats, " + stats.Count + " trackers");
+    }
+    public void ClearAllStats()
+    {
+        for (int i = 0; i < stats.Count; ++i)
+        {
+            UCPlayer? pl = UCPlayer.FromID(stats[i].Steam64);
+            if (pl != null && F.TryGetPlayerData(pl.Player, out UCPlayerData data))
+                data.stats = null!;
+        }
+
+        stats.Clear();
     }
     public virtual void StartTracking()
     {
@@ -241,17 +271,18 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
     protected virtual void Update()
     {
         float dt = Time.deltaTime;
-        foreach (TeamPlayerStats s in stats.Values)
-            s.Update(dt);
+        for (int i = 0; i < stats.Count; i++)
+            stats[i].Update(dt);
     }
     protected override void OnTick()
     {
         base.OnTick();
-        foreach (IndividualStats s in stats.Values)
-            s.Tick();
+        for (int i = 0; i < stats.Count; i++)
+            stats[i].Tick();
+
         for (int i = 0; i < Provider.clients.Count; i++)
         {
-            byte team = Provider.clients[i].GetTeamByte();
+            int team = Provider.clients[i].GetTeamByte();
             if (team == 1)
                 t1sizetotal++;
             else if (team == 2)
@@ -281,13 +312,10 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
                     if (c.stats is BaseCTFStats st && e.Killer.Player.IsOnFlag())
                         st.AddKillOnPoint();
                 }
-                if (this is ILongestShotTracker ls)
+                if (this is ILongestShotTracker ls && e.Cause is EDeathCause.GUN or EDeathCause.SPLASH && 
+                   (ls.LongestShot.Player == default || ls.LongestShot.Distance < e.KillDistance))
                 {
-                    if (e.Cause is EDeathCause.GUN or EDeathCause.SPLASH &&
-                        (ls.LongestShot.Player == 0 || ls.LongestShot.Distance < e.KillDistance))
-                    {
-                        ls.LongestShot = new LongestShot(e.Killer.Steam64, e.KillDistance, e.PrimaryAsset, e.KillerTeam);
-                    }
+                    ls.LongestShot = new LongestShot(e.Killer.Steam64, e.KillDistance, e.PrimaryAsset, e.KillerTeam);
                 }
             }
         }
@@ -391,7 +419,7 @@ public abstract class TeamPlayerStats : BasePlayerStats, ITeamPVPModeStats, ITea
     public void AddDeath() => deaths++;
     public void AddKill() => kills++;
     public void AddTeamkill() => teamkills++;
-    public void Update(float dt)
+    public virtual void Update(float dt)
     {
         if (_player is null || !_player.IsOnline) return;
         if (_player.Player.IsOnFlag())

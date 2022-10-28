@@ -28,7 +28,7 @@ public delegate void ObjectiveChangedDelegate(Flag OldFlagObj, Flag NewFlagObj, 
 public delegate void FlagCapturedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
 public delegate void FlagNeutralizedHandler(Flag flag, ulong capturedTeam, ulong lostTeam);
 public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvider> :
-    TicketGamemode<TTicketProvider>,
+    TicketFlagGamemode<TTicketProvider>,
     IFlagTeamObjectiveGamemode,
     IVehicles,
     IFOBs,
@@ -88,8 +88,8 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public ActionManager ActionManager => _actionManager;
     Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;
     public bool IsScreenUp => _isScreenUp;
-    public StatTracker WarstatsTracker => _gameStats;
-    object IGameStats.GameStats => _gameStats;
+    StatTracker IImplementsLeaderboard<Stats, StatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
+    object IGameStats.GameStats => ((IImplementsLeaderboard<Stats, StatTracker>)this).WarstatsTracker;
     public CTFBaseMode(string name, float timing) : base(name, timing)
     {
 
@@ -109,23 +109,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
         base.PreInit();
-    }
-    protected override void PostInit()
-    {
-        Commands.ReloadCommand.ReloadKits();
-        _gameStats = gameObject.AddComponent<StatTracker>();
-    }
-    protected override void OnReady()
-    {
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        base.OnReady();
-    }
-    protected override void PostDispose()
-    {
-        CTFUI.StagingUI.ClearFromAllPlayers();
-        Destroy(_gameStats);
-        base.PostDispose();
     }
     protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.AASFlagTickSeconds);
     public override void DeclareWin(ulong winner)
@@ -283,9 +266,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     protected override void EventLoopAction()
     {
         base.EventLoopAction();
-
-        if (EveryXSeconds(5f))
-            FOBManager.Tick();
 
         if (EveryXSeconds(20f))
         {

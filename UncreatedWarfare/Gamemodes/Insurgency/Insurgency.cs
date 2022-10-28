@@ -12,6 +12,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
+using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
@@ -33,7 +34,7 @@ using Cache = Uncreated.Warfare.Components.Cache;
 namespace Uncreated.Warfare.Gamemodes.Insurgency;
 
 public class Insurgency :
-    TeamGamemode,
+    TicketGamemode<InsurgencyTicketProvider>,
     ITeams,
     IFOBs,
     IVehicles,
@@ -61,7 +62,6 @@ public class Insurgency :
     protected InsurgencyLeaderboard _endScreen;
     protected TraitManager _traitManager;
     protected ActionManager _actionManager;
-    private TicketManager _ticketManager;
     protected ulong _attackTeam;
     protected ulong _defendTeam;
     public int IntelligencePoints;
@@ -97,10 +97,9 @@ public class Insurgency :
     public List<CacheData> DiscoveredCaches => Caches.Where(c => c.IsActive && !c.IsDestroyed && c.IsDestroyed).ToList();
     public int ActiveCachesCount => Caches.Count(c => c.IsActive && !c.IsDestroyed);
     public bool IsScreenUp => _isScreenUp;
-    public InsurgencyTracker WarstatsTracker => _gameStats;
+    InsurgencyTracker IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
     object IGameStats.GameStats => _gameStats;
-    public TicketManager TicketManager { get => _ticketManager; }
     public Insurgency() : base("Insurgency", 0.25F) { }
     protected override void PreInit()
     {
@@ -108,8 +107,6 @@ public class Insurgency :
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _reviveManager);
-        AddSingletonRequirement(ref _ticketManager);
-        _ticketManager.Provider = new InsurgencyTicketProvider();
         AddSingletonRequirement(ref _vehicleBay);
         AddSingletonRequirement(ref _FOBManager);
         AddSingletonRequirement(ref _structureSaver);
@@ -122,7 +119,6 @@ public class Insurgency :
     }
     protected override void PostInit()
     {
-        Commands.ReloadCommand.ReloadKits();
         string file = Path.Combine(Data.Paths.MapStorage, "insurgency_caches.json");
         if (File.Exists(file))
         {
@@ -195,19 +191,8 @@ public class Insurgency :
                 }
             }
         }
-    }
-    protected override void OnReady()
-    {
-        _gameStats = UCWarfare.I.gameObject.AddComponent<InsurgencyTracker>();
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        VehicleSigns.InitAllSigns();
-        base.OnReady();
-    }
-    protected override void PostDispose()
-    {
-        Destroy(_gameStats);
-        base.PostDispose();
+
+        base.PostInit();
     }
     protected override void PreGameStarting(bool isOnLoad)
     {
@@ -245,9 +230,7 @@ public class Insurgency :
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SendWinUI(winner);
         base.DeclareWin(winner);
-
         StartCoroutine(EndGameCoroutine(winner));
     }
     private IEnumerator<WaitForSeconds> TryDiscoverFirstCache()
@@ -299,9 +282,7 @@ public class Insurgency :
 #endif
         if (EveryXSeconds(Config.AASFlagTickSeconds))
             CheckMainCampZones();
-        TeamManager.EvaluateBases();
-        if (State == EState.ACTIVE)
-            TicketManager.Provider.Tick();
+        base.EventLoopAction();
     }
     public override void OnPlayerDeath(PlayerDied e)
     {
@@ -310,7 +291,7 @@ public class Insurgency :
             AddIntelligencePoints(1);
             if (e.Killer!.Player.TryGetPlayerData(out UCPlayerData c) && c.stats is InsurgencyPlayerStats s)
                 s._intelligencePointsCollected++;
-            WarstatsTracker.intelligenceGathered++;
+            ((IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>)this).WarstatsTracker.intelligenceGathered++;
         }
         base.OnPlayerDeath(e);
     }
@@ -595,11 +576,11 @@ public class Insurgency :
                 StatsManager.ModifyTeam(AttackingTeam, t => t.FlagsCaptured++, false);
                 if (_gameStats != null)
                 {
-                    foreach (KeyValuePair<ulong, InsurgencyPlayerStats> stats in _gameStats.stats)
+                    for (int i = 0; i < _gameStats.stats.Count; ++i)
                     {
-                        if (stats.Key == destroyer.Steam64)
+                        if (_gameStats.stats[i].Steam64 == destroyer.Steam64)
                         {
-                            stats.Value._cachesDestroyed++;
+                            _gameStats.stats[i]._cachesDestroyed++;
                             break;
                         }
                     }

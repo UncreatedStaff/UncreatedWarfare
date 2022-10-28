@@ -19,6 +19,16 @@ public interface ILevelStartListener
 {
     void OnLevelReady();
 }
+public interface ITimeSyncListener
+{
+    void TimeSync(float time);
+}
+
+public interface IGameTickListener
+{
+    void Tick();
+}
+
 public interface IDeclareWinListener
 {
     void OnWinnerDeclared(ulong winner);

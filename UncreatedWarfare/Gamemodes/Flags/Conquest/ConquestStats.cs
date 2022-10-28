@@ -28,7 +28,7 @@ public sealed class ConquestStatTracker : TeamStatTracker<ConquestStats>, ILonge
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<ConquestStats> stats = this.stats.Values.ToList();
+        List<ConquestStats> stats = this.stats.ToList();
 
         stats.RemoveAll(p =>
         {
