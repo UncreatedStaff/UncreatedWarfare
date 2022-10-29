@@ -1,8 +1,6 @@
-﻿using SDG.NetTransport;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using System.Threading.Tasks;
 using Uncreated.Warfare.Gamemodes.Interfaces;
-using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;
@@ -52,10 +50,11 @@ public abstract class TicketGamemode<TProvider> : TeamGamemode, ITickets where T
             TicketManager.Provider.Tick();
         base.EventLoopAction();
     }
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
+        ThreadUtil.assertIsGameThread();
         SendWinUI(winner);
-        base.DeclareWin(winner);
+        return base.DeclareWin(winner);
     }
-    protected void SendWinUI(ulong winner) => TicketManager.SendWinUI(winner);
+    protected virtual void SendWinUI(ulong winner) => TicketManager.SendWinUI(winner);
 }

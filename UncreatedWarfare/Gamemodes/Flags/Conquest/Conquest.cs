@@ -18,7 +18,6 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
-using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using static Uncreated.Warfare.Gamemodes.Flags.UI.CaptureUI;
@@ -33,7 +32,6 @@ public sealed partial class Conquest :
     IRevives,
     ISquads,
     IImplementsLeaderboard<ConquestStats, ConquestStatTracker>,
-    IStructureSaving,
     IStagingPhase,
     IGameStats,
     ITraits

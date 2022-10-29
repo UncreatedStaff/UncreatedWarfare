@@ -1089,7 +1089,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             if (sel < total)
                 return GamemodeRotation[i].Key;
         }
-        }
         return null;
     }
 

@@ -651,7 +651,7 @@ public class Insurgency :
             L.LogError(ex);
         }
     }
-    protected void SendWinUI(ulong winner)
+    protected override void SendWinUI(ulong winner)
     {
         WinToastUI.SendToAllPlayers();
         string img1 = TeamManager.Team1Faction.FlagImageURL;

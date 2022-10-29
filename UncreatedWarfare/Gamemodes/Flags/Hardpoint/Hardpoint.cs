@@ -25,15 +25,12 @@ namespace Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     IFlagObjectiveGamemode,
     IFlagTeamObjectiveGamemode,
-    ITeams,
     IFOBs,
     IVehicles,
     IKitRequests,
     IRevives,
     ISquads,
     IImplementsLeaderboard<HardpointPlayerStats, HardpointTracker>,
-    IStructureSaving,
-    ITickets,
     IStagingPhase,
     IGameStats,
     ITraits
@@ -126,12 +123,12 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     }
     protected override void EventLoopAction()
     {
-        base.EventLoopAction();
-        if (nextObjectivePickTime < Time.realtimeSinceStartup)
+        if (State == EState.ACTIVE && nextObjectivePickTime < Time.realtimeSinceStartup)
         {
             PickObjective(false);
             Chat.Broadcast(T.HardpointObjectiveChanged, Objective, nextObjectivePickTime - Time.realtimeSinceStartup);
         }
+        base.EventLoopAction();
     }
     private void PickObjective(bool first)
     {
@@ -251,11 +248,11 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         }
         base.OnJoinTeam(player, team);
     }
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
-        base.DeclareWin(winner);
         _objIndex = -1;
         StartCoroutine(EndGameCoroutine(winner));
+        return base.DeclareWin(winner);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
@@ -290,7 +287,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     }
     private void EvaluatePointsOverride(Flag flag, bool overrideInactiveCheck) { }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player) { }
-    protected override void PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad)
     {
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();
@@ -300,7 +297,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             SpawnBlockers();
             StartStagingPhase(Config.HardpointStagingPhaseSeconds);
         }
-        base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad);
     }
     protected override void EndStagingPhase()
     {
@@ -428,7 +425,7 @@ public class HardpointTicketProvider : BaseTicketProvider
     public override void OnTicketsChanged(ulong team, int oldValue, int newValue, ref bool updateUI)
     {
         if (oldValue > 0 && newValue <= 0)
-            Data.Gamemode.DeclareWin(TeamManager.Other(team));
+            _ = Data.Gamemode.DeclareWin(TeamManager.Other(team));
     }
     public override void Tick()
     {

@@ -147,7 +147,7 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
     }
     public void ClearUI(UCPlayer player) => TicketUI.ClearFromPlayer(player.Connection);
     public void ClearUI(ITransportConnection connection) => TicketUI.ClearFromPlayer(connection);
-    internal void SendWinUI(ulong winner)
+    public void SendWinUI(ulong winner)
     {
         Gamemode.WinToastUI.SendToAllPlayers();
         string img1 = TeamManager.Team1Faction.FlagImageURL;
