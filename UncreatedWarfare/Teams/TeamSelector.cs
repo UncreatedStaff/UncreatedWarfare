@@ -312,7 +312,10 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
 
         for (int j = 0; j < PlayerManager.OnlinePlayers.Count; ++j)
         {
-            ITransportConnection c = PlayerManager.OnlinePlayers[j].Connection;
+            UCPlayer pl = PlayerManager.OnlinePlayers[j];
+            if (pl.TeamSelectorData is null || !pl.TeamSelectorData.IsSelecting)
+                continue;
+            ITransportConnection c = pl.Connection;
             for (int i = t1ct; i < _t1Amt; ++i)
                 JoinUI.Team1Players[i].SetText(c, string.Empty);
             for (int i = t2ct; i < _t2Amt; ++i)

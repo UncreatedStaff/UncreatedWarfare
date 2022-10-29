@@ -61,6 +61,11 @@ public abstract class TeamGamemode : Gamemode, ITeams
 
         return base.PreGameStarting(isOnLoad);
     }
+    protected override void EventLoopAction()
+    {
+        if (EveryXSeconds(Config.GeneralMainCheckSeconds))
+            TeamManager.EvaluateBases();
+    }
     protected override Task OnReady()
     {
         ThreadUtil.assertIsGameThread();

@@ -34,8 +34,6 @@ public class Invasion :
         foreach (SteamPlayer player in Provider.clients)
         {
             CTFUI.ClearFlagList(player.transportConnection);
-            if (player.player.TryGetPlayerData(out Components.UCPlayerData c))
-                c.stats = null!;
         }
         CTFUI.CaptureUI.ClearFromAllPlayers();
         return base.PostDispose();

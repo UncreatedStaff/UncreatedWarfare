@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Players;
@@ -10,7 +12,9 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags;
+using Uncreated.Warfare.Gamemodes.Flags.Hardpoint;
 using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -19,6 +23,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
@@ -33,18 +38,19 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 {
     public const float MATCH_PRESENT_THRESHOLD = 0.65f;
     public const string GAMEMODE_RELOAD_KEY = "gamemode";
-    internal static GamemodeConfig ConfigObj;
-    public static WinToastUI WinToastUI;
-    public static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
-    public static readonly List<KeyValuePair<Type, float>> GAMEMODE_ROTATION = new List<KeyValuePair<Type, float>>();
-    public static readonly List<KeyValuePair<string, Type>> GAMEMODES = new List<KeyValuePair<string, Type>>
+    protected static readonly Vector3 BLOCKER_SPAWN_ROTATION = new Vector3(270f, 0f, 180f);
+    public static readonly List<KeyValuePair<Type, float>> GamemodeRotation = new List<KeyValuePair<Type, float>>();
+    public static readonly List<KeyValuePair<string, Type>> Gamemodes = new List<KeyValuePair<string, Type>>
     {
         new KeyValuePair<string, Type>("TeamCTF", typeof(TeamCTF)),
         new KeyValuePair<string, Type>("Invasion", typeof(Invasion)),
         new KeyValuePair<string, Type>("TDM", typeof(TeamDeathmatch.TeamDeathmatch)),
         new KeyValuePair<string, Type>("Insurgency", typeof(Insurgency.Insurgency)),
-        new KeyValuePair<string, Type>("Conquest", typeof(Conquest))
+        new KeyValuePair<string, Type>("Conquest", typeof(Conquest)),
+        new KeyValuePair<string, Type>("Hardpoint", typeof(Hardpoint))
     };
+    internal static GamemodeConfig ConfigObj;
+    public static WinToastUI WinToastUI;
     public Whitelister Whitelister;
     public CooldownManager Cooldowns;
     public Tips Tips;
@@ -58,7 +64,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     protected float _startTime = 0f;
     protected long _gameID;
     protected int _ticks = 0;
-    protected int _stagingSeconds;
+    protected float _stagingSeconds;
     protected EState _state;
     private float _eventLoopSpeed;
     private bool useEventLoop;
@@ -72,7 +78,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public override bool AwaitLoad => true;
     public EState State => _state;
     public float StartTime => _startTime;
-    public int StagingSeconds => _stagingSeconds;
+    public float StagingSeconds => _stagingSeconds;
     public float SecondsSinceStart => Time.realtimeSinceStartup - _startTime;
     public long GameID => _gameID;
     public static GamemodeConfigData Config => ConfigObj.Data;
@@ -89,14 +95,14 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual bool ShowXPUI => true;
     public virtual bool ShowOFPUI => true;
     public virtual bool UseTips => true;
-    public virtual bool AllowCosmetics => true;
+    public virtual bool AllowCosmetics => false;
     public virtual EGamemode GamemodeType => EGamemode.UNDEFINED;
     protected bool HasOnReadyRan => _hasOnReadyRan;
-    protected Gamemode(string Name, float EventLoopSpeed)
+    protected Gamemode(string name, float eventLoopSpeed)
     {
-        this._name = Name;
-        this._eventLoopSpeed = EventLoopSpeed;
-        this.useEventLoop = EventLoopSpeed > 0;
+        this._name = name;
+        this._eventLoopSpeed = eventLoopSpeed;
+        this.useEventLoop = eventLoopSpeed > 0;
         this._state = EState.LOADING;
     }
     public void SetTiming(float newSpeed)
@@ -109,7 +115,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         _startTime -= seconds;
         VehicleSpawner.UpdateSigns();
         TraitSigns.BroadcastAllTraitSigns();
+        TimeSync();
     }
+    protected virtual void OnAdvanceDelays(float seconds) { }
     public override async Task LoadAsync()
     {
         await UCWarfare.ToUpdate();
@@ -140,6 +148,22 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             await task.ConfigureAwait(false);
             await UCWarfare.ToUpdate();
             ThreadUtil.assertIsGameThread();
+        }
+        if (this is IKitRequests)
+        {
+            Commands.ReloadCommand.ReloadKits();
+        }
+        Type[] interfaces = this.GetType().GetInterfaces();
+        for (int i = 0; i < interfaces.Length; i++)
+        {
+            Type intx = interfaces[i];
+            if (intx.IsGenericType && intx.GetGenericTypeDefinition() == typeof(IImplementsLeaderboard<,>) && intx.GenericTypeArguments.Length > 1)
+            {
+                Type tracker = intx.GenericTypeArguments[1];
+                MethodInfo method = intx.GetProperty("WarstatsTracker", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).GetSetMethod(true);
+                method.Invoke(this, new object[1] { gameObject.AddComponent(tracker) });
+                break;
+            }
         }
         if (wasLevelLoadedOnStart)
         {
@@ -191,6 +215,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         await Data.Singletons.UnloadSingletonsInOrderAsync(_singletons).ConfigureAwait(false);
         await UCWarfare.ToUpdate();
         ThreadUtil.assertIsGameThread();
+        InternalPostDispose();
         task = PostDispose();
         if (!task.IsCompleted)
         {
@@ -244,8 +269,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual Task PlayerInit(UCPlayer player, bool wasAlreadyOnline) => Task.CompletedTask;
 
     /// <summary>Run in <see cref="EventLoopAction"/>, returns true if <param name="seconds"/> ago it would've also returned true. Based on tick speed and number of ticks.</summary>
-    /// <remarks>Returns true if the second mark passed between the end of last tick and the start of this tick.</remarks>
-    public bool EveryXSeconds(float seconds) => _ticks * _eventLoopSpeed % seconds < _eventLoopSpeed;
+    /// <remarks>Returns true if the second mark passed between the end of last tick and the start of this tick. Inlined when possible.</remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool EveryXSeconds(float seconds) => seconds <= 0f || _ticks * _eventLoopSpeed % seconds < _eventLoopSpeed;
     private void InternalPreInit()
     {
         AddSingletonRequirement(ref Cooldowns);
@@ -314,6 +340,12 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     private void InternalOnReady()
     {
         ThreadUtil.assertIsGameThread();
+        if (this is IFOBs)
+            RepairManager.LoadRepairStations();
+
+        if (this is ISquads)
+            RallyManager.WipeAllRallies();
+
         ReplaceBarricadesAndStructures();
         _hasTimeSynced = false;
         if (useEventLoop)
@@ -322,6 +354,16 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
     }
     private Task PostOnReady() => StartNextGame(true);
+    private void InternalPostDispose()
+    {
+        if (this is IGameStats stats && stats is Component beh)
+        {
+            Destroy(beh);
+            if (beh is BaseStatTracker<BasePlayerStats> tracker)
+                tracker.ClearAllStats();
+        }
+        CTFUI.StagingUI.ClearFromAllPlayers();
+    }
     private void InternalPostInit()
     {
         _ticks = 0;
@@ -415,29 +457,31 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     {
         while (!isPendingCancel)
         {
-            _ticks++;
-            yield return new WaitForSecondsRealtime(_eventLoopSpeed);
 #if DEBUG
             IDisposable profiler = ProfilingUtils.StartTracking(Name + " Gamemode Event Loop");
 #endif
-            DateTime start = DateTime.UtcNow;
             for (int i = PlayerManager.OnlinePlayers.Count - 1; i >= 0; i--)
             {
                 UCPlayer pl = PlayerManager.OnlinePlayers[i];
-                try
+                if (pl.IsOnline)
                 {
-                    _ = pl.Player.transform;
+                    try
+                    {
+                        _ = pl.Player.transform;
+                        continue;
+                    }
+                    catch (NullReferenceException) { }
                 }
-                catch (NullReferenceException)
-                {
-                    L.Log($"Kicking {F.GetPlayerOriginalNames(pl).PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
-                    Provider.kick(pl.CSteamID, Localization.Translate(T.NullTransformKickMessage, pl, UCWarfare.Config.DiscordInviteCode));
-                }
+                L.Log($"Kicking {F.GetPlayerOriginalNames(pl).PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
+                Provider.kick(pl.CSteamID, Localization.Translate(T.NullTransformKickMessage, pl, UCWarfare.Config.DiscordInviteCode));
             }
             try
             {
                 EventLoopAction();
                 OnGameTick?.Invoke();
+                for (int i = 0; i < _singletons.Count; ++i)
+                    if (_singletons[i] is IGameTickListener ticker)
+                        ticker.Tick();
             }
             catch (Exception ex)
             {
@@ -459,13 +503,23 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 F.SaveProfilingData();
             }
 #endif
-            if (UCWarfare.I.CoroutineTiming)
-                L.Log(Name + " Eventloop: " + (DateTime.UtcNow - start).TotalMilliseconds.ToString(Data.Locale) + "ms.");
+            _ticks++;
+            yield return new WaitForSecondsRealtime(_eventLoopSpeed);
         }
     }
 
-    private void TimeSync()
+    /// <summary>
+    /// Used to line up all 'animated' sections of the plugin.<br/>
+    /// Seconds tick on vehicle signs at the same time as they do on the staging phase UI, for example.
+    /// </summary>
+    protected virtual void TimeSync()
     {
+        float time = Time.realtimeSinceStartup;
+        for (int i = 0; i < _singletons.Count; ++i)
+        {
+            if (_singletons[i] is ITimeSyncListener ts)
+                ts.TimeSync(time);
+        }
         TraitSigns.TimeSync();
         VehicleSigns.TimeSync();
     }
@@ -504,15 +558,14 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
             ActionLogger.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
 
-            foreach (LanguageSet set in LanguageSet.All())
-                Chat.Broadcast(set, T.TeamWin, TeamManager.GetFaction(winner));
+        Chat.Broadcast(T.TeamWin, TeamManager.GetFaction(winner));
 
             foreach (SteamPlayer client in Provider.clients)
                 client.player.movement.forceRemoveFromVehicle();
 
             if (this is IGameStats { GameStats: BaseStatTracker<BasePlayerStats> tps })
             {
-                foreach (IStats played in tps.stats.Values.OfType<IStats>())
+                foreach (IStats played in tps.stats.OfType<IStats>())
                 {
                     switch (played)
                     {
@@ -563,7 +616,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
     }
 
-    protected virtual bool IsWinner(UCPlayer player) =>
+    internal virtual bool IsWinner(UCPlayer player) =>
         throw new NotImplementedException("IsWinner is not overridden by a non-team gamemode.");
     public static async Task<bool> TryLoadGamemode(Type type)
     {
@@ -772,22 +825,22 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        for (int i = 0; i < GAMEMODES.Count; ++i)
+        for (int i = 0; i < Gamemodes.Count; ++i)
         {
-            if (GAMEMODES[i].Key.Equals(name, StringComparison.OrdinalIgnoreCase))
+            if (Gamemodes[i].Key.Equals(name, StringComparison.OrdinalIgnoreCase))
             {
-                Type type = GAMEMODES[i].Value;
+                Type type = Gamemodes[i].Value;
                 if (type is null || !type.IsSubclassOf(typeof(Gamemode))) return null;
                 return type;
             }
         }
         if (name.Length > 2)
         {
-            for (int i = 0; i < GAMEMODES.Count; ++i)
+            for (int i = 0; i < Gamemodes.Count; ++i)
             {
-                if (GAMEMODES[i].Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
+                if (Gamemodes[i].Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) != -1)
                 {
-                    Type type = GAMEMODES[i].Value;
+                    Type type = Gamemodes[i].Value;
                     if (type is null || !type.IsSubclassOf(typeof(Gamemode))) return null;
                     return type;
                 }
@@ -798,7 +851,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual void Subscribe() { }
     public virtual void Unsubscribe() { }
     protected Coroutine? _stagingPhaseTimer;
-    public virtual void StartStagingPhase(int seconds)
+    public virtual void StartStagingPhase(float seconds)
     {
         _stagingSeconds = seconds;
         _state = EState.STAGING;
@@ -946,10 +999,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (GAMEMODE_ROTATION.Count > 0) GAMEMODE_ROTATION.Clear();
+        if (GamemodeRotation.Count > 0) GamemodeRotation.Clear();
         if (UCWarfare.Config.GamemodeRotation == null)
         {
-            GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(typeof(TeamCTF), 1.0f));
+            GamemodeRotation.Add(new KeyValuePair<Type, float>(typeof(TeamCTF), 1.0f));
             return;
         }
 
@@ -988,6 +1041,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                         if (float.TryParse(current.ToString(), System.Globalization.NumberStyles.Any, Data.Locale,
                                 out weight))
                             gms.Add(new KeyValuePair<string?, float>(name, weight));
+                        else
+                            gms.Add(new KeyValuePair<string?, float>(name, 1f));
                         name = null;
                         current.Clear();
                         inName = true;
@@ -1006,10 +1061,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
         for (int j = 0; j < gms.Count; ++j)
         {
-            for (int i = 0; i < GAMEMODES.Count; ++i)
+            for (int i = 0; i < Gamemodes.Count; ++i)
             {
-                if (GAMEMODES[i].Key.Equals(gms[j].Key, StringComparison.OrdinalIgnoreCase))
-                    GAMEMODE_ROTATION.Add(new KeyValuePair<Type, float>(GAMEMODES[i].Value, gms[j].Value));
+                if (Gamemodes[i].Key.Equals(gms[j].Key, StringComparison.OrdinalIgnoreCase))
+                {
+                    GamemodeRotation.Add(new KeyValuePair<Type, float>(Gamemodes[i].Value, gms[j].Value));
+                    break;
+                }
             }
         }
     }
@@ -1019,24 +1077,19 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        using IEnumerator<KeyValuePair<Type, float>> iter = GAMEMODE_ROTATION.GetEnumerator();
         float total = 0f;
-        while (iter.MoveNext())
-        {
-            total += iter.Current.Value;
-        }
-        float sel = UnityEngine.Random.Range(0f, total);
-        iter.Reset();
-        total = 0f;
-        while (iter.MoveNext())
-        {
-            total += iter.Current.Value;
-            if (sel < total)
-            {
-                return iter.Current.Key;
-            }
-        }
+        for (int i = 0; i < GamemodeRotation.Count; i++)
+            total += GamemodeRotation[i].Value;
 
+        float sel = UnityEngine.Random.Range(0f, total);
+        total = 0f;
+        for (int i = 0; i < GamemodeRotation.Count; i++)
+        {
+            total += GamemodeRotation[i].Value;
+            if (sel < total)
+                return GamemodeRotation[i].Key;
+        }
+        }
         return null;
     }
 
@@ -1064,5 +1117,6 @@ public enum EGamemode : byte
     TEAM_CTF,
     INVASION,
     INSURGENCY,
-    CONQUEST
+    CONQUEST,
+    HARDPOINT
 }

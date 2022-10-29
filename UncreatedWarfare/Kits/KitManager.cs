@@ -95,6 +95,21 @@ public class KitManager : BaseReloadSingleton
         _singleton = null!;
         PlayerLife.OnPreDeath -= PlayerLife_OnPreDeath;
     }
+    public static void TryGiveKitOnJoinTeam(UCPlayer player)
+    {
+        ulong team = player.GetTeam();
+        if (team is 1 or 2)
+        {
+            if (KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))
+                GiveKit(player, unarmed);
+            else if (KitExists(TeamManager.DefaultKit, out unarmed))
+                GiveKit(player, unarmed);
+            else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
+        }
+        else if (KitExists(TeamManager.DefaultKit, out Kit @default))
+            GiveKit(player, @default);
+        else L.LogWarning("Unable to give " + player.CharacterName + " a kit.");
+    }
     private static void ReadToKit(MySqlDataReader reader, Kit kit)
     {
         kit.PrimaryKey = reader.GetInt32(0);

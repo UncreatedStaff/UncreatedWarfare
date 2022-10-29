@@ -32,7 +32,6 @@ public class Intimidation : Buff
         TraitData? d = DATA ??= TraitManager.GetData(typeof(Intimidation));
         return d != null && TraitManager.IsAffected(d, player, out _);
     }
-
     public static ulong CheckSquadsForContestBoost(Flag flag)
     {
         List<UCPlayer> t1 = flag.PlayersOnFlagTeam1;

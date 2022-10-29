@@ -238,10 +238,88 @@ public class Translation
                 17 => CheckCase((value as StructureData)?.structure.asset.itemName ?? value.ToString(), format),
                 18 => value is Guid guid ? guid.ToString(format ?? "N", locale) : value.ToString(),
                 19 => value is char chr ? CheckCase(new string(chr, 1), format) : value.ToString(),
+                50 => CheckTime(value, format, out string? val, language, locale) ? val! : value.ToString(),
+                51 => CheckTime(value, format, out string? val, language, locale) ? val! : toStringFunc1!(value, format!, locale),
+                52 => CheckTime(value, format, out string? val, language, locale) ? val! : toStringFunc2!(value, format!),
+                53 => CheckTime(value, format, out string? val, language, locale) ? val! : toStringFunc3!(value, locale!),
                 _ => value.ToString(),
             };
 
             return str;
+        }
+        private static bool CheckTime(T value, string? format, out string? val, string lang, IFormatProvider locale)
+        {
+            if (format is not null)
+            {
+                if (format.Equals(Warfare.T.TIME_LONG, StringComparison.Ordinal))
+                {
+                    int sec = -1;
+                    switch (value)
+                    {
+                        case float f:
+                            sec = Mathf.RoundToInt(f);
+                            goto default;
+                        case int i:
+                            sec = i;
+                            goto default;
+                        case uint i:
+                            sec = checked((int)i);
+                            goto default;
+                        case TimeSpan span:
+                            sec = (int)Math.Round(span.TotalSeconds);
+                            goto default;
+                        default:
+                            if (sec != -1)
+                            {
+                                val = Localization.GetTimeFromSeconds(sec, lang);
+                                return true;
+                            }
+                            break;
+                    }
+                }
+                else
+                {
+                    bool b1 = format.Equals(Warfare.T.TIME_SHORT_MM_SS, StringComparison.Ordinal);
+                    bool b2 = !b1 && format.Equals(Warfare.T.TIME_SHORT_HH_MM_SS, StringComparison.Ordinal);
+                    if (b1 || b2)
+                    {
+                        string sep = locale is CultureInfo info ? info.DateTimeFormat.TimeSeparator : ":";
+                        int sec = -1;
+                        switch (value)
+                        {
+                            case float f:
+                                sec = Mathf.RoundToInt(f);
+                                goto default;
+                            case int i:
+                                sec = i;
+                                goto default;
+                            case uint i:
+                                sec = checked((int)i);
+                                goto default;
+                            case TimeSpan span:
+                                sec = (int)Math.Round(span.TotalSeconds);
+                                goto default;
+                            default:
+                                if (sec != -1)
+                                {
+                                    if (b1)
+                                        val = (sec / 60).ToString("00", locale) + sep + (sec % 60).ToString("00", locale);
+                                    else
+                                    {
+                                        int hrs = sec / 3600;
+                                        int mins = sec - hrs * 3600;
+                                        val = hrs.ToString("00", locale) + sep + (mins / 60).ToString("00", locale) + sep + (mins % 60).ToString("00", locale);
+                                    }
+                                    return true;
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+
+            val = null;
+            return false;
         }
         private static string AssetToString(Asset asset, string? format, TranslationFlags flags)
         {
@@ -540,11 +618,15 @@ public class Translation
                     info = t.GetMethod("ToString", BindingFlags.Instance | BindingFlags.Public, null, tarr3, null);
                     if (info == null || Attribute.GetCustomAttribute(info, typeof(ObsoleteAttribute)) is not null)
                     {
-                        type = 0;
+                        if (TimeType(t))
+                            type = 50;
+                        else type = 0;
                     }
                     else
                     {
                         type = 3;
+                        if (TimeType(t))
+                            type += 50;
                         dm = new DynamicMethod("ToStringHelper",
                             MethodAttributes.Public | MethodAttributes.Static, CallingConventions.Standard,
                             typeof(string), new Type[] { t, typeof(IFormatProvider) }, typeof(ToStringHelperClass<T>),
@@ -565,6 +647,8 @@ public class Translation
                 else
                 {
                     type = 2;
+                    if (TimeType(t))
+                        type += 50;
                     dm = new DynamicMethod("ToStringHelper",
                         MethodAttributes.Public | MethodAttributes.Static, CallingConventions.Standard, typeof(string), new Type[] { t, typeof(string) }, typeof(ToStringHelperClass<T>),
                         true);
@@ -584,6 +668,8 @@ public class Translation
             else
             {
                 type = 1;
+                if (TimeType(t))
+                    type += 50;
                 dm = new DynamicMethod("ToStringHelper",
                     MethodAttributes.Public | MethodAttributes.Static, CallingConventions.Standard, typeof(string), new Type[] { t, typeof(string), typeof(IFormatProvider) }, typeof(ToStringHelperClass<T>),
                     true);
@@ -603,6 +689,7 @@ public class Translation
             }
         }
     }
+    private static bool TimeType(Type t) => t == typeof(float) || t == typeof(int) || t == typeof(uint) || t == typeof(TimeSpan);
     protected struct TranslationValue
     {
         public static TranslationValue Nil = new TranslationValue();
@@ -1241,6 +1328,14 @@ public class Translation
                             goto next;
                         }
                     }
+                    for (int j = 0; j < list.Count; ++j)
+                    {
+                        if (list[j].Key.IsAssignableFrom(type))
+                        {
+                            fmt2 = list[j].Value.DisplayName;
+                            goto next;
+                        }
+                    }
                 }
             next:
                 if (!string.IsNullOrEmpty(fmt2))
@@ -1259,7 +1354,7 @@ public class Translation
 
             writer.WriteLine(fmt);
         }
-        if (!val.Equals(t.DefaultData.Original))
+        if (!val.Equals(t.DefaultData.Original, StringComparison.Ordinal))
         {
             writer.WriteLine("# Default Value: " + t.DefaultData.Original.Replace(@"\", @"\\").Replace("\n", @"\n").Replace("\r", @"\r").Replace("\t", @"\t"));
         }

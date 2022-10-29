@@ -57,6 +57,12 @@ public interface IFlagTeamObjectiveGamemode : IFlagRotation
     int ObjectiveT1Index { get; }
     int ObjectiveT2Index { get; }
 }
+public interface IFlagObjectiveGamemode : IFlagRotation
+{
+    Flag? Objective { get; }
+    int ObjectiveIndex { get; }
+}
+
 public interface IFOBs : IGamemode
 {
     FOBs.FOBManager FOBManager { get; }

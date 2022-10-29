@@ -685,7 +685,7 @@ public class VehicleSpawn
                 {
                     try
                     {
-                        string val2 = string.Format(val, data.GetCostLine(set.Next));
+                        string val2 = Signs.QuickFormat(val, data.GetCostLine(set.Next));
                         Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val2);
                     }
                     catch (FormatException)

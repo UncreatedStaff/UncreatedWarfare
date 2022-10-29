@@ -449,7 +449,7 @@ public class _DebugCommand : Command
             Data.SendEffectClearAll.InvokeAndLoopback(ENetReliability.Reliable, new ITransportConnection[] { ctx.Caller.Connection });
         }
         ctx.Caller.HasUIHidden = !ctx.Caller.HasUIHidden;
-
+        ctx.ReplyString("<#a4a5b3>UI " + (ctx.Caller.HasUIHidden ? "hidden." : "visible."));
     }
     private void game(CommandInteraction ctx)
     {

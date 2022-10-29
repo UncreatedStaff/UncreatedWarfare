@@ -73,20 +73,6 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
     }
-    protected override Task PostInit()
-    {
-        ThreadUtil.assertIsGameThread();
-        Commands.ReloadCommand.ReloadKits();
-        return base.PostInit();
-    }
-    protected override Task OnReady()
-    {
-        ThreadUtil.assertIsGameThread();
-        RepairManager.LoadRepairStations();
-        RallyManager.WipeAllRallies();
-        VehicleSigns.InitAllSigns();
-        return base.OnReady();
-    }
     public override void Subscribe()
     {
         base.Subscribe();
@@ -123,10 +109,6 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         _t1score = 0;
         _t2score = 0;
         return base.PreGameStarting(isOnLoad);
-    }
-    protected override void EventLoopAction()
-    {
-
     }
     private void OnDeath(PlayerDied e)
     {
