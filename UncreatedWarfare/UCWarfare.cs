@@ -346,11 +346,14 @@ public class UCWarfare : MonoBehaviour
         StatsManager.UnloadEvents();
     }
     internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests = new Queue<MainThreadTask.MainThreadResult>();
-    public static MainThreadTask ToUpdate() => new MainThreadTask();
+    public static MainThreadTask ToUpdate() => new MainThreadTask(false);
+    public static MainThreadTask SkipFrame() => new MainThreadTask(true);
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
-    public static void RunOnMainThread(System.Action action)
+    /// <param name="action">Method to be ran on the main thread in an update dequeue loop.</param>
+    /// <param name="skipFrame">If this is called on the main thread it will queue it to be called next update or at the end of the current frame.</param>
+    public static void RunOnMainThread(System.Action action, bool skipFrame = false)
     {
-        MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask());
+        MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask(skipFrame));
         res.OnCompleted(action);
     }
     internal void UpdateLangs(UCPlayer player)

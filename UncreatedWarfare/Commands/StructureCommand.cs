@@ -40,7 +40,7 @@ public class StructureCommand : Command
 
             if (ctx.TryGetTarget(out StructureDrop structure))
             {
-                if (StructureSaver.AddStructure(structure, out SavedStructure st))
+                if (StructureSaverOld.AddStructure(structure, out SavedStructure st))
                 {
                     ctx.Reply(T.StructureSaved, st);
                     ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
@@ -53,7 +53,7 @@ public class StructureCommand : Command
             }
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
-                if (StructureSaver.AddBarricade(barricade, out SavedStructure st))
+                if (StructureSaverOld.AddBarricade(barricade, out SavedStructure st))
                 {
                     ctx.Reply(T.StructureSaved, st);
                     ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
@@ -74,9 +74,9 @@ public class StructureCommand : Command
 
             if (ctx.TryGetTarget(out StructureDrop structure))
             {
-                if (StructureSaver.SaveExists(structure, out SavedStructure st))
+                if (StructureSaverOld.SaveExists(structure, out SavedStructure st))
                 {
-                    if (StructureSaver.RemoveSave(st))
+                    if (StructureSaverOld.RemoveSave(st))
                     {
                         ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
                             $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {st.Position} ({st.InstanceID})");
@@ -89,9 +89,9 @@ public class StructureCommand : Command
             }
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
-                if (StructureSaver.SaveExists(barricade, out SavedStructure st))
+                if (StructureSaverOld.SaveExists(barricade, out SavedStructure st))
                 {
-                    if (StructureSaver.RemoveSave(st))
+                    if (StructureSaverOld.RemoveSave(st))
                     {
                         ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
                             $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {st.Position} ({st.InstanceID})");
@@ -119,9 +119,9 @@ public class StructureCommand : Command
             }
             else if (ctx.TryGetTarget(out StructureDrop structure))
             {
-                if (StructureSaver.SaveExists(structure, out SavedStructure st))
+                if (StructureSaverOld.SaveExists(structure, out SavedStructure st))
                 {
-                    if (StructureSaver.RemoveSave(st))
+                    if (StructureSaverOld.RemoveSave(st))
                     {
                         ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
                             $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {st.Position} ({st.InstanceID})");
@@ -138,9 +138,9 @@ public class StructureCommand : Command
             }
             else if (ctx.TryGetTarget(out BarricadeDrop barricade))
             {
-                if (StructureSaver.SaveExists(barricade, out SavedStructure st))
+                if (StructureSaverOld.SaveExists(barricade, out SavedStructure st))
                 {
-                    if (StructureSaver.RemoveSave(st))
+                    if (StructureSaverOld.RemoveSave(st))
                     {
                         ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
                             $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {st.Position} ({st.InstanceID})");
@@ -187,25 +187,25 @@ public class StructureCommand : Command
                 SavedStructure? data;
                 if (ctx.TryGetTarget(out StructureDrop structure))
                 {
-                    StructureSaver.SaveExists(structure, out data);
+                    StructureSaverOld.SaveExists(structure, out data);
                 }
                 else if (ctx.TryGetTarget(out BarricadeDrop barricade))
                 {
-                    StructureSaver.SaveExists(barricade, out data);
+                    StructureSaverOld.SaveExists(barricade, out data);
                 }
                 else throw ctx.Reply(T.StructureNoTarget);
                 if (data is null)
                     throw ctx.Reply(T.StructureAlreadyUnsaved, structure.asset);
 
-                result = StructureSaver.Singleton.SetProperty(data, ref property, value);
+                result = StructureSaverOld.Singleton.SetProperty(data, ref property, value);
                 switch (result)
                 {
                     case ESetFieldResult.SUCCESS:
                         ItemAsset? asset = Assets.find<ItemAsset>(data.ItemGuid);
                         ctx.LogAction(EActionLogType.SET_SAVED_STRUCTURE_PROPERTY, $"{asset?.itemName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.ItemGuid:N} - SET " + property.ToUpper() + " >> " + value.ToUpper());
                         ctx.Reply(T.StructureSaveSetProperty!, property, asset, value);
-                        StructureSaver.Singleton.Check(data);
-                        StructureSaver.SaveSingleton();
+                        StructureSaverOld.Singleton.Check(data);
+                        StructureSaverOld.SaveSingleton();
                         break;
                     default:
                     case ESetFieldResult.OBJECT_NOT_FOUND:

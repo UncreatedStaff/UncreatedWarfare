@@ -69,7 +69,7 @@ public interface IFOBs : IGamemode
 }
 public interface IStructureSaving : IGamemode
 {
-    Structures.StructureSaver StructureSaver { get; }
+    Structures.StructureSaverOld StructureSaver { get; }
 }
 public interface IAttackDefense : ITeams
 {

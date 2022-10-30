@@ -837,7 +837,7 @@ public static class EventFunctions
                 shouldAllow = false;
             }
 
-            if (Structures.StructureSaver.SaveExists(drop, out Structures.SavedStructure s))
+            if (Structures.StructureSaverOld.SaveExists(drop, out Structures.SavedStructure s))
             {
                 shouldAllow = false;
                 return;
@@ -935,7 +935,7 @@ public static class EventFunctions
             }
             StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
             if (drop == null) return;
-            if (StructureSaver.SaveExists(drop, out SavedStructure s))
+            if (StructureSaverOld.SaveExists(drop, out SavedStructure s))
             {
                 shouldAllow = false;
                 return;
@@ -1242,11 +1242,11 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (StructureSaver.SaveExists(instanceID, EStructType.STRUCTURE, out SavedStructure found))
+        if (StructureSaverOld.SaveExists(instanceID, EStructType.STRUCTURE, out SavedStructure found))
         {
             found.Position = point;
             found.Rotation = new Vector3(angle_x * 2f, angle_y * 2f, angle_z * 2f);
-            StructureSaver.SaveSingleton();
+            StructureSaverOld.SaveSingleton();
         }
     }
     internal static void BarricadeMovedInWorkzone(CSteamID instigator, byte x, byte y, ushort plant, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
@@ -1254,11 +1254,11 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (StructureSaver.SaveExists(instanceID, EStructType.BARRICADE, out SavedStructure found))
+        if (StructureSaverOld.SaveExists(instanceID, EStructType.BARRICADE, out SavedStructure found))
         {
             found.Position = point;
             found.Rotation = new Vector3(angle_x * 2f, angle_y * 2f, angle_z * 2f);
-            StructureSaver.SaveSingleton();
+            StructureSaverOld.SaveSingleton();
         }
         UCBarricadeManager.GetBarricadeFromInstID(instanceID, out BarricadeDrop? drop);
         if (drop != default)

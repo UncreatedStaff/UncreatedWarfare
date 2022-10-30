@@ -8,7 +8,6 @@ using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
-using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare;
 

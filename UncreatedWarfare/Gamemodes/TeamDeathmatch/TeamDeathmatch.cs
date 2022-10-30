@@ -29,7 +29,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     protected KitManager _kitManager;
     protected ReviveManager _reviveManager;
     protected SquadManager _squadManager;
-    protected StructureSaver _structureSaver;
+    protected StructureSaverOld _structureSaver;
     public TeamDeathmatch() : base(nameof(TeamDeathmatch), 0f)
     {
 
@@ -50,7 +50,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
-    public StructureSaver StructureSaver => _structureSaver;
+    public StructureSaverOld StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     public int Team1Score => _t1score;

@@ -8,10 +8,12 @@ namespace Uncreated.Warfare
     {
         internal const int DEFAULT_TIMEOUT_MS = 5000;
         internal const int POLL_SPEED_MS = 25;
+        private readonly bool skipFrame;
         private bool isCompleted = false;
         private readonly MainThreadResult awaiter;
-        public MainThreadTask()
+        public MainThreadTask(bool skipFrame)
         {
+            this.skipFrame = skipFrame;
             awaiter = new MainThreadResult(this);
         }
         public MainThreadResult GetAwaiter()
@@ -29,7 +31,7 @@ namespace Uncreated.Warfare
             public bool IsCompleted { get => task.isCompleted; }
             public void OnCompleted(Action continuation)
             {
-                if (UCWarfare.IsMainThread)
+                if (UCWarfare.IsMainThread && !task.skipFrame)
                 {
                     continuation();
                     task.isCompleted = true;

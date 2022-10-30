@@ -43,7 +43,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
     private SquadManager _squadManager;
-    private StructureSaver _structureSaver;
+    private StructureSaverOld _structureSaver;
     private HardpointTracker _gameStats;
     private HardpointLeaderboard? _endScreen;
     private TraitManager _traitManager;
@@ -83,7 +83,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
-    public StructureSaver StructureSaver => _structureSaver;
+    public StructureSaverOld StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     public Hardpoint() : base(nameof(Hardpoint), 0.25f) { }

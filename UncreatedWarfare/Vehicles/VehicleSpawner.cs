@@ -16,7 +16,7 @@ using UnityEngine;
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(VehicleBay))]
-[SingletonDependency(typeof(StructureSaver))]
+[SingletonDependency(typeof(StructureSaverOld))]
 public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, IGameStartListener
 {
     public static VehicleSpawner Singleton;
@@ -125,7 +125,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.BARRICADE, new SerializableTransform(drop.model));
         spawn.Initialize();
         Singleton.AddObjectToSave(spawn);
-        StructureSaver.AddBarricade(drop, out _);
+        StructureSaverOld.AddBarricade(drop, out _);
         spawn.SpawnVehicle();
     }
     public static void CreateSpawn(StructureDrop drop, StructureData data, Guid vehicleID)
@@ -137,7 +137,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.STRUCTURE, new SerializableTransform(drop.model));
         spawn.Initialize();
         Singleton.AddObjectToSave(spawn);
-        StructureSaver.AddStructure(drop, out _);
+        StructureSaverOld.AddStructure(drop, out _);
         spawn.SpawnVehicle();
     }
     public static void DeleteSpawn(uint barricadeInstanceID, EStructType type)
@@ -163,8 +163,8 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
             }
         }
         Singleton.RemoveWhere(s => s.InstanceId == barricadeInstanceID && s.StructureType == type);
-        if (StructureSaver.SaveExists(barricadeInstanceID, type, out SavedStructure structure))
-            StructureSaver.RemoveSave(structure);
+        if (StructureSaverOld.SaveExists(barricadeInstanceID, type, out SavedStructure structure))
+            StructureSaverOld.RemoveSave(structure);
     }
     public static bool IsRegistered(uint barricadeInstanceID, out VehicleSpawn spawn, EStructType type)
     {
@@ -400,7 +400,7 @@ public class VehicleSpawn
                 if (!Initialized)
                 {
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding BarricadeDrop could not be found, attempting to replace the barricade.");
-                    if (!StructureSaver.SaveExists(InstanceId, EStructType.BARRICADE, out SavedStructure structure))
+                    if (!StructureSaverOld.SaveExists(InstanceId, EStructType.BARRICADE, out SavedStructure structure))
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: barricade save not found.");
                         Initialized = false;
@@ -432,7 +432,7 @@ public class VehicleSpawn
                         structure.InstanceID = newdrop.instanceID;
                         InstanceId = newdrop.instanceID;
                         VehicleSpawner.SaveSingleton();
-                        StructureSaver.SaveSingleton();
+                        StructureSaverOld.SaveSingleton();
                         Initialized = true;
                     }
                     else
@@ -460,7 +460,7 @@ public class VehicleSpawn
                 if (!Initialized)
                 {
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding StructureDrop could not be found, attempting to replace the structure.");
-                    if (!StructureSaver.SaveExists(InstanceId, EStructType.STRUCTURE, out SavedStructure structure))
+                    if (!StructureSaverOld.SaveExists(InstanceId, EStructType.STRUCTURE, out SavedStructure structure))
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: structure save not found.");
                         Initialized = false;
@@ -495,7 +495,7 @@ public class VehicleSpawn
                             structure.InstanceID = newdrop.instanceID;
                             InstanceId = newdrop.instanceID;
                             VehicleSpawner.SaveSingleton();
-                            StructureSaver.SaveSingleton();
+                            StructureSaverOld.SaveSingleton();
                             Initialized = true;
                         }
                     }

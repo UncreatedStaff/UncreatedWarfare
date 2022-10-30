@@ -12,7 +12,7 @@ namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(VehicleSpawner))]
 [SingletonDependency(typeof(VehicleBay))]
-[SingletonDependency(typeof(StructureSaver))]
+[SingletonDependency(typeof(StructureSaverOld))]
 public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
 {
     public VehicleSigns() : base("vehiclesigns", Path.Combine(Data.Paths.VehicleStorage, "signs.json")) { }
@@ -58,7 +58,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
             VehicleSign vs = this[i];
             if (vs is not null && vs.InstanceId == instanceID)
             {
-                StructureSaver.RemoveSave(vs.StructureSave);
+                StructureSaverOld.RemoveSave(vs.StructureSave);
                 Remove(vs);
                 Save();
                 break;
@@ -92,7 +92,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
                 {
                     RequestSigns.SetSignTextSneaky(sign, string.Empty);
                     VehicleSign vs = Singleton[i];
-                    StructureSaver.RemoveSave(vs.StructureSave);
+                    StructureSaverOld.RemoveSave(vs.StructureSave);
                     Singleton.Remove(Singleton[i]);
                     if (VehicleSpawner.Loaded)
                     {
@@ -151,14 +151,14 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
         if (drop != null)
         {
-            if (!StructureSaver.SaveExists(drop, out SavedStructure structure))
-                StructureSaver.AddBarricade(drop, out structure);
+            if (!StructureSaverOld.SaveExists(drop, out SavedStructure structure))
+                StructureSaverOld.AddBarricade(drop, out structure);
 
             VehicleSign n = Singleton.AddObjectToSave(new VehicleSign(drop, sign, structure, spawn));
             spawn.LinkedSign = n;
 
             n.StructureSave.Metadata = RequestSigns.SetSignTextSneaky(sign, n.SignText);
-            StructureSaver.SaveSingleton();
+            StructureSaverOld.SaveSingleton();
             spawn.UpdateSign();
             return true;
         }
@@ -225,15 +225,15 @@ public class VehicleSign
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         BarricadeDrop? drop = UCBarricadeManager.GetBarricadeFromInstID(InstanceId);
-        if (!StructureSaver.SaveExists(this.InstanceId, EStructType.BARRICADE, out _structureSave))
+        if (!StructureSaverOld.SaveExists(this.InstanceId, EStructType.BARRICADE, out _structureSave))
         {
             if (drop == null)
             {
                 L.LogWarning("Failed to link sign to the correct instance id.");
             }
-            else if (!StructureSaver.SaveExists(drop, out _structureSave))
+            else if (!StructureSaverOld.SaveExists(drop, out _structureSave))
             {
-                if (!StructureSaver.AddBarricade(drop, out _structureSave))
+                if (!StructureSaverOld.AddBarricade(drop, out _structureSave))
                 {
                     L.LogWarning("Failed to add sign to structure saver.");
                     return;
@@ -271,21 +271,21 @@ public class VehicleSign
         this.SignInteractable = sign;
         this.SignDrop = drop;
         bay.LinkedSign = this;
-        if (!StructureSaver.SaveExists(bay.InstanceId, bay.StructureType, out SavedStructure s))
+        if (!StructureSaverOld.SaveExists(bay.InstanceId, bay.StructureType, out SavedStructure s))
         {
             if (bay.StructureType == EStructType.BARRICADE)
             {
                 BarricadeData? paddata =
                     UCBarricadeManager.GetBarricadeFromInstID(bay.InstanceId, out BarricadeDrop? paddrop);
                 if (paddata != null)
-                    StructureSaver.AddBarricade(paddrop!, out _);
+                    StructureSaverOld.AddBarricade(paddrop!, out _);
             }
             else if (bay.StructureType == EStructType.STRUCTURE)
             {
                 StructureData? paddata =
                     UCBarricadeManager.GetStructureFromInstID(bay.InstanceId, out StructureDrop? paddrop);
                 if (paddata != null)
-                    StructureSaver.AddStructure(paddrop!, out _);
+                    StructureSaverOld.AddStructure(paddrop!, out _);
             }
         }
     }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -79,8 +80,7 @@ public class ReloadCommand : Command
         }
         else if (module.Equals("sql", StringComparison.OrdinalIgnoreCase))
         {
-            ReloadSQLServer();
-            ctx.Reply(T.ReloadedSQL);
+            ReloadSQLServer(ctx);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "MYSQL CONNECTION");
         }
         else if (module.Equals("teams", StringComparison.OrdinalIgnoreCase))
@@ -94,7 +94,7 @@ public class ReloadCommand : Command
             ReloadTranslations();
             ReloadFlags();
             ReloadTCPServer();
-            ReloadSQLServer();
+            ReloadSQLServer(null);
             ReloadKits();
             foreach (KeyValuePair<string, IConfiguration> config in ReloadableConfigs)
                 config.Value.Reload();
@@ -296,13 +296,59 @@ public class ReloadCommand : Command
 #endif
         UCWarfare.I.InitNetClient();
     }
-    internal static void ReloadSQLServer()
+    internal static void ReloadSQLServer(CommandInteraction? ctx)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Data.DatabaseManager.Close();
-        Data.DatabaseManager.Open();
+        Task.Run(async () =>
+        {
+            L.Log("Reloading SQL...");
+            List<UCPlayer> players = PlayerManager.OnlinePlayers.ToList();
+            try
+            {
+                List<Task> tasks = new List<Task>(players.Count);
+                for (int i = 0; i < players.Count; ++i)
+                    tasks.Add(players[i].PurchaseSync.WaitAsync());
+                await Task.WhenAll(tasks).ConfigureAwait(false);
+                await UCWarfare.ToUpdate();
+                // not async intentionally, we want it to do all this within a frame
+                Data.DatabaseManager.Close();
+                Data.DatabaseManager.Dispose();
+                Data.DatabaseManager = new WarfareSQL(UCWarfare.Config.SQL);
+                if (Data.DatabaseManager.Open())
+                    L.Log("Local database reopened");
+                else
+                    L.LogError("Local database failed to reopen.");
+                if (Data.RemoteSQL != null)
+                {
+                    await UCWarfare.SkipFrame();
+                    Data.RemoteSQL.Close();
+                    Data.RemoteSQL.Dispose();
+                    if (UCWarfare.Config.RemoteSQL != null)
+                    {
+                        Data.RemoteSQL = new WarfareSQL(UCWarfare.Config.RemoteSQL);
+                        if (Data.RemoteSQL.Open())
+                            L.Log("Remote database reopened");
+                        else
+                            L.LogError("Remote database failed to reopen.");
+                    }
+                }
+                ctx?.Reply(T.ReloadedSQL);
+            }
+            catch (Exception ex)
+            {
+                L.LogError("Failed to reload SQL.");
+                L.LogError(ex);
+                ctx?.Reply(T.UnknownError);
+            }
+            finally
+            {
+                for (int i = 0; i < players.Count; ++i)
+                    players[i].PurchaseSync.Release();
+                L.Log("Reload operation complete.");
+            }
+        });
     }
     internal static void DeregisterConfigForReload(string reloadKey)
     {

@@ -2,11 +2,13 @@
 using System;
 using System.Text.Json.Serialization;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Structures;
-public sealed class SavedStructure : ITranslationArgument
+public sealed class SavedStructure : IListItem, ITranslationArgument
 {
+    public PrimaryKey PrimaryKey { get; set; }
     [JsonPropertyName("guid")]
     public Guid ItemGuid;
     [JsonPropertyName("instance_id")]

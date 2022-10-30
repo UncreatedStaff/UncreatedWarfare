@@ -55,7 +55,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     protected KitManager _kitManager;
     protected ReviveManager _reviveManager;
     protected SquadManager _squadManager;
-    protected StructureSaver _structureSaver;
+    protected StructureSaverOld _structureSaver;
     protected TraitManager _traitManager;
     protected ActionManager _actionManager;
     protected Leaderboard? _endScreen;
@@ -82,7 +82,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
-    public StructureSaver StructureSaver => _structureSaver;
+    public StructureSaverOld StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     Leaderboard<Stats, StatTracker>? IImplementsLeaderboard<Stats, StatTracker>.Leaderboard => _endScreen;

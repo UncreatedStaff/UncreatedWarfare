@@ -54,10 +54,10 @@ public static partial class Patches
                 BarricadeManager.updateState(drop.model, newState, newState.Length);
                 sign.updateState(drop.asset, newState);
                 Signs.BroadcastSign(trimmedText, sign, x, y);
-                if (StructureSaver.Loaded && StructureSaver.SaveExists(drop, out SavedStructure structure))
+                if (StructureSaverOld.Loaded && StructureSaverOld.SaveExists(drop, out SavedStructure structure))
                 {
                     structure.Metadata = Util.CloneBytes(newState);
-                    StructureSaver.SaveSingleton();
+                    StructureSaverOld.SaveSingleton();
                 }
 
                 if (TraitManager.Loaded && trimmedText.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX,
