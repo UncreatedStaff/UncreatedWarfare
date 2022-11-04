@@ -125,18 +125,6 @@ public static partial class Patches
             EventFunctions.droppeditemsInverse.Remove(instanceID);
         }
 
-        //[HarmonyPatch(typeof(ItemManager), nameof(ItemManager.dropItem))]
-        //[HarmonyPostfix]
-        //static void OnItemDropDropped(
-        //    Item item,
-        //    Vector3 point,
-        //    bool playEffect,
-        //    bool isDropped,
-        //    bool wideSpread)
-        //{
-        //    FOBs.FOBManager.OnItemDropped(item, point);
-        //}
-
         // SDG.Unturned.BarricadeManager
         /// <summary>
         /// Prefix of <see cref="BarricadeManager.SendRegion(SteamPlayer client, byte x, byte y, ushort plant)"/> to set translation data of signs.
@@ -187,9 +175,8 @@ public static partial class Patches
                         {
                             BarricadeDrop drop = region.drops[index];
                             BarricadeData serversideData = drop.GetServersideData();
-                            InteractableStorage? interactable = drop.interactable as InteractableStorage;
                             writer.WriteGuid(drop.asset.GUID);
-                            if (interactable != null)
+                            if (drop.interactable is InteractableStorage interactable)
                             {
                                 byte[] bytes1;
                                 if (interactable.isDisplay)
@@ -217,39 +204,34 @@ public static partial class Patches
                                 Array.Copy(serversideData.barricade.state, 0, bytes1, 0, 16);
                                 writer.WriteUInt8((byte)bytes1.Length);
                                 writer.WriteBytes(bytes1);
+                                goto skip;
                             }
                             else if (drop.interactable is InteractableSign sign)
                             {
                                 string newtext = sign.text;
-                                if (lang == null)
+                                if (lang == null || !newtext.StartsWith(Signs.PREFIX, StringComparison.OrdinalIgnoreCase))
+                                    goto writeState;
+                                newtext = Signs.GetClientText(newtext, pl, sign);
+                                byte[] textbytes = System.Text.Encoding.UTF8.GetBytes(newtext);
+                                byte[] state = serversideData.barricade.state;
+                                if (textbytes.Length > byte.MaxValue - 17)
                                 {
-                                    writer.WriteUInt8((byte)serversideData.barricade.state.Length);
-                                    writer.WriteBytes(serversideData.barricade.state);
+                                    L.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 17} UTF8 bytes (was {textbytes.Length} bytes)!");
+                                    goto writeState;
                                 }
-                                else
-                                {
-                                    if (newtext.StartsWith(Signs.PREFIX, StringComparison.OrdinalIgnoreCase))
-                                        newtext = Signs.GetClientText(newtext, pl, sign);
-                                    byte[] state = serversideData.barricade.state;
-                                    byte[] textbytes = System.Text.Encoding.UTF8.GetBytes(newtext);
-                                    if (textbytes.Length > byte.MaxValue - 18)
-                                    {
-                                        L.LogError(sign.text + $" sign translation is too long, must be <= {byte.MaxValue - 18} UTF8 bytes (was {textbytes.Length} bytes)!");
-                                        textbytes = System.Text.Encoding.UTF8.GetBytes(sign.text);
-                                    }
-                                    byte[] numArray1 = new byte[17 + textbytes.Length];
-                                    numArray1[16] = (byte)textbytes.Length;
-                                    if (textbytes.Length != 0)
-                                        Buffer.BlockCopy(textbytes, 0, numArray1, 17, textbytes.Length);
-                                    writer.WriteUInt8((byte)numArray1.Length);
-                                    writer.WriteBytes(numArray1);
-                                }
+                                byte[] numArray1 = new byte[17 + textbytes.Length];
+                                Buffer.BlockCopy(state, 0, numArray1, 0, 16);
+                                numArray1[16] = (byte)textbytes.Length;
+                                if (textbytes.Length != 0)
+                                    Buffer.BlockCopy(textbytes, 0, numArray1, 17, textbytes.Length);
+                                writer.WriteUInt8((byte)numArray1.Length);
+                                writer.WriteBytes(numArray1);
+                                goto skip;
                             }
-                            else
-                            {
-                                writer.WriteUInt8((byte)serversideData.barricade.state.Length);
-                                writer.WriteBytes(serversideData.barricade.state);
-                            }
+                            writeState:
+                            writer.WriteUInt8((byte)serversideData.barricade.state.Length);
+                            writer.WriteBytes(serversideData.barricade.state);
+                            skip:
                             writer.WriteClampedVector3(serversideData.point, fracBitCount: 11);
                             writer.WriteUInt8(serversideData.angle_x);
                             writer.WriteUInt8(serversideData.angle_y);

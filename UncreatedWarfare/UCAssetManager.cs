@@ -9,6 +9,8 @@ namespace Uncreated.Warfare;
 
 public static class UCAssetManager
 {
+    private static readonly char[] ignore = { '.', ',', '&', '-', '_' };
+    private static readonly char[] splits = { ' ' };
     public static VehicleAsset FindVehicleAsset(ushort vehicleID) => Assets.find(EAssetType.VEHICLE).Cast<VehicleAsset>().Where(k => k?.id == vehicleID).FirstOrDefault();
     public static VehicleAsset FindVehicleAsset(string vehicleName)
     {
@@ -20,8 +22,8 @@ public static class UCAssetManager
 
         VehicleAsset asset = assets.FirstOrDefault(k =>
             vehicleName.Equals(k.id.ToString(Data.Locale), StringComparison.OrdinalIgnoreCase) ||
-            vehicleName.Split(' ').All(l => k.vehicleName.ToLower().Contains(l)) ||
-            vehicleName.Split(' ').All(l => k.name.ToLower().Contains(l))
+            vehicleName.Split(splits).All(l => k.vehicleName.ToLower().Contains(l)) ||
+            vehicleName.Split(splits).All(l => k.name.ToLower().Contains(l))
             );
 
         return asset;
@@ -32,34 +34,34 @@ public static class UCAssetManager
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         itemName = itemName.ToLower();
+        string[] insplits = itemName.Split(splits);
 
         numberOfSimilarNames = 0;
 
-        List<ItemAsset> assets = Assets.find(EAssetType.ITEM).Cast<ItemAsset>()
-            .Where(k => k?.name != null && k.itemName != null).OrderBy(k => k.itemName.Length).ToList();
-
-        IEnumerable<ItemAsset> selection = assets.Where(k =>
+        List<ItemAsset> selection = Assets.find(EAssetType.ITEM).Cast<ItemAsset>()
+            .Where(k => k?.name != null && k.itemName != null && (
             itemName.Equals(k.id.ToString(Data.Locale), StringComparison.OrdinalIgnoreCase) ||
-            itemName.Split(' ').All(l => k.itemName.ToLower().Contains(l)) ||
-            itemName.Split(' ').All(l => k.name.ToLower().Contains(l))
-            );
+            insplits.All(l => k.itemName.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1) ||
+            insplits.All(l => k.name.IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+            ).OrderBy(k => k.itemName.Length).ToList();
 
-        numberOfSimilarNames = selection.Count();
+        numberOfSimilarNames = selection.Count;
 
-        ItemAsset? asset = selection.FirstOrDefault();
+        ItemAsset? asset = numberOfSimilarNames < 1 ? null : selection[0];
 
         if (asset == null && additionalCheckWithoutNonAlphanumericCharacters)
         {
-            itemName = itemName.RemoveMany(false, '.', ',', '&', '-', '_');
+            itemName = itemName.RemoveMany(false, ignore);
 
-            selection = assets.Where(k =>
-            itemName.Equals(k.id.ToString(Data.Locale), StringComparison.OrdinalIgnoreCase) ||
-            itemName.Split(' ').All(l => k.itemName.ToLower().RemoveMany(false, '.', ',', '&', '-', '_').Contains(l)) ||
-            itemName.Split(' ').All(l => k.name.ToLower().RemoveMany(false, '.', ',', '&', '-', '_').Contains(l))
-            );
+            selection = Assets.find(EAssetType.ITEM).Cast<ItemAsset>()
+                .Where(k => k?.name != null && k.itemName != null && (
+                    itemName.Equals(k.id.ToString(Data.Locale), StringComparison.OrdinalIgnoreCase) ||
+                    insplits.All(l => k.itemName.RemoveMany(false, ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1) ||
+                    insplits.All(l => k.name.RemoveMany(false, ignore).IndexOf(l, StringComparison.OrdinalIgnoreCase) != -1))
+                ).OrderBy(k => k.itemName.Length).ToList();
 
-            numberOfSimilarNames = selection.Count();
-            asset = selection.FirstOrDefault();
+            numberOfSimilarNames = selection.Count;
+            asset = numberOfSimilarNames < 1 ? null : selection[0];
         }
 
         numberOfSimilarNames--;
