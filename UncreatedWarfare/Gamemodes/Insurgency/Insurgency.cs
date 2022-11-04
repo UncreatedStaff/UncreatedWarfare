@@ -57,7 +57,7 @@ public class Insurgency :
     protected KitManager _kitManager;
     protected ReviveManager _reviveManager;
     protected SquadManager _squadManager;
-    protected StructureSaverOld _structureSaver;
+    protected StructureSaver _structureSaver;
     protected InsurgencyTracker _gameStats;
     protected InsurgencyLeaderboard _endScreen;
     protected TraitManager _traitManager;
@@ -86,7 +86,7 @@ public class Insurgency :
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
-    public StructureSaverOld StructureSaver => _structureSaver;
+    public StructureSaver StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     public ulong AttackingTeam => _attackTeam;

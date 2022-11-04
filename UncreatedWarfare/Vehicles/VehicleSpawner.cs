@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -16,7 +18,8 @@ using UnityEngine;
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(VehicleBay))]
-[SingletonDependency(typeof(StructureSaverOld))]
+[SingletonDependency(typeof(StructureSaver))]
+[SingletonDependency(typeof(Level))]
 public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, IGameStartListener
 {
     public static VehicleSpawner Singleton;
@@ -125,7 +128,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.BARRICADE, new SerializableTransform(drop.model));
         spawn.Initialize();
         Singleton.AddObjectToSave(spawn);
-        StructureSaverOld.AddBarricade(drop, out _);
+        Data.Singletons.GetSingleton<StructureSaver>()?.BeginAddBarricade(drop);
         spawn.SpawnVehicle();
     }
     public static void CreateSpawn(StructureDrop drop, StructureData data, Guid vehicleID)
@@ -137,7 +140,7 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         VehicleSpawn spawn = new VehicleSpawn(data.instanceID, vehicleID, EStructType.STRUCTURE, new SerializableTransform(drop.model));
         spawn.Initialize();
         Singleton.AddObjectToSave(spawn);
-        StructureSaverOld.AddStructure(drop, out _);
+        Data.Singletons.GetSingleton<StructureSaver>()?.BeginAddStructure(drop);
         spawn.SpawnVehicle();
     }
     public static void DeleteSpawn(uint barricadeInstanceID, EStructType type)
@@ -163,8 +166,9 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
             }
         }
         Singleton.RemoveWhere(s => s.InstanceId == barricadeInstanceID && s.StructureType == type);
-        if (StructureSaverOld.SaveExists(barricadeInstanceID, type, out SavedStructure structure))
-            StructureSaverOld.RemoveSave(structure);
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        if (saver != null && saver.TryGetSave(barricadeInstanceID, type, out SavedStructure structure))
+            saver.BeginRemoveItem(structure);
     }
     public static bool IsRegistered(uint barricadeInstanceID, out VehicleSpawn spawn, EStructType type)
     {
@@ -399,8 +403,9 @@ public class VehicleSpawn
                 Initialized = BarricadeData != null;
                 if (!Initialized)
                 {
+                    StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding BarricadeDrop could not be found, attempting to replace the barricade.");
-                    if (!StructureSaverOld.SaveExists(InstanceId, EStructType.BARRICADE, out SavedStructure structure))
+                    if (saver == null || !saver.TryGetSave(InstanceId, EStructType.BARRICADE, out SavedStructure structure))
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: barricade save not found.");
                         Initialized = false;
@@ -430,9 +435,9 @@ public class VehicleSpawn
                         BarricadeDrop = newdrop;
                         BarricadeData = newdrop.GetServersideData();
                         structure.InstanceID = newdrop.instanceID;
+                        Task.Run(() => Util.TryWrap(saver.AddOrUpdate(structure, F.DebugTimeout), "Error saving structure."));
                         InstanceId = newdrop.instanceID;
                         VehicleSpawner.SaveSingleton();
-                        StructureSaverOld.SaveSingleton();
                         Initialized = true;
                     }
                     else
@@ -459,8 +464,9 @@ public class VehicleSpawn
                 Initialized = StructureDrop != null;
                 if (!Initialized)
                 {
+                    StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding StructureDrop could not be found, attempting to replace the structure.");
-                    if (!StructureSaverOld.SaveExists(InstanceId, EStructType.STRUCTURE, out SavedStructure structure))
+                    if (saver == null || !saver.TryGetSave(InstanceId, EStructType.STRUCTURE, out SavedStructure structure))
                     {
                         L.LogError("VEHICLE SPAWNER ERROR: structure save not found.");
                         Initialized = false;
@@ -482,7 +488,7 @@ public class VehicleSpawn
                     }
                     else if (Regions.tryGetCoordinate(structure.Position, out byte x, out byte y))
                     {
-                        StructureDrop newdrop = StructureManager.regions[x, y].drops.LastOrDefault();
+                        StructureDrop? newdrop = StructureManager.regions[x, y].drops.TailOrDefault();
                         if (newdrop == null)
                         {
                             L.LogWarning("VEHICLE SPAWNER ERROR: Spawned structure could not be found");
@@ -495,7 +501,7 @@ public class VehicleSpawn
                             structure.InstanceID = newdrop.instanceID;
                             InstanceId = newdrop.instanceID;
                             VehicleSpawner.SaveSingleton();
-                            StructureSaverOld.SaveSingleton();
+                            Task.Run(() => Util.TryWrap(saver.AddOrUpdate(structure, F.DebugTimeout), "Error saving structure."));
                             Initialized = true;
                         }
                     }

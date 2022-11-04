@@ -4,12 +4,27 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using Uncreated.SQL;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Maps;
 internal class MapScheduler : MonoBehaviour
 {
     internal static MapScheduler Instance;
+
+    // todo
+    internal static readonly Schema MAPS_TABLE = new Schema("map_data", new Schema.Column[]
+    {
+        new Schema.Column("MapId", SqlTypes.INT)
+        {
+            PrimaryKey = true
+        },
+        new Schema.Column("Display Name", SqlTypes.STRING_255),
+        new Schema.Column("Faction_1", "varchar(16)"),
+        new Schema.Column("Faction_2", "varchar(16)")
+    }, true, null);
+                                 // intentional is
+    public static int Current => Instance is null ? -1 : Instance._map;
     // active map
     private int _map = -1;
     private const int STATIC_MAP = 3;

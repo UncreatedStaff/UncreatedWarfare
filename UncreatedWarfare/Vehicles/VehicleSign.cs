@@ -3,16 +3,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Uncreated.SQL;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
-using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(VehicleSpawner))]
 [SingletonDependency(typeof(VehicleBay))]
-[SingletonDependency(typeof(StructureSaverOld))]
+[SingletonDependency(typeof(StructureSaver))]
+[SingletonDependency(typeof(Level))]
 public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
 {
     public VehicleSigns() : base("vehiclesigns", Path.Combine(Data.Paths.VehicleStorage, "signs.json")) { }
@@ -58,7 +60,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
             VehicleSign vs = this[i];
             if (vs is not null && vs.InstanceId == instanceID)
             {
-                StructureSaverOld.RemoveSave(vs.StructureSave);
+                Data.Singletons.GetSingleton<StructureSaver>()?.BeginRemoveItem(vs.StructureSave);
                 Remove(vs);
                 Save();
                 break;
@@ -92,7 +94,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
                 {
                     RequestSigns.SetSignTextSneaky(sign, string.Empty);
                     VehicleSign vs = Singleton[i];
-                    StructureSaverOld.RemoveSave(vs.StructureSave);
+                    Data.Singletons.GetSingleton<StructureSaver>()?.RemoveItem(vs.StructureSave);
                     Singleton.Remove(Singleton[i]);
                     if (VehicleSpawner.Loaded)
                     {
@@ -146,22 +148,37 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
     {
         Singleton.AssertLoaded<VehicleSigns, VehicleSign>();
 #if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
+        IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(sign.transform);
-        if (drop != null)
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        if (drop != null && saver != null)
         {
-            if (!StructureSaverOld.SaveExists(drop, out SavedStructure structure))
-                StructureSaverOld.AddBarricade(drop, out structure);
+            Task.Run(async () =>
+            {
+                try
+                {
+                    (SqlItem<SavedStructure> item, _) = await saver.AddBarricade(drop);
+                    await UCWarfare.ToUpdate();
+                    VehicleSign n = Singleton.AddObjectToSave(new VehicleSign(drop, sign, item.Item!, spawn));
+                    spawn.LinkedSign = n;
 
-            VehicleSign n = Singleton.AddObjectToSave(new VehicleSign(drop, sign, structure, spawn));
-            spawn.LinkedSign = n;
-
-            n.StructureSave.Metadata = RequestSigns.SetSignTextSneaky(sign, n.SignText);
-            StructureSaverOld.SaveSingleton();
-            spawn.UpdateSign();
+                    n.StructureSave.Metadata = RequestSigns.SetSignTextSneaky(sign, n.SignText);
+                    spawn.UpdateSign();
+                }
+                catch (Exception ex)
+                {
+                    L.LogError(ex);
+                }
+#if DEBUG
+                profiler.Dispose();
+#endif
+            });
             return true;
         }
+#if DEBUG
+        profiler.Dispose();
+#endif
         return false;
     }
 
@@ -225,18 +242,39 @@ public class VehicleSign
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         BarricadeDrop? drop = UCBarricadeManager.GetBarricadeFromInstID(InstanceId);
-        if (!StructureSaverOld.SaveExists(this.InstanceId, EStructType.BARRICADE, out _structureSave))
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        if (saver != null)
         {
-            if (drop == null)
+            if (!saver.TryGetSave(this.InstanceId, EStructType.BARRICADE, out _structureSave))
             {
-                L.LogWarning("Failed to link sign to the correct instance id.");
-            }
-            else if (!StructureSaverOld.SaveExists(drop, out _structureSave))
-            {
-                if (!StructureSaverOld.AddBarricade(drop, out _structureSave))
+                if (drop == null)
                 {
-                    L.LogWarning("Failed to add sign to structure saver.");
-                    return;
+                    L.LogWarning("Failed to link sign to the correct instance id.");
+                }
+                else if (!saver.TryGetSave(drop, out _structureSave))
+                {
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            if (!saver.IsLoading)
+                                return;
+                            (SqlItem<SavedStructure> item, _) = await saver.AddBarricade(drop, F.DebugTimeout).ConfigureAwait(false);
+                            if (item.Item == null)
+                                L.LogWarning("Failed to add sign to structure saver.");
+                            else
+                            {
+                                await UCWarfare.ToUpdate();
+                                this._structureSave = item.Item;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            L.LogError("Error adding vehicle sign save.");
+                            L.LogError(ex);
+                        }
+                    });
+
                 }
             }
         }
@@ -260,7 +298,7 @@ public class VehicleSign
     }
     public VehicleSign(BarricadeDrop drop, InteractableSign sign, SavedStructure save, VehicleSpawn bay)
     {
-        if (save == null || bay == null) throw new ArgumentNullException("save or bay", "Can not create a vehicle sign unless save and bay are defined.");
+        if (save == null || bay == null) throw new ArgumentNullException("save/bay", "Can not create a vehicle sign unless save and bay are defined.");
         _structureSave = save;
         _vehicleBay = bay;
         this.InstanceId = save.InstanceID;
@@ -271,21 +309,25 @@ public class VehicleSign
         this.SignInteractable = sign;
         this.SignDrop = drop;
         bay.LinkedSign = this;
-        if (!StructureSaverOld.SaveExists(bay.InstanceId, bay.StructureType, out SavedStructure s))
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        if (saver != null)
         {
-            if (bay.StructureType == EStructType.BARRICADE)
+            if (!saver.TryGetSave(bay.InstanceId, bay.StructureType, out SavedStructure _))
             {
-                BarricadeData? paddata =
-                    UCBarricadeManager.GetBarricadeFromInstID(bay.InstanceId, out BarricadeDrop? paddrop);
-                if (paddata != null)
-                    StructureSaverOld.AddBarricade(paddrop!, out _);
-            }
-            else if (bay.StructureType == EStructType.STRUCTURE)
-            {
-                StructureData? paddata =
-                    UCBarricadeManager.GetStructureFromInstID(bay.InstanceId, out StructureDrop? paddrop);
-                if (paddata != null)
-                    StructureSaverOld.AddStructure(paddrop!, out _);
+                if (bay.StructureType == EStructType.BARRICADE)
+                {
+                    BarricadeData? paddata =
+                        UCBarricadeManager.GetBarricadeFromInstID(bay.InstanceId, out BarricadeDrop? paddrop);
+                    if (paddata != null)
+                        saver.BeginAddBarricade(paddrop!);
+                }
+                else if (bay.StructureType == EStructType.STRUCTURE)
+                {
+                    StructureData? paddata =
+                        UCBarricadeManager.GetStructureFromInstID(bay.InstanceId, out StructureDrop? paddrop);
+                    if (paddata != null)
+                        saver.BeginAddStructure(paddrop!);
+                }
             }
         }
     }

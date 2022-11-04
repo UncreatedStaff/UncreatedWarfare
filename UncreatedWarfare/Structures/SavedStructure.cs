@@ -31,7 +31,12 @@ public sealed class SavedStructure : IListItem, ITranslationArgument
         get => Metadata is null ? string.Empty : Convert.ToBase64String(Metadata);
         set => Metadata = value is null ? Array.Empty<byte>() : Convert.FromBase64String(value);
     }
-
+    [JsonIgnore]
+    internal StructureSaver.ItemJarData[]? Items = null;
+    [JsonIgnore]
+    internal StructureSaver.ItemDisplayData? DisplayData = null;
+    [JsonIgnore]
+    public IBuildable? Buildable { get; internal set; }
     public override string ToString()
     {
         return $"{ItemGuid:N} ({Assets.find(ItemGuid)?.FriendlyName ?? "null"}): Instance ID: {InstanceID}; Position: {Position:F0}; Rotation: {Rotation:F0}; Owner: {Owner}; Group: {Group}; State: \"{StateString}\".";

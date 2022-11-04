@@ -44,7 +44,7 @@ public sealed partial class Conquest :
     private KitManager _kitManager;
     private ReviveManager _reviveManager;
     private SquadManager _squadManager;
-    private StructureSaverOld _structureSaver;
+    private StructureSaver _structureSaver;
     private ConquestLeaderboard? _endScreen;
     private ConquestStatTracker _gameStats;
     private TraitManager _traitManager;
@@ -66,7 +66,7 @@ public sealed partial class Conquest :
     public KitManager KitManager => _kitManager;
     public ReviveManager ReviveManager => _reviveManager;
     public SquadManager SquadManager => _squadManager;
-    public StructureSaverOld StructureSaver => _structureSaver;
+    public StructureSaver StructureSaver => _structureSaver;
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     Leaderboard<ConquestStats, ConquestStatTracker>? IImplementsLeaderboard<ConquestStats, ConquestStatTracker>.Leaderboard => _endScreen;

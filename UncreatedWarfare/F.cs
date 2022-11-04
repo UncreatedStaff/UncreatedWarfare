@@ -1,12 +1,15 @@
-﻿using SDG.NetTransport;
+﻿using SDG.Framework.UI.Components;
+using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
@@ -17,6 +20,7 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Singletons;
+using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
 using UnityEngine;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
@@ -26,6 +30,11 @@ namespace Uncreated.Warfare;
 public static class F
 {
     public static bool IsMono { get; } = Type.GetType("Mono.Runtime") != null;
+#if DEBUG
+    public static CancellationToken DebugTimeout => new CancellationTokenSource(10000).Token;
+#else
+    public static CancellationToken DebugTimeout => default;
+#endif
     public static bool HasPlayer(this List<UCPlayer> list, UCPlayer player)
     {
         IEqualityComparer<UCPlayer> c = UCPlayer.Comparer;
@@ -938,7 +947,6 @@ public static class F
         id = default;
         return false;
     }
-
     public static bool MatchGuid<TAsset>(this RotatableConfig<JsonAssetReference<TAsset>>? reference, Guid match) where TAsset : Asset
     {
         return reference.ValidReference(out Guid guid) && guid == match;
@@ -991,5 +999,194 @@ public static class F
         }
 
         return questName;
+    }
+    public static void SetOwnerOrGroup(this IBuildable obj, ulong? owner = null, ulong? group = null)
+    {
+        if (obj.Drop is BarricadeDrop bdrop)
+            SetOwnerOrGroup(bdrop, owner, group);
+        else if (obj.Drop is StructureDrop sdrop)
+            SetOwnerOrGroup(sdrop, owner, group);
+        else
+            throw new InvalidOperationException("Unable to get drop from IBuildable of type " + obj.Type + ".");
+    }
+    public static void SetOwnerOrGroup(BarricadeDrop drop, ulong? owner = null, ulong? group = null)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (!owner.HasValue && !group.HasValue)
+            return;
+        BarricadeData bdata = drop.GetServersideData();
+        ulong o = owner ?? bdata.owner;
+        ulong g = group ?? bdata.group;
+        BarricadeManager.changeOwnerAndGroup(drop.model, o, g);
+        byte[] oldSt = bdata.barricade.state;
+        byte[] state;
+        if (drop.interactable is InteractableStorage storage)
+        {
+            if (oldSt.Length < sizeof(ulong) * 2)
+                oldSt = new byte[sizeof(ulong) * 2];
+            Buffer.BlockCopy(BitConverter.GetBytes(o), 0, oldSt, 0, sizeof(ulong));
+            Buffer.BlockCopy(BitConverter.GetBytes(g), 0, oldSt, sizeof(ulong), sizeof(ulong));
+            BarricadeManager.updateState(drop.model, oldSt, oldSt.Length);
+            drop.ReceiveUpdateState(oldSt);
+            if (Data.SendUpdateBarricadeState != null && BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
+            {
+                if (storage.isDisplay)
+                {
+                    Block block = new Block();
+                    if (storage.displayItem != null)
+                        block.write(storage.displayItem.id, storage.displayItem.quality,
+                            storage.displayItem.state ?? Array.Empty<byte>());
+                    else
+                        block.step += 4;
+                    block.write(storage.displaySkin, storage.displayMythic,
+                        storage.displayTags ?? string.Empty,
+                        storage.displayDynamicProps ?? string.Empty, storage.rot_comp);
+                    byte[] b = block.getBytes(out int size);
+                    state = new byte[size + sizeof(ulong) * 2];
+                    Buffer.BlockCopy(b, 0, state, sizeof(ulong) * 2, size);
+                }
+                else
+                    state = new byte[sizeof(ulong) * 2];
+                Buffer.BlockCopy(oldSt, 0, state, 0, sizeof(ulong) * 2);
+                Data.SendUpdateBarricadeState.Invoke(drop.GetNetId(), ENetReliability.Reliable,
+                    BarricadeManager.EnumerateClients_Remote(x, y, plant), state);
+            }
+        }
+        else if (drop.interactable is InteractableSign sign)
+        {
+            if (oldSt.Length < sizeof(ulong) * 2 + 1)
+                oldSt = new byte[sizeof(ulong) * 2 + 1];
+            Buffer.BlockCopy(BitConverter.GetBytes(o), 0, oldSt, 0, sizeof(ulong));
+            Buffer.BlockCopy(BitConverter.GetBytes(g), 0, oldSt, sizeof(ulong), sizeof(ulong));
+            if (sign.text.StartsWith(Signs.PREFIX, StringComparison.Ordinal) && Data.SendUpdateBarricadeState != null && BarricadeManager.tryGetRegion(drop.model, out byte x, out byte y, out ushort plant, out _))
+            {
+                BarricadeManager.updateState(drop.model, oldSt, oldSt.Length);
+                drop.ReceiveUpdateState(oldSt);
+                NetId id = drop.GetNetId();
+                state = null!;
+                for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+                {
+                    UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                    if (plant != ushort.MaxValue || Regions.checkArea(x, y, pl.Player.movement.region_x,
+                            pl.Player.movement.region_y, BarricadeManager.BARRICADE_REGIONS))
+                    {
+                        byte[] text = System.Text.Encoding.UTF8.GetBytes(Signs.GetClientText(sign.text, pl, sign));
+                        int txtLen = Math.Min(text.Length, byte.MaxValue - 17);
+                        if (state == null || state.Length != txtLen + 17)
+                        {
+                            state = new byte[txtLen + 17];
+                            Buffer.BlockCopy(oldSt, 0, state, 0, sizeof(ulong) * 2);
+                            state[16] = (byte)txtLen;
+                        }
+
+                        Buffer.BlockCopy(text, 0, state, 17, txtLen);
+                        Data.SendUpdateBarricadeState.Invoke(id, ENetReliability.Reliable, pl.Connection, state);
+                    }
+                }
+            }
+            else
+            {
+                BarricadeManager.updateReplicatedState(drop.model, oldSt, oldSt.Length);
+            }
+        }
+        else
+        {
+            switch (drop.asset.build)
+            {
+                case EBuild.DOOR:
+                case EBuild.GATE:
+                case EBuild.SHUTTER:
+                case EBuild.HATCH:
+                    state = new byte[17];
+                    Buffer.BlockCopy(BitConverter.GetBytes(o), 0, state, 0, sizeof(ulong));
+                    Buffer.BlockCopy(BitConverter.GetBytes(g), 0, state, sizeof(ulong), sizeof(ulong));
+                    state[16] = (byte)(oldSt[16] > 0 ? 1 : 0);
+                    break;
+                case EBuild.BED:
+                    state = BitConverter.GetBytes(o);
+                    break;
+                case EBuild.STORAGE:
+                case EBuild.SENTRY:
+                case EBuild.SENTRY_FREEFORM:
+                case EBuild.SIGN:
+                case EBuild.SIGN_WALL:
+                case EBuild.NOTE:
+                case EBuild.LIBRARY:
+                case EBuild.MANNEQUIN:
+                    state = oldSt.Length < sizeof(ulong) * 2
+                        ? new byte[sizeof(ulong) * 2]
+                        : Util.CloneBytes(oldSt);
+                    Buffer.BlockCopy(BitConverter.GetBytes(o), 0, state, 0, sizeof(ulong));
+                    Buffer.BlockCopy(BitConverter.GetBytes(g), 0, state, sizeof(ulong), sizeof(ulong));
+                    break;
+                case EBuild.SPIKE:
+                case EBuild.WIRE:
+                case EBuild.CHARGE:
+                case EBuild.BEACON:
+                case EBuild.CLAIM:
+                    state = oldSt.Length == 0 ? oldSt : Array.Empty<byte>();
+                    if (drop.interactable is InteractableCharge charge)
+                    {
+                        charge.owner = o;
+                        charge.group = g;
+                    }
+                    else if (drop.interactable is InteractableClaim claim)
+                    {
+                        claim.owner = o;
+                        claim.group = g;
+                    }
+                    break;
+                default:
+                    state = oldSt;
+                    break;
+            }
+            bool diff = state.Length != oldSt.Length;
+            if (!diff && state != oldSt)
+            {
+                for (int i = 0; i < state.Length; ++i)
+                {
+                    if (state[i] != oldSt[i])
+                    {
+                        diff = true;
+                        break;
+                    }
+                }
+            }
+            if (diff)
+            {
+                BarricadeManager.updateReplicatedState(drop.model, state, state.Length);
+            }
+        }
+    }
+    public static void SetOwnerOrGroup(StructureDrop drop, ulong? owner = null, ulong? group = null)
+    {
+        ThreadUtil.assertIsGameThread();
+        if (!owner.HasValue && !group.HasValue)
+            return;
+        StructureData sdata = drop.GetServersideData();
+        StructureManager.changeOwnerAndGroup(drop.model, owner ?? sdata.owner, group ?? sdata.group);
+    }
+    public static void EulerToBytes(Vector3 euler, out byte angle_x, out byte angle_y, out byte angle_z)
+    {
+        angle_x = MeasurementTool.angleToByte(euler.x);
+        angle_y = MeasurementTool.angleToByte(euler.y);
+        angle_z = MeasurementTool.angleToByte(euler.z);
+    }
+    public static Vector3 BytesToEuler(byte angle_x, byte angle_y, byte angle_z) =>
+        new Vector3(MeasurementTool.byteToAngle(angle_x), MeasurementTool.byteToAngle(angle_y),
+            MeasurementTool.byteToAngle(angle_z));
+    public static (byte angle_x, byte angle_y, byte angle_z) EulerToBytes(Vector3 euler)
+        => (MeasurementTool.angleToByte(euler.x), MeasurementTool.angleToByte(euler.y),
+            MeasurementTool.angleToByte(euler.z));
+    public static bool AlmostEquals(this Vector3 left, Vector3 right, float tolerance = 0.05f)
+    {
+        return Mathf.Abs(left.x - right.x) < tolerance &&
+               Mathf.Abs(left.y - right.y) < tolerance &&
+               Mathf.Abs(left.z - right.z) < tolerance;
+    }
+    public static bool AlmostEquals(this Vector2 left, Vector2 right, float tolerance = 0.05f)
+    {
+        return Mathf.Abs(left.x - right.x) < tolerance &&
+               Mathf.Abs(left.y - right.y) < tolerance;
     }
 }

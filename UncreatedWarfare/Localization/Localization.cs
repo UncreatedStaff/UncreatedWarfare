@@ -1278,6 +1278,38 @@ public struct LanguageSet : IEnumerator<UCPlayer>
             return rtn;
         }
     }
+    public static IEnumerable<LanguageSet> InRegions(byte x, byte y, ushort plant, byte regionDistance)
+    {
+        if (plant != ushort.MaxValue)
+            return All();
+        lock (languages)
+        {
+            if (languages.Count > 0)
+                languages.Clear();
+            for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
+            {
+                UCPlayer pl = PlayerManager.OnlinePlayers[i];
+                if (!Regions.checkArea(x, y, pl.Player.movement.region_x, pl.Player.movement.region_y, regionDistance)) continue;
+                if (!Data.Languages.TryGetValue(pl.Steam64, out string lang))
+                    lang = L.DEFAULT;
+                bool found = false;
+                for (int i2 = 0; i2 < languages.Count; i2++)
+                {
+                    if (languages[i2].Language.Equals(lang, StringComparison.Ordinal))
+                    {
+                        languages[i2].Add(pl);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    languages.Add(new LanguageSet(lang, pl));
+            }
+            LanguageSetEnumerator rtn = new LanguageSetEnumerator(languages.ToArray());
+            languages.Clear();
+            return rtn;
+        }
+    }
     public static IEnumerable<LanguageSet> InRegionsByTeam(byte x, byte y, byte regionDistance)
     {
         lock (languages)

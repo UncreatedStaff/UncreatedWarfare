@@ -141,6 +141,12 @@ public abstract class BaseAsyncSingleton : IUncreatedSingleton
         await UnloadAsync();
         _isUnloading = false;
     }
+    /// <exception cref="SingletonUnloadedException"/>
+    internal void AssertLoadedIntl()
+    {
+        if (!_isLoaded)
+            throw new SingletonUnloadedException(this.GetType());
+    }
 }
 public abstract class BaseAsyncSingletonComponent : MonoBehaviour, IUncreatedSingleton
 {
@@ -169,6 +175,12 @@ public abstract class BaseAsyncSingletonComponent : MonoBehaviour, IUncreatedSin
         _isLoaded = false;
         await UnloadAsync();
         _isUnloading = false;
+    }
+    /// <exception cref="SingletonUnloadedException"/>
+    internal void AssertLoadedIntl()
+    {
+        if (!_isLoaded)
+            throw new SingletonUnloadedException(this.GetType());
     }
 }
 public abstract class BaseAsyncReloadSingleton : BaseAsyncSingleton, IReloadableSingleton
@@ -202,17 +214,33 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
     protected ListSqlSingleton(string reloadKey, Schema[] schemas) : base(reloadKey, schemas) { }
     public async Task ReloadAsync()
     {
+        Task task;
         if (_isLoading || _isUnloading)
             throw new InvalidOperationException("Already loading or unloading.");
         if (_isLoaded)
         {
             _isLoaded = false;
             _isUnloading = true;
+            task = PreUnload();
+            if (!task.IsCompleted)
+                await task;
             await UnloadAll().ConfigureAwait(false);
+            task = PostUnload();
+            if (!task.IsCompleted)
+                await task;
             _isUnloading = false;
         }
         _isLoading = true;
+        task = PreLoad();
+        if (!task.IsCompleted)
+            await task;
         await Init().ConfigureAwait(false);
+        task = PostLoad();
+        if (!task.IsCompleted)
+            await task;
+        task = PostReload();
+        if (!task.IsCompleted)
+            await task;
         _isLoading = false;
         _isLoaded = true;
     }
@@ -221,7 +249,13 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
         if (_isLoading || _isUnloading)
             throw new InvalidOperationException("Already loading or unloading.");
         _isLoading = true;
+        Task task = PreLoad();
+        if (!task.IsCompleted)
+            await task;
         await Init().ConfigureAwait(false);
+        task = PostLoad();
+        if (!task.IsCompleted)
+            await task;
         _isLoading = false;
         _isLoaded = true;
     }
@@ -231,12 +265,34 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
             throw new InvalidOperationException("Already loading or unloading.");
         _isLoaded = false;
         _isUnloading = true;
+        Task task = PreUnload();
+        if (!task.IsCompleted)
+            await task;
         await UnloadAll().ConfigureAwait(false);
+        task = PostUnload();
+        if (!task.IsCompleted)
+            await task;
         _isUnloading = false;
     }
     public void Reload() => throw new NotImplementedException();
     public void Load() => throw new NotImplementedException();
     public void Unload() => throw new NotImplementedException();
+    /// <remarks>No base.</remarks>
+    public virtual Task PreLoad() => Task.CompletedTask;
+    /// <remarks>No base.</remarks>
+    public virtual Task PostLoad() => Task.CompletedTask;
+    /// <remarks>No base.</remarks>
+    public virtual Task PreUnload() => Task.CompletedTask;
+    /// <remarks>No base.</remarks>
+    public virtual Task PostUnload() => Task.CompletedTask;
+    /// <remarks>No base.</remarks>
+    public virtual Task PostReload() => Task.CompletedTask;
+    /// <exception cref="SingletonUnloadedException"/>
+    internal void AssertLoadedIntl()
+    {
+        if (!_isLoaded)
+            throw new SingletonUnloadedException(this.GetType());
+    }
 }
 public abstract class BaseSingleton : IUncreatedSingleton
 {

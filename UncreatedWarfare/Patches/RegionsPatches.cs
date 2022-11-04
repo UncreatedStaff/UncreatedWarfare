@@ -3,6 +3,7 @@ using SDG.NetPak;
 using SDG.NetTransport;
 using SDG.Unturned;
 using System;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Traits;
@@ -39,7 +40,7 @@ public static partial class Patches
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (trimmedText.StartsWith(Signs.PREFIX, StringComparison.Ordinal))
+            if (trimmedText.StartsWith(Signs.PREFIX, StringComparison.OrdinalIgnoreCase))
             {
                 BarricadeDrop drop = region.FindBarricadeByRootTransform(sign.transform);
                 if (drop == null)
@@ -54,10 +55,11 @@ public static partial class Patches
                 BarricadeManager.updateState(drop.model, newState, newState.Length);
                 sign.updateState(drop.asset, newState);
                 Signs.BroadcastSign(trimmedText, sign, x, y);
-                if (StructureSaverOld.Loaded && StructureSaverOld.SaveExists(drop, out SavedStructure structure))
+                StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+                if (saver != null && saver.TryGetSave(drop, out SavedStructure structure))
                 {
                     structure.Metadata = Util.CloneBytes(newState);
-                    StructureSaverOld.SaveSingleton();
+                    Task.Run(() => Util.TryWrap(saver.AddOrUpdate(structure), "Error saving structure."));
                 }
 
                 if (TraitManager.Loaded && trimmedText.StartsWith(TraitSigns.TRAIT_SIGN_PREFIX,

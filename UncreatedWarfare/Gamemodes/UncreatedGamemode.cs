@@ -160,8 +160,8 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             if (intx.IsGenericType && intx.GetGenericTypeDefinition() == typeof(IImplementsLeaderboard<,>) && intx.GenericTypeArguments.Length > 1)
             {
                 Type tracker = intx.GenericTypeArguments[1];
-                MethodInfo method = intx.GetProperty("WarstatsTracker", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).GetSetMethod(true);
-                method.Invoke(this, new object[1] { gameObject.AddComponent(tracker) });
+                MethodInfo? method = intx.GetProperty("WarstatsTracker", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?.GetSetMethod(true);
+                method?.Invoke(this, new object[] { gameObject.AddComponent(tracker) });
                 break;
             }
         }
@@ -933,8 +933,9 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             L.LogWarning("Barricade regions have not been initialized.");
         try
         {
-            bool isStruct = this is IStructureSaving;
+            //bool isStruct = this is IStructureSaving;
             int fails = 0;
+            StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
             for (byte x = 0; x < Regions.WORLD_SIZE; x++)
             {
                 for (byte y = 0; y < Regions.WORLD_SIZE; y++)
@@ -947,7 +948,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                             for (int i = barricadeRegion.drops.Count - 1; i >= 0; i--)
                             {
                                 BarricadeDrop drop = barricadeRegion.drops[i];
-                                if (!(isStruct && ((StructureSaverOld.Loaded && StructureSaverOld.SaveExists(drop, out _)) || (RequestSigns.Loaded && RequestSigns.SignExists(drop.instanceID, out _)))))
+                                if (!((saver != null && saver.IsLoaded && saver.TryGetSave(drop, out SavedStructure _)) || (RequestSigns.Loaded && RequestSigns.SignExists(drop.instanceID, out _))))
                                 {
                                     if (drop.model.TryGetComponent(out FOBComponent fob))
                                     {
@@ -966,7 +967,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                             for (int i = structureRegion.drops.Count - 1; i >= 0; i--)
                             {
                                 StructureDrop drop = structureRegion.drops[i];
-                                if (!(isStruct && StructureSaverOld.Loaded && StructureSaverOld.SaveExists(drop, out _)))
+                                if (!(saver != null && saver.IsLoaded && saver.TryGetSave(drop, out SavedStructure _)))
                                     StructureManager.destroyStructure(drop, x, y, Vector3.zero);
                             }
                         }
@@ -983,8 +984,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             }
             if (RequestSigns.Loaded)
                 RequestSigns.DropAllSigns();
-            if (StructureSaverOld.Loaded)
-                StructureSaverOld.Singleton.CheckAll();
             IconManager.OnLevelLoaded();
         }
         catch (Exception ex)

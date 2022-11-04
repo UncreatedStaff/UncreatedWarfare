@@ -79,6 +79,7 @@ public class UCWarfare : MonoBehaviour
         Logging.OnLogWarning += L.NetLogWarning;
         Logging.OnLogError += L.NetLogError;
         Logging.OnLogException += L.NetLogException;
+        Logging.ExecuteOnMainThread = RunOnMainThread;
         NetFactory.Reflect(Assembly.GetExecutingAssembly(), ENetCall.FROM_SERVER);
 
         L.Log("Registering Commands: ", ConsoleColor.Magenta);
@@ -345,17 +346,6 @@ public class UCWarfare : MonoBehaviour
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
         StatsManager.UnloadEvents();
     }
-    internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests = new Queue<MainThreadTask.MainThreadResult>();
-    public static MainThreadTask ToUpdate() => new MainThreadTask(false);
-    public static MainThreadTask SkipFrame() => new MainThreadTask(true);
-    public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
-    /// <param name="action">Method to be ran on the main thread in an update dequeue loop.</param>
-    /// <param name="skipFrame">If this is called on the main thread it will queue it to be called next update or at the end of the current frame.</param>
-    public static void RunOnMainThread(System.Action action, bool skipFrame = false)
-    {
-        MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask(skipFrame));
-        res.OnCompleted(action);
-    }
     internal void UpdateLangs(UCPlayer player)
     {
 #if DEBUG
@@ -418,25 +408,68 @@ public class UCWarfare : MonoBehaviour
                 TraitManager.BuffUI.SendBuffs(player);
         }
     }
+
+    private static Queue<MainThreadTask.MainThreadResult>? _threadActionRequests;
+    private static Queue<LevelLoadTask.LevelLoadResult>? _levelLoadRequests;
+    internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests => _threadActionRequests ??= new Queue<MainThreadTask.MainThreadResult>(4);
+    internal static Queue<LevelLoadTask.LevelLoadResult> LevelLoadRequests => _levelLoadRequests ??= new Queue<LevelLoadTask.LevelLoadResult>(4);
+    public static MainThreadTask ToUpdate() => new MainThreadTask(false);
+    public static MainThreadTask SkipFrame() => new MainThreadTask(true);
+    public static LevelLoadTask ToLevelLoad() => new LevelLoadTask();
+    public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
+
+    /// <param name="action">Method to be ran on the main thread in an update dequeue loop.</param>
+    public static void RunOnMainThread(System.Action action) => RunOnMainThread(action, false);
+    /// <param name="action">Method to be ran on the main thread in an update dequeue loop.</param>
+    /// <param name="skipFrame">If this is called on the main thread it will queue it to be called next update or at the end of the current frame.</param>
+    public static void RunOnMainThread(System.Action action, bool skipFrame)
+    {
+        MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask(skipFrame));
+        res.OnCompleted(action);
+    }
     [UsedImplicitly]
     private void Update()
     {
-        while (ThreadActionRequests.Count > 0)
+        if (_threadActionRequests != null)
         {
-            MainThreadTask.MainThreadResult? res = null;
-            try
+            while (_threadActionRequests.Count > 0)
             {
-                res = ThreadActionRequests.Dequeue();
-                res.continuation();
+                MainThreadTask.MainThreadResult? res = null;
+                try
+                {
+                    res = _threadActionRequests.Dequeue();
+                    res.continuation();
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error executing main thread operation.");
+                    L.LogError(ex);
+                }
+                finally
+                {
+                    res?.Complete();
+                }
             }
-            catch (Exception ex)
+        }
+        if (_levelLoadRequests != null && Level.isLoaded)
+        {
+            while (_levelLoadRequests.Count > 0)
             {
-                L.LogError("ERROR DEQUEUEING AND RUNNING MAIN THREAD OPERATION");
-                L.LogError(ex);
-            }
-            finally
-            {
-                res?.Complete();
+                LevelLoadTask.LevelLoadResult? res = null;
+                try
+                {
+                    res = _levelLoadRequests.Dequeue();
+                    res.continuation();
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error executing level load operation.");
+                    L.LogError(ex);
+                }
+                finally
+                {
+                    res?.Complete();
+                }
             }
         }
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)

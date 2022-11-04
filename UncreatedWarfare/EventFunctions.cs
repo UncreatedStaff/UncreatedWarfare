@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Deaths;
@@ -837,7 +838,8 @@ public static class EventFunctions
                 shouldAllow = false;
             }
 
-            if (Structures.StructureSaverOld.SaveExists(drop, out Structures.SavedStructure s))
+            StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+            if (saver != null && saver.IsLoaded && saver.TryGetSave(drop, out SavedStructure _))
             {
                 shouldAllow = false;
                 return;
@@ -935,7 +937,8 @@ public static class EventFunctions
             }
             StructureDrop drop = StructureManager.FindStructureByRootTransform(structureTransform);
             if (drop == null) return;
-            if (StructureSaverOld.SaveExists(drop, out SavedStructure s))
+            StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+            if (saver != null && saver.IsLoaded && saver.TryGetSave(drop, out SavedStructure _))
             {
                 shouldAllow = false;
                 return;
@@ -1242,11 +1245,29 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (StructureSaverOld.SaveExists(instanceID, EStructType.STRUCTURE, out SavedStructure found))
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        Vector3 pt = point, rt = F.BytesToEuler(angle_x, angle_y, angle_z);
+        if (saver != null && saver.TryGetSave(instanceID, EStructType.STRUCTURE, out SqlItem<SavedStructure> item) && item.Item != null)
         {
-            found.Position = point;
-            found.Rotation = new Vector3(angle_x * 2f, angle_y * 2f, angle_z * 2f);
-            StructureSaverOld.SaveSingleton();
+            Task.Run(async () =>
+            {
+                await item.Enter().ConfigureAwait(false);
+                try
+                {
+                    item.Item.Position = pt;
+                    item.Item.Rotation = rt;
+                    await item.SaveItem();
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error saving structure workzone move.");
+                    L.LogError(ex);
+                }
+                finally
+                {
+                    item.Release();
+                }
+            });
         }
     }
     internal static void BarricadeMovedInWorkzone(CSteamID instigator, byte x, byte y, ushort plant, uint instanceID, ref Vector3 point, ref byte angle_x, ref byte angle_y, ref byte angle_z, ref bool shouldAllow)
@@ -1254,11 +1275,29 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (StructureSaverOld.SaveExists(instanceID, EStructType.BARRICADE, out SavedStructure found))
+        StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+        Vector3 pt = point, rt = F.BytesToEuler(angle_x, angle_y, angle_z);
+        if (saver != null && saver.TryGetSave(instanceID, EStructType.BARRICADE, out SqlItem<SavedStructure> item) && item.Item != null)
         {
-            found.Position = point;
-            found.Rotation = new Vector3(angle_x * 2f, angle_y * 2f, angle_z * 2f);
-            StructureSaverOld.SaveSingleton();
+            Task.Run(async () =>
+            {
+                await item.Enter().ConfigureAwait(false);
+                try
+                {
+                    item.Item.Position = pt;
+                    item.Item.Rotation = rt;
+                    await item.SaveItem();
+                }
+                catch (Exception ex)
+                {
+                    L.LogError("Error saving structure workzone move.");
+                    L.LogError(ex);
+                }
+                finally
+                {
+                    item.Release();
+                }
+            });
         }
         UCBarricadeManager.GetBarricadeFromInstID(instanceID, out BarricadeDrop? drop);
         if (drop != default)

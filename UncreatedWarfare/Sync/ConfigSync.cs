@@ -1342,6 +1342,16 @@ public sealed class SyncPacket : IReadWrite
     public override string ToString() => $"Sync packet containing {PropertyGroups.Count} documents. Timestamp: {Timestamp:G} UTC.";
 }
 
+public enum WarfareSyncTypes
+{
+    None,
+    StructureSaver,
+    KitManager,
+    VehicleBay,
+    VehicleSigns,
+    VehicleSpawner
+}
+
 public enum SyncMode
 {
     Manual,
