@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Networking;
 using ItemData = Uncreated.Framework.Assets.ItemData;
-
+    
 namespace Uncreated.Warfare;
 
 public static class UCAssetManager

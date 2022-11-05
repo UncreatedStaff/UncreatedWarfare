@@ -281,12 +281,6 @@ public static class Data
         L.Log("Loading first gamemode...", ConsoleColor.Magenta);
         if (!await Gamemode.TryLoadGamemode(Gamemode.GetNextGamemode() ?? typeof(TeamCTF)))
             throw new SingletonLoadException(ESingletonLoadType.LOAD, null, new Exception("Failed to load gamemode"));
-
-        if (!UCWarfare.Config.DisableDailyQuests)
-        {
-            Quests.QuestManager.Init();
-            Quests.DailyQuests.Load();
-        }
     }
     internal static void RegisterInitialSyncs()
     {

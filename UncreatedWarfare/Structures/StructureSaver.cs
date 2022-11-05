@@ -498,7 +498,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
                 if (_onStateUpdatedInteractableStorageMethod != null)
                 {
                     inv.onStateUpdated = (StateUpdated)Delegate.Combine(inv.onStateUpdated,
-                        _onStateUpdatedInteractableStorageMethod.CreateDelegate(typeof(Action), inv));
+                        _onStateUpdatedInteractableStorageMethod.CreateDelegate(typeof(StateUpdated), intx));
                 }
                 else L.LogWarning("Unknown method: void onStateUpdated() in InteractableStorage.");
                 Data.SetStorageInventory(intx, inv);

@@ -367,6 +367,11 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     private void InternalPostInit()
     {
         _ticks = 0;
+        if (!UCWarfare.Config.DisableDailyQuests)
+        {
+            QuestManager.Init();
+            DailyQuests.Load();
+        }
     }
     public async Task OnLevelReady()
     {

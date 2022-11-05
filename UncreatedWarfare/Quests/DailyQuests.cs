@@ -174,8 +174,7 @@ public static class DailyQuests
     {
         if (QuestManager.Quests.Count <= DailyQuest.DAILY_QUEST_CONDITION_LENGTH)
         {
-            L.LogError("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
-            return;
+            throw new Exception("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
         }
         DateTime now = DateTime.Today;
         for (int day = 0; day < DailyQuest.DAILY_QUEST_LENGTH; ++day)
@@ -191,8 +190,7 @@ public static class DailyQuests
     {
         if (QuestManager.Quests.Count <= DailyQuest.DAILY_QUEST_CONDITION_LENGTH)
         {
-            L.LogError("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
-            return;
+            throw new Exception("Not enough quest types defined to create " + DailyQuest.DAILY_QUEST_CONDITION_LENGTH + " daily quests.");
         }
         int half = DailyQuest.DAILY_QUEST_LENGTH / 2;
         DailyQuest[] quests = _sendQuests;
