@@ -614,6 +614,19 @@ internal class SingletonManager : MonoBehaviour
                 return singletons[i].Singleton as T;
         return null;
     }
+    /// <summary>Get a singleton by type.</summary>
+    /// <typeparam name="T">Type of <see cref="IUncreatedSingleton"/> to get.</typeparam>
+    /// <returns>Singleton of type <typeparamref name="T"/>, or <see langword="null"/> if it isn't found.</returns>
+    public IUncreatedSingleton? GetSingleton(Type type)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        for (int i = 0; i < singletons.Count; ++i)
+            if (singletons[i].SingletonType == type)
+                return singletons[i].Singleton;
+        return null;
+    }
     /// <summary>Check if a singleton is loaded.</summary>
     /// <typeparam name="T">Type of <see cref="IUncreatedSingleton"/> to check for.</typeparam>
     /// <returns><see langword="True"/> if <typeparamref name="T"/> singleton is loaded, otherwise <see langword="false"/>.</returns>

@@ -1355,7 +1355,8 @@ public enum WarfareSyncTypes
 public enum SyncMode
 {
     Manual,
-    Automatic
+    Automatic,
+    NoSync
 }
 public interface ISyncObject
 {
