@@ -1,6 +1,8 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes.Interfaces;
@@ -32,202 +34,293 @@ public class StructureCommand : Command
 
         ctx.AssertArgs(1, SYNTAX);
 
-        if (ctx.MatchParameter(0, "save"))
+        ctx.Defer();
+        
+        Task.Run(async () =>
         {
-            ctx.AssertGamemode<IStructureSaving>();
-
-            ctx.AssertPermissions(EAdminType.HELPER);
-
-            if (ctx.TryGetTarget(out StructureDrop structure))
+            try
             {
-                if (StructureSaver.AddStructure(structure, out SavedStructure st))
-                {
-                    ctx.Reply(T.StructureSaved, st);
-                    ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
-                        $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {st.Position} ({st.InstanceID})");
-                }
-                else if (st is not null)
-                    throw ctx.Reply(T.StructureAlreadySaved, st);
-                else
-                    throw ctx.SendUnknownError();
-            }
-            else if (ctx.TryGetTarget(out BarricadeDrop barricade))
-            {
-                if (StructureSaver.AddBarricade(barricade, out SavedStructure st))
-                {
-                    ctx.Reply(T.StructureSaved, st);
-                    ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
-                        $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {st.Position} ({st.InstanceID})");
-                }
-                else if (st is not null)
-                    throw ctx.Reply(T.StructureAlreadySaved, st);
-                else
-                    throw ctx.SendUnknownError();
-            }
-            else throw ctx.Reply(T.StructureNoTarget);
-        }
-        else if (ctx.MatchParameter(0, "remove", "delete"))
-        {
-            ctx.AssertGamemode<IStructureSaving>();
+                await UCWarfare.ToLevelLoad();
+                StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+                if (saver == null)
+                    throw ctx.SendNotEnabled();
 
-            ctx.AssertPermissions(EAdminType.HELPER);
-
-            if (ctx.TryGetTarget(out StructureDrop structure))
-            {
-                if (StructureSaver.SaveExists(structure, out SavedStructure st))
+                if (ctx.MatchParameter(0, "save"))
                 {
-                    if (StructureSaver.RemoveSave(st))
+                    ctx.AssertGamemode<IStructureSaving>();
+
+                    ctx.AssertPermissions(EAdminType.HELPER);
+
+                    if (ctx.TryGetTarget(out StructureDrop structure))
                     {
-                        ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
-                            $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {st.Position} ({st.InstanceID})");
-                        ctx.Reply(T.StructureUnsaved, st);
+                        (SqlItem<SavedStructure> item, bool isNew) = await saver.AddStructure(structure).ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                        if (isNew && item.Item != null)
+                        {
+                            ctx.Reply(T.StructureSaved, item.Item);
+                            ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
+                                $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {item.Item.Position:0:##} ({item.Item.InstanceID})");
+                        }
+                        else if (item.Item != null)
+                            throw ctx.Reply(T.StructureAlreadySaved, item.Item);
+                        else
+                            throw ctx.SendUnknownError();
+                    }
+                    else if (ctx.TryGetTarget(out BarricadeDrop barricade))
+                    {
+                        (SqlItem<SavedStructure> item, bool isNew) = await saver.AddBarricade(barricade).ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                        if (isNew && item.Item != null)
+                        {
+                            ctx.Reply(T.StructureSaved, item.Item);
+                            ctx.LogAction(EActionLogType.SAVE_STRUCTURE,
+                                $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {item.Item.Position:0:##} ({item.Item.InstanceID})");
+                        }
+                        else if (item.Item != null)
+                            throw ctx.Reply(T.StructureAlreadySaved, item.Item);
+                        else
+                            throw ctx.SendUnknownError();
+                    }
+                    else throw ctx.Reply(T.StructureNoTarget);
+                }
+                else if (ctx.MatchParameter(0, "remove", "delete"))
+                {
+                    ctx.AssertGamemode<IStructureSaving>();
+
+                    ctx.AssertPermissions(EAdminType.HELPER);
+
+                    if (ctx.TryGetTarget(out StructureDrop structure))
+                    {
+                        SqlItem<SavedStructure>? item = await saver.GetSaveItem(structure).ConfigureAwait(false);
+                        if (item?.Item != null)
+                        {
+                            await item.Enter().ConfigureAwait(false);
+                            try
+                            {
+                                SavedStructure oldItem = item.Item;
+                                await item.Delete().ConfigureAwait(false);
+                                await UCWarfare.ToUpdate();
+                                ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                                    $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID})");
+                                ctx.Reply(T.StructureUnsaved, oldItem);
+                            }
+                            finally
+                            {
+                                item.Release();
+                            }
+                        }
+                        else
+                        {
+                            await UCWarfare.ToUpdate();
+                            throw ctx.Reply(T.StructureAlreadyUnsaved, structure.asset);
+                        }
+                    }
+                    else if (ctx.TryGetTarget(out BarricadeDrop barricade))
+                    {
+                        SqlItem<SavedStructure>? item = await saver.GetSaveItem(barricade).ConfigureAwait(false);
+                        if (item?.Item != null)
+                        {
+                            await item.Enter().ConfigureAwait(false);
+                            try
+                            {
+                                SavedStructure oldItem = item.Item;
+                                await item.Delete().ConfigureAwait(false);
+                                await UCWarfare.ToUpdate();
+                                ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                                    $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID})");
+                                ctx.Reply(T.StructureUnsaved, oldItem);
+                            }
+                            finally
+                            {
+                                item.Release();
+                            }
+                        }
+                        else
+                        {
+                            await UCWarfare.ToUpdate();
+                            throw ctx.Reply(T.StructureAlreadyUnsaved, barricade.asset);
+                        }
+                    }
+                    else throw ctx.Reply(T.StructureNoTarget);
+                }
+                else if (ctx.MatchParameter(0, "pop", "destroy"))
+                {
+                    ctx.AssertPermissions(EAdminType.HELPER);
+
+                    if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+                    {
+                        VehicleBay.DeleteVehicle(vehicle);
+
+                        ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                            $"VEHICLE: {vehicle.asset.vehicleName} / {vehicle.asset.id} /" +
+                            $" {vehicle.asset.GUID:N} at {vehicle.transform.position:N2} ({vehicle.instanceID})");
+                        ctx.Reply(T.StructureDestroyed, vehicle.asset);
+                    }
+                    else if (ctx.TryGetTarget(out StructureDrop structure))
+                    {
+                        SqlItem<SavedStructure>? item = await saver.GetSaveItem(structure).ConfigureAwait(false);
+                        if (item?.Item != null)
+                        {
+                            await item.Enter().ConfigureAwait(false);
+                            try
+                            {
+                                SavedStructure oldItem = item.Item;
+                                await item.Delete().ConfigureAwait(false);
+                                await UCWarfare.ToUpdate();
+                                ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                                    $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID}) (Autmoatically unsaved before destroy)");
+                                ctx.Reply(T.StructureUnsaved, oldItem);
+                            }
+                            finally
+                            {
+                                item.Release();
+                            }
+                        }
+                        else await UCWarfare.ToUpdate();
+
+                        DestroyStructure(structure, ctx.Caller);
+                        ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                            $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
+                            $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2")} ({structure.instanceID})");
+                    }
+                    else if (ctx.TryGetTarget(out BarricadeDrop barricade))
+                    {
+                        SqlItem<SavedStructure>? item = await saver.GetSaveItem(barricade).ConfigureAwait(false);
+                        if (item?.Item != null)
+                        {
+                            await item.Enter().ConfigureAwait(false);
+                            try
+                            {
+                                SavedStructure oldItem = item.Item;
+                                await item.Delete().ConfigureAwait(false);
+                                await UCWarfare.ToUpdate();
+                                ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
+                                    $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {oldItem.Position} ({oldItem.InstanceID}) (Autmoatically unsaved before destroy)");
+                                ctx.Reply(T.StructureUnsaved, oldItem);
+                            }
+                            finally
+                            {
+                                item.Release();
+                            }
+                        }
+                        else await UCWarfare.ToUpdate();
+
+                        DestroyBarricade(barricade, ctx.Caller);
+                        ctx.LogAction(EActionLogType.POP_STRUCTURE,
+                            $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
+                            $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2")} ({barricade.instanceID})");
+                        ctx.Defer();
+                    }
+                }
+                else if (ctx.MatchParameter(0, "examine", "exam", "wtf"))
+                {
+                    if (ctx.TryGetTarget(out InteractableVehicle vehicle))
+                    {
+                        ExamineVehicle(vehicle, ctx.Caller, true);
+                        ctx.Defer();
+                    }
+                    else if (ctx.TryGetTarget(out StructureDrop structure))
+                    {
+                        ExamineStructure(structure, ctx.Caller, true);
+                        ctx.Defer();
+                    }
+                    else if (ctx.TryGetTarget(out BarricadeDrop barricade))
+                    {
+                        ExamineBarricade(barricade, ctx.Caller, true);
+                        ctx.Defer();
+                    }
+                    else throw ctx.Reply(T.StructureExamineNotExaminable);
+                }
+                else if (ctx.MatchParameter(0, "set", "s"))
+                {
+                    ctx.AssertPermissions(EAdminType.MODERATOR);
+
+                    ctx.AssertHelpCheck(1, "/structure <set|s> <group|owner> <value> - Sets properties for strcuture saves.");
+
+                    if (ctx.HasArg(2))
+                    {
+                        bool grp = ctx.MatchParameter(1, "group");
+                        if (!grp && !ctx.MatchParameter(1, "owner"))
+                            throw ctx.SendCorrectUsage("/structure <set|s> <group|owner> <value>");
+                        SqlItem<SavedStructure>? data;
+                        BarricadeDrop? barricade = null;
+                        ItemAsset asset;
+                        if (ctx.TryGetTarget(out StructureDrop structure))
+                        {
+                            data = await saver.GetSaveItem(structure);
+                            asset = structure.asset;
+                        }
+                        else if (ctx.TryGetTarget(out barricade))
+                        {
+                            data = await saver.GetSaveItem(barricade!);
+                            asset = barricade.asset;
+                        }
+                        else throw ctx.Reply(T.StructureNoTarget);
+
+                        await UCWarfare.ToUpdate();
+                        bool saved = data?.Item?.Buildable?.Drop is not null;
+                        if (!ctx.TryGet(2, out ulong s64) || s64 != 0 && (!grp && !OffenseManager.IsValidSteam64ID(s64)))
+                        {
+                            if (ctx.MatchParameter(2, "me"))
+                                s64 = grp ? ctx.Caller.Player.quests.groupID.m_SteamID : ctx.CallerID;
+                            else throw ctx.SendCorrectUsage("/structure <set|s> <group|owner> <value> - Value must be 'me', '0' or a valid Steam64 ID");
+                        }
+                        string s64s = s64.ToString(Data.AdminLocale);
+
+                        if (saved)
+                        {
+                            await data!.Enter().ConfigureAwait(false);
+                            try
+                            {
+                                await UCWarfare.ToUpdate();
+                                if (grp)
+                                    data.Item!.Group = s64;
+                                else // owner
+                                    data.Item!.Owner = s64;
+
+                                data.Item!.Buildable!.SetOwnerOrGroup(data.Item.Owner, data.Item.Group);
+                                await data.SaveItem().ConfigureAwait(false);
+                            }
+                            finally
+                            {
+                                data.Release();
+                            }
+
+                            await UCWarfare.ToUpdate();
+                            ctx.LogAction(EActionLogType.SET_SAVED_STRUCTURE_PROPERTY, $"{asset?.itemName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.Item.ItemGuid:N} - SET " + (grp ? "GROUP" : "OWNER") + " >> " + s64s);
+                        }
+                        else
+                        {
+                            ulong? group = grp ? s64 : null;
+                            ulong? owner = grp ? null : s64;
+                            if (structure != null)
+                                F.SetOwnerOrGroup(structure, owner, group);
+                            else if (barricade != null)
+                                F.SetOwnerOrGroup(barricade, owner, group);
+                            else throw ctx.Reply(T.StructureNoTarget);
+                        }
+                        if (grp)
+                        {
+                            FactionInfo? info = TeamManager.GetFactionSafe(s64);
+                            if (info != null)
+                                s64s = info.GetName(ctx.Caller.Language).ColorizeTMPro(info.HexColor);
+                        }
+                        ctx.Reply(T.StructureSaveSetProperty!, grp ? "Group" : "Owner", asset, s64s);
                     }
                     else
-                        throw ctx.SendUnknownError();
+                        ctx.SendCorrectUsage("/structure <set|s> <group|owner> <value>");
                 }
-                else throw ctx.Reply(T.StructureAlreadyUnsaved, structure.asset);
+                else
+                    ctx.SendCorrectUsage(SYNTAX);
             }
-            else if (ctx.TryGetTarget(out BarricadeDrop barricade))
+            catch (BaseCommandInteraction)
+            { }
+            catch (Exception ex)
             {
-                if (StructureSaver.SaveExists(barricade, out SavedStructure st))
-                {
-                    if (StructureSaver.RemoveSave(st))
-                    {
-                        ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
-                            $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {st.Position} ({st.InstanceID})");
-                        ctx.Reply(T.StructureUnsaved, st);
-                    }
-                    else
-                        throw ctx.SendUnknownError();
-                }
-                else throw ctx.Reply(T.StructureAlreadyUnsaved, barricade.asset);
+                L.LogError("Error in structure command.");
+                L.LogError(ex);
             }
-            else throw ctx.Reply(T.StructureNoTarget);
-        }
-        else if (ctx.MatchParameter(0, "pop", "destroy"))
-        {
-            ctx.AssertPermissions(EAdminType.HELPER);
-
-            if (ctx.TryGetTarget(out InteractableVehicle vehicle))
-            {
-                VehicleBay.DeleteVehicle(vehicle);
-
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
-                    $"VEHICLE: {vehicle.asset.vehicleName} / {vehicle.asset.id} /" +
-                    $" {vehicle.asset.GUID:N} at {vehicle.transform.position:N2} ({vehicle.instanceID})");
-                ctx.Reply(T.StructureDestroyed, vehicle.asset);
-            }
-            else if (ctx.TryGetTarget(out StructureDrop structure))
-            {
-                if (StructureSaver.SaveExists(structure, out SavedStructure st))
-                {
-                    if (StructureSaver.RemoveSave(st))
-                    {
-                        ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
-                            $"{structure.asset.itemName} / {structure.asset.id} / {structure.asset.GUID:N} at {st.Position} ({st.InstanceID})");
-                        ctx.Reply(T.StructureUnsaved, st);
-                    }
-                    else ctx.SendUnknownError();
-                }
-
-                DestroyStructure(structure, ctx.Caller);
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
-                    $"STRUCTURE: {structure.asset.itemName} / {structure.asset.id} /" +
-                    $" {structure.asset.GUID:N} at {structure.model.transform.position.ToString("N2")} ({structure.instanceID})");
-                ctx.Defer();
-            }
-            else if (ctx.TryGetTarget(out BarricadeDrop barricade))
-            {
-                if (StructureSaver.SaveExists(barricade, out SavedStructure st))
-                {
-                    if (StructureSaver.RemoveSave(st))
-                    {
-                        ctx.LogAction(EActionLogType.UNSAVE_STRUCTURE,
-                            $"{barricade.asset.itemName} / {barricade.asset.id} / {barricade.asset.GUID:N} at {st.Position} ({st.InstanceID})");
-                        ctx.Reply(T.StructureUnsaved, st);
-                    }
-                    else ctx.SendUnknownError();
-                }
-
-                DestroyBarricade(barricade, ctx.Caller);
-                ctx.LogAction(EActionLogType.POP_STRUCTURE,
-                    $"BARRICADE: {barricade.asset.itemName} / {barricade.asset.id} /" +
-                    $" {barricade.asset.GUID:N} at {barricade.model.transform.position.ToString("N2")} ({barricade.instanceID})");
-                ctx.Defer();
-            }
-        }
-        else if (ctx.MatchParameter(0, "examine", "exam", "wtf"))
-        {
-            if (ctx.TryGetTarget(out InteractableVehicle vehicle))
-            {
-                ExamineVehicle(vehicle, ctx.Caller, true);
-                ctx.Defer();
-            }
-            else if (ctx.TryGetTarget(out StructureDrop structure))
-            {
-                ExamineStructure(structure, ctx.Caller, true);
-                ctx.Defer();
-            }
-            else if (ctx.TryGetTarget(out BarricadeDrop barricade))
-            {
-                ExamineBarricade(barricade, ctx.Caller, true);
-                ctx.Defer();
-            }
-            else throw ctx.Reply(T.StructureExamineNotExaminable);
-        }
-        else if (ctx.MatchParameter(0, "set", "s"))
-        {
-            ctx.AssertPermissions(EAdminType.MODERATOR);
-
-            ctx.AssertHelpCheck(1, "/structure <set|s> <group|owner> <value> - Sets properties for strcuture saves.");
-
-            if (ctx.TryGet(2, out string value) && ctx.TryGet(1, out string property))
-            {
-                ESetFieldResult result;
-                SavedStructure? data;
-                if (ctx.TryGetTarget(out StructureDrop structure))
-                {
-                    StructureSaver.SaveExists(structure, out data);
-                }
-                else if (ctx.TryGetTarget(out BarricadeDrop barricade))
-                {
-                    StructureSaver.SaveExists(barricade, out data);
-                }
-                else throw ctx.Reply(T.StructureNoTarget);
-                if (data is null)
-                    throw ctx.Reply(T.StructureAlreadyUnsaved, structure.asset);
-
-                result = StructureSaver.Singleton.SetProperty(data, ref property, value);
-                switch (result)
-                {
-                    case ESetFieldResult.SUCCESS:
-                        ItemAsset? asset = Assets.find<ItemAsset>(data.ItemGuid);
-                        ctx.LogAction(EActionLogType.SET_SAVED_STRUCTURE_PROPERTY, $"{asset?.itemName ?? "null"} / {(asset == null ? 0 : asset.id)} / {data.ItemGuid:N} - SET " + property.ToUpper() + " >> " + value.ToUpper());
-                        ctx.Reply(T.StructureSaveSetProperty!, property, asset, value);
-                        StructureSaver.Singleton.Check(data);
-                        StructureSaver.SaveSingleton();
-                        break;
-                    default:
-                    case ESetFieldResult.OBJECT_NOT_FOUND:
-                        ctx.Reply(T.StructureAlreadyUnsaved);
-                        break;
-                    case ESetFieldResult.FIELD_NOT_FOUND:
-                        ctx.Reply(T.StructureSaveInvalidProperty, property);
-                        break;
-                    case ESetFieldResult.FIELD_NOT_SERIALIZABLE:
-                    case ESetFieldResult.INVALID_INPUT:
-                        ctx.Reply(T.StructureSaveInvalidSetValue, value, property);
-                        break;
-                    case ESetFieldResult.FIELD_PROTECTED:
-                        ctx.Reply(T.StructureSaveNotJsonSettable, property);
-                        break;
-                }
-            }
-            else
-                ctx.SendCorrectUsage("/structure <set|s> <group|owner> <value>");
-        }
-        else
-            ctx.SendCorrectUsage(SYNTAX);
+        });
     }
 
     private void DestroyBarricade(BarricadeDrop bdrop, Player player)

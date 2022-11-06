@@ -67,15 +67,18 @@ internal class DebugComponent : MonoBehaviour
     {
         avgFrameRate = (avgFrameRate * updates + Time.deltaTime) / ++updates;
         _lastDt = Time.deltaTime;
+#if !DEBUG
         if (_lastDt > _maxUpdateSpeed && Level.isLoaded)
             L.LogWarning("Update took " + _lastDt.ToString("F6", Data.Locale) + " seconds, higher than the max: " + _maxUpdateSpeed.ToString("F3", Data.Locale) + "!!", ConsoleColor.Yellow);
-
+#endif
     }
     private void FixedUpdate()
     {
         float t = Time.realtimeSinceStartup;
+#if !DEBUG
         if (t - _lastFixed > _maxFixedUpdateSpeed && Level.isLoaded)
             L.LogWarning("FixedUpdate took " + (t - _lastFixed).ToString("F6", Data.Locale) + " seconds, higher than the max: " + _maxFixedUpdateSpeed.ToString("F3", Data.Locale) + "!!", ConsoleColor.Yellow);
+#endif
         _lastFixed = t;
     }
     private void LateUpdate()

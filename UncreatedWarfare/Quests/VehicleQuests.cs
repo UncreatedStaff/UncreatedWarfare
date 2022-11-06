@@ -4,6 +4,7 @@ using System.Text.Json;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Vehicles;
+using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 

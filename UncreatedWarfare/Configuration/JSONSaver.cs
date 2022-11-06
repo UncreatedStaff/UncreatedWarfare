@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Warfare.Singletons;
 
 namespace Uncreated.Warfare.Configuration;
@@ -332,7 +333,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
             property = field.Name;
             if (reason == ESetFieldResult.SUCCESS)
             {
-                if (F.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
+                if (Util.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
                 {
                     try
                     {
@@ -419,162 +420,6 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
             reason = ESetFieldResult.FIELD_PROTECTED;
             return false;
         }
-    }
-}
-public static class JsonEx
-{
-    private static readonly JavaScriptEncoder jsEncoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
-    public static readonly JsonSerializerOptions serializerSettings = new JsonSerializerOptions()
-    {
-        WriteIndented = true,
-        IncludeFields = true,
-        AllowTrailingCommas = true,
-        Encoder = jsEncoder
-    };
-    public static readonly JsonSerializerOptions condensedSerializerSettings = new JsonSerializerOptions()
-    {
-        WriteIndented = false,
-        IncludeFields = true,
-        AllowTrailingCommas = true,
-        Encoder = jsEncoder
-    };
-    public static readonly JsonWriterOptions writerOptions = new JsonWriterOptions() { Indented = true, Encoder = jsEncoder };
-    public static readonly JsonWriterOptions condensedWriterOptions = new JsonWriterOptions() { Indented = false, Encoder = jsEncoder };
-    public static readonly JsonReaderOptions readerOptions = new JsonReaderOptions() { AllowTrailingCommas = true };
-    static JsonEx()
-    {
-        serializerSettings.Converters.Add(new Vector3JsonConverter());
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, bool value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteBooleanValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, byte value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, byte[] value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteBase64StringValue(new ReadOnlySpan<byte>(value));
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, ReadOnlySpan<byte> value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteBase64StringValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, char value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStringValue(new string(new char[1] { value }));
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, decimal value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, double value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, float value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, int value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, long value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, sbyte value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, short value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, string value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStringValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, DateTime value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStringValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, DateTimeOffset value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStringValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, Guid value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStringValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, TimeSpan value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStringValue(value.ToString());
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, uint value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, ulong value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, ushort value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteNumberValue(value);
-    }
-    public static void WriteProperty(this Utf8JsonWriter writer, string propertyName, IJsonReadWrite value)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStartObject();
-        value.WriteJson(writer);
-        writer.WriteEndObject();
-    }
-    public static void WriteArrayProperty(this Utf8JsonWriter writer, string propertyName, IJsonReadWrite[] values)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStartArray();
-        for (int i = 0; i < values.Length; i++)
-        {
-            writer.WriteStartObject();
-            values[i].WriteJson(writer);
-            writer.WriteEndObject();
-        }
-        writer.WriteEndArray();
-    }
-    public static void WriteArrayProperty(this Utf8JsonWriter writer, string propertyName, IEnumerable<IJsonReadWrite> values)
-    {
-        writer.WritePropertyName(propertyName);
-        writer.WriteStartArray();
-        foreach (IJsonReadWrite jwr in values)
-        {
-            writer.WriteStartObject();
-            jwr.WriteJson(writer);
-            writer.WriteEndObject();
-        }
-        writer.WriteEndArray();
     }
 }
 public enum ESetFieldResult : byte

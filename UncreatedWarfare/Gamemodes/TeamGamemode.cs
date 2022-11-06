@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Events.Players;
@@ -30,38 +31,46 @@ public abstract class TeamGamemode : Gamemode, ITeams
         if (UseTeamSelector)
             AddSingletonRequirement(ref _teamSelector);
     }
-    protected override void PreDispose()
+    protected override Task PreDispose()
     {
+        ThreadUtil.assertIsGameThread();
         if (HasOnReadyRan)
             DestroyBlockers();
+
+        return Task.CompletedTask;
     }
-    protected override void PostInit()
+    protected override Task PostInit()
     {
+        ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
         }
+
+        return Task.CompletedTask;
     }
-    protected override void PreGameStarting(bool isOnLoad)
+    protected override Task PreGameStarting(bool isOnLoad)
     {
+        ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 _teamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
         }
 
-        base.PreGameStarting(isOnLoad);
+        return base.PreGameStarting(isOnLoad);
     }
     protected override void EventLoopAction()
     {
         if (EveryXSeconds(Config.GeneralMainCheckSeconds))
             TeamManager.EvaluateBases();
     }
-    protected override void OnReady()
+    protected override Task OnReady()
     {
+        ThreadUtil.assertIsGameThread();
         TeamManager.CheckGroups();
-        base.OnReady();
+        return Task.CompletedTask;
     }
     protected void CheckMainCampZones()
     {
@@ -255,12 +264,14 @@ public abstract class TeamGamemode : Gamemode, ITeams
         mainCampers.Remove(e.Player.Steam64);
         EventFunctions.RemoveDamageMessageTicks(e.Player.Steam64);
     }
-    protected override void OnAsyncInitComplete(UCPlayer player)
+    public override async Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
+        ThreadUtil.assertIsGameThread();
+        await base.PlayerInit(player, wasAlreadyOnline);
+        await UCWarfare.ToUpdate();
+        ThreadUtil.assertIsGameThread();
         if (UseTeamSelector)
             _teamSelector.JoinSelectionMenu(player);
-
-        base.OnAsyncInitComplete(player);
     }
     public virtual void OnJoinTeam(UCPlayer player, ulong team)
     {

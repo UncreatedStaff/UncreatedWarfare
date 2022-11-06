@@ -5,6 +5,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Uncreated.Framework;
 using Uncreated.Warfare.Teams;
 
 namespace Uncreated.Warfare.Kits;
@@ -59,7 +60,7 @@ public static class UCInventoryManager
             {
                 if (Assets.find(k.Id) is ItemAsset asset)
                 {
-                    Item item = new Item(asset.id, k.Amount, 100, F.CloneBytes(k.Metadata));
+                    Item item = new Item(asset.id, k.Amount, 100, Util.CloneBytes(k.Metadata));
 
                     if (!player.Player.inventory.tryAddItem(item, k.X, k.Y, k.Page, k.Rotation))
                         player.Player.inventory.tryAddItem(item, true);

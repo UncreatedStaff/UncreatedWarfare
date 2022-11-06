@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using Uncreated.Framework;
 using Uncreated.Warfare.Quests;
 using UnityEngine;
 
@@ -699,8 +700,8 @@ public class Translation
         public readonly Color Color;
         public readonly bool rt;
         private string? _console;
-        public string Console => rt ? (_console ??= F.RemoveRichText(ProcessedInner)) : Original;
-        public ConsoleColor ConsoleColor => F.GetClosestConsoleColor(Color);
+        public string Console => rt ? (_console ??= Util.RemoveRichText(ProcessedInner)) : Original;
+        public ConsoleColor ConsoleColor => Util.GetClosestConsoleColor(Color);
         public bool IsNil => Original is null;
         public TranslationValue(string language, string original, TranslationFlags flags)
         {
@@ -845,7 +846,7 @@ public class Translation
             --depth;
             inp += "</color>";
         }
-        value = F.RemoveTMProRichText(inp);
+        value = Util.RemoveTMProRichText(inp);
     }
     public static unsafe void ReplaceColors(ref string message)
     {
@@ -904,7 +905,7 @@ public class Translation
                 innerText = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
             else
                 innerText = message.Substring(endtag + 1, message.Length - endtag - 1);
-            color = F.Hex(clr);
+            color = Util.Hex(clr);
             goto next;
         }
         // <color=#ffffff>
@@ -920,7 +921,7 @@ public class Translation
                 innerText = message.Substring(endtag + 1, message.Length - endtag - 1 - 8);
             else
                 innerText = message.Substring(endtag + 1, message.Length - endtag - 1);
-            color = F.Hex(clr);
+            color = Util.Hex(clr);
             goto next;
         }
 

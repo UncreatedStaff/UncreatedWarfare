@@ -26,7 +26,13 @@ using UnityEngine;
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(Whitelister))]
-public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDeclareWinListener
+public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsync, IDeclareWinListenerAsync
+{
+
+}
+
+[SingletonDependency(typeof(Whitelister))]
+public class VehicleBayOld : ListSingleton<VehicleData>, ILevelStartListener, IDeclareWinListener
 {
     private static VehicleBayConfig _config;
     internal static VehicleBay Singleton;
@@ -231,7 +237,7 @@ public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDecl
                         {
                             if (Assets.find(k.Id) is ItemAsset iasset)
                             {
-                                Item item = new Item(iasset.id, k.Amount, 100, F.CloneBytes(k.Metadata));
+                                Item item = new Item(iasset.id, k.Amount, 100, Util.CloneBytes(k.Metadata));
                                 if (!vehicle.trunkItems.tryAddItem(item))
                                     ItemManager.dropItem(item, vehicle.transform.position, false, true, true);
                             }

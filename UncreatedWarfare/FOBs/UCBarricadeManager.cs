@@ -1,4 +1,5 @@
-﻿using SDG.Unturned;
+﻿using SDG.Framework.Translations;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -38,6 +39,36 @@ public static class UCBarricadeManager
         if (Regions.tryGetCoordinate(pos, out byte x, out byte y))
         {
             BarricadeRegion region = BarricadeManager.regions[x, y];
+            if (tolerance == 0f)
+            {
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    if (region.drops[i].model.position == pos)
+                        return region.drops[i];
+                }
+            }
+            else
+            {
+                tolerance = tolerance < 0 ? -tolerance : tolerance;
+                for (int i = 0; i < region.drops.Count; ++i)
+                {
+                    Vector3 pos2 = region.drops[i].model.position - pos;
+                    if (pos2.x > -tolerance && pos2.x < tolerance &&
+                        pos2.y > -tolerance && pos2.y < tolerance &&
+                        pos2.z > -tolerance && pos2.z < tolerance)
+                    {
+                        return region.drops[i];
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    public static StructureDrop? GetStructureFromPosition(Vector3 pos, float tolerance = 0.05f)
+    {
+        if (Regions.tryGetCoordinate(pos, out byte x, out byte y))
+        {
+            StructureRegion region = StructureManager.regions[x, y];
             if (tolerance == 0f)
             {
                 for (int i = 0; i < region.drops.Count; ++i)
@@ -650,7 +681,6 @@ public static class UCBarricadeManager
             for (int y = 0; y < Regions.WORLD_SIZE; y++)
             {
                 BarricadeRegion region = BarricadeManager.regions[x, y];
-                if (region == default) continue;
                 for (int i = 0; i < region.drops.Count; i++)
                 {
                     if (region.drops[i].GetServersideData().instanceID == instanceID)
@@ -686,10 +716,9 @@ public static class UCBarricadeManager
             for (int y = 0; y < Regions.WORLD_SIZE; y++)
             {
                 BarricadeRegion region = BarricadeManager.regions[x, y];
-                if (region == default) continue;
                 for (int i = 0; i < region.drops.Count; i++)
                 {
-                    if (region.drops[i].GetServersideData().instanceID == instanceID)
+                    if (region.drops[i].instanceID == instanceID)
                     {
                         return region.drops[i];
                     }
@@ -708,6 +737,135 @@ public static class UCBarricadeManager
             }
         }
         return default;
+    }
+    public static BarricadeDrop? GetBarricadeFromInstID(uint instanceID, Vector3 expectedPosition)
+    {
+        if (BarricadeManager.regions == null)
+            throw new InvalidOperationException("Barricade manager has not yet been initialized.");
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        bool f = false;
+        if (Regions.tryGetCoordinate(expectedPosition, out byte x1, out byte y1))
+        {
+            f = true;
+            BarricadeDrop? drop = ScanBarricadeRegion(instanceID, x1, y1);
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(instanceID, (byte)(x1 - 1), y1);
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(instanceID, (byte)(x1 + 1), y1);
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(instanceID, x1, (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(instanceID, x1, (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(instanceID, (byte)(x1 - 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(instanceID, (byte)(x1 - 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(instanceID, (byte)(x1 + 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanBarricadeRegion(instanceID, (byte)(x1 + 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+        }
+        for (int x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                if (f && (x - x1) is -1 or 0 or 1 && (y - y1) is -1 or 0 or 1)
+                    continue;
+                BarricadeRegion region = BarricadeManager.regions[x, y];
+                for (int i = 0; i < region.drops.Count; ++i)
+                    if (region.drops[i].instanceID == instanceID)
+                        return region.drops[i];
+            }
+        }
+        for (int vr = 0; vr < BarricadeManager.vehicleRegions.Count; ++vr)
+        {
+            VehicleBarricadeRegion region = BarricadeManager.vehicleRegions[vr];
+            for (int i = 0; i < region.drops.Count; ++i)
+                if (region.drops[i].instanceID == instanceID)
+                    return region.drops[i];
+        }
+        return default;
+    }
+    public static StructureDrop? GetStructureFromInstID(uint instanceID, Vector3 expectedPosition)
+    {
+        if (StructureManager.regions == null)
+            throw new InvalidOperationException("Structure manager has not yet been initialized.");
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        bool f = false;
+        if (Regions.tryGetCoordinate(expectedPosition, out byte x1, out byte y1))
+        {
+            f = true;
+            StructureDrop? drop = ScanStructureRegion(instanceID, x1, y1);
+            if (drop != null) return drop;
+            drop = ScanStructureRegion(instanceID, (byte)(x1 - 1), y1);
+            if (drop != null) return drop;
+            drop = ScanStructureRegion(instanceID, (byte)(x1 + 1), y1);
+            if (drop != null) return drop;
+            drop = ScanStructureRegion(instanceID, x1, (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanStructureRegion(instanceID, x1, (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanStructureRegion(instanceID, (byte)(x1 - 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanStructureRegion(instanceID, (byte)(x1 - 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+            drop = ScanStructureRegion(instanceID, (byte)(x1 + 1), (byte)(y1 - 1));
+            if (drop != null) return drop;
+            drop = ScanStructureRegion(instanceID, (byte)(x1 + 1), (byte)(y1 + 1));
+            if (drop != null) return drop;
+        }
+        for (int x = 0; x < Regions.WORLD_SIZE; ++x)
+        {
+            for (int y = 0; y < Regions.WORLD_SIZE; ++y)
+            {
+                if (f && (x - x1) is -1 or 0 or 1 && (y - y1) is -1 or 0 or 1)
+                    continue;
+                StructureRegion region = StructureManager.regions[x, y];
+                for (int i = 0; i < region.drops.Count; ++i)
+                    if (region.drops[i].instanceID == instanceID)
+                        return region.drops[i];
+            }
+        }
+        return default;
+    }
+    private static BarricadeDrop? ScanBarricadeRegion(uint instanceID, BarricadeRegion region)
+    {
+        for (int i = 0; i < region.drops.Count; ++i)
+            if (region.drops[i].instanceID == instanceID)
+                return region.drops[i];
+        return null;
+    }
+    private static StructureDrop? ScanStructureRegion(uint instanceID, StructureRegion region)
+    {
+        for (int i = 0; i < region.drops.Count; ++i)
+            if (region.drops[i].instanceID == instanceID)
+                return region.drops[i];
+        return null;
+    }
+    private static BarricadeDrop? ScanBarricadeRegion(uint instanceID, byte x, byte y)
+    {
+        if (x < 0 || y < 0 || x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
+            return null;
+        BarricadeRegion region = BarricadeManager.regions[x, y];
+        for (int i = 0; i < region.drops.Count; ++i)
+            if (region.drops[i].instanceID == instanceID)
+                return region.drops[i];
+        return null;
+    }
+    private static StructureDrop? ScanStructureRegion(uint instanceID, byte x, byte y)
+    {
+        if (x < 0 || y < 0 || x > Regions.WORLD_SIZE || y > Regions.WORLD_SIZE)
+            return null;
+        StructureRegion region = StructureManager.regions[x, y];
+        for (int i = 0; i < region.drops.Count; ++i)
+            if (region.drops[i].instanceID == instanceID)
+                return region.drops[i];
+        return null;
     }
     public static StructureData? GetStructureFromInstID(uint instanceID, out StructureDrop? drop)
     {
@@ -793,7 +951,6 @@ public static class UCBarricadeManager
         }
         return null;
     }
-
     public static bool RemoveNearbyItemsByID(Guid id, int amount, Vector3 center, float radius)
     {
         List<RegionCoordinate> regions = new List<RegionCoordinate>();

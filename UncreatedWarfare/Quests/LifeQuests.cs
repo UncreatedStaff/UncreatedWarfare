@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Text.Json;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 

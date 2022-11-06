@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using System;
 using System.Collections;
@@ -7,10 +6,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Uncreated.Framework;
-using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -29,6 +26,7 @@ using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
+// ReSharper disable UnusedMember.Local
 
 namespace Uncreated.Warfare.Commands;
 
@@ -43,7 +41,7 @@ public class _DebugCommand : Command
     {
         if (ctx.TryGet(0, out string operation))
         {
-            MethodInfo info;
+            MethodInfo? info;
             try
             {
                 info = type.GetMethod(operation, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
@@ -60,7 +58,7 @@ public class _DebugCommand : Command
                 using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
 #endif
                 ctx.Offset = 1;
-                info.Invoke(this, new object[1] { ctx });
+                info.Invoke(this, new object[] { ctx });
                 ctx.Offset = 0;
                 ctx.Defer();
             }
@@ -75,7 +73,6 @@ public class _DebugCommand : Command
         else throw ctx.SendCorrectUsage("/test <operation> [parameters...]");
     }
 #pragma warning disable IDE1006
-#pragma warning disable IDE0060
 #pragma warning disable IDE0051
     private const string GIVE_XP_SYNTAX = "/test givexp <player> <amount> [team - required if offline]";
     private void givexp(CommandInteraction ctx)
@@ -96,7 +93,7 @@ public class _DebugCommand : Command
                 {
                     if (PlayerSave.HasPlayerSave(player))
                     {
-                        if (team > 0 && team < 3)
+                        if (team is > 0 and < 3)
                         {
                             Task.Run(async () =>
                             {
@@ -115,7 +112,7 @@ public class _DebugCommand : Command
                 }
                 else
                 {
-                    if (team < 1 || team > 2)
+                    if (team is < 1 or > 2)
                         team = onlinePlayer.GetTeam();
                     Points.AwardXP(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
                     FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
@@ -186,7 +183,7 @@ public class _DebugCommand : Command
         ctx.AssertRanByPlayer();
         ctx.AssertGamemode(out IFlagRotation fg);
 
-        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller));
+        Flag? flag = fg.Rotation.FirstOrDefault(f => f.PlayersOnFlag.Contains(ctx.Caller));
         if (flag == default)
         {
             ctx.Reply(T.ZoneNoResultsLocation);
@@ -231,7 +228,7 @@ public class _DebugCommand : Command
             ctx.Reply(T.NotOnCaptureTeam);
             return;
         }
-        Data.Gamemode.DeclareWin(team);
+        _ = Data.Gamemode.DeclareWin(team);
     }
     private void savemanyzones(CommandInteraction ctx)
     {
@@ -529,16 +526,28 @@ public class _DebugCommand : Command
                     ctx.ReplyString($"Skipped staging phase.");
                     gm.SkipStagingPhase();
                 }
-                if (newGamemode == Data.Gamemode.GetType())
-                    Data.Singletons.ReloadSingleton(Gamemode.GAMEMODE_RELOAD_KEY);
-                else if (Gamemode.TryLoadGamemode(newGamemode))
-                {
-                    ctx.ReplyString($"Successfully loaded {newGamemode.Name}.");
-                }
                 else
+                    ctx.Defer();
+                Task.Run(async () =>
                 {
-                    ctx.ReplyString($"Failed to load {newGamemode.Name}.");
-                }
+                    await UCWarfare.ToUpdate();
+                    if (newGamemode == Data.Gamemode?.GetType())
+                    {
+                        await Data.Singletons.ReloadSingletonAsync(Gamemode.GAMEMODE_RELOAD_KEY);
+                        await UCWarfare.ToUpdate();
+                        ctx.ReplyString($"Successfully reloaded {newGamemode.Name}.");
+                    }
+                    else if (await Gamemode.TryLoadGamemode(newGamemode))
+                    {
+                        await UCWarfare.ToUpdate();
+                        ctx.ReplyString($"Successfully loaded {newGamemode.Name}.");
+                    }
+                    else
+                    {
+                        await UCWarfare.ToUpdate();
+                        ctx.ReplyString($"Failed to load {newGamemode.Name}.");
+                    }
+                });
             }
             else
                 ctx.ReplyString($"Gamemode not found: {gamemodeName}.");
@@ -796,14 +805,14 @@ public class _DebugCommand : Command
         ctx.AssertArgs(1, "/test gettime <timestr>");
 
         string t = ctx.GetRange(0)!;
-        ctx.ReplyString("Time: " + F.ParseTimespan(t).ToString("g"));
+        ctx.ReplyString("Time: " + Util.ParseTimespan(t).ToString("g"));
     }
     private void getperms(CommandInteraction ctx)
     {
         ctx.ReplyString("Permission: " + ctx.Caller.GetPermissions());
     }
 #if DEBUG
-    private static readonly InstanceSetter<InteractableVehicle, bool> SetEngineOn = F.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+    private static readonly InstanceSetter<InteractableVehicle, bool> SetEngineOn = Util.GenerateInstanceSetter<InteractableVehicle, bool>("<isEngineOn>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
     private void drivetest(CommandInteraction ctx)
     {
         ctx.AssertRanByPlayer();

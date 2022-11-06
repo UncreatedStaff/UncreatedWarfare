@@ -10,7 +10,7 @@ using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 
 namespace Uncreated.Warfare.Tickets;
 
-public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListener, IGameTickListener
+public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartListener, IGameTickListener
 {
     public static TicketManager Singleton;
     public static Config<TicketData> config = new Config<TicketData>(Data.Paths.TicketStorage, "config.json");
@@ -134,10 +134,10 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
         else
             ClearUI(e.Player);
     }
-    void IPlayerInitListener.OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    void IPlayerPreInitListener.OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
-        if (Provider is IPlayerInitListener il)
-            il.OnPlayerInit(player, wasAlreadyOnline);
+        if (Provider is IPlayerPreInitListener il)
+            il.OnPrePlayerInit(player, wasAlreadyOnline);
         SendUI(player);
     }
     void IGameStartListener.OnGameStarting(bool isOnLoad)
@@ -147,7 +147,7 @@ public class TicketManager : BaseSingleton, IPlayerInitListener, IGameStartListe
     }
     public void ClearUI(UCPlayer player) => TicketUI.ClearFromPlayer(player.Connection);
     public void ClearUI(ITransportConnection connection) => TicketUI.ClearFromPlayer(connection);
-    internal void SendWinUI(ulong winner)
+    public void SendWinUI(ulong winner)
     {
         Gamemode.WinToastUI.SendToAllPlayers();
         string img1 = TeamManager.Team1Faction.FlagImageURL;

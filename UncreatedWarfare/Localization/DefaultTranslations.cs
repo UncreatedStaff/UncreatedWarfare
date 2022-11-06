@@ -585,10 +585,14 @@ internal static class T
 
     #region Toasts
     private const string SECTION_TOASTS = "Toasts";
-        [TranslationData(SECTION_TOASTS, "Sent when the player joins for the 2nd+ time..")]
+    [TranslationData(SECTION_TOASTS, "Sent when the player joins for the 2nd+ time.")]
     public static readonly Translation<IPlayer> WelcomeBackMessage = new Translation<IPlayer>("Thanks for playing <#c$uncreated$>Uncreated Warfare</color>!\nWelcome back {0}.", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
-        [TranslationData(SECTION_TOASTS, "Sent when the player joins for the 1st time..")]
-    public static readonly Translation<IPlayer> WelcomeMessage     = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nCheck out our tutorial to get started (follow the signs).", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    [TranslationData(SECTION_TOASTS, "Sent when the player joins for the 1st time.")]
+    public static readonly Translation<IPlayer> WelcomeMessage = new Translation<IPlayer>("Welcome to <#c$uncreated$>Uncreated Warfare</color> {0}!\nCheck out our tutorial to get started (follow the signs).", TranslationFlags.UnityUI, UCPlayer.COLOR_CHARACTER_NAME_FORMAT);
+    [TranslationData(SECTION_TOASTS, "Broadcasted when a game is loading.", "Next gamemode")]
+    public static readonly Translation<Gamemode> LoadingGamemode = new Translation<Gamemode>("Loading New Gamemode\n<#66ff99>{0}</color>", TranslationFlags.TMProUI);
+    [TranslationData(SECTION_TOASTS, "Broadcasted when a player joins and their data is loading.")]
+    public static readonly Translation LoadingOnJoin = new Translation("Loading Player Data", TranslationFlags.TMProUI);
     #endregion
 
     #region KitCommand

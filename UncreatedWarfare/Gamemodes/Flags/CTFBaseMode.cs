@@ -3,6 +3,7 @@ using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Uncreated.Warfare.Actions;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
@@ -16,7 +17,6 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
 using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Teams;
-using Uncreated.Warfare.Tickets;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
@@ -36,7 +36,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     IRevives,
     ISquads,
     IImplementsLeaderboard<Stats, StatTracker>,
-    IStructureSaving,
     IStagingPhase,
     IGameStats,
     ITraits
@@ -90,7 +89,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     public bool IsScreenUp => _isScreenUp;
     StatTracker IImplementsLeaderboard<Stats, StatTracker>.WarstatsTracker { get => _gameStats; set => _gameStats = value; }
     object IGameStats.GameStats => ((IImplementsLeaderboard<Stats, StatTracker>)this).WarstatsTracker;
-    public CTFBaseMode(string name, float timing) : base(name, timing)
+    protected CTFBaseMode(string name, float timing) : base(name, timing)
     {
 
     }
@@ -111,13 +110,14 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         base.PreInit();
     }
     protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.AASFlagTickSeconds);
-    public override void DeclareWin(ulong winner)
+    public override Task DeclareWin(ulong winner)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        base.DeclareWin(winner);
         StartCoroutine(EndGameCoroutine(winner));
+        return base.DeclareWin(winner);
     }
     private IEnumerator<WaitForSeconds> EndGameCoroutine(ulong winner)
     {
@@ -150,12 +150,13 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         _isScreenUp = false;
         EndGame();
     }
-    protected override void PostGameStarting(bool isOnLoad)
+    protected override Task PostGameStarting(bool isOnLoad)
     {
+        ThreadUtil.assertIsGameThread();
         _gameStats.Reset();
         CTFUI.ClearCaptureUI();
         RallyManager.WipeAllRallies();
-        base.PostGameStarting(isOnLoad);
+        return base.PostGameStarting(isOnLoad);
     }
     protected void LoadFlagsIntoRotation()
     {
@@ -173,7 +174,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
                 L.LogError("Failed to path...");
                 throw new InvalidOperationException("Invalid pathing data entered.");
             }
-            //_rotation = ObjectivePathing.PathWithAdjacents(_allFlags, Config.MapConfig.Team1Adjacencies, Config.MapConfig.Team2Adjacencies);
         }
         while (_rotation.Count > CTFUI.ListUI.Parents.Length);
     }
@@ -328,7 +328,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " entered flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.EnteredCaptureRadius, flag);
         UpdateFlag(flag);
@@ -339,7 +338,6 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ITransportConnection channel = player.channel.owner.transportConnection;
-        ulong team = player.GetTeam();
         L.LogDebug("Player " + player.channel.owner.playerID.playerName + " left flag " + flag.Name, ConsoleColor.White);
         player.SendChat(T.LeftCaptureRadius, flag);
         CTFUI.ClearCaptureUI(channel);
@@ -476,20 +474,20 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             flag.SetOwner(0);
         UpdateFlag(flag);
     }
-    public override void PlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    public override Task PlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (KitManager.KitExists(player.KitName, out Kit kit))
         {
-            if ((!kit.IsLoadout && kit.IsLimited(out int currentPlayers, out int allowedPlayers, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out currentPlayers, out allowedPlayers, player.GetTeam())))
+            if ((!kit.IsLoadout && kit.IsLimited(out _, out _, player.GetTeam())) || (kit.IsLoadout && kit.IsClassLimited(out _, out _, player.GetTeam())))
             {
                 if (!KitManager.TryGiveRiflemanKit(player))
                     KitManager.TryGiveUnarmedKit(player);
             }
         }
-        ulong team = player.GetTeam();
         if (!AllowCosmetics)
             player.SetCosmeticStates(false);
 
@@ -498,7 +496,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
 
         StatsManager.RegisterPlayer(player.CSteamID.m_SteamID);
         StatsManager.ModifyStats(player.CSteamID.m_SteamID, s => s.LastOnline = DateTime.Now.Ticks);
-        base.PlayerInit(player, wasAlreadyOnline);
+        return base.PlayerInit(player, wasAlreadyOnline);
     }
     public override void OnJoinTeam(UCPlayer player, ulong team)
     {

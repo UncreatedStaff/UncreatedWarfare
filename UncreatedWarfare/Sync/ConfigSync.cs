@@ -12,6 +12,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Uncreated.Encoding;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Warfare.Configuration;
@@ -1341,10 +1342,21 @@ public sealed class SyncPacket : IReadWrite
     public override string ToString() => $"Sync packet containing {PropertyGroups.Count} documents. Timestamp: {Timestamp:G} UTC.";
 }
 
+public enum WarfareSyncTypes
+{
+    None,
+    StructureSaver,
+    KitManager,
+    VehicleBay,
+    VehicleSigns,
+    VehicleSpawner
+}
+
 public enum SyncMode
 {
     Manual,
-    Automatic
+    Automatic,
+    NoSync
 }
 public interface ISyncObject
 {

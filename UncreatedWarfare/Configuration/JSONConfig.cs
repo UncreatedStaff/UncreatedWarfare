@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Uncreated.Json;
 using Uncreated.Warfare.Commands;
 
 namespace Uncreated.Warfare.Configuration;

@@ -8,7 +8,6 @@ using Uncreated.Encoding;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.SQL;
-using Uncreated.Warfare.Kits;
 
 namespace Uncreated.Warfare;
 
@@ -520,13 +519,13 @@ public class WarfareSQL : MySqlDatabase
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        int amt = await ScalarAsync(
-            $"SELECT COUNT(*) " +
+        bool found = false;
+        await QueryAsync(
+            $"SELECT COUNT(`Steam64`) " +
             $"FROM `logindata` " +
             $"WHERE `Steam64` = @0;",
-            new object[1] { steam64 },
-            Convert.ToInt32);
-        return amt > 0;
+            new object[1] { steam64 }, R => found = true);
+        return found;
     }
     public Task RegisterLogin(Player player)
     {

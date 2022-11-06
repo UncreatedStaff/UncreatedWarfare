@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
@@ -953,7 +954,7 @@ public static class OffenseManager
                 if (caller is not null)
                     caller.SendChat(T.UnmuteNotMuted, names);
                 else if (callerId == 0)
-                    L.Log(F.RemoveRichText(T.UnmuteNotMuted.Translate(L.DEFAULT, names, out Color color)), F.GetClosestConsoleColor(color));
+                    L.Log(Util.RemoveRichText(T.UnmuteNotMuted.Translate(L.DEFAULT, names, out Color color)), Util.GetClosestConsoleColor(color));
                 return 2;
             }
             else
@@ -990,7 +991,7 @@ public static class OffenseManager
             if (caller is not null)
                 caller.SendChat(T.PlayerNotFound);
             else if (callerId == 0)
-                L.Log(F.RemoveRichText(T.PlayerNotFound.Translate(L.DEFAULT, out Color color)), F.GetClosestConsoleColor(color));
+                L.Log(Util.RemoveRichText(T.PlayerNotFound.Translate(L.DEFAULT, out Color color)), Util.GetClosestConsoleColor(color));
             return 2;
         }
     }

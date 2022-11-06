@@ -1,8 +1,12 @@
-﻿using SDG.Unturned;
+﻿using JetBrains.Annotations;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using Uncreated.Framework;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Singletons;
@@ -21,26 +25,32 @@ internal class SingletonManager : MonoBehaviour
     public event ReloadSingletonDelegate? OnSingletonReloaded;
 
 #pragma warning disable IDE0051
+    [UsedImplicitly]
     private void Awake()
     {
         L.Log("Singleton system loaded", ConsoleColor.Blue);
     }
 #pragma warning restore IDE0051
 
-    /// <summary>Loads a singleton, unloading any others.</summary>
+    /// <summary>Loads a singleton (asynchronously when available), unloading any others.</summary>
     /// <typeparam name="T">Type of singleton to load.</typeparam>
     /// <param name="throwErrors"><see langword="True"/> to throw any <see cref="SingletonLoadException"/>s that may be thrown upon loading. Otherwise, <see langword="false"/>.</param>
     /// <exception cref="NotSupportedException">Thrown if the function isn't executed on the game thread.</exception>
-    /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
+    /// <exception cref="SingletonLoadException">Thrown if <typeparamref name="T"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     /// <returns>The loaded singleton.</returns>
-    public T LoadSingleton<T>(bool throwErrors = true) where T : class, IUncreatedSingleton
+    public async Task<T> LoadSingletonAsync<T>(bool throwErrors = true, bool @lock = true) where T : class, IUncreatedSingleton
     {
-        ThreadUtil.assertIsGameThread();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        await UCWarfare.ToUpdate();
         Type inputType = typeof(T);
         T singleton = null!;
         PopulateSingleton(ref singleton, throwErrors);
         SingletonInformation info = new SingletonInformation(singleton);
-        lock (singletons)
+        if (@lock)
+            await WaitOrThrow(info).ConfigureAwait(false);
+        try
         {
             for (int i = 0; i < singletons.Count; ++i)
             {
@@ -49,34 +59,42 @@ internal class SingletonManager : MonoBehaviour
                     SingletonInformation ucs = singletons[i];
                     if (ucs.IsLoaded)
                     {
-                        UnloadIntl(ucs, throwErrors);
+                        await UnloadIntlAsync(ucs, throwErrors).ConfigureAwait(false);
                     }
                     singletons[i] = info;
                     goto load;
                 }
             }
+            singletons.Add(info);
+            load:
+            await LoadIntlAsync(info, throwErrors).ConfigureAwait(false);
         }
-        singletons.Add(info);
-    load:
-        LoadIntl(info, throwErrors);
+        finally
+        {
+            if (@lock)
+                info.semaphore.Release();
+        }
         return (info.Singleton as T)!;
     }
-    /// <summary>Loads a singleton, unloading any others.</summary>
-    /// <typeparam name="T">Type of singleton to load.</typeparam>
+    /// <summary>Loads a singleton, (asynchronously when available), unloading any others.</summary>
     /// <param name="throwErrors"><see langword="True"/> to throw any <see cref="SingletonLoadException"/>s that may be thrown upon loading. Otherwise, <see langword="false"/>.</param>
     /// <exception cref="NotSupportedException">Thrown if the function isn't executed on the game thread.</exception>
     /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     /// <exception cref="ArgumentException">Type is not derived from <see cref="IUncreatedSingleton"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if <paramref name="singleton"/> has to be loaded asynchronously.</exception>
     /// <returns>The loaded singleton.</returns>
-    public IUncreatedSingleton LoadSingleton(Type type, bool throwErrors = true)
+    public async Task<IUncreatedSingleton> LoadSingletonAsync(Type type, bool throwErrors = true, bool @lock = true)
     {
-        if (!typeof(IUncreatedSingleton).IsAssignableFrom(type))
-            throw new ArgumentException("Type is not derived from " + nameof(IUncreatedSingleton), nameof(type));
-        ThreadUtil.assertIsGameThread();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        await UCWarfare.ToUpdate();
         IUncreatedSingleton singleton = null!;
         PopulateSingleton(ref singleton, type, throwErrors);
         SingletonInformation info = new SingletonInformation(singleton);
-        lock (singletons)
+        if (@lock)
+            await WaitOrThrow(info).ConfigureAwait(false);
+        try
         {
             for (int i = 0; i < singletons.Count; ++i)
             {
@@ -85,31 +103,46 @@ internal class SingletonManager : MonoBehaviour
                     SingletonInformation ucs = singletons[i];
                     if (ucs.IsLoaded)
                     {
-                        UnloadIntl(ucs, throwErrors);
+                        await UnloadIntlAsync(ucs, throwErrors).ConfigureAwait(false);
                     }
                     singletons[i] = info;
                     goto load;
                 }
             }
+            singletons.Add(info);
+            load:
+            await LoadIntlAsync(info, throwErrors).ConfigureAwait(false);
         }
-        singletons.Add(info);
-    load:
-        LoadIntl(info, throwErrors);
+        finally
+        {
+            if (@lock)
+                info.semaphore.Release();
+        }
         return info.Singleton;
     }
-    /// <summary>Loads a singleton that was created by <see cref="PopulateSingleton{T}(ref T, bool)"/>.</summary>
+    private async Task WaitOrThrow(SingletonInformation info)
+    {
+        if (!await info.semaphore.WaitAsync(10000).ConfigureAwait(false))
+            throw new TimeoutException("Took more than 10 seconds to unlock semaphore.");
+    }
+    /// <summary>Loads a singleton that was created by <see cref="PopulateSingleton{T}(ref T, bool)"/>, (asynchronously when available).</summary>
     /// <typeparam name="T">Type of singleton to load.</typeparam>
     /// <param name="singleton">The result of running <see cref="PopulateSingleton{T}(ref T, bool)"/> that will finish loading.</param>
     /// <param name="throwErrors"><see langword="True"/> to throw any <see cref="SingletonLoadException"/>s that may be thrown upon loading. Otherwise, <see langword="false"/>.</param>
     /// <exception cref="NotSupportedException">Thrown if the function isn't executed on the game thread.</exception>
     /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if <paramref name="singleton"/> has to be loaded asynchronously.</exception>
     /// <returns>The loaded singleton.</returns>
-    public T LoadSingleton<T>(T singleton, bool throwErrors = true) where T : class, IUncreatedSingleton
+    public async Task<T> LoadSingletonAsync<T>(T singleton, bool throwErrors = true, bool @lock = true) where T : class, IUncreatedSingleton
     {
-        ThreadUtil.assertIsGameThread();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         Type inputType = singleton.GetType();
         SingletonInformation info = new SingletonInformation(singleton);
-        lock (singletons)
+        if (@lock)
+            await WaitOrThrow(info).ConfigureAwait(false);
+        try
         {
             for (int i = 0; i < singletons.Count; ++i)
             {
@@ -118,16 +151,29 @@ internal class SingletonManager : MonoBehaviour
                     SingletonInformation ucs = singletons[i];
                     if (ucs.IsLoaded)
                     {
-                        UnloadIntl(ucs, throwErrors);
+                        await WaitOrThrow(ucs).ConfigureAwait(false);
+                        try
+                        {
+                            await UnloadIntlAsync(ucs, throwErrors).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            ucs.semaphore.Release();
+                        }
                     }
                     singletons[i] = info;
                     goto load;
                 }
             }
+            singletons.Add(info);
+            load:
+            await LoadIntlAsync(info, throwErrors).ConfigureAwait(false);
         }
-        singletons.Add(info);
-    load:
-        LoadIntl(info, throwErrors);
+        finally
+        {
+            if (@lock)
+                info.semaphore.Release();
+        }
         return (info.Singleton as T)!;
     }
     /// <summary>Creates a reference to a singleton object without loading it. Call <see cref="LoadSingleton{T}(T, bool)"/> to finish loading it.</summary>
@@ -138,6 +184,9 @@ internal class SingletonManager : MonoBehaviour
     /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     public void PopulateSingleton<T>(ref T singleton, bool throwErrors) where T : class, IUncreatedSingleton
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         ThreadUtil.assertIsGameThread();
         Type inputType = singleton?.GetType() ?? typeof(T);
         if (typeof(Component).IsAssignableFrom(inputType))
@@ -168,6 +217,9 @@ internal class SingletonManager : MonoBehaviour
     /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully loaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     public void PopulateSingleton(ref IUncreatedSingleton singleton, Type type, bool throwErrors)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (!typeof(IUncreatedSingleton).IsAssignableFrom(type))
             throw new ArgumentException("Type is not derived from " + nameof(IUncreatedSingleton), nameof(type));
         ThreadUtil.assertIsGameThread();
@@ -191,9 +243,11 @@ internal class SingletonManager : MonoBehaviour
             singleton = (Activator.CreateInstance(type) as IUncreatedSingleton)!;
         }
     }
-
-    internal void LoadSingletonsInOrder(List<IUncreatedSingleton> singletons)
+    internal async Task LoadSingletonsInOrderAsync(List<IUncreatedSingleton> singletons)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         List<SingletonDependencyInformation> info = new List<SingletonDependencyInformation>(singletons.Count);
         List<SingletonDependencyInformation> loadOrder = new List<SingletonDependencyInformation>(singletons.Count);
         for (int i = 0; i < singletons.Count; ++i)
@@ -201,12 +255,12 @@ internal class SingletonManager : MonoBehaviour
         info.Sort((a, b) => a.Dependencies.Length.CompareTo(b.Dependencies.Length));
         List<Type> tree = new List<Type>(4);
         for (int i = 0; i < info.Count; ++i)
-            Load(info[i], tree, info, loadOrder);
+            await LoadAsync(info[i], tree, info, loadOrder).ConfigureAwait(false);
         for (int i = 0; i < info.Count; ++i)
         {
             if (!info[i].isLoaded)
             {
-                LoadSingleton(info[i].Singleton);
+                await LoadSingletonAsync(info[i].Singleton).ConfigureAwait(false);
                 loadOrder.Add(info[i]);
             }
         }
@@ -228,62 +282,29 @@ internal class SingletonManager : MonoBehaviour
             }
         }
     }
-    internal bool UnloadSingletonsInOrder(List<IUncreatedSingleton> singletons)
+    internal async Task<bool> UnloadSingletonsInOrderAsync(List<IUncreatedSingleton> singletons)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         bool success = true;
         for (int i = singletons.Count - 1; i >= 0; --i)
         {
             IUncreatedSingleton sgl = singletons[i];
-            success |= UnloadSingleton(ref sgl);
+            success |= (await UnloadSingletonAsync(sgl).ConfigureAwait(false));
             singletons[i] = sgl;
         }
         return success;
-#if false
-        List<SingletonDependencyInformation> info = new List<SingletonDependencyInformation>(singletons.Count);
-        for (int i = 0; i < singletons.Count; ++i)
-            info[i] = new SingletonDependencyInformation(singletons[i]) { isLoaded = true };
-        for (int i = 0; i < info.Count; ++i)
-        {
-            SingletonDependencyInformation i2 = info[i];
-            i2.Dependents = new List<Type>(4);
-            for (int j = 0; j < info.Count; ++j)
-            {
-                if (i == j) continue;
-                SingletonDependencyInformation i3 = info[j];
-                for (int t = 0; t < i3.Dependencies.Length; ++t)
-                {
-                    Type? d = i3.Dependencies[t];
-                    if (d is null) continue;
-                    if (d == i2.SingletonType)
-                    {
-                        for (int x = 0; x < i2.Dependents.Count; ++x)
-                        {
-                            if (d == i2.Dependents[x])
-                                goto next;
-                        }
-                        i2.Dependents.Add(d);
-                    next:;
-                    }
-                }
-            }
-        }
-        info.Sort((a, b) => a.Dependencies.Length.CompareTo(b.Dependencies.Length));
-        List<Type> tree = new List<Type>(4);
-        for (int i = 0; i < info.Count; ++i)
-            Unload(info[i], tree, info);
-        for (int i = 0; i < info.Count; ++i)
-        {
-            if (info[i].isLoaded)
-            {
-                UnloadSingleton(ref info[i].Singleton);
-            }
-        }
-        info.Clear();
-        singletons.Clear();
-#endif
+    }
+    private void CheckLoadingUnloadingStatus(SingletonInformation singleton)
+    {
+        if (singleton.Singleton.IsLoading)
+            throw new InvalidOperationException("Singleton " + singleton.SingletonType.Name + " is already loading.");
+        if (singleton.Singleton.IsUnloading)
+            throw new InvalidOperationException("Singleton " + singleton.SingletonType.Name + " is already loading.");
     }
     // recursive
-    private void Load(SingletonDependencyInformation dep, List<Type> tree, List<SingletonDependencyInformation> singletons, List<SingletonDependencyInformation> loadOrder)
+    private async Task LoadAsync(SingletonDependencyInformation dep, List<Type> tree, List<SingletonDependencyInformation> singletons, List<SingletonDependencyInformation> loadOrder)
     {
         if (dep.isLoaded) return;
         bool circ = tree.Contains(dep.SingletonType);
@@ -291,7 +312,7 @@ internal class SingletonManager : MonoBehaviour
         {
             if (!dep.isLoaded)
             {
-                LoadSingleton(dep.Singleton);
+                await LoadSingletonAsync(dep.Singleton, @lock: false).ConfigureAwait(false);
                 loadOrder.Add(dep);
                 dep.isLoaded = true;
             }
@@ -314,15 +335,12 @@ internal class SingletonManager : MonoBehaviour
                                 L.LogWarning("Circular reference detected from the singleton dependency heirarchy: " + string.Join(" > ", tree.Select(x => x.Name)) + ", skipping singleton.");
                                 tree.Remove(dep.SingletonType);
 
-                                LoadSingleton(dep.Singleton);
+                                await LoadSingletonAsync(dep.Singleton, @lock: false).ConfigureAwait(false);
                                 loadOrder.Add(dep);
                                 dep.isLoaded = true;
                                 return;
                             }
-                            else
-                            {
-                                Load(singletons[j], tree, singletons, loadOrder);
-                            }
+                            await LoadAsync(singletons[j], tree, singletons, loadOrder).ConfigureAwait(false);
                         }
                         break;
                     }
@@ -330,179 +348,163 @@ internal class SingletonManager : MonoBehaviour
             }
             tree.Remove(dep.SingletonType);
 
-            LoadSingleton(dep.Singleton);
+            await LoadSingletonAsync(dep.Singleton, @lock: false).ConfigureAwait(false);
             loadOrder.Add(dep);
             dep.isLoaded = true;
         }
     }
-#if false
-    // recursive
-    private void Unload(SingletonDependencyInformation dep, List<Type> tree, List<SingletonDependencyInformation> singletons)
+    private async Task LoadIntlAsync(SingletonInformation singleton, bool rethrow)
     {
-        if (!dep.isLoaded) return;
-        bool circ = tree.Contains(dep.SingletonType);
-        if (dep.Dependents!.Count == 0)
-        {
-            if (dep.isLoaded)
-            {
-                UnloadSingleton(ref dep.Singleton);
-                dep.isLoaded = false;
-            }
-        }
-        else
-        {
-            tree.Add(dep.SingletonType);
-            for (int i = 0; i < dep.Dependents.Count; ++i)
-            {
-                Type dep2 = dep.Dependents[i];
-                for (int j = 0; j < singletons.Count; ++j)
-                {
-                    if (singletons[j].GetType() == dep2)
-                    {
-                        if (!singletons[j].isLoaded)
-                        {
-                            if (circ)
-                            {
-                                L.LogWarning("Circular reference detected from the singleton dependency heirarchy: " + string.Join(" > ", tree.Select(x => x.Name)));
-                                tree.Remove(dep.SingletonType);
-
-                                UnloadSingleton(ref dep.Singleton);
-                                dep.isLoaded = false;
-                                return;
-                            }
-                            else
-                            {
-                                Unload(singletons[j], tree, singletons);
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-            tree.Remove(dep.SingletonType);
-
-            UnloadSingleton(ref dep.Singleton);
-            dep.isLoaded = false;
-        }
-    }
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-    private void LoadIntl(SingletonInformation singleton, bool rethrow)
-    {
         singleton.IsLoaded = false;
+        CheckLoadingUnloadingStatus(singleton);
         try
         {
-            singleton.Load();
-            singleton.ErroredOnLoad = false;
-            singleton.IsLoaded = true;
-            OnSingletonLoaded?.Invoke(singleton.Singleton, true);
-        }
-        catch (NotSupportedException ex)
-        {
-            L.LogError("Tried to load a singleton without being on the game thread: " + singleton.Name);
-            singleton.ErroredOnLoad = true;
-            OnSingletonLoaded?.Invoke(singleton.Singleton, false);
-            if (rethrow)
-                throw new SingletonLoadException(ESingletonLoadType.LOAD, singleton.Singleton, ex);
+            await singleton.LoadAsync().ConfigureAwait(false);
+            singleton.IsLoaded = singleton.Singleton.IsLoaded;
+            if (OnSingletonLoaded != null)
+            {
+                await UCWarfare.ToUpdate();
+                OnSingletonLoaded.Invoke(singleton.Singleton, singleton.IsLoaded);
+            }
         }
         catch (Exception ex)
         {
             L.LogError("Ran into an error loading: " + singleton.Name);
             L.LogError(ex);
-            singleton.ErroredOnLoad = true;
-            OnSingletonLoaded?.Invoke(singleton.Singleton, false);
+            if (OnSingletonLoaded != null)
+            {
+                await UCWarfare.ToUpdate();
+                OnSingletonLoaded.Invoke(singleton.Singleton, false);
+            }
             if (rethrow)
                 throw new SingletonLoadException(ESingletonLoadType.LOAD, singleton.Singleton, ex);
         }
     }
+
     /// <summary>Unloads a singleton.</summary>
     /// <typeparam name="T">Type of singleton to unload.</typeparam>
     /// <param name="throwErrors"><see langword="True"/> to throw any <see cref="SingletonLoadException"/>s that may be thrown upon unloading. Otherwise, <see langword="false"/>.</param>
     /// <exception cref="NotSupportedException">Thrown if the function isn't executed on the game thread.</exception>
-    /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully unloaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
+    /// <exception cref="SingletonLoadException">Thrown if <typeparamref name="T"/> isn't successfully unloaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     /// <returns><see langword="True"/> if the singleton was successfully unloaded and removed, otherwise <see langword="false"/>.</returns>
-    public bool UnloadSingleton<T>(bool throwErrors = false) where T : class, IUncreatedSingleton
+    public Task<bool> UnloadSingletonAsync<T>(bool throwErrors = false, bool @lock = true)
+        where T : class, IUncreatedSingleton
+        => UnloadSingletonAsync(typeof(T), throwErrors, @lock);
+
+    /// <summary>Unloads a singleton.</summary>
+    /// <param name="type">Type of singleton to unload.</param>
+    /// <param name="throwErrors"><see langword="True"/> to throw any <see cref="SingletonLoadException"/>s that may be thrown upon unloading. Otherwise, <see langword="false"/>.</param>
+    /// <exception cref="NotSupportedException">Thrown if the function isn't executed on the game thread.</exception>
+    /// <exception cref="SingletonLoadException">Thrown if <typeparamref name="T"/> isn't successfully unloaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
+    /// <returns><see langword="True"/> if the singleton was successfully unloaded and removed, otherwise <see langword="false"/>.</returns>
+    public async Task<bool> UnloadSingletonAsync(Type type, bool throwErrors = false, bool @lock = true)
     {
-        ThreadUtil.assertIsGameThread();
-        Type inputType = typeof(T);
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         SingletonInformation? info = null;
-        lock (singletons)
+        for (int i = singletons.Count - 1; i >= 0; --i)
         {
-            for (int i = singletons.Count - 1; i >= 0; --i)
+            if (singletons[i].SingletonType == type)
             {
-                if (singletons[i].SingletonType == inputType)
-                {
-                    info = singletons[i];
-                    singletons.RemoveAt(i);
-                    break;
-                }
+                info = singletons[i];
+                singletons.RemoveAt(i);
+                break;
             }
-            if (info is null)
-                return false;
         }
-        bool state = UnloadIntl(info, throwErrors);
-        OnSingletonUnloaded?.Invoke(info.Singleton, state);
-        info.Singleton = null!;
-        info.SingletonType = null!;
-        info.Name = null!;
-        return state;
+        if (info is null)
+            return false;
+        if (@lock)
+            await WaitOrThrow(info).ConfigureAwait(false);
+        try
+        {
+            bool state = await UnloadIntlAsync(info, throwErrors).ConfigureAwait(false);
+            if (OnSingletonUnloaded != null)
+            {
+                await UCWarfare.ToUpdate();
+                OnSingletonUnloaded.Invoke(info.Singleton, state);
+            }
+            info.Singleton = null!;
+            info.SingletonType = null!;
+            info.Name = null!;
+            return state;
+        }
+        finally
+        {
+            if (@lock)
+                info.semaphore.Release();
+        }
     }
     /// <summary>Unloads a singleton.</summary>
     /// <typeparam name="T">Type of singleton to unload.</typeparam>
     /// <param name="throwErrors"><see langword="True"/> to throw any <see cref="SingletonLoadException"/>s that may be thrown upon unloading. Otherwise, <see langword="false"/>.</param>
     /// <param name="field">Will set this field to null if it was properly unloaded.</param>
     /// <exception cref="NotSupportedException">Thrown if the function isn't executed on the game thread.</exception>
-    /// <exception cref="SingletonLoadException">Thrown if <paramref name="singleton"/> isn't successfully unloaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
+    /// <exception cref="SingletonLoadException">Thrown if <typeparamref name="T"/> isn't successfully unloaded and if <paramref name="throwErrors"/> is <see langword="true"/>.</exception>
     /// <returns><see langword="True"/> if the singleton was successfully unloaded and removed, otherwise <see langword="false"/>.</returns>
-    public bool UnloadSingleton<T>(ref T field, bool throwErrors = false) where T : class, IUncreatedSingleton
+    public async Task<bool> UnloadSingletonAsync<T>(T field, bool throwErrors = false, bool @lock = true) where T : class, IUncreatedSingleton
     {
-        ThreadUtil.assertIsGameThread();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         Type inputType = field?.GetType() ?? typeof(T);
         SingletonInformation? info = null;
-        lock (singletons)
+        for (int i = singletons.Count - 1; i >= 0; --i)
         {
-            for (int i = singletons.Count - 1; i >= 0; --i)
+            if (singletons[i].SingletonType == inputType)
             {
-                if (singletons[i].SingletonType == inputType)
-                {
-                    info = singletons[i];
-                    singletons.RemoveAt(i);
-                    break;
-                }
+                info = singletons[i];
+                singletons.RemoveAt(i);
+                break;
             }
-            if (info is null)
-                return false;
         }
-        bool state = UnloadIntl(info, throwErrors);
-        OnSingletonUnloaded?.Invoke(info.Singleton, state);
-        info.Singleton = null!;
-        info.SingletonType = null!;
-        info.Name = null!;
-        field = null!;
-        return state;
-    }
-    private bool UnloadIntl(SingletonInformation singleton, bool rethrow)
-    {
-        singleton.IsLoaded = false;
+        if (info is null)
+            return false;
+        if (@lock)
+            await WaitOrThrow(info).ConfigureAwait(false);
         try
         {
-            singleton.Unload();
-            if (singleton.Singleton is Component comp) Destroy(comp);
-            singleton.ErroredOnUnload = false;
-            return true;
+            bool state = await UnloadIntlAsync(info, throwErrors).ConfigureAwait(false);
+            if (OnSingletonUnloaded != null)
+            {
+                await UCWarfare.ToUpdate();
+                OnSingletonUnloaded.Invoke(info.Singleton, state);
+            }
+            info.Singleton = null!;
+            info.SingletonType = null!;
+            info.Name = null!;
+            return state;
         }
-        catch (NotSupportedException ex)
+        finally
         {
-            L.LogError("Tried to unload a singleton without being on the game thread: " + singleton.Name);
-            singleton.ErroredOnUnload = true;
-            if (rethrow)
-                throw new SingletonLoadException(ESingletonLoadType.UNLOAD, singleton.Singleton, ex);
-            return false;
+            if (@lock)
+                info.semaphore.Release();
+        }
+    }
+    private async Task<bool> UnloadIntlAsync(SingletonInformation singleton, bool rethrow)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        singleton.IsLoaded = false;
+        CheckLoadingUnloadingStatus(singleton);
+        try
+        {
+            await singleton.UnloadAsync();
+            if (singleton.Singleton is Component comp)
+            {
+                await UCWarfare.ToUpdate();
+                Destroy(comp);
+            }
+            return true;
         }
         catch (Exception ex)
         {
             L.LogError("Ran into an error unloading: " + singleton.Name);
             L.LogError(ex);
-            singleton.ErroredOnUnload = true;
             if (rethrow)
                 throw new SingletonLoadException(ESingletonLoadType.UNLOAD, singleton.Singleton, ex);
             return false;
@@ -513,46 +515,84 @@ internal class SingletonManager : MonoBehaviour
     /// <exception cref="NotSupportedException">Thrown if the function isn't executed on the game thread.</exception>
     /// <exception cref="SingletonLoadException">Thrown if the singleton represented by <paramref name="key"/> isn't successfully reloaded.</exception>
     /// <returns>The singleton if it was found, otherwise <see langword="null"/>.</returns>
-    public IReloadableSingleton? ReloadSingleton(string key)
+    public async Task<IReloadableSingleton?> ReloadSingletonAsync(string key)
     {
-        ThreadUtil.assertIsGameThread();
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         for (int i = 0; i < singletons.Count; ++i)
         {
             string? k1 = singletons[i].ReloadKey;
             if (k1 is not null && k1.Equals(key, StringComparison.OrdinalIgnoreCase))
             {
-                IReloadableSingleton? reloadable = ReloadIntl(singletons[i], true);
-                return reloadable;
+                SingletonInformation s = singletons[i];
+                await WaitOrThrow(s).ConfigureAwait(false);
+                try
+                {
+                    IReloadableSingleton? reloadable = await ReloadIntlAsync(s, true).ConfigureAwait(false);
+                    return reloadable;
+                }
+                finally
+                {
+                    s.semaphore.Release();
+                }
             }
         }
         return null;
     }
-    private IReloadableSingleton? ReloadIntl(SingletonInformation singleton, bool rethrow)
+
+    public async Task<IReloadableSingleton?> ReloadSingletonAsync(IReloadableSingleton singleton)
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        for (int i = 0; i < singletons.Count; ++i)
+        {
+            if (ReferenceEquals(singletons[i].Singleton, singleton))
+            {
+                SingletonInformation s = singletons[i];
+                await WaitOrThrow(s).ConfigureAwait(false);
+                try
+                {
+                    IReloadableSingleton? reloadable = await ReloadIntlAsync(s, true).ConfigureAwait(false);
+                    return reloadable;
+                }
+                finally
+                {
+                    s.semaphore.Release();
+                }
+            }
+        }
+        return null;
+    }
+    private async Task<IReloadableSingleton?> ReloadIntlAsync(SingletonInformation singleton, bool rethrow)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         if (singleton.Singleton is IReloadableSingleton reloadable)
         {
+            CheckLoadingUnloadingStatus(singleton);
             singleton.IsLoaded = false;
             try
             {
-                reloadable.Reload();
-                OnSingletonReloaded?.Invoke(reloadable, true);
+                await reloadable.ReloadAsync().ConfigureAwait(false);
                 singleton.IsLoaded = true;
-                singleton.ErroredOnReload = false;
-            }
-            catch (NotSupportedException ex)
-            {
-                L.LogError("Tried to reload a singleton without being on the game thread: " + singleton.Name);
-                singleton.ErroredOnReload = true;
-                OnSingletonReloaded?.Invoke(reloadable, false);
-                if (rethrow)
-                    throw new SingletonLoadException(ESingletonLoadType.RELOAD, singleton.Singleton, ex);
+                if (OnSingletonReloaded != null)
+                {
+                    await UCWarfare.ToUpdate();
+                    OnSingletonReloaded.Invoke(reloadable, true);
+                }
             }
             catch (Exception ex)
             {
                 L.LogError("Ran into an error reloading: " + singleton.Name);
                 L.LogError(ex);
-                OnSingletonReloaded?.Invoke(reloadable, false);
-                singleton.ErroredOnReload = true;
+                if (OnSingletonReloaded != null)
+                {
+                    await UCWarfare.ToUpdate();
+                    OnSingletonReloaded.Invoke(reloadable, false);
+                }
                 if (rethrow)
                     throw new SingletonLoadException(ESingletonLoadType.RELOAD, singleton.Singleton, ex);
             }
@@ -563,19 +603,38 @@ internal class SingletonManager : MonoBehaviour
     /// <summary>Get a singleton by type.</summary>
     /// <typeparam name="T">Type of <see cref="IUncreatedSingleton"/> to get.</typeparam>
     /// <returns>Singleton of type <typeparamref name="T"/>, or <see langword="null"/> if it isn't found.</returns>
-    public T GetSingleton<T>() where T : class, IUncreatedSingleton
+    public T? GetSingleton<T>() where T : class, IUncreatedSingleton
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         Type inputType = typeof(T);
         for (int i = 0; i < singletons.Count; ++i)
             if (singletons[i].SingletonType == inputType)
-                return (singletons[i].Singleton as T)!;
-        return null!;
+                return singletons[i].Singleton as T;
+        return null;
+    }
+    /// <summary>Get a singleton by type.</summary>
+    /// <typeparam name="T">Type of <see cref="IUncreatedSingleton"/> to get.</typeparam>
+    /// <returns>Singleton of type <typeparamref name="T"/>, or <see langword="null"/> if it isn't found.</returns>
+    public IUncreatedSingleton? GetSingleton(Type type)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        for (int i = 0; i < singletons.Count; ++i)
+            if (singletons[i].SingletonType == type)
+                return singletons[i].Singleton;
+        return null;
     }
     /// <summary>Check if a singleton is loaded.</summary>
     /// <typeparam name="T">Type of <see cref="IUncreatedSingleton"/> to check for.</typeparam>
     /// <returns><see langword="True"/> if <typeparamref name="T"/> singleton is loaded, otherwise <see langword="false"/>.</returns>
     public bool IsLoaded<T>() where T : class, IUncreatedSingleton
     {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
         Type inputType = typeof(T);
         for (int i = 0; i < singletons.Count; ++i)
             if (singletons[i].SingletonType == inputType)
@@ -585,64 +644,78 @@ internal class SingletonManager : MonoBehaviour
     /// <summary>
     /// Unload all currently loaded singletons.
     /// </summary>
-    public void UnloadAll()
+    public async Task UnloadAllAsync()
     {
-        ThreadUtil.assertIsGameThread();
-        lock (singletons)
+        foreach (SingletonInformation info in singletons)
         {
-            foreach (SingletonInformation info in singletons)
-            {
-                if (info.IsLoaded)
-                    UnloadIntl(info, false);
-            }
-            singletons.Clear();
+            if (info.IsLoaded)
+                await UnloadIntlAsync(info, false).ConfigureAwait(false);
         }
+        singletons.Clear();
     }
     private class SingletonInformation
     {
+        public readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+        public readonly string? ReloadKey;
         public bool IsLoaded;
         public IUncreatedSingleton Singleton;
         public Type SingletonType;
         public string Name;
-        public bool ErroredOnLoad;
-        public bool ErroredOnUnload;
-        public bool ErroredOnReload;
-        public string? ReloadKey;
+        public bool RequiresLevel;
         public SingletonInformation(IUncreatedSingleton singleton)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Singleton = singleton;
             IsLoaded = false;
             SingletonType = singleton.GetType();
+            if (Attribute.GetCustomAttributes(SingletonType, 
+                    typeof(SingletonDependencyAttribute))
+                .Any(x => x is SingletonDependencyAttribute attr &&
+                          attr.Dependency == typeof(Level)))
+            {
+                RequiresLevel = true;
+            }
             Name = SingletonType.Name.ToProperCase();
             if (singleton is IReloadableSingleton reloadable)
                 ReloadKey = reloadable.ReloadKey;
         }
         /// <exception cref="SingletonLoadException"/>
-        public void Unload()
+        public async Task UnloadAsync()
         {
-            ThreadUtil.assertIsGameThread();
-            lock (this)
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            await UCWarfare.ToUpdate();
+            if (Singleton.LoadAsynchrounously)
             {
+                await Singleton.UnloadAsync();
+                IsLoaded = Singleton.IsLoaded;
+            }
+            else
+            {
+                await UCWarfare.ToUpdate();
                 Singleton.Unload();
             }
         }
         /// <exception cref="SingletonLoadException"/>
-        public void Reload()
+        public async Task LoadAsync()
         {
-            if (Singleton is IReloadableSingleton reloadable)
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+            await UCWarfare.ToUpdate();
+            if (RequiresLevel && !Level.isLoaded)
             {
-                ThreadUtil.assertIsGameThread();
-                lock (this)
-                {
-                    reloadable.Reload();
-                }
+                await UCWarfare.ToLevelLoad();
             }
-        }
-        /// <exception cref="SingletonLoadException"/>
-        public void Load()
-        {
-            ThreadUtil.assertIsGameThread();
-            lock (this)
+            if (Singleton.LoadAsynchrounously)
+            {
+                await Singleton.LoadAsync();
+                IsLoaded = Singleton.IsLoaded;
+            }
+            else
             {
                 Singleton.Load();
             }
@@ -651,13 +724,16 @@ internal class SingletonManager : MonoBehaviour
 
     private class SingletonDependencyInformation
     {
-        public Type?[] Dependencies;
+        public readonly Type?[] Dependencies;
         //public List<Type>? Dependents;
-        public Type SingletonType;
-        public IUncreatedSingleton Singleton;
+        public readonly Type SingletonType;
+        public readonly IUncreatedSingleton Singleton;
         public bool isLoaded = false;
         public SingletonDependencyInformation(IUncreatedSingleton singleton)
         {
+#if DEBUG
+            using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
             Singleton = singleton;
             SingletonType = singleton.GetType();
             Attribute[] attributes = Attribute.GetCustomAttributes(SingletonType, typeof(SingletonDependencyAttribute));
@@ -671,19 +747,8 @@ internal class SingletonManager : MonoBehaviour
                             goto next;
                     Dependencies[i] = attr.Dependency;
                 }
-            next:;
+                next:;
             }
-        }
-        public bool DependsOn(Type type)
-        {
-            if (type is null) return false;
-            for (int i = 0; i < Dependencies.Length; ++i)
-            {
-                Type? t = Dependencies[i];
-                if (t == type)
-                    return true;
-            }
-            return false;
         }
     }
 }
@@ -716,7 +781,7 @@ public class SingletonLoadException : Exception
             return "Unknown exception while " + LoadType.ToString().ToLower() + "ing " + (Singleton?.GetType()?.Name?.ToProperCase() ?? "unknown") + " singleton: \n" + StackTrace;
     }
 }
-/// <summary>Thrown by <see cref="SingletonEx.AssertLoaded{T}"/> and <see cref="SingletonEx.AssertLoaded{T}(bool)"/> if the <see cref="IUncreatedSingleton"/> they reference isn't loaded.</summary>
+/// <summary>Thrown by <see cref="SingletonEx.AssertLoaded{T}()"/> and <see cref="SingletonEx.AssertLoaded{T}(bool)"/> if the <see cref="IUncreatedSingleton"/> they reference isn't loaded.</summary>
 [Serializable]
 public class SingletonUnloadedException : Exception
 {

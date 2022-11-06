@@ -21,7 +21,7 @@ public class BanCommand : Command
 
         if (!ctx.TryGet(0, out ulong targetId, out UCPlayer? target))
             throw ctx.Reply(T.PlayerNotFound);
-        int duration = F.ParseTime(ctx.Get(1)!);
+        int duration = Util.ParseTime(ctx.Get(1)!);
 
         if (duration == 0 || duration < -1)
             throw ctx.Reply(T.InvalidTime);

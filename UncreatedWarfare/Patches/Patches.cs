@@ -2,6 +2,10 @@
 using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.RegularExpressions;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -18,6 +22,8 @@ public static partial class Patches
     public static void DoPatching()
     {
         Patcher.PatchAll();
+        if (UCWarfare.Config.DisableMissingAssetKick)
+            InternalPatches.ServerMessageHandler_ValidateAssets_Patch.Patch(Patcher);
     }
     /// <summary>Unpatch methods</summary>
     public static void Unpatch()
@@ -427,6 +433,68 @@ public static partial class Patches
             if (__instance.gameObject.TryGetComponent(out ProjectileComponent projectile))
             {
                 projectile.OnCollided(other);
+            }
+        }
+        public static class ServerMessageHandler_ValidateAssets_Patch
+        {
+            private const string READ_MESSSAGE_NAME = "ReadMessage";
+            private const string VALIDATE_ASSETS_HANDLER_NAME = "ServerMessageHandler_ValidateAssets";
+            private const string SEND_KICK_NETCALL_NAME = "SendKickForInvalidGuid";
+            private static readonly Type? ValidateAssetsHandlerType = typeof(Provider).Assembly.GetType("SDG.Unturned." + VALIDATE_ASSETS_HANDLER_NAME);
+            private static readonly FieldInfo? SendKickForInvalidGuidField = typeof(Assets).GetField(SEND_KICK_NETCALL_NAME, BindingFlags.NonPublic | BindingFlags.Static);
+            private static readonly MethodInfo? LogMethod = typeof(L).GetMethod(nameof(L.LogWarning), BindingFlags.Public | BindingFlags.Static);
+            private static readonly MethodInfo? GuidToStringMethod = typeof(Guid).GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(x => x.Name.Equals(nameof(Guid.ToString), StringComparison.Ordinal) && x.GetParameters().Length == 2);
+            private static readonly MethodInfo? Concat2Method = typeof(string).GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(x => x.Name.Equals(nameof(string.Concat)) && x.GetParameters().Length == 2 && x.GetParameters()[0].ParameterType == typeof(string));
+            private const int LOCAL_NUMBER = 5;
+            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+            {
+                bool found = false;
+                foreach (CodeInstruction instruction in instructions)
+                {
+                    if (!found && instruction.opcode == OpCodes.Ldsfld && instruction.LoadsField(SendKickForInvalidGuidField))
+                    {
+                        yield return new CodeInstruction(OpCodes.Ldstr, "Unknown asset found: ");
+                        yield return new CodeInstruction(OpCodes.Ldloca_S, 5);
+                        yield return new CodeInstruction(OpCodes.Ldstr, "N");
+                        yield return new CodeInstruction(OpCodes.Ldnull);
+                        yield return new CodeInstruction(OpCodes.Callvirt, GuidToStringMethod);
+                        yield return new CodeInstruction(OpCodes.Call, Concat2Method); // message + guid
+                        yield return new CodeInstruction(OpCodes.Ldc_I4, (int)ConsoleColor.Yellow);
+                        yield return new CodeInstruction(OpCodes.Ldstr, "VALIDATE ASSETS");
+                        yield return new CodeInstruction(OpCodes.Call, LogMethod);
+                        yield return new CodeInstruction(OpCodes.Ret);
+                        found = true;
+                    }
+                    yield return instruction;
+                }
+                if (!found)
+                {
+                    L.LogWarning("Patch on " + VALIDATE_ASSETS_HANDLER_NAME + "." + READ_MESSSAGE_NAME + " failed to find an injection point.");
+                }
+            }
+
+            internal static void Patch(Harmony patcher)
+            {
+                if (SendKickForInvalidGuidField == null)
+                {
+                    L.LogWarning("Failed to find field: " + nameof(Assets) + "." + SEND_KICK_NETCALL_NAME + ".");
+                    return;
+                }
+                if (ValidateAssetsHandlerType != null)
+                {
+                    MethodInfo? original = ValidateAssetsHandlerType.GetMethod(READ_MESSSAGE_NAME, BindingFlags.NonPublic | BindingFlags.Static);
+                    if (original == null)
+                    {
+                        L.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + "." + READ_MESSSAGE_NAME + ".");
+                        return;
+                    }
+                    patcher.Patch(original, transpiler: new HarmonyMethod(typeof(ServerMessageHandler_ValidateAssets_Patch).GetMethod(nameof(Transpiler), BindingFlags.NonPublic | BindingFlags.Static)));
+                }
+                else
+                {
+                    L.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + ".");
+                    return;
+                }
             }
         }
     }

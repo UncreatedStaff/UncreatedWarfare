@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Uncreated.Json;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -18,7 +19,7 @@ using Uncreated.Warfare.Traits.Buffs;
 using Uncreated.Warfare.Vehicles;
 
 namespace Uncreated.Warfare.Traits;
-public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGameStartListener, ILevelStartListener, IPlayerAsyncInitListener
+public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IGameStartListener, ILevelStartListener, IPlayerPostInitListener
 {
     public List<Trait> ActiveTraits;
     public static TraitManager Singleton;
@@ -166,7 +167,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
 
         return trait is not Buff b || b.CanEnable;
     }
-    public void OnPlayerInit(UCPlayer player, bool wasAlreadyOnline)
+    public void OnPrePlayerInit(UCPlayer player, bool wasAlreadyOnline)
     {
         BuffUI.SendBuffs(player);
     }
@@ -628,7 +629,7 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerInitListener, IGame
             player.SendChat(T.UnknownError);
     }
 
-    public void OnAsyncInitComplete(UCPlayer player)
+    public void OnPostPlayerInit(UCPlayer player)
     {
         TraitSigns.SendAllTraitSigns(player);
     }

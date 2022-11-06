@@ -22,7 +22,6 @@ public sealed class GamemodeConfig : SyncConfig<GamemodeConfigData>
 [Sync(ConfigSyncId.GamemodeConfig)]
 public sealed class GamemodeConfigData : JSONConfigData
 {
-    public GamemodeConfigData() { }
     #region Barricades and Structures (1 to 200)
     [Sync(1)]
     [JsonPropertyName("barricade_insurgency_cache")]
@@ -199,6 +198,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [Sync(459, OnPullMethod = nameof(OnUIActionMenuUpdated))]
     [JsonPropertyName("ui_action_menu")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> UIActionMenu { get; set; }
+
+    [Sync(459, OnPullMethod = nameof(OnUILoadingUpdated))]
+    [JsonPropertyName("ui_loading")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> UILoading { get; set; }
 
     [Sync(500)]
     [JsonPropertyName("effect_marker_ammo")]
@@ -765,6 +768,7 @@ public sealed class GamemodeConfigData : JSONConfigData
     private void OnUIToastUpdated() => UCPlayerData.ReloadToastIDs();
     private void OnUIToastWinUpdated() => Gamemode.WinToastUI.LoadFromConfig(UIToastWin);
     private void OnUIActionMenuUpdated() => ActionManager.ActionMenuUI.LoadFromConfig(UIActionMenu);
+    private void OnUILoadingUpdated() => UCPlayer.LoadingUI.LoadFromConfig(UILoading);
     private void OnUIMutedUpdated() => UCPlayer.MutedUI.LoadFromConfig(UIMuted);
     private void OnUITicketsUpdated() => TicketManager.TicketUI.LoadFromConfig(UITickets);
     private void OnUITeamSelectorUpdated() => Teams.TeamSelector.JoinUI.LoadFromConfig(UITeamSelector);
