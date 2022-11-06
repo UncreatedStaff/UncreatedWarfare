@@ -7,14 +7,8 @@ namespace Uncreated.Warfare.Configuration;
 
 public class SystemConfig : Config<SystemConfigData>
 {
-    public SystemConfig() : base(Warfare.Data.Paths.BaseDirectory, "sys_config.json", "sysconfig")
-    {
-    }
-
-    protected override void OnReload()
-    {
-
-    }
+    public SystemConfig() : base(Warfare.Data.Paths.BaseDirectory, "sys_config.json", "sysconfig") { }
+    protected override void OnReload() { }
 }
 
 public class SystemConfigData : JSONConfigData
@@ -97,6 +91,8 @@ public class SystemConfigData : JSONConfigData
     public float SecondsBetweenAnnouncements;
     [JsonPropertyName("sendActionLogs")]
     public bool SendActionLogs;
+    [JsonPropertyName("disableMissingAssetKick")]
+    public bool DisableMissingAssetKick;
 
     public override void SetDefaults()
     {
@@ -139,6 +135,7 @@ public class SystemConfigData : JSONConfigData
         EnableSync = true;
         SecondsBetweenAnnouncements = 60f;
         SendActionLogs = true;
+        DisableMissingAssetKick = false;
     }
     public class ModerationConfig
     {

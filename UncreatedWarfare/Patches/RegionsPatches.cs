@@ -11,6 +11,14 @@ using UnityEngine;
 
 namespace Uncreated.Warfare;
 
+internal static class RegionsPatches
+{
+    internal static void Patch()
+    {
+
+    }
+}
+
 public static partial class Patches
 {
     [HarmonyPatch]
