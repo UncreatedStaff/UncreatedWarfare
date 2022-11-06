@@ -26,7 +26,13 @@ using UnityEngine;
 namespace Uncreated.Warfare.Vehicles;
 
 [SingletonDependency(typeof(Whitelister))]
-public class VehicleBay : ListSingleton<VehicleData>, ILevelStartListener, IDeclareWinListener
+public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsync, IDeclareWinListenerAsync
+{
+
+}
+
+[SingletonDependency(typeof(Whitelister))]
+public class VehicleBayOld : ListSingleton<VehicleData>, ILevelStartListener, IDeclareWinListener
 {
     private static VehicleBayConfig _config;
     internal static VehicleBay Singleton;
