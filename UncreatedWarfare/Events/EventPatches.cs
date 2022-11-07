@@ -5,6 +5,7 @@ using System;
 using System.Reflection;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Components;
+using Uncreated.Warfare.Harmony;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -13,98 +14,36 @@ internal static class EventPatches
 {
     internal static void TryPatchAll()
     {
-        PatchMethod(
+        PatchUtil.PatchMethod(
             typeof(BarricadeManager)
             .GetMethod(nameof(BarricadeManager.destroyBarricade),
                 BindingFlags.Static | BindingFlags.Public,
                 null,
                 new Type[] { typeof(BarricadeDrop), typeof(byte), typeof(byte), typeof(ushort) },
                 null),
-            postfix: GetMethodInfo(DestroyBarricadePostFix));
+            postfix: PatchUtil.GetMethodInfo(DestroyBarricadePostFix));
 
-        PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic),
-            postfix: GetMethodInfo(OnVehicleSpawned));
+        PatchUtil.PatchMethod(typeof(VehicleManager).GetMethod("addVehicle", BindingFlags.Instance | BindingFlags.NonPublic),
+            postfix: PatchUtil.GetMethodInfo(OnVehicleSpawned));
 
-        PatchMethod(typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
-            prefix: GetMethodInfo(TrapOnTriggerEnter));
+        PatchUtil.PatchMethod(typeof(InteractableTrap).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
+            prefix: PatchUtil.GetMethodInfo(TrapOnTriggerEnter));
 
-        PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public),
-            prefix: GetMethodInfo(PreDetonate), postfix: GetMethodInfo(PostDetonate));
+        PatchUtil.PatchMethod(typeof(InteractableCharge).GetMethod("detonate", BindingFlags.Instance | BindingFlags.Public),
+            prefix: PatchUtil.GetMethodInfo(PreDetonate), postfix: PatchUtil.GetMethodInfo(PostDetonate));
 
-        PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic),
-            prefix: GetMethodInfo(ExplodeVehicle));
+        PatchUtil.PatchMethod(typeof(InteractableVehicle).GetMethod("explode", BindingFlags.Instance | BindingFlags.NonPublic),
+            prefix: PatchUtil.GetMethodInfo(ExplodeVehicle));
 
-        PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
-            prefix: GetMethodInfo(RocketOnTriggerEnter));
+        PatchUtil.PatchMethod(typeof(Rocket).GetMethod("OnTriggerEnter", BindingFlags.Instance | BindingFlags.NonPublic),
+            prefix: PatchUtil.GetMethodInfo(RocketOnTriggerEnter));
 
-        PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance),
-            prefix: GetMethodInfo(PlayerDamageRequested));
-    }
-    private static MethodInfo GetMethodInfo(Delegate method)
-    {
-        try
-        {
-            return method.GetMethodInfo();
-        }
-        catch (MemberAccessException)
-        {
-            L.LogWarning("Was unable to get a method info from a delegate.");
-            return null!;
-        }
-    }
-    private static void PatchMethod(Delegate original, Delegate? prefix = null, Delegate? postfix = null, Delegate? transpiler = null, Delegate? finalizer = null)
-    {
-        if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return;
-        try
-        {
-            MethodInfo? originalInfo = original.Method;
-            MethodInfo? prefixInfo = prefix?.Method;
-            MethodInfo? postfixInfo = prefix?.Method;
-            MethodInfo? transpilerInfo = prefix?.Method;
-            MethodInfo? finalizerInfo = prefix?.Method;
-            if (originalInfo is null)
-            {
-                L.LogError("Error getting method info for patching.");
-                return;
-            }
-            if (prefixInfo is null && postfixInfo is null && transpilerInfo is null && finalizerInfo is null)
-            {
-                L.LogError("Error getting method info for patching " + originalInfo.FullDescription());
-                return;
-            }
-            if (prefix is not null && prefixInfo is null)
-                L.LogError("Error getting prefix info for patching " + originalInfo.FullDescription());
-            if (postfix is not null && postfixInfo is null)
-                L.LogError("Error getting postfix info for patching " + originalInfo.FullDescription());
-            if (transpiler is not null && transpilerInfo is null)
-                L.LogError("Error getting transpiler info for patching " + originalInfo.FullDescription());
-            if (finalizer is not null && finalizerInfo is null)
-                L.LogError("Error getting finalizer info for patching " + originalInfo.FullDescription());
-            PatchMethod(originalInfo, prefixInfo, postfixInfo, transpilerInfo, finalizerInfo);
-        }
-        catch (MemberAccessException ex)
-        {
-            L.LogError("Error getting method info for patching.");
-            L.LogError(ex);
-        }
-    }
-    private static void PatchMethod(MethodInfo original, MethodInfo? prefix = null, MethodInfo? postfix = null, MethodInfo? transpiler = null, MethodInfo? finalizer = null)
-    {
-        if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return;
+        PatchUtil.PatchMethod(typeof(PlayerLife).GetMethod("doDamage", BindingFlags.NonPublic | BindingFlags.Instance),
+            prefix: PatchUtil.GetMethodInfo(PlayerDamageRequested));
 
-        HarmonyMethod? prfx2 = prefix is null ? null : new HarmonyMethod(prefix);
-        HarmonyMethod? pofx2 = postfix is null ? null : new HarmonyMethod(postfix);
-        HarmonyMethod? tplr2 = transpiler is null ? null : new HarmonyMethod(transpiler);
-        HarmonyMethod? fnlr2 = finalizer is null ? null : new HarmonyMethod(finalizer);
-        try
-        {
-            Patches.Patcher.Patch(original, prefix: prfx2, postfix: pofx2, transpiler: tplr2, finalizer: fnlr2);
-        }
-        catch (Exception ex)
-        {
-            L.LogError("Error patching " + original.FullDescription());
-            L.LogError(ex);
-        }
+        PatchUtil.PatchMethod(PatchUtil.GetMethodInfo(
+                new Action<StructureDrop, byte, byte, Vector3, bool>(StructureManager.destroyStructure)),
+            postfix: PatchUtil.GetMethodInfo(OnStructureDestroyed));
     }
     // SDG.Unturned.BarricadeManager
     /// <summary>
@@ -472,5 +411,24 @@ internal static class EventPatches
         }
 
         return true;
+    }
+    // SDG.Unturned.StructureManager.destroyStructure
+    /// <summary>
+    /// Creates a post-structure destroyed event.
+    /// </summary>
+    private static void OnStructureDestroyed(StructureDrop structure, byte x, byte y, Vector3 ragdoll, bool wasPickedUp)
+    {
+        ulong destroyer;
+        if (structure.model.TryGetComponent(out DestroyerComponent comp))
+        {
+            destroyer = comp.Destroyer;
+            float time = comp.RelevantTime;
+            if (destroyer != 0 && Time.realtimeSinceStartup - time > 1f)
+                destroyer = 0ul;
+            UnityEngine.Object.Destroy(comp);
+        }
+        else destroyer = 0ul;
+
+        EventDispatcher.InvokeOnStructureDestroyed(structure, destroyer, ragdoll, wasPickedUp);
     }
 }

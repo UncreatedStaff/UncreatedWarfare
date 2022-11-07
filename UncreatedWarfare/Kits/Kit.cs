@@ -5,8 +5,10 @@ using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Transactions;
 using Uncreated.Encoding;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 
@@ -600,6 +602,41 @@ public readonly struct Skillset : IEquatable<Skillset>
     }
     public static bool operator ==(Skillset a, Skillset b) => a.EqualsHelper(in b, true);
     public static bool operator !=(Skillset a, Skillset b) => !a.EqualsHelper(in b, true);
+    public const string COLUMN_PK = "pk";
+    public const string COLUMN_TYPE = "Type";
+    public const string COLUMN_SKILL = "Skill";
+    public const string COLUMN_LEVEL = "Level";
+    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
+    {
+        if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
+        int ct = 4;
+        if (!oneToOne && hasPk)
+            ++ct;
+        Schema.Column[] columns = new Schema.Column[ct];
+        int index = 0;
+        if (!oneToOne && hasPk)
+        {
+            columns[0] = new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            };
+        }
+        else index = -1;
+        columns[++index] = new Schema.Column(fkColumn, SqlTypes.INCREMENT_KEY)
+        {
+            PrimaryKey = oneToOne,
+            AutoIncrement = oneToOne,
+            ForeignKey = true,
+            ForeignKeyColumn = mainPkColumn,
+            ForeignKeyTable = mainTable
+        };
+        columns[++index] = new Schema.Column(COLUMN_TYPE, SqlTypes.BYTE);
+        columns[++index] = new Schema.Column(COLUMN_SKILL, SqlTypes.BYTE);
+        columns[++index] = new Schema.Column(COLUMN_LEVEL, SqlTypes.BYTE);
+        return new Schema(tableName, columns, false, typeof(Skillset));
+    }
 }
 [JsonConverter(typeof(UnlockRequirementConverter))]
 public abstract class BaseUnlockRequirement : ICloneable
@@ -668,6 +705,37 @@ public abstract class BaseUnlockRequirement : ICloneable
     public abstract object Clone();
     protected abstract void Read(ByteReader reader);
     protected abstract void Write(ByteWriter writer);
+    public const string COLUMN_PK = "pk";
+    public const string COLUMN_JSON = "JSON";
+    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool oneToOne = false, bool hasPk = false)
+    {
+        if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
+        int ct = 2;
+        if (!oneToOne && hasPk)
+            ++ct;
+        Schema.Column[] columns = new Schema.Column[ct];
+        int index = 0;
+        if (!oneToOne && hasPk)
+        {
+            columns[0] = new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            };
+        }
+        else index = -1;
+        columns[++index] = new Schema.Column(fkColumn, SqlTypes.INCREMENT_KEY)
+        {
+            PrimaryKey = oneToOne,
+            AutoIncrement = oneToOne,
+            ForeignKey = true,
+            ForeignKeyColumn = mainPkColumn,
+            ForeignKeyTable = mainTable
+        };
+        columns[++index] = new Schema.Column(COLUMN_JSON, SqlTypes.STRING_255);
+        return new Schema(tableName, columns, false, typeof(BaseUnlockRequirement));
+    }
 }
 public class UnlockRequirementConverter : JsonConverter<BaseUnlockRequirement>
 {
@@ -881,6 +949,52 @@ public class KitItem : ICloneable
     }
     public KitItem() { }
     public object Clone() => new KitItem(Id, X, Y, Rotation, Metadata, Amount, Page);
+    public const string COLUMN_PK = "pk";
+    public const string COLUMN_GUID = "Item";
+    public const string COLUMN_X = "X";
+    public const string COLUMN_Y = "Y";
+    public const string COLUMN_ROTATION = "Rotation";
+    public const string COLUMN_PAGE = "Page";
+    public const string COLUMN_AMOUNT = "Amount";
+    public const string COLUMN_METADATA = "Metadata";
+    public static Schema GetDefaultSchema(string tableName, string fkColumn, string mainTable, string mainPkColumn, bool includePage = true, bool oneToOne = false, bool hasPk = false)
+    {
+        if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
+        int ct = 6;
+        if (!oneToOne && hasPk)
+            ++ct;
+        if (includePage)
+            ++ct;
+        Schema.Column[] columns = new Schema.Column[ct];
+        int index = 0;
+        if (!oneToOne && hasPk)
+        {
+            columns[0] = new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            };
+        }
+        else index = -1;
+        columns[++index] = new Schema.Column(fkColumn, SqlTypes.INCREMENT_KEY)
+        {
+            PrimaryKey = oneToOne,
+            AutoIncrement = oneToOne,
+            ForeignKey = true,
+            ForeignKeyColumn = mainPkColumn,
+            ForeignKeyTable = mainTable
+        };
+        columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID);
+        columns[++index] = new Schema.Column(COLUMN_X, SqlTypes.BYTE);
+        columns[++index] = new Schema.Column(COLUMN_Y, SqlTypes.BYTE);
+        columns[++index] = new Schema.Column(COLUMN_ROTATION, SqlTypes.BYTE);
+        if (includePage)
+            columns[++index] = new Schema.Column(COLUMN_PAGE, SqlTypes.BYTE);
+        columns[++index] = new Schema.Column(COLUMN_AMOUNT, SqlTypes.BYTE);
+        columns[++index] = new Schema.Column(COLUMN_METADATA, SqlTypes.BYTES_255);
+        return new Schema(tableName, columns, false, typeof(KitItem));
+    }
 }
 public class KitClothing : ICloneable
 {
@@ -901,6 +1015,7 @@ public class KitClothing : ICloneable
     public object Clone() => new KitClothing(Id, Type);
 }
 
+/// <summary>Max field character limit: <see cref="KitEx.SQUAD_LEVEL_MAX_CHAR_LIMIT"/>.</summary>
 [Translatable("Squad Level")]
 public enum ESquadLevel : byte
 {
@@ -909,6 +1024,7 @@ public enum ESquadLevel : byte
     [Translatable("Commander")]
     COMMANDER = 4
 }
+/// <summary>Max field character limit: <see cref="KitEx.BRANCH_MAX_CHAR_LIMIT"/>.</summary>
 [Translatable("Branch")]
 public enum EBranch : byte
 {
@@ -921,6 +1037,7 @@ public enum EBranch : byte
     SPECOPS,
     NAVY
 }
+/// <summary>Max field character limit: <see cref="KitEx.CLOTHING_MAX_CHAR_LIMIT"/>.</summary>
 public enum EClothingType : byte
 {
     SHIRT,
@@ -931,6 +1048,7 @@ public enum EClothingType : byte
     BACKPACK,
     GLASSES
 }
+/// <summary>Max field character limit: <see cref="KitEx.CLASS_MAX_CHAR_LIMIT"/>.</summary>
 [JsonConverter(typeof(ClassConverter))]
 [Translatable("Kit Class")]
 public enum EClass : byte

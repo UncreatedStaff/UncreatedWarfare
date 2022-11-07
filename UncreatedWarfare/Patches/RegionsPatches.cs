@@ -9,7 +9,7 @@ using Uncreated.Warfare.Structures;
 using Uncreated.Warfare.Traits;
 using UnityEngine;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Harmony;
 
 internal static class RegionsPatches
 {
@@ -24,19 +24,6 @@ public static partial class Patches
     [HarmonyPatch]
     public class RegionsPatches
     {
-        // SDG.Unturned.StructureManager
-        /// <summary>
-        /// Prefix of <see cref="StructureManager.destroyStructure(StructureRegion, byte, byte, ushort, Vector3)"/> to invoke <see cref="StructureDestroyedHandler"/>.
-        /// </summary>
-        [HarmonyPatch(typeof(StructureManager), nameof(StructureManager.destroyStructure), typeof(StructureDrop), typeof(byte), typeof(byte), typeof(Vector3))]
-        [HarmonyPrefix]
-        static void DestroyStructurePostFix(StructureDrop structure, byte x, byte y, Vector3 ragdoll)
-        {
-#if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-            StructureDestroyedHandler?.Invoke(structure.GetServersideData(), structure, structure.GetServersideData().instanceID);
-        }
         // SDG.Unturned.BarricadeManager
         /// <summary>
         /// Prefix of <see cref="BarricadeManager.ServerSetSignTextInternal(InteractableSign, BarricadeRegion, byte, byte, ushort, string)"/> to set translation data of signs.

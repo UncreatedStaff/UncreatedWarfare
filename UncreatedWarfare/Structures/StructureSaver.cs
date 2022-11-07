@@ -1014,6 +1014,26 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
 
         return null;
     }
+    public SqlItem<SavedStructure>? GetSaveItemSync(uint instanceId, EStructType type)
+    {
+        Wait();
+        try
+        {
+            for (int i = 0; i < List.Count; ++i)
+            {
+                SavedStructure? item = List[i].Item;
+                if (item != null && item.InstanceID == instanceId && item.Buildable != null && item.Buildable.Type == type)
+                {
+                    return List[i];
+                }
+            }
+        }
+        finally
+        {
+            Release();
+        }
+        return null;
+    }
     public void BeginAddStructure(StructureDrop drop)
     {
         Task.Run(async () =>
@@ -1172,18 +1192,18 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
             new Schema.Column(COLUMN_INSTANCES_INSTANCE_ID, SqlTypes.INSTANCE_ID)
         }, false, null)
     };
-    internal record struct ItemJarData(PrimaryKey Key, PrimaryKey Structure, Guid Item, byte X, byte Y, byte Rotation, byte Amount, byte Quality,
-        byte[] Metadata) : IListSubItem
-    {
-        PrimaryKey IListSubItem.LinkedKey { get => Structure; set => Structure = value; }
-        PrimaryKey IListItem.PrimaryKey { get => Key; set => Key = value; }
-    }
-    internal record struct ItemDisplayData(PrimaryKey Key, ushort Skin, ushort Mythic, byte Rotation, string? Tags, string? DynamicProps) : IListSubItem
-    {
-        PrimaryKey IListSubItem.LinkedKey { get => Key; set => Key = value; }
-        PrimaryKey IListItem.PrimaryKey { get => Key; set => Key = value; }
-    }
     #endregion
+}
+public record struct ItemJarData(PrimaryKey Key, PrimaryKey Structure, Guid Item, byte X, byte Y, byte Rotation, byte Amount, byte Quality,
+    byte[] Metadata) : IListSubItem
+{
+    PrimaryKey IListSubItem.LinkedKey { get => Structure; set => Structure = value; }
+    PrimaryKey IListItem.PrimaryKey { get => Key; set => Key = value; }
+}
+public record struct ItemDisplayData(PrimaryKey Key, ushort Skin, ushort Mythic, byte Rotation, string? Tags, string? DynamicProps) : IListSubItem
+{
+    PrimaryKey IListSubItem.LinkedKey { get => Key; set => Key = value; }
+    PrimaryKey IListItem.PrimaryKey { get => Key; set => Key = value; }
 }
 public class UCBarricade : IBuildable
 {

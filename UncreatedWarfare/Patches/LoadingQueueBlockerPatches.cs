@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Harmony;
 internal static class LoadingQueueBlockerPatches
 {
     public static void Patch()

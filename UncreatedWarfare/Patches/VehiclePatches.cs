@@ -6,7 +6,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Harmony;
 
 public static partial class Patches
 {
@@ -100,7 +100,6 @@ public static partial class Patches
                                         __result = false;
                                     }
                                 }
-
                             }
                         }
                     }

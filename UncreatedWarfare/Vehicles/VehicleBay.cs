@@ -4,9 +4,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using Mono.Cecil.Cil;
 using Uncreated.Framework;
+using Uncreated.Json;
+using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
@@ -17,6 +23,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Maps;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
 using Uncreated.Warfare.Singletons;
@@ -28,7 +35,308 @@ namespace Uncreated.Warfare.Vehicles;
 [SingletonDependency(typeof(Whitelister))]
 public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsync, IDeclareWinListenerAsync
 {
+    public VehicleBay() : base("vehiclebay", SCHEMAS)
+    {
+    }
 
+    public override bool AwaitLoad => true;
+
+    public override MySqlDatabase Sql => Data.AdminSql;
+    [Obsolete]
+    protected override async Task AddOrUpdateItem(VehicleData? item, PrimaryKey pk, CancellationToken token = default)
+    {
+        if (item == null)
+        {
+            if (!pk.IsValid)
+                throw new ArgumentException("If item is null, pk must have a value to delete the item.", nameof(pk));
+            await Sql.NonQueryAsync($"DELETE FROM `{TABLE_MAIN}` WHERE `{COLUMN_PK}`=@0;", new object[] { pk.Key }, token).ConfigureAwait(false);
+            return;
+        }
+        if (MapScheduler.Current == -1)
+            throw new InvalidOperationException("MapScheduler not loaded.");
+        bool hasPk = pk.IsValid;
+        int pk2 = PrimaryKey.NotAssigned;
+        object[] objs = new object[hasPk ? 14 : 13];
+        objs[0] = MapScheduler.Current;
+        objs[1] = item.Faction;
+        objs[2] = item.RespawnTime;
+        objs[3] = item.TicketCost;
+        objs[4] = item.CreditCost;
+        objs[5] = item.RearmCost;
+        objs[6] = item.Cooldown;
+        objs[7] = item.Branch.ToString();
+        objs[8] = item.RequiredClass.ToString();
+        objs[9] = item.Type.ToString();
+        objs[10] = item.RequiresSL;
+        objs[11] = item.DisallowAbandons;
+        objs[12] = item.AbandonValueLossSpeed;
+        if (hasPk)
+            objs[13] = pk.Key;
+        await Sql.QueryAsync($"INSERT INTO `{TABLE_MAIN}` (`{COLUMN_MAP}`,`{COLUMN_FACTION}`,`{COLUMN_RESPAWN_TIME}`," +
+                             $"`{COLUMN_TICKET_COST}`,`{COLUMN_CREDIT_COST}`,`{COLUMN_REARM_COST}`,`{COLUMN_COOLDOWN}`," +
+                             $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
+                             $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`" +
+                             (hasPk ? $",`{COLUMN_PK}`" : string.Empty) +
+                             ") VALUES (@0,@1,@2,@3,@4,@5,@6,@7,@8,@9,@10,@11,@12" +
+                             (hasPk ? ",@13" : string.Empty) +
+                             ") ON DUPLICATE KEY UPDATE " +
+                             $"`{COLUMN_MAP}`=@0,`{COLUMN_FACTION}`=@1,`{COLUMN_RESPAWN_TIME}`=@2,`{COLUMN_TICKET_COST}`=@3," +
+                             $"`{COLUMN_CREDIT_COST}`=@4,`{COLUMN_REARM_COST}`=@5,`{COLUMN_COOLDOWN}`=@6,`{COLUMN_BRANCH}`=@7,`{COLUMN_REQUIRED_CLASS}`=@8," +
+                             $"`{COLUMN_VEHICLE_TYPE}`=@9,`{COLUMN_REQUIRES_SQUADLEADER}`=@10,`{COLUMN_ABANDON_BLACKLISTED}`=@11,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}`=@12," +
+                             $"`{COLUMN_PK}`=LAST_INSERT_ID(`{COLUMN_PK}`);" +
+                             "SET @pk := (SELECT LAST_INSERT_ID() as `pk`);" +
+                             $"DELETE FROM `{TABLE_UNLOCK_REQUIREMENTS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_DELAYS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_CREW_SEATS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_BARRICADES}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             $"DELETE FROM `{TABLE_TRUNK_ITEMS}` WHERE `{COLUMN_EXT_PK}`=@pk;" +
+                             "SELECT @pk;",
+            objs, reader =>
+            {
+                pk2 = reader.GetInt32(0);
+            }, token).ConfigureAwait(false);
+        pk = pk2;
+        if (!pk.IsValid)
+            throw new Exception("Unable to get a valid primary key for " + item + ".");
+        item.PrimaryKey = pk;
+        StringBuilder builder = new StringBuilder(128);
+        if (item.Delays is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_DELAYS}` (`{Delay.COLUMN_TYPE}`,`{Delay.COLUMN_VALUE}`,`{Delay.COLUMN_GAMEMODE}`) VALUES ");
+            objs = new object[item.Delays.Length * 3];
+            for (int i = 0; i < item.Delays.Length; ++i)
+            {
+                Delay delay = item.Delays[i];
+                int index = i * 3;
+                objs[index] = delay.type.ToString();
+                objs[index + 1] = delay.type switch
+                {
+                    EDelayType.OUT_OF_STAGING or EDelayType.NONE => DBNull.Value,
+                    _ => delay.value
+                };
+                objs[index + 2] = (object?)delay.gamemode ?? DBNull.Value;
+                if (i != 0)
+                    builder.Append(',');
+                builder.Append('(');
+                for (int j = index; j < index + 3; ++j)
+                {
+                    if (j != index)
+                        builder.Append(',');
+                    builder.Append('@').Append(index);
+                }
+                builder.Append(')');
+            }
+            builder.Append(';');
+            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            builder.Clear();
+        }
+
+        if (item.Items is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_ITEMS}` (`{COLUMN_EXT_PK}`,`{COLUMN_ITEM_GUID}`) VALUES ");
+            objs = new object[item.Items.Length * 2];
+            for (int i = 0; i < item.Items.Length; ++i)
+            {
+                int index = i * 2;
+                objs[index] = pk2;
+                objs[index + 1] = item.Items[i];
+                if (i != 0)
+                    builder.Append(',');
+                builder.Append('(');
+                for (int j = index; j < index + 2; ++j)
+                {
+                    if (j != index)
+                        builder.Append(',');
+                    builder.Append('@').Append(index);
+                }
+                builder.Append(')');
+            }
+            builder.Append(';');
+            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            builder.Clear();
+        }
+
+        if (item.CrewSeats is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_CREW_SEATS}` (`{COLUMN_EXT_PK}`,`{COLUMN_CREW_SEATS_SEAT}`) VALUES ");
+            objs = new object[item.CrewSeats.Length * 2];
+            for (int i = 0; i < item.CrewSeats.Length; ++i)
+            {
+                int index = i * 2;
+                objs[index] = pk2;
+                objs[index + 1] = item.CrewSeats[i];
+                if (i != 0)
+                    builder.Append(',');
+                builder.Append('(');
+                for (int j = index; j < index + 2; ++j)
+                {
+                    if (j != index)
+                        builder.Append(',');
+                    builder.Append('@').Append(index);
+                }
+                builder.Append(')');
+            }
+            builder.Append(';');
+            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            builder.Clear();
+        }
+
+        if (item.UnlockRequirements is { Length: > 0 })
+        {
+            builder.Append($"INSERT INTO `{TABLE_UNLOCK_REQUIREMENTS}` (`{COLUMN_EXT_PK}`,`{BaseUnlockRequirement.COLUMN_JSON}`) VALUES ");
+            objs = new object[item.UnlockRequirements.Length * 2];
+            using MemoryStream str = new MemoryStream(48);
+            for (int i = 0; i < item.UnlockRequirements.Length; ++i)
+            {
+                BaseUnlockRequirement req = item.UnlockRequirements[i];
+                if (i != 0)
+                    str.Seek(0L, SeekOrigin.Begin);
+                Utf8JsonWriter writer = new Utf8JsonWriter(str, JsonEx.condensedWriterOptions);
+                BaseUnlockRequirement.Write(writer, req);
+                writer.Dispose();
+                string json = System.Text.Encoding.UTF8.GetString(str.GetBuffer(), 0, checked((int)str.Position));
+                int index = i * 2;
+                objs[index] = pk2;
+                objs[index + 1] = json;
+                if (i != 0)
+                    builder.Append(',');
+                builder.Append('(');
+                for (int j = index; j < index + 2; ++j)
+                {
+                    if (j != index)
+                        builder.Append(',');
+                    builder.Append('@').Append(index);
+                }
+                builder.Append(')');
+            }
+            builder.Append(';');
+            await Sql.NonQueryAsync(builder.ToString(), objs, token);
+            builder.Clear();
+        }
+    }
+    [Obsolete]
+    protected override Task<VehicleData[]> DownloadAllItems(CancellationToken token = default)
+    {
+        throw new NotImplementedException();
+    }
+    [Obsolete]
+    protected override Task<VehicleData?> DownloadItem(PrimaryKey pk, CancellationToken token = default)
+    {
+        throw new NotImplementedException();
+    }
+
+    Task ILevelStartListenerAsync.OnLevelReady()
+    {
+        throw new NotImplementedException();
+    }
+
+    Task IDeclareWinListenerAsync.OnWinnerDeclared(ulong winner)
+    {
+        throw new NotImplementedException();
+    }
+
+    private const string TABLE_MAIN = "vehicle_data";
+    private const string TABLE_UNLOCK_REQUIREMENTS = "vehicle_data_unlock_requirements";
+    private const string TABLE_DELAYS = "vehicle_data_delays";
+    private const string TABLE_ITEMS = "vehicle_data_request_items";
+    private const string TABLE_CREW_SEATS = "vehicle_data_crew_seats";
+    private const string TABLE_BARRICADES = "vehicle_data_barricades";
+    private const string TABLE_BARRICADE_ITEMS = "vehicle_data_barricade_items";
+    private const string TABLE_BARRICADE_DISPLAY_DATA = "vehicle_data_barricade_display_data";
+    private const string TABLE_TRUNK_ITEMS = "vehicle_data_trunk_items";
+    private const string COLUMN_PK = "pk";
+    private const string COLUMN_EXT_PK = "VehicleData";
+    private const string COLUMN_MAP = "Map";
+    private const string COLUMN_FACTION = "Faction";
+    private const string COLUMN_RESPAWN_TIME = "RespawnTime";
+    private const string COLUMN_TICKET_COST = "TicketCost";
+    private const string COLUMN_CREDIT_COST = "CreditCost";
+    private const string COLUMN_REARM_COST = "RearmCost";
+    private const string COLUMN_COOLDOWN = "Cooldown";
+    private const string COLUMN_VEHICLE_TYPE = "VehicleType";
+    private const string COLUMN_BRANCH = "Branch";
+    private const string COLUMN_REQUIRED_CLASS = "RequiredClass";
+    private const string COLUMN_REQUIRES_SQUADLEADER = "RequiresSquadleader";
+    private const string COLUMN_ABANDON_BLACKLISTED = "AbandonBlacklisted";
+    private const string COLUMN_ABANDON_VALUE_LOSS_SPEED = "AbandonValueLossSpeed";
+    private const string COLUMN_ITEM_GUID = "Item";
+    private const string COLUMN_CREW_SEATS_SEAT = "Index";
+    private static readonly Schema[] SCHEMAS;
+    static VehicleBay()
+    {
+        SCHEMAS = new Schema[9];
+        SCHEMAS[0] = new Schema(TABLE_MAIN, new Schema.Column[]
+        {
+            new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            },
+            new Schema.Column(COLUMN_MAP, SqlTypes.MAP_ID)
+            {
+                Nullable = true
+            },
+            new Schema.Column(COLUMN_FACTION, SqlTypes.INCREMENT_KEY)
+            {
+                Nullable = true,
+                ForeignKey = true,
+                ForeignKeyColumn = FactionInfo.COLUMN_PK,
+                ForeignKeyTable = FactionInfo.TABLE_MAIN
+            },
+            new Schema.Column(COLUMN_RESPAWN_TIME, SqlTypes.FLOAT)
+            {
+                Default = "600"
+            },
+            new Schema.Column(COLUMN_TICKET_COST, SqlTypes.INT)
+            {
+                Default = "0"
+            },
+            new Schema.Column(COLUMN_CREDIT_COST, SqlTypes.INT)
+            {
+                Default = "0"
+            },
+            new Schema.Column(COLUMN_REARM_COST, SqlTypes.INT)
+            {
+                Default = "3"
+            },
+            new Schema.Column(COLUMN_COOLDOWN, SqlTypes.FLOAT)
+            {
+                Default = "0"
+            },
+            new Schema.Column(COLUMN_VEHICLE_TYPE, "varchar(" + VehicleData.VEHICLE_TYPE_MAX_CHAR_LIMIT + ")")
+            {
+                Default = nameof(EVehicleType.NONE)
+            },
+            new Schema.Column(COLUMN_BRANCH, "varchar(" + KitEx.BRANCH_MAX_CHAR_LIMIT + ")")
+            {
+                Default = nameof(EBranch.DEFAULT)
+            },
+            new Schema.Column(COLUMN_REQUIRED_CLASS, "varchar(" + KitEx.CLASS_MAX_CHAR_LIMIT + ")")
+            {
+                Default = nameof(EClass.NONE)
+            },
+            new Schema.Column(COLUMN_REQUIRES_SQUADLEADER, SqlTypes.BOOLEAN)
+            {
+                Default = "0"
+            },
+            new Schema.Column(COLUMN_ABANDON_BLACKLISTED, SqlTypes.BOOLEAN)
+            {
+                Default = "0"
+            },
+            new Schema.Column(COLUMN_ABANDON_VALUE_LOSS_SPEED, SqlTypes.BOOLEAN)
+            {
+                Default = "0.125"
+            },
+        }, true, typeof(VehicleData));
+        SCHEMAS[1] = BaseUnlockRequirement.GetDefaultSchema(TABLE_UNLOCK_REQUIREMENTS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);
+        SCHEMAS[2] = Delay.GetDefaultSchema(TABLE_DELAYS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK);
+        SCHEMAS[3] = F.GetListSchema<Guid>(TABLE_ITEMS, COLUMN_EXT_PK, COLUMN_ITEM_GUID, TABLE_MAIN, COLUMN_PK);
+        SCHEMAS[4] = F.GetListSchema<byte>(TABLE_CREW_SEATS, COLUMN_EXT_PK, COLUMN_CREW_SEATS_SEAT, TABLE_MAIN, COLUMN_PK);
+        SCHEMAS[5] = KitItem.GetDefaultSchema(TABLE_TRUNK_ITEMS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includePage: false);
+        Schema[] vbarrs = VBarricade.GetDefaultSchemas(TABLE_BARRICADES, TABLE_BARRICADE_ITEMS, TABLE_BARRICADE_DISPLAY_DATA, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, includeHealth: true);
+        Array.Copy(vbarrs, 0, SCHEMAS, 6, vbarrs.Length);
+    }
 }
 
 [SingletonDependency(typeof(Whitelister))]
@@ -39,7 +347,7 @@ public class VehicleBayOld : ListSingleton<VehicleData>, ILevelStartListener, ID
     public static bool Loaded => Singleton.IsLoaded<VehicleBay, VehicleData>();
     public static VehicleBayData Config => _config.Data;
 
-    public VehicleBay() : base("vehiclebay", Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"))
+    public VehicleBayOld() : base("vehiclebay", Path.Combine(Data.Paths.VehicleStorage, "vehiclebay.json"))
     {
     }
     private bool hasWhitelisted = false;
@@ -608,636 +916,4 @@ public class VehicleBayOld : ListSingleton<VehicleData>, ILevelStartListener, ID
             }
         }
     }
-}
-public enum EDelayType
-{
-    NONE = 0,
-    TIME = 1,
-    /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG = 2,
-    /// <summary><see cref="VehicleData.Team"/> must be set.</summary>
-    FLAG_PERCENT = 3,
-    OUT_OF_STAGING = 4
-}
-[JsonConverter(typeof(DelayConverter))]
-public struct Delay : IJsonReadWrite
-{
-    public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
-    [JsonIgnore]
-    public bool IsNil => value == float.NaN;
-    public EDelayType type;
-    public string? gamemode;
-    public float value;
-    public Delay(EDelayType type, float value, string? gamemode = null)
-    {
-        this.type = type;
-        this.value = value;
-        this.gamemode = gamemode;
-    }
-
-    public override string ToString() =>
-        $"{type} Delay, {(string.IsNullOrEmpty(gamemode) ? "any" : gamemode)} " +
-        $"gamemode{(type == EDelayType.NONE || type == EDelayType.OUT_OF_STAGING ? string.Empty : $" Value: {value}")}";
-    public void WriteJson(Utf8JsonWriter writer)
-    {
-        writer.WriteNumber(nameof(type), (int)type);
-        writer.WriteString(nameof(gamemode), gamemode);
-        writer.WriteNumber(nameof(value), value);
-    }
-    public void ReadJson(ref Utf8JsonReader reader)
-    {
-        while (reader.TokenType == JsonTokenType.PropertyName || (reader.Read() && reader.TokenType == JsonTokenType.PropertyName))
-        {
-            string? prop = reader.GetString();
-            if (reader.Read() && prop != null)
-            {
-                switch (prop)
-                {
-                    case nameof(type):
-                        if (reader.TryGetInt32(out int i))
-                            type = (EDelayType)i;
-                        break;
-                    case nameof(gamemode):
-                        if (reader.TokenType == JsonTokenType.Null) gamemode = null;
-                        else gamemode = reader.GetString();
-                        break;
-                    case nameof(value):
-                        reader.TryGetSingle(out value);
-                        break;
-                }
-            }
-        }
-    }
-    public static void AddDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
-    {
-        int index = -1;
-        for (int i = 0; i < delays.Length; i++)
-        {
-            ref Delay del = ref delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1)
-        {
-            Delay del = new Delay(type, value, gamemode);
-            Delay[] old = delays;
-            delays = new Delay[old.Length + 1];
-            if (old.Length > 0)
-            {
-                Array.Copy(old, 0, delays, 0, old.Length);
-                delays[delays.Length - 1] = del;
-            }
-            else
-            {
-                delays[0] = del;
-            }
-        }
-    }
-    public static bool RemoveDelay(ref Delay[] delays, EDelayType type, float value, string? gamemode = null)
-    {
-        if (delays.Length == 0) return false;
-        int index = -1;
-        for (int i = 0; i < delays.Length; i++)
-        {
-            ref Delay del = ref delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
-            {
-                index = i;
-                break;
-            }
-        }
-        if (index == -1) return false;
-        Delay[] old = delays;
-        delays = new Delay[old.Length - 1];
-        if (old.Length == 1) return true;
-        if (index != 0)
-            Array.Copy(old, 0, delays, 0, index);
-        Array.Copy(old, index + 1, delays, index, old.Length - index - 1);
-        return true;
-    }
-    public static bool HasDelayType(Delay[] delays, EDelayType type)
-    {
-        string gm = Data.Gamemode.Name;
-        for (int i = 0; i < delays.Length; i++)
-        {
-            ref Delay del = ref delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
-            if (del.type == type) return true;
-        }
-        return false;
-    }
-    public static bool IsDelayedType(Delay[] delays, EDelayType type, ulong team)
-    {
-        string gm = Data.Gamemode.Name;
-        for (int i = 0; i < delays.Length; i++)
-        {
-            ref Delay del = ref delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode))
-            {
-                string gamemode = del.gamemode!;
-                bool blacklist = false;
-                if (gamemode[0] == '!')
-                {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1);
-                }
-
-                if (gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue;
-            }
-            if (del.type == type)
-            {
-                switch (type)
-                {
-                    case EDelayType.NONE:
-                        return false;
-                    case EDelayType.TIME:
-                        if (TimeDelayed(ref del))
-                            return true;
-                        break;
-                    case EDelayType.FLAG:
-                        if (FlagDelayed(ref del, team))
-                            return true;
-                        break;
-                    case EDelayType.FLAG_PERCENT:
-                        if (FlagPercentDelayed(ref del, team))
-                            return true;
-                        break;
-                    case EDelayType.OUT_OF_STAGING:
-                        if (StagingDelayed(ref del))
-                            return true;
-                        break;
-                }
-            }
-        }
-        return false;
-    }
-    // TODO: gamemode blacklist not working
-    public static bool IsDelayed(Delay[] delays, out Delay delay, ulong team)
-    {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        delay = Delay.Nil;
-        string? gm = Data.Gamemode?.Name;
-        if (delays == null || delays.Length == 0) return false;
-        bool anyVal = false;
-        bool isNoneYet = false;
-        for (int i = delays.Length - 1; i >= 0; i--)
-        {
-            ref Delay del = ref delays[i];
-            bool universal = string.IsNullOrEmpty(del.gamemode);
-            if (!universal)
-            {
-                string gamemode = del.gamemode!; // !TeamCTF
-                bool blacklist = false;
-                if (gamemode[0] == '!') // true
-                {
-                    blacklist = true;
-                    gamemode = gamemode.Substring(1); // TeamCTF
-                }
-
-                if (gm is not null && gm.Equals(gamemode, StringComparison.OrdinalIgnoreCase)) // false
-                {
-                    if (blacklist) continue;
-                }
-                else if (!blacklist) continue; // false
-                universal = true;
-            }
-            if (universal && anyVal) continue;
-            switch (del.type)
-            {
-                case EDelayType.NONE:
-                    if (!universal)
-                    {
-                        delay = del;
-                        isNoneYet = true;
-                    }
-                    break;
-                case EDelayType.TIME:
-                    if ((!universal || !isNoneYet) && TimeDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.FLAG:
-                    if ((!universal || !isNoneYet) && FlagDelayed(ref del, team))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.FLAG_PERCENT:
-                    if ((!universal || !isNoneYet) && FlagPercentDelayed(ref del, team))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-                case EDelayType.OUT_OF_STAGING:
-                    if ((!universal || !isNoneYet) && StagingDelayed(ref del))
-                    {
-                        delay = del;
-                        if (!universal) return true;
-                        anyVal = true;
-                    }
-                    break;
-            }
-        }
-        return anyVal;
-    }
-    private static bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.value > Data.Gamemode.SecondsSinceStart;
-    private static bool FlagDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, false, team);
-    private static bool FlagPercentDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, true, team);
-    private static bool FlagDelayed(ref Delay delay, bool percent, ulong team)
-    {
-        if (Data.Is(out Invasion inv))
-        {
-            int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            if (team == 1)
-            {
-                if (inv.AttackingTeam == 1)
-                    return inv.ObjectiveT1Index < ct;
-                else
-                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
-            }
-            else if (team == 2)
-            {
-                if (inv.AttackingTeam == 2)
-                    return inv.Rotation.Count - inv.ObjectiveT2Index - 1 < ct;
-                else
-                    return inv.ObjectiveT1Index < ct;
-            }
-            return false;
-        }
-        else if (Data.Is(out IFlagTeamObjectiveGamemode fr))
-        {
-            int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            int i2 = GetHighestObjectiveIndex(team, fr);
-            return (team == 1 && i2 < ct) ||
-                   (team == 2 && fr.Rotation.Count - i2 - 1 < ct);
-        }
-        else if (Data.Is(out Insurgency ins))
-        {
-            int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
-            return ins.Caches != null && ins.CachesDestroyed < ct;
-        }
-        return false;
-    }
-    private static bool StagingDelayed(ref Delay delay) => Data.Is(out IStagingPhase sp) && sp.State == EState.STAGING;
-    private static int GetHighestObjectiveIndex(ulong team, IFlagTeamObjectiveGamemode gm)
-    {
-        if (team == 1)
-        {
-            for (int i = 0; i < gm.Rotation.Count; i++)
-            {
-                if (!gm.Rotation[i].HasBeenCapturedT1)
-                    return i;
-            }
-            return 0;
-        }
-        else if (team == 2)
-        {
-            for (int i = gm.Rotation.Count - 1; i >= 0; i--)
-            {
-                if (!gm.Rotation[i].HasBeenCapturedT2)
-                    return i;
-            }
-            return gm.Rotation.Count - 1;
-        }
-        return -1;
-    }
-}
-public sealed class DelayConverter : JsonConverter<Delay>
-{
-    public override Delay Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        Delay delay = new Delay();
-        delay.ReadJson(ref reader);
-        return delay;
-    }
-
-    public override void Write(Utf8JsonWriter writer, Delay value, JsonSerializerOptions options)
-    {
-        writer.WriteStartObject();
-        value.WriteJson(writer);
-        writer.WriteEndObject();
-    }
-}
-public class VehicleData : ITranslationArgument
-{
-    [JsonSettable]
-    public string Name;
-    [JsonSettable]
-    public Guid VehicleID;
-    [JsonSettable]
-    public ulong Team;
-    [JsonSettable]
-    public ushort RespawnTime;
-    [JsonSettable]
-    public ushort TicketCost;
-    [JsonSettable]
-    public ushort CreditCost;
-    [JsonSettable]
-    public ushort Cooldown;
-    [JsonSettable]
-    public EBranch Branch;
-    [JsonSettable]
-    public EClass RequiredClass;
-    [JsonSettable]
-    public byte RearmCost;
-    [JsonSettable]
-    public EVehicleType Type;
-    [JsonSettable]
-    public bool RequiresSL;
-    [JsonSettable]
-    public ushort UnlockLevel;
-    [JsonSettable]
-    public bool DisallowAbandons;
-    [JsonSettable]
-    public float AbandonValueLossSpeed = 0.125f;
-    public BaseUnlockRequirement[] UnlockRequirements;
-    public Guid[] Items;
-    public Delay[] Delays;
-    public List<byte> CrewSeats;
-    public MetaSave? Metadata;
-    [JsonIgnore]
-    public IEnumerable<VehicleSpawn> EnumerateSpawns => VehicleSpawner.Spawners.Where(x => x.VehicleGuid == VehicleID);
-    public VehicleData(Guid vehicleID)
-    {
-        VehicleID = vehicleID;
-        Team = 0;
-        RespawnTime = 600;
-        TicketCost = 0;
-        CreditCost = 0;
-        Cooldown = 0;
-        if (Assets.find(vehicleID) is VehicleAsset va)
-        {
-            Name = va.name;
-            if (va.engine == EEngine.PLANE || va.engine == EEngine.HELICOPTER || va.engine == EEngine.BLIMP)
-                Branch = EBranch.AIRFORCE;
-            else if (va.engine == EEngine.BOAT)
-                Branch = (EBranch)5; // navy
-            else
-                Branch = EBranch.DEFAULT;
-        }
-        else Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        RearmCost = 3;
-        Type = EVehicleType.NONE;
-        RequiresSL = false;
-        UnlockLevel = 0;
-        Items = new Guid[0];
-        CrewSeats = new List<byte>();
-        Metadata = null;
-        Delays = new Delay[0];
-    }
-    public VehicleData()
-    {
-        Name = "";
-        VehicleID = Guid.Empty;
-        Team = 0;
-        UnlockRequirements = new BaseUnlockRequirement[0];
-        RespawnTime = 600;
-        TicketCost = 0;
-        CreditCost = 0;
-        Cooldown = 0;
-        Branch = EBranch.DEFAULT;
-        RequiredClass = EClass.NONE;
-        RearmCost = 3;
-        Type = EVehicleType.NONE;
-        RequiresSL = false;
-        UnlockLevel = 0;
-        Items = new Guid[0];
-        CrewSeats = new List<byte>();
-        Metadata = null;
-        Delays = new Delay[0];
-    }
-    public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
-    public static bool IsArmor(EVehicleType type) => type == EVehicleType.APC || type == EVehicleType.IFV || type == EVehicleType.MBT || type == EVehicleType.SCOUT_CAR;
-    public static bool IsLogistics(EVehicleType type) => type == EVehicleType.LOGISTICS || type == EVehicleType.HELI_TRANSPORT;
-    public static bool IsAircraft(EVehicleType type) =>  type == EVehicleType.HELI_TRANSPORT || type == EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
-    public static bool IsEmplacement(EVehicleType type) => type == EVehicleType.HMG || type == EVehicleType.ATGM || type == EVehicleType.AA || type == EVehicleType.MORTAR;
-    public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
-    public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
-    public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
-    public void SaveMetaData(InteractableVehicle vehicle)
-    {
-        List<VBarricade>? barricades = null;
-        List<KitItem>? trunk = null;
-
-        if (vehicle.trunkItems.items.Count > 0)
-        {
-            trunk = new List<KitItem>();
-
-            foreach (ItemJar jar in vehicle.trunkItems.items)
-            {
-                if (Assets.find(EAssetType.ITEM, jar.item.id) is ItemAsset asset)
-                {
-                    trunk.Add(new KitItem(
-                        asset.GUID,
-                        jar.x,
-                        jar.y,
-                        jar.rot,
-                        jar.item.metadata,
-                        jar.item.amount,
-                        0
-                    ));
-                }
-            }
-        }
-
-        VehicleBarricadeRegion vehicleRegion = BarricadeManager.findRegionFromVehicle(vehicle);
-        if (vehicleRegion != null)
-        {
-            barricades = new List<VBarricade>();
-            for (int i = 0; i < vehicleRegion.drops.Count; i++)
-            {
-                BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
-                barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
-                    bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
-            }
-        }
-
-        if (barricades is not null || trunk is not null)
-            Metadata = new MetaSave(barricades, trunk);
-    }
-    public string GetCostLine(UCPlayer ucplayer)
-    {
-        if (UnlockRequirements == null || UnlockRequirements.Length == 0)
-            return string.Empty;
-        else
-        {
-            for (int i = 0; i < UnlockRequirements.Length; i++)
-            {
-                BaseUnlockRequirement req = UnlockRequirements[i];
-                if (req.CanAccess(ucplayer))
-                    continue;
-                return req.GetSignText(ucplayer);
-            }
-        }
-        return string.Empty;
-    }
-    [FormatDisplay("Colored Vehicle Name")]
-    public const string COLORED_NAME = "cn";
-    [FormatDisplay("Vehicle Name")]
-    public const string NAME = "n";
-    string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
-    {
-        string name = Assets.find(VehicleID) is VehicleAsset va ? va.vehicleName : VehicleID.ToString("N");
-        if (format is not null && format.Equals(COLORED_NAME, StringComparison.Ordinal))
-            return Localization.Colorize(TeamManager.GetTeamHexColor(Team), name, flags);
-        return name;
-    }
-}
-
-public class MetaSave
-{
-    public List<VBarricade>? Barricades;
-    public List<KitItem>? TrunkItems;
-    public MetaSave(List<VBarricade>? barricades, List<KitItem>? trunkItems)
-    {
-        Barricades = barricades;
-        TrunkItems = trunkItems;
-    }
-}
-
-public class VBarricade
-{
-    public Guid BarricadeID;
-    public ushort Health;
-    public ulong OwnerID;
-    public ulong GroupID;
-    public float PosX;
-    public float PosY;
-    public float PosZ;
-    public float AngleX;
-    public float AngleY;
-    public float AngleZ;
-    public string State;
-    internal VBarricade() { }
-    public VBarricade(Guid barricadeID, ushort health, ulong ownerID, ulong groupID, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
-    {
-        BarricadeID = barricadeID;
-        Health = health;
-        OwnerID = ownerID;
-        GroupID = groupID;
-        PosX = posX;
-        PosY = posY;
-        PosZ = posZ;
-        AngleX = angleX;
-        AngleY = angleY;
-        AngleZ = angleZ;
-        State = state;
-    }
-}
-
-[Translatable("Vehicle Type")]
-public enum EVehicleType
-{
-    [Translatable("Unknown")]
-    NONE,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Хамви")]
-    [Translatable(LanguageAliasSet.SPANISH, "Humvee")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Humvee")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Humvee")]
-    [Translatable(LanguageAliasSet.POLISH, "Humvee")]
-    HUMVEE,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Транспорт")]
-    [Translatable(LanguageAliasSet.SPANISH, "Transporte")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Transport")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Transporte")]
-    [Translatable(LanguageAliasSet.POLISH, "Humvee")]
-    [Translatable("Transport Truck")]
-    TRANSPORT,
-    SCOUT_CAR,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Логистический")]
-    [Translatable(LanguageAliasSet.SPANISH, "Logistico")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Camion")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Logística")]
-    [Translatable(LanguageAliasSet.POLISH, "Transport Logistyczny")]
-    [Translatable("Logistics Truck")]
-    LOGISTICS,
-    [Translatable(LanguageAliasSet.RUSSIAN, "БТР")]
-    [Translatable(LanguageAliasSet.SPANISH, "APC")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "TAB")]
-    [Translatable(LanguageAliasSet.POLISH, "APC")]
-    [Translatable("APC")]
-    APC,
-    [Translatable(LanguageAliasSet.RUSSIAN, "БМП")]
-    [Translatable(LanguageAliasSet.SPANISH, "IFV")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "MLI")]
-    [Translatable(LanguageAliasSet.POLISH, "BWP")]
-    [Translatable("IFV")]
-    IFV,
-    [Translatable(LanguageAliasSet.RUSSIAN, "ТАНК")]
-    [Translatable(LanguageAliasSet.SPANISH, "Tanque")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Tanc")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Tanque")]
-    [Translatable(LanguageAliasSet.POLISH, "Czołg")]
-    [Translatable("Tank")]
-    MBT,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
-    [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
-    [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
-    [Translatable("Transport Heli")]
-    HELI_TRANSPORT,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Верталёт")]
-    [Translatable(LanguageAliasSet.SPANISH, "Helicoptero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Elicopter")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Helicóptero")]
-    [Translatable(LanguageAliasSet.POLISH, "Helikopter")]
-    [Translatable("Attack Heli")]
-    HELI_ATTACK,
-    [Translatable(LanguageAliasSet.RUSSIAN, "реактивный")]
-    [Translatable("Jet")]
-    JET,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Размещение")]
-    [Translatable(LanguageAliasSet.SPANISH, "Emplazamiento")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "Amplasament")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "Emplacamento")]
-    [Translatable(LanguageAliasSet.POLISH, "Fortyfikacja")]
-    [Obsolete("Use the individual emplacement types instead.", true)]
-    EMPLACEMENT,
-    [Translatable(LanguageAliasSet.RUSSIAN, "зенитный")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
-    [Translatable("Anti-Aircraft")]
-    AA,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Тяжелый пулемет")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
-    [Translatable("Heavy Machine Gun")]
-    HMG,
-    [Translatable(LanguageAliasSet.RUSSIAN, "противотанковая ракета")]
-    [Translatable(LanguageAliasSet.SPANISH, "")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
-    [Translatable("ATGM")]
-    ATGM,
-    [Translatable(LanguageAliasSet.RUSSIAN, "Миномет")]
-    [Translatable(LanguageAliasSet.SPANISH, "Mortero")]
-    [Translatable(LanguageAliasSet.ROMANIAN, "")]
-    [Translatable(LanguageAliasSet.PORTUGUESE, "")]
-    [Translatable(LanguageAliasSet.POLISH, "")]
-    [Translatable("Mortar")]
-    MORTAR
 }

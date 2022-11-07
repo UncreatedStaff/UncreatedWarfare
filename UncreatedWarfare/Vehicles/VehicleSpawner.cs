@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Structures;
@@ -74,27 +75,49 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Gamemode.Config.StructureVehicleBay.MatchGuid(data.barricade.asset.GUID))
+        if (Gamemode.Config.StructureVehicleBay.MatchGuid(data.barricade.asset.GUID) && IsRegistered(data.instanceID, out VehicleSpawn spawn, EStructType.BARRICADE))
         {
-            if (IsRegistered(data.instanceID, out _, EStructType.BARRICADE))
+            if (Assets.find<VehicleAsset>(spawn.VehicleGuid) is VehicleAsset asset)
             {
-                L.LogDebug("Vehicle spawn was deregistered because the barricade was salvaged or destroyed.");
-                DeleteSpawn(data.instanceID, EStructType.BARRICADE);
+                ActionLogger.Add(EActionLogType.DEREGISTERED_SPAWN,
+                    $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                    $"DEREGISTERED SPAWN ID: {spawn.InstanceId}");
+                    //e.Instigator == null ? 0ul : e.Instigator.Steam64);
             }
+            else
+            {
+                ActionLogger.Add(EActionLogType.DEREGISTERED_SPAWN,
+                    $"{spawn.VehicleGuid:N} - " +
+                    $"DEREGISTERED SPAWN ID: {spawn.InstanceId}");
+                    //e.Instigator == null ? 0ul : e.Instigator.Steam64);
+            }
+            L.LogDebug("Vehicle spawn was deregistered because the barricade was salvaged or destroyed.");
+            DeleteSpawn(data.instanceID, EStructType.BARRICADE);
         }
     }
-    internal void OnStructureDestroyed(StructureData data, StructureDrop drop, uint instanceID)
+    internal void OnStructureDestroyed(StructureDestroyed e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Gamemode.Config.StructureVehicleBay.MatchGuid(data.structure.asset.GUID))
+        if (Gamemode.Config.StructureVehicleBay.MatchGuid(e.Structure.asset.GUID) && IsRegistered(e.InstanceID, out VehicleSpawn spawn, EStructType.STRUCTURE))
         {
-            if (IsRegistered(data.instanceID, out _, EStructType.STRUCTURE))
+            if (Assets.find<VehicleAsset>(spawn.VehicleGuid) is VehicleAsset asset)
             {
-                L.LogDebug("Vehicle spawn was deregistered because the structure was salvaged or destroyed.");
-                DeleteSpawn(data.instanceID, EStructType.STRUCTURE);
+                ActionLogger.Add(EActionLogType.DEREGISTERED_SPAWN,
+                    $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                    $"DEREGISTERED SPAWN ID: {spawn.InstanceId}",
+                    e.Instigator == null ? 0ul : e.Instigator.Steam64);
             }
+            else
+            {
+                ActionLogger.Add(EActionLogType.DEREGISTERED_SPAWN, 
+                    $"{spawn.VehicleGuid:N} - " +
+                    $"DEREGISTERED SPAWN ID: {spawn.InstanceId}",
+                    e.Instigator == null ? 0ul : e.Instigator.Steam64);
+            }
+            L.LogDebug("Vehicle spawn was deregistered because the structure was " + (e.WasPickedUp ? "salvaged" : "destroyed") + ".");
+            DeleteSpawn(e.InstanceID, EStructType.STRUCTURE);
         }
     }
     public static void SaveSingleton()

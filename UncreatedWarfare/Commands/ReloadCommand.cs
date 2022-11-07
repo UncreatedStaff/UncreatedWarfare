@@ -66,6 +66,12 @@ public class ReloadCommand : Command
             ctx.Reply(T.ReloadedPermissions);
             ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "PERMISSIONS");
         }
+        else if (module.Equals("factions", StringComparison.OrdinalIgnoreCase))
+        {
+            ReloadFactions(ctx);
+            ctx.Defer();
+            ctx.LogAction(EActionLogType.RELOAD_COMPONENT, "FACTIONS");
+        }
         else if (module.Equals("colors", StringComparison.OrdinalIgnoreCase))
         {
             ReloadColors();
@@ -239,6 +245,21 @@ public class ReloadCommand : Command
                 L.LogError("Team 2's unarmed kit, \"" + TeamManager.Team2UnarmedKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
             if (!KitManager.KitExists(TeamManager.DefaultKit, out _))
                 L.LogError("The default kit, \"" + TeamManager.DefaultKit + "\", was not found, it should be added to \"" + Data.Paths.KitsStorage + "kits.json\".");
+        });
+    }
+    internal static void ReloadFactions(CommandInteraction? ctx)
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        Task.Run(async () =>
+        {
+            await TeamManager.ReloadFactions().ConfigureAwait(false);
+            if (ctx != null)
+            {
+                await UCWarfare.ToUpdate();
+                ctx.Reply(T.ReloadedGeneric, "factions");
+            }
         });
     }
     internal static void ReloadAllConfigFiles()

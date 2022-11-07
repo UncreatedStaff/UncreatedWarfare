@@ -39,16 +39,18 @@ public abstract class TeamGamemode : Gamemode, ITeams
 
         return Task.CompletedTask;
     }
-    protected override Task PostInit()
+    protected override async Task PostInit()
     {
         ThreadUtil.assertIsGameThread();
+        await TeamManager.ReloadFactions().ConfigureAwait(false);
         if (UseTeamSelector)
         {
             for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
                 TeamSelector.JoinSelectionMenu(PlayerManager.OnlinePlayers[i]);
         }
-
-        return Task.CompletedTask;
+        Task task = base.PostInit();
+        if (!task.IsCompleted)
+            await task.ConfigureAwait(false);
     }
     protected override Task PreGameStarting(bool isOnLoad)
     {

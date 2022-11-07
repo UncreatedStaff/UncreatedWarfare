@@ -1538,6 +1538,11 @@ public delegate void KitAccessCallback(Kit kit, ulong player);
 public delegate void KitChangedCallback(UCPlayer player, Kit kit, string oldKit);
 public static class KitEx
 {
+    public const int BRANCH_MAX_CHAR_LIMIT = 16;
+    public const int CLOTHING_MAX_CHAR_LIMIT = 16;
+    public const int CLASS_MAX_CHAR_LIMIT = 20;
+    public const int SQUAD_LEVEL_MAX_CHAR_LIMIT = 16;
+    public const int KIT_NAME_MAX_CHAR_LIMIT = 25;
     public static bool HasItemOfID(this Kit kit, Guid ID) => kit.Items.Exists(i => i.Id == ID);
     public static bool IsLimited(this Kit kit, out int currentPlayers, out int allowedPlayers, ulong team, bool requireCounts = false)
     {

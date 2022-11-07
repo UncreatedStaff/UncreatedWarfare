@@ -12,7 +12,7 @@ using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Traits.Buffs;
 using UnityEngine;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Harmony;
 
 public static partial class Patches
 {

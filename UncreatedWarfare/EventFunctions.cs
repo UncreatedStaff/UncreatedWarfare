@@ -17,12 +17,14 @@ using Uncreated.Warfare.Events.Barricades;
 using Uncreated.Warfare.Events.Components;
 using Uncreated.Warfare.Events.Items;
 using Uncreated.Warfare.Events.Players;
+using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
@@ -58,17 +60,7 @@ public static class EventFunctions
         if (itemstemp.TryGetValue(item, out PlayerInventory inv))
         {
             uint nextindex;
-            try
-            {
-                nextindex = Data.GetItemManagerInstanceCount();
-            }
-            catch
-            {
-                L.LogError("Unable to get ItemManager.instanceCount.");
-                itemstemp.Remove(item);
-                return;
-            }
-            nextindex++;
+            nextindex = Data.GetItemManagerInstanceCount() + 1;
             if (droppeditems.TryGetValue(inv.player.channel.owner.playerID.steamID.m_SteamID, out List<uint> instanceids))
             {
                 if (instanceids == null) droppeditems[inv.player.channel.owner.playerID.steamID.m_SteamID] = new List<uint>() { nextindex };
@@ -97,7 +89,7 @@ public static class EventFunctions
     }
     internal static void OnStructurePlaced(StructureRegion region, StructureDrop drop)
     {
-        SDG.Unturned.StructureData data = drop.GetServersideData();
+        StructureData data = drop.GetServersideData();
         ActionLogger.Add(EActionLogType.PLACE_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", data.owner);
     }
     internal static void OnBarricadePlaced(BarricadeRegion region, BarricadeDrop drop)
@@ -105,7 +97,7 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SDG.Unturned.BarricadeData data = drop.GetServersideData();
+        BarricadeData data = drop.GetServersideData();
 
         BarricadeComponent owner = drop.model.gameObject.AddComponent<BarricadeComponent>();
         owner.Owner = data.owner;
@@ -1537,22 +1529,27 @@ public static class EventFunctions
             explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening.";
         }
     }
-    internal static void OnStructureDestroyed(StructureData data, StructureDrop drop, uint instanceID)
+    internal static void OnStructureDestroyed(StructureDestroyed e)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (Data.Is(out IVehicles v))
-            v.VehicleSpawner.OnStructureDestroyed(data, drop, instanceID);
-        if (drop.model.TryGetComponent(out BarricadeComponent c))
+            v.VehicleSpawner.OnStructureDestroyed(e);
+        if (e.Instigator != null)
         {
-            SteamPlayer damager = PlayerTool.getSteamPlayer(c.LastDamager);
-            ActionLogger.Add(EActionLogType.DESTROY_STRUCTURE, $"{drop.asset.itemName} / {drop.asset.id} / {drop.asset.GUID:N} - Owner: {c.Owner}, Team: {TeamManager.TranslateName(data.group.GetTeam(), 0)}, ID: {drop.instanceID}", c.LastDamager);
-            if (Data.Reporter is not null && damager != null && data.group.GetTeam() == damager.GetTeam())
+            ActionLogger.Add(EActionLogType.DESTROY_STRUCTURE, 
+                $"{e.Structure.asset.itemName} / {e.Structure.asset.id} / {e.Structure.asset.GUID:N} " +
+                $"- Owner: {e.ServersideData.owner}, Team: {TeamManager.TranslateName(e.ServersideData.group.GetTeam(), 0)}, ID: {e.Structure.instanceID}",
+                e.Instigator.Steam64);
+            if (Data.Reporter is not null && e.Instigator.GetTeam() == e.ServersideData.group.GetTeam())
             {
-                Data.Reporter.OnDestroyedStructure(c.LastDamager, instanceID);
+                Data.Reporter.OnDestroyedStructure(e.Instigator.Steam64, e.InstanceID);
             }
         }
+        IconRenderer[] iconrenderers = e.Transform.GetComponents<IconRenderer>();
+        foreach (IconRenderer iconRenderer in iconrenderers)
+            IconManager.DeleteIcon(iconRenderer);
     }
     internal static void OnBarricadeDestroyed(BarricadeDestroyed e)
     {
@@ -1569,7 +1566,7 @@ public static class EventFunctions
         if (e.Transform.TryGetComponent(out RepairableComponent repairable))
             repairable.Destroy(e);
 
-        IconRenderer[] iconrenderers = e.Barricade.model.GetComponents<IconRenderer>();
+        IconRenderer[] iconrenderers = e.Transform.GetComponents<IconRenderer>();
         foreach (IconRenderer iconRenderer in iconrenderers)
             IconManager.DeleteIcon(iconRenderer);
 

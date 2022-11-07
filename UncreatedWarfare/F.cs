@@ -1,12 +1,11 @@
-﻿using SDG.Framework.UI.Components;
-using SDG.NetTransport;
+﻿using SDG.NetTransport;
 using SDG.Unturned;
 using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -14,6 +13,7 @@ using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.Permissions;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
@@ -29,6 +29,8 @@ namespace Uncreated.Warfare;
 
 public static class F
 {
+    public const string COLUMN_LANGUAGE = "Language";
+    public const string COLUMN_VALUE = "Value";
     public static bool IsMono { get; } = Type.GetType("Mono.Runtime") != null;
 #if DEBUG
     public static CancellationToken DebugTimeout => new CancellationTokenSource(10000).Token;
@@ -76,9 +78,7 @@ public static class F
             rtn = color;
         else
             rtn = f2.Substring(7); // 7 is "color=#" length
-        if (!int.TryParse(rtn, NumberStyles.HexNumber, Data.Locale, out _))
-            return UCWarfare.GetColorHex("default");
-        else return rtn;
+        return !int.TryParse(rtn, NumberStyles.HexNumber, Data.Locale, out _) ? UCWarfare.GetColorHex("default") : rtn;
     }
     public static string MakeRemainder(this string[] array, int startIndex = 0, int length = -1, string deliminator = " ")
     {
@@ -358,7 +358,7 @@ public static class F
                 else
                 {
                     if (buffer.Length != 0)
-                        newString.Append(buffer.ToString());
+                        newString.Append(buffer);
                     buffer.Clear();
                     newString.Append(chars[i]);
                 }
@@ -565,7 +565,7 @@ public static class F
         else
         {
             SteamPlayer? pl = PlayerTool.getSteamPlayer(player);
-            if (pl == default)
+            if (pl == null)
             {
                 try
                 {
@@ -842,7 +842,7 @@ public static class F
         {
             char ch = charenum.Current;
             int c = ch;
-            if (c > 31 && c < 127)
+            if (c is > 31 and < 127)
             {
                 if (alphanumcount - 1 >= UCWarfare.Config.MinAlphanumericStringLength)
                 {
@@ -1188,5 +1188,131 @@ public static class F
     {
         return Mathf.Abs(left.x - right.x) < tolerance &&
                Mathf.Abs(left.y - right.y) < tolerance;
+    }
+    public static Schema GetListSchema<T>(string tableName, string pkColumn, string valueColumn, string primaryTableName, string primaryTablePkColumn, bool hasPk = false, bool oneToOne = false, int length = -1, bool nullable = false, bool unique = false, string pkName = "pk")
+    {
+        Type type = typeof(T);
+        string typestr;
+        if (type == typeof(Guid))
+            typestr = SqlTypes.GUID;
+        else if (type == typeof(ulong))
+            typestr = SqlTypes.ULONG;
+        else if (type == typeof(byte[]))
+            typestr = length < 1 ? SqlTypes.BYTES_255 : "binary(" + length + ")";
+        else if (type == typeof(string))
+            typestr = length < 1 ? SqlTypes.STRING_255 : "varchar(" + length + ")";
+        else if (type == typeof(float))
+            typestr = SqlTypes.FLOAT;
+        else if (type == typeof(double))
+            typestr = SqlTypes.DOUBLE;
+        else if (type == typeof(long))
+            typestr = SqlTypes.LONG;
+        else if (type == typeof(uint))
+            typestr = SqlTypes.UINT;
+        else if (type == typeof(int))
+            typestr = SqlTypes.INT;
+        else if (type == typeof(short))
+            typestr = SqlTypes.SHORT;
+        else if (type == typeof(ushort))
+            typestr = SqlTypes.USHORT;
+        else if (type == typeof(byte))
+            typestr = SqlTypes.BYTE;
+        else if (type == typeof(sbyte))
+            typestr = SqlTypes.SBYTE;
+        else if (type == typeof(bool))
+            typestr = SqlTypes.BOOLEAN;
+        else if (type == typeof(PrimaryKey))
+            typestr = SqlTypes.INCREMENT_KEY;
+        else
+        {
+            MethodInfo info = type.GetMethod("GetDefaultSchema", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+            if (info != null && typeof(Schema).IsAssignableFrom(info.ReturnType))
+            {
+                ParameterInfo[] parameters = info.GetParameters();
+                if (parameters.Length > 3 &&
+                    parameters[0].ParameterType == typeof(string) && parameters[0].Name.Equals("tableName", StringComparison.OrdinalIgnoreCase) &&
+                    parameters[1].ParameterType == typeof(string) && parameters[1].Name.Equals("fkColumn", StringComparison.OrdinalIgnoreCase) &&
+                    parameters[2].ParameterType == typeof(string) && parameters[2].Name.Equals("mainTable", StringComparison.OrdinalIgnoreCase) &&
+                    parameters[3].ParameterType == typeof(string) && parameters[3].Name.Equals("mainPkColumn", StringComparison.OrdinalIgnoreCase) &&
+                    (parameters.Length == 4 || parameters[4].IsOptional))
+                {
+                    int oneToOneIndex = -1;
+                    int hasPkIndex = -1;
+                    for (int i = 0; i < parameters.Length; ++i)
+                    {
+                        ParameterInfo p = parameters[i];
+                        if (p.Name.Equals(nameof(oneToOne)))
+                            oneToOneIndex = i;
+                        else if (p.Name.Equals("hasPk"))
+                            hasPkIndex = i;
+                    }
+
+                    object[] objs = new object[parameters.Length];
+                    for (int i = 4; i < parameters.Length; ++i)
+                        objs[i] = Type.Missing;
+                    if (oneToOneIndex != -1)
+                        objs[oneToOneIndex] = oneToOne;
+                    if (hasPkIndex != -1)
+                        objs[hasPkIndex] = hasPk;
+                    objs[0] = tableName;
+                    objs[1] = pkColumn;
+                    objs[2] = primaryTableName;
+                    objs[3] = primaryTablePkColumn;
+                    try
+                    {
+                        if (info.Invoke(null, objs) is Schema s)
+                            return s;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new ArgumentException(nameof(T), type.Name + " is not a valid type for GetListSchema<T>(...).", ex);
+                    }
+                }
+            }
+            throw new ArgumentException(nameof(T), type.Name + " is not a valid type for GetListSchema<T>(...).");
+        }
+        Schema.Column[] columns = new Schema.Column[hasPk ? 3 : 2];
+        int index = 0;
+        if (hasPk)
+        {
+            columns[0] = new Schema.Column(pkName, SqlTypes.INCREMENT_KEY)
+            {
+                PrimaryKey = true,
+                AutoIncrement = true
+            };
+        }
+        else index = -1;
+        columns[++index] = new Schema.Column(pkColumn, SqlTypes.INCREMENT_KEY)
+        {
+            PrimaryKey = !hasPk && oneToOne,
+            AutoIncrement = !hasPk && oneToOne,
+            ForeignKey = true,
+            ForeignKeyColumn = primaryTablePkColumn,
+            ForeignKeyTable = primaryTableName
+        };
+        columns[++index] = new Schema.Column(valueColumn, typestr)
+        {
+            Nullable = nullable,
+            UniqueKey = unique
+        };
+        return new Schema(tableName, columns, false, type);
+    }
+
+    public static Schema GetTranslationListSchema(string tableName, string pkColumn, string mainTable, string mainPkColumn, int length)
+    {
+        return new Schema(tableName, new Schema.Column[]
+        {
+            new Schema.Column(pkColumn, SqlTypes.INCREMENT_KEY)
+            {
+                ForeignKey = true,
+                ForeignKeyTable = mainTable,
+                ForeignKeyColumn = mainPkColumn
+            },
+            new Schema.Column(COLUMN_LANGUAGE, "char(5)")
+            {
+                Nullable = true
+            },
+            new Schema.Column(COLUMN_VALUE, "varchar(" + length.ToString(CultureInfo.InvariantCulture) + ")")
+        }, false, typeof(KeyValuePair<string, string>));
     }
 }

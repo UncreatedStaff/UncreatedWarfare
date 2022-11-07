@@ -34,6 +34,7 @@ using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 using System.Threading.Tasks;
 using System.Collections;
+using Uncreated.Warfare.Harmony;
 
 namespace Uncreated.Warfare;
 
@@ -295,7 +296,7 @@ public class UCWarfare : MonoBehaviour
         UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
         UseableConsumeable.onConsumePerformed += EventFunctions.OnConsume;
         EventDispatcher.OnBarricadeDestroyed += EventFunctions.OnBarricadeDestroyed;
-        Patches.StructureDestroyedHandler += EventFunctions.OnStructureDestroyed;
+        EventDispatcher.OnStructureDestroyed += EventFunctions.OnStructureDestroyed;
         PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
     }
     private void UnsubscribeFromEvents()
@@ -342,7 +343,7 @@ public class UCWarfare : MonoBehaviour
         UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
         UseableConsumeable.onConsumePerformed -= EventFunctions.OnConsume;
         EventDispatcher.OnBarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
-        Patches.StructureDestroyedHandler -= EventFunctions.OnStructureDestroyed;
+        EventDispatcher.OnStructureDestroyed -= EventFunctions.OnStructureDestroyed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
         StatsManager.UnloadEvents();
     }

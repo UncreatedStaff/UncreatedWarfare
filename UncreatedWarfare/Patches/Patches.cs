@@ -13,11 +13,11 @@ using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Squads;
 using UnityEngine;
 
-namespace Uncreated.Warfare;
+namespace Uncreated.Warfare.Harmony;
 
 public static partial class Patches
 {
-    public static Harmony Patcher = new Harmony("net.uncreated.warfare");
+    public static HarmonyLib.Harmony Patcher = new HarmonyLib.Harmony("net.uncreated.warfare");
     /// <summary>Patch methods</summary>
     public static void DoPatching()
     {
@@ -41,7 +41,6 @@ public static partial class Patches
     public delegate void PlayerGesture(Player player, EPlayerGesture gesture, ref bool allow);
     public delegate void PlayerMarker(Player player, ref Vector3 position, ref string overrideText, ref bool isBeingPlaced, ref bool allowed);
 
-    public static event StructureDestroyedEventArgs StructureDestroyedHandler;
     public static event OnPlayerTogglesCosmeticsDelegate OnPlayerTogglesCosmetics_Global;
     public static event OnPlayerSetsCosmeticsDelegate OnPlayerSetsCosmetics_Global;
     public static event BatteryStealingDelegate OnBatterySteal_Global;
@@ -473,7 +472,7 @@ public static partial class Patches
                 }
             }
 
-            internal static void Patch(Harmony patcher)
+            internal static void Patch(HarmonyLib.Harmony patcher)
             {
                 if (SendKickForInvalidGuidField == null)
                 {

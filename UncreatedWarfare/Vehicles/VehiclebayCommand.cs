@@ -474,11 +474,11 @@ public class VehicleBayCommand : Command
                 VehicleSpawner.DeleteSpawn(spawn.InstanceId, spawn.StructureType);
                 VehicleAsset? asset = Assets.find<VehicleAsset>(spawn.VehicleGuid);
                 if (asset is not null)
-                    ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
-                                                               $"UNREGISTERED SPAWN ID: {spawn.InstanceId}");
+                    ctx.LogAction(EActionLogType.DEREGISTERED_SPAWN, $"{asset.vehicleName} / {asset.id} / {asset.GUID:N} - " +
+                                                               $"DEREGISTERED SPAWN ID: {spawn.InstanceId}");
                 else
-                    ctx.LogAction(EActionLogType.REGISTERED_SPAWN, $"{spawn.VehicleGuid:N} - " +
-                        $"UNREGISTERED SPAWN ID: {spawn.InstanceId}");
+                    ctx.LogAction(EActionLogType.DEREGISTERED_SPAWN, $"{spawn.VehicleGuid:N} - " +
+                        $"DEREGISTERED SPAWN ID: {spawn.InstanceId}");
                 ctx.Reply(T.VehicleBaySpawnDeregistered, asset!);
             }
             else if (ctx.TryGetTarget(out BarricadeDrop _) || ctx.TryGetTarget(out StructureDrop _))
