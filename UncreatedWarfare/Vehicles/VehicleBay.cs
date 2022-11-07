@@ -218,7 +218,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     [Obsolete]
     protected override Task<VehicleData[]> DownloadAllItems(CancellationToken token = default)
     {
-        throw new NotImplementedException();
+        List<VehicleData> list = new List<VehicleData>(32);
     }
     [Obsolete]
     protected override Task<VehicleData?> DownloadItem(PrimaryKey pk, CancellationToken token = default)
