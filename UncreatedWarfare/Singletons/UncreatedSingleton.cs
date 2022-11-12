@@ -31,6 +31,26 @@ public interface ILevelStartListenerAsync
 {
     Task OnLevelReady();
 }
+public interface IQuestCompletedHandler
+{
+    /// <returns>Whether the quest was handled and execution should be stopped.</returns>
+    bool OnQuestCompleted(UCPlayer player, Guid presetKey);
+}
+public interface IQuestCompletedHandlerAsync
+{
+    /// <returns>Whether the quest was handled and execution should be stopped.</returns>
+    Task<bool> OnQuestCompletedAsync(UCPlayer player, Guid presetKey);
+}
+
+public interface IQuestCompletedListener
+{
+    void OnQuestCompleted(UCPlayer player, Guid presetKey);
+}
+public interface IQuestCompletedListenerAsync
+{
+    Task OnQuestCompletedAsync(UCPlayer player, Guid presetKey);
+}
+
 public interface ITimeSyncListener
 {
     void TimeSync(float time);

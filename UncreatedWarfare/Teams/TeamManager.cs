@@ -873,6 +873,7 @@ public static class TeamManager
 
     public static Task ReloadFactions()
     {
+        _factions ??= new List<FactionInfo>(DefaultFactions.Length);
         return FactionInfo.DownloadFactions(Data.AdminSql, _factions, CancellationToken.None);
     }
 }
@@ -1214,11 +1215,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 continue;
             foreach (KeyValuePair<string, string> v in def.NameTranslations)
             {
-                if (!f)
-                {
+                if (f)
                     builder.Append(',');
+                else
                     f = true;
-                }
                 builder.Append("(@0,@1,@2)");
                 objs2.Add(def.PrimaryKey.Key);
                 objs2.Add(v.Key);
@@ -1239,11 +1239,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 continue;
             foreach (KeyValuePair<string, string> v in def.ShortNameTranslations)
             {
-                if (!f)
-                {
+                if (f)
                     builder.Append(',');
+                else
                     f = true;
-                }
                 builder.Append("(@0,@1,@2)");
                 objs2.Add(def.PrimaryKey.Key);
                 objs2.Add(v.Key);
@@ -1264,11 +1263,10 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 continue;
             foreach (KeyValuePair<string, string> v in def.AbbreviationTranslations)
             {
-                if (!f)
-                {
+                if (f)
                     builder.Append(',');
+                else
                     f = true;
-                }
                 builder.Append("(@0,@1,@2)");
                 objs2.Add(def.PrimaryKey.Key);
                 objs2.Add(v.Key);
@@ -1477,7 +1475,6 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                     }
                 }
             }, token).ConfigureAwait(false);
-        return list.ToArray();
     }
 
     public object Clone()

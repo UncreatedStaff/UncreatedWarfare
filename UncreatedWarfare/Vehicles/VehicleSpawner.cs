@@ -421,7 +421,7 @@ public class VehicleSpawn
         {
             if (StructureType == EStructType.BARRICADE)
             {
-                BarricadeData = UCBarricadeManager.GetBarricadeFromInstID(InstanceId, out BarricadeDrop? drop);
+                BarricadeData = UCBarricadeManager.FindBarricade(InstanceId, out BarricadeDrop? drop);
                 BarricadeDrop = drop;
                 Initialized = BarricadeData != null;
                 if (!Initialized)
@@ -483,7 +483,7 @@ public class VehicleSpawn
             }
             else if (StructureType == EStructType.STRUCTURE)
             {
-                StructureDrop = UCBarricadeManager.GetStructureFromInstID(InstanceId);
+                StructureDrop = UCBarricadeManager.FindStructure(InstanceId);
                 Initialized = StructureDrop != null;
                 if (!Initialized)
                 {

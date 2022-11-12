@@ -44,6 +44,8 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     [FormatDisplay(typeof(IPlayer), "Colored Steam64 ID")]
     public const string COLOR_STEAM_64_FORMAT = "c64";
 
+    private static readonly InstanceGetter<Dictionary<Buff, float>, int> VersionGetter =
+        Util.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
     public static readonly IEqualityComparer<UCPlayer> Comparer = new EqualityComparer();
     public static readonly UnturnedUI MutedUI = new UnturnedUI(15623, Gamemode.Config.UIMuted, false, false);
     public static readonly UnturnedUI LoadingUI = new UnturnedUI(15624, Gamemode.Config.UILoading, false, false, false);
@@ -63,7 +65,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public int CachedCredits;
     public bool HasUIHidden = false;
     public bool IsOnline;
-    public float LastSpoken = 0f;
+    public float LastSpoken;
     public string CharacterName;
     public string NickName;
     public string KitName;
@@ -82,18 +84,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public List<Trait> ActiveTraits = new List<Trait>(8);
     internal bool _isLeaving;
     internal Action<byte, ItemJar> SendItemRemove;
-    internal List<Guid>? _completedQuests;
-    private static readonly InstanceGetter<Dictionary<Buff, float>, int> _versionGetter = Util.GenerateInstanceGetter<Dictionary<Buff, float>, int>("version", BindingFlags.NonPublic | BindingFlags.Instance);
-    private int multVersion = -1;
-    private bool isTalking = false;
-    private bool lastMuted = false;
-    private bool _godMode = false;
-    private bool _vanishMode = false;
+    internal List<Guid>? CompletedQuests;
+    private int _multVersion = -1;
+    private bool _isTalking;
+    private bool _lastMuted;
     private float _multCache = 1f;
     private string? _lang;
-    private EAdminType? _pLvl = null;
+    private EAdminType? _pLvl;
     private RankData? _rank;
-    private FPlayerName cachedName = FPlayerName.Nil;
+    private FPlayerName _cachedName = FPlayerName.Nil;
     public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName, bool donator)
     {
         Steam64 = steamID.m_SteamID;
@@ -123,7 +122,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         {
             try
             {
-                SendItemRemove = (Action<byte, ItemJar>)(typeof(PlayerInventory).GetMethod("sendItemRemove", BindingFlags.Instance | BindingFlags.NonPublic).CreateDelegate(typeof(Action<byte, ItemJar>), Player.inventory));
+                SendItemRemove = (Action<byte, ItemJar>)typeof(PlayerInventory).GetMethod("sendItemRemove", BindingFlags.Instance | BindingFlags.NonPublic)?.CreateDelegate(typeof(Action<byte, ItemJar>), Player.inventory)!;
             }
             catch
             {
@@ -149,25 +148,23 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         if (format is null) goto end;
         if (format.Equals(CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
             return Name.CharacterName;
-        else if (format.Equals(NICK_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(NICK_NAME_FORMAT, StringComparison.Ordinal))
             return Name.NickName;
-        else if (format.Equals(PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(PLAYER_NAME_FORMAT, StringComparison.Ordinal))
             return Name.PlayerName;
-        else if (format.Equals(STEAM_64_FORMAT, StringComparison.Ordinal))
+        if (format.Equals(STEAM_64_FORMAT, StringComparison.Ordinal))
             return Steam64.ToString(Data.Locale);
-        else
-        {
-            string hex = TeamManager.GetTeamHexColor(this.GetTeam());
-            if (format.Equals(COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, Name.CharacterName, flags);
-            else if (format.Equals(COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, Name.NickName, flags);
-            else if (format.Equals(COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, Name.PlayerName, flags);
-            else if (format.Equals(COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, Steam64.ToString(Data.Locale), flags);
-        }
-    end:
+
+        string hex = TeamManager.GetTeamHexColor(this.GetTeam());
+        if (format.Equals(COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(hex, Name.CharacterName, flags);
+        if (format.Equals(COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(hex, Name.NickName, flags);
+        if (format.Equals(COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(hex, Name.PlayerName, flags);
+        if (format.Equals(COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(hex, Steam64.ToString(Data.Locale), flags);
+        end:
         return Name.CharacterName;
     }
     public InteractableVehicle? CurrentVehicle => Player.movement.getVehicle();
@@ -177,21 +174,21 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public SteamPlayer SteamPlayer => Player.channel.owner;
     public Player Player { get; internal set; }
     public CSteamID CSteamID { get; internal set; }
-    public ITransportConnection Connection => Player?.channel?.owner?.transportConnection!;
+    public ITransportConnection Connection => Player.channel.owner.transportConnection!;
     public ushort LastPingID { get; internal set; }
     ulong IPlayer.Steam64 => Steam64;
     public bool IsAdmin => Player.channel.owner.isAdmin;
     public bool IsTeam1 => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
     public bool IsTeam2 => Player.quests.groupID.m_SteamID == TeamManager.Team2ID;
     public string Language => _lang ??= Localization.GetLang(Steam64);
-    public bool IsTalking => !lastMuted && isTalking && IsOnline;
+    public bool IsTalking => !_lastMuted && _isTalking && IsOnline;
     public bool IsLeaving => _isLeaving;
-    public bool VanishMode { get => _vanishMode; set => _vanishMode = value; }
+    public bool VanishMode { get; set; }
     public bool IsActionMenuOpen { get; internal set; }
     public bool IsOtherDonator { get; set; }
-    public bool GodMode { get => _godMode; set => _godMode = value; }
+    public bool GodMode { get; set; }
     public Dictionary<Buff, float> ShovelSpeedMultipliers { get; } = new Dictionary<Buff, float>(6);
-    public List<SpottedComponent> CurrentMarkers { get; private set; }
+    public List<SpottedComponent> CurrentMarkers { get; }
     /// <summary><see langword="True"/> if rank order <see cref="OfficerStorage.OFFICER_RANK_ORDER"/> has been completed (Receiving officer pass from discord server).</summary>
     public bool IsOfficer => RankData != null && RankData.Length > OfficerStorage.OFFICER_RANK_ORDER && RankData[OfficerStorage.OFFICER_RANK_ORDER].IsCompelete;
     public RankData Rank
@@ -207,15 +204,15 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         get
         {
-            int version = _versionGetter(ShovelSpeedMultipliers);
-            if (version == multVersion)
+            int version = VersionGetter(ShovelSpeedMultipliers);
+            if (version == _multVersion)
                 return _multCache;
             float max = 0f;
             foreach (float fl in ShovelSpeedMultipliers.Values)
                 if (fl > max) max = fl;
             if (max <= 0f)
                 max = 1f;
-            multVersion = version;
+            _multVersion = version;
             return _multCache = max;
         }
     }
@@ -241,7 +238,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         get
         {
             ulong team = this.GetTeam();
-            return team == 1 || team == 2;
+            return team is 1 or 2;
         }
     }
     public int CachedXP
@@ -253,9 +250,16 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     {
         get
         {
-            if (cachedName == FPlayerName.Nil)
-                cachedName = F.GetPlayerOriginalNames(this.Player);
-            return cachedName;
+            if (_cachedName == FPlayerName.Nil)
+                _cachedName = new FPlayerName
+                {
+                    Steam64 = Steam64,
+                    CharacterName = Player.channel.owner.playerID.characterName,
+                    NickName = Player.channel.owner.playerID.nickName,
+                    PlayerName = Player.channel.owner.playerID.playerName,
+                    WasFound = true
+                };
+            return _cachedName;
         }
     }
     public char Icon
@@ -480,7 +484,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
 
         if (CurrentMarkers.Count(x => !x.UAVMode) == 3)
         {
-            SpottedComponent oldest = CurrentMarkers.LastOrDefault(x => !x.UAVMode);
+            SpottedComponent? oldest = CurrentMarkers.LastOrDefault(x => !x.UAVMode);
             if (oldest != null)
             {
                 oldest.Deactivate();
@@ -505,10 +509,10 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Squad is null)
+        if (Squad?.Leader is null)
             return false;
 
-        return Squad.Leader?.Steam64 == Steam64;
+        return Squad.Leader.Steam64 == Steam64;
     }
     public bool IsNearSquadLeader(float distance)
     {
@@ -569,38 +573,36 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         return FOB.IsOnFOB(this, out fob);
     }
     public int CompareTo(UCPlayer obj) => Steam64.CompareTo(obj.Steam64);
+    private bool DownloadKitsSpinWaitCheck() => HasDownloadedKits;
     public async Task DownloadKits(bool @lock)
     {
         if (IsDownloadingKits)
         {
-            SpinWait.SpinUntil(() => HasDownloadedKits, 2500);
+            UCWarfare.SpinWaitUntil(DownloadKitsSpinWaitCheck, 2500);
             return;
         }
-        else
+        IsDownloadingKits = true;
+        if (@lock)
+            await PurchaseSync.WaitAsync();
+        try
         {
-            IsDownloadingKits = true;
+            KitManager singleton = KitManager.GetSingleton();
+            List<string> kits = new List<string>();
+            await Data.AdminSql.QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
+                new object[] { Steam64 },
+                reader =>
+                {
+                    if (singleton.Kits.TryGetValue(reader.GetInt32(0), out Kit kit))
+                        kits.Add(kit.Name);
+                });
+            AccessibleKits = kits;
+        }
+        finally
+        {
+            HasDownloadedKits = true;
+            IsDownloadingKits = false;
             if (@lock)
-                await PurchaseSync.WaitAsync();
-            try
-            {
-                KitManager singleton = KitManager.GetSingleton();
-                List<string> kits = new List<string>();
-                await Data.AdminSql.QueryAsync("SELECT `Kit` FROM `kit_access` WHERE `Steam64` = @0;",
-                    new object[1] { Steam64 },
-                    R =>
-                    {
-                        if (singleton.Kits.TryGetValue(R.GetInt32(0), out Kit kit))
-                            kits.Add(kit.Name);
-                    });
-                AccessibleKits = kits;
-            }
-            finally
-            {
-                HasDownloadedKits = true;
-                IsDownloadingKits = false;
-                if (@lock)
-                    PurchaseSync.Release();
-            }
+                PurchaseSync.Release();
         }
     }
 
@@ -614,29 +616,29 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     internal void ResetPermissionLevel() => _pLvl = null;
     internal void Update()
     {
-        if (isTalking && Time.realtimeSinceStartup - LastSpoken > 0.5f)
+        if (_isTalking && Time.realtimeSinceStartup - LastSpoken > 0.5f)
         {
-            isTalking = false;
-            if (lastMuted)
+            _isTalking = false;
+            if (_lastMuted)
             {
                 MutedUI.ClearFromPlayer(Connection);
-                lastMuted = false;
+                _lastMuted = false;
             }
         }
     }
     internal void OnUseVoice(bool isMuted)
     {
         float t = Time.realtimeSinceStartup;
-        if (isMuted != lastMuted)
+        if (isMuted != _lastMuted)
         {
             if (isMuted)
                 MutedUI.SendToPlayer(Connection);
             else
                 MutedUI.ClearFromPlayer(Connection);
-            lastMuted = isMuted;
+            _lastMuted = isMuted;
         }
         LastSpoken = t;
-        isTalking = true;
+        _isTalking = true;
     }
     internal void UpdatePoints(uint xp, uint credits)
     {
@@ -665,7 +667,9 @@ public struct OfflinePlayer : IPlayer
     {
         _s64 = steam64;
         if (cacheUsernames)
-            _names = F.GetPlayerOriginalNames(steam64);
+            _names = F.GetPlayerName(steam64);
+        else
+            _names = null;
     }
     public OfflinePlayer(in FPlayerName names)
     {
@@ -674,59 +678,55 @@ public struct OfflinePlayer : IPlayer
     }
     public async Task CacheUsernames()
     {
-        _names = await F.GetPlayerOriginalNamesAsync(_s64);
+        _names = await F.GetPlayerOriginalNamesAsync(_s64).ConfigureAwait(false);
     }
     public string Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags)
     {
         if (format is null) goto end;
 
         if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= F.GetPlayerOriginalNames(_s64)).CharacterName;
-        else if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= F.GetPlayerOriginalNames(_s64)).NickName;
-        else if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
-            return (_names ??= F.GetPlayerOriginalNames(_s64)).PlayerName;
-        else if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
+            return (_names ??= F.GetPlayerName(_s64)).CharacterName;
+        if (format.Equals(UCPlayer.NICK_NAME_FORMAT, StringComparison.Ordinal))
+            return (_names ??= F.GetPlayerName(_s64)).NickName;
+        if (format.Equals(UCPlayer.PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+            return (_names ??= F.GetPlayerName(_s64)).PlayerName;
+        if (format.Equals(UCPlayer.STEAM_64_FORMAT, StringComparison.Ordinal))
             return _s64.ToString(Data.Locale);
-        else
-        {
-            UCPlayer? pl = UCPlayer.FromID(Steam64);
-            string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
-            if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).CharacterName, flags);
-            else if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).NickName, flags);
-            else if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, (_names ??= F.GetPlayerOriginalNames(_s64)).PlayerName, flags);
-            else if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
-                return Localization.Colorize(hex, _s64.ToString(Data.Locale), flags);
-        }
-    end:
+        UCPlayer? pl = UCPlayer.FromID(Steam64);
+        string hex = TeamManager.GetTeamHexColor(pl is null || !pl.IsOnline ? (PlayerSave.TryReadSaveFile(_s64, out PlayerSave save) ? save.Team : 0) : pl.GetTeam());
+        if (format.Equals(UCPlayer.COLOR_CHARACTER_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(hex, (_names ??= F.GetPlayerName(_s64)).CharacterName, flags);
+        if (format.Equals(UCPlayer.COLOR_NICK_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(hex, (_names ??= F.GetPlayerName(_s64)).NickName, flags);
+        if (format.Equals(UCPlayer.COLOR_PLAYER_NAME_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(hex, (_names ??= F.GetPlayerName(_s64)).PlayerName, flags);
+        if (format.Equals(UCPlayer.COLOR_STEAM_64_FORMAT, StringComparison.Ordinal))
+            return Localization.Colorize(hex, _s64.ToString(Data.Locale), flags);
+        end:
         return (_names ??= Data.DatabaseManager.GetUsernames(_s64)).CharacterName;
     }
 }
 public class PlayerSave
 {
     public const uint CURRENT_DATA_VERSION = 1;
-    public uint DATA_VERSION = CURRENT_DATA_VERSION;
     public readonly ulong Steam64;
-    [JsonSettable]
+    [CommandSettable]
     public ulong Team;
-    [JsonSettable]
+    [CommandSettable]
     public string KitName;
-    [JsonSettable]
+    [CommandSettable]
     public string SquadName;
-    [JsonSettable]
+    [CommandSettable]
     public bool HasQueueSkip;
-    [JsonSettable]
+    [CommandSettable]
     public long LastGame;
-    [JsonSettable]
+    [CommandSettable]
     public bool ShouldRespawnOnJoin;
-    [JsonSettable]
+    [CommandSettable]
     public bool IsOtherDonator;
-    public PlayerSave(ulong Steam64)
+    public PlayerSave(ulong s64)
     {
-        this.Steam64 = Steam64;
+        this.Steam64 = s64;
         Team = 0;
         KitName = string.Empty;
         SquadName = string.Empty;
@@ -747,16 +747,16 @@ public class PlayerSave
         IsOtherDonator = false;
     }
     [JsonConstructor]
-    public PlayerSave(ulong Steam64, ulong Team, string KitName, string SquadName, bool HasQueueSkip, long LastGame, bool ShouldRespawnOnJoin, bool IsOtherDonator)
+    public PlayerSave(ulong s64, ulong team, string kitName, string squadName, bool hasQueueSkip, long lastGame, bool respawnOnJoin, bool isOtherDonor)
     {
-        this.Steam64 = Steam64;
-        this.Team = Team;
-        this.KitName = KitName;
-        this.SquadName = SquadName;
-        this.HasQueueSkip = HasQueueSkip;
-        this.LastGame = LastGame;
-        this.ShouldRespawnOnJoin = ShouldRespawnOnJoin;
-        this.IsOtherDonator = IsOtherDonator;
+        this.Steam64 = s64;
+        this.Team = team;
+        this.KitName = kitName;
+        this.SquadName = squadName;
+        this.HasQueueSkip = hasQueueSkip;
+        this.LastGame = lastGame;
+        this.ShouldRespawnOnJoin = respawnOnJoin;
+        this.IsOtherDonator = isOtherDonor;
     }
 
     /// <summary>Players / 76561198267927009_0 / Uncreated_S2 / PlayerSave.dat</summary>
@@ -766,7 +766,7 @@ public class PlayerSave
     public static void WriteToSaveFile(PlayerSave save)
     {
         Block block = new Block();
-        block.writeUInt32(save.DATA_VERSION);
+        block.writeUInt32(CURRENT_DATA_VERSION);
         block.writeByte((byte)save.Team);
         block.writeString(save.KitName);
         block.writeString(save.SquadName);

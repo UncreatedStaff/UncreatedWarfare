@@ -19,38 +19,38 @@ namespace Uncreated.Warfare.Vehicles;
 public class VehicleData : ITranslationArgument, IListItem
 {
     public const int VEHICLE_TYPE_MAX_CHAR_LIMIT = 20;
-    [JsonSettable]
+    [CommandSettable]
     public string Name;
-    [JsonSettable]
+    [CommandSettable]
     public Guid VehicleID;
     [JsonIgnore]
-    [JsonSettable]
+    [CommandSettable]
     public PrimaryKey Faction;
-    [JsonSettable]
+    [CommandSettable]
     public float RespawnTime;
-    [JsonSettable]
+    [CommandSettable]
     public int TicketCost;
-    [JsonSettable]
+    [CommandSettable]
     public int CreditCost;
-    [JsonSettable]
+    [CommandSettable]
     public float Cooldown;
-    [JsonSettable]
+    [CommandSettable]
     public EBranch Branch;
-    [JsonSettable]
+    [CommandSettable]
     public EClass RequiredClass;
-    [JsonSettable]
+    [CommandSettable]
     public int RearmCost;
-    [JsonSettable]
+    [CommandSettable]
     public EVehicleType Type;
-    [JsonSettable]
+    [CommandSettable]
     public bool RequiresSL;
-    [JsonSettable]
+    [CommandSettable]
     public ushort UnlockLevel;
-    [JsonSettable]
+    [CommandSettable]
     public bool DisallowAbandons;
-    [JsonSettable]
+    [CommandSettable]
     public float AbandonValueLossSpeed = 0.125f;
-    [JsonSettable]
+    [CommandSettable]
     public int Map = -1;
     public BaseUnlockRequirement[] UnlockRequirements;
     public Guid[] Items;
@@ -101,19 +101,19 @@ public class VehicleData : ITranslationArgument, IListItem
         }
         else Branch = EBranch.DEFAULT;
         RequiredClass = EClass.NONE;
-        UnlockRequirements = new BaseUnlockRequirement[0];
+        UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
         RearmCost = 3;
         Type = EVehicleType.NONE;
         RequiresSL = false;
         UnlockLevel = 0;
-        Items = new Guid[0];
-        CrewSeats = new List<byte>();
+        Items = Array.Empty<Guid>();
+        CrewSeats = Array.Empty<byte>();
+        Delays = Array.Empty<Delay>();
         Metadata = null;
-        Delays = new Delay[0];
     }
     public VehicleData()
     {
-        Name = "";
+        Name = string.Empty;
         VehicleID = Guid.Empty;
         Team = 0;
         UnlockRequirements = Array.Empty<BaseUnlockRequirement>();
@@ -128,17 +128,36 @@ public class VehicleData : ITranslationArgument, IListItem
         RequiresSL = false;
         UnlockLevel = 0;
         Items = Array.Empty<Guid>();
-        CrewSeats = new List<byte>();
-        Metadata = null;
+        CrewSeats = Array.Empty<byte>();
         Delays = Array.Empty<Delay>();
+        Metadata = null;
     }
+
+                                                                                      // intentional is null check
+    public static bool CanTransport(VehicleData data, InteractableVehicle vehicle) => vehicle is not null && CanTransport(data, vehicle.passengers.Length);
+    public static bool CanTransport(VehicleData data, int passengerCt) => !IsEmplacement(data.Type) && data.CrewSeats.Length < passengerCt;
     public static bool IsGroundVehicle(EVehicleType type) => !IsAircraft(type);
-    public static bool IsArmor(EVehicleType type) => type == EVehicleType.APC || type == EVehicleType.IFV || type == EVehicleType.MBT || type == EVehicleType.SCOUT_CAR;
-    public static bool IsLogistics(EVehicleType type) => type == EVehicleType.LOGISTICS || type == EVehicleType.HELI_TRANSPORT;
-    public static bool IsAircraft(EVehicleType type) => type == EVehicleType.HELI_TRANSPORT || type == EVehicleType.HELI_ATTACK || type == EVehicleType.JET;
-    public static bool IsEmplacement(EVehicleType type) => type == EVehicleType.HMG || type == EVehicleType.ATGM || type == EVehicleType.AA || type == EVehicleType.MORTAR;
+    public static bool IsArmor(EVehicleType type) => type is EVehicleType.APC or EVehicleType.IFV or EVehicleType.MBT or EVehicleType.SCOUT_CAR;
+    public static bool IsLogistics(EVehicleType type) => type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT;
+    public static bool IsAircraft(EVehicleType type) => type is EVehicleType.HELI_TRANSPORT or EVehicleType.HELI_ATTACK or EVehicleType.JET;
+    public static bool IsAssaultAircraft(EVehicleType type) => type is EVehicleType.HELI_ATTACK or EVehicleType.JET;
+    public static bool IsEmplacement(EVehicleType type) => type is EVehicleType.HMG or EVehicleType.ATGM or EVehicleType.AA or EVehicleType.MORTAR;
     public bool HasDelayType(EDelayType type) => Delay.HasDelayType(Delays, type);
     public bool IsDelayed(out Delay delay) => Delay.IsDelayed(Delays, out delay, Team);
+    public bool IsCrewSeat(byte seat)
+    {
+        if (CrewSeats != null)
+        {
+            for (int i = 0; i < CrewSeats.Length; ++i)
+            {
+                if (CrewSeats[i] == seat)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     public List<VehicleSpawn> GetSpawners() => EnumerateSpawns.ToList();
     public void SaveMetaData(InteractableVehicle vehicle)
     {
@@ -173,7 +192,7 @@ public class VehicleData : ITranslationArgument, IListItem
             for (int i = 0; i < vehicleRegion.drops.Count; i++)
             {
                 BarricadeData bdata = vehicleRegion.drops[i].GetServersideData();
-                barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, 0, Teams.TeamManager.AdminID, bdata.point.x, bdata.point.y,
+                barricades.Add(new VBarricade(bdata.barricade.asset.GUID, bdata.barricade.asset.health, bdata.point.x, bdata.point.y,
                     bdata.point.z, bdata.angle_x, bdata.angle_y, bdata.angle_z, Convert.ToBase64String(bdata.barricade.state)));
             }
         }
@@ -214,6 +233,7 @@ public class MetaSave
 {
     public List<VBarricade>? Barricades;
     public List<KitItem>? TrunkItems;
+    public MetaSave() { }
     public MetaSave(List<VBarricade>? barricades, List<KitItem>? trunkItems)
     {
         Barricades = barricades;
@@ -225,8 +245,6 @@ public class VBarricade : IListSubItem
 {
     public Guid BarricadeID;
     public ushort Health;
-    public ulong OwnerID;
-    public ulong GroupID;
     public float PosX;
     public float PosY;
     public float PosZ;
@@ -244,12 +262,10 @@ public class VBarricade : IListSubItem
     public PrimaryKey LinkedKey { get; set; }
     public PrimaryKey PrimaryKey { get; set; }
     internal VBarricade() { }
-    public VBarricade(Guid barricadeID, ushort health, ulong ownerID, ulong groupID, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
+    public VBarricade(Guid barricadeID, ushort health, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, string state)
     {
         BarricadeID = barricadeID;
         Health = health;
-        OwnerID = ownerID;
-        GroupID = groupID;
         PosX = posX;
         PosY = posY;
         PosZ = posZ;
@@ -258,12 +274,10 @@ public class VBarricade : IListSubItem
         AngleZ = angleZ;
         State = state;
     }
-    public VBarricade(Guid barricadeID, ushort health, ulong ownerID, ulong groupID, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, byte[] state)
+    public VBarricade(Guid barricadeID, ushort health, float posX, float posY, float posZ, float angleX, float angleY, float angleZ, byte[] state)
     {
         BarricadeID = barricadeID;
         Health = health;
-        OwnerID = ownerID;
-        GroupID = groupID;
         PosX = posX;
         PosY = posY;
         PosZ = posZ;
@@ -284,7 +298,7 @@ public class VBarricade : IListSubItem
     public const string COLUMN_ROT_Z = "Rot_Z";
     public const string COLUMN_METADATA = "Item";
     public const string COLUMN_ITEM_PK = "pk";
-    public const string COLUMN_ITEM_BARRICADE_PK = "Structure";
+    public const string COLUMN_ITEM_BARRICADE_PK = "Barricade";
     public const string COLUMN_ITEM_GUID = "Guid";
     public const string COLUMN_ITEM_POS_X = "Pos_X";
     public const string COLUMN_ITEM_POS_Y = "Pos_Y";
@@ -327,7 +341,12 @@ public class VBarricade : IListSubItem
         };
         columns[++index] = new Schema.Column(COLUMN_GUID, SqlTypes.GUID);
         if (includeHealth)
-            columns[++index] = new Schema.Column(COLUMN_HEALTH, SqlTypes.USHORT);
+        {
+            columns[++index] = new Schema.Column(COLUMN_HEALTH, SqlTypes.USHORT)
+            {
+                Default = ushort.MaxValue.ToString(Data.AdminLocale)
+            };
+        }
         columns[++index] = new Schema.Column(COLUMN_POS_X, SqlTypes.FLOAT);
         columns[++index] = new Schema.Column(COLUMN_POS_Y, SqlTypes.FLOAT);
         columns[++index] = new Schema.Column(COLUMN_POS_Z, SqlTypes.FLOAT);
@@ -337,7 +356,7 @@ public class VBarricade : IListSubItem
         columns[++index] = new Schema.Column(COLUMN_METADATA, SqlTypes.BYTES_255);
         Schema[] schemas = new Schema[3];
         schemas[0] = new Schema(tableName, columns, false, typeof(VBarricade));
-        schemas[1] = new Schema(tableItemsName, new Schema.Column[]
+        schemas[1] = new Schema(tableDisplayDataName, new Schema.Column[]
         {
             new Schema.Column(COLUMN_PK, SqlTypes.INCREMENT_KEY)
             {
@@ -359,7 +378,7 @@ public class VBarricade : IListSubItem
                 Nullable = true
             }
         }, false, typeof(Structures.ItemDisplayData));
-        schemas[2] = new Schema(tableDisplayDataName, new Schema.Column[]
+        schemas[2] = new Schema(tableItemsName, new Schema.Column[]
         {
             new Schema.Column(COLUMN_ITEM_PK, SqlTypes.INCREMENT_KEY)
             {

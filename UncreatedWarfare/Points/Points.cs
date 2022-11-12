@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Players;
 using Uncreated.Warfare.Components;
@@ -147,26 +148,26 @@ public static class Points
         AwardCredits(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase, @lock);
     public static void AwardCredits<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
         AwardCredits(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase, @lock);
-    public static Task AwardCreditsAsync(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock);
-    public static Task AwardCreditsAsync<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase, @lock);
-    public static Task AwardCreditsAsync<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false, bool @lock = true) =>
-        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase, @lock);
+    public static Task AwardCreditsAsync(UCPlayer player, int amount, Translation message, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player), redmessage, isPurchase, @lock, token);
+    public static Task AwardCreditsAsync<T>(UCPlayer player, int amount, Translation<T> message, T arg, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg), redmessage, isPurchase, @lock, token);
+    public static Task AwardCreditsAsync<T1, T2>(UCPlayer player, int amount, Translation<T1, T2> message, T1 arg1, T2 arg2, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default) =>
+        AwardCreditsAsync(player, amount, Localization.Translate(message, player, arg1, arg2), redmessage, isPurchase, @lock, token);
     public static void AwardCredits(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true)
     {
         Task.Run(() => AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase, @lock)).ConfigureAwait(false);
     }
-    public static Task AwardCreditsAsync(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true)
+    public static Task AwardCreditsAsync(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default)
     {
-        return AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase, @lock);
+        return AwardCreditsAsyncIntl(player, amount, message, redmessage, isPurchase, @lock, token);
     }
-    private static async Task AwardCreditsAsyncIntl(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true)
+    private static async Task AwardCreditsAsyncIntl(UCPlayer player, int amount, string? message = null, bool redmessage = false, bool isPurchase = false, bool @lock = true, CancellationToken token = default)
     {
         try
         {
             if (@lock)
-                await player.PurchaseSync.WaitAsync().ConfigureAwait(false);
+                await player.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
             if (amount == 0 || _xpconfig.Data.XPMultiplier == 0f) return;
             amount = Mathf.RoundToInt(amount * _xpconfig.Data.XPMultiplier);
 
@@ -548,7 +549,7 @@ public static class Points
                 }
             });
     }
-    public static async Task UpdateAllPointsAsync()
+    public static async Task UpdateAllPointsAsync(CancellationToken token = default)
     {
         if (PlayerManager.OnlinePlayers.Count < 1)
             return;
@@ -626,7 +627,7 @@ public static class Points
     }
 
     private record struct XPData(ulong Steam64, ulong Team, uint XP, uint Credits);
-    public static async Task UpdatePointsAsync(UCPlayer caller, bool @lock)
+    public static async Task UpdatePointsAsync(UCPlayer caller, bool @lock, CancellationToken token = default)
     {
         if (caller is null) throw new ArgumentNullException(nameof(caller));
         caller.IsDownloadingXP = true;

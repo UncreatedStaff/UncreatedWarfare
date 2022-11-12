@@ -280,7 +280,7 @@ public class RequestSign
         }
         else
         {
-            UCBarricadeManager.GetBarricadeFromInstID(InstanceId, out BarricadeDrop? drop);
+            UCBarricadeManager.FindBarricade(InstanceId, out BarricadeDrop? drop);
             if (drop != null)
             {
                 BarricadeTransform = drop.model;
@@ -315,7 +315,7 @@ public class RequestSign
         }
         else
         {
-            UCBarricadeManager.GetBarricadeFromInstID(InstanceId, out BarricadeDrop? drop);
+            UCBarricadeManager.FindBarricade(InstanceId, out BarricadeDrop? drop);
             if (drop != null)
             {
                 BarricadeTransform = drop.model;
@@ -340,7 +340,7 @@ public class RequestSign
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCBarricadeManager.GetBarricadeFromInstID(InstanceId, out BarricadeDrop? drop);
+        UCBarricadeManager.FindBarricade(InstanceId, out BarricadeDrop? drop);
         bool needsSave = false;
         if (drop == null)
         {

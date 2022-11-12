@@ -322,7 +322,7 @@ public class Whitelister : ListSingleton<WhitelistItem>
 public class WhitelistItem
 {
     public Guid Item;
-    [JsonSettable]
+    [CommandSettable]
     public int Amount;
 
     public WhitelistItem()

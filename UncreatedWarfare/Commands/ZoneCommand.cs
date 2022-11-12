@@ -163,30 +163,30 @@ public class ZoneCommand : Command
         if (zone == null) throw ctx.Reply(T.ZoneNoResults);
 
         Vector2[] points = zone.GetParticleSpawnPoints(out Vector2[] corners, out Vector2 center);
-        CSteamID channel = ctx.Caller.Player.channel.owner.playerID.steamID;
+        ITransportConnection channel = ctx.Caller.Player.channel.owner.transportConnection;
         bool hasui = ZonePlayerComponent._airdrop != null;
         foreach (Vector2 point in points)
         {   // Border
             Vector3 pos = new Vector3(point.x, 0f, point.y);
             pos.y = F.GetHeight(pos, zone.MinHeight);
-            F.TriggerEffectReliable(ZonePlayerComponent._side.id, channel, pos);
+            F.TriggerEffectReliable(ZonePlayerComponent._side, channel, pos);
             if (hasui)
-                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!.id, channel, pos);
+                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!, channel, pos);
         }
         foreach (Vector2 point in corners)
         {   // Corners
             Vector3 pos = new Vector3(point.x, 0f, point.y);
             pos.y = F.GetHeight(pos, zone.MinHeight);
-            F.TriggerEffectReliable(ZonePlayerComponent._corner.id, channel, pos);
+            F.TriggerEffectReliable(ZonePlayerComponent._corner, channel, pos);
             if (hasui)
-                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!.id, channel, pos);
+                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!, channel, pos);
         }
         {   // Center
             Vector3 pos = new Vector3(center.x, 0f, center.y);
             pos.y = F.GetHeight(pos, zone.MinHeight);
-            F.TriggerEffectReliable(ZonePlayerComponent._center.id, channel, pos);
+            F.TriggerEffectReliable(ZonePlayerComponent._center, channel, pos);
             if (hasui)
-                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!.id, channel, pos);
+                F.TriggerEffectReliable(ZonePlayerComponent._airdrop!, channel, pos);
         }
         ctx.Caller.Player.StartCoroutine(ClearPoints(ctx.Caller));
         ctx.Reply(T.ZoneVisualizeSuccess, points.Length + corners.Length + 1, zone);

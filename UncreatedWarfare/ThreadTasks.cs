@@ -11,11 +11,14 @@ public sealed class MainThreadTask
     internal const int DEFAULT_TIMEOUT_MS = 5000;
     internal const int POLL_SPEED_MS = 25;
     private readonly bool skipFrame;
-    private bool isCompleted = false;
+    private volatile bool isCompleted = false;
     private readonly MainThreadResult awaiter;
-    public MainThreadTask(bool skipFrame)
+    public readonly CancellationToken Token;
+    public MainThreadTask(bool skipFrame, CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
         this.skipFrame = skipFrame;
+        this.Token = token;
         awaiter = new MainThreadResult(this);
     }
     public MainThreadResult GetAwaiter()
@@ -24,19 +27,20 @@ public sealed class MainThreadTask
     }
     public sealed class MainThreadResult : INotifyCompletion
     {
-        private readonly MainThreadTask task;
+        public readonly MainThreadTask Task;
         public MainThreadResult(MainThreadTask task)
         {
-            this.task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
+            this.Task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
         }
         internal Action continuation;
-        public bool IsCompleted { get => task.isCompleted; }
+        public bool IsCompleted { get => Task.isCompleted; }
         public void OnCompleted(Action continuation)
         {
-            if (UCWarfare.IsMainThread && !task.skipFrame)
+            Task.Token.ThrowIfCancellationRequested();
+            if (UCWarfare.IsMainThread && !Task.skipFrame)
             {
                 continuation();
-                task.isCompleted = true;
+                Task.isCompleted = true;
             }
             else
             {
@@ -47,33 +51,39 @@ public sealed class MainThreadTask
         }
         internal void Complete()
         {
-            task.isCompleted = true;
+            Task.isCompleted = true;
         }
+
+        private bool WaitCheck() => Task.isCompleted;
         public void GetResult()
         {
             if (UCWarfare.IsMainThread)
-            {
                 return;
-            }
+            UCWarfare.SpinWaitUntil(WaitCheck, DEFAULT_TIMEOUT_MS);
+            /*
             int counter = 0;
             int maxloop = DEFAULT_TIMEOUT_MS / POLL_SPEED_MS;
-            while (!task.isCompleted && counter < maxloop)
+            while (!Task.isCompleted && counter < maxloop)
             {
+                Task.Token.ThrowIfCancellationRequested();
                 Thread.Sleep(POLL_SPEED_MS);
                 counter++;
-            }
+            }*/
         }
     }
 }
 public sealed class LevelLoadTask
 {
-    internal const int DEFAULT_TIMEOUT_MS = 5000;
+    internal const int DEFAULT_TIMEOUT_MS = 120000;
     internal const int POLL_SPEED_MS = 25;
     private bool isCompleted = false;
     private readonly LevelLoadResult awaiter;
-    public LevelLoadTask()
+    public readonly CancellationToken Token;
+    public LevelLoadTask(CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
         awaiter = new LevelLoadResult(this);
+        Token = token;
     }
     public LevelLoadResult GetAwaiter()
     {
@@ -81,19 +91,20 @@ public sealed class LevelLoadTask
     }
     public sealed class LevelLoadResult : INotifyCompletion
     {
-        private readonly LevelLoadTask task;
+        public readonly LevelLoadTask Task;
         public LevelLoadResult(LevelLoadTask task)
         {
-            this.task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
+            this.Task = task ?? throw new ArgumentNullException(nameof(task), "Task was null in MainThreadResult constructor.");
         }
         internal Action continuation;
-        public bool IsCompleted { get => task.isCompleted; }
+        public bool IsCompleted { get => Task.isCompleted; }
         public void OnCompleted(Action continuation)
         {
+            Task.Token.ThrowIfCancellationRequested();
             if (UCWarfare.IsMainThread && Level.isLoaded)
             {
                 continuation();
-                task.isCompleted = true;
+                Task.isCompleted = true;
             }
             else
             {
@@ -104,21 +115,23 @@ public sealed class LevelLoadTask
         }
         internal void Complete()
         {
-            task.isCompleted = true;
+            Task.isCompleted = true;
         }
+        private bool WaitCheck() => Task.isCompleted;
         public void GetResult()
         {
             if (UCWarfare.IsMainThread && Level.isLoaded)
-            {
                 return;
-            }
+            UCWarfare.SpinWaitUntil(WaitCheck, DEFAULT_TIMEOUT_MS);
+            /*
             int counter = 0;
             int maxloop = DEFAULT_TIMEOUT_MS / POLL_SPEED_MS;
-            while (!task.isCompleted && counter < maxloop)
+            while (!Task.isCompleted && counter < maxloop)
             {
+                Task.Token.ThrowIfCancellationRequested();
                 Thread.Sleep(POLL_SPEED_MS);
                 counter++;
-            }
+            }*/
         }
     }
 }

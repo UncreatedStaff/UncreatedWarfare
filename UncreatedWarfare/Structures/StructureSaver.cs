@@ -392,7 +392,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
              return 3;
 
         ItemBarricadeAsset brAsset = (ItemBarricadeAsset)item;
-        BarricadeDrop? bdrop = structure.InstanceID > 0 ? UCBarricadeManager.GetBarricadeFromInstID(structure.InstanceID, structure.Position) : null;
+        BarricadeDrop? bdrop = structure.InstanceID > 0 ? UCBarricadeManager.FindBarricade(structure.InstanceID, structure.Position) : null;
         if (bdrop == null)
         {
             bdrop = UCBarricadeManager.GetBarricadeFromPosition(structure.Position);
@@ -424,7 +424,7 @@ public sealed class StructureSaver : ListSqlSingleton<SavedStructure>, ILevelSta
         return 0;
         structure:
         ItemStructureAsset stAsset = (ItemStructureAsset)item;
-        StructureDrop? sdrop = UCBarricadeManager.GetStructureFromInstID(structure.InstanceID, structure.Position);
+        StructureDrop? sdrop = UCBarricadeManager.FindStructure(structure.InstanceID, structure.Position);
         if (sdrop == null)
         {
             sdrop = UCBarricadeManager.GetStructureFromPosition(structure.Position);

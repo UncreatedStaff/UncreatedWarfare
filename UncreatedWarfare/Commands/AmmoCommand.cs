@@ -2,7 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.FOBs;
@@ -12,70 +15,83 @@ using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class AmmoCommand : Command
+public class AmmoCommand : AsyncCommand
 {
     public AmmoCommand() : base("ammo", EAdminType.MEMBER) { }
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ctx.AssertRanByPlayer();
 
+        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+        if (bay == null || !bay.IsLoaded)
+            throw ctx.SendGamemodeError();
+
         if (ctx.TryGetTarget(out InteractableVehicle vehicle))
         {
             ctx.AssertGamemode<IVehicles>();
 
-            if (!VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData vehicleData))
+            SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token).ConfigureAwait(false);
+            if (data?.Item == null)
                 throw ctx.Reply(T.AmmoVehicleCantRearm);
-
-            if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
-                throw ctx.Reply(T.AmmoAutoSupply);
-
-            bool isInMain = F.IsInMain(vehicle.transform.position);
-            if (!VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
+            await data.Enter(token).ConfigureAwait(false);
+            try
             {
-                BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.BarricadeRepairStation.Value.Guid,
-                10,
-                vehicle.transform.position,
-                ctx.Caller!.GetTeam(),
-                false).FirstOrDefault();
+                await UCWarfare.ToUpdate();
+                VehicleData vehicleData = data.Item;
+                if (vehicleData.Metadata != null && vehicleData.Metadata.TrunkItems != null && vehicleData.Items.Length == 0 && (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT))
+                    throw ctx.Reply(T.AmmoAutoSupply);
 
-                if (repairStation == null)
-                    throw ctx.Reply(T.AmmoNotNearRepairStation);
+                bool isInMain = F.IsInMain(vehicle.transform.position);
+                if (!VehicleData.IsEmplacement(vehicleData.Type) && !isInMain)
+                {
+                    BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.BarricadeRepairStation.Value.Guid,
+                    10,
+                    vehicle.transform.position,
+                    ctx.Caller!.GetTeam(),
+                    false).FirstOrDefault();
+
+                    if (repairStation == null)
+                        throw ctx.Reply(T.AmmoNotNearRepairStation);
+                }
+
+                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
+
+                if (fob == null && !isInMain)
+                    throw ctx.Reply(T.AmmoNotNearFOB);
+
+                if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
+                    throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, vehicleData.RearmCost);
+
+                if (vehicleData.Items.Length == 0)
+                    throw ctx.Reply(T.AmmoVehicleFullAlready);
+
+                EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
+
+                foreach (Guid item in vehicleData.Items)
+                    if (Assets.find(item) is ItemAsset a)
+                        ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
+
+                if (!isInMain)
+                {
+                    fob!.ReduceAmmo(vehicleData.RearmCost);
+                    ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.Ammo);
+                    ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE");
+                }
+                else
+                {
+                    ctx.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
+                    ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN");
+                }
             }
-
-            FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
-
-            if (fob == null && !isInMain)
-                throw ctx.Reply(T.AmmoNotNearFOB);
-
-            if (!isInMain && fob!.Ammo < vehicleData.RearmCost)
-                throw ctx.Reply(T.AmmoOutOfStock, fob.Ammo, vehicleData.RearmCost);
-
-            if (vehicleData.Items.Length == 0)
-                throw ctx.Reply(T.AmmoVehicleFullAlready);
-
-            EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
-
-            foreach (Guid item in vehicleData.Items)
-                if (Assets.find(item) is ItemAsset a)
-                    ItemManager.dropItem(new Item(a.id, true), ctx.Caller.Position, true, true, true);
-
-            if (!isInMain)
+            finally
             {
-                fob!.ReduceAmmo(vehicleData.RearmCost);
-                ctx.Reply(T.AmmoResuppliedVehicle, vehicleData, vehicleData.RearmCost, fob.Ammo);
-                ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE");
-            }
-            else
-            {
-                ctx.Reply(T.AmmoResuppliedVehicleMain, vehicleData, vehicleData.RearmCost);
-                ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR VEHICLE IN MAIN");
+                data.Release();
             }
         }
         else if (ctx.TryGetTarget(out BarricadeDrop barricade))

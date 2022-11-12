@@ -333,7 +333,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
             property = field.Name;
             if (reason == ESetFieldResult.SUCCESS)
             {
-                if (Util.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsAssignableFrom(val.GetType()))
+                if (Util.TryParseAny(value, field.FieldType, out object val) && val != null && field.FieldType.IsInstanceOfType(val))
                 {
                     try
                     {
@@ -361,7 +361,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
             property = field.Name;
             if (reason == ESetFieldResult.SUCCESS)
             {
-                if (field.FieldType.IsAssignableFrom(value.GetType()))
+                if (field.FieldType.IsInstanceOfType(value))
                 {
                     try
                     {
@@ -409,7 +409,7 @@ public abstract class JSONSaver<T> : List<T> where T : class, new()
             reason = ESetFieldResult.FIELD_NOT_FOUND;
             return false;
         }
-        Attribute atr = Attribute.GetCustomAttribute(field, typeof(JsonSettable));
+        Attribute atr = Attribute.GetCustomAttribute(field, typeof(CommandSettable));
         if (atr is not null)
         {
             reason = ESetFieldResult.SUCCESS;

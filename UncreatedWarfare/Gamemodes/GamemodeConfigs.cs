@@ -299,6 +299,14 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("effect_action_build")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectActionBuild { get; set; }
 
+    [Sync(524)]
+    [JsonPropertyName("effect_unload_ammo")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectUnloadAmmo { get; set; }
+
+    [Sync(525)]
+    [JsonPropertyName("effect_unload_build")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectUnloadBuild { get; set; }
+
     [Sync(550)]
     [JsonPropertyName("ui_capture_enable_player_count")]
     public bool UICaptureEnablePlayerCount { get; set; }
@@ -679,6 +687,8 @@ public sealed class GamemodeConfigData : JSONConfigData
         EffectActionDefend = new JsonAssetReference<EffectAsset>("16371fab7e8247619c6a6ec9a3e48e41");
         EffectActionMove = new JsonAssetReference<EffectAsset>("4077d5eea255435d8ed0133ec833b86a");
         EffectActionBuild = new JsonAssetReference<EffectAsset>("793bd80007f3484882284a6994e80bb3");
+        EffectUnloadAmmo = new JsonAssetReference<EffectAsset>("8a2740cfc6f64ca68410145a83027735");
+        EffectUnloadBuild = new JsonAssetReference<EffectAsset>("066c35a3e97e476a9f0a75218b4f6683");
         UICaptureEnablePlayerCount = true;
         UICaptureShowPointCount = false;
         UICircleFontCharacters = "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀ";

@@ -266,8 +266,8 @@ public static class QuestManager
         {
             if (tracker.PresetKey != default)
             {
-                if (tracker.Player!._completedQuests == null) GetCompletedQuests(tracker.Player);
-                tracker.Player._completedQuests!.Add(tracker.PresetKey);
+                if (tracker.Player!.CompletedQuests == null) GetCompletedQuests(tracker.Player);
+                tracker.Player.CompletedQuests!.Add(tracker.PresetKey);
                 if (!RankManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
                     if (!KitManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
                         VehicleBay.OnQuestCompleted(tracker.Player, tracker.PresetKey);
@@ -309,8 +309,8 @@ public static class QuestManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (player._completedQuests == null) GetCompletedQuests(player);
-        return player._completedQuests!.Contains(key);
+        if (player.CompletedQuests == null) GetCompletedQuests(player);
+        return player.CompletedQuests!.Contains(key);
     }
     private static void OnPlayerDied(PlayerDied e)
     {
@@ -599,11 +599,11 @@ public static class QuestManager
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);
-            player._completedQuests = new List<Guid>(0);
+            player.CompletedQuests = new List<Guid>(0);
             return;
         }
         string[] files = Directory.GetFiles(folder, "*.json", SearchOption.TopDirectoryOnly);
-        player._completedQuests = new List<Guid>(16);
+        player.CompletedQuests = new List<Guid>(16);
         for (int fi = 0; fi < files.Length; fi++)
         {
             FileInfo file = new FileInfo(files[fi]);
@@ -630,8 +630,8 @@ public static class QuestManager
                                     ReadProgress(tr, preset.Team);
                                     if (tr.IsCompleted)
                                     {
-                                        if (!player._completedQuests.Contains(guid))
-                                            player._completedQuests.Add(guid);
+                                        if (!player.CompletedQuests.Contains(guid))
+                                            player.CompletedQuests.Add(guid);
                                     }
                                 }
                             }

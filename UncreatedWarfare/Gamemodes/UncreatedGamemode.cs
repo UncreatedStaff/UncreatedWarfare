@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Uncreated.Players;
+using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Commands.VanillaRework;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
@@ -167,12 +168,20 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         }
         if (wasLevelLoadedOnStart)
         {
-            foreach (ILevelStartListener listener in _singletons.OfType<ILevelStartListener>())
-                listener.OnLevelReady();
-            foreach (ILevelStartListenerAsync listener in _singletons.OfType<ILevelStartListenerAsync>())
+            for (int i = 0; i < _singletons.Count; ++i)
             {
-                await listener.OnLevelReady().ConfigureAwait(false);
-                await UCWarfare.ToUpdate();
+                IUncreatedSingleton singleton = _singletons[i];
+                if (singleton is ILevelStartListener l1)
+                    l1.OnLevelReady();
+                if (singleton is ILevelStartListenerAsync l2)
+                {
+                    task = l2.OnLevelReady();
+                    if (!task.IsCompleted)
+                    {
+                        await task.ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                    }
+                }
             }
             ThreadUtil.assertIsGameThread();
             InternalOnReady();
@@ -285,16 +294,26 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         ThreadUtil.assertIsGameThread();
         if (!player.IsOnline)
             return;
+        Task task;
         player.HasInitedOnce = true;
-        foreach (IPlayerPreInitListener listener in _singletons.OfType<IPlayerPreInitListener>())
-            listener.OnPrePlayerInit(player, wasAlreadyOnline);
-        foreach (IPlayerPreInitListenerAsync listener in _singletons.OfType<IPlayerPreInitListenerAsync>())
+        for (int i = 0; i < _singletons.Count; ++i)
         {
-            await listener.OnPrePlayerInit(player, wasAlreadyOnline).ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
-            if (!player.IsOnline)
-                return;
+            IUncreatedSingleton singleton = _singletons[i];
+            if (singleton is IPlayerPreInitListener l1)
+                l1.OnPrePlayerInit(player, wasAlreadyOnline);
+            if (singleton is ILevelStartListenerAsync l2)
+            {
+                task = l2.OnLevelReady();
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate();
+                    if (!player.IsOnline)
+                        return;
+                }
+            }
         }
+        ThreadUtil.assertIsGameThread();
         if (!wasAlreadyOnline)
         {
             Task t2 = Points.UpdatePointsAsync(player, false);
@@ -310,21 +329,27 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!player.IsOnline)
             return;
         if (!wasAlreadyOnline)
-            _ = Data.DatabaseManager.CheckUpdateUsernames(player.Name);
-        foreach (IPlayerPostInitListener listener in _singletons.OfType<IPlayerPostInitListener>())
-            listener.OnPostPlayerInit(player);
-        foreach (IPlayerPostInitListenerAsync listener in _singletons.OfType<IPlayerPostInitListenerAsync>())
-        {
-            await listener.OnPostPlayerInit(player).ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
-            if (!player.IsOnline)
-                return;
-        }
-        
-        ThreadUtil.assertIsGameThread();
-        Task task = PlayerInit(player, wasAlreadyOnline);
+            _ = Data.DatabaseManager.UpdateUsernames(player.Name);
+        task = PlayerInit(player, wasAlreadyOnline);
         if (!task.IsCompleted)
             await task.ConfigureAwait(false);
+        for (int i = 0; i < _singletons.Count; ++i)
+        {
+            IUncreatedSingleton singleton = _singletons[i];
+            if (singleton is IPlayerPostInitListener l1)
+                l1.OnPostPlayerInit(player);
+            if (singleton is IPlayerPostInitListenerAsync l2)
+            {
+                task = l2.OnPostPlayerInit(player);
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate();
+                    if (!player.IsOnline)
+                        return;
+                }
+            }
+        }
     }
     private void InternalPreDispose()
     {
@@ -378,16 +403,25 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         if (!wasLevelLoadedOnStart)
         {
             await UCWarfare.ToUpdate();
-            foreach (ILevelStartListener listener in _singletons.OfType<ILevelStartListener>())
-                listener.OnLevelReady();
-            foreach (ILevelStartListenerAsync listener in _singletons.OfType<ILevelStartListenerAsync>())
+            Task task;
+            for (int i = 0; i < _singletons.Count; ++i)
             {
-                await UCWarfare.ToUpdate();
-                await listener.OnLevelReady().ConfigureAwait(false);
+                IUncreatedSingleton singleton = _singletons[i];
+                if (singleton is ILevelStartListener l1)
+                    l1.OnLevelReady();
+                if (singleton is ILevelStartListenerAsync l2)
+                {
+                    task = l2.OnLevelReady();
+                    if (!task.IsCompleted)
+                    {
+                        await task.ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                    }
+                }
             }
-            await UCWarfare.ToUpdate();
+            ThreadUtil.assertIsGameThread();
             InternalOnReady();
-            Task task = OnReady();
+            task = OnReady();
             if (!task.IsCompleted)
             {
                 await task.ConfigureAwait(false);
@@ -550,12 +584,20 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
             ThreadUtil.assertIsGameThread();
             this._state = EState.FINISHED;
             L.Log(TeamManager.TranslateName(winner, 0) + " just won the game!", ConsoleColor.Cyan);
-            foreach (IDeclareWinListener listener in _singletons.OfType<IDeclareWinListener>())
-                listener.OnWinnerDeclared(winner);
-            foreach (IDeclareWinListenerAsync listener in _singletons.OfType<IDeclareWinListenerAsync>())
+            for (int i = 0; i < _singletons.Count; ++i)
             {
-                await listener.OnWinnerDeclared(winner).ConfigureAwait(false);
-                await UCWarfare.ToUpdate();
+                IUncreatedSingleton singleton = _singletons[i];
+                if (singleton is IDeclareWinListener l1)
+                    l1.OnWinnerDeclared(winner);
+                if (singleton is IDeclareWinListenerAsync l2)
+                {
+                    Task task = l2.OnWinnerDeclared(winner);
+                    if (!task.IsCompleted)
+                    {
+                        await task.ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                    }
+                }
             }
             ThreadUtil.assertIsGameThread();
 
@@ -563,10 +605,10 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
             ActionLogger.Add(EActionLogType.TEAM_WON, TeamManager.TranslateName(winner, 0));
 
-        Chat.Broadcast(T.TeamWin, TeamManager.GetFaction(winner));
+            Chat.Broadcast(T.TeamWin, TeamManager.GetFaction(winner));
 
-            foreach (SteamPlayer client in Provider.clients)
-                client.player.movement.forceRemoveFromVehicle();
+            for (int i = 0; i < Provider.clients.Count; i++)
+                Provider.clients[i].player.movement.forceRemoveFromVehicle();
 
             if (this is IGameStats { GameStats: BaseStatTracker<BasePlayerStats> tps })
             {
@@ -681,20 +723,24 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         UCWarfare.ForceUnload();
     }
 
-    protected virtual Task EndGame()
+    protected virtual async Task EndGame()
     {
         try
         {
+            await CommandHandler.LetCommandsFinish().ConfigureAwait(false);
             Type? nextMode = GetNextGamemode();
             if (GetType() != nextMode)
-                return TryLoadGamemode(nextMode!);
-            return Data.Singletons.ReloadSingletonAsync(ReloadKey);
+            {
+                await TryLoadGamemode(nextMode!).ConfigureAwait(false);
+                return;
+            }
+            await Data.Singletons.ReloadSingletonAsync(ReloadKey).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             L.LogError("Error ending game: " + DisplayName + ".");
             L.LogError(ex);
-            return FailToLoadGame(ex);
+            await FailToLoadGame(ex).ConfigureAwait(false);
         }
     }
     public async Task StartNextGame(bool onLoad = false)
@@ -720,12 +766,20 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                 }
             }
         }
-        foreach (IGameStartListener listener in _singletons.OfType<IGameStartListener>())
-            listener.OnGameStarting(onLoad);
-        foreach (IGameStartListenerAsync listener in _singletons.OfType<IGameStartListenerAsync>())
+        for (int i = 0; i < _singletons.Count; ++i)
         {
-            await listener.OnGameStarting(onLoad).ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
+            IUncreatedSingleton singleton = _singletons[i];
+            if (singleton is IGameStartListener l1)
+                l1.OnGameStarting(onLoad);
+            if (singleton is IGameStartListenerAsync l2)
+            {
+                task = l2.OnGameStarting(onLoad);
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate();
+                }
+            }
         }
 
         ThreadUtil.assertIsGameThread();
@@ -739,17 +793,29 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         PlayerManager.ApplyToOnline();
         if (!onLoad)
         {
-            foreach (ILevelStartListener listener in _singletons.OfType<ILevelStartListener>())
-                listener.OnLevelReady();
-            foreach (ILevelStartListenerAsync listener in _singletons.OfType<ILevelStartListenerAsync>())
+            for (int i = 0; i < _singletons.Count; ++i)
             {
-                await listener.OnLevelReady().ConfigureAwait(false);
-                await UCWarfare.ToUpdate();
+                IUncreatedSingleton singleton = _singletons[i];
+                if (singleton is ILevelStartListener l1)
+                    l1.OnLevelReady();
+                if (singleton is ILevelStartListenerAsync l2)
+                {
+                    task = l2.OnLevelReady();
+                    if (!task.IsCompleted)
+                    {
+                        await task.ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                    }
+                }
             }
             ThreadUtil.assertIsGameThread();
         }
-        await PostGameStarting(onLoad).ConfigureAwait(false);
-        await UCWarfare.ToUpdate();
+        task = PostGameStarting(onLoad);
+        if (!task.IsCompleted)
+        {
+            await task;
+            await UCWarfare.ToUpdate();
+        }
         ThreadUtil.assertIsGameThread();
         await Points.UpdateAllPointsAsync().ConfigureAwait(false);
         for (int i = 0; i < PlayerManager.OnlinePlayers.Count; i++)
@@ -785,14 +851,22 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     internal async Task OnPlayerJoined(UCPlayer player)
     {
         ThreadUtil.assertIsGameThread();
-        foreach (IPlayerConnectListener listener in _singletons.OfType<IPlayerConnectListener>())
-            listener.OnPlayerConnecting(player);
-        foreach (IPlayerConnectListenerAsync listener in _singletons.OfType<IPlayerConnectListenerAsync>())
+        for (int i = 0; i < _singletons.Count; ++i)
         {
-            await listener.OnPlayerConnecting(player).ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
-            if (!player.IsOnline)
-                break;
+            IUncreatedSingleton singleton = _singletons[i];
+            if (singleton is IPlayerConnectListener l1)
+                l1.OnPlayerConnecting(player);
+            if (singleton is IPlayerConnectListenerAsync l2)
+            {
+                Task task = l2.OnPlayerConnecting(player);
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate();
+                    if (!player.IsOnline)
+                        return;
+                }
+            }
         }
         await InternalPlayerInit(player, false).ConfigureAwait(false);
     }

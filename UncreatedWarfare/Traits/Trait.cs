@@ -224,7 +224,7 @@ public class TraitData : ITranslationArgument
         }
     }
 
-    [JsonSettable]
+    [CommandSettable]
     [JsonPropertyName("credit_cost")]
     public int CreditCost;
 

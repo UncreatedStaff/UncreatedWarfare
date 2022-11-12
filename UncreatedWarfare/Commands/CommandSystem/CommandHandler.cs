@@ -6,6 +6,8 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using UnityEngine;
@@ -13,17 +15,37 @@ using UnityEngine;
 namespace Uncreated.Warfare.Commands.CommandSystem;
 public static class CommandHandler
 {
-    private static readonly List<IExecutableCommand> _commands = new List<IExecutableCommand>(8);
-
-    private static readonly char[] PREFIXES = new char[] { '/', '@' };
-    private static readonly char[] CONTINUE_ARG_CHARS = new char[] { '\'', '"' };
+    public const int MILLISECONDS_COMMAND_MAX_TIMEOUT_AT_GAME_END = 11000;
+    private static readonly List<IExecutableCommand> Commands = new List<IExecutableCommand>(8);
+    public static readonly IReadOnlyList<IExecutableCommand> RegisteredCommands;
+    private static readonly char[] Prefixes = { '/', '@', '\\' };
+    private static readonly char[] ContinueArgChars = { '\'', '"', '`', '“', '”', '‘', '’' };
     private const int MAX_ARG_COUNT = 16;
-    private static readonly ArgumentInfo[] _argList = new ArgumentInfo[MAX_ARG_COUNT];
-    private static CommandInteraction? _activeVanillaCmd = null;
+    private static readonly ArgumentInfo[] ArgBuffer = new ArgumentInfo[MAX_ARG_COUNT];
+    internal static CancellationTokenSource GlobalCommandCancel = new CancellationTokenSource();
+    internal static List<CommandInteraction> ActiveCommands = new List<CommandInteraction>(8);
+    internal static bool TryingToCancel = false;
     static CommandHandler()
     {
+        RegisteredCommands = Commands.AsReadOnly();
         ChatManager.onCheckPermissions += OnChatProcessing;
         CommandWindow.onCommandWindowInputted += OnCommandInput;
+    }
+
+    public static async Task LetCommandsFinish()
+    {
+        TryingToCancel = true;
+        GlobalCommandCancel.CancelAfter(MILLISECONDS_COMMAND_MAX_TIMEOUT_AT_GAME_END);
+        foreach (CommandInteraction intx in ActiveCommands.ToList())
+        {
+            if (intx.Task != null && !intx.Task.IsCompleted)
+            {
+                await intx.Task.ConfigureAwait(false);
+            }
+        }
+
+        GlobalCommandCancel = new CancellationTokenSource();
+        TryingToCancel = false;
     }
     private static void OnChatProcessing(SteamPlayer player, string text, ref bool shouldExecuteCommand, ref bool shouldList)
     {
@@ -38,7 +60,7 @@ public static class CommandHandler
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        _commands.Clear();
+        Commands.Clear();
         RegisterVanillaCommands();
         Type t = typeof(IExecutableCommand);
         Type v = typeof(VanillaCommand);
@@ -63,16 +85,16 @@ public static class CommandHandler
     {
         int priority = cmd.Priority;
         string name = cmd.CommandName;
-        for (int i = 0; i < _commands.Count; ++i)
+        for (int i = 0; i < Commands.Count; ++i)
         {
-            if (name.Equals(_commands[i].CommandName, StringComparison.OrdinalIgnoreCase))
+            if (name.Equals(Commands[i].CommandName, StringComparison.OrdinalIgnoreCase))
             {
-                if (_commands[i].Priority < priority)
+                if (Commands[i].Priority < priority)
                 {
-                    _commands.Insert(i, cmd);
+                    Commands.Insert(i, cmd);
                     goto regCmd;
                 }
-                else if (_commands[i].Priority == priority)
+                else if (Commands[i].Priority == priority)
                 {
                     L.LogWarning("Duplicate command /" + name.ToLower() + " with same priority from assembly: " + cmd.GetType().Assembly.GetName().Name);
                     return;
@@ -80,7 +102,7 @@ public static class CommandHandler
             }
         }
 
-        _commands.Add(cmd);
+        Commands.Add(cmd);
     regCmd:
         if (cmd is VanillaCommand)
             L.Log("Command /" + name.ToLower() + " registered from Unturned.", ConsoleColor.DarkGray);
@@ -105,6 +127,16 @@ public static class CommandHandler
     }
     private static unsafe bool CheckRunCommand(UCPlayer? player, string message, bool requirePrefix)
     {
+        ThreadUtil.assertIsGameThread();
+        if (TryingToCancel)
+        {
+            if (player != null)
+                player.SendChat(T.ErrorCommandCancelled);
+            else
+                L.Log(T.ErrorCommandCancelled.Translate(L.DEFAULT));
+            return true;
+        }
+            
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -124,157 +156,149 @@ public static class CommandHandler
                 if (!foundPrefix && requirePrefix)
                 {
                     if (c == ' ') continue;
-                    else
+                    for (int j = 0; j < ContinueArgChars.Length; ++j)
                     {
-                        for (int j = 0; j < CONTINUE_ARG_CHARS.Length; ++j)
+                        if (c == Prefixes[j])
                         {
-                            if (c == PREFIXES[j])
-                            {
-                                foundPrefix = true;
-                                break;
-                            }
+                            foundPrefix = true;
+                            break;
                         }
-                        if (!foundPrefix) goto notCommand;
+                    }
+                    if (!foundPrefix) goto notCommand;
+                    continue;
+                }
+
+                if (cmdStart == -1)
+                {
+                    if (c == ' ') goto c;
+                    if (!requirePrefix)
+                    {
+                        for (int j = 0; j < Prefixes.Length; ++j)
+                        {
+                            if (c == Prefixes[j]) goto c;
+                        }
+                    }
+                    cmdStart = i;
+                    c:
+                    continue;
+                }
+
+                if (cmdEnd == -1)
+                {
+                    if (i != len - 1)
+                    {
+                        if (c != ' ') continue;
+                        else
+                        {
+                            char next = message[i + 1];
+                            if (next != ' ')
+                            {
+                                for (int j = 0; j < ContinueArgChars.Length; ++j)
+                                {
+                                    if (next == ContinueArgChars[j])
+                                        goto c;
+                                }
+                                ref ArgumentInfo info = ref ArgBuffer[++argCt];
+                                info.End = -1;
+                                info.Start = i + 1;
+                            }
+                            c:
+                            cmdEnd = i - 1;
+                        }
+                    }
+                    else
+                        cmdEnd = i;
+                    goto getCommand;
+                }
+
+                for (int j = 0; j < ContinueArgChars.Length; ++j)
+                {
+                    if (c == ContinueArgChars[j])
+                        goto contArgChr;
+                }
+
+                if (c == ' ' && !inArg)
+                {
+                    if (i == len - 1)
+                    {
+                        if (argCt != -1)
+                        {
+                            ref ArgumentInfo info2 = ref ArgBuffer[argCt];
+                            if (info2.End == -1)
+                                info2.End = i - 1;
+                        }
+                        break;
+                    }
+
+                    char next = message[i + 1];
+                    if (next == ' ')
+                    {
+                        if (argCt != -1)
+                        {
+                            ref ArgumentInfo info2 = ref ArgBuffer[argCt];
+                            if (info2.End == -1)
+                                info2.End = i - 1;
+                        }
                         continue;
                     }
+
+                    for (int j = 0; j < ContinueArgChars.Length; ++j)
+                    {
+                        if (next == ContinueArgChars[j])
+                            goto c;
+                    }
+                    goto n;
+                    c:
+                    continue;
+                    n:
+                    if (argCt != -1)
+                    {
+                        ref ArgumentInfo info2 = ref ArgBuffer[argCt];
+                        if (info2.End == -1)
+                            info2.End = i - 1;
+                    }
+                    if (i == len - 1) break;
+                    if (argCt >= MAX_ARG_COUNT - 1)
+                        goto runCommand;
+                    ref ArgumentInfo info = ref ArgBuffer[++argCt];
+                    info.End = -1;
+                    info.Start = i + 1;
+                }
+                continue;
+
+                contArgChr:
+                if (inArg)
+                {
+                    ref ArgumentInfo info = ref ArgBuffer[argCt];
+                    info.End = i - 1;
+                    inArg = false;
                 }
                 else
                 {
-                    if (cmdStart == -1)
+                    if (argCt != -1)
                     {
-                        if (c == ' ') goto c;
-                        if (!requirePrefix)
+                        ref ArgumentInfo info2 = ref ArgBuffer[argCt];
+                        if (info2.End == -1)
                         {
-                            for (int j = 0; j < PREFIXES.Length; ++j)
-                            {
-                                if (c == PREFIXES[j]) goto c;
-                            }
-                        }
-                        cmdStart = i;
-                    c:
-                        continue;
-                    }
-                    else if (cmdEnd == -1)
-                    {
-                        if (i != len - 1)
-                        {
-                            if (c != ' ') continue;
+                            if (message[i - 1] == ' ')
+                                info2.End = i - 2;
                             else
-                            {
-                                char next = message[i + 1];
-                                if (next != ' ')
-                                {
-                                    for (int j = 0; j < CONTINUE_ARG_CHARS.Length; ++j)
-                                    {
-                                        if (next == CONTINUE_ARG_CHARS[j])
-                                            goto c;
-                                    }
-                                    ref ArgumentInfo info = ref _argList[++argCt];
-                                    info.end = -1;
-                                    info.start = i + 1;
-                                }
-                            c:
-                                cmdEnd = i - 1;
-                            }
-                        }
-                        else
-                            cmdEnd = i;
-                        goto getCommand;
-                    }
-                    else
-                    {
-                        for (int j = 0; j < CONTINUE_ARG_CHARS.Length; ++j)
-                        {
-                            if (c == CONTINUE_ARG_CHARS[j])
-                                goto contArgChr;
-                        }
-
-                        if (c == ' ' && !inArg)
-                        {
-                            if (i == len - 1)
-                            {
-                                if (argCt != -1)
-                                {
-                                    ref ArgumentInfo info2 = ref _argList[argCt];
-                                    if (info2.end == -1)
-                                        info2.end = i - 1;
-                                }
-                                break;
-                            }
-
-                            char next = message[i + 1];
-                            if (next == ' ')
-                            {
-                                if (argCt != -1)
-                                {
-                                    ref ArgumentInfo info2 = ref _argList[argCt];
-                                    if (info2.end == -1)
-                                        info2.end = i - 1;
-                                }
-                                continue;
-                            }
-                            else
-                            {
-                                for (int j = 0; j < CONTINUE_ARG_CHARS.Length; ++j)
-                                {
-                                    if (next == CONTINUE_ARG_CHARS[j])
-                                        goto c;
-                                }
-                                goto n;
-                            c:
-                                continue;
-                            }
-                        n:
-                            if (argCt != -1)
-                            {
-                                ref ArgumentInfo info2 = ref _argList[argCt];
-                                if (info2.end == -1)
-                                    info2.end = i - 1;
-                            }
-                            if (i == len - 1) break;
-                            if (argCt >= MAX_ARG_COUNT - 1)
-                                goto runCommand;
-                            ref ArgumentInfo info = ref _argList[++argCt];
-                            info.end = -1;
-                            info.start = i + 1;
-                        }
-                        continue;
-
-                    contArgChr:
-                        if (inArg)
-                        {
-                            ref ArgumentInfo info = ref _argList[argCt];
-                            info.end = i - 1;
-                            inArg = false;
-                        }
-                        else
-                        {
-                            if (argCt != -1)
-                            {
-                                ref ArgumentInfo info2 = ref _argList[argCt];
-                                if (info2.end == -1)
-                                {
-                                    if (message[i - 1] == ' ')
-                                        info2.end = i - 2;
-                                    else
-                                        info2.end = i - 1;
-                                }
-                            }
-                            if (i == len - 1) break;
-                            if (argCt >= MAX_ARG_COUNT - 1)
-                                goto runCommand;
-                            ref ArgumentInfo info = ref _argList[++argCt];
-                            info.start = i + 1;
-                            info.end = -1;
-                            inArg = true;
+                                info2.End = i - 1;
                         }
                     }
+                    if (i == len - 1) break;
+                    if (argCt >= MAX_ARG_COUNT - 1)
+                        goto runCommand;
+                    ref ArgumentInfo info = ref ArgBuffer[++argCt];
+                    info.Start = i + 1;
+                    info.End = -1;
+                    inArg = true;
                 }
                 continue;
-            getCommand:
-                for (int k = 0; k < _commands.Count; ++k)
+                getCommand:
+                for (int k = 0; k < Commands.Count; ++k)
                 {
-                    string c2 = _commands[k].CommandName;
+                    string c2 = Commands[k].CommandName;
                     fixed (char* ptr2 = c2)
                     {
                         if (cmdEnd - cmdStart + 1 != c2.Length)
@@ -295,9 +319,9 @@ public static class CommandHandler
 
                 if (cmdInd == -1)
                 {
-                    for (int k = 0; k < _commands.Count; ++k)
+                    for (int k = 0; k < Commands.Count; ++k)
                     {
-                        IExecutableCommand cmd = _commands[k];
+                        IExecutableCommand cmd = Commands[k];
                         if (cmd.Aliases is not null && cmd.Aliases.Count > 0)
                         {
                             for (int a = 0; a < cmd.Aliases.Count; ++a)
@@ -333,115 +357,74 @@ public static class CommandHandler
             }
             if (argCt != -1)
             {
-                ref ArgumentInfo info = ref _argList[argCt];
-                if (info.end == -1)
+                ref ArgumentInfo info = ref ArgBuffer[argCt];
+                if (info.End == -1)
                 {
                     bool endIsC = false;
                     char end = message[len - 1];
-                    for (int j = 0; j < CONTINUE_ARG_CHARS.Length; ++j)
+                    for (int j = 0; j < ContinueArgChars.Length; ++j)
                     {
-                        if (end == CONTINUE_ARG_CHARS[j])
+                        if (end == ContinueArgChars[j])
                             endIsC = true;
                     }
                     if (endIsC)
                     {
-                        info.end = len - 2;
+                        info.End = len - 2;
                     }
                     else
                     {
-                        info.end = len;
-                        do --info.end;
-                        while (message[info.end] == ' ' && info.end > -1);
-                        if (info.end > 0)
+                        info.End = len;
+                        do --info.End;
+                        while (message[info.End] == ' ' && info.End > -1);
+                        if (info.End > 0)
                         {
                             endIsC = false;
-                            end = message[info.end];
-                            for (int j = 0; j < CONTINUE_ARG_CHARS.Length; ++j)
+                            end = message[info.End];
+                            for (int j = 0; j < ContinueArgChars.Length; ++j)
                             {
-                                if (end == CONTINUE_ARG_CHARS[j])
+                                if (end == ContinueArgChars[j])
                                     endIsC = true;
                             }
-                            if (endIsC) --info.end;
+                            if (endIsC) --info.End;
                         }
                     }
                 }
             }
-        runCommand:
+            runCommand:
             if (cmdInd == -1) goto notCommand;
             int ct2 = 0;
             for (int i = 0; i <= argCt; ++i)
             {
-                ref ArgumentInfo ai = ref _argList[i];
-                if (ai.end > 0) ct2++;
+                ref ArgumentInfo ai = ref ArgBuffer[i];
+                if (ai.End > 0) ct2++;
             }
 
             int i3 = -1;
             string[] args = argCt == -1 ? Array.Empty<string>() : new string[ct2];
             for (int i = 0; i <= argCt; ++i)
             {
-                ref ArgumentInfo ai = ref _argList[i];
-                if (ai.end < 1) continue;
-                args[++i3] = new string(ptr, ai.start, ai.end - ai.start + 1);
+                ref ArgumentInfo ai = ref ArgBuffer[i];
+                if (ai.End < 1) continue;
+                args[++i3] = new string(ptr, ai.Start, ai.End - ai.Start + 1);
             }
             RunCommand(cmdInd, player, args, message, message[message.Length - 1] == '\\');
         }
         return true;
-    notCommand:
+        notCommand:
         return false;
     }
     internal static void OnLog(string message)
     {
-        _activeVanillaCmd?.ReplyString("<color=#bfb9ac>" + message + "</color>");
+        ActiveCommands.FindLast(x => x.Command is VanillaCommand)?.ReplyString("<#bfb9ac>" + message + "</color>");
     }
     private static void RunCommand(int index, UCPlayer? player, string[] args, string message, bool keepSlash)
     {
-        IExecutableCommand cmd = _commands[index];
+        IExecutableCommand cmd = Commands[index];
         CommandInteraction interaction = cmd.SetupCommand(player, args, message, keepSlash);
-        if (cmd.CheckPermission(interaction))
-        {
-            try
-            {
-                if (player is not null && cmd is VanillaCommand)
-                    _activeVanillaCmd = interaction;
-#if DEBUG
-                IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + cmd.CommandName);
-#endif
-                cmd.Execute(interaction);
-#if DEBUG
-                profiler.Dispose();
-#endif
-                if (!interaction.Responded)
-                {
-                    interaction.Reply(T.UnknownError);
-                    interaction.MarkComplete();
-                }
-
-                if (player is not null)
-                    CommandWaiter.OnCommandExecuted(player, cmd);
-            }
-            catch (BaseCommandInteraction i)
-            {
-                i.MarkComplete();
-                if (player is not null)
-                    CommandWaiter.OnCommandExecuted(player, cmd);
-            }
-            catch (Exception ex)
-            {
-                interaction.Reply(T.UnknownError);
-                interaction.MarkComplete();
-                L.LogError(ex);
-            }
-            finally
-            {
-                _activeVanillaCmd = null;
-            }
-        }
-        else
-        {
-            interaction.Reply(T.UnknownError);
-            interaction.MarkComplete();
-        }
+        ActiveCommands.Add(interaction);
+        Task.Run(interaction.ExecuteCommand);
     }
+    
     private static void OnCommandInput(string text, ref bool shouldExecuteCommand)
     {
         if (shouldExecuteCommand && CheckRunCommand(null, text, false))
@@ -449,85 +432,156 @@ public static class CommandHandler
     }
     private struct ArgumentInfo
     {
-        public int start;
-        public int end;
-        public ArgumentInfo()
-        {
-            start = -1;
-            end = -1;
-        }
-        public ArgumentInfo(int start, int end)
-        {
-            this.start = start;
-            this.end = end;
-        }
+        public int Start;
+        public int End;
     }
 }
 public abstract class BaseCommandInteraction : Exception
 {
     public readonly IExecutableCommand Command;
-    protected bool _responded = false;
-    public bool Responded => _responded;
+    protected bool responded;
+    public bool Responded => responded;
     protected BaseCommandInteraction(IExecutableCommand cmd, string message) : base(message)
     {
         this.Command = cmd;
     }
     internal virtual void MarkComplete()
     {
-        _responded = true;
+        responded = true;
     }
 }
 
 /// <summary>Provides helpful information and helper functions relating to the currently executing command.</summary>
-public class CommandInteraction : BaseCommandInteraction
+public sealed class CommandInteraction : BaseCommandInteraction
 {
+    internal Task? Task;
     private readonly ContextData _ctx;
-    private int offset;
+    private int _offset;
     public ContextData Context => _ctx;
     public UCPlayer Caller => _ctx.Caller;
     public bool IsConsole => _ctx.IsConsole;
     public string[] Parameters => _ctx.Parameters;
-    public int ArgumentCount => _ctx.ArgumentCount - offset;
+    public int ArgumentCount => _ctx.ArgumentCount - _offset;
     public ulong CallerID => _ctx.CallerID;
     public CSteamID CallerCSteamID => _ctx.CallerCSteamID;
     public string OriginalMessage => _ctx.OriginalMessage;
-    public int Offset { get => offset; set => offset = value; }
+    public int Offset { get => _offset; set => _offset = value; }
     public CommandInteraction(ContextData ctx, IExecutableCommand cmd)
         : base(cmd, ctx.IsConsole ? ("Console Command: " + ctx.OriginalMessage) :
             ("Command ran by " + ctx.CallerID + ": " + ctx.OriginalMessage))
     {
         this._ctx = ctx;
-        _responded = false;
-        offset = 0;
+        _offset = 0;
     }
 
+    public string? this[int index] => Get(index);
+    internal async Task ExecuteCommand()
+    {
+        bool rem = false;
+        try
+        {
+            if (CommandHandler.GlobalCommandCancel.IsCancellationRequested)
+                return;
+            await UCWarfare.ToUpdate();
+            if (CommandHandler.GlobalCommandCancel.IsCancellationRequested)
+                return;
+            if (Command.CheckPermission(this))
+            {
+                try
+                {
+#if DEBUG
+                    using IDisposable profiler = ProfilingUtils.StartTracking("Execute command: " + Command.CommandName);
+#endif
+                    await (Task = Command.Execute(this, CommandHandler.GlobalCommandCancel.Token)).ConfigureAwait(false);
+                    CommandHandler.ActiveCommands.Remove(this);
+                    rem = true;
+#if DEBUG
+                    profiler.Dispose();
+#endif
+                    if (CommandHandler.TryingToCancel)
+                        return;
+                    if (!UCWarfare.IsMainThread)
+                        await UCWarfare.ToUpdate();
+                    if (CommandHandler.TryingToCancel)
+                        return;
+
+                    if (!Responded)
+                    {
+                        Reply(T.UnknownError);
+                        MarkComplete();
+                    }
+
+                    if (Caller is not null)
+                        CommandWaiter.OnCommandExecuted(Caller, Command);
+                }
+                catch (TaskCanceledException)
+                {
+                    if (!UCWarfare.IsMainThread)
+                        await UCWarfare.ToUpdate();
+                    if (CommandHandler.TryingToCancel)
+                        return;
+                    Reply(T.ErrorCommandCancelled);
+                    MarkComplete();
+                    L.Log("Execution of " + Command.CommandName + " was cancelled (" + CallerID + ").");
+                }
+                catch (BaseCommandInteraction i)
+                {
+                    if (!UCWarfare.IsMainThread)
+                        await UCWarfare.ToUpdate();
+                    i.MarkComplete();
+                    if (Caller is not null)
+                        CommandWaiter.OnCommandExecuted(Caller, Command);
+                }
+                catch (Exception ex)
+                {
+                    if (!UCWarfare.IsMainThread)
+                        await UCWarfare.ToUpdate();
+                    Reply(T.UnknownError);
+                    MarkComplete();
+                    L.LogError(ex);
+                }
+            }
+            else
+            {
+                if (!UCWarfare.IsMainThread)
+                    await UCWarfare.ToUpdate();
+                Reply(T.UnknownError);
+                MarkComplete();
+            }
+        }
+        finally
+        {
+            if (!rem)
+                CommandHandler.ActiveCommands.Remove(this);
+        }
+    }
     public Exception Defer()
     {
-        _responded = true;
+        responded = true;
         return this;
     }
     /// <summary>Zero based. Checks if the argument at index <paramref name="position"/> exists.</summary>
     public bool HasArg(int position)
     {
-        position += offset;
+        position += _offset;
         return position > -1 && position < _ctx.ArgumentCount;
     }
     /// <summary>One based. Checks if there are at least <paramref name="count"/> arguments.</summary>
     public bool HasArgs(int count)
     {
-        count += offset;
+        count += _offset;
         return count > -1 && count <= _ctx.ArgumentCount;
     }
     /// <summary>One based. Checks if there are exactly <paramref name="count"/> argument(s).</summary>
     public bool HasArgsExact(int count)
     {
-        count += offset;
+        count += _offset;
         return count == _ctx.ArgumentCount;
     }
     /// <summary>Zero based, compare the value of argument <paramref name="parameter"/> with <paramref name="value"/>. Case insensitive.</summary>
     public bool MatchParameter(int parameter, string value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         return Parameters[parameter].Equals(value, StringComparison.OrdinalIgnoreCase);
@@ -536,7 +590,7 @@ public class CommandInteraction : BaseCommandInteraction
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
     public bool MatchParameter(int parameter, string value, string alternate)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
@@ -546,7 +600,7 @@ public class CommandInteraction : BaseCommandInteraction
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
     public bool MatchParameter(int parameter, string value, string alternate1, string alternate2)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
@@ -556,7 +610,7 @@ public class CommandInteraction : BaseCommandInteraction
     /// <returns><see langword="true"/> if one of the parameters match.</returns>
     public bool MatchParameter(int parameter, params string[] alternates)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return false;
         string v = Parameters[parameter];
@@ -571,14 +625,14 @@ public class CommandInteraction : BaseCommandInteraction
     private string GetParamForParse(int index) => Parameters[index];
     public string? Get(int parameter)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
             return null;
         return Parameters[parameter];
     }
     public string? GetRange(int start, int length = -1)
     {
-        start += offset;
+        start += _offset;
         if (length == 1) return Get(start);
         if (start < 0 || start >= _ctx.ArgumentCount)
             return null;
@@ -598,7 +652,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out string value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = null!;
@@ -609,7 +663,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet<TEnum>(int parameter, out TEnum value) where TEnum : unmanaged, Enum
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = default;
@@ -619,7 +673,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out int value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -629,7 +683,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out byte value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -639,7 +693,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out short value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -649,7 +703,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out sbyte value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -659,7 +713,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out Guid value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = default;
@@ -669,7 +723,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out uint value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -679,7 +733,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ushort value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -689,7 +743,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ulong value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -699,7 +753,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetTeam(int parameter, out ulong value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -711,33 +765,30 @@ public class CommandInteraction : BaseCommandInteraction
         {
             return value is > 0 and < 4;
         }
-        else if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.OrdinalIgnoreCase) ||
+        if (p.Equals(Teams.TeamManager.Team1Code, StringComparison.OrdinalIgnoreCase) ||
                  p.Equals(Teams.TeamManager.Team1Name, StringComparison.OrdinalIgnoreCase) || p.Equals("t1", StringComparison.OrdinalIgnoreCase))
         {
             value = 1ul;
             return true;
         }
-        else if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.OrdinalIgnoreCase) ||
+        if (p.Equals(Teams.TeamManager.Team2Code, StringComparison.OrdinalIgnoreCase) ||
                  p.Equals(Teams.TeamManager.Team2Name, StringComparison.OrdinalIgnoreCase) || p.Equals("t2", StringComparison.OrdinalIgnoreCase))
         {
             value = 2ul;
             return true;
         }
-        else if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.OrdinalIgnoreCase) ||
+        if (p.Equals(Teams.TeamManager.AdminCode, StringComparison.OrdinalIgnoreCase) ||
                  p.Equals(Teams.TeamManager.AdminName, StringComparison.OrdinalIgnoreCase) || p.Equals("t3", StringComparison.OrdinalIgnoreCase))
         {
             value = 3ul;
             return true;
         }
-        else
-        {
-            value = 0ul;
-            return false;
-        }
+        value = 0ul;
+        return false;
     }
     public bool TryGet(int parameter, out float value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -747,7 +798,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out double value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -757,7 +808,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out decimal value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -768,7 +819,7 @@ public class CommandInteraction : BaseCommandInteraction
     // the ref ones are so you can count on your already existing variable not being overwritten
     public bool TryGetRef<TEnum>(int parameter, ref TEnum value) where TEnum : unmanaged, Enum
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = default;
@@ -783,7 +834,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref int value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -798,7 +849,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref byte value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -813,7 +864,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref sbyte value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -828,7 +879,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref Guid value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = default;
@@ -843,7 +894,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref uint value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -858,7 +909,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref ushort value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -873,7 +924,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref ulong value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -888,7 +939,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref float value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -903,7 +954,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref double value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -918,7 +969,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGetRef(int parameter, ref decimal value)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             value = 0;
@@ -933,7 +984,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer? onlinePlayer)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             steam64 = 0;
@@ -958,7 +1009,7 @@ public class CommandInteraction : BaseCommandInteraction
     }
     public bool TryGet(int parameter, out ulong steam64, out UCPlayer onlinePlayer, IEnumerable<UCPlayer> selection)
     {
-        parameter += offset;
+        parameter += _offset;
         if (parameter < 0 || parameter >= _ctx.ArgumentCount)
         {
             steam64 = 0;
@@ -1067,7 +1118,7 @@ public class CommandInteraction : BaseCommandInteraction
                     multipleResultsFound = false;
                     return true;
                 }
-                else if (results.Count > 1)
+                if (results.Count > 1)
                 {
                     multipleResultsFound = true;
                     asset = results[0];
@@ -1086,7 +1137,7 @@ public class CommandInteraction : BaseCommandInteraction
                     multipleResultsFound = false;
                     return true;
                 }
-                else if (results.Count > 1)
+                if (results.Count > 1)
                 {
                     multipleResultsFound = true;
                     asset = results[0];
@@ -1129,7 +1180,7 @@ public class CommandInteraction : BaseCommandInteraction
             interactable = (info.vehicle as T)!;
             return interactable != null;
         }
-        else if (typeof(InteractableForage).IsAssignableFrom(typeof(T)))
+        if (typeof(InteractableForage).IsAssignableFrom(typeof(T)))
         {
             if (info.transform.TryGetComponent(out InteractableForage forage))
             {
@@ -1307,7 +1358,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, color);
-        _responded = true;
+        responded = true;
 
         return this;
     }
@@ -1321,7 +1372,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, Util.GetColor(color));
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception ReplyString(string message, string hex)
@@ -1335,7 +1386,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message, hex);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception ReplyString(string message)
@@ -1348,7 +1399,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendString(message);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply(Translation translation)
@@ -1363,7 +1414,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T>(Translation<T> translation, T arg)
@@ -1378,7 +1429,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2>(Translation<T1, T2> translation, T1 arg1, T2 arg2)
@@ -1393,7 +1444,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3>(Translation<T1, T2, T3> translation, T1 arg1, T2 arg2, T3 arg3)
@@ -1408,7 +1459,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4>(Translation<T1, T2, T3, T4> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
@@ -1423,7 +1474,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5>(Translation<T1, T2, T3, T4, T5> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5)
@@ -1438,7 +1489,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6>(Translation<T1, T2, T3, T4, T5, T6> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6)
@@ -1453,7 +1504,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7>(Translation<T1, T2, T3, T4, T5, T6, T7> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7)
@@ -1468,7 +1519,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8>(Translation<T1, T2, T3, T4, T5, T6, T7, T8> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8)
@@ -1483,7 +1534,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9)
@@ -1498,7 +1549,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
-        _responded = true;
+        responded = true;
         return this;
     }
     public Exception Reply<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Translation<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> translation, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10)
@@ -1513,7 +1564,7 @@ public class CommandInteraction : BaseCommandInteraction
         }
         else
             Caller.SendChat(translation, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
-        _responded = true;
+        responded = true;
         return this;
     }
 

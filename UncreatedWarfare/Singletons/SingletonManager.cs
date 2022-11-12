@@ -608,11 +608,28 @@ internal class SingletonManager : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Type inputType = typeof(T);
         for (int i = 0; i < singletons.Count; ++i)
-            if (singletons[i].SingletonType == inputType)
-                return singletons[i].Singleton as T;
+            if (singletons[i].Singleton is T v)
+                return v;
         return null;
+    }
+
+    public bool TryGetSingleton<T>(out T loaded) where T : class, IUncreatedSingleton
+    {
+#if DEBUG
+        using IDisposable profiler = ProfilingUtils.StartTracking();
+#endif
+        for (int i = 0; i < singletons.Count; ++i)
+        {
+            if (singletons[i].Singleton is T v)
+            {
+                loaded = v;
+                return v.IsLoaded;
+            }
+        }
+
+        loaded = null!;
+        return false;
     }
     /// <summary>Get a singleton by type.</summary>
     /// <typeparam name="T">Type of <see cref="IUncreatedSingleton"/> to get.</typeparam>
@@ -635,9 +652,8 @@ internal class SingletonManager : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        Type inputType = typeof(T);
         for (int i = 0; i < singletons.Count; ++i)
-            if (singletons[i].SingletonType == inputType)
+            if (singletons[i].SingletonType is T)
                 return singletons[i].IsLoaded;
         return false;
     }

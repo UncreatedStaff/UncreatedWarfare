@@ -1,5 +1,6 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
 using Uncreated.Players;
@@ -9,6 +10,7 @@ using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Teams;
+using Uncreated.Warfare.Vehicles;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Actions;
@@ -55,15 +57,15 @@ public class ActionManager : BaseSingleton
 
         ActionMenuUI.Cancel.OnClicked -= Cancel;
     }
-    private static bool uiWarnSent = false;
+    private static bool _uiWarnSent;
     public static void OpenUI(UCPlayer player, ref bool handled)
     {
         if (!ActionMenuUI.UIAsset.ValidReference(out EffectAsset _))
         {
-            if (!uiWarnSent)
+            if (!_uiWarnSent)
             {
                 L.LogWarning("Skipping sending action UI, effect not found.");
-                uiWarnSent = true;
+                _uiWarnSent = true;
             }
             return;
         }
@@ -76,7 +78,7 @@ public class ActionManager : BaseSingleton
         {
             ActionMenuUI.SquadSection.SetVisibility(player.Connection, true);
         }
-        var fob = FOB.GetNearestFOB(player.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, player.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(player.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, player.GetTeam());
         if (fob != null)
         {
             ActionMenuUI.LogiSection.SetVisibility(player.Connection, true);
@@ -102,13 +104,13 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == Kits.EClass.MEDIC &&
+            p.KitClass == EClass.MEDIC &&
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionNeedMedic.Value, Gamemode.Config.EffectActionNearbyMedic.Value, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, T.NeedMedicChat, T.NeedMedicToast);
+        Action action = new Action(caller, Gamemode.Config.EffectActionNeedMedic.Value, Gamemode.Config.EffectActionNearbyMedic.Value, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, T.NeedMedicChat, T.NeedMedicToast);
         action.Start();
         CloseUI(caller);
     }
@@ -118,13 +120,13 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == Kits.EClass.RIFLEMAN &&
+            p.KitClass == EClass.RIFLEMAN &&
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionNeedAmmo.Value, Gamemode.Config.EffectActionNearbyAmmo.Value, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, T.NeedAmmoChat, T.NeedAmmoToast);
+        Action action = new Action(caller, Gamemode.Config.EffectActionNeedAmmo.Value, Gamemode.Config.EffectActionNearbyAmmo.Value, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, T.NeedAmmoChat, T.NeedAmmoToast);
         action.Start();
         CloseUI(caller);
     }
@@ -134,7 +136,7 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             p.IsDriver && 
             p.CurrentVehicle!.TryGetComponent(out VehicleComponent v) && 
@@ -142,8 +144,10 @@ public class ActionManager : BaseSingleton
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionNeedRide.Value, null, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, T.NeedRideChat, T.NeedRideToast);
-        action.CheckValid = () => !caller.IsInVehicle;
+        Action action = new Action(caller, Gamemode.Config.EffectActionNeedRide.Value, null, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, T.NeedRideChat, T.NeedRideToast)
+        {
+            CheckValid = () => !caller.IsInVehicle
+        };
         action.Start();
         CloseUI(caller);
     }
@@ -153,12 +157,12 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
             (p.Position - caller.Position).sqrMagnitude < Math.Pow(100, 2) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionNeedSupport.Value, null, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, T.NeedSupportChat, T.NeedSupportToast);
+        Action action = new Action(caller, Gamemode.Config.EffectActionNeedSupport.Value, null, viewers, updateFrequency: 0.5f, lifeTime: 10, EActionOrigin.FOLLOW_CALLER, T.NeedSupportChat, T.NeedSupportToast);
         action.Start();
         CloseUI(caller);
     }
@@ -168,30 +172,32 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == Kits.EClass.PILOT) ||
+            p.KitClass == EClass.PILOT) ||
             p.IsInSameSquadAs(caller));
 
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
             p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == Kits.EClass.PILOT &&
+            p.KitClass == EClass.PILOT &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionHeliPickup.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, T.HeliPickupChat, T.HeliPickupToast, squadWide: true);
-        action.CheckValid = () =>
+        Action action = new Action(caller, Gamemode.Config.EffectActionHeliPickup.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, T.HeliPickupChat, T.HeliPickupToast, squadWide: true)
         {
-            if (F.IsInMain(caller))
+            CheckValid = () =>
             {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
-                return false;
+                if (F.IsInMain(caller))
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    return false;
+                }
+                if (caller.IsInVehicle)
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    return false;
+                }
+                return true;
             }
-            if (caller.IsInVehicle)
-            {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
-                return false;
-            }
-            return true;
         };
         action.Start();
         CloseUI(caller);
@@ -202,30 +208,32 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            p.KitClass == Kits.EClass.PILOT) ||
+            p.KitClass == EClass.PILOT) ||
             p.IsInSameSquadAs(caller));
 
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
             p.IsDriver &&
             p.IsInSameVehicleAs(caller) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionHeliDropoff.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, EActionOrigin.CALLER_MARKER, T.HeliDropoffChat, T.HeliDropoffToast, squadWide: true);
-        action.CheckValid = () =>
+        Action action = new Action(caller, Gamemode.Config.EffectActionHeliDropoff.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, EActionOrigin.CALLER_MARKER, T.HeliDropoffChat, T.HeliDropoffToast, squadWide: true)
         {
-            if (!(caller.IsInVehicle && caller.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.Data.Type == Vehicles.EVehicleType.HELI_TRANSPORT))
+            CheckValid = () =>
             {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorNotInHeli);
-                return false;
+                if (!(caller.IsInVehicle && caller.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.HELI_TRANSPORT)))
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorNotInHeli);
+                    return false;
+                }
+                if (!caller.Player.quests.isMarkerPlaced)
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
+                    return false;
+                }
+                return true;
             }
-            if (!caller.Player.quests.isMarkerPlaced)
-            {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorNoMarker);
-                return false;
-            }
-            return true;
         };
         action.LoopCheckComplete = () => (action.InitialPosition?? - caller.Position).sqrMagnitude < Math.Pow(50, 2);
         action.Start();
@@ -236,33 +244,35 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            (p.KitClass == Kits.EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.Data.Type == Vehicles.EVehicleType.LOGISTICS))) ||
+            (p.KitClass == EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS)))) ||
             p.IsInSameSquadAs(caller));
 
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
-            (p.KitClass == Kits.EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.Data.Type == Vehicles.EVehicleType.LOGISTICS)) &&
+        IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
+            (p.KitClass == EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS))) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionSuppliesBuild.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, EActionOrigin.CALLER_POSITION, T.SuppliesBuildChat, T.SuppliesBuildToast, squadWide: true);
-        action.CheckValid = () =>
+        Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesBuild.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 150, EActionOrigin.CALLER_POSITION, T.SuppliesBuildChat, T.SuppliesBuildToast, squadWide: true)
         {
-            if (F.IsInMain(caller))
+            CheckValid = () =>
             {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
-                return false;
+                if (F.IsInMain(caller))
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    return false;
+                }
+                if (caller.IsInVehicle)
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    return false;
+                }
+                return true;
             }
-            if (caller.IsInVehicle)
-            {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
-                return false;
-            }
-            return true;
         };
         action.LoopCheckComplete = () =>
         {
-            foreach (var viewer in toastReceivers)
+            foreach (UCPlayer? viewer in toastReceivers)
             {
                 if ((action.InitialPosition?? - viewer.Position).sqrMagnitude < Math.Pow(50, 2))
                     return true;
@@ -277,33 +287,35 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            (p.KitClass == Kits.EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.Data.Type == Vehicles.EVehicleType.LOGISTICS))) ||
+            (p.KitClass == EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS)))) ||
             p.IsInSameSquadAs(caller));
 
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
-            (p.KitClass == Kits.EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.Data.Type == Vehicles.EVehicleType.LOGISTICS)) &&
+        IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
+            (p.KitClass == EClass.PILOT || (p.IsDriver && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsType(EVehicleType.LOGISTICS))) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, T.SuppliesAmmoChat, T.SuppliesAmmoToast, squadWide: true);
-        action.CheckValid = () =>
+        Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_POSITION, T.SuppliesAmmoChat, T.SuppliesAmmoToast, squadWide: true)
         {
-            if (F.IsInMain(caller))
+            CheckValid = () =>
             {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
-                return false;
+                if (F.IsInMain(caller))
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    return false;
+                }
+                if (caller.IsInVehicle)
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    return false;
+                }
+                return true;
             }
-            if (caller.IsInVehicle)
-            {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
-                return false;
-            }
-            return true;
         };
         action.LoopCheckComplete = () =>
         {
-            foreach (var viewer in toastReceivers)
+            foreach (UCPlayer? viewer in toastReceivers)
             {
                 if ((action.InitialPosition?? - viewer.Position).sqrMagnitude < Math.Pow(50, 2))
                     return true;
@@ -318,29 +330,31 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
-            p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && (c.Data.Type == Vehicles.EVehicleType.HELI_ATTACK || c.Data.Type == Vehicles.EVehicleType.JET)) ||
-            p.IsInSameSquadAs(caller));
+             p.IsInVehicle && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsAssaultAircraft) ||
+             p.IsInSameSquadAs(caller));
 
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
-            (p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && (c.Data.Type == Vehicles.EVehicleType.HELI_ATTACK || c.Data.Type == Vehicles.EVehicleType.JET)) &&
+        IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
+            (p.IsInVehicle && p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsAssaultAircraft) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, T.AirSupportChat, T.AirSupportToast, squadWide: true);
-        action.CheckValid = () =>
+        Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, T.AirSupportChat, T.AirSupportToast, squadWide: true)
         {
-            if (F.IsInMain(caller))
+            CheckValid = () =>
             {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
-                return false;
+                if (F.IsInMain(caller))
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    return false;
+                }
+                if (caller.IsInVehicle)
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    return false;
+                }
+                return true;
             }
-            if (caller.IsInVehicle)
-            {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
-                return false;
-            }
-            return true;
         };
         action.Start();
         CloseUI(caller);
@@ -350,29 +364,31 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        var viewers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> viewers = PlayerManager.OnlinePlayers.Where(p =>
             (p.GetTeam() == caller.GetTeam() &&
             p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsArmor) ||
             p.IsInSameSquadAs(caller));
 
-        var toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
+        IEnumerable<UCPlayer> toastReceivers = PlayerManager.OnlinePlayers.Where(p =>
             (p.CurrentVehicle!.TryGetComponent(out VehicleComponent c) && c.IsArmor) &&
             p.Player != caller);
 
-        var action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, T.ArmorSupportChat, T.ArmorSupportToast, squadWide: true);
-        action.CheckValid = () =>
+        Action action = new Action(caller, Gamemode.Config.EffectActionSuppliesAmmo.Value, null, viewers, toastReceivers, updateFrequency: 1, lifeTime: 120, EActionOrigin.CALLER_LOOK, T.ArmorSupportChat, T.ArmorSupportToast, squadWide: true)
         {
-            if (F.IsInMain(caller))
+            CheckValid = () =>
             {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
-                return false;
+                if (F.IsInMain(caller))
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInMain);
+                    return false;
+                }
+                if (caller.IsInVehicle)
+                {
+                    Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
+                    return false;
+                }
+                return true;
             }
-            if (caller.IsInVehicle)
-            {
-                Tips.TryGiveTip(caller, 0, T.ActionErrorInVehicle);
-                return false;
-            }
-            return true;
         };
         action.Start();
         CloseUI(caller);
@@ -399,7 +415,7 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build, false);
+        TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Build, true);
         CloseUI(caller);
     }
     public static void LoadAmmo(UnturnedButton button, Player player) // WIP
@@ -407,20 +423,17 @@ public class ActionManager : BaseSingleton
         UCPlayer? caller = UCPlayer.FromPlayer(player);
         if (caller == null)
             return;
-        TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo, true);
+        TryLoadSupplies(caller, 5, TeamManager.GetFaction(caller.GetTeam()).Ammo, false);
         CloseUI(caller);
     }
     
-    
-
     const int REQUIRED_UNLOAD_AMOUNT_FOR_REWARD = 5;
-
     private static void TryUnloadSupplies(UCPlayer caller, int amount, JsonAssetReference<ItemAsset>? buildOrAmmo)
     {
         if (buildOrAmmo is null || !buildOrAmmo.Exists)
             return;
 
-        var fob = FOB.GetNearestFOB(caller.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, caller.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(caller.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, caller.GetTeam());
         InteractableVehicle? vehicle = caller.CurrentVehicle;
         if (vehicle == null)
             return;
@@ -448,7 +461,7 @@ public class ActionManager : BaseSingleton
             {
                 caller.SuppliesUnloaded = -difference;
 
-                int xp = Points.XPConfig.UnloadSuppliesXP * Mathf.CeilToInt(difference / REQUIRED_UNLOAD_AMOUNT_FOR_REWARD);
+                int xp = Points.XPConfig.UnloadSuppliesXP * Mathf.CeilToInt(difference / (float)REQUIRED_UNLOAD_AMOUNT_FOR_REWARD);
 
                 if (caller.KitClass == EClass.PILOT)
                     xp *= 2;
@@ -457,39 +470,36 @@ public class ActionManager : BaseSingleton
             }
         }
     }
-    private static void TryLoadSupplies(UCPlayer caller, int amount, JsonAssetReference<ItemAsset>? supplyItem, bool buildOrAmmo)
+    private static void TryLoadSupplies(UCPlayer caller, int amount, JsonAssetReference<ItemAsset>? supplyItem, bool build)
     {
-        if (supplyItem is null || !supplyItem.Exists)
+        if (!supplyItem.ValidReference(out ItemAsset itemasset))
             return;
 
-        var fob = FOB.GetNearestFOB(caller.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, caller.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(caller.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, caller.GetTeam());
         InteractableVehicle? vehicle = caller.CurrentVehicle;
         if (vehicle != null && fob != null && vehicle.TryGetComponent(out VehicleComponent c) && c.IsLogistics)
         {
-            if (buildOrAmmo)
-                amount = Mathf.Clamp(amount, 0, fob.Build);
-            else
-                amount = Mathf.Clamp(amount, 0, fob.Ammo);
+            amount = Mathf.Clamp(amount, 0, build ? fob.Build : fob.Ammo);
 
             int successfullyAdded = 0;
 
             for (int i = 0; i < amount; i++)
             {
-                if (vehicle.trunkItems.tryAddItem(new Item(supplyItem.Id, true)))
+                if (vehicle.trunkItems.tryAddItem(new Item(itemasset.id, true)))
                     successfullyAdded++;
             }
             
-            if (buildOrAmmo)
+            if (build)
                 fob.ReduceBuild(successfullyAdded);
             else
                 fob.ReduceAmmo(successfullyAdded);
 
             if (successfullyAdded > 0)
             {
-                if (buildOrAmmo)
-                    EffectManager.sendEffect(25997, EffectManager.MEDIUM, vehicle.transform.position);
-                else
-                    EffectManager.sendEffect(25998, EffectManager.MEDIUM, vehicle.transform.position);
+                if ((build ? Gamemode.Config.EffectUnloadBuild : Gamemode.Config.EffectUnloadAmmo).ValidReference(out EffectAsset effect))
+                {
+                    F.TriggerEffectReliable(effect, EffectManager.MEDIUM, vehicle.transform.position);
+                }
             }
         }
     }

@@ -17,10 +17,10 @@ public sealed class SavedStructure : IListItem, ITranslationArgument
     public Vector3 Position;
     [JsonPropertyName("rotation")]
     public Vector3 Rotation;
-    [JsonSettable]
+    [CommandSettable]
     [JsonPropertyName("owner")]
     public ulong Owner;
-    [JsonSettable]
+    [CommandSettable]
     [JsonPropertyName("group")]
     public ulong Group;
     [JsonIgnore]
@@ -32,9 +32,9 @@ public sealed class SavedStructure : IListItem, ITranslationArgument
         set => Metadata = value is null ? Array.Empty<byte>() : Convert.FromBase64String(value);
     }
     [JsonIgnore]
-    internal StructureSaver.ItemJarData[]? Items = null;
+    internal ItemJarData[]? Items = null;
     [JsonIgnore]
-    internal StructureSaver.ItemDisplayData? DisplayData = null;
+    internal ItemDisplayData? DisplayData = null;
     [JsonIgnore]
     public IBuildable? Buildable { get; internal set; }
     public override string ToString()

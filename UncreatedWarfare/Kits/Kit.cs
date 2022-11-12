@@ -19,36 +19,36 @@ public class Kit : ITranslationArgument, ICloneable
     public const int CAPACITY = 256;
     internal int PrimaryKey = -1;
     public string Name;
-    [JsonSettable]
+    [CommandSettable]
     public EClass Class;
-    [JsonSettable]
+    [CommandSettable]
     public EBranch Branch;
-    [JsonSettable]
+    [CommandSettable]
     public ulong Team;
     public BaseUnlockRequirement[] UnlockRequirements;
     public Skillset[] Skillsets;
-    [JsonSettable]
+    [CommandSettable]
     public ushort CreditCost;
-    [JsonSettable]
+    [CommandSettable]
     public ushort UnlockLevel;
-    [JsonSettable]
+    [CommandSettable]
     public bool IsPremium;
-    [JsonSettable]
+    [CommandSettable]
     public float PremiumCost;
-    [JsonSettable]
+    [CommandSettable]
     public bool IsLoadout;
-    [JsonSettable]
+    [CommandSettable]
     public float TeamLimit;
-    [JsonSettable]
+    [CommandSettable]
     public float Cooldown;
-    [JsonSettable]
+    [CommandSettable]
     public bool Disabled;
-    [JsonSettable]
+    [CommandSettable]
     public ESquadLevel SquadLevel;
     public List<KitItem> Items;
     public List<KitClothing> Clothes;
     public Dictionary<string, string> SignTexts;
-    [JsonSettable]
+    [CommandSettable]
     public string Weapons;
     public Kit(string name)
     {
@@ -824,7 +824,7 @@ public class RankUnlockRequirement : BaseUnlockRequirement
 [UnlockRequirement(3, "unlock_presets", "quest_id")]
 public class QuestUnlockRequirement : BaseUnlockRequirement
 {
-    public Guid QuestID = default;
+    public Guid QuestID;
     public Guid[] UnlockPresets = Array.Empty<Guid>();
     public override bool CanAccess(UCPlayer player)
     {

@@ -51,6 +51,9 @@ internal static class T
     [TranslationData(SECTION_COMMON_ERRORS, "A command didn't respond to an interaction, or a command chose to throw a vague error response to an uncommon problem.")]
     public static readonly Translation UnknownError = new Translation("<#ff8c69>We ran into an unknown error executing that command.");
 
+    [TranslationData(SECTION_COMMON_ERRORS, "An async command was cancelled mid-execution.")]
+    public static readonly Translation ErrorCommandCancelled = new Translation("<#ff8c69>This command was cancelled during it's execution. This could be caused by the game ending or a bug.");
+
     [TranslationData(SECTION_COMMON_ERRORS, "A command is disabled in the current gamemode type (ex, /deploy in a gamemode without FOBs).")]
     public static readonly Translation GamemodeError = new Translation("<#ff8c69>This command is not enabled in this gamemode.");
 
@@ -1153,7 +1156,7 @@ internal static class T
     public static readonly Translation<VehicleAsset> VehicleBayNotAdded = new Translation<VehicleAsset>("<#ff8c69>{0} has not been added to the vehicle bay.", RARITY_COLOR_FORMAT);
     public static readonly Translation<string> VehicleBayInvalidProperty = new Translation<string>("<#ff8c69>{0} isn't a valid a vehicle property. Try putting 'level', 'team', 'rearmcost' etc.");
     public static readonly Translation<string, string> VehicleBayInvalidSetValue = new Translation<string, string>("<#ff8c69><#ddd>{0}</color> isn't a valid value for vehicle property: <#a0ad8e>{1}</color>.");
-    public static readonly Translation<string> VehicleBayNotJsonSettable = new Translation<string>("<#ff8c69><#a0ad8e>{0}</color> is not marked as settable.");
+    public static readonly Translation<string> VehicleBayNotCommandSettable = new Translation<string>("<#ff8c69><#a0ad8e>{0}</color> is not marked as settable.");
     public static readonly Translation<byte, VehicleAsset> VehicleBayCrewSeatAlreadySet = new Translation<byte, VehicleAsset>("<#ff8c69><#ffffff>#{0}</color> is already marked as a crew seat in {1}.", arg1Fmt: RARITY_COLOR_FORMAT + PLURAL);
     public static readonly Translation<byte, VehicleAsset> VehicleBayCrewSeatNotSet = new Translation<byte, VehicleAsset>("<#ff8c69><#ffffff>#{0}</color> isn't marked as a crew seat in {1}.", arg1Fmt: RARITY_COLOR_FORMAT + PLURAL);
     public static readonly Translation<EDelayType, float, string?> VehicleBayAddedDelay = new Translation<EDelayType, float, string?>("<#a0ad8e>Added delay of type <#fff>{0}</color>:<#ddd>{1}</color> during <#ddd>{2}</color> gamemode.", arg1Fmt: "N1");

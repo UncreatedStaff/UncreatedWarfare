@@ -150,7 +150,7 @@ namespace Uncreated.Warfare.Squads
 
                 ActionLogger.Add(EActionLogType.PLACED_RALLY, "AT " + data.point.ToString(), squad.Leader);
 
-                RallyPoint rallypoint = new RallyPoint(data, UCBarricadeManager.GetDropFromBarricadeData(data), squad);
+                RallyPoint rallypoint = new RallyPoint(data, UCBarricadeManager.FindBarricadeDrop(data), squad);
                 rallypoint.drop.model.transform.gameObject.AddComponent<RallyComponent>().Initialize(rallypoint);
 
                 rallypoints.Add(rallypoint);

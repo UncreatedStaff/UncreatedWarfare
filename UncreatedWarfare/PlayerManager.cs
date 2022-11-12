@@ -66,14 +66,13 @@ public static class PlayerManager
     public static PlayerListEntry[] GetPlayerList()
     {
         PlayerListEntry[] rtn = new PlayerListEntry[OnlinePlayers.Count];
-        for (int i = 0; i < OnlinePlayers!.Count; i++)
+        for (int i = 0; i < OnlinePlayers.Count; i++)
         {
-            if (OnlinePlayers == null) continue;
             rtn[i] = new PlayerListEntry
             {
                 Duty = OnlinePlayers[i].OnDuty(),
                 Steam64 = OnlinePlayers[i].Steam64,
-                Name = F.GetPlayerOriginalNames(OnlinePlayers[i]).CharacterName,
+                Name = OnlinePlayers[i].Name.CharacterName,
                 Team = OnlinePlayers[i].Player.GetTeamByte()
             };
         }
@@ -114,7 +113,7 @@ public static class PlayerManager
     private static void OnGroupChagned(GroupChanged e)
     {
         ApplyTo(e.Player);
-        NetCalls.SendTeamChanged.NetInvoke(e.Steam64, F.GetTeamByte(e.NewGroup));
+        NetCalls.SendTeamChanged.NetInvoke(e.Steam64, e.NewGroup.GetTeamByte());
         if (e.Player.Player.TryGetComponent(out SpottedComponent spot))
             spot.OwnerTeam = e.NewTeam;
     }
@@ -269,7 +268,7 @@ public static class PlayerManager
             reason = ESetFieldResult.FIELD_NOT_FOUND;
             return false;
         }
-        Attribute atr = Attribute.GetCustomAttribute(field, typeof(JsonSettable));
+        Attribute atr = Attribute.GetCustomAttribute(field, typeof(CommandSettable));
         if (atr is not null)
         {
             reason = ESetFieldResult.SUCCESS;

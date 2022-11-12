@@ -6,10 +6,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Networking.Async;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Gamemodes;
@@ -24,27 +26,29 @@ using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Squads.Commander;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 using Flag = Uncreated.Warfare.Gamemodes.Flags.Flag;
 // ReSharper disable UnusedMember.Local
+// ReSharper disable InconsistentNaming
 
 namespace Uncreated.Warfare.Commands;
 
 #pragma warning disable IDE1006 // Naming Styles
-public class _DebugCommand : Command
+public class DebugCommand : AsyncCommand
 #pragma warning restore IDE1006 // Naming Styles
 {
-    public static int currentstep = 0;
-    private readonly Type type = typeof(_DebugCommand);
-    public _DebugCommand() : base("test", EAdminType.MEMBER) { }
-    public override void Execute(CommandInteraction ctx)
+    public DebugCommand() : base("test", EAdminType.MEMBER)
+    {
+        AddAlias("dev");
+        AddAlias("tests");
+    }
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
         if (ctx.TryGet(0, out string operation))
         {
             MethodInfo? info;
             try
             {
-                info = type.GetMethod(operation, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                info = typeof(DebugCommand).GetMethod(operation, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
             }
             catch (AmbiguousMatchException)
             {
@@ -52,15 +56,30 @@ public class _DebugCommand : Command
             }
             if (info == null)
                 throw ctx.Reply(T.DebugNoMethod, operation);
+            ParameterInfo[] parameters = info.GetParameters();
+            int len = 1;
+            if (parameters.Length == 0 || parameters[0].ParameterType != typeof(CommandInteraction))
+                throw ctx.Reply(T.DebugNoMethod, operation);
+            if (parameters.Length > 2 || (parameters.Length == 2 && parameters[1].ParameterType != typeof(CancellationToken)))
+                throw ctx.Reply(T.DebugNoMethod, operation);
+            if (typeof(Task).IsAssignableFrom(info.ReturnType) && parameters.Length == 2)
+                len = 2;
             try
             {
 #if DEBUG
                 using IDisposable profiler = ProfilingUtils.StartTracking(info.Name + " Debug Command");
 #endif
                 ctx.Offset = 1;
-                info.Invoke(this, new object[] { ctx });
+                object obj = info.Invoke(this, len == 2 ? new object[] { ctx, token } : new object[] { ctx });
+                if (obj is Task task)
+                {
+                    await task.ConfigureAwait(false);
+#if DEBUG
+                    profiler.Dispose();
+#endif
+                    await UCWarfare.ToUpdate();
+                }
                 ctx.Offset = 0;
-                ctx.Defer();
             }
             catch (Exception ex)
             {
@@ -1116,7 +1135,7 @@ public class _DebugCommand : Command
         ctx.Defer();
     }
 
-    private void squad(CommandInteraction ctx)
+    private async Task squad(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.VANILLA_ADMIN);
         ctx.AssertRanByPlayer();
@@ -1131,18 +1150,55 @@ public class _DebugCommand : Command
         {
             SquadManager.CreateSquad(ctx.Caller, team);
         }
-        if (VehicleBay.Loaded && VehicleSpawner.Loaded)
+
+        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+        if (bay != null && bay.IsLoaded && VehicleSpawner.Loaded)
         {
-            Vector3 pos = ctx.Caller.Position;
-            Vehicles.VehicleSpawn logi = VehicleBay.Singleton
-                .Where(x => (x.Team == team || x.Team == 0) && x.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
-                .SelectMany(x => VehicleSpawner.Spawners
-                    .Where(y => y.VehicleGuid == x.VehicleID && y.HasLinkedVehicle(out _) && y.LinkedSign?.SignInteractable != null))
-                .OrderBy(x => (pos - x.LinkedSign!.SignInteractable!.transform.position).sqrMagnitude)
-                .FirstOrDefault();
-            if (logi.HasLinkedVehicle(out InteractableVehicle veh) && VehicleBay.VehicleExists(logi.VehicleGuid, out VehicleData data))
-                RequestCommand.GiveVehicle(ctx.Caller, veh, data);
+            Vehicles.VehicleSpawn? logi;
+            await bay.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                await UCWarfare.ToUpdate();
+                Vector3 pos = ctx.Caller.Position;
+                logi = bay.Items
+                    .Where(x => x.Item != null && (x.Item.Team == team || x.Item.Team == 0) && x.Item.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
+                    .SelectMany(x => VehicleSpawner.Spawners
+                        .Where(y => y.VehicleGuid == x.Item!.VehicleID && y.HasLinkedVehicle(out _) && y.LinkedSign?.SignInteractable != null))
+                    .OrderBy(x => (pos - x.LinkedSign!.SignInteractable!.transform.position).sqrMagnitude)
+                    .FirstOrDefault();
+            }
+            finally
+            {
+                bay.Release();
+            }
+            if (logi == null)
+            {
+                ctx.ReplyString("No logistics vehicle nearby to request.", Color.red);
+            }
+            else if (logi.HasLinkedVehicle(out InteractableVehicle veh))
+            {
+                SqlItem<VehicleData>? data = await bay.GetDataProxy(logi.VehicleGuid, token).ConfigureAwait(false);
+                if (data?.Item == null)
+                {
+                    await UCWarfare.ToUpdate();
+                    ctx.ReplyString("Failed to get a logistics vehicle.", Color.red);
+                }
+                else
+                {
+                    await data.Enter(token).ConfigureAwait(false);
+                    try
+                    {
+                        await UCWarfare.ToUpdate();
+                        RequestCommand.GiveVehicle(ctx.Caller, veh, data.Item);
+                    }
+                    finally
+                    {
+                        data.Release();
+                    }
+                }
+            }
         }
+        else throw ctx.SendGamemodeError();
         if (Data.Gamemode.State == EState.STAGING)
         {
             Data.Gamemode.SkipStagingPhase();

@@ -1,12 +1,14 @@
 ﻿#define USE_DEBUGGER
+using JetBrains.Annotations;
 using SDG.Framework.Modules;
 using SDG.Unturned;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Threading;
-using JetBrains.Annotations;
+using System.Threading.Tasks;
 using Uncreated.Networking;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -22,6 +24,7 @@ using Uncreated.Warfare.Gamemodes.Flags.Invasion;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
 using Uncreated.Warfare.Gamemodes.Insurgency;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+using Uncreated.Warfare.Harmony;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Singletons;
@@ -32,9 +35,6 @@ using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Traits;
 using Uncreated.Warfare.Vehicles;
 using UnityEngine;
-using System.Threading.Tasks;
-using System.Collections;
-using Uncreated.Warfare.Harmony;
 
 namespace Uncreated.Warfare;
 
@@ -54,7 +54,7 @@ public class UCWarfare : MonoBehaviour
     internal Projectiles.ProjectileSolver Solver;
     public HomebaseClientComponent? NetClient;
     public bool CoroutineTiming = false;
-    private DateTime NextRestartTime;
+    private DateTime _nextRestartTime;
     public static int Season => Version.Major;
     public static bool IsLoaded => I is not null;
     public static SystemConfigData Config => I is null ? throw new SingletonUnloadedException(typeof(UCWarfare)) : I._config.Data;
@@ -91,11 +91,11 @@ public class UCWarfare : MonoBehaviour
 
         DateTime loadTime = DateTime.Now;
         if (loadTime.TimeOfDay > RestartTime - TimeSpan.FromHours(2)) // don't restart if the restart would be in less than 2 hours
-            NextRestartTime = loadTime.Date + RestartTime + TimeSpan.FromDays(1);
+            _nextRestartTime = loadTime.Date + RestartTime + TimeSpan.FromDays(1);
         else
-            NextRestartTime = loadTime.Date + RestartTime;
-        L.Log("Restart scheduled at " + NextRestartTime.ToString("g"), ConsoleColor.Magenta);
-        float seconds = (float)(NextRestartTime - DateTime.Now).TotalSeconds;
+            _nextRestartTime = loadTime.Date + RestartTime;
+        L.Log("Restart scheduled at " + _nextRestartTime.ToString("g"), ConsoleColor.Magenta);
+        float seconds = (float)(_nextRestartTime - DateTime.Now).TotalSeconds;
 
         StartCoroutine(RestartIn(seconds));
 
@@ -414,22 +414,54 @@ public class UCWarfare : MonoBehaviour
     private static Queue<LevelLoadTask.LevelLoadResult>? _levelLoadRequests;
     internal static Queue<MainThreadTask.MainThreadResult> ThreadActionRequests => _threadActionRequests ??= new Queue<MainThreadTask.MainThreadResult>(4);
     internal static Queue<LevelLoadTask.LevelLoadResult> LevelLoadRequests => _levelLoadRequests ??= new Queue<LevelLoadTask.LevelLoadResult>(4);
-    public static MainThreadTask ToUpdate() => new MainThreadTask(false);
-    public static MainThreadTask SkipFrame() => new MainThreadTask(true);
-    public static LevelLoadTask ToLevelLoad() => new LevelLoadTask();
+    public static MainThreadTask ToUpdate(CancellationToken token = default) => new MainThreadTask(false, token);
+    public static MainThreadTask SkipFrame(CancellationToken token = default) => new MainThreadTask(true, token);
+    public static LevelLoadTask ToLevelLoad(CancellationToken token = default) => new LevelLoadTask(token);
     public static bool IsMainThread => Thread.CurrentThread.IsGameThread();
-
-    /// <param name="action">Method to be ran on the main thread in an update dequeue loop.</param>
-    public static void RunOnMainThread(System.Action action) => RunOnMainThread(action, false);
+    public static void RunOnMainThread(System.Action action) => RunOnMainThread(action, false, default);
+    public static void RunOnMainThread(System.Action action, CancellationToken token) => RunOnMainThread(action, false, token);
     /// <param name="action">Method to be ran on the main thread in an update dequeue loop.</param>
     /// <param name="skipFrame">If this is called on the main thread it will queue it to be called next update or at the end of the current frame.</param>
-    public static void RunOnMainThread(System.Action action, bool skipFrame)
+    public static void RunOnMainThread(System.Action action, bool skipFrame, CancellationToken token = default)
     {
-        MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask(skipFrame));
-        res.OnCompleted(action);
+        token.ThrowIfCancellationRequested();
+        if (IsMainThread)
+            action();
+        else
+        {
+            MainThreadTask.MainThreadResult res = new MainThreadTask.MainThreadResult(new MainThreadTask(skipFrame, token));
+            res.OnCompleted(action);
+        }
+    }
+    /// <summary>Continues to run main thread operations in between spins so that calls to <see cref="ToUpdate"/> are not blocked.</summary>
+    public static bool SpinWaitUntil(Func<bool> condition, int millisecondsTimeout = -1)
+    {
+        if (!IsMainThread)
+            return SpinWait.SpinUntil(condition, millisecondsTimeout);
+
+        uint stTime = 0;
+        if (millisecondsTimeout != 0 && millisecondsTimeout != -1)
+            stTime = (uint)Environment.TickCount;
+        SpinWait spinWait = new SpinWait();
+        while (!condition())
+        {
+            if (millisecondsTimeout == 0)
+                return false;
+            spinWait.SpinOnce();
+            ProcessQueues();
+            if (millisecondsTimeout != -1 && spinWait.NextSpinWillYield && millisecondsTimeout <= Environment.TickCount - stTime)
+                return false;
+        }
+        return true;
     }
     [UsedImplicitly]
     private void Update()
+    {
+        ProcessQueues();
+        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
+            PlayerManager.OnlinePlayers[i].Update();
+    }
+    private static void ProcessQueues()
     {
         if (_threadActionRequests != null)
         {
@@ -439,8 +471,10 @@ public class UCWarfare : MonoBehaviour
                 try
                 {
                     res = _threadActionRequests.Dequeue();
+                    res.Task.Token.ThrowIfCancellationRequested();
                     res.continuation();
                 }
+                catch (OperationCanceledException) { L.LogDebug("Execution on update cancelled."); }
                 catch (Exception ex)
                 {
                     L.LogError("Error executing main thread operation.");
@@ -460,8 +494,10 @@ public class UCWarfare : MonoBehaviour
                 try
                 {
                     res = _levelLoadRequests.Dequeue();
+                    res.Task.Token.ThrowIfCancellationRequested();
                     res.continuation();
                 }
+                catch (OperationCanceledException) { L.LogDebug("Execution on level load cancelled."); }
                 catch (Exception ex)
                 {
                     L.LogError("Error executing level load operation.");
@@ -473,8 +509,6 @@ public class UCWarfare : MonoBehaviour
                 }
             }
         }
-        for (int i = 0; i < PlayerManager.OnlinePlayers.Count; ++i)
-            PlayerManager.OnlinePlayers[i].Update();
     }
     /// <exception cref="SingletonUnloadedException"/>
     internal static void ForceUnload()
@@ -612,8 +646,9 @@ public class UCWarfare : MonoBehaviour
         for (int i = 0; i < Provider.clients.Count; ++i)
             Provider.kick(Provider.clients[i].playerID.steamID, "Intentional Shutdown: " + reason);
 
-        if (VehicleBay.Loaded && VehicleSpawner.Loaded)
-            VehicleBay.AbandonAllVehicles();
+        VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+        if (bay != null && bay.IsLoaded)
+            bay.AbandonAllVehicles();
 
         if (CanUseNetCall)
         {

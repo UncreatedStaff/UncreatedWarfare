@@ -201,20 +201,13 @@ public static class F
     }
     public static ulong GetTeamFromPlayerSteam64ID(this ulong s64)
     {
-        if (!Data.Is<ITeams>(out _))
+        if (!Data.Is<ITeams>())
         {
             SteamPlayer pl2 = PlayerTool.getSteamPlayer(s64);
-            if (pl2 == null) return 0;
-            else return pl2.player.quests.groupID.m_SteamID;
+            return pl2 == null ? 0ul : pl2.player.quests.groupID.m_SteamID;
         }
         SteamPlayer pl = PlayerTool.getSteamPlayer(s64);
-        if (pl == default)
-        {
-            if (PlayerManager.HasSave(s64, out PlayerSave save))
-                return save.Team;
-            else return 0;
-        }
-        else return pl.GetTeam();
+        return pl == null ? PlayerManager.HasSave(s64, out PlayerSave save) ? save.Team : 0ul : pl.GetTeam();
     }
     public static ulong GetTeam(this UCPlayer player) => GetTeam(player.Player.quests.groupID.m_SteamID);
     public static ulong GetTeam(this SteamPlayer player) => GetTeam(player.player.quests.groupID.m_SteamID);
@@ -223,34 +216,37 @@ public static class F
     public static ulong GetTeam(this ulong groupID)
     {
         if (!Data.Is<ITeams>(out _)) return groupID;
-        if (groupID == TeamManager.Team1ID) return 1;
-        else if (groupID == TeamManager.Team2ID) return 2;
-        else if (groupID == TeamManager.AdminID) return 3;
-        else return 0;
+        return groupID switch
+        {
+            TeamManager.Team1ID => 1,
+            TeamManager.Team2ID => 2,
+            TeamManager.AdminID => 3,
+            _ => 0
+        };
     }
     public static byte GetTeamByte(this SteamPlayer player) => GetTeamByte(player.player.quests.groupID.m_SteamID);
     public static byte GetTeamByte(this Player player) => GetTeamByte(player.quests.groupID.m_SteamID);
     public static byte GetTeamByte(this ulong groupID)
     {
         if (!Data.Is<ITeams>(out _)) return groupID > byte.MaxValue ? byte.MaxValue : (byte)groupID;
-        if (groupID == TeamManager.Team1ID) return 1;
-        else if (groupID == TeamManager.Team2ID) return 2;
-        else if (groupID == TeamManager.AdminID) return 3;
-        else return 0;
+        return groupID switch
+        {
+            TeamManager.Team1ID => 1,
+            TeamManager.Team2ID => 2,
+            TeamManager.AdminID => 3,
+            _ => 0
+        };
     }
     public static Vector3 GetBaseSpawn(this Player player)
     {
         if (!Data.Is<ITeams>(out _)) return TeamManager.LobbySpawn;
         ulong team = player.GetTeam();
-        if (team == 1)
+        return team switch
         {
-            return TeamManager.Team1Main.Center3D;
-        }
-        else if (team == 2)
-        {
-            return TeamManager.Team2Main.Center3D;
-        }
-        else return TeamManager.LobbySpawn;
+            1 => TeamManager.Team1Main.Center3D,
+            2 => TeamManager.Team2Main.Center3D,
+            _ => TeamManager.LobbySpawn
+        };
     }
     public static Vector3 GetBaseSpawn(this Player player, out ulong team)
     {
@@ -260,24 +256,17 @@ public static class F
             return TeamManager.LobbySpawn;
         }
         team = player.GetTeam();
-        if (team == 1)
+        return team switch
         {
-            return TeamManager.Team1Main.Center3D;
-        }
-        else if (team == 2)
-        {
-            return TeamManager.Team2Main.Center3D;
-        }
-        else return TeamManager.LobbySpawn;
+            1 => TeamManager.Team1Main.Center3D,
+            2 => TeamManager.Team2Main.Center3D,
+            _ => TeamManager.LobbySpawn
+        };
     }
     public static Vector3 GetBaseSpawn(this ulong playerID, out ulong team)
     {
         team = playerID.GetTeamFromPlayerSteam64ID();
-        if (!Data.Is<ITeams>(out _))
-        {
-            return TeamManager.LobbySpawn;
-        }
-        return team.GetBaseSpawnFromTeam();
+        return !Data.Is<ITeams>(out _) ? TeamManager.LobbySpawn : team.GetBaseSpawnFromTeam();
     }
     public static Vector3 GetBaseSpawnFromTeam(this ulong team)
     {
@@ -285,9 +274,13 @@ public static class F
         {
             return TeamManager.LobbySpawn;
         }
-        if (team == 1) return TeamManager.Team1Main.Center3D;
-        else if (team == 2) return TeamManager.Team2Main.Center3D;
-        else return TeamManager.LobbySpawn;
+
+        return team switch
+        {
+            1 => TeamManager.Team1Main.Center3D,
+            2 => TeamManager.Team2Main.Center3D,
+            _ => TeamManager.LobbySpawn
+        };
     }
     public static float GetBaseAngle(this ulong team)
     {
@@ -295,9 +288,13 @@ public static class F
         {
             return TeamManager.LobbySpawnAngle;
         }
-        if (team == 1) return TeamManager.Team1SpawnAngle;
-        else if (team == 2) return TeamManager.Team2SpawnAngle;
-        else return TeamManager.LobbySpawnAngle;
+
+        return team switch
+        {
+            1 => TeamManager.Team1SpawnAngle,
+            2 => TeamManager.Team2SpawnAngle,
+            _ => TeamManager.LobbySpawnAngle
+        };
     }
     public static IEnumerable<SteamPlayer> EnumerateClients_Remote(byte x, byte y, byte distance)
     {
@@ -319,23 +316,17 @@ public static class F
         if (Physics.Raycast(new Ray(new Vector3(point.x, Level.HEIGHT, point.z), Vector3.down), out RaycastHit hit, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
         {
             height = hit.point.y;
-            if (!float.IsNaN(minHeight))
-                return Mathf.Max(height, minHeight);
-            return height;
+            return !float.IsNaN(minHeight) ? Mathf.Max(height, minHeight) : height;
         }
-        else
-        {
-            height = LevelGround.getHeight(point);
-            if (!float.IsNaN(minHeight))
-                return Mathf.Max(height, minHeight);
-            return height;
-        }
+
+        height = LevelGround.getHeight(point);
+        return !float.IsNaN(minHeight) ? Mathf.Max(height, minHeight) : height;
     }
     public static float GetHeightAt2DPoint(float x, float z, float defaultY = 0, float above = 0)
     {
         if (Physics.Raycast(new Vector3(x, Level.HEIGHT, z), new Vector3(0f, -1, 0f), out RaycastHit h, Level.HEIGHT, RayMasks.BLOCK_COLLISION))
             return h.point.y + above;
-        else return defaultY;
+        return defaultY;
     }
     public static string ReplaceCaseInsensitive(this string source, string replaceIf, string replaceWith = "")
     {
@@ -405,19 +396,55 @@ public static class F
         }
         return sb.ToString();
     }
-    public static void TriggerEffectReliable(ushort ID, CSteamID player, Vector3 position)
-    {
-        TriggerEffectParameters p = new TriggerEffectParameters(ID)
-        {
-            position = position,
-            reliable = true,
-            relevantPlayerID = player
-        };
-        EffectManager.triggerEffect(p);
-    }
     public static void TriggerEffectReliable(EffectAsset asset, ITransportConnection connection, Vector3 position)
     {
-        EffectManager.sendEffectReliable(asset.id, connection, position);
+        ThreadUtil.assertIsGameThread();
+        TriggerEffectParameters p = new TriggerEffectParameters(asset)
+        {
+            position = position,
+            reliable = true
+        };
+        p.SetRelevantPlayer(connection);
+        EffectManager.triggerEffect(p);
+    }
+    public static bool ArrayContains(this byte[] array, byte value)
+    {
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (array[i] == value)
+                return true;
+        }
+
+        return false;
+    }
+    public static bool ArrayContains<T>(this T[] array, T value)
+    {
+        Comparer<T> comparison = Comparer<T>.Default;
+        for (int i = 0; i < array.Length; ++i)
+        {
+            if (comparison.Compare(array[i], value) == 0)
+                return true;
+        }
+
+        return false;
+    }
+    public static void TryTriggerSupplyEffect(SupplyType type, Vector3 position)
+    {
+        if ((type is SupplyType.Build ? Gamemode.Config.EffectUnloadBuild : Gamemode.Config.EffectUnloadAmmo).ValidReference(out EffectAsset effect))
+            TriggerEffectReliable(effect, EffectManager.MEDIUM, position);
+    }
+    public static void TriggerEffectReliable(EffectAsset asset, float range, Vector3 position)
+        => TriggerEffectReliable(asset, Provider.EnumerateClients_RemoteWithinSphere(position, range), position);
+    public static void TriggerEffectReliable(EffectAsset asset, IEnumerable<ITransportConnection> connection, Vector3 position)
+    {
+        ThreadUtil.assertIsGameThread();
+        TriggerEffectParameters p = new TriggerEffectParameters(asset)
+        {
+            position = position,
+            reliable = true
+        };
+        p.SetRelevantTransportConnections(connection);
+        EffectManager.triggerEffect(p);
     }
     public static bool SavePhotoToDisk(string path, Texture2D texture)
     {
@@ -543,91 +570,72 @@ public static class F
             }
         }
     }
+    [Obsolete("Use UCPlayer.Name instead.")]
     public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => player.Name;
+    [Obsolete("Use UCPlayer.Name instead.")]
     public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
+    [Obsolete("Use UCPlayer.Name instead.")]
     public static FPlayerName GetPlayerOriginalNames(Player player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.OriginalNames.TryGetValue(player.channel.owner.playerID.steamID.m_SteamID, out FPlayerName names))
-            return names;
-        else return new FPlayerName(player);
+        UCPlayer? pl = UCPlayer.FromPlayer(player);
+        if (pl != null)
+            return pl.Name;
+        return new FPlayerName(player);
     }
-    public static FPlayerName GetPlayerOriginalNames(ulong player)
+    public static FPlayerName GetPlayerName(ulong player)
     {
         if (player == 0) return FPlayerName.Console;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (Data.OriginalNames.TryGetValue(player, out FPlayerName names))
-            return names;
-        else
+        UCPlayer? pl = UCPlayer.FromID(player);
+        if (pl != null)
+            return pl.Name;
+        try
         {
-            SteamPlayer? pl = PlayerTool.getSteamPlayer(player);
-            if (pl == null)
-            {
-                try
-                {
-                    return Data.DatabaseManager.GetUsernames(player);
-                }
-                catch (Exception ex)
-                {
-                    if (!ex.Message.Equals("Not connected", StringComparison.Ordinal))
-                        throw ex;
-                    string tname = player.ToString(Data.Locale);
-                    return new FPlayerName() { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
-                }
-            }
-            else return new FPlayerName()
-            {
-                CharacterName = pl.playerID.characterName,
-                NickName = pl.playerID.nickName,
-                PlayerName = pl.playerID.playerName,
-                Steam64 = player,
-                WasFound = true
-            };
+            return Data.DatabaseManager.GetUsernames(player);
+        }
+        catch (Exception ex)
+        {
+            if (!ex.Message.Equals("Not connected", StringComparison.Ordinal))
+                throw;
+            string tname = player.ToString(Data.Locale);
+            return new FPlayerName { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
         }
     }
-    public static Task<FPlayerName> GetPlayerOriginalNamesAsync(ulong player)
+    public static ValueTask<FPlayerName> GetPlayerOriginalNamesAsync(ulong player, CancellationToken token = default)
     {
-#if DEBUG
-        using IDisposable profiler = ProfilingUtils.StartTracking();
-#endif
-        if (Data.OriginalNames.TryGetValue(player, out FPlayerName names))
-            return Task.FromResult(names);
-        else if (OffenseManager.IsValidSteam64ID(player))
-        {
-            SteamPlayer? pl = PlayerTool.getSteamPlayer(player);
-            if (pl == default)
-                return Data.DatabaseManager.GetUsernamesAsync(player);
-            else return Task.FromResult(new FPlayerName()
-            {
-                CharacterName = pl.playerID.characterName,
-                NickName = pl.playerID.nickName,
-                PlayerName = pl.playerID.playerName,
-                Steam64 = player
-            });
-        }
-        return Task.FromResult(FPlayerName.Nil);
+        UCPlayer? pl = UCPlayer.FromID(player);
+        if (pl != null)
+            return new ValueTask<FPlayerName>(pl.Name);
+
+        return OffenseManager.IsValidSteam64ID(player)
+            ? new ValueTask<FPlayerName>(Data.DatabaseManager.GetUsernamesAsync(player, token))
+            : new ValueTask<FPlayerName>(FPlayerName.Nil);
     }
     public static bool IsInMain(this Player player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!Data.Is<ITeams>(out _)) return false;
+        if (!Data.Is<ITeams>()) return false;
         ulong team = player.GetTeam();
-        if (team == 1) return TeamManager.Team1Main.IsInside(player.transform.position);
-        else if (team == 2) return TeamManager.Team2Main.IsInside(player.transform.position);
-        else return false;
+        return team switch
+        {
+            1 => TeamManager.Team1Main.IsInside(player.transform.position),
+            2 => TeamManager.Team2Main.IsInside(player.transform.position),
+            _ => false
+        };
     }
     public static bool IsInMain(Vector3 point)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (!Data.Is<ITeams>(out _)) return false;
+        if (!Data.Is<ITeams>()) return false;
         return TeamManager.Team1Main.IsInside(point) || TeamManager.Team2Main.IsInside(point);
     }
     public static bool IsOnFlag(this Player player) => player != null && Data.Is(out IFlagRotation fg) && fg.OnFlag.ContainsKey(player.channel.owner.playerID.steamID.m_SteamID);
@@ -654,15 +662,19 @@ public static class F
     }
     public static string Colorize(this string inner, string colorhex) => $"<color=#{colorhex}>{inner}</color>";
 
-    public static string ColorizeTMPro(this string inner, string colorhex, bool endTag = true) => endTag ? $"<#{colorhex}>{inner}</color>" : $"<#{colorhex}>{inner}";
+    public static string ColorizeTMPro(this string inner, string colorhex, bool endTag = true) =>
+        endTag ? $"<#{colorhex}>{inner}</color>" : $"<#{colorhex}>{inner}";
     public static string ColorizeName(string innerText, ulong team)
     {
         if (!Data.Is<ITeams>(out _)) return innerText;
-        if (team == TeamManager.ZOMBIE_TEAM_ID) return $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>";
-        else if (team == TeamManager.Team1ID) return $"<color=#{TeamManager.Team1ColorHex}>{innerText}</color>";
-        else if (team == TeamManager.Team2ID) return $"<color=#{TeamManager.Team2ColorHex}>{innerText}</color>";
-        else if (team == TeamManager.AdminID) return $"<color=#{TeamManager.AdminColorHex}>{innerText}</color>";
-        else return $"<color=#{TeamManager.NeutralColorHex}>{innerText}</color>";
+        return team switch
+        {
+            TeamManager.ZOMBIE_TEAM_ID => $"<color=#{UCWarfare.GetColorHex("death_zombie_name_color")}>{innerText}</color>",
+            TeamManager.Team1ID => $"<color=#{TeamManager.Team1ColorHex}>{innerText}</color>",
+            TeamManager.Team2ID => $"<color=#{TeamManager.Team2ColorHex}>{innerText}</color>",
+            TeamManager.AdminID => $"<color=#{TeamManager.AdminColorHex}>{innerText}</color>",
+            _ => $"<color=#{TeamManager.NeutralColorHex}>{innerText}</color>"
+        };
     }
     /// <exception cref="SingletonLoadException"/>
     public static void CheckDir(string path, out bool success, bool unloadIfFail = false)
@@ -699,23 +711,13 @@ public static class F
         ProfilingUtils.Clear();
     }
 #endif
-    public static void SendSteamURL(this SteamPlayer player, string message, ulong SteamID) => player.SendURL(message, $"https://steamcommunity.com/profiles/{SteamID}/");
+    public static void SendSteamURL(this SteamPlayer player, string message, ulong s64) =>
+        player.SendURL(message, $"https://steamcommunity.com/profiles/{s64}/");
     public static void SendURL(this SteamPlayer player, string message, string url)
     {
         if (player == default || url == default) return;
         player.player.sendBrowserRequest(message, url);
     }
-    public static string GetLayer(Vector3 direction, Vector3 origin, int Raymask)
-    {
-        if (Physics.Raycast(origin, direction, out RaycastHit hit, 8192f, Raymask))
-        {
-            if (hit.transform != null)
-                return hit.transform.gameObject.layer.ToString();
-            else return "nullHitNoTransform";
-        }
-        else return "nullNoHit";
-    }
-
     public static bool CanStandAtLocation(Vector3 source) => PlayerStance.hasStandingHeightClearanceAtPosition(source);
     public static string GetClosestLocation(Vector3 point)
     {
@@ -861,7 +863,7 @@ public static class F
         final = original;
         return alphanumcount != original.Length;
     }
-    public static bool HasGUID<T>(this JsonAssetReference<T>[] assets, Guid guid) where T : Asset
+    public static bool HasGuid<T>(this JsonAssetReference<T>[] assets, Guid guid) where T : Asset
     {
         for (int i = 0; i < assets.Length; ++i)
         {
@@ -999,6 +1001,43 @@ public static class F
         }
 
         return questName;
+    }
+    public static void EnsureCorrectGroupAndOwner(ref byte[] state, ItemBarricadeAsset asset, ulong owner, ulong group)
+    {
+        if (state == null)
+        {
+            state = Array.Empty<byte>();
+            return;
+        }
+
+        switch (asset.build)
+        {
+            case EBuild.DOOR:
+            case EBuild.GATE:
+            case EBuild.SHUTTER:
+            case EBuild.HATCH:
+                if (state.Length < sizeof(ulong) * 2)
+                    state = new byte[17];
+                Buffer.BlockCopy(BitConverter.GetBytes(owner), 0, state, 0, sizeof(ulong));
+                Buffer.BlockCopy(BitConverter.GetBytes(group), 0, state, sizeof(ulong), sizeof(ulong));
+                break;
+            case EBuild.BED:
+                state = BitConverter.GetBytes(owner);
+                break;
+            case EBuild.STORAGE:
+            case EBuild.SENTRY:
+            case EBuild.SENTRY_FREEFORM:
+            case EBuild.SIGN:
+            case EBuild.SIGN_WALL:
+            case EBuild.NOTE:
+            case EBuild.LIBRARY:
+            case EBuild.MANNEQUIN:
+                if (state.Length < sizeof(ulong) * 2)
+                    state = new byte[16];
+                Buffer.BlockCopy(BitConverter.GetBytes(owner), 0, state, 0, sizeof(ulong));
+                Buffer.BlockCopy(BitConverter.GetBytes(group), 0, state, sizeof(ulong), sizeof(ulong));
+                break;
+        }
     }
     public static void SetOwnerOrGroup(this IBuildable obj, ulong? owner = null, ulong? group = null)
     {
@@ -1166,6 +1205,7 @@ public static class F
         StructureData sdata = drop.GetServersideData();
         StructureManager.changeOwnerAndGroup(drop.model, owner ?? sdata.owner, group ?? sdata.group);
     }
+    // ReSharper disable InconsistentNaming
     public static void EulerToBytes(Vector3 euler, out byte angle_x, out byte angle_y, out byte angle_z)
     {
         angle_x = MeasurementTool.angleToByte(euler.x);
@@ -1178,6 +1218,8 @@ public static class F
     public static (byte angle_x, byte angle_y, byte angle_z) EulerToBytes(Vector3 euler)
         => (MeasurementTool.angleToByte(euler.x), MeasurementTool.angleToByte(euler.y),
             MeasurementTool.angleToByte(euler.z));
+
+    // ReSharper restore InconsistentNaming
     public static bool AlmostEquals(this Vector3 left, Vector3 right, float tolerance = 0.05f)
     {
         return Mathf.Abs(left.x - right.x) < tolerance &&
@@ -1225,7 +1267,7 @@ public static class F
             typestr = SqlTypes.INCREMENT_KEY;
         else
         {
-            MethodInfo info = type.GetMethod("GetDefaultSchema", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
+            MethodInfo? info = type.GetMethod("GetDefaultSchema", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
             if (info != null && typeof(Schema).IsAssignableFrom(info.ReturnType))
             {
                 ParameterInfo[] parameters = info.GetParameters();
@@ -1314,5 +1356,40 @@ public static class F
             },
             new Schema.Column(COLUMN_VALUE, "varchar(" + length.ToString(CultureInfo.InvariantCulture) + ")")
         }, false, typeof(KeyValuePair<string, string>));
+    }
+
+    public static ConfiguredTaskAwaitable ThenToUpdate(this Task task, CancellationToken token = default)
+        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
+    public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this Task<T> task, CancellationToken token = default)
+        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
+    public static ConfiguredTaskAwaitable ThenToUpdate(this ValueTask task, CancellationToken token = default)
+        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
+    public static ConfiguredTaskAwaitable<T> ThenToUpdate<T>(this ValueTask<T> task, CancellationToken token = default)
+        => ThenToUpdateIntl(task, token).ConfigureAwait(false);
+    private static async Task ThenToUpdateIntl(Task task, CancellationToken token = default)
+    {
+        await task.ConfigureAwait(false);
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate(token);
+    }
+    private static async Task<T> ThenToUpdateIntl<T>(Task<T> task, CancellationToken token = default)
+    {
+        T result = await task.ConfigureAwait(false);
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate(token);
+        return result;
+    }
+    private static async Task ThenToUpdateIntl(ValueTask task, CancellationToken token = default)
+    {
+        await task.ConfigureAwait(false);
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate(token);
+    }
+    private static async Task<T> ThenToUpdateIntl<T>(ValueTask<T> task, CancellationToken token = default)
+    {
+        T result = await task.ConfigureAwait(false);
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate(token);
+        return result;
     }
 }

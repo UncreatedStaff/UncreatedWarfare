@@ -1,23 +1,24 @@
-﻿using JetBrains.Annotations;
-using SDG.Unturned;
+﻿using SDG.Unturned;
 using Steamworks;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
+using Uncreated.SQL;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Teams;
 using Uncreated.Warfare.Vehicles;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class LoadCommand : Command
+public class LoadCommand : AsyncCommand
 {
     private const string SYNTAX = "/load <build|ammo> <amount|'half'>";
     private const string HELP = "Loads supplies into a logistics truck. If no amount is given, it fills the vehicle. If 'half' is supplied, it fills half the empty slots.";
 
     public LoadCommand() : base("load", EAdminType.MEMBER) { }
 
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -32,9 +33,13 @@ public class LoadCommand : Command
             {
                 if (vehicle.lockedOwner == CSteamID.Nil || vehicle.lockedGroup == CSteamID.Nil)
                     throw ctx.Reply(T.LoadNoTarget);
-
-                if (VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data) && data.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
+                VehicleBay? bay = Data.Singletons.GetSingleton<VehicleBay>();
+                if (bay != null && bay.IsLoaded)
                 {
+                    SqlItem<VehicleData>? data = await bay.GetDataProxy(vehicle.asset.GUID, token);
+                    await UCWarfare.ToUpdate();
+                    if (data is null || data.Item == null || !VehicleData.IsLogistics(data.Item.Type))
+                        throw ctx.Reply(T.LoadNotLogisticsVehicle);
                     if (F.IsInMain(vehicle.transform.position))
                     {
                         if (vehicle.speed >= -1 && vehicle.speed <= 1)
@@ -48,9 +53,9 @@ public class LoadCommand : Command
                                 half = false;
                             }
 
-                            ESupplyType type = ESupplyType.BUILD;
-                            if (ctx.MatchParameter(0, "build")) type = ESupplyType.BUILD;
-                            else if (ctx.MatchParameter(0, "ammo")) type = ESupplyType.AMMO;
+                            SupplyType type;
+                            if (ctx.MatchParameter(0, "build")) type = SupplyType.Build;
+                            else if (ctx.MatchParameter(0, "ammo")) type = SupplyType.Ammo;
                             else throw ctx.Reply(T.LoadUsage);
 
                             if (amount == 0)
@@ -59,20 +64,25 @@ public class LoadCommand : Command
                                     throw ctx.Reply(T.LoadInvalidAmount, ctx.Get(1)!);
                                 ItemAsset? supplyAsset;
                                 ulong team = vehicle.lockedGroup.m_SteamID.GetTeam();
-                                if (type is ESupplyType.BUILD)
+                                if (type is SupplyType.Build)
                                     TeamManager.GetFaction(team).Build.ValidReference(out supplyAsset);
                                 else
                                     TeamManager.GetFaction(team).Ammo.ValidReference(out supplyAsset);
                                 byte c = vehicle.trunkItems.getItemCount();
                                 // estimate the amount that can fit
-                                amount = (vehicle.trunkItems.width - vehicle.trunkItems.width % supplyAsset.size_x) * (vehicle.trunkItems.height - vehicle.trunkItems.height % supplyAsset.size_y);
+                                amount = (vehicle.trunkItems.width - vehicle.trunkItems.width % supplyAsset.size_x) *
+                                         (vehicle.trunkItems.height - vehicle.trunkItems.height % supplyAsset.size_y);
                                 for (int i = 0; i < c; i++)
                                 {
                                     ItemJar ij = vehicle.trunkItems.items[i];
                                     amount -= ij.size_x * ij.size_y;
                                 }
+
                                 if (amount < 0)
-                                    amount = (vehicle.trunkItems.width - vehicle.trunkItems.width % supplyAsset.size_x) * (vehicle.trunkItems.height - vehicle.trunkItems.height % supplyAsset.size_y) - c;
+                                    amount =
+                                        (vehicle.trunkItems.width - vehicle.trunkItems.width % supplyAsset.size_x) *
+                                        (vehicle.trunkItems.height - vehicle.trunkItems.height % supplyAsset.size_y) -
+                                        c;
                                 amount /= (supplyAsset.size_x * supplyAsset.size_y);
                                 if (half)
                                     amount /= 2;
@@ -85,6 +95,7 @@ public class LoadCommand : Command
                                     c = vehicle.transform.gameObject.AddComponent<VehicleComponent>();
                                     c.Initialize(vehicle);
                                 }
+
                                 if (c.ForceSupplyLoop == null)
                                 {
                                     c.StartForceLoadSupplies(ctx.Caller, type, amount);
@@ -100,7 +111,7 @@ public class LoadCommand : Command
                     }
                     else throw ctx.Reply(T.LoadNotInMain);
                 }
-                else throw ctx.Reply(T.LoadNotLogisticsVehicle);
+                else throw ctx.SendGamemodeError();
             }
             else throw ctx.Reply(T.LoadNoTarget);
         }

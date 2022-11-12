@@ -183,13 +183,13 @@ public static class EventFunctions
             rocket.killer = gun.player.channel.owner.playerID.steamID;
         }
 
-        if (VehicleBay.Config.TOWMissileWeapons.HasGUID(gun.equippedGunAsset.GUID))
+        if (VehicleBay.Config.TOWMissileWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, gun.player, 90, 0.33f, 800);
-        else if (VehicleBay.Config.GroundAAWeapons.HasGUID(gun.equippedGunAsset.GUID))
+        else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 4, 0.33f);
-        else if (VehicleBay.Config.AirAAWeapons.HasGUID(gun.equippedGunAsset.GUID))
+        else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
-        else if (VehicleBay.Config.LaserGuidedWeapons.HasGUID(gun.equippedGunAsset.GUID))
+        else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 150, 15, 0.6f);
 
         Patches.DeathsPatches.lastProjected = projectile;
@@ -1018,6 +1018,9 @@ public static class EventFunctions
             component = e.Vehicle.transform.gameObject.AddComponent<VehicleComponent>();
             component.Initialize(e.Vehicle);
         }
+        ActionLogger.Add(EActionLogType.ENTER_VEHICLE_SEAT, $"{e.Vehicle.asset.vehicleName} / {e.Vehicle.asset.id} / {e.Vehicle.asset.GUID:N}, Owner: {e.Vehicle.lockedOwner.m_SteamID}, " +
+                                                            $"ID: ({e.Vehicle.instanceID}) Seat move: >> " +
+                                                            $"{e.PassengerIndex.ToString(Data.Locale)}", e.Player.Steam64);
         component.OnPlayerEnteredVehicle(e);
 
         if (Data.Is<IFlagRotation>(out _) && e.Player.Player.IsOnFlag(out Flag flag))
@@ -1291,7 +1294,7 @@ public static class EventFunctions
                 }
             });
         }
-        UCBarricadeManager.GetBarricadeFromInstID(instanceID, out BarricadeDrop? drop);
+        UCBarricadeManager.FindBarricade(instanceID, out BarricadeDrop? drop);
         if (drop != default)
         {
             if (drop.model.TryGetComponent(out InteractableSign sign))

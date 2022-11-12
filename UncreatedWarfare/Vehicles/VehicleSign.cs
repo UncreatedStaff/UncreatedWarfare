@@ -241,7 +241,7 @@ public class VehicleSign
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        BarricadeDrop? drop = UCBarricadeManager.GetBarricadeFromInstID(InstanceId);
+        BarricadeDrop? drop = UCBarricadeManager.FindBarricade(InstanceId);
         StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
         if (saver != null)
         {
@@ -317,14 +317,14 @@ public class VehicleSign
                 if (bay.StructureType == EStructType.BARRICADE)
                 {
                     BarricadeData? paddata =
-                        UCBarricadeManager.GetBarricadeFromInstID(bay.InstanceId, out BarricadeDrop? paddrop);
+                        UCBarricadeManager.FindBarricade(bay.InstanceId, out BarricadeDrop? paddrop);
                     if (paddata != null)
                         saver.BeginAddBarricade(paddrop!);
                 }
                 else if (bay.StructureType == EStructType.STRUCTURE)
                 {
                     StructureData? paddata =
-                        UCBarricadeManager.GetStructureFromInstID(bay.InstanceId, out StructureDrop? paddrop);
+                        UCBarricadeManager.FindStructure(bay.InstanceId, out StructureDrop? paddrop);
                     if (paddata != null)
                         saver.BeginAddStructure(paddrop!);
                 }
