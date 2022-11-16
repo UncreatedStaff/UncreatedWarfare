@@ -243,8 +243,7 @@ public class RequestCommand : AsyncCommand
                                 await data.Enter(token).ConfigureAwait(false);
                                 try
                                 {
-                                    await UCWarfare.ToUpdate();
-                                    RequestVehicle(ctx.Caller!, vehicle, data.Item);
+                                    await RequestVehicle(ctx.Caller!, vehicle, data.Item, token);
                                     ctx.Defer();
                                 }
                                 finally
@@ -285,8 +284,7 @@ public class RequestCommand : AsyncCommand
                         await data.Enter(token).ConfigureAwait(false);
                         try
                         {
-                            await UCWarfare.ToUpdate();
-                            RequestVehicle(ctx.Caller!, vehicle, data.Item);
+                            await RequestVehicle(ctx.Caller, vehicle, data.Item, token).ConfigureAwait(false);
                             ctx.Defer();
                         }
                         finally
@@ -326,64 +324,66 @@ public class RequestCommand : AsyncCommand
 
         //PlayerManager.ApplyTo(ucplayer);
     }
-    internal Task RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data) => RequestVehicle(ucplayer, vehicle, data, ucplayer.GetTeam());
-    internal async Task RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data, ulong team)
+    /// <remarks>Thread Safe</remarks>
+    internal Task RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data, CancellationToken token = default) => RequestVehicle(ucplayer, vehicle, data, ucplayer.GetTeam(), token);
+    /// <remarks>Thread Safe</remarks>
+    internal async Task RequestVehicle(UCPlayer ucplayer, InteractableVehicle vehicle, VehicleData data, ulong team, CancellationToken token = default)
     {
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate();
         if (vehicle.lockedOwner != CSteamID.Nil || vehicle.lockedGroup != CSteamID.Nil)
         {
-            ucplayer.SendChat(T.RequestVehicleAlreadyRequested, F.GetPlayerOriginalNames(vehicle.lockedOwner.m_SteamID));
+            ucplayer.SendChat(T.RequestVehicleAlreadyRequested, await F.GetPlayerOriginalNamesAsync(vehicle.lockedOwner.m_SteamID, token).ThenToUpdate(token));
             return;
         }
-        else if (data.Team != 0 && data.Team != team)
+        if (data.Team != 0 && data.Team != team)
         {
             ucplayer.SendChat(T.RequestVehicleOtherTeam, TeamManager.GetFactionSafe(data.Team)!);
             return;
         }
-        else if (data.RequiresSL && ucplayer.Squad == null)
+        if (data.RequiresSL && ucplayer.Squad == null)
         {
             ucplayer.SendChat(T.RequestVehicleNotSquadLeader);
             return;
         }
-        else if (!KitManager.HasKit(ucplayer.CSteamID, out Kit kit))
+        if (!KitManager.HasKit(ucplayer.CSteamID, out Kit kit))
         {
             ucplayer.SendChat(T.RequestVehicleNoKit);
             return;
         }
-        else if (data.RequiredClass != EClass.NONE && kit.Class != data.RequiredClass)
+        if (data.RequiredClass != EClass.NONE && kit.Class != data.RequiredClass)
         {
             ucplayer.SendChat(T.RequestVehicleWrongClass, data.RequiredClass);
             return;
         }
-        else if (ucplayer.Rank.Level < data.UnlockLevel)
+        if (ucplayer.Rank.Level < data.UnlockLevel)
         {
             ucplayer.SendChat(T.RequestVehicleMissingLevels, RankData.GetRankName(data.UnlockLevel));
             return;
         }
-        else if (ucplayer.CachedCredits < data.CreditCost)
+        if (ucplayer.CachedCredits < data.CreditCost)
         {
             ucplayer.SendChat(T.RequestVehicleCantAfford, data.CreditCost - ucplayer.CachedCredits, data.CreditCost);
             return;
         }
-        else if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
+        if (CooldownManager.HasCooldown(ucplayer, ECooldownType.REQUEST_VEHICLE, out Cooldown cooldown, vehicle.id))
         {
             ucplayer.SendChat(T.RequestVehicleCooldown, cooldown);
             return;
         }
-        else
+
+        if (VehicleSpawner.Loaded) // check if an owned vehicle is nearby
         {
-            if (VehicleSpawner.Loaded) // check if an owned vehicle is nearby
+            foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
             {
-                foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
+                if (spawn is not null && spawn.HasLinkedVehicle(out InteractableVehicle veh))
                 {
-                    if (spawn is not null && spawn.HasLinkedVehicle(out InteractableVehicle veh))
+                    if (veh == null || veh.isDead) continue;
+                    if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 &&
+                        (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
                     {
-                        if (veh == null || veh.isDead) continue;
-                        if (veh.lockedOwner.m_SteamID == ucplayer.Steam64 &&
-                            (veh.transform.position - vehicle.transform.position).sqrMagnitude < UCWarfare.Config.MaxVehicleAbandonmentDistance * UCWarfare.Config.MaxVehicleAbandonmentDistance)
-                        {
-                            ucplayer.SendChat(T.RequestVehicleAlreadyOwned, data);
-                            return;
-                        }
+                        ucplayer.SendChat(T.RequestVehicleAlreadyOwned, data);
+                        return;
                     }
                 }
             }
@@ -433,17 +433,17 @@ public class RequestCommand : AsyncCommand
         {
             if (data.CreditCost > 0)
             {
-                await ucplayer.PurchaseSync.WaitAsync();
+                await ucplayer.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
                 try
                 {
-                    await Points.UpdatePointsAsync(ucplayer, false);
+                    await Points.UpdatePointsAsync(ucplayer, false, token).ConfigureAwait(false);
                     if (ucplayer.CachedCredits >= data.CreditCost)
                     {
-                        await Points.AwardCreditsAsync(ucplayer, -data.CreditCost, isPurchase: true, @lock: false);
+                        await Points.AwardCreditsAsync(ucplayer, -data.CreditCost, isPurchase: true, @lock: false, token: token).ConfigureAwait(false);
                     }
                     else
                     {
-                        await UCWarfare.ToUpdate();
+                        await UCWarfare.ToUpdate(token);
                         ucplayer.SendChat(T.RequestVehicleCantAfford, data.CreditCost - ucplayer.CachedCredits, data.CreditCost);
                         return;
                     }
@@ -454,7 +454,7 @@ public class RequestCommand : AsyncCommand
                 }
             }
 
-            await UCWarfare.ToUpdate();
+            await UCWarfare.ToUpdate(token);
             GiveVehicle(ucplayer, vehicle, data);
             Stats.StatsManager.ModifyStats(ucplayer.Steam64, x => x.VehiclesRequested++, false);
             Stats.StatsManager.ModifyTeam(team, t => t.VehiclesRequested++, false);
@@ -491,7 +491,9 @@ public class RequestCommand : AsyncCommand
         vehicle.updateVehicle();
         vehicle.updatePhysics();
 
-        EffectManager.sendEffect(8, EffectManager.SMALL, vehicle.transform.position);
+        if (Gamemode.Config.EffectUnlockVehicle.ValidReference(out EffectAsset effect))
+            F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
+
         ucplayer.SendChat(T.RequestVehicleSuccess, data);
 
         if (!FOBManager.Config.Buildables.Exists(e => e.Type == EBuildableType.EMPLACEMENT && e.Emplacement != null && e.Emplacement.EmplacementVehicle.MatchGuid(vehicle.asset.GUID)))

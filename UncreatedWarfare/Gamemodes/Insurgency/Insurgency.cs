@@ -323,7 +323,7 @@ public class Insurgency :
     private void OnPlayerJoinedTeam(UCPlayer player)
     {
         ulong team = player.GetTeam();
-        FPlayerName names = F.GetPlayerOriginalNames(player);
+        PlayerNames names = F.GetPlayerOriginalNames(player);
         if (string.IsNullOrEmpty(player.KitName) && team is > 0 and < 3)
         {
             if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))

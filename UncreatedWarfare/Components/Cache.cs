@@ -78,11 +78,11 @@ public class Cache : MonoBehaviour, IFOB, IObjective, IDeployable
                 _cl = flag.ShortName;
         }
 
-        EventDispatcher.OnPlayerLeaving += OnPlayerDisconnect;
+        EventDispatcher.PlayerLeaving += OnPlayerDisconnect;
     }
     private void OnDestroy()
     {
-        EventDispatcher.OnPlayerLeaving -= OnPlayerDisconnect;
+        EventDispatcher.PlayerLeaving -= OnPlayerDisconnect;
     }
     private void OnPlayerDisconnect(PlayerEvent e)
     {

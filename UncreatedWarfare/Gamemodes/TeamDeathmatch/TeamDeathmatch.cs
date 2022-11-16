@@ -76,11 +76,11 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public override void Subscribe()
     {
         base.Subscribe();
-        EventDispatcher.OnPlayerDied += OnDeath;
+        EventDispatcher.PlayerDied += OnDeath;
     }
     public override void Unsubscribe()
     {
-        EventDispatcher.OnPlayerDied -= OnDeath;
+        EventDispatcher.PlayerDied -= OnDeath;
         base.Unsubscribe();
     }
     public override Task DeclareWin(ulong winner)

@@ -49,7 +49,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
     public override void Load()
     {
         Medics.AddRange(PlayerManager.OnlinePlayers.Where(x => x.KitClass == EClass.MEDIC).ToList());
-        EventDispatcher.OnPlayerDied += OnPlayerDeath;
+        EventDispatcher.PlayerDied += OnPlayerDeath;
         PlayerLife.OnRevived_Global += OnPlayerRespawned;
         UseableConsumeable.onPerformingAid += OnHealPlayer;
         Singleton = this;
@@ -64,7 +64,7 @@ public class ReviveManager : BaseSingleton, IPlayerConnectListener, IDeclareWinL
         Singleton = null!;
         UseableConsumeable.onPerformingAid -= OnHealPlayer;
         PlayerLife.OnRevived_Global -= OnPlayerRespawned;
-        EventDispatcher.OnPlayerDied -= OnPlayerDeath;
+        EventDispatcher.PlayerDied -= OnPlayerDeath;
         if (Updater is not null)
         {
             UCWarfare.I.StopCoroutine(Updater);

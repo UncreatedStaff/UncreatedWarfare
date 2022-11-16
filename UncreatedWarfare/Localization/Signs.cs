@@ -65,26 +65,23 @@ public static class Signs
 
         string key2 = serverText.Substring(PREFIX.Length);
         if (key2.StartsWith(VBS_PREFIX, StringComparison.OrdinalIgnoreCase))
-        {
             return GetClientTextVBS(player, key2.Substring(VBS_PREFIX.Length), sign);
-        }
-        else if (key2.StartsWith(TRAIT_PREFIX, StringComparison.OrdinalIgnoreCase))
-        {
-            return GetClientTextTrait(player, key2.Substring(TRAIT_PREFIX.Length), sign);
-        }
-        else
-        {
-            return GetClientTextKitSign(player, key2, sign);
-        }
+        
+        if (key2.StartsWith(TRAIT_PREFIX, StringComparison.OrdinalIgnoreCase))
+            return GetClientTextTrait(player, key2.Substring(TRAIT_PREFIX.Length));
+
+        return GetClientTextKitSign(player, key2);
     }
 
     private static void BroadcastClientVBS(string vbKey, InteractableSign sign, byte x, byte y)
     {
-        if (VehicleSigns.Loaded && VehicleSpawner.Loaded && VehicleBay.Loaded &&
-            VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn) &&
-            VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data))
+        VehicleBay? vb = VehicleBay.GetSingletonQuick();
+        if (VehicleSigns.Loaded && VehicleSpawner.Loaded && vb != null &&
+            VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn)
+            && spawn.Data?.Item != null)
         {
             NetId id = sign.GetNetId();
+            VehicleData data = spawn.Data.Item;
             foreach (LanguageSet set in LanguageSet.InRegions(x, y, BarricadeManager.BARRICADE_REGIONS))
             {
                 string fmt = Localization.TranslateVBS(spawn, data, set.Language, data.Team);
@@ -93,22 +90,20 @@ public static class Signs
             }
         }
         else
-        {
             BroadcastClientSign(vbKey, sign, x, y);
-            return;
-        }
     }
     private static string GetClientTextVBS(UCPlayer player, string vbKey, InteractableSign sign)
     {
-        if (VehicleSigns.Loaded && VehicleSpawner.Loaded && VehicleBay.Loaded &&
-            VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn) &&
-            VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data))
+        VehicleBay? vb = VehicleBay.GetSingletonQuick();
+        if (VehicleSigns.Loaded && VehicleSpawner.Loaded && vb != null &&
+            VehicleSpawner.TryGetSpawnFromSign(sign, out Vehicles.VehicleSpawn spawn)
+            && spawn.Data?.Item != null)
         {
             string lang = Localization.GetLang(player.Steam64);
-            return QuickFormat(Localization.TranslateVBS(spawn, data, lang, data.Team), data.GetCostLine(player));
+            return QuickFormat(Localization.TranslateVBS(spawn, spawn.Data.Item, lang, spawn.Data.Item.Team), spawn.Data.Item.GetCostLine(player));
         }
-        else
-            return GetClientTextSign(player, vbKey);
+        
+        return GetClientTextSign(player, vbKey);
     }
 
     private static string GetClientTextSign(UCPlayer player, string key)
@@ -136,7 +131,7 @@ public static class Signs
                 Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Connection, shouldFormat ? TraitSigns.FormatTraitSign(d, fmt, set.Next, team) : fmt);
         }
     }
-    private static string GetClientTextTrait(UCPlayer player, string typeName, InteractableSign sign)
+    private static string GetClientTextTrait(UCPlayer player, string typeName)
     {
         TraitData? d;
         if (!TraitManager.Loaded || (d = TraitManager.GetData(typeName)) == null)
@@ -165,7 +160,7 @@ public static class Signs
             Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, pl.Connection, ld ? Localization.TranslateLoadoutSign(kitname, lang, pl) : Localization.TranslateKitSign(lang, kit, pl));
         }
     }
-    private static string GetClientTextKitSign(UCPlayer player, string kitname, InteractableSign sign)
+    private static string GetClientTextKitSign(UCPlayer player, string kitname)
     {
         bool ld = kitname.StartsWith(LOADOUT_PREFIX, StringComparison.OrdinalIgnoreCase);
         Kit kit = null!;

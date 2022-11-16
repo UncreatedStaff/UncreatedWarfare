@@ -124,24 +124,21 @@ public enum EQuestType : byte
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
 public sealed class QuestDataAttribute : Attribute
 {
-    public EQuestType Type => _type;
-    private readonly EQuestType _type;
+    public EQuestType Type { get; }
     public QuestDataAttribute(EQuestType type)
     {
-        _type = type;
+        Type = type;
     }
 }
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
 public sealed class QuestRewardAttribute : Attribute
 {
-    public EQuestRewardType Type => _type;
-    public Type ReturnType => _returnType;
-    private readonly EQuestRewardType _type;
-    private readonly Type _returnType;
+    public EQuestRewardType Type { get; }
+    public Type ReturnType { get; }
     public QuestRewardAttribute(EQuestRewardType type, Type returnType)
     {
-        _type = type;
-        _returnType = returnType;
+        Type = type;
+        ReturnType = returnType;
     }
 }
 
@@ -155,35 +152,36 @@ public static class QuestJsonEx
             {
                 return EWeaponClass.SHOTGUN;
             }
-            else if (weapon.action == EAction.Rail)
+
+            if (weapon.action == EAction.Rail)
             {
                 return EWeaponClass.SNIPER_RIFLE;
             }
-            else if (weapon.action == EAction.Minigun)
+            if (weapon.action == EAction.Minigun)
             {
                 return EWeaponClass.MACHINE_GUN;
             }
-            else if (weapon.action == EAction.Rocket)
+            if (weapon.action == EAction.Rocket)
             {
                 return EWeaponClass.ROCKET;
             }
-            else if (weapon.itemDescription.IndexOf("smg", StringComparison.OrdinalIgnoreCase) != -1)
+            if (weapon.itemDescription.IndexOf("smg", StringComparison.OrdinalIgnoreCase) != -1)
             {
                 return EWeaponClass.SMG;
             }
-            else if (weapon.itemDescription.IndexOf("pistol", StringComparison.OrdinalIgnoreCase) != -1)
+            if (weapon.itemDescription.IndexOf("pistol", StringComparison.OrdinalIgnoreCase) != -1)
             {
                 return EWeaponClass.PISTOL;
             }
-            else if (weapon.itemDescription.IndexOf("marksman", StringComparison.OrdinalIgnoreCase) != -1)
+            if (weapon.itemDescription.IndexOf("marksman", StringComparison.OrdinalIgnoreCase) != -1)
             {
                 return EWeaponClass.MARKSMAN_RIFLE;
             }
-            else if (weapon.itemDescription.IndexOf("rifle", StringComparison.OrdinalIgnoreCase) != -1)
+            if (weapon.itemDescription.IndexOf("rifle", StringComparison.OrdinalIgnoreCase) != -1)
             {
                 return EWeaponClass.BATTLE_RIFLE;
             }
-            else if (weapon.itemDescription.IndexOf("machine", StringComparison.OrdinalIgnoreCase) != -1 || weapon.itemDescription.IndexOf("lmg", StringComparison.OrdinalIgnoreCase) != -1)
+            if (weapon.itemDescription.IndexOf("machine", StringComparison.OrdinalIgnoreCase) != -1 || weapon.itemDescription.IndexOf("lmg", StringComparison.OrdinalIgnoreCase) != -1)
             {
                 return EWeaponClass.MACHINE_GUN;
             }
@@ -201,13 +199,13 @@ public static class QuestJsonEx
             string? str = reader.GetString();
             if (string.IsNullOrEmpty(str) || str!.Length < 3)
             {
-                if (str == "$*" || str == "#*")
+                if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
-                    value = new DynamicIntegerValue(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                    value = new DynamicIntegerValue(EDynamicValueType.ANY, str![0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                 }
-                else if (int.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out int v))
+                else if (int.TryParse(str, NumberStyles.Any, Data.Locale, out int v1))
                 {
-                    value = new DynamicIntegerValue(v);
+                    value = new DynamicIntegerValue(v1);
                 }
                 else
                 {
@@ -283,13 +281,12 @@ public static class QuestJsonEx
                         value = new DynamicIntegerValue(new IntegralRange(v1, v2, round), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
                         return true;
                     }
-                    else
-                    {
-                        value = new DynamicIntegerValue(0);
-                        return false;
-                    }
+
+                    value = new DynamicIntegerValue(0);
+                    return false;
                 }
-                else if (str[1] == '[' && str[str.Length - 1] == ']')
+
+                if (str[1] == '[' && str[str.Length - 1] == ']')
                 {
                     int len = str.Length;
                     int arrLen = 1;
@@ -302,13 +299,13 @@ public static class QuestJsonEx
                         res = new int[arrLen];
                         int ptrpos = str.Length - 1;
                         int index = arrLen;
+                        int num = 0;
+                        int m = 1;
                         while (ptrpos > 1)
                         {
                             ptrpos--;
-                            int num = 0;
-                            int m = 1;
                             char c = *(p + ptrpos);
-                            if (c >= '0' && c <= '9')
+                            if (c is >= '0' and <= '9')
                             {
                                 num += (c - 48) * m;
                                 m *= 10;
@@ -318,7 +315,7 @@ public static class QuestJsonEx
                                 num = -num;
                                 break;
                             }
-                            else if (c == ',' || c == '[')
+                            else if (c == ',' || c == ']')
                             {
                                 index--;
                                 res[index] = num;
@@ -330,13 +327,11 @@ public static class QuestJsonEx
                     return true;
 
                 }
-                else
-                {
-                    value = new DynamicIntegerValue(0);
-                    return false;
-                }
+                value = new DynamicIntegerValue(0);
+                return false;
             }
-            else if (int.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out int v))
+
+            if (int.TryParse(str, NumberStyles.Any, Data.Locale, out int v))
             {
                 value = new DynamicIntegerValue(v);
                 return true;
@@ -360,13 +355,13 @@ public static class QuestJsonEx
             string? str = reader.GetString();
             if (string.IsNullOrEmpty(str) || str!.Length < 3)
             {
-                if (str == "$*" || str == "#*")
+                if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
-                    value = new DynamicFloatValue(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                    value = new DynamicFloatValue(EDynamicValueType.ANY, str![0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                 }
-                else if (float.TryParse(str, NumberStyles.Any, Data.Locale, out float v))
+                else if (float.TryParse(str, NumberStyles.Any, Data.Locale, out float v1))
                 {
-                    value = new DynamicFloatValue(v);
+                    value = new DynamicFloatValue(v1);
                 }
                 else
                 {
@@ -457,13 +452,12 @@ public static class QuestJsonEx
                         value = new DynamicFloatValue(new FloatRange(v1f, v2f, round), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
                         return true;
                     }
-                    else
-                    {
-                        value = new DynamicFloatValue(0);
-                        return false;
-                    }
+
+                    value = new DynamicFloatValue(0);
+                    return false;
                 }
-                else if (str[1] == '[' && str[str.Length - 1] == ']')
+
+                if (str[1] == '[' && str[str.Length - 1] == ']')
                 {
                     int len = str.Length;
                     int arrLen = 1;
@@ -508,13 +502,11 @@ public static class QuestJsonEx
                     return true;
 
                 }
-                else
-                {
-                    value = new DynamicFloatValue(0);
-                    return false;
-                }
+                value = new DynamicFloatValue(0);
+                return false;
             }
-            else if (float.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out float v))
+
+            if (float.TryParse(str, NumberStyles.Any, Data.Locale, out float v))
             {
                 value = new DynamicFloatValue(v);
                 return true;
@@ -538,16 +530,14 @@ public static class QuestJsonEx
             string? str = reader.GetString();
             if (string.IsNullOrEmpty(str) || str!.Length < 3)
             {
-                if (str == "$*" || str == "#*")
+                if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
-                    value = new DynamicStringValue(isKitselector, EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                    value = new DynamicStringValue(isKitselector, EDynamicValueType.ANY, str![0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                     return true;
                 }
-                else
-                {
-                    value = new DynamicStringValue(isKitselector, str!);
-                    return false;
-                }
+
+                value = new DynamicStringValue(isKitselector, str!);
+                return false;
             }
             bool isInclusive = str[0] == '#';
 
@@ -591,17 +581,13 @@ public static class QuestJsonEx
                     return true;
 
                 }
-                else
-                {
-                    value = new DynamicStringValue(isKitselector, str);
-                    return true;
-                }
-            }
-            else
-            {
+
                 value = new DynamicStringValue(isKitselector, str);
                 return true;
             }
+
+            value = new DynamicStringValue(isKitselector, str);
+            return true;
         }
         value = new DynamicStringValue(isKitselector, null!);
         return false;
@@ -616,16 +602,14 @@ public static class QuestJsonEx
             string? str = reader.GetString();
             if (string.IsNullOrEmpty(str) || str!.Length < 3)
             {
-                if (str == "$*" || str == "#*")
+                if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
                     value = new DynamicEnumValue<TEnum>(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                     return true;
                 }
-                else
-                {
-                    value = new DynamicEnumValue<TEnum>(default);
-                    return false;
-                }
+
+                value = new DynamicEnumValue<TEnum>(default);
+                return false;
             }
             bool isInclusive = str[0] == '#';
 
@@ -690,44 +674,46 @@ public static class QuestJsonEx
                     return true;
 
                 }
-                else if (str[1] == '(' && str[str.Length - 1] == ')') // read range
+
                 {
-                    int sep = str.IndexOf(':');
-                    if (sep != -1)
+                    if (str[1] == '(' && str[str.Length - 1] == ')') // read range
                     {
-                        string p1 = str.Substring(2, sep - 2);
-                        string p2 = str.Substring(sep + 1, str.Length - sep - 2);
-                        if (!Enum.TryParse(p1, true, out TEnum e1))
+                        int sep = str.IndexOf(':');
+                        if (sep != -1)
                         {
-                            L.LogWarning("[QUEST PARSER] Couldn't interpret \"" + p1 + "\" (lower range) as an " + typeof(TEnum).Name);
-                            value = new DynamicEnumValue<TEnum>(default);
-                            return false;
+                            string p1 = str.Substring(2, sep - 2);
+                            string p2 = str.Substring(sep + 1, str.Length - sep - 2);
+                            if (!Enum.TryParse(p1, true, out TEnum e1))
+                            {
+                                L.LogWarning("[QUEST PARSER] Couldn't interpret \"" + p1 + "\" (lower range) as an " + typeof(TEnum).Name);
+                                value = new DynamicEnumValue<TEnum>(default);
+                                return false;
+                            }
+                            if (!Enum.TryParse(p2, true, out TEnum e2))
+                            {
+                                L.LogWarning("[QUEST PARSER] Couldn't interpret \"" + p2 + "\" (higher range) as an " + typeof(TEnum).Name);
+                                value = new DynamicEnumValue<TEnum>(default);
+                                return false;
+                            }
+                            int a = e1.CompareTo(e2);
+                            if (a > 0)
+                                (e2, e1) = (e1, e2);
+                            value = a == 0
+                                ? new DynamicEnumValue<TEnum>(e1)
+                                : new DynamicEnumValue<TEnum>(new EnumRange<TEnum>(e1, e2), isInclusive
+                                    ? EChoiceBehavior.ALLOW_ALL
+                                    : EChoiceBehavior.ALLOW_ONE);
+                            return true;
                         }
-                        if (!Enum.TryParse(p2, true, out TEnum e2))
-                        {
-                            L.LogWarning("[QUEST PARSER] Couldn't interpret \"" + p2 + "\" (higher range) as an " + typeof(TEnum).Name);
-                            value = new DynamicEnumValue<TEnum>(default);
-                            return false;
-                        }
-                        int a = e1.CompareTo(e2);
-                        if (a > 0)
-                            (e2, e1) = (e1, e2);
-                        if (a == 0)
-                            value = new DynamicEnumValue<TEnum>(e1);
-                        else
-                            value = new DynamicEnumValue<TEnum>(new EnumRange<TEnum>(e1, e2), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
-                        return true;
-                    }
-                    else
-                    {
+
                         value = new DynamicEnumValue<TEnum>(default);
                         return false;
                     }
-                }
-                else if (Enum.TryParse(str, out TEnum res))
-                {
-                    value = new DynamicEnumValue<TEnum>(res);
-                    return true;
+                    if (Enum.TryParse(str, out TEnum res))
+                    {
+                        value = new DynamicEnumValue<TEnum>(res);
+                        return true;
+                    }
                 }
             }
             else if (Enum.TryParse(str, out TEnum res))
@@ -742,10 +728,10 @@ public static class QuestJsonEx
             {
                 try
                 {
-                    value = new DynamicEnumValue<TEnum>((TEnum)(object)v2);
+                    value = new DynamicEnumValue<TEnum>((TEnum)Convert.ChangeType(v2, typeof(TEnum)));
                     return true;
                 }
-                catch { }
+                catch (InvalidCastException) { }
             }
         }
         value = new DynamicEnumValue<TEnum>(default);
@@ -763,7 +749,8 @@ public static class QuestJsonEx
             }
             return Enum.TryParse(str, true, out value);
         }
-        else if (reader.TokenType == JsonTokenType.Number)
+
+        if (reader.TokenType == JsonTokenType.Number)
         {
             if (reader.TryGetInt64(out long v2))
             {
@@ -772,7 +759,7 @@ public static class QuestJsonEx
                     value = (TEnum)Convert.ChangeType(v2, typeof(TEnum));
                     return true;
                 }
-                catch { }
+                catch (InvalidCastException) { }
             }
         }
         value = default;
@@ -788,16 +775,14 @@ public static class QuestJsonEx
             string? str = reader.GetString();
             if (string.IsNullOrEmpty(str) || str!.Length < 3)
             {
-                if (str == "$*" || str == "#*")
+                if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
-                    value = new DynamicAssetValue<TAsset>(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                    value = new DynamicAssetValue<TAsset>(EDynamicValueType.ANY, str![0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                     return true;
                 }
-                else
-                {
-                    value = new DynamicAssetValue<TAsset>(default);
-                    return false;
-                }
+
+                value = new DynamicAssetValue<TAsset>(default);
+                return false;
             }
             bool isInclusive = str[0] == '#';
 
@@ -862,23 +847,19 @@ public static class QuestJsonEx
                     value = new DynamicAssetValue<TAsset>(new GuidSet(guids), isInclusive ? EChoiceBehavior.ALLOW_ALL : EChoiceBehavior.ALLOW_ONE);
                     return true;
                 }
-                else
-                {
-                    L.LogWarning("[QUEST PARSER] Couldn't interpret " + str + " as a " + typeof(TAsset).Name);
-                    value = new DynamicAssetValue<TAsset>(default);
-                    return false;
-                }
+
+                L.LogWarning("[QUEST PARSER] Couldn't interpret " + str + " as a " + typeof(TAsset).Name);
+                value = new DynamicAssetValue<TAsset>(default);
+                return false;
             }
-            else
+
+            if (Guid.TryParse(str, out Guid guid))
             {
-                if (Guid.TryParse(str, out Guid guid))
-                {
-                    value = new DynamicAssetValue<TAsset>(guid);
-                    return true;
-                }
-                else
-                    L.LogWarning("[QUEST PARSER] Couldn't interpret " + str + " as a " + typeof(TAsset).Name);
+                value = new DynamicAssetValue<TAsset>(guid);
+                return true;
             }
+
+            L.LogWarning("[QUEST PARSER] Couldn't interpret " + str + " as a " + typeof(TAsset).Name);
         }
         value = new DynamicAssetValue<TAsset>(default);
         return false;
@@ -898,8 +879,7 @@ public static class QuestJsonEx
                 return value;
             if (mod > round / 2f)
                 return value + (round - mod);
-            else
-                return value - mod;
+            return value - mod;
         }
         return value;
     }
@@ -914,19 +894,16 @@ public static class QuestJsonEx
                 return value;
             if (mod > round / 2f)
                 return value + (round - mod);
-            else
-                return value - mod;
+            return value - mod;
         }
         else
         {
-            int i = 0;
             int val = -round;
             while (val > 0)
             {
                 val /= 10;
-                i++;
             }
-            int t = (int)Mathf.Pow(10, ((val - 1) * 2) + 1);
+            int t = (int)Mathf.Pow(10, (val - 1) * 2 + 1);
             float m = (-round % t) / (float)t;
             float val2 = value - min;
             float mod = val2 % m;
@@ -934,8 +911,7 @@ public static class QuestJsonEx
                 return value;
             if (mod > m / 2f)
                 return value + (m - mod);
-            else
-                return value - mod;
+            return value - mod;
         }
     }
 }
@@ -1019,14 +995,14 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
     {
         if (type == EDynamicValueType.CONSTANT)
             return constant.ToString(Data.Locale);
-        else if (type == EDynamicValueType.RANGE)
+        if (type == EDynamicValueType.RANGE)
             return (_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + range.Minimum.ToString(Data.Locale) +
                    ":" + range.Maximum.ToString(Data.Locale) + ")";
-        else if (type == EDynamicValueType.ANY)
+        if (type == EDynamicValueType.ANY)
             return _choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-        else if (type == EDynamicValueType.SET)
+        if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             for (int i = 0; i < set.Length; i++)
             {
@@ -1036,8 +1012,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
             sb.Append(']');
             return sb.ToString();
         }
-        else
-            return constant.ToString(Data.Locale);
+        return constant.ToString(Data.Locale);
     }
     public void Write(Utf8JsonWriter writer)
     {
@@ -1056,7 +1031,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
         }
         else if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             for (int i = 0; i < set.Length; i++)
             {
@@ -1103,10 +1078,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
             {
                 if (_behavior == EChoiceBehavior.ALLOW_ONE)
                 {
-                    if (value.set.Length == 1)
-                        _value = value.set.Set[0];
-                    else
-                        _value = value.set.Set[UnityEngine.Random.Range(0, value.set.Length)];
+                    _value = value.set.Length == 1 ? value.set.Set[0] : value.set.Set[UnityEngine.Random.Range(0, value.set.Length)];
                 }
                 else
                 {
@@ -1138,13 +1110,14 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
             if (_type == EDynamicValueType.ANY) return true;
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value == value;
-            else if (_type == EDynamicValueType.RANGE)
+            if (_type == EDynamicValueType.RANGE)
                 return value >= _minVal && value <= _maxVal;
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 for (int i = 0; i < _values.Length; i++)
                     if (_values[i] == value) return true;
             }
+
             return false;
         }
         public bool Read(ref Utf8JsonReader reader)
@@ -1155,7 +1128,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                 if (str == null) return false;
                 if (str.Length > 1 && (str[0] == '$' || str[0] == '#'))
                 {
-                    if (str == "$*" || str == "#*")
+                    if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                     {
                         if (str[0] == '#')
                             _behavior = EChoiceBehavior.ALLOW_ALL;
@@ -1167,7 +1140,8 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                         _type = EDynamicValueType.ANY;
                         return true;
                     }
-                    else if (reader.TryReadIntegralValue(out DynamicIntegerValue v))
+
+                    if (reader.TryReadIntegralValue(out DynamicIntegerValue v))
                     {
                         FromValue(ref v);
                         if (_behavior == EChoiceBehavior.ALLOW_ONE && _type != EDynamicValueType.CONSTANT)
@@ -1175,7 +1149,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                         return true;
                     }
                 }
-                else if (int.TryParse(str, System.Globalization.NumberStyles.Any, Data.Locale, out _value))
+                else if (int.TryParse(str, NumberStyles.Any, Data.Locale, out _value))
                 {
                     _type = EDynamicValueType.CONSTANT;
                     _behavior = EChoiceBehavior.ALLOW_ONE;
@@ -1183,7 +1157,8 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                 }
                 return false;
             }
-            else if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out _value))
+
+            if (reader.TokenType == JsonTokenType.Number && reader.TryGetInt32(out _value))
             {
                 _type = EDynamicValueType.CONSTANT;
                 _behavior = EChoiceBehavior.ALLOW_ONE;
@@ -1226,12 +1201,12 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
         {
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.ToString(Data.Locale);
-            else if (_type == EDynamicValueType.RANGE)
+            if (_type == EDynamicValueType.RANGE)
                 return (_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + _minVal.ToString(Data.Locale) +
                        ":" + _maxVal.ToString(Data.Locale) + ")";
-            else if (_type == EDynamicValueType.ANY)
+            if (_type == EDynamicValueType.ANY)
                 return _behavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 StringBuilder sb = new StringBuilder(_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
                 sb.Append('[');
@@ -1243,8 +1218,7 @@ public readonly struct DynamicIntegerValue : IDynamicValue<int>
                 sb.Append(']');
                 return sb.ToString();
             }
-            else
-                return _value.ToString(Data.Locale);
+            return _value.ToString(Data.Locale);
         }
     }
 }
@@ -1282,6 +1256,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         this.range = default;
         this.set = default;
         this.type = EDynamicValueType.CONSTANT;
+        _choiceBehavior = EChoiceBehavior.ALLOW_ONE;
     }
     public DynamicFloatValue(ref FloatRange range, EChoiceBehavior anyBehavior = EChoiceBehavior.ALLOW_ONE)
     {
@@ -1289,6 +1264,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         this.range = range;
         this.set = default;
         this.type = EDynamicValueType.RANGE;
+        _choiceBehavior = anyBehavior;
     }
     public DynamicFloatValue(ref FloatSet set, EChoiceBehavior anyBehavior = EChoiceBehavior.ALLOW_ONE)
     {
@@ -1296,6 +1272,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         this.range = default;
         this.set = set;
         this.type = EDynamicValueType.SET;
+        _choiceBehavior = anyBehavior;
     }
     public DynamicFloatValue(FloatRange range, EChoiceBehavior anyBehavior = EChoiceBehavior.ALLOW_ONE)
     {
@@ -1303,6 +1280,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         this.range = range;
         this.set = default;
         this.type = EDynamicValueType.RANGE;
+        _choiceBehavior = anyBehavior;
     }
     public DynamicFloatValue(FloatSet set, EChoiceBehavior anyBehavior = EChoiceBehavior.ALLOW_ONE)
     {
@@ -1310,8 +1288,9 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         this.range = default;
         this.set = set;
         this.type = EDynamicValueType.SET;
+        _choiceBehavior = anyBehavior;
     }
-    public readonly IDynamicValue<float>.IChoice GetValue()
+    public IDynamicValue<float>.IChoice GetValue()
     {
         return new Choice(this);
     }
@@ -1325,14 +1304,14 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
     {
         if (type == EDynamicValueType.CONSTANT)
             return constant.ToString(Data.Locale);
-        else if (type == EDynamicValueType.RANGE)
+        if (type == EDynamicValueType.RANGE)
             return (_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + range.Minimum.ToString(Data.Locale) +
                    ":" + range.Maximum.ToString(Data.Locale) + ")";
-        else if (type == EDynamicValueType.ANY)
+        if (type == EDynamicValueType.ANY)
             return _choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-        else if (type == EDynamicValueType.SET)
+        if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             for (int i = 0; i < set.Length; i++)
             {
@@ -1342,8 +1321,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
             sb.Append(']');
             return sb.ToString();
         }
-        else
-            return constant.ToString(Data.Locale);
+        return constant.ToString(Data.Locale);
     }
     public void Write(Utf8JsonWriter writer)
     {
@@ -1362,7 +1340,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         }
         else if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             for (int i = 0; i < set.Length; i++)
             {
@@ -1443,14 +1421,15 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         {
             if (_type == EDynamicValueType.ANY) return true;
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
-                return _value == value;
-            else if (_type == EDynamicValueType.RANGE)
+                return Math.Abs(_value - value) < 0.005f;
+            if (_type == EDynamicValueType.RANGE)
                 return value >= _minVal && value <= _maxVal;
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 for (int i = 0; i < _values!.Length; i++)
-                    if (_values[i] == value) return true;
+                    if (Math.Abs(_values[i] - value) < 0.005f) return true;
             }
+
             return false;
         }
         public bool Read(ref Utf8JsonReader reader)
@@ -1461,7 +1440,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
                 if (str == null) return false;
                 if (str.Length > 1 && (str[0] == '$' || str[0] == '#'))
                 {
-                    if (str == "$*" || str == "#*")
+                    if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                     {
                         if (str[0] == '#')
                             _behavior = EChoiceBehavior.ALLOW_ALL;
@@ -1473,7 +1452,8 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
                         _type = EDynamicValueType.ANY;
                         return true;
                     }
-                    else if (reader.TryReadFloatValue(out DynamicFloatValue v))
+
+                    if (reader.TryReadFloatValue(out DynamicFloatValue v))
                     {
                         FromValue(ref v);
                         if (_behavior == EChoiceBehavior.ALLOW_ONE && _type != EDynamicValueType.CONSTANT)
@@ -1489,7 +1469,8 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
                 }
                 return false;
             }
-            else if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out _value))
+
+            if (reader.TokenType == JsonTokenType.Number && reader.TryGetSingle(out _value))
             {
                 _type = EDynamicValueType.CONSTANT;
                 _behavior = EChoiceBehavior.ALLOW_ONE;
@@ -1532,12 +1513,12 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
         {
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.ToString(Data.Locale);
-            else if (_type == EDynamicValueType.RANGE)
+            if (_type == EDynamicValueType.RANGE)
                 return (_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + _minVal.ToString(Data.Locale) +
                        ":" + _maxVal.ToString(Data.Locale) + ")";
-            else if (_type == EDynamicValueType.ANY)
+            if (_type == EDynamicValueType.ANY)
                 return _behavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 StringBuilder sb = new StringBuilder(_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
                 sb.Append('[');
@@ -1549,8 +1530,7 @@ public readonly struct DynamicFloatValue : IDynamicValue<float>
                 sb.Append(']');
                 return sb.ToString();
             }
-            else
-                return _value.ToString(Data.Locale);
+            return _value.ToString(Data.Locale);
         }
     }
 }
@@ -1620,11 +1600,11 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
     {
         if (type == EDynamicValueType.CONSTANT)
             return constant!;
-        else if (type == EDynamicValueType.ANY)
+        if (type == EDynamicValueType.ANY)
             return _choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-        else if (type == EDynamicValueType.SET)
+        if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             string[] arr = set.Set;
             for (int i = 0; i < set.Length; i++)
@@ -1636,8 +1616,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             sb.Append(']');
             return sb.ToString();
         }
-        else
-            return constant!;
+        return constant!;
     }
     public void Write(Utf8JsonWriter writer)
     {
@@ -1651,7 +1630,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         }
         else if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             string[] arr = set.Set;
             for (int i = 0; i < set.Length; i++)
@@ -1738,7 +1717,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             if (_type == EDynamicValueType.ANY && _behavior == EChoiceBehavior.ALLOW_ALL) return true;
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value!.Equals(value, StringComparison.OrdinalIgnoreCase);
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 for (int i = 0; i < _values!.Length; i++)
                     if (_values[i].Equals(value, StringComparison.OrdinalIgnoreCase)) return true;
@@ -1751,7 +1730,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
             if (str == null) return false;
             if (str.Length > 1 && (str[0] == '$' || str[0] == '#'))
             {
-                if (str == "$*" || str == "#*")
+                if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
                     if (str[0] == '#')
                         _behavior = EChoiceBehavior.ALLOW_ALL;
@@ -1763,7 +1742,8 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
                     _type = EDynamicValueType.ANY;
                     return true;
                 }
-                else if (reader.TryReadStringValue(out DynamicStringValue v, _isKitSelector))
+
+                if (reader.TryReadStringValue(out DynamicStringValue v, _isKitSelector))
                 {
                     FromValue(ref v);
                     if (_behavior == EChoiceBehavior.ALLOW_ONE && _type != EDynamicValueType.CONSTANT)
@@ -1812,9 +1792,9 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
         {
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value!;
-            else if (_type == EDynamicValueType.ANY)
+            if (_type == EDynamicValueType.ANY)
                 return _behavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 StringBuilder sb = new StringBuilder(_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
                 sb.Append('[');
@@ -1827,8 +1807,7 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
                 sb.Append(']');
                 return sb.ToString();
             }
-            else
-                return _value!;
+            return _value!;
         }
         public string GetKitNames(ulong player = 0)
         {
@@ -1845,11 +1824,12 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
                     }
                     return _kitName;
                 }
-                else if (_type == EDynamicValueType.ANY)
+
+                if (_type == EDynamicValueType.ANY)
                 {
                     return "any";
                 }
-                else if (_type == EDynamicValueType.SET)
+                if (_type == EDynamicValueType.SET)
                 {
                     if (_kitNames == null)
                     {
@@ -1881,12 +1861,10 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
 
                     return builder.ToString();
                 }
-                else return _value!;
+                return _value!;
             }
-            else
-            {
-                return ToString();
-            }
+
+            return ToString();
         }
         private static string GetKitName(Kit kit, ulong player)
         {
@@ -1894,10 +1872,10 @@ public readonly struct DynamicStringValue : IDynamicValue<string>
                 language = L.DEFAULT;
             if (kit.SignTexts.TryGetValue(language, out string v))
                 return v;
-            else if (!language.Equals(L.DEFAULT, StringComparison.Ordinal) &&
-                     kit.SignTexts.TryGetValue(L.DEFAULT, out v))
+            if (!language.Equals(L.DEFAULT, StringComparison.Ordinal) &&
+                kit.SignTexts.TryGetValue(L.DEFAULT, out v))
                 return v;
-            else return kit.SignTexts.Values.FirstOrDefault();
+            return kit.SignTexts.Values.FirstOrDefault() ?? kit.Name;
         }
     }
 }
@@ -1971,11 +1949,11 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
     {
         if (type == EDynamicValueType.CONSTANT)
             return constant.ToString("N");
-        else if (type == EDynamicValueType.ANY)
+        if (type == EDynamicValueType.ANY)
             return _choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-        else if (type == EDynamicValueType.SET)
+        if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             for (int i = 0; i < set.Length; i++)
             {
@@ -1985,8 +1963,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             sb.Append(']');
             return sb.ToString();
         }
-        else
-            return constant.ToString("N");
+        return constant.ToString("N");
     }
     public void Write(Utf8JsonWriter writer)
     {
@@ -2000,7 +1977,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         }
         else if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             for (int i = 0; i < set.Length; i++)
             {
@@ -2079,6 +2056,16 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                 else
                 {
                     _values = value.set.Set;
+                    _valuesCache = new TAsset[_values.Length];
+                    bool hasNull = false;
+                    for (int i = 0; i < _values.Length; ++i)
+                    {
+                        TAsset? asset = Assets.find<TAsset>(_values[i]);
+                        if (asset == null)
+                            hasNull = true;
+                        else _valuesCache[i] = asset;
+                    }
+                    _areValuesCached = !hasNull || Level.isLoaded;
                 }
             }
             else if (value.type == EDynamicValueType.ANY && value._choiceBehavior == EChoiceBehavior.ALLOW_ONE)
@@ -2120,7 +2107,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
         /// <summary>Will return <see langword="null"/> if <see cref="ChoiceBehavior"/> is <see cref="EChoiceBehavior.ALLOW_ALL"/> and the value is not of type <see cref="EDynamicValueType.CONSTANT"/>.</summary>
         public Guid InsistValue() => _value;
         public TAsset InsistAssetValue() => (_valueCache ?? (Assets.isLoading ? null : Assets.find<TAsset>(_value)))!;
-        public TAsset[] GetAssetValueSet()
+        public readonly TAsset[] GetAssetValueSet()
         {
             if (_areValuesCached) return _valuesCache!;
             if (_type == EDynamicValueType.SET)
@@ -2128,21 +2115,11 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                 TAsset[] values = new TAsset[_values!.Length];
                 for (int i = 0; i < values.Length; i++)
                     values[i] = (!Level.isLoaded ? null : Assets.find<TAsset>(_values[i]))!;
-                if (Level.isLoaded)
-                {
-                    _valuesCache = values;
-                    _areValuesCached = true;
-                }
                 return values;
             }
-            if (_valueCache != null)
-                _valuesCache = new TAsset[1] { _valueCache };
-            else
-                _valuesCache = new TAsset[0];
-            _areValuesCached = !Assets.isLoading;
-            return _valuesCache;
+            return _valuesCache!;
         }
-        public string GetCommaList()
+        public readonly string GetCommaList()
         {
             if (_valueCache != null)
                 return GetName(_valueCache, _assetType) ?? "null";
@@ -2150,14 +2127,14 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             {
                 if (typeof(TAsset) == typeof(ItemAsset))
                     return "any item";
-                else if (typeof(TAsset) == typeof(VehicleAsset))
+                if (typeof(TAsset) == typeof(VehicleAsset))
                     return "any vehicle";
-                else if (typeof(TAsset) == typeof(Asset))
+                if (typeof(TAsset) == typeof(Asset))
                     return "any asset";
+
                 if (_assetType == EAssetType.ITEM)
                     return " any " + typeof(TAsset).Name.Replace("Item", string.Empty).Replace("Asset", string.Empty).ToLower();
-                else
-                    return " any " + typeof(TAsset).Name.Replace("Asset", string.Empty).ToLower();
+                return " any " + typeof(TAsset).Name.Replace("Asset", string.Empty).ToLower();
             }
             if (!_areValuesCached) GetAssetValueSet();
             if (_valuesCache != null)
@@ -2180,24 +2157,24 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             }
             return string.Empty;
         }
-        public bool IsMatch(Guid value)
+        public readonly bool IsMatch(Guid value)
         {
             if (_type == EDynamicValueType.ANY) return true;
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value == value;
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 for (int i = 0; i < _values!.Length; i++)
                     if (_values[i] == value) return true;
             }
             return false;
         }
-        public bool IsMatch(ushort value)
+        public readonly bool IsMatch(ushort value)
         {
             if (_type == EDynamicValueType.ANY) return true;
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return (_valueCache ?? Assets.find<TAsset>(_value))?.id == value;
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 TAsset[] assets = GetAssetValueSet();
                 for (int i = 0; i < assets.Length; i++)
@@ -2205,13 +2182,13 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             }
             return false;
         }
-        public bool IsMatch(TAsset value)
+        public readonly bool IsMatch(TAsset value)
         {
             if (value == null) return false;
             if (_type == EDynamicValueType.ANY) return true;
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value == value.GUID;
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 for (int i = 0; i < _values!.Length; i++)
                     if (_values[i] == value.GUID) return true;
@@ -2224,7 +2201,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             if (str == null) return false;
             if (str.Length > 1 && (str[0] == '$' || str[0] == '#'))
             {
-                if (str == "$*" || str == "#*")
+                if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
                     if (str[0] == '#')
                         _behavior = EChoiceBehavior.ALLOW_ALL;
@@ -2236,7 +2213,8 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                     _type = EDynamicValueType.ANY;
                     return true;
                 }
-                else if (reader.TryReadAssetValue(out DynamicAssetValue<TAsset> v))
+
+                if (reader.TryReadAssetValue(out DynamicAssetValue<TAsset> v))
                 {
                     FromValue(ref v);
                     if (_behavior == EChoiceBehavior.ALLOW_ONE && _type != EDynamicValueType.CONSTANT)
@@ -2252,7 +2230,7 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
             }
             return false;
         }
-        public void Write(Utf8JsonWriter writer)
+        public readonly void Write(Utf8JsonWriter writer)
         {
             if (_behavior == EChoiceBehavior.ALLOW_ONE || _type == EDynamicValueType.CONSTANT)
             {
@@ -2279,13 +2257,13 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                 writer.WriteStringValue(_value);
             }
         }
-        public override string ToString()
+        public readonly override string ToString()
         {
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.ToString("N");
-            else if (_type == EDynamicValueType.ANY)
+            if (_type == EDynamicValueType.ANY)
                 return _behavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 StringBuilder sb = new StringBuilder(_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
                 sb.Append('[');
@@ -2297,16 +2275,15 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                 sb.Append(']');
                 return sb.ToString();
             }
-            else
-                return _value.ToString("N");
+            return _value.ToString("N");
         }
-        public string? ToStringAssetNames()
+        public readonly string? ToStringAssetNames()
         {
             if (_type == EDynamicValueType.CONSTANT)
                 return GetName(Assets.find(_value), _assetType);
-            else if (_type == EDynamicValueType.ANY)
+            if (_type == EDynamicValueType.ANY)
                 return _behavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 StringBuilder sb = new StringBuilder(_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
                 sb.Append('[');
@@ -2318,13 +2295,12 @@ public readonly struct DynamicAssetValue<TAsset> : IDynamicValue<Guid> where TAs
                 sb.Append(']');
                 return sb.ToString();
             }
-            else
-                return GetName(Assets.find(_value), _assetType);
+            return GetName(Assets.find(_value), _assetType);
         }
         private static string? GetName(Asset asset, EAssetType type)
         {
             if (asset == null) return null;
-            else return asset.FriendlyName;
+            return asset.FriendlyName;
         }
     }
 }
@@ -2392,8 +2368,8 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         _choiceBehavior = choiceBehavior;
     }
 
-    public readonly IDynamicValue<TEnum>.IChoice GetValue() => GetValueIntl();
-    internal readonly Choice GetValueIntl()
+    public IDynamicValue<TEnum>.IChoice GetValue() => GetValueIntl();
+    internal Choice GetValueIntl()
     {
         return new Choice(this);
     }
@@ -2409,14 +2385,14 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
     {
         if (type == EDynamicValueType.CONSTANT)
             return constant.ToString();
-        else if (type == EDynamicValueType.RANGE)
+        if (type == EDynamicValueType.RANGE)
             return (_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + range.Minimum.ToString() +
                    ":" + range.Maximum.ToString() + ")";
-        else if (type == EDynamicValueType.ANY)
+        if (type == EDynamicValueType.ANY)
             return _choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-        else if (type == EDynamicValueType.SET)
+        if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             for (int i = 0; i < set.Length; i++)
             {
@@ -2426,8 +2402,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             sb.Append(']');
             return sb.ToString();
         }
-        else
-            return constant.ToString();
+        return constant.ToString();
     }
     public void Write(Utf8JsonWriter writer)
     {
@@ -2446,7 +2421,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         }
         else if (type == EDynamicValueType.SET)
         {
-            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? '$' : '#');
+            StringBuilder sb = new StringBuilder(_choiceBehavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
             sb.Append('[');
             for (int i = 0; i < set.Length; i++)
             {
@@ -2549,21 +2524,22 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
         }
         /// <summary>Will return <see langword="null"/> if <see cref="ChoiceBehavior"/> is <see cref="EChoiceBehavior.ALLOW_ALL"/> and the value is not of type <see cref="EDynamicValueType.CONSTANT"/>.</summary>
         public TEnum InsistValue() => _value;
-        public bool IsMatch(TEnum value)
+        public readonly bool IsMatch(TEnum value)
         {
             if (_type == EDynamicValueType.ANY) return true;
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.Equals(value);
-            else if (_type == EDynamicValueType.RANGE)
+            if (_type == EDynamicValueType.RANGE)
             {
                 int r = (int)(object)value;
                 return r >= _maxValUnderlying && r <= _maxValUnderlying;
             }
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 for (int i = 0; i < _values!.Length; i++)
                     if (_value.Equals(value)) return true;
             }
+
             return false;
         }
         public bool Read(ref Utf8JsonReader reader)
@@ -2572,7 +2548,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             if (str == null) return false;
             if (str.Length > 1 && (str[0] == '$' || str[0] == '#'))
             {
-                if (str == "$*" || str == "#*")
+                if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
                     if (str[0] == '#')
                         _behavior = EChoiceBehavior.ALLOW_ALL;
@@ -2584,7 +2560,8 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
                     _type = EDynamicValueType.ANY;
                     return true;
                 }
-                else if (reader.TryReadEnumValue(out DynamicEnumValue<TEnum> v))
+
+                if (reader.TryReadEnumValue(out DynamicEnumValue<TEnum> v))
                 {
                     FromValue(ref v);
                     if (_behavior == EChoiceBehavior.ALLOW_ONE && _type != EDynamicValueType.CONSTANT)
@@ -2600,7 +2577,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             }
             return false;
         }
-        public void Write(Utf8JsonWriter writer)
+        public readonly void Write(Utf8JsonWriter writer)
         {
             if (_behavior == EChoiceBehavior.ALLOW_ONE || _type == EDynamicValueType.CONSTANT)
             {
@@ -2631,16 +2608,16 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
                 writer.WriteStringValue(_value.ToString());
             }
         }
-        public override string ToString()
+        public override readonly string ToString()
         {
             if (_type == EDynamicValueType.CONSTANT || _behavior == EChoiceBehavior.ALLOW_ONE)
                 return _value.ToString();
-            else if (_type == EDynamicValueType.RANGE)
+            if (_type == EDynamicValueType.RANGE)
                 return (_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#") + "(" + _minVal.ToString() +
                        ":" + _maxVal.ToString() + ")";
-            else if (_type == EDynamicValueType.ANY)
+            if (_type == EDynamicValueType.ANY)
                 return _behavior == EChoiceBehavior.ALLOW_ONE ? "$*" : "#*";
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 StringBuilder sb = new StringBuilder(_behavior == EChoiceBehavior.ALLOW_ONE ? "$" : "#");
                 sb.Append('[');
@@ -2652,8 +2629,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
                 sb.Append(']');
                 return sb.ToString();
             }
-            else
-                return _value.ToString();
+            return _value.ToString();
         }
         public string GetCommaList(ulong player)
         {
@@ -2661,11 +2637,11 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
             {
                 return Localization.TranslateEnum(_value, player);
             }
-            else if (_type == EDynamicValueType.ANY)
+            if (_type == EDynamicValueType.ANY)
             {
                 return "any";
             }
-            else if (_type == EDynamicValueType.SET)
+            if (_type == EDynamicValueType.SET)
             {
                 StringBuilder builder = new StringBuilder();
                 for (int i = 0; i < _values!.Length; ++i)
@@ -2685,7 +2661,7 @@ public readonly struct DynamicEnumValue<TEnum> : IDynamicValue<TEnum> where TEnu
 
                 return builder.ToString();
             }
-            else return Localization.TranslateEnum(_value!, player);
+            return Localization.TranslateEnum(_value!, player);
         }
     }
 }

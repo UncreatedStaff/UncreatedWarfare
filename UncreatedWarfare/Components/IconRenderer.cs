@@ -1,6 +1,8 @@
-﻿using SDG.Unturned;
+﻿using SDG.NetTransport;
+using SDG.Unturned;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.FOBs;
@@ -12,10 +14,10 @@ namespace Uncreated.Warfare.Components;
 
 public static class IconManager
 {
-    private static readonly List<IconRenderer> icons = new List<IconRenderer>();
+    private static readonly List<IconRenderer> Icons = new List<IconRenderer>();
     static IconManager()
     {
-        EventDispatcher.OnGroupChanged += OnGroupChanged;
+        EventDispatcher.GroupChanged += OnGroupChanged;
     }
     public static void OnLevelLoaded()
     {
@@ -33,38 +35,38 @@ public static class IconManager
         BarricadeData data = drop.GetServersideData();
         // FOB radio
         if (isFOBRadio && Gamemode.Config.EffectMarkerRadio.ValidReference(out Guid guid))
-            AttachIcon(guid, drop.model, data.group, 3.5F);
+            AttachIcon(guid, drop.model, data.group, 3.5f);
 
         // FOB radio damaged
         else if (Gamemode.Config.BarricadeFOBRadioDamaged.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerRadioDamaged.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 3.5F);
+            AttachIcon(guid, drop.model, data.group, 3.5f);
 
         // FOB bunker
         else if (Gamemode.Config.BarricadeFOBBunker.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerBunker.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 5.5F);
+            AttachIcon(guid, drop.model, data.group, 5.5f);
 
         // ammo bag
         else if (Gamemode.Config.BarricadeAmmoBag.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerAmmo.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 1);
+            AttachIcon(guid, drop.model, data.group, 1f);
 
         // ammo crate
         else if (Gamemode.Config.BarricadeAmmoCrate.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerAmmo.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 1.75F);
+            AttachIcon(guid, drop.model, data.group, 1.75f);
 
         // repair station
         else if (Gamemode.Config.BarricadeRepairStation.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerRepair.ValidReference(out guid))
-            AttachIcon(guid, drop.model, data.group, 4.5F);
+            AttachIcon(guid, drop.model, data.group, 4.5f);
 
-        else if (Data.Is(out Insurgency _))
+        else if (Data.Is<Insurgency>())
         {
             // cache
             if (Gamemode.Config.BarricadeInsurgencyCache.MatchGuid(drop.asset.GUID) && Gamemode.Config.EffectMarkerCacheDefend.ValidReference(out guid))
-                AttachIcon(guid, drop.model, data.group, 2.25F);
+                AttachIcon(guid, drop.model, data.group, 2.25f);
         }
 
         // buildable
         else if (Gamemode.Config.EffectMarkerBuildable.ValidReference(out guid) && FOBManager.Config.Buildables.Exists(b => b.Foundation.MatchGuid(drop.asset.GUID) && b.Type != EBuildableType.FORTIFICATION))
-            AttachIcon(guid, drop.model, data.group, 2F);
+            AttachIcon(guid, drop.model, data.group, 2f);
     }
     private static void OnGroupChanged(GroupChanged e)
     {
@@ -75,23 +77,23 @@ public static class IconManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<Guid> seenTypes = new List<Guid>(icons.Count);
+        List<Guid> seenTypes = clearOld ? new List<Guid>(Icons.Count) : null!;
 
         ulong team = player.GetTeam();
-        foreach (IconRenderer icon in icons)
+        foreach (IconRenderer icon in Icons)
         {
             if (clearOld)
             {
                 if (!seenTypes.Contains(icon.EffectGUID))
                 {
                     seenTypes.Add(icon.EffectGUID);
-                    EffectManager.askEffectClearByID(icon.EffectID, player.Connection);
+                    EffectManager.ClearEffectByGuid(icon.EffectGUID, player.Connection);
                 }
             }
 
             if (icon.Team == 0 || (icon.Team != 0 && icon.Team == team))
             {
-                EffectManager.sendEffect(icon.EffectID, player.Connection, icon.Point);
+                icon.SpawnNewIcon(player.Connection);
             }
         }
     }
@@ -103,31 +105,19 @@ public static class IconManager
         IconRenderer icon = transform.gameObject.AddComponent<IconRenderer>();
         icon.Initialize(effectGUID, new Vector3(transform.position.x, transform.position.y + yOffset, transform.position.z), team);
 
-        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-        {
-            if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
-            {
-                EffectManager.sendEffect(icon.EffectID, player.Connection, icon.Point);
-            }
-        }
+        icon.SpawnNewIcon(
+            (icon.Team == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
+            .Select(x => x.Connection));
 
-        icons.Add(icon);
-
-        //IconRenderer[] components = transform.gameObject.GetComponents<IconRenderer>();
+        Icons.Add(icon);
     }
     public static void DeleteIcon(IconRenderer icon)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
-        {
-            if (icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
-            {
-                EffectManager.askEffectClearByID(icon.EffectID, player.Connection);
-            }
-        }
-        icons.Remove(icon);
+        EffectManager.ClearEffectByGuid_AllPlayers(icon.EffectGUID);
+        Icons.Remove(icon);
         icon.Destroy();
 
         SpawnNewIconsOfType(icon.EffectGUID);
@@ -137,14 +127,13 @@ public static class IconManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        foreach (UCPlayer player in PlayerManager.OnlinePlayers)
+        foreach (IconRenderer icon in Icons)
         {
-            foreach (IconRenderer icon in icons)
+            if (icon.EffectGUID == effectGUID)
             {
-                if (icon.EffectGUID == effectGUID && icon.Team == 0 || (icon.Team != 0 && icon.Team == player.GetTeam()))
-                {
-                    icon.SpawnNewIcon(player);
-                }
+                icon.SpawnNewIcon(
+                    (icon.Team == 0 ? PlayerManager.OnlinePlayers : PlayerManager.OnlinePlayers.Where(x => x.GetTeam() == icon.Team))
+                    .Select(x => x.Connection));
             }
         }
     }
@@ -154,7 +143,7 @@ public static class IconManager
 public class IconRenderer : MonoBehaviour
 {
     public Guid EffectGUID { get; private set; }
-    public ushort EffectID { get; private set; }
+    public EffectAsset Effect { get; private set; }
     public ulong Team { get; private set; }
     public Vector3 Point { get; private set; }
     public void Initialize(Guid effectGUID, Vector3 point, ulong team = 0)
@@ -167,7 +156,7 @@ public class IconRenderer : MonoBehaviour
 
         if (Assets.find(EffectGUID) is EffectAsset effect)
         {
-            EffectID = effect.id;
+            Effect = effect;
         }
         else
             L.LogWarning("IconSpawner could not start: Effect asset not found: " + effectGUID);
@@ -177,8 +166,16 @@ public class IconRenderer : MonoBehaviour
     {
         Destroy(this);
     }
-    public void SpawnNewIcon(UCPlayer player)
+    public void SpawnNewIcon(ITransportConnection player)
     {
-        EffectManager.sendEffect(EffectID, player.Connection, Point);
+        if (Effect == null)
+            return;
+        F.TriggerEffectReliable(Effect, player, Point);
+    }
+    public void SpawnNewIcon(IEnumerable<ITransportConnection> players)
+    {
+        if (Effect == null)
+            return;
+        F.TriggerEffectReliable(Effect, players, Point);
     }
 }

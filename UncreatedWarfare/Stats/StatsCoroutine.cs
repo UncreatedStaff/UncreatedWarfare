@@ -63,7 +63,7 @@ namespace Uncreated.Warfare.Stats
                             {
                                 if (afk.time == n)
                                 {
-                                    FPlayerName names = F.GetPlayerOriginalNames(ucplayer);
+                                    PlayerNames names = F.GetPlayerOriginalNames(ucplayer);
                                     L.Log($"{names.PlayerName} ({ucplayer.Steam64}) was auto-kicked for being AFK.", ConsoleColor.Cyan);
                                     Provider.kick(ucplayer.CSteamID, "Auto-kick for being AFK.");
                                     previousPositions.Remove(ucplayer.Steam64);

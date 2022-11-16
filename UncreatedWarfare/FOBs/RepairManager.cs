@@ -122,7 +122,8 @@ namespace Uncreated.Warfare.FOBs
             }
 
             VehicleManager.sendVehicleHealth(vehicle, newHealth);
-            EffectManager.sendEffect(27, EffectManager.SMALL, vehicle.transform.position);
+            if (Gamemode.Config.EffectRepair.ValidReference(out EffectAsset effect))
+                F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
             vehicle.updateVehicle();
         }
 
@@ -138,7 +139,8 @@ namespace Uncreated.Warfare.FOBs
 
             vehicle.askFillFuel(amount);
 
-            EffectManager.sendEffect(38316, EffectManager.SMALL, vehicle.transform.position);
+            if (Gamemode.Config.EffectRefuel.ValidReference(out EffectAsset effect))
+                F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
             vehicle.updateVehicle();
         }
     }
@@ -151,9 +153,9 @@ namespace Uncreated.Warfare.FOBs
         public void Initialize(RepairStation repairStation)
         {
             parent = repairStation;
-            StartCoroutine(RepaitStationLoop());
+            StartCoroutine(RepairStationLoop());
         }
-        private IEnumerator<WaitForSeconds> RepaitStationLoop()
+        private IEnumerator<WaitForSeconds> RepairStationLoop()
         {
             while (parent.IsActive)
             {
@@ -204,7 +206,7 @@ namespace Uncreated.Warfare.FOBs
                         }
                         else if (parent.structure.group == nearby[i].lockedGroup.m_SteamID)
                         {
-                            FOB? fob = FOB.GetNearestFOB(parent.structure.point, EFOBRadius.FULL_WITH_BUNKER_CHECK, parent.structure.group);
+                            FOB? fob = FOB.GetNearestFOB(parent.structure.point, EfobRadius.FULL_WITH_BUNKER_CHECK, parent.structure.group);
                             if (F.IsInMain(parent.structure.point) || (fob != null && fob.Build > 0))
                             {
                                 parent.VehiclesRepairing.Add(nearby[i].instanceID, 9);

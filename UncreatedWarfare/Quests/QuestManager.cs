@@ -31,7 +31,7 @@ public static class QuestManager
     public static readonly string QUEST_LOCATION = Path.Combine(QUEST_FOLDER, "quest_data.json");
     static QuestManager()
     {
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
+        EventDispatcher.PlayerDied += OnPlayerDied;
     }
     public static void Init()
     {

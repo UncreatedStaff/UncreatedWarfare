@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Warfare.Teams;
 using UnityEngine;
 
 namespace Uncreated.Warfare.Vehicles;
@@ -101,15 +102,20 @@ public static class UCVehicleManager
         vehicles.Clear();
         return newvehicles;
     }
-    public static InteractableVehicle GetNearestLogi(Vector3 point, float radius, ulong team = 0)
+    public static InteractableVehicle? GetNearestLogi(Vector3 point, float radius, ulong team = 0)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         List<InteractableVehicle> vehicles = new List<InteractableVehicle>();
         VehicleManager.getVehiclesInRadius(point, Mathf.Pow(radius, 2), vehicles);
-        return vehicles.FirstOrDefault(v => v.lockedGroup.m_SteamID == team &&
-        VehicleBay.VehicleExists(v.asset.GUID, out VehicleData vehicleData) &&
-        (vehicleData.Type == EVehicleType.LOGISTICS || vehicleData.Type == EVehicleType.HELI_TRANSPORT));
+        VehicleBay? bay = VehicleBay.GetSingletonQuick();
+        if (bay == null)
+            return null;
+        team = TeamManager.GetGroupID(team);
+        return vehicles.FirstOrDefault(v =>
+            v.lockedGroup.m_SteamID == team &&
+            bay.GetDataSync(v.asset.GUID) is { } vehicleData &&
+            vehicleData.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT);
     }
 }

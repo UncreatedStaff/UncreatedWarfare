@@ -81,7 +81,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         StartTime = Time.realtimeSinceStartup;
         if (Data.LastsUntilDeath)
         {
-            EventDispatcher.OnPlayerDied += OnPlayerDied;
+            EventDispatcher.PlayerDied += OnPlayerDied;
             if (Data.TickSpeed > 0f)
                 _coroutine = StartCoroutine(EffectCoroutine());
         }
@@ -96,7 +96,7 @@ public abstract class Trait : MonoBehaviour, ITranslationArgument
         if (e.Player.Steam64 != TargetPlayer.Steam64)
             return;
 
-        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+        EventDispatcher.PlayerDied -= OnPlayerDied;
         ActiveTime = Time.realtimeSinceStartup - StartTime;
         if (_coroutine != null)
         {

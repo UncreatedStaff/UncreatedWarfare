@@ -92,7 +92,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     private string? _lang;
     private EAdminType? _pLvl;
     private RankData? _rank;
-    private FPlayerName _cachedName = FPlayerName.Nil;
+    private PlayerNames _cachedName;
     public UCPlayer(CSteamID steamID, string kitName, Player player, string characterName, string nickName, bool donator)
     {
         Steam64 = steamID.m_SteamID;
@@ -111,7 +111,9 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         Squad = null;
         Player = player;
         CSteamID = steamID;
-        CharacterName = characterName;
+        if (!Data.OriginalPlayerNames.TryGetValue(Steam64, out _cachedName))
+            _cachedName = new PlayerNames(player);
+        else Data.OriginalPlayerNames.Remove(Steam64);
         NickName = nickName;
         IsOnline = true;
         IsOtherDonator = donator;
@@ -246,12 +248,12 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         get => Rank.TotalXP;
         set => _rank = new RankData(value);
     }
-    public FPlayerName Name
+    public PlayerNames Name
     {
         get
         {
-            if (_cachedName == FPlayerName.Nil)
-                _cachedName = new FPlayerName
+            if (_cachedName == PlayerNames.Nil)
+                _cachedName = new PlayerNames
                 {
                     Steam64 = Steam64,
                     CharacterName = Player.channel.owner.playerID.characterName,
@@ -574,7 +576,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     }
     public int CompareTo(UCPlayer obj) => Steam64.CompareTo(obj.Steam64);
     private bool DownloadKitsSpinWaitCheck() => HasDownloadedKits;
-    public async Task DownloadKits(bool @lock)
+    public async Task DownloadKits(bool @lock, CancellationToken token = default)
     {
         if (IsDownloadingKits)
         {
@@ -583,7 +585,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
         IsDownloadingKits = true;
         if (@lock)
-            await PurchaseSync.WaitAsync();
+            await PurchaseSync.WaitAsync(token).ConfigureAwait(false);
         try
         {
             KitManager singleton = KitManager.GetSingleton();
@@ -594,7 +596,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
                 {
                     if (singleton.Kits.TryGetValue(reader.GetInt32(0), out Kit kit))
                         kits.Add(kit.Name);
-                });
+                }, token).ConfigureAwait(false);
             AccessibleKits = kits;
         }
         finally
@@ -661,7 +663,7 @@ public interface IPlayer : ITranslationArgument
 public struct OfflinePlayer : IPlayer
 {
     private readonly ulong _s64;
-    private FPlayerName? _names;
+    private PlayerNames? _names;
     public ulong Steam64 => _s64;
     public OfflinePlayer(ulong steam64, bool cacheUsernames = false)
     {
@@ -671,7 +673,7 @@ public struct OfflinePlayer : IPlayer
         else
             _names = null;
     }
-    public OfflinePlayer(in FPlayerName names)
+    public OfflinePlayer(in PlayerNames names)
     {
         _s64 = names.Steam64;
         _names = names;

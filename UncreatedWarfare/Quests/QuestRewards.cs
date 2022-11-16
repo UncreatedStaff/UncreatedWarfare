@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Kits;
+using Uncreated.Warfare.Point;
 
 namespace Uncreated.Warfare.Quests;
 public static class QuestRewards
@@ -52,13 +55,15 @@ public class XPReward : IQuestReward
 {
     public EQuestRewardType Type { get; set; }
     public int XP { get; private set; }
-    public void GiveReward(UCPlayer player, BaseQuestTracker tracker)
+    public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
-        Point.Points.AwardXP(player.Player, XP,
+        XPParameters parameters = new XPParameters(player, player.GetTeam(), XP,
+            // todo translation
             Localization.TranslateEnum(tracker.QuestData.QuestType,
                 Data.Languages.TryGetValue(player.Steam64, out string lang)
                     ? lang
-                    : L.DEFAULT).ToUpper() + " REWARD");
+                    : L.DEFAULT).ToUpper() + " REWARD", false);
+        return Points.AwardXPAsync(parameters, token);
     }
     public void Init(object value)
     {
@@ -96,13 +101,15 @@ public class CreditsReward : IQuestReward
 {
     public EQuestRewardType Type { get; set; }
     public int Credits { get; private set; }
-    public void GiveReward(UCPlayer player, BaseQuestTracker tracker)
+    public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
-        Point.Points.AwardCredits(player, Credits,
+        CreditsParameters parameters = new CreditsParameters(player, player.GetTeam(), Credits,
+            // todo translation
             Localization.TranslateEnum(tracker.QuestData.QuestType,
                 Data.Languages.TryGetValue(player.Steam64, out string lang)
                     ? lang
-                    : L.DEFAULT).ToUpper() + " REWARD", redmessage: false);
+                    : L.DEFAULT).ToUpper() + " REWARD");
+        return Points.AwardCreditsAsync(parameters, token);
     }
     public void Init(object value)
     {
@@ -140,9 +147,10 @@ public class RankReward : IQuestReward
 {
     public EQuestRewardType Type { get; set; }
     public int RankOrder { get; private set; }
-    public void GiveReward(UCPlayer player, BaseQuestTracker tracker)
+    public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
         Ranks.RankManager.SkipToRank(player, RankOrder);
+        return Task.CompletedTask;
     }
     public void Init(object value)
     {
@@ -183,10 +191,11 @@ public class KitAccessReward : IQuestReward
 {
     public EQuestRewardType Type { get; set; }
     public string KitId { get; private set; }
-    public void GiveReward(UCPlayer player, BaseQuestTracker tracker)
+    public Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default)
     {
         if (KitManager.KitExists(KitId, out Kit kit))
-            _ = KitManager.GiveAccess(kit, player, EKitAccessType.QUEST_REWARD).ConfigureAwait(false);
+            return KitManager.GiveAccess(kit, player, EKitAccessType.QUEST_REWARD);
+        return Task.CompletedTask;
     }
     public void Init(object value)
     {
@@ -220,7 +229,7 @@ public class KitAccessReward : IQuestReward
 
 public interface IQuestReward : IJsonReadWrite
 {
-    EQuestRewardType Type { get; internal set; }
+    EQuestRewardType Type { get; set; }
     void Init(object value);
-    void GiveReward(UCPlayer player, BaseQuestTracker tracker);
+    Task GiveReward(UCPlayer player, BaseQuestTracker tracker, CancellationToken token = default);
 }

@@ -1,21 +1,21 @@
 ﻿using SDG.Unturned;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 
-public class BuyCommand : Command
+public class BuyCommand : AsyncCommand
 {
     const string HELP = "Must be looking at a kit request sign. Purchases a kit for credits.";
     const string SYNTAX = "/buy [help]";
     public BuyCommand() : base("buy", EAdminType.MEMBER) { }
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -45,40 +45,46 @@ public class BuyCommand : Command
                 throw ctx.Reply(T.RequestKitAlreadyOwned);
             if (ctx.Caller.CachedCredits < kit.CreditCost)
                 throw ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
-
-            Task.Run(async () =>
+            
+            await ctx.Caller.PurchaseSync.WaitAsync(token).ConfigureAwait(false);
+            if (!ctx.Caller.HasDownloadedKits)
+                await ctx.Caller.DownloadKits(false, token).ConfigureAwait(false);
+            try
             {
-                await ctx.Caller.PurchaseSync.WaitAsync();
-                if (!ctx.Caller.HasDownloadedKits)
-                    await ctx.Caller.DownloadKits(false);
-                try
+                await Points.UpdatePointsAsync(ctx.Caller, false, token).ConfigureAwait(false);
+                if (ctx.Caller.CachedCredits < kit.CreditCost)
                 {
-                    await Points.UpdatePointsAsync(ctx.Caller, false);
-                    if (ctx.Caller.CachedCredits < kit.CreditCost)
-                    {
-                        await UCWarfare.ToUpdate();
-                        ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
-                        return;
-                    }
-                    await Points.AwardCreditsAsync(ctx.Caller, -kit.CreditCost, isPurchase: true, @lock: false);
-                }
-                finally
-                {
-                    ctx.Caller.PurchaseSync.Release();
+                    await UCWarfare.ToUpdate();
+                    ctx.Reply(T.RequestKitCantAfford, kit.CreditCost - ctx.Caller.CachedCredits, kit.CreditCost);
+                    return;
                 }
 
-                await KitManager.GiveAccess(kit, ctx.Caller, EKitAccessType.CREDITS);
+                CreditsParameters parameters = new CreditsParameters(ctx.Caller, team, -kit.CreditCost)
+                {
+                    IsPurchase = true,
+                    IsPunishment = false
+                };
+                await Points.AwardCreditsAsync(parameters, token, false).ConfigureAwait(false);
+            }
+            finally
+            {
+                ctx.Caller.PurchaseSync.Release();
+            }
 
-                await UCWarfare.ToUpdate();
+            await KitManager.GiveAccess(kit, ctx.Caller, EKitAccessType.CREDITS).ThenToUpdate(token);
 
-                KitManager.UpdateSigns(kit, ctx.Caller);
-                if (requestsign != null && requestsign.BarricadeTransform != null)
-                    EffectManager.sendEffect(81, 7f, requestsign.BarricadeTransform.position);
-                ctx.Reply(T.RequestKitBought, kit.CreditCost);
-                ctx.LogAction(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS");
-                L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Name);
-            });
-            ctx.Defer();
+            KitManager.UpdateSigns(kit, ctx.Caller);
+            if (Gamemode.Config.EffectPurchase.ValidReference(out EffectAsset effect))
+            {
+                F.TriggerEffectReliable(effect, EffectManager.SMALL,
+                    requestsign.BarricadeTransform != null
+                    ? requestsign.Position
+                    : ctx.Caller.Position);
+            }
+
+            ctx.Reply(T.RequestKitBought, kit.CreditCost);
+            ctx.LogAction(EActionLogType.BUY_KIT, "BOUGHT KIT " + kit.Name + " FOR " + kit.CreditCost + " CREDITS");
+            L.Log(ctx.Caller.Name.PlayerName + " (" + ctx.Caller.Steam64 + ") bought " + kit.Name);
         }
         else throw ctx.Reply(T.RequestNoTarget);
     }

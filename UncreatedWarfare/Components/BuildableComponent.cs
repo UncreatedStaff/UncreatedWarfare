@@ -55,7 +55,7 @@ public class BuildableComponent : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EFOBRadius.FULL, Foundation.GetServersideData().group.GetTeam());
+        FOB? fob = FOB.GetNearestFOB(Foundation.model.position, EfobRadius.FULL, Foundation.GetServersideData().group.GetTeam());
         if (fob == null && Buildable.Type != EBuildableType.RADIO && (builder.KitClass is not EClass.COMBAT_ENGINEER || Buildable.Type is not EBuildableType.FORTIFICATION))
         {
             builder.SendChat(T.BuildTickNotInRadius);
@@ -93,8 +93,8 @@ public class BuildableComponent : MonoBehaviour
         Hits += amount;
 
         //player.SendChat("fob_built");
-
-        EffectManager.sendEffect(38405, EffectManager.MEDIUM, builder.Position);
+        if (Gamemode.Config.EffectDig.ValidReference(out EffectAsset effect))
+            F.TriggerEffectReliable(effect, EffectManager.MEDIUM, builder.Position);
 
         //XPManager.AddXP(builder.Player, XPManager.config.Data.ShovelXP, Math.Round((float)Hits / Buildable.requiredHits * 100F).ToString() + "%", true);
 
@@ -139,7 +139,7 @@ public class BuildableComponent : MonoBehaviour
 
             if (Buildable.Type == EBuildableType.FOB_BUNKER)
             {
-                FOB? fob = FOB.GetNearestFOB(structure.model.position, EFOBRadius.SHORT, data.group);
+                FOB? fob = FOB.GetNearestFOB(structure.model.position, EfobRadius.SHORT, data.group);
                 if (fob != null)
                 {
                     transform.gameObject.AddComponent<SpottedComponent>().Initialize(SpottedComponent.ESpotted.FOB, data.group.GetTeam());
@@ -233,7 +233,7 @@ public class BuildableComponent : MonoBehaviour
 #endif
         if (IsSalvaged)
         {
-            FOB? fob = FOB.GetNearestFOB(Foundation.GetServersideData().point, EFOBRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
+            FOB? fob = FOB.GetNearestFOB(Foundation.GetServersideData().point, EfobRadius.FULL_WITH_BUNKER_CHECK, Foundation.GetServersideData().group);
             if (fob is not null)
             {
                 fob.AddBuild(Buildable.RequiredBuild);
@@ -270,7 +270,7 @@ public class BuildableComponent : MonoBehaviour
                 return false;
             }
         }
-        if (FOB.GetFOBs(team).Count >= FOBManager.Config.FobLimit)
+        if (FOB.GetFoBs(team).Count >= FOBManager.Config.FobLimit)
         {
             // fob limit reached
             placer?.SendChat(T.BuildMaxFOBsHit);
@@ -312,7 +312,7 @@ public class BuildableComponent : MonoBehaviour
             }
         }
 
-        FOB? nearbyFOB = FOB.GetNearestFOB(point, EFOBRadius.FOB_PLACEMENT, team);
+        FOB? nearbyFOB = FOB.GetNearestFOB(point, EfobRadius.FOB_PLACEMENT, team);
         if (nearbyFOB != null)
         {
             // another FOB radio is too close
@@ -329,7 +329,7 @@ public class BuildableComponent : MonoBehaviour
 #endif
         ulong team = placer == null ? 0ul : placer.GetTeam();
 
-        FOB? fob = FOB.GetNearestFOB(point, EFOBRadius.FULL, team);
+        FOB? fob = FOB.GetNearestFOB(point, EfobRadius.FULL, team);
 
         if (buildable.Type == EBuildableType.FOB_BUNKER)
         {

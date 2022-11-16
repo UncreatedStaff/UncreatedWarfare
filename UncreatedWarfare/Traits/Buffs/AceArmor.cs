@@ -55,9 +55,9 @@ public class AceArmor : Buff
                 _refundMultiplier = 0.1f;
             if (string.IsNullOrEmpty(_icon))
                 _icon = Data.Icon;
-            EventDispatcher.OnEnterVehicle += OnEnterVehicle;
-            EventDispatcher.OnExitVehicle += OnExitVehicle;
-            EventDispatcher.OnVehicleSwapSeat += OnSwapSeats;
+            EventDispatcher.EnterVehicle += OnEnterVehicle;
+            EventDispatcher.ExitVehicle += OnExitVehicle;
+            EventDispatcher.VehicleSwapSeat += OnSwapSeats;
         }
 
         base.StartEffect(onStart);
@@ -199,9 +199,9 @@ public class AceArmor : Buff
     {
         if (onDestroy)
         {
-            EventDispatcher.OnVehicleSwapSeat -= OnSwapSeats;
-            EventDispatcher.OnExitVehicle -= OnExitVehicle;
-            EventDispatcher.OnEnterVehicle -= OnEnterVehicle;
+            EventDispatcher.VehicleSwapSeat -= OnSwapSeats;
+            EventDispatcher.ExitVehicle -= OnExitVehicle;
+            EventDispatcher.EnterVehicle -= OnEnterVehicle;
         }
         for (int i = _boosts.Count - 1; i >= 0; --i)
         {

@@ -39,9 +39,9 @@ public static class OffenseManager
     // calls the type initializer
     internal static void Init()
     {
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
-        EventDispatcher.OnPlayerJoined += OnPlayerJoined;
-        EventDispatcher.OnPlayerPending += OnPlayerPending;
+        EventDispatcher.PlayerDied += OnPlayerDied;
+        EventDispatcher.PlayerJoined += OnPlayerJoined;
+        EventDispatcher.PlayerPending += OnPlayerPending;
         Load<Ban>(0);
         Load<Unban>(1);
         Load<Kick>(2);
@@ -54,9 +54,9 @@ public static class OffenseManager
     }
     internal static void Deinit()
     {
-        EventDispatcher.OnPlayerPending -= OnPlayerPending;
-        EventDispatcher.OnPlayerJoined -= OnPlayerJoined;
-        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+        EventDispatcher.PlayerPending -= OnPlayerPending;
+        EventDispatcher.PlayerJoined -= OnPlayerJoined;
+        EventDispatcher.PlayerDied -= OnPlayerDied;
         for (int i = 0; i < _pendings.Length; ++i)
         {
             IList l = _pendings[i];
@@ -522,8 +522,7 @@ public static class OffenseManager
     {
         Task.Run(async () =>
         {
-            await Data.DatabaseManager.AddUnban(violator, caller).ConfigureAwait(false);
-            await UCWarfare.ToUpdate();
+            await Data.DatabaseManager.AddUnban(violator, caller).ThenToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
                 RequestResponse response = await NetCalls.SendPlayerUnbanned.RequestAck(UCWarfare.I.NetClient!, violator, caller, timestamp, 10000);
@@ -667,8 +666,8 @@ public static class OffenseManager
 #endif
         UCPlayer? target = UCPlayer.FromID(targetId);
         UCPlayer? caller = UCPlayer.FromID(callerId);
-        FPlayerName name;
-        FPlayerName callerName;
+        PlayerNames name;
+        PlayerNames callerName;
         uint ipv4;
         List<byte[]> hwids = target is not null ? target.SteamPlayer.playerID.GetHwids().ToList() : (await GetAllHWIDs(targetId).ConfigureAwait(false));
         await UCWarfare.ToUpdate();
@@ -689,7 +688,7 @@ public static class OffenseManager
         if (callerId != 0)
             callerName = F.GetPlayerOriginalNames(callerId);
         else
-            callerName = FPlayerName.Console;
+            callerName = PlayerNames.Console;
         ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
             (duration == -1 ? "PERMANENT" : (duration.ToString(Data.Locale) + " SECONDS")), callerId);
 
@@ -754,7 +753,7 @@ public static class OffenseManager
         UCPlayer? target = UCPlayer.FromID(targetId);
         if (target is null)
             return 2;
-        FPlayerName names = F.GetPlayerOriginalNames(targetId);
+        PlayerNames names = F.GetPlayerOriginalNames(targetId);
         Provider.kick(target.Player.channel.owner.playerID.steamID, reason);
 
         LogKickPlayer(targetId, callerId, reason, DateTime.Now);
@@ -767,7 +766,7 @@ public static class OffenseManager
         }
         else
         {
-            FPlayerName callerNames = F.GetPlayerOriginalNames(callerId);
+            PlayerNames callerNames = F.GetPlayerOriginalNames(callerId);
             L.Log($"{names.PlayerName} ({targetId}) was kicked by {callerNames.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
             UCPlayer? callerPlayer = UCPlayer.FromID(callerId);
             Chat.Broadcast(LanguageSet.AllBut(callerId), T.KickSuccessBroadcast, target as IPlayer ?? names, callerPlayer as IPlayer ?? callerNames);
@@ -782,7 +781,7 @@ public static class OffenseManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        FPlayerName targetNames = F.GetPlayerOriginalNames(targetId);
+        PlayerNames targetNames = F.GetPlayerOriginalNames(targetId);
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
         {
             L.Log(callerId + " not banned.", ConsoleColor.Cyan);
@@ -800,7 +799,7 @@ public static class OffenseManager
         }
         else
         {
-            FPlayerName callerNames = F.GetPlayerOriginalNames(callerId);
+            PlayerNames callerNames = F.GetPlayerOriginalNames(callerId);
             UCPlayer? caller = UCPlayer.FromID(callerId);
             L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {callerNames.PlayerName} ({callerId}).", ConsoleColor.Cyan);
             caller?.SendChat(T.UnbanSuccessFeedback, targetNames);
@@ -819,7 +818,7 @@ public static class OffenseManager
         if (target is null)
             return 2;
         UCPlayer? caller = UCPlayer.FromID(callerId);
-        FPlayerName targetNames = F.GetPlayerOriginalNames(target);
+        PlayerNames targetNames = F.GetPlayerOriginalNames(target);
 
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
 
@@ -838,7 +837,7 @@ public static class OffenseManager
         }
         else
         {
-            FPlayerName callerNames = F.GetPlayerOriginalNames(callerId);
+            PlayerNames callerNames = F.GetPlayerOriginalNames(callerId);
             L.Log($"{targetNames.PlayerName} ({targetId}) was warned by {callerNames.PlayerName} ({caller}) because {reason}.", ConsoleColor.Cyan);
             IPlayer caller2 = caller as IPlayer ?? callerNames;
             Chat.Broadcast(LanguageSet.AllBut(callerId, targetId), T.WarnSuccessBroadcast, target, caller2);
@@ -865,8 +864,8 @@ public static class OffenseManager
         await Data.DatabaseManager.NonQueryAsync(
             "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4, @5);",
             new object[] { target, admin, reason, duration, now, (byte)type }).ConfigureAwait(false);
-        FPlayerName names = await F.GetPlayerOriginalNamesAsync(target).ConfigureAwait(false);
-        FPlayerName names2 = await F.GetPlayerOriginalNamesAsync(admin).ConfigureAwait(false);
+        PlayerNames names = await F.GetPlayerOriginalNamesAsync(target).ConfigureAwait(false);
+        PlayerNames names2 = await F.GetPlayerOriginalNamesAsync(admin).ConfigureAwait(false);
         await UCWarfare.ToUpdate();
         DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : now + TimeSpan.FromSeconds(duration);
         if (muted is not null && muted.TimeUnmuted < unmutedTime)
@@ -940,7 +939,7 @@ public static class OffenseManager
     {
         UCPlayer? caller = UCPlayer.FromID(callerId);
         UCPlayer? onlinePlayer = UCPlayer.FromID(targetId);
-        FPlayerName names = await Data.DatabaseManager.GetUsernamesAsync(targetId).ConfigureAwait(false);
+        PlayerNames names = await Data.DatabaseManager.GetUsernamesAsync(targetId).ConfigureAwait(false);
         if (names.WasFound)
         {
             int rows = await Data.DatabaseManager.NonQueryAsync(
@@ -967,7 +966,7 @@ public static class OffenseManager
                     onlinePlayer.TimeUnmuted = DateTime.MinValue;
                 }
                 LogUnmutePlayer(targetId, callerId, DateTime.Now);
-                FPlayerName n2 = await F.GetPlayerOriginalNamesAsync(callerId).ConfigureAwait(false);
+                PlayerNames n2 = await F.GetPlayerOriginalNamesAsync(callerId).ConfigureAwait(false);
                 await UCWarfare.ToUpdate();
                 if (callerId == 0)
                 {

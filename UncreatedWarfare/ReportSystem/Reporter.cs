@@ -15,11 +15,11 @@ public class Reporter : MonoBehaviour
 {
     void Start()
     {
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
+        EventDispatcher.PlayerDied += OnPlayerDied;
     }
     void OnDestroy()
     {
-        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+        EventDispatcher.PlayerDied -= OnPlayerDied;
     }
     public Report? CreateReport(ulong reporter, ulong violator, string message)
     {

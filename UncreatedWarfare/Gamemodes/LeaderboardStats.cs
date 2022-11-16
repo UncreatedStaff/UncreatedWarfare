@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Uncreated.Framework.UI;
+using Uncreated.Players;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
@@ -262,11 +263,11 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
     }
     protected virtual void Start()
     {
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
+        EventDispatcher.PlayerDied += OnPlayerDied;
     }
     protected virtual void OnDestroy()
     {
-        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+        EventDispatcher.PlayerDied -= OnPlayerDied;
     }
     protected virtual void Update()
     {
@@ -315,7 +316,7 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
                 if (this is ILongestShotTracker ls && e.Cause is EDeathCause.GUN or EDeathCause.SPLASH && 
                    (ls.LongestShot.Player == default || ls.LongestShot.Distance < e.KillDistance))
                 {
-                    ls.LongestShot = new LongestShot(e.Killer.Steam64, e.KillDistance, e.PrimaryAsset, e.KillerTeam);
+                    ls.LongestShot = new LongestShot(e.Killer.Steam64, e.KillDistance, e.PrimaryAsset, e.KillerTeam, e.Killer.Name);
                 }
             }
         }
@@ -459,15 +460,17 @@ public readonly struct LongestShot
     public static readonly LongestShot Nil = default;
     public readonly bool IsValue;
     public readonly ulong Player;
+    public readonly PlayerNames Name;
     public readonly float Distance;
     public readonly Guid Gun;
     public readonly ulong Team;
-    public LongestShot(ulong player, float distance, Guid gun, ulong team)
+    public LongestShot(ulong player, float distance, Guid gun, ulong team, PlayerNames name)
     {
         this.IsValue = true;
         Player = player;
         Distance = distance;
         Gun = gun;
         Team = team;
+        Name = name;
     }
 }

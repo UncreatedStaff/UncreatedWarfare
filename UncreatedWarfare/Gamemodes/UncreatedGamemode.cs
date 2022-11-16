@@ -99,6 +99,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     public virtual bool AllowCosmetics => false;
     public virtual EGamemode GamemodeType => EGamemode.UNDEFINED;
     protected bool HasOnReadyRan => _hasOnReadyRan;
+    public bool EndScreenUp => this is IEndScreen es && es.IsScreenUp;
     protected Gamemode(string name, float eventLoopSpeed)
     {
         this._name = name;
@@ -452,13 +453,13 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     }
     private void InternalSubscribe()
     {
-        EventDispatcher.OnGroupChanged += OnGroupChangedIntl;
-        EventDispatcher.OnPlayerDied += OnPlayerDeath;
+        EventDispatcher.GroupChanged += OnGroupChangedIntl;
+        EventDispatcher.PlayerDied += OnPlayerDeath;
     }
     private void InternalUnsubscribe()
     {
-        EventDispatcher.OnPlayerDied -= OnPlayerDeath;
-        EventDispatcher.OnGroupChanged -= OnGroupChangedIntl;
+        EventDispatcher.PlayerDied -= OnPlayerDeath;
+        EventDispatcher.GroupChanged -= OnGroupChangedIntl;
     }
     /// <summary>Adds a singleton to be loaded at the end of PreInit</summary>
     /// <typeparam name="T">Type of singleton to be loaded.</typeparam>
@@ -471,13 +472,16 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         Data.Singletons.PopulateSingleton(ref field, true);
         _singletons.Add(field);
     }
-    public static void OnStagingComplete()
+    public void OnStagingComplete()
     {
-        if (Data.Gamemode.StagingPhaseOver != null)
+        for (int i = 0; i < _singletons.Count; ++i)
+            if (_singletons[i] is IStagingPhaseOverListener staging)
+                staging.OnStagingPhaseOver();
+        if (StagingPhaseOver != null)
         {
             try
             {
-                Data.Gamemode.StagingPhaseOver.Invoke();
+                StagingPhaseOver.Invoke();
             }
             catch (Exception ex)
             {
@@ -488,8 +492,6 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (VehicleSpawner.Loaded)
-            VehicleSpawner.UpdateSignsWhere(spawn => VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data) && data.HasDelayType(EDelayType.OUT_OF_STAGING));
     }
     protected abstract void EventLoopAction();
     private IEnumerator<WaitForSecondsRealtime> EventLoop()

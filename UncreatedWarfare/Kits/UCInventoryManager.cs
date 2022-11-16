@@ -16,7 +16,7 @@ public static class UCInventoryManager
     {
         try
         {
-            Patches.Patcher.Patch(
+            Harmony.Patches.Patcher.Patch(
                 typeof(PlayerEquipment).GetMethod("InitializePlayer", BindingFlags.Instance | BindingFlags.NonPublic),
                 prefix: new HarmonyMethod(
                     typeof(UCInventoryManager).GetMethod("GlassesFix", BindingFlags.Static | BindingFlags.NonPublic)));

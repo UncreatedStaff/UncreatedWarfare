@@ -18,6 +18,7 @@ using Uncreated.Warfare.Deaths;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Flags;
 using Uncreated.Warfare.Gamemodes.Flags.TeamCTF;
+using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.ReportSystem;
 using Uncreated.Warfare.Singletons;
@@ -31,19 +32,19 @@ public static class Data
 {
     public static class Paths
     {
-        public static readonly char[] BAD_FILE_NAME_CHARACTERS = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
+        public static readonly char[] BadFileNameCharacters = new char[] { '>', ':', '"', '/', '\\', '|', '?', '*' };
         public static readonly string BaseDirectory = Path.Combine(Environment.CurrentDirectory, "Uncreated", "Warfare") + Path.DirectorySeparatorChar;
-        private static string? mapCache;
+        private static string? _mapCache;
         public static string MapStorage
         {
             get
             {
-                if (mapCache is null)
+                if (_mapCache is null)
                 {
                     if (Provider.map == default) throw new Exception("Map not yet set.");
-                    mapCache = Path.Combine(BaseDirectory, "Maps", Provider.map.RemoveMany(false, BAD_FILE_NAME_CHARACTERS)) + Path.DirectorySeparatorChar;
+                    _mapCache = Path.Combine(BaseDirectory, "Maps", Provider.map.RemoveMany(false, BadFileNameCharacters)) + Path.DirectorySeparatorChar;
                 }
-                return mapCache;
+                return _mapCache;
             }
         }
         private static string? _flagCache;
@@ -73,7 +74,7 @@ public static class Data
         public static string VehicleStorage => _vehicleCache ??= Path.Combine(MapStorage, "Vehicles") + Path.DirectorySeparatorChar;
         public static void OnMapChanged()
         {
-            mapCache = null;
+            _mapCache = null;
             _flagCache = null;
             _structureCache = null;
             _vehicleCache = null;
@@ -98,6 +99,7 @@ public static class Data
     public static Dictionary<string, Vector3> ExtraPoints;
     public static Dictionary<ulong, string> DefaultPlayerNames;
     public static Dictionary<ulong, string> Languages;
+    public static Dictionary<ulong, PlayerNames> OriginalPlayerNames;
     public static Dictionary<string, LanguageAliasSet> LanguageAliases;
     public static Dictionary<ulong, UCPlayerData> PlaytimeComponents = new Dictionary<ulong, UCPlayerData>();
     internal static JsonZoneProvider ZoneProvider;
@@ -106,8 +108,8 @@ public static class Data
     public static Gamemode Gamemode;
     public static bool TrackStats = true;
     internal static MethodInfo ReplicateStance;
-    internal static ICommandInputOutput? defaultIOHandler;
-    public static Reporter Reporter;
+    internal static ICommandInputOutput? DefaultIOHandler;
+    public static Reporter? Reporter;
     public static DeathTracker DeathTracker;
     internal static ClientStaticMethod<byte, byte, uint, bool> SendDestroyItem;
     internal static ClientInstanceMethod<byte[]>? SendUpdateBarricadeState;
@@ -122,7 +124,7 @@ public static class Data
     internal static ClientStaticMethod SendMultipleBarricades;
     internal static ClientStaticMethod SendEffectClearAll;
     internal static ClientStaticMethod<CSteamID, string, EChatMode, Color, bool, string> SendChatIndividual;
-    public static bool UseFastKits = false;
+    public static bool UseFastKits;
     internal static ClientInstanceMethod? SendInventory;
     internal delegate void OutputToConsole(string value, ConsoleColor color);
     internal static OutputToConsole? OutputToConsoleMethod;
@@ -149,11 +151,11 @@ public static class Data
             FieldInfo? defaultIoHandlerFieldInfo = typeof(CommandWindow).GetField("defaultIOHandler", BindingFlags.Instance | BindingFlags.NonPublic);
             if (defaultIoHandlerFieldInfo != null)
             {
-                defaultIOHandler = (ICommandInputOutput)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
-                MethodInfo? appendConsoleMethod = defaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
+                DefaultIOHandler = (ICommandInputOutput)defaultIoHandlerFieldInfo.GetValue(Dedicator.commandWindow);
+                MethodInfo? appendConsoleMethod = DefaultIOHandler.GetType().GetMethod("outputToConsole", BindingFlags.NonPublic | BindingFlags.Instance);
                 if (appendConsoleMethod != null)
                 {
-                    OutputToConsoleMethod = (OutputToConsole)appendConsoleMethod.CreateDelegate(typeof(OutputToConsole), defaultIOHandler);
+                    OutputToConsoleMethod = (OutputToConsole)appendConsoleMethod.CreateDelegate(typeof(OutputToConsole), DefaultIOHandler);
                     L.Log("Gathered IO Methods for Colored Console Messages", ConsoleColor.Magenta);
                     return;
                 }

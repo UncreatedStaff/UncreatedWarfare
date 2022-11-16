@@ -53,14 +53,14 @@ public class AmmoCommand : AsyncCommand
                     BarricadeDrop? repairStation = UCBarricadeManager.GetNearbyBarricades(Gamemode.Config.BarricadeRepairStation.Value.Guid,
                     10,
                     vehicle.transform.position,
-                    ctx.Caller!.GetTeam(),
+                    ctx.Caller.GetTeam(),
                     false).FirstOrDefault();
 
                     if (repairStation == null)
                         throw ctx.Reply(T.AmmoNotNearRepairStation);
                 }
 
-                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EFOBRadius.FULL, vehicle.lockedGroup.m_SteamID);
+                FOB? fob = FOB.GetNearestFOB(vehicle.transform.position, EfobRadius.FULL, vehicle.lockedGroup.m_SteamID);
 
                 if (fob == null && !isInMain)
                     throw ctx.Reply(T.AmmoNotNearFOB);
@@ -70,8 +70,8 @@ public class AmmoCommand : AsyncCommand
 
                 if (vehicleData.Items.Length == 0)
                     throw ctx.Reply(T.AmmoVehicleFullAlready);
-
-                EffectManager.sendEffect(30, EffectManager.SMALL, vehicle.transform.position);
+                if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                    F.TriggerEffectReliable(effect, EffectManager.SMALL, vehicle.transform.position);
 
                 foreach (Guid item in vehicleData.Items)
                     if (Assets.find(item) is ItemAsset a)
@@ -138,7 +138,8 @@ public class AmmoCommand : AsyncCommand
                 WipeDroppedItems(ctx.CallerID);
                 KitManager.ResupplyKit(ctx.Caller, kit);
 
-                EffectManager.sendEffect(30, EffectManager.SMALL, ctx.Caller.Position);
+                if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                    F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
 
                 if (isInMain)
                 {
@@ -164,7 +165,9 @@ public class AmmoCommand : AsyncCommand
 
                     ammobag.ResupplyPlayer(ctx.Caller, kit, ammoCost);
 
-                    EffectManager.sendEffect(30, EffectManager.SMALL, ctx.Caller.Position);
+                    if (Gamemode.Config.EffectAmmo.ValidReference(out EffectAsset effect))
+                        F.TriggerEffectReliable(effect, EffectManager.SMALL, ctx.Caller.Position);
+
                     ctx.LogAction(EActionLogType.REQUEST_AMMO, "FOR KIT FROM BAG");
 
                     WipeDroppedItems(ctx.CallerID);

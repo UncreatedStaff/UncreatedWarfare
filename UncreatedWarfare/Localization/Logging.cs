@@ -36,7 +36,7 @@ public static class L
             File.Move(Data.Paths.CurrentLog, n);
         }
         _log = new FileStream(Data.Paths.CurrentLog, FileMode.Create, FileAccess.Write, FileShare.Read);
-        Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(Logs.printLine)),
+        Harmony.Patches.Patcher.Patch(typeof(Logs).GetMethod(nameof(Logs.printLine)),
             prefix: new HarmonyMethod(typeof(L).GetMethod(nameof(PrintLinePatch),
                 BindingFlags.Static | BindingFlags.NonPublic)));
     }
@@ -397,4 +397,13 @@ public static class L
             isRequestingLog = state;
         }*/
     }
+}
+
+public enum LogSeverity : byte
+{
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Exception
 }

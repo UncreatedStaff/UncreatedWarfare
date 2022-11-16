@@ -198,7 +198,7 @@ public class DevCommand : AsyncCommand
 
             ctx.AssertHelpCheck(1, "/dev <onfob|fob>. Gets what FOB you're on, if any.");
 
-            FOB? fob = FOB.GetNearestFOB(ctx.Caller!.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, ctx.Caller!.GetTeam());
+            FOB? fob = FOB.GetNearestFOB(ctx.Caller!.Position, EfobRadius.FULL_WITH_BUNKER_CHECK, ctx.Caller!.GetTeam());
             ctx.ReplyString((fob != null
                 ? $"Your nearest FOB is: {fob.Name.Colorize(fob.UIColor)} ({(ctx.Caller.Position - fob.Position).magnitude}m away)"
                 : "You are not near a FOB.").Colorize("ebd491"));

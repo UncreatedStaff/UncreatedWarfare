@@ -43,17 +43,17 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
     public FOBManager() { }
     public override void Load()
     {
-        EventDispatcher.OnBarricadePlaced += OnBarricadePlaced;
-        EventDispatcher.OnBarricadeDestroyed += OnBarricadeDestroyed;
-        EventDispatcher.OnGroupChanged += OnGroupChanged;
+        EventDispatcher.BarricadePlaced += OnBarricadePlaced;
+        EventDispatcher.BarricadeDestroyed += OnBarricadeDestroyed;
+        EventDispatcher.GroupChanged += OnGroupChanged;
         Singleton = this;
     }
     public override void Unload()
     {
         Singleton = null!;
-        EventDispatcher.OnGroupChanged -= OnGroupChanged;
-        EventDispatcher.OnBarricadeDestroyed -= OnBarricadeDestroyed;
-        EventDispatcher.OnBarricadePlaced -= OnBarricadePlaced;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
+        EventDispatcher.BarricadeDestroyed -= OnBarricadeDestroyed;
+        EventDispatcher.BarricadePlaced -= OnBarricadePlaced;
         Team1FOBs.Clear();
         Team2FOBs.Clear();
         SpecialFOBs.Clear();
@@ -170,7 +170,7 @@ public class FOBManager : BaseSingleton, ILevelStartListener, IGameStartListener
             UnityEngine.Object.Destroy(comp);
         if (Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid guid) && guid == e.ServersideData.barricade.asset.GUID)
         {
-            FOB.GetNearestFOB(e.ServersideData.point, EFOBRadius.SHORT, e.ServersideData.group.GetTeam())?.UpdateBunker(null);
+            FOB.GetNearestFOB(e.ServersideData.point, EfobRadius.SHORT, e.ServersideData.group.GetTeam())?.UpdateBunker(null);
         }
         if (e.Transform.TryGetComponent(out FOBComponent f) && f.Parent != null)
         {

@@ -23,15 +23,15 @@ public class RequestSigns : ListSingleton<RequestSign>
     public override void Load()
     {
         Singleton = this;
-        EventDispatcher.OnGroupChanged += OnGroupChanged;
-        EventDispatcher.OnPlayerJoined += OnPlayerJoined;
-        EventDispatcher.OnPlayerLeaving += OnPlayerLeaving;
+        EventDispatcher.GroupChanged += OnGroupChanged;
+        EventDispatcher.PlayerJoined += OnPlayerJoined;
+        EventDispatcher.PlayerLeaving += OnPlayerLeaving;
     }
     public override void Unload()
     {
-        EventDispatcher.OnPlayerLeaving -= OnPlayerLeaving;
-        EventDispatcher.OnPlayerJoined -= OnPlayerJoined;
-        EventDispatcher.OnGroupChanged -= OnGroupChanged;
+        EventDispatcher.PlayerLeaving -= OnPlayerLeaving;
+        EventDispatcher.PlayerJoined -= OnPlayerJoined;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
         Singleton = null!;
     }
     public static void DropAllSigns()
@@ -280,7 +280,7 @@ public class RequestSign
         }
         else
         {
-            UCBarricadeManager.FindBarricade(InstanceId, out BarricadeDrop? drop);
+            BarricadeDrop? drop = UCBarricadeManager.FindBarricade(InstanceId, Position);
             if (drop != null)
             {
                 BarricadeTransform = drop.model;
@@ -288,14 +288,7 @@ public class RequestSign
             }
             else
             {
-                drop = BarricadeManager.FindBarricadeByRootTransform(BarricadeTransform);
-                if (drop == null)
-                    L.LogError("Failed to find barricade after respawn!");
-                else
-                {
-                    InstanceId = drop.instanceID;
-                    Signs.SendSignUpdate(drop, player);
-                }
+                L.LogError("Failed to find barricade after respawn!");
             }
         }
     }
@@ -315,7 +308,7 @@ public class RequestSign
         }
         else
         {
-            UCBarricadeManager.FindBarricade(InstanceId, out BarricadeDrop? drop);
+            BarricadeDrop? drop = UCBarricadeManager.FindBarricade(InstanceId, Position);
             if (drop != null)
             {
                 BarricadeTransform = drop.model;
@@ -323,14 +316,7 @@ public class RequestSign
             }
             else
             {
-                drop = BarricadeManager.FindBarricadeByRootTransform(BarricadeTransform);
-                if (drop == null)
-                    L.LogError("Failed to find barricade after respawn!");
-                else
-                {
-                    InstanceId = drop.instanceID;
-                    Signs.BroadcastSignUpdate(drop);
-                }
+                L.LogError("Failed to find barricade after respawn!");
             }
         }
     }
@@ -340,7 +326,7 @@ public class RequestSign
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        UCBarricadeManager.FindBarricade(InstanceId, out BarricadeDrop? drop);
+        BarricadeDrop? drop = UCBarricadeManager.FindBarricade(InstanceId, Position);
         bool needsSave = false;
         if (drop == null)
         {

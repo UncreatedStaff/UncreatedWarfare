@@ -28,7 +28,7 @@ internal class DebugComponent : MonoBehaviour
         Reset();
         try
         {
-            Patches.Patcher.Patch(typeof(SteamPlayer).GetMethod(nameof(SteamPlayer.lag), BindingFlags.Instance | BindingFlags.Public),
+            Harmony.Patches.Patcher.Patch(typeof(SteamPlayer).GetMethod(nameof(SteamPlayer.lag), BindingFlags.Instance | BindingFlags.Public),
                 postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod(nameof(LagPostfix), BindingFlags.Static | BindingFlags.NonPublic)));
         }
         catch (Exception ex)
@@ -38,7 +38,7 @@ internal class DebugComponent : MonoBehaviour
         }
         try
         {
-            Patches.Patcher.Patch(typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages", true, false).GetMethod("ReceiveMessageFromClient", BindingFlags.Static | BindingFlags.Public),
+            Harmony.Patches.Patcher.Patch(typeof(Provider).Assembly.GetType("SDG.Unturned.NetMessages", true, false).GetMethod("ReceiveMessageFromClient", BindingFlags.Static | BindingFlags.Public),
                 postfix: new HarmonyMethod(typeof(DebugComponent).GetMethod("ReceiveClientMessagePostfix", BindingFlags.Static | BindingFlags.NonPublic)));
         }
         catch (Exception ex)

@@ -58,11 +58,11 @@ public class TraitManager : ListSingleton<TraitData>, IPlayerPreInitListener, IG
 
 
         KitManager.OnPlayersKitChanged += OnKitChagned;
-        EventDispatcher.OnGroupChanged += OnGroupChanged;
+        EventDispatcher.GroupChanged += OnGroupChanged;
     }
     public override void Unload()
     {
-        EventDispatcher.OnGroupChanged -= OnGroupChanged;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
         KitManager.OnPlayersKitChanged -= OnKitChagned;
         if (ActiveTraits != null)
         {

@@ -23,6 +23,10 @@ public class ReportCommand : AsyncCommand
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+
+        if (Data.Reporter == null)
+            throw ctx.Reply(T.ReportNotConnected);
+
         // /report john greifing keeps using the mortar on the fobs 
         // /report john teamkilling teamkilled 5 teammates
 
@@ -90,7 +94,7 @@ public class ReportCommand : AsyncCommand
             ctx.Reply(T.ReportNotConnected);
             return;
         }
-        FPlayerName targetNames = await F.GetPlayerOriginalNamesAsync(target, token).ThenToUpdate(token);
+        PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(target, token).ThenToUpdate(token);
 
         if (CooldownManager.HasCooldownNoStateCheck(ctx.Caller, ECooldownType.REPORT, out Cooldown cd) && cd.data.Length > 0 && cd.data[0] is ulong ul && ul == target)
         {
@@ -160,7 +164,7 @@ public class ReportCommand : AsyncCommand
             targetPl.SendChat(T.ReportNotifyViolatorMessage2);
         }
 
-        FPlayerName names = await F.GetPlayerOriginalNamesAsync(target);
+        PlayerNames names = await F.GetPlayerOriginalNamesAsync(target);
 
         if (res.Responded && res.Parameters.Length > 1 && res.Parameters[0] is bool success &&
             success && res.Parameters[1] is string messageUrl)
@@ -268,7 +272,7 @@ public class ReportCommand : AsyncCommand
     }
     public async Task<bool> CheckLinked(UCPlayer player, CancellationToken token) =>
         (await Data.DatabaseManager.GetDiscordID(player.Steam64, token).ConfigureAwait(false)) != 0;
-    public void NotifyAdminsOfReport(FPlayerName violator, FPlayerName reporter, Report report, string typename)
+    public void NotifyAdminsOfReport(PlayerNames violator, PlayerNames reporter, Report report, string typename)
     {
         foreach (LanguageSet set in LanguageSet.OfPermission(EAdminType.MODERATOR))
         {

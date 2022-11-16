@@ -65,6 +65,10 @@ public interface IDeclareWinListener
 {
     void OnWinnerDeclared(ulong winner);
 }
+public interface IStagingPhaseOverListener
+{
+    void OnStagingPhaseOver();
+}
 public interface IDeclareWinListenerAsync
 {
     Task OnWinnerDeclared(ulong winner);

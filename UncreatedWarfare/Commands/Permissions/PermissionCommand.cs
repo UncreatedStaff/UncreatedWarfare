@@ -34,7 +34,7 @@ public class PermissionCommand : Command
             {
                 Task.Run(async () =>
                 {
-                    FPlayerName name = await F.GetPlayerOriginalNamesAsync(steam64);
+                    PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64);
                     await UCWarfare.ToUpdate();
                     EAdminType t = PermissionSaver.Instance.GetPlayerPermissionLevel(steam64);
                     if (t == type)
@@ -54,7 +54,7 @@ public class PermissionCommand : Command
         {
             Task.Run(async () =>
             {
-                FPlayerName name = await F.GetPlayerOriginalNamesAsync(steam64);
+                PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64);
                 await UCWarfare.ToUpdate();
                 EAdminType t = PermissionSaver.Instance.GetPlayerPermissionLevel(steam64);
                 if (t == EAdminType.MEMBER)

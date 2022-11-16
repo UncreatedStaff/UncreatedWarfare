@@ -24,21 +24,21 @@ public static class StatsManager
     public static WarfareTeam Team1Stats;
     public static WarfareTeam Team2Stats;
     public static readonly List<WarfareWeapon> Weapons = new List<WarfareWeapon>();
-    private static int weaponCounter = 0;
     public static readonly List<WarfareKit> Kits = new List<WarfareKit>();
-    private static int kitCounter = 0;
     public static readonly List<WarfareVehicle> Vehicles = new List<WarfareVehicle>();
-    private static int vehicleCounter = 0;
     public static readonly List<WarfareStats> OnlinePlayers = new List<WarfareStats>();
-    private static int teamBackupCounter = 0;
-    private static int minsCounter = 0;
+    private static int _weaponCounter;
+    private static int _kitCounter;
+    private static int _vehicleCounter;
+    private static int _teamBackupCounter;
+    private static int _minsCounter;
     public static void LoadEvents()
     {
-        EventDispatcher.OnPlayerDied += OnPlayerDied;
+        EventDispatcher.PlayerDied += OnPlayerDied;
     }
     internal static void UnloadEvents()
     {
-        EventDispatcher.OnPlayerDied -= OnPlayerDied;
+        EventDispatcher.PlayerDied -= OnPlayerDied;
     }
     public static void LoadTeams()
     {
@@ -48,7 +48,7 @@ public static class StatsManager
         string t1 = Path.Combine(SaveDirectory, "team1.dat");
         string t2 = Path.Combine(SaveDirectory, "team2.dat");
         WarfareTeam.IO.InitializeTo(
-            () => new WarfareTeam()
+            () => new WarfareTeam
             {
                 DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION,
                 Team = 1,
@@ -71,7 +71,7 @@ public static class StatsManager
             t1
         );
         WarfareTeam.IO.InitializeTo(
-            () => new WarfareTeam()
+            () => new WarfareTeam
             {
                 DATA_VERSION = WarfareTeam.CURRENT_DATA_VERSION,
                 Team = 2,
@@ -111,61 +111,61 @@ public static class StatsManager
     const int TICK_SPEED_MINS = 5;
     public static void BackupTick()
     {
-        if (minsCounter > TICK_SPEED_MINS - 1)
-            minsCounter = 0;
-        if (minsCounter != TICK_SPEED_MINS - 1)
+        if (_minsCounter > TICK_SPEED_MINS - 1)
+            _minsCounter = 0;
+        if (_minsCounter != TICK_SPEED_MINS - 1)
         {
-            minsCounter++;
+            _minsCounter++;
             return;
         }
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (weaponCounter >= Weapons.Count)
-            weaponCounter = 0;
-        if (vehicleCounter >= Vehicles.Count)
-            vehicleCounter = 0;
-        if (kitCounter >= Kits.Count)
-            kitCounter = 0;
-        if (teamBackupCounter > 60)
-            teamBackupCounter = 0;
+        if (_weaponCounter >= Weapons.Count)
+            _weaponCounter = 0;
+        if (_vehicleCounter >= Vehicles.Count)
+            _vehicleCounter = 0;
+        if (_kitCounter >= Kits.Count)
+            _kitCounter = 0;
+        if (_teamBackupCounter > 60)
+            _teamBackupCounter = 0;
         if (Weapons.Count > 0)
         {
-            NetCalls.BackupWeapon.NetInvoke(Weapons[weaponCounter]);
+            NetCalls.BackupWeapon.NetInvoke(Weapons[_weaponCounter]);
             if (UCWarfare.Config.Debug)
-                L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[weaponCounter].ID) is ItemAsset asset ?
-                    (asset.itemName + " - " + Weapons[weaponCounter].KitID) :
-                    (Weapons[weaponCounter].ID.ToString() + " - " + Weapons[weaponCounter].KitID)));
+                L.Log("[WEAPON] Backed up: " + (Assets.find(EAssetType.ITEM, Weapons[_weaponCounter].ID) is ItemAsset asset ?
+                    (asset.itemName + " - " + Weapons[_weaponCounter].KitID) :
+                    (Weapons[_weaponCounter].ID.ToString() + " - " + Weapons[_weaponCounter].KitID)));
         }
         if (Vehicles.Count > 0)
         {
-            NetCalls.BackupVehicle.NetInvoke(Vehicles[vehicleCounter]);
+            NetCalls.BackupVehicle.NetInvoke(Vehicles[_vehicleCounter]);
             if (UCWarfare.Config.Debug)
-                L.Log("[VEHICLE] Backed up: " + (Assets.find(EAssetType.VEHICLE, Vehicles[vehicleCounter].ID) is VehicleAsset asset ?
+                L.Log("[VEHICLE] Backed up: " + (Assets.find(EAssetType.VEHICLE, Vehicles[_vehicleCounter].ID) is VehicleAsset asset ?
                     asset.vehicleName :
-                    Vehicles[vehicleCounter].ID.ToString()));
+                    Vehicles[_vehicleCounter].ID.ToString()));
         }
         if (Kits.Count > 0)
         {
-            NetCalls.BackupKit.NetInvoke(Kits[kitCounter]);
+            NetCalls.BackupKit.NetInvoke(Kits[_kitCounter]);
             if (UCWarfare.Config.Debug)
-                L.Log("[KITS] Backed up: " + Kits[kitCounter].KitID);
+                L.Log("[KITS] Backed up: " + Kits[_kitCounter].KitID);
         }
-        if (teamBackupCounter == 30)
+        if (_teamBackupCounter == 30)
         {
             NetCalls.BackupTeam.NetInvoke(Team1Stats);
             L.LogDebug("[TEAMS] Backed up: TEAM 1");
         }
-        else if (teamBackupCounter == 60)
+        else if (_teamBackupCounter == 60)
         {
             NetCalls.BackupTeam.NetInvoke(Team2Stats);
             L.LogDebug("[TEAMS] Backed up: TEAM 2");
         }
-        weaponCounter++;
-        vehicleCounter++;
-        kitCounter++;
-        teamBackupCounter++;
-        minsCounter++;
+        _weaponCounter++;
+        _vehicleCounter++;
+        _kitCounter++;
+        _teamBackupCounter++;
+        _minsCounter++;
     }
     public static void ModifyTeam(byte team, Action<WarfareTeam> modification, bool save = true)
     {
@@ -290,17 +290,17 @@ public static class StatsManager
             }
         }
     }
-    private static string GetWeaponName(ushort ID, string KitID) => $"{ID}_{KitID.RemoveMany(false, Data.Paths.BAD_FILE_NAME_CHARACTERS)}.dat";
-    public static bool ModifyWeapon(ushort ID, string KitID, Action<WarfareWeapon> modification, bool save = true)
+    private static string GetWeaponName(ushort id, string kitId) => $"{id}_{kitId.RemoveMany(false, Data.Paths.BadFileNameCharacters)}.dat";
+    public static bool ModifyWeapon(ushort id, string kitId, Action<WarfareWeapon> modification, bool save = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = Path.Combine(WeaponsDirectory, GetWeaponName(ID, KitID));
+        string dir = Path.Combine(WeaponsDirectory, GetWeaponName(id, kitId));
         for (int i = 0; i < Weapons.Count; i++)
         {
-            if (Weapons[i].ID == ID && Weapons[i].KitID == KitID)
+            if (Weapons[i].ID == id && Weapons[i].KitID == kitId)
             {
                 modification.Invoke(Weapons[i]);
                 if (save) WarfareWeapon.IO.WriteTo(Weapons[i], dir);
@@ -318,24 +318,24 @@ public static class StatsManager
         weapon = new WarfareWeapon()
         {
             DATA_VERSION = WarfareWeapon.CURRENT_DATA_VERSION,
-            ID = ID,
-            KitID = KitID
+            ID = id,
+            KitID = kitId
         };
         modification.Invoke(weapon);
         Weapons.Add(weapon);
         WarfareWeapon.IO.WriteTo(weapon, dir);
         return true;
     }
-    public static bool ModifyVehicle(ushort ID, Action<WarfareVehicle> modification, bool save = true)
+    public static bool ModifyVehicle(ushort id, Action<WarfareVehicle> modification, bool save = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = Path.Combine(VehiclesDirectory, ID.ToString(Data.Locale) + ".dat");
+        string dir = Path.Combine(VehiclesDirectory, id.ToString(Data.Locale) + ".dat");
         for (int i = 0; i < Vehicles.Count; i++)
         {
-            if (Vehicles[i].ID == ID)
+            if (Vehicles[i].ID == id)
             {
                 modification.Invoke(Vehicles[i]);
                 if (save) WarfareVehicle.IO.WriteTo(Vehicles[i], dir);
@@ -353,23 +353,23 @@ public static class StatsManager
         weapon = new WarfareVehicle()
         {
             DATA_VERSION = WarfareVehicle.CURRENT_DATA_VERSION,
-            ID = ID
+            ID = id
         };
         modification.Invoke(weapon);
         Vehicles.Add(weapon);
         WarfareVehicle.IO.WriteTo(weapon, dir);
         return true;
     }
-    public static bool ModifyStats(ulong Steam64, Action<WarfareStats> modification, bool save = true)
+    public static bool ModifyStats(ulong s64, Action<WarfareStats> modification, bool save = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = Path.Combine(StatsDirectory, Steam64.ToString(Data.Locale) + ".dat");
+        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat");
         for (int i = 0; i < OnlinePlayers.Count; i++)
         {
-            if (OnlinePlayers[i].Steam64 == Steam64)
+            if (OnlinePlayers[i].Steam64 == s64)
             {
                 modification.Invoke(OnlinePlayers[i]);
                 if (save) WarfareStats.IO.WriteTo(OnlinePlayers[i], dir);
@@ -387,22 +387,22 @@ public static class StatsManager
         {
             DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
             Kits = new List<WarfareStats.KitData>(),
-            Steam64 = Steam64
+            Steam64 = s64
         };
         modification.Invoke(stats);
         WarfareStats.IO.WriteTo(stats, dir);
         return true;
     }
-    public static bool ModifyKit(string KitID, Action<WarfareKit> modification, bool save = true)
+    public static bool ModifyKit(string kitId, Action<WarfareKit> modification, bool save = true)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Data.TrackStats) return false;
-        string dir = Path.Combine(KitsDirectory, KitID + ".dat");
+        string dir = Path.Combine(KitsDirectory, kitId + ".dat");
         for (int i = 0; i < Kits.Count; i++)
         {
-            if (Kits[i].KitID == KitID)
+            if (Kits[i].KitID == kitId)
             {
                 modification.Invoke(Kits[i]);
                 if (save) WarfareKit.IO.WriteTo(Kits[i], dir);
@@ -420,22 +420,22 @@ public static class StatsManager
         kit = new WarfareKit()
         {
             DATA_VERSION = WarfareKit.CURRENT_DATA_VERSION,
-            KitID = KitID
+            KitID = kitId
         };
         modification.Invoke(kit);
         Kits.Add(kit);
         WarfareKit.IO.WriteTo(kit, dir);
         return true;
     }
-    public static void RegisterPlayer(ulong Steam64)
+    public static void RegisterPlayer(ulong s64)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         if (!Directory.Exists(StatsDirectory))
             Directory.CreateDirectory(StatsDirectory);
-        string dir = Path.Combine(StatsDirectory, Steam64.ToString(Data.Locale) + ".dat");
-        if (!OnlinePlayers.Exists(x => x.Steam64 == Steam64))
+        string dir = Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat");
+        if (!OnlinePlayers.Exists(x => x.Steam64 == s64))
         {
             if (File.Exists(dir))
             {
@@ -454,19 +454,19 @@ public static class StatsManager
                         fs.Close();
                         fs.Dispose();
                     }
-                    using (FileStream fs = new FileStream(Path.Combine(StatsDirectory, Steam64.ToString(Data.Locale) + "_corrupt.dat"),
+                    using (FileStream fs = new FileStream(Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + "_corrupt.dat"),
                                FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
                     {
                         fs.Write(bytes, 0, bytes.Length);
                         fs.Close();
                         fs.Dispose();
                     }
-                    L.LogWarning("Failed to read " + Steam64.ToString(Data.Locale) + "'s stat file, creating a backup and resetting it.");
+                    L.LogWarning("Failed to read " + s64.ToString(Data.Locale) + "'s stat file, creating a backup and resetting it.");
                     WarfareStats reset = new WarfareStats()
                     {
                         DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
                         Kits = new List<WarfareStats.KitData>(),
-                        Steam64 = Steam64
+                        Steam64 = s64
                     };
                     WarfareStats.IO.WriteTo(reset, dir);
                     OnlinePlayers.Add(reset);
@@ -478,7 +478,7 @@ public static class StatsManager
                 {
                     DATA_VERSION = WarfareStats.CURRENT_DATA_VERSION,
                     Kits = new List<WarfareStats.KitData>(),
-                    Steam64 = Steam64
+                    Steam64 = s64
                 };
                 WarfareStats.IO.WriteTo(reset, dir);
                 OnlinePlayers.Add(reset);
@@ -490,8 +490,8 @@ public static class StatsManager
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        WarfareStats stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == s64);
-        if (stats == default) return;
+        WarfareStats? stats = OnlinePlayers.FirstOrDefault(x => x.Steam64 == s64);
+        if (stats == null) return;
         WarfareStats.IO.WriteTo(stats, Path.Combine(StatsDirectory, s64.ToString(Data.Locale) + ".dat"));
         NetCalls.BackupStats.NetInvoke(stats);
         OnlinePlayers.Remove(stats);
@@ -618,8 +618,8 @@ public static class StatsManager
                     kitData.Deaths++;
                 }
             }, false);
-            ItemJar primary = e.Player.Player.inventory.items[0].items.FirstOrDefault();
-            ItemJar secondary = e.Player.Player.inventory.items[1].items.FirstOrDefault();
+            ItemJar? primary = e.Player.Player.inventory.items[0].items.FirstOrDefault();
+            ItemJar? secondary = e.Player.Player.inventory.items[1].items.FirstOrDefault();
             if (primary != null)
                 ModifyWeapon(primary.item.id, kit.Name, x => x.Deaths++, true);
             if (secondary != null && (primary == null || primary.item.id != secondary.item.id)) // prevents 2 of the same gun from counting twice
@@ -702,10 +702,10 @@ public static class StatsManager
         public static readonly NetCallRaw<WarfareKit> BackupKit = new NetCallRaw<WarfareKit>(2094, WarfareKit.Read, WarfareKit.Write);
 
         [NetCall(ENetCall.FROM_SERVER, 2000)]
-        internal static void ReceiveRequestPlayerData(MessageContext context, ulong Player)
+        internal static void ReceiveRequestPlayerData(MessageContext context, ulong player)
         {
-            bool online = Provider.clients.Exists(x => x.playerID.steamID.m_SteamID == Player);
-            string dir = Path.Combine(StatsDirectory, Player.ToString() + ".dat");
+            bool online = Provider.clients.Exists(x => x.playerID.steamID.m_SteamID == player);
+            string dir = Path.Combine(StatsDirectory, player.ToString() + ".dat");
             if (WarfareStats.IO.ReadFrom(dir, out WarfareStats stats))
             {
                 context.Reply(SendPlayerData, stats, online);
@@ -713,18 +713,17 @@ public static class StatsManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2002)]
-        internal static void ReceiveRequestKitData(MessageContext context, string KitID)
+        internal static void ReceiveRequestKitData(MessageContext context, string kitId)
         {
             EClass @class = EClass.NONE;
-            string sname = KitID;
-            if (KitManager.KitExists(KitID, out Kit GameKit))
+            string sname = kitId;
+            if (KitManager.KitExists(kitId, out Kit kit2))
             {
-                @class = GameKit.Class;
-                if (!GameKit.SignTexts.TryGetValue(L.DEFAULT, out sname))
-                    if (GameKit.SignTexts.Count > 0)
-                        sname = GameKit.SignTexts.Values.ElementAt(0);
+                @class = kit2.Class;
+                if (!kit2.SignTexts.TryGetValue(L.DEFAULT, out sname))
+                    sname = kit2.SignTexts.Count > 0 ? kit2.SignTexts.Values.ElementAt(0) : kitId;
             }
-            string dir = Path.Combine(KitsDirectory, KitID + ".dat");
+            string dir = Path.Combine(KitsDirectory, kitId + ".dat");
             if (WarfareKit.IO.ReadFrom(dir, out WarfareKit kit))
             {
                 context.Reply(SendKitData, kit, sname, (byte)@class);
@@ -741,21 +740,22 @@ public static class StatsManager
         }
 
         [NetCall(ENetCall.FROM_SERVER, 2006)]
-        internal static void ReceiveRequestWeaponData(MessageContext context, ushort weaponid, string KitID)
+        internal static void ReceiveRequestWeaponData(MessageContext context, ushort weaponid, string kitId)
         {
-            string dir = WeaponsDirectory + GetWeaponName(weaponid, KitID);
+            string dir = WeaponsDirectory + GetWeaponName(weaponid, kitId);
             if (WarfareWeapon.IO.ReadFrom(dir, out WarfareWeapon weapon))
             {
                 string name = Assets.find(EAssetType.ITEM, weaponid) is ItemAsset asset ? asset.itemName : weaponid.ToString();
                 string kitname;
-                if (KitManager.KitExists(KitID, out Kit kit))
+                if (KitManager.KitExists(kitId, out Kit kit))
                 {
                     if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitname))
-                        if (kit.SignTexts.Count > 0)
-                            kitname = kit.SignTexts.Values.ElementAt(0);
+                    {
+                        kitname = kit.SignTexts.Count > 0 ? kit.SignTexts.Values.ElementAt(0) : kitId;
+                    }
                 }
                 else
-                    kitname = KitID;
+                    kitname = kitId;
                 context.Reply(SendWeaponData, weapon, name, kitname);
             }
         }
@@ -763,7 +763,7 @@ public static class StatsManager
         [NetCall(ENetCall.FROM_SERVER, 2008)]
         internal static void ReceiveRequestVehicleData(MessageContext context, ushort vehicleID)
         {
-            string dir = Path.Combine(VehiclesDirectory, vehicleID.ToString() + ".dat");
+            string dir = Path.Combine(VehiclesDirectory, vehicleID + ".dat");
             string name = Assets.find(EAssetType.VEHICLE, vehicleID) is VehicleAsset asset ? asset.vehicleName : vehicleID.ToString();
             if (WarfareVehicle.IO.ReadFrom(dir, out WarfareVehicle vehicle))
                 context.Reply(SendVehicleData, vehicle, name);
@@ -779,7 +779,7 @@ public static class StatsManager
         [NetCall(ENetCall.FROM_SERVER, 2020)]
         internal static void ReceiveWeaponRequest(MessageContext context, ushort weapon)
         {
-            if (!Directory.Exists(WeaponsDirectory)) SendWeapons.NetInvoke(new WarfareWeapon[0], string.Empty, new string[0]);
+            if (!Directory.Exists(WeaponsDirectory)) SendWeapons.NetInvoke(Array.Empty<WarfareWeapon>(), string.Empty, Array.Empty<string>());
             string[] files = Directory.GetFiles(WeaponsDirectory, $"{weapon}*.dat");
             List<WarfareWeapon> weapons = new List<WarfareWeapon>();
             List<string> kitnames = new List<string>();
@@ -839,13 +839,13 @@ public static class StatsManager
             byte[] classes = new byte[Kits.Count];
             for (int i = 0; i < kitnames.Length; i++)
             {
-                if (KitManager.KitExists(Kits[i].KitID, out Kit GameKit))
+                if (KitManager.KitExists(Kits[i].KitID, out Kit kit))
                 {
-                    classes[i] = (byte)GameKit.Class;
+                    classes[i] = (byte)kit.Class;
                     kitnames[i] = Kits[i].KitID;
-                    if (!GameKit.SignTexts.TryGetValue(L.DEFAULT, out kitnames[i]))
-                        if (GameKit.SignTexts.Count > 0)
-                            kitnames[i] = GameKit.SignTexts.Values.ElementAt(0);
+                    if (!kit.SignTexts.TryGetValue(L.DEFAULT, out kitnames[i]))
+                        if (kit.SignTexts.Count > 0)
+                            kitnames[i] = kit.SignTexts.Values.ElementAt(0);
                 }
             }
             context.Reply(SendEveryKit, Kits.ToArray(), kitnames, classes);
@@ -862,76 +862,76 @@ public static class StatsManager
             context.Reply(SendEveryVehicle, Vehicles.ToArray(), vehiclenames);
         }
 
-        private static WarfareWeapon[] ReadWeaponArray(ByteReader R)
+        private static WarfareWeapon[] ReadWeaponArray(ByteReader reader)
         {
-            int length = R.ReadInt32();
+            int length = reader.ReadInt32();
             WarfareWeapon[] weapons = new WarfareWeapon[length];
             for (int i = 0; i < length; i++)
             {
-                weapons[i] = WarfareWeapon.Read(R);
+                weapons[i] = WarfareWeapon.Read(reader);
             }
             return weapons;
         }
-        private static void WriteWeaponArray(ByteWriter W, WarfareWeapon[] A)
+        private static void WriteWeaponArray(ByteWriter writer, WarfareWeapon[] array)
         {
-            W.Write(A.Length);
-            for (int i = 0; i < A.Length; i++)
+            writer.Write(array.Length);
+            for (int i = 0; i < array.Length; i++)
             {
-                WarfareWeapon.Write(W, A[i]);
+                WarfareWeapon.Write(writer, array[i]);
             }
         }
-        private static WarfareStats[] ReadStatArray(ByteReader R)
+        private static WarfareStats[] ReadStatArray(ByteReader reader)
         {
-            int length = R.ReadInt32();
+            int length = reader.ReadInt32();
             WarfareStats[] stats = new WarfareStats[length];
             for (int i = 0; i < length; i++)
             {
-                stats[i] = WarfareStats.Read(R);
+                stats[i] = WarfareStats.Read(reader);
             }
             return stats;
         }
-        private static void WriteStatArray(ByteWriter W, WarfareStats[] A)
+        private static void WriteStatArray(ByteWriter writer, WarfareStats[] array)
         {
-            W.Write(A.Length);
-            for (int i = 0; i < A.Length; i++)
+            writer.Write(array.Length);
+            for (int i = 0; i < array.Length; i++)
             {
-                WarfareStats.Write(W, A[i]);
+                WarfareStats.Write(writer, array[i]);
             }
         }
-        private static WarfareVehicle[] ReadVehicleArray(ByteReader R)
+        private static WarfareVehicle[] ReadVehicleArray(ByteReader reader)
         {
-            int length = R.ReadInt32();
+            int length = reader.ReadInt32();
             WarfareVehicle[] vehicles = new WarfareVehicle[length];
             for (int i = 0; i < length; i++)
             {
-                vehicles[i] = WarfareVehicle.Read(R);
+                vehicles[i] = WarfareVehicle.Read(reader);
             }
             return vehicles;
         }
-        private static void WriteVehicleArray(ByteWriter W, WarfareVehicle[] A)
+        private static void WriteVehicleArray(ByteWriter writer, WarfareVehicle[] array)
         {
-            W.Write(A.Length);
-            for (int i = 0; i < A.Length; i++)
+            writer.Write(array.Length);
+            for (int i = 0; i < array.Length; i++)
             {
-                WarfareVehicle.Write(W, A[i]);
+                WarfareVehicle.Write(writer, array[i]);
             }
         }
-        private static WarfareKit[] ReadKitArray(ByteReader R)
+        private static WarfareKit[] ReadKitArray(ByteReader reader)
         {
-            int length = R.ReadInt32();
+            int length = reader.ReadInt32();
             WarfareKit[] kits = new WarfareKit[length];
             for (int i = 0; i < length; i++)
             {
-                kits[i] = WarfareKit.Read(R);
+                kits[i] = WarfareKit.Read(reader);
             }
             return kits;
         }
-        private static void WriteKitArray(ByteWriter W, WarfareKit[] A)
+        private static void WriteKitArray(ByteWriter writer, WarfareKit[] array)
         {
-            W.Write(A.Length);
-            for (int i = 0; i < A.Length; i++)
+            writer.Write(array.Length);
+            for (int i = 0; i < array.Length; i++)
             {
-                WarfareKit.Write(W, A[i]);
+                WarfareKit.Write(writer, array[i]);
             }
         }
     }

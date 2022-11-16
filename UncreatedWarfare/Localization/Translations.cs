@@ -407,7 +407,7 @@ public class Translation
                 return Null(flags);
             else if (!player.isActiveAndEnabled)
                 return player.channel.owner.playerID.steamID.m_SteamID.ToString(Warfare.Data.Locale);
-            Players.FPlayerName names = F.GetPlayerOriginalNames(player);
+            Players.PlayerNames names = F.GetPlayerOriginalNames(player);
             if (format is not null)
             {
                 if (format.Equals(UCPlayer.CHARACTER_NAME_FORMAT, StringComparison.Ordinal))

@@ -139,7 +139,7 @@ public class VehicleComponent : MonoBehaviour
         if (e.Player.KitClass == EClass.SQUADLEADER &&
             (Data?.Item != null && VehicleData.IsLogistics(Data.Item.Type)) &&
             !F.IsInMain(e.Player.Position) &&
-            FOB.GetNearestFOB(e.Player.Position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
+            FOB.GetNearestFOB(e.Player.Position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Player.GetTeam()) == null
             )
         {
             Tips.TryGiveTip(e.Player, 300, T.TipPlaceRadio);
@@ -155,7 +155,7 @@ public class VehicleComponent : MonoBehaviour
         if (TransportTable.TryGetValue(e.Player.Steam64, out Vector3 original))
         {
             float distance = (e.Player.Position - original).magnitude;
-            if (distance >= 200 && !(e.Player.KitClass == EClass.CREWMAN || e.Player.KitClass == EClass.PILOT))
+            if (distance >= 200 && e.Player.KitClass is not EClass.CREWMAN and not EClass.PILOT)
             {
                 if (!(_timeRewardedTable.TryGetValue(e.Player.Steam64, out DateTime time) && (DateTime.UtcNow - time).TotalSeconds < 60))
                 {
@@ -260,7 +260,7 @@ public class VehicleComponent : MonoBehaviour
                 rigidbody.AddForce(countermeasure.transform.forward * 5, ForceMode.Impulse);
 
                 _countermeasures.Add(countermeasure.transform);
-                HeatSeakingMissileComponent.ActiveCountermeasures.Add(countermeasure.transform);
+                HeatSeekingMissileComponent.ActiveCountermeasures.Add(countermeasure.transform);
 
                 yield return new WaitForSeconds(0.25f);
             }
@@ -280,7 +280,7 @@ public class VehicleComponent : MonoBehaviour
     {
         foreach (Transform countermeasure in _countermeasures)
         {
-            HeatSeakingMissileComponent.ActiveCountermeasures.RemoveAll(t => t.GetInstanceID() == countermeasure.GetInstanceID());
+            HeatSeekingMissileComponent.ActiveCountermeasures.RemoveAll(t => t.GetInstanceID() == countermeasure.GetInstanceID());
 
             if (countermeasure.TryGetComponent(out InteractableVehicle vehicle))
             {

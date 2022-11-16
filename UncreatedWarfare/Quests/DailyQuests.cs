@@ -45,13 +45,13 @@ public static class DailyQuests
     {
         MethodInfo? m = typeof(Provider).GetMethod("onDedicatedUGCInstalled", BindingFlags.NonPublic | BindingFlags.Static);
         if (m is not null)
-            Patches.Patcher.Patch(m,
+            Harmony.Patches.Patcher.Patch(m,
                 prefix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnRegisteredWorkshopID),
                     BindingFlags.Static | BindingFlags.NonPublic)));
         else L.LogWarning("Unable to patch Provider.onDedicatedUGCInstalled to register the quest mod!");
         m = typeof(PlayerQuests).GetMethod(nameof(PlayerQuests.ReceiveAbandonQuest), BindingFlags.Instance | BindingFlags.Public);
         if (m is not null)
-            Patches.Patcher.Patch(m,
+            Harmony.Patches.Patcher.Patch(m,
                 postfix: new HarmonyMethod(typeof(DailyQuests).GetMethod(nameof(OnAbandonedQuest),
                     BindingFlags.Static | BindingFlags.NonPublic)));
         else L.LogWarning("Unable to patch PlayerQuests.ReceiveAbandonQuest to prevent abandoning daily missions!");

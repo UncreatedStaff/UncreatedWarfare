@@ -5,9 +5,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
+using Uncreated.SQL;
 using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Events.Structures;
 using Uncreated.Warfare.Gamemodes;
@@ -21,7 +23,7 @@ namespace Uncreated.Warfare.Vehicles;
 [SingletonDependency(typeof(VehicleBay))]
 [SingletonDependency(typeof(StructureSaver))]
 [SingletonDependency(typeof(Level))]
-public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, IGameStartListener
+public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, IGameStartListener, IStagingPhaseOverListener
 {
     public static VehicleSpawner Singleton;
     public static bool Loaded => Singleton.IsLoaded<VehicleSpawner, VehicleSpawn>();
@@ -341,6 +343,11 @@ public class VehicleSpawner : ListSingleton<VehicleSpawn>, ILevelStartListener, 
         spawn = null!;
         return false;
     }
+
+    void IStagingPhaseOverListener.OnStagingPhaseOver()
+    {
+        UpdateSignsWhere(spawn => spawn.Data?.Item != null && spawn.Data.Item.HasDelayType(EDelayType.OUT_OF_STAGING));
+    }
 }
 [JsonSerializable(typeof(VehicleSpawn))]
 public class VehicleSpawn
@@ -361,13 +368,7 @@ public class VehicleSpawn
     public BarricadeDrop? BarricadeDrop { get; internal set; }
 
     [JsonIgnore]
-    public BarricadeData? BarricadeData { get; internal set; }
-
-    [JsonIgnore]
     public StructureDrop? StructureDrop { get; internal set; }
-
-    [JsonIgnore]
-    public StructureData? StructureData { get; internal set; }
 
     [JsonIgnore]
     public bool IsActive { get; private set; }
@@ -377,6 +378,9 @@ public class VehicleSpawn
 
     [JsonIgnore]
     public VehicleSign? LinkedSign { get; internal set; }
+
+    [JsonIgnore]
+    public SqlItem<VehicleData>? Data { get; internal set; }
 
     [JsonIgnore]
     public VehicleBayComponent? Component
@@ -397,7 +401,6 @@ public class VehicleSpawn
             return null;
         }
     }
-    public override string ToString() => $"Instance id: {InstanceId}, guid: {VehicleGuid}, type: {StructureType}";
     public VehicleSpawn(uint spawnPadInstanceId, Guid vehicleID, EStructType type, SerializableTransform loc)
     {
         InstanceId = spawnPadInstanceId;
@@ -419,14 +422,14 @@ public class VehicleSpawn
 #endif
         try
         {
+            Data = Warfare.Data.Singletons.TryGetSingleton(out VehicleBay bay) ? bay.GetDataProxySync(VehicleGuid) : null;
             if (StructureType == EStructType.BARRICADE)
             {
-                BarricadeData = UCBarricadeManager.FindBarricade(InstanceId, out BarricadeDrop? drop);
-                BarricadeDrop = drop;
-                Initialized = BarricadeData != null;
+                BarricadeDrop = UCBarricadeManager.FindBarricade(InstanceId);
+                Initialized = BarricadeDrop != null;
                 if (!Initialized)
                 {
-                    StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+                    StructureSaver? saver = Warfare.Data.Singletons.GetSingleton<StructureSaver>();
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding BarricadeDrop could not be found, attempting to replace the barricade.");
                     if (saver == null || !saver.TryGetSave(InstanceId, EStructType.BARRICADE, out SavedStructure structure))
                     {
@@ -456,7 +459,6 @@ public class VehicleSpawn
                     if (newdrop != null)
                     {
                         BarricadeDrop = newdrop;
-                        BarricadeData = newdrop.GetServersideData();
                         structure.InstanceID = newdrop.instanceID;
                         Task.Run(() => Util.TryWrap(saver.AddOrUpdate(structure, F.DebugTimeout), "Error saving structure."));
                         InstanceId = newdrop.instanceID;
@@ -471,10 +473,10 @@ public class VehicleSpawn
                 }
                 if (BarricadeDrop != null)
                 {
-                    if (!VehicleBay.VehicleExists(this.VehicleGuid, out VehicleData data))
+                    if (Data?.Item == null)
                         L.LogError("VEHICLE SPAWNER ERROR: Failed to find vehicle data for " + VehicleGuid.ToString("N"));
                     else if (!BarricadeDrop.model.TryGetComponent<VehicleBayComponent>(out _))
-                        BarricadeDrop.model.transform.gameObject.AddComponent<VehicleBayComponent>().Init(this, data);
+                        BarricadeDrop.model.transform.gameObject.AddComponent<VehicleBayComponent>().Init(this, Data);
                 }
                 else
                 {
@@ -487,7 +489,7 @@ public class VehicleSpawn
                 Initialized = StructureDrop != null;
                 if (!Initialized)
                 {
-                    StructureSaver? saver = Data.Singletons.GetSingleton<StructureSaver>();
+                    StructureSaver? saver = Warfare.Data.Singletons.GetSingleton<StructureSaver>();
                     L.LogWarning("VEHICLE SPAWNER ERROR: corresponding StructureDrop could not be found, attempting to replace the structure.");
                     if (saver == null || !saver.TryGetSave(InstanceId, EStructType.STRUCTURE, out SavedStructure structure))
                     {
@@ -519,7 +521,6 @@ public class VehicleSpawn
                         }
                         else
                         {
-                            StructureData = newdrop.GetServersideData();
                             StructureDrop = newdrop;
                             structure.InstanceID = newdrop.instanceID;
                             InstanceId = newdrop.instanceID;
@@ -534,14 +535,12 @@ public class VehicleSpawn
                         Initialized = false;
                     }
                 }
-                else
-                    StructureData = StructureDrop!.GetServersideData();
                 if (StructureDrop != null)
                 {
-                    if (!VehicleBay.VehicleExists(this.VehicleGuid, out VehicleData data))
+                    if (Data?.Item == null)
                         L.LogError("VEHICLE SPAWNER ERROR: Failed to find vehicle data for " + VehicleGuid.ToString("N"));
                     else if (!StructureDrop.model.TryGetComponent<VehicleBayComponent>(out _))
-                        StructureDrop.model.transform.gameObject.AddComponent<VehicleBayComponent>().Init(this, data);
+                        StructureDrop.model.transform.gameObject.AddComponent<VehicleBayComponent>().Init(this, Data);
                 }
                 else
                 {
@@ -557,70 +556,93 @@ public class VehicleSpawn
             L.LogError(ex);
         }
     }
-    public void SpawnVehicle()
+
+    internal void ReportError(LogSeverity severity, string messsage, Exception? ex = null)
+    {
+        if (severity == LogSeverity.Debug && !UCWarfare.Config.Debug)
+            return;
+        string msg = ToString() + ": " + messsage;
+        switch (severity)
+        {
+            case LogSeverity.Debug:
+                L.LogDebug(msg);
+                break;
+            case LogSeverity.Info:
+                L.Log(msg);
+                break;
+            case LogSeverity.Warning:
+                L.LogWarning(msg, method: "VEHICLE SPAWNER");
+                break;
+            case LogSeverity.Exception:
+                throw new Exception(msg, ex);
+            default:
+                L.LogError(msg, method: "VEHICLE SPAWNER");
+                break;
+        }
+        if (ex != null)
+            L.LogError(ex, method: "VEHICLE SPAWNER");
+    }
+    public async Task<InteractableVehicle?> SpawnVehicle(CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (HasLinkedVehicle(out _))
+        if (HasLinkedVehicle(out InteractableVehicle vehicle))
         {
-            L.LogDebug("Could not spawn vehicle because another is already linked");
-            return;
+            ReportError(LogSeverity.Debug, "Vehicle already linked: {#" + vehicle.instanceID + "}.");
+            return null;
         }
         try
         {
+            if (!Warfare.Data.Singletons.TryGetSingleton(out VehicleBay bay))
+            {
+                ReportError(LogSeverity.Error, "VehicleBay not loaded when spawning vehicle.");
+                return null;
+            }
             if (!Initialized)
             {
-                L.LogError($"VEHICLE SPAWNER ERROR: Tried to spawn vehicle without Initializing. {(Assets.find(VehicleGuid) is VehicleAsset va ? (va.vehicleName + " - " + VehicleGuid.ToString("N")) : VehicleGuid.ToString("N"))} spawn.");
-                return;
+                ReportError(LogSeverity.Error, "Spawn not initialized when spawning vehicle.");
+                return null;
             }
-            if (StructureType == EStructType.BARRICADE)
+            if (StructureType is not EStructType.BARRICADE and not EStructType.STRUCTURE)
             {
-                if (BarricadeData == default)
-                {
-                    L.LogError($"VEHICLE SPAWNER ERROR: {(Assets.find(VehicleGuid) is VehicleAsset va ? (va.vehicleName + " - " + VehicleGuid.ToString("N")) : VehicleGuid.ToString("N"))} at spawn {InstanceId} was unable to find BarricadeData.");
-                    return;
-                }
-                Quaternion rotation = new Quaternion
-                { eulerAngles = new Vector3((BarricadeData.angle_x * 2) + 90, BarricadeData.angle_y * 2, BarricadeData.angle_z * 2) };
-                InteractableVehicle? veh = VehicleBay.SpawnLockedVehicle(VehicleGuid, new Vector3(BarricadeData.point.x, BarricadeData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, BarricadeData.point.z), rotation, out _);
-                if (veh == null)
-                {
-                    L.LogWarning("VEHICLE SPAWNER ERROR: " + (Assets.find(VehicleGuid) is VehicleAsset va ? (va.vehicleName + " - " + VehicleGuid.ToString("N")) : VehicleGuid.ToString("N")) + " returned null.");
-                    return;
-                }
-                LinkNewVehicle(veh);
-                UpdateSign();
-                if (UCWarfare.Config.Debug)
-                    L.Log($"VEHICLE SPAWNER: spawned {(Assets.find(VehicleGuid) is VehicleAsset va ? (va.vehicleName + " - " + VehicleGuid.ToString("N")) : VehicleGuid.ToString("N"))} at spawn {BarricadeData.point}", ConsoleColor.DarkGray);
+                ReportError(LogSeverity.Error, "Spawn has incorrect structure type.");
+                return null;
             }
-            else if (StructureType == EStructType.STRUCTURE)
+            if ((StructureType == EStructType.BARRICADE && BarricadeDrop == null) || (StructureType == EStructType.STRUCTURE && StructureDrop == null))
             {
-                if (StructureData == default)
-                {
-                    L.LogError($"VEHICLE SPAWNER ERROR: {(Assets.find(VehicleGuid) is VehicleAsset va ? (va.vehicleName + " - " + VehicleGuid.ToString("N")) : VehicleGuid.ToString("N"))} at spawn {InstanceId} was unable to find StructureData.");
-                    return;
-                }
+                ReportError(LogSeverity.Error, "Unable to find drop when spawning vehicle.");
+                return null;
+            }
 
-                Quaternion rotation = new Quaternion
-                { eulerAngles = new Vector3(StructureData.angle_x * 2 + 90, StructureData.angle_y * 2, StructureData.angle_z * 2) };
-                InteractableVehicle? veh = VehicleBay.SpawnLockedVehicle(VehicleGuid, new Vector3(StructureData.point.x, StructureData.point.y + VehicleSpawner.VEHICLE_HEIGHT_OFFSET, StructureData.point.z), rotation, out _);
-                if (veh == null)
-                {
-                    L.LogWarning("VEHICLE SPAWNER ERROR: " + (Assets.find(VehicleGuid) is VehicleAsset va ? (va.vehicleName + " - " + VehicleGuid.ToString("N")) : VehicleGuid.ToString("N")) + " returned null.");
-                    return;
-                }
-                LinkNewVehicle(veh);
-                UpdateSign();
-                if (UCWarfare.Config.Debug)
-                    L.Log($"VEHICLE SPAWNER: spawned {(Assets.find(VehicleGuid) is VehicleAsset va ? (va.vehicleName + " - " + VehicleGuid.ToString("N")) : VehicleGuid.ToString("N"))} at spawn {StructureData.point}", ConsoleColor.DarkGray);
+            Vector3 euler = StructureType == EStructType.BARRICADE
+                ? F.BytesToEulerForVehicle(BarricadeDrop!.GetServersideData().angle_x,
+                    BarricadeDrop.GetServersideData().angle_y, BarricadeDrop.GetServersideData().angle_z)
+                : F.BytesToEulerForVehicle(StructureDrop!.GetServersideData().angle_x,
+                    StructureDrop.GetServersideData().angle_y, StructureDrop.GetServersideData().angle_z);
+
+            Quaternion rotation = Quaternion.Euler(euler);
+            Vector3 offset = (StructureType == EStructType.BARRICADE
+                ? BarricadeDrop!.model
+                : StructureDrop!.model).position
+                             + new Vector3(0f, VehicleSpawner.VEHICLE_HEIGHT_OFFSET, 0f);
+            InteractableVehicle? veh = await bay.SpawnLockedVehicle(VehicleGuid, offset, rotation, token: token).ThenToUpdate(token);
+            if (veh == null)
+            {
+                ReportError(LogSeverity.Error, "Unable to spawn vehicle, unknown reason.");
+                return null;
             }
+            LinkNewVehicle(veh);
+            UpdateSign();
+            ReportError(LogSeverity.Debug, "Spawned vehicle.");
+            return veh;
         }
         catch (Exception ex)
         {
             L.LogError($"Error spawning vehicle {this.VehicleGuid} on vehicle bay: ");
             L.LogError(ex);
         }
+        return null;
     }
     public bool HasLinkedVehicle(out InteractableVehicle vehicle)
     {
@@ -702,24 +724,24 @@ public class VehicleSpawn
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        if (VehicleBay.Loaded && VehicleSigns.Loaded && VehicleSpawner.Loaded && spawn.LinkedSign != null && spawn.LinkedSign.SignInteractable != null)
+        if (VehicleSigns.Loaded && VehicleSpawner.Loaded && spawn.LinkedSign != null && spawn.LinkedSign.SignInteractable != null)
         {
-            if (!VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data))
+            if (spawn.Data?.Item == null)
                 return;
             foreach (LanguageSet set in LanguageSet.All(players))
             {
-                string val = Localization.TranslateVBS(spawn, data, set.Language, team == 0 ? data.Team : team);
+                string val = Localization.TranslateVBS(spawn, spawn.Data.Item, set.Language, team == 0 ? spawn.Data.Item.Team : team);
                 NetId id = spawn.LinkedSign.SignInteractable.GetNetId();
                 while (set.MoveNext())
                 {
                     try
                     {
-                        string val2 = Signs.QuickFormat(val, data.GetCostLine(set.Next));
-                        Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val2);
+                        string val2 = Signs.QuickFormat(val, spawn.Data.Item.GetCostLine(set.Next));
+                        Warfare.Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val2);
                     }
                     catch (FormatException)
                     {
-                        Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val);
+                        Warfare.Data.SendChangeText.Invoke(id, ENetReliability.Unreliable, set.Next.Player.channel.owner.transportConnection, val);
                         L.LogError("Formatting error in send vbs!");
                     }
                 }
@@ -734,27 +756,29 @@ public class VehicleSpawn
 #endif
         if (spawn.LinkedSign != null && spawn.LinkedSign.SignInteractable != null)
         {
-            if (!VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data))
+            if (Data?.Item == null)
                 return;
-            if (!Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
+            if (!Warfare.Data.Languages.TryGetValue(player.playerID.steamID.m_SteamID, out string lang))
                 lang = L.DEFAULT;
-            string val = Localization.TranslateVBS(spawn, data, lang, player.GetTeam());
+            string val = Localization.TranslateVBS(spawn, Data.Item, lang, player.GetTeam());
             try
             {
                 UCPlayer? pl = UCPlayer.FromSteamPlayer(player);
                 if (pl == null) return;
-                string val2 = string.Format(val, data.GetCostLine(pl));
-                Data.SendChangeText.Invoke(spawn.LinkedSign.SignInteractable.GetNetId(), ENetReliability.Unreliable,
+                string val2 = string.Format(val, Data.Item.GetCostLine(pl));
+                Warfare.Data.SendChangeText.Invoke(spawn.LinkedSign.SignInteractable.GetNetId(), ENetReliability.Unreliable,
                     player.transportConnection, val2);
             }
             catch (FormatException)
             {
-                Data.SendChangeText.Invoke(spawn.LinkedSign.SignInteractable.GetNetId(), ENetReliability.Unreliable,
+                Warfare.Data.SendChangeText.Invoke(spawn.LinkedSign.SignInteractable.GetNetId(), ENetReliability.Unreliable,
                     player.transportConnection, val);
                 L.LogError("Formatting error in send vbs!");
             }
         }
     }
+    public override string ToString() => $"Bay Instance id: {InstanceId}, Guid: {Assets.find(VehicleGuid)?.FriendlyName ?? VehicleGuid.ToString("N")}" +
+                                         $", Type: {StructureType}, {(Data is null ? "<unknown vehicle bay data>" : Data.ToString())}";
 }
 public enum EVehicleBayState : byte
 {
@@ -771,14 +795,14 @@ public enum EVehicleBayState : byte
 public sealed class VehicleBayComponent : MonoBehaviour
 {
     private VehicleSpawn spawnData;
-    private VehicleData vehicleData;
+    private SqlItem<VehicleData> vehicleData;
     public VehicleSpawn Spawn => spawnData;
     private EVehicleBayState state = EVehicleBayState.NOT_INITIALIZED;
     private InteractableVehicle? vehicle;
     public EVehicleBayState State => state;
     public Vector3 lastLoc = Vector3.zero;
-    public float RequestTime = 0f;
-    public void Init(VehicleSpawn spawn, VehicleData data)
+    public float RequestTime;
+    public void Init(VehicleSpawn spawn, SqlItem<VehicleData> data)
     {
         spawnData = spawn;
         vehicleData = data;
@@ -800,7 +824,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
         this.vehicle = vehicle;
         IdleTime = 0f;
         DeadTime = 0f;
-        if (vehicleData.IsDelayed(out Delay delay))
+        if (vehicleData.Item != null && vehicleData.Item.IsDelayed(out Delay delay))
             this.state = delay.type == EDelayType.TIME ? EVehicleBayState.TIME_DELAYED : EVehicleBayState.DELAYED;
         else this.state = EVehicleBayState.READY;
     }
@@ -825,7 +849,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
         {
             lastDelayCheck = time;
             checkTime = false;
-            if (vehicleData.IsDelayed(out Delay delay))
+            if (vehicleData.Item != null && vehicleData.Item.IsDelayed(out Delay delay))
             {
                 if (delay.type == EDelayType.TIME)
                 {
@@ -915,7 +939,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
             IdleTime = idleStartTime == -1 ? 0 : time - idleStartTime;
         else if (state == EVehicleBayState.DEAD)
             DeadTime = deadStartTime == -1 ? 0 : time - deadStartTime;
-        if ((state == EVehicleBayState.IDLE && IdleTime > vehicleData.RespawnTime) || (state == EVehicleBayState.DEAD && DeadTime > vehicleData.RespawnTime))
+        if (vehicleData.Item != null && (state == EVehicleBayState.IDLE && IdleTime > vehicleData.Item.RespawnTime) || (state == EVehicleBayState.DEAD && DeadTime > vehicleData.Item.RespawnTime))
         {
             if (vehicle != null)
                 VehicleBay.DeleteVehicle(vehicle);

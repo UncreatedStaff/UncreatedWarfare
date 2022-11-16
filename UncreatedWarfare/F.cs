@@ -571,11 +571,11 @@ public static class F
         }
     }
     [Obsolete("Use UCPlayer.Name instead.")]
-    public static FPlayerName GetPlayerOriginalNames(UCPlayer player) => player.Name;
+    public static PlayerNames GetPlayerOriginalNames(UCPlayer player) => player.Name;
     [Obsolete("Use UCPlayer.Name instead.")]
-    public static FPlayerName GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
+    public static PlayerNames GetPlayerOriginalNames(SteamPlayer player) => GetPlayerOriginalNames(player.player);
     [Obsolete("Use UCPlayer.Name instead.")]
-    public static FPlayerName GetPlayerOriginalNames(Player player)
+    public static PlayerNames GetPlayerOriginalNames(Player player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -583,11 +583,11 @@ public static class F
         UCPlayer? pl = UCPlayer.FromPlayer(player);
         if (pl != null)
             return pl.Name;
-        return new FPlayerName(player);
+        return new PlayerNames(player);
     }
-    public static FPlayerName GetPlayerName(ulong player)
+    public static PlayerNames GetPlayerName(ulong player)
     {
-        if (player == 0) return FPlayerName.Console;
+        if (player == 0) return PlayerNames.Console;
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
@@ -603,18 +603,18 @@ public static class F
             if (!ex.Message.Equals("Not connected", StringComparison.Ordinal))
                 throw;
             string tname = player.ToString(Data.Locale);
-            return new FPlayerName { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
+            return new PlayerNames { Steam64 = player, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
         }
     }
-    public static ValueTask<FPlayerName> GetPlayerOriginalNamesAsync(ulong player, CancellationToken token = default)
+    public static ValueTask<PlayerNames> GetPlayerOriginalNamesAsync(ulong player, CancellationToken token = default)
     {
         UCPlayer? pl = UCPlayer.FromID(player);
         if (pl != null)
-            return new ValueTask<FPlayerName>(pl.Name);
+            return new ValueTask<PlayerNames>(pl.Name);
 
         return OffenseManager.IsValidSteam64ID(player)
-            ? new ValueTask<FPlayerName>(Data.DatabaseManager.GetUsernamesAsync(player, token))
-            : new ValueTask<FPlayerName>(FPlayerName.Nil);
+            ? new ValueTask<PlayerNames>(Data.DatabaseManager.GetUsernamesAsync(player, token))
+            : new ValueTask<PlayerNames>(PlayerNames.Nil);
     }
     public static bool IsInMain(this Player player)
     {
@@ -1214,6 +1214,9 @@ public static class F
     }
     public static Vector3 BytesToEuler(byte angle_x, byte angle_y, byte angle_z) =>
         new Vector3(MeasurementTool.byteToAngle(angle_x), MeasurementTool.byteToAngle(angle_y),
+            MeasurementTool.byteToAngle(angle_z));
+    public static Vector3 BytesToEulerForVehicle(byte angle_x, byte angle_y, byte angle_z) =>
+        new Vector3(MeasurementTool.byteToAngle(angle_x) + 90f, MeasurementTool.byteToAngle(angle_y),
             MeasurementTool.byteToAngle(angle_z));
     public static (byte angle_x, byte angle_y, byte angle_z) EulerToBytes(Vector3 euler)
         => (MeasurementTool.angleToByte(euler.x), MeasurementTool.angleToByte(euler.y),

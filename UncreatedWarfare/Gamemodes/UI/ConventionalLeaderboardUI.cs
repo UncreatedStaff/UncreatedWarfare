@@ -740,7 +740,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
-                    UCPlayer.FromID(info.Player) as IPlayer ?? F.GetPlayerOriginalNames(info.Player));
+                    info.Name);
         }
         else
         {
@@ -794,7 +794,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            FPlayerName names = F.GetPlayerOriginalNames(pl);
+            PlayerNames names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 
@@ -1111,7 +1111,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            FPlayerName names = F.GetPlayerOriginalNames(pl);
+            PlayerNames names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 
@@ -1434,7 +1434,7 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            FPlayerName names = F.GetPlayerOriginalNames(pl);
+            PlayerNames names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 

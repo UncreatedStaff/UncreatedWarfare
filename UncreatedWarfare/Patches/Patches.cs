@@ -164,7 +164,7 @@ public static partial class Patches
                 text = text.Substring(0, ChatManager.MAX_MESSAGE_LENGTH);
             if (CommandWindow.shouldLogChat)
             {
-                FPlayerName n = F.GetPlayerOriginalNames(callingPlayer);
+                PlayerNames n = F.GetPlayerOriginalNames(callingPlayer);
                 string name = $"[{n.PlayerName} ({n.CharacterName})]:";
                 int len = 40 - name.Length;
                 if (len > 0)

@@ -27,11 +27,11 @@ public class TeamSelector : BaseSingletonComponent, IPlayerPostInitListener
         JoinUI.Team1Button.OnClicked += OnTeam1Clicked;
         JoinUI.Team2Button.OnClicked += OnTeam2Clicked;
         JoinUI.ConfirmButton.OnClicked += OnConfirmClicked;
-        EventDispatcher.OnPlayerLeaving += OnPlayerDisconnect;
+        EventDispatcher.PlayerLeaving += OnPlayerDisconnect;
     }
     public override void Unload()
     {
-        EventDispatcher.OnPlayerLeaving -= OnPlayerDisconnect;
+        EventDispatcher.PlayerLeaving -= OnPlayerDisconnect;
         JoinUI.ConfirmButton.OnClicked -= OnConfirmClicked;
         JoinUI.Team2Button.OnClicked -= OnTeam2Clicked;
         JoinUI.Team1Button.OnClicked -= OnTeam1Clicked;

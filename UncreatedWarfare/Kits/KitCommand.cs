@@ -291,7 +291,7 @@ public class KitCommand : Command
                     Task.Run(async () =>
                     {
                         bool hasAccess;
-                        FPlayerName names;
+                        PlayerNames names;
                         if (onlinePlayer is not null)
                         {
                             names = onlinePlayer.Name;
@@ -348,7 +348,7 @@ public class KitCommand : Command
                     Task.Run(async () =>
                     {
                         bool hasAccess;
-                        FPlayerName names;
+                        PlayerNames names;
                         if (onlinePlayer is not null)
                         {
                             names = onlinePlayer.Name;
@@ -455,7 +455,7 @@ public class KitCommand : Command
                 }
                 Task.Run(async () =>
                 {
-                    FPlayerName names = onlinePlayer is not null ? onlinePlayer.Name : await Data.DatabaseManager.GetUsernamesAsync(playerId);
+                    PlayerNames names = onlinePlayer is not null ? onlinePlayer.Name : await Data.DatabaseManager.GetUsernamesAsync(playerId);
                     char let = await KitManager.GetLoadoutCharacter(playerId);
                     string loadoutName = playerId.ToString() + "_" + let;
                     if (!ctx.TryGetRange(4, out string signText) || string.IsNullOrEmpty(signText))

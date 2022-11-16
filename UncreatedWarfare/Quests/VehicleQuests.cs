@@ -1,10 +1,9 @@
 ﻿using SDG.Unturned;
 using System;
 using System.Text.Json;
-using Uncreated.Warfare.Configuration;
+using Uncreated.Json;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.Vehicles;
-using Uncreated.Json;
 
 namespace Uncreated.Warfare.Quests.Types;
 
@@ -65,7 +64,7 @@ public class DestroyVehiclesQuest : BaseQuestData<DestroyVehiclesQuest.Tracker, 
     }
     public class Tracker : BaseQuestTracker, INotifyVehicleDestroyed
     {
-        private readonly int VehicleCount = 0;
+        private readonly int VehicleCount;
         internal readonly DynamicEnumValue<EVehicleType>.Choice VehicleType;
         private readonly DynamicAssetValue<VehicleAsset>.Choice VehicleIDs;
         private readonly string translationCache1;
@@ -234,7 +233,8 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
                 if (!(VehicleType.ValueType != EDynamicValueType.ANY && VehicleType.Behavior != EChoiceBehavior.ALLOW_ALL) && lastInstID != vehicle.Vehicle.instanceID)
                 {
                     lastInstID = vehicle.Vehicle.instanceID;
-                    if (VehicleBay.VehicleExists(vehicle.Vehicle.asset.GUID, out VehicleData data))
+                    VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSyncUnsafe(vehicle.Vehicle.asset.GUID);
+                    if (data != null)
                         lastType = data.Type;
                     else
                         lastType = EVehicleType.NONE;

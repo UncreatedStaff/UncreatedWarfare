@@ -30,12 +30,12 @@ public class WarfareSQL : MySqlDatabase
     {
         DebugLogging |= UCWarfare.Config.Debug;
     }
-    public FPlayerName GetUsernames(ulong s64)
+    public PlayerNames GetUsernames(ulong s64)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        FPlayerName name = default;
+        PlayerNames name = default;
         Query(
             "SELECT `PlayerName`, `CharacterName`, `NickName` " +
             "FROM `" + USERNAMES_TABLE + "` " +
@@ -43,20 +43,20 @@ public class WarfareSQL : MySqlDatabase
             new object[] { s64 },
             reader =>
             {
-                name = new FPlayerName() { Steam64 = s64, PlayerName = reader.GetString(0), CharacterName = reader.GetString(1), NickName = reader.GetString(2), WasFound = true };
+                name = new PlayerNames() { Steam64 = s64, PlayerName = reader.GetString(0), CharacterName = reader.GetString(1), NickName = reader.GetString(2), WasFound = true };
             });
         if (name.WasFound)
             return name;
         string tname = s64.ToString(Data.Locale);
-        return new FPlayerName { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
+        return new PlayerNames { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
     }
-    public async Task<FPlayerName> GetUsernamesAsync(ulong s64, CancellationToken token = default)
+    public async Task<PlayerNames> GetUsernamesAsync(ulong s64, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         token.ThrowIfCancellationRequested();
-        FPlayerName name = default;
+        PlayerNames name = default;
         await QueryAsync(
             "SELECT `PlayerName`, `CharacterName`, `NickName` " +
             "FROM `" + USERNAMES_TABLE + "` " +
@@ -64,13 +64,13 @@ public class WarfareSQL : MySqlDatabase
             new object[] { s64 },
             reader =>
             {
-                name = new FPlayerName { Steam64 = s64, PlayerName = reader.GetString(0), CharacterName = reader.GetString(1), NickName = reader.GetString(2), WasFound = true };
+                name = new PlayerNames { Steam64 = s64, PlayerName = reader.GetString(0), CharacterName = reader.GetString(1), NickName = reader.GetString(2), WasFound = true };
             }, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
         if (name.WasFound)
             return name;
         string tname = s64.ToString(Data.Locale);
-        return new FPlayerName { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
+        return new PlayerNames { Steam64 = s64, PlayerName = tname, CharacterName = tname, NickName = tname, WasFound = false };
     }
     [Obsolete]
     public bool GetDiscordID(ulong s64, out ulong discordId)
@@ -99,7 +99,7 @@ public class WarfareSQL : MySqlDatabase
         token.ThrowIfCancellationRequested();
         return tid;
     }
-    public Task UpdateUsernames(FPlayerName player, CancellationToken token = default)
+    public Task UpdateUsernames(PlayerNames player, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
         return NonQueryAsync(
@@ -134,6 +134,21 @@ public class WarfareSQL : MySqlDatabase
         }, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
     }
+    public async Task<(int, int)> GetCreditsAndXP(ulong player, ulong team, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+        int credits = 0;
+        int xp = 0;
+        await QueryAsync("SELECT `Credits`, `Experience` FROM `" + LEVELS_TABLE + "` WHERE `Steam64` = @0 AND `Team` = @1 LIMIT 1;",
+            new object[] { player, team },
+            reader =>
+            {
+                credits = reader.GetInt32(0);
+                xp = reader.GetInt32(1);
+            }, token).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        return (credits, xp);
+    }
     public async Task<int> GetXP(ulong player, ulong team, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
@@ -163,16 +178,27 @@ public class WarfareSQL : MySqlDatabase
     public async Task<int> AddXP(ulong player, ulong team, int amount, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
+        if (amount > 0)
+        {
+            await QueryAsync("INSERT INTO `" + LEVELS_TABLE +
+                             "` (`Steam64`,`Team`,`Experience`) VALUES (@0,@1,@2) ON DUPLICATE KEY UPDATE `Experience`=`Experience`+@2;" +
+                             "SELECT `Experience` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1 LIMIT 1;",
+                new object[] { player, team, amount },
+                reader =>
+                {
+                    amount = reader.GetInt32(0);
+                }, token).ConfigureAwait(false);
+            return amount;
+        }
         int old = await GetXP(player, team, token).ConfigureAwait(false);
-        token.ThrowIfCancellationRequested();
         if (amount == 0)
             return old;
         int total = amount + old;
         if (total >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Experience`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Experience` = @2;",
-                new object[] { player, team, total }, token).ConfigureAwait(false);
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Experience`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Experience` = `Experience` + @2;",
+                new object[] { player, team, amount }, token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             return total;
         }
@@ -185,6 +211,18 @@ public class WarfareSQL : MySqlDatabase
     public async Task<int> AddCredits(ulong player, ulong team, int amount, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
+        if (amount > 0)
+        {
+            await QueryAsync("INSERT INTO `" + LEVELS_TABLE +
+                             "` (`Steam64`,`Team`,`Credits`) VALUES (@0,@1,@2) ON DUPLICATE KEY UPDATE `Credits`=`Credits`+@2;" +
+                             "SELECT `Credits` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1 LIMIT 1;",
+                new object[] { player, team, amount },
+                reader =>
+                {
+                    amount = reader.GetInt32(0);
+                }, token).ConfigureAwait(false);
+            return amount;
+        }
         int old = await GetCredits(player, team, token).ConfigureAwait(false);
         token.ThrowIfCancellationRequested();
         if (amount == 0)
@@ -193,16 +231,63 @@ public class WarfareSQL : MySqlDatabase
         if (ttl >= 0)
         {
             await NonQueryAsync(
-                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Credits` = @2;",
-                new object[] { player, team, ttl }, token).ConfigureAwait(false);
-            token.ThrowIfCancellationRequested();
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, @2) ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2;",
+                new object[] { player, team, amount }, token).ConfigureAwait(false);
             return ttl;
         }
         await NonQueryAsync(
             "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`) VALUES (@0, @1, 0) ON DUPLICATE KEY UPDATE `Credits` = 0;",
             new object[] { player, team }, token).ConfigureAwait(false);
-        token.ThrowIfCancellationRequested();
         return 0;
+    }
+    public async Task<(int, int)> AddCreditsAndXP(ulong player, ulong team, int credits, int xp, CancellationToken token = default)
+    {
+        token.ThrowIfCancellationRequested();
+        if (credits > 0 && xp > 0)
+        {
+            await QueryAsync("INSERT INTO `" + LEVELS_TABLE +
+                             "` (`Steam64`,`Team`,`Credits`,`Experience`) VALUES (@0,@1,@2,@3) ON DUPLICATE KEY UPDATE `Credits`=`Credits`+@2, `Experience`=`Experience`+@3;" +
+                             "SELECT `Credits`,`Experience` FROM `" + LEVELS_TABLE + "` WHERE `Steam64`=@0 AND `Team=@1 LIMIT 1;",
+                new object[] { player, team, credits, xp },
+                reader =>
+                {
+                    credits = reader.GetInt32(0);
+                    xp = reader.GetInt32(1);
+                }, token).ConfigureAwait(false);
+            return (credits, xp);
+        }
+        if (credits == 0 && xp == 0)
+            return (credits, xp);
+        (int oldCredits, int oldXP) = await GetCreditsAndXP(player, team, token).ConfigureAwait(false);
+        token.ThrowIfCancellationRequested();
+        int ttlc = credits + oldCredits;
+        int ttlx = xp + oldXP;
+        if (ttlc >= 0 && ttlx >= 0)
+        {
+            await NonQueryAsync(
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, @2, @3) ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2, `Experience` = `Experience` + @3;",
+                new object[] { player, team, credits, xp }, token).ConfigureAwait(false);
+            return (ttlc, ttlx);
+        }
+
+        if (ttlc >= 0)
+        {
+            await NonQueryAsync(
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, @2, 0) ON DUPLICATE KEY UPDATE `Credits` = `Credits` + @2, `Experience` = 0;",
+                new object[] { player, team, credits }, token).ConfigureAwait(false);
+            return (ttlc, 0);
+        }
+        if (ttlx >= 0)
+        {
+            await NonQueryAsync(
+                "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, 0, @2) ON DUPLICATE KEY UPDATE `Credits` = 0, `Experience` = `Experience` + @3;",
+                new object[] { player, team, xp }, token).ConfigureAwait(false);
+            return (0, ttlx);
+        }
+        await NonQueryAsync(
+            "INSERT INTO `" + LEVELS_TABLE + "` (`Steam64`, `Team`, `Credits`, `Experience`) VALUES (@0, @1, 0, 0) ON DUPLICATE KEY UPDATE `Credits` = 0, `Experience` = 0;",
+            new object[] { player, team }, token).ConfigureAwait(false);
+        return (0, 0);
     }
 
     public async Task<uint> GetKills(ulong player, ulong team, CancellationToken token = default)

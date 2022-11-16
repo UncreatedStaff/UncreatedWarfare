@@ -50,8 +50,8 @@ public class SpottedComponent : MonoBehaviour
 #if ENABLE_SPOTTED_BUFF
         if (!statInit)
         {
-            EventDispatcher.OnEnterVehicle += OnEnterVehicle;
-            EventDispatcher.OnExitVehicle += OnExitVehicle;
+            EventDispatcher.EnterVehicle += OnEnterVehicle;
+            EventDispatcher.ExitVehicle += OnExitVehicle;
             statInit = true;
         }
 #endif
@@ -199,8 +199,8 @@ public class SpottedComponent : MonoBehaviour
         {
             if (transform.TryGetComponent(out InteractableVehicle vehicle) && vehicle.lockedGroup.m_SteamID != spotter.GetTeam())
             {
-                if (vehicle.transform.TryGetComponent(out VehicleComponent vc))
-                    spotted.TryAnnounce(spotter, Localization.TranslateEnum(vc.Data.Type, L.DEFAULT));
+                if (vehicle.transform.TryGetComponent(out VehicleComponent vc) && vc.Data?.Item != null)
+                    spotted.TryAnnounce(spotter, Localization.TranslateEnum(vc.Data.Item.Type, L.DEFAULT));
                 else
                     spotted.TryAnnounce(spotter, vehicle.asset.vehicleName);
 

@@ -38,11 +38,18 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public const ushort MAX_BATTERY_CHARGE = 10000;
     private static VehicleBayConfig _config;
     private bool _hasWhitelisted;
+    private static VehicleBay? _vb;
+
+    public static VehicleBay? GetSingletonQuick()
+    {
+        if (_vb == null || !_vb.IsLoaded)
+            return _vb = Data.Singletons.GetSingleton<VehicleBay>();
+        return _vb;
+    }
     public static VehicleBayData Config => _config == null ? throw new SingletonUnloadedException(typeof(VehicleBay)) : _config.Data;
     public VehicleBay() : base("vehiclebay", SCHEMAS)
     {
     }
-
     public override Task PreLoad()
     {
         if (_config == null)
@@ -50,14 +57,13 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         else _config.Reload();
         return Task.CompletedTask;
     }
-
     public override async Task PostLoad()
     {
-        EventDispatcher.OnEnterVehicleRequested += OnVehicleEnterRequested;
-        EventDispatcher.OnVehicleSwapSeatRequested += OnVehicleSwapSeatRequested;
-        EventDispatcher.OnExitVehicleRequested += OnVehicleExitRequested;
-        EventDispatcher.OnExitVehicle += OnVehicleExit;
-        EventDispatcher.OnVehicleSpawned += OnVehicleSpawned;
+        EventDispatcher.EnterVehicleRequested += OnVehicleEnterRequested;
+        EventDispatcher.VehicleSwapSeatRequested += OnVehicleSwapSeatRequested;
+        EventDispatcher.ExitVehicleRequested += OnVehicleExitRequested;
+        EventDispatcher.ExitVehicle += OnVehicleExit;
+        EventDispatcher.VehicleSpawned += OnVehicleSpawned;
         await WaitAsync();
         try
         {
@@ -73,20 +79,18 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             Release();
         }
     }
-
     public override Task PostUnload()
     {
-        EventDispatcher.OnVehicleSpawned -= OnVehicleSpawned;
-        EventDispatcher.OnExitVehicle -= OnVehicleExit;
-        EventDispatcher.OnExitVehicleRequested -= OnVehicleExitRequested;
-        EventDispatcher.OnVehicleSwapSeatRequested -= OnVehicleSwapSeatRequested;
-        EventDispatcher.OnEnterVehicleRequested -= OnVehicleEnterRequested;
+        EventDispatcher.VehicleSpawned -= OnVehicleSpawned;
+        EventDispatcher.ExitVehicle -= OnVehicleExit;
+        EventDispatcher.ExitVehicleRequested -= OnVehicleExitRequested;
+        EventDispatcher.VehicleSwapSeatRequested -= OnVehicleSwapSeatRequested;
+        EventDispatcher.EnterVehicleRequested -= OnVehicleEnterRequested;
         _hasWhitelisted = false;
+        _vb = null;
         return Task.CompletedTask;
     }
-
     public override bool AwaitLoad => true;
-
     public override MySqlDatabase Sql => Data.AdminSql;
     private void WhitelistItems()
     {
@@ -241,7 +245,11 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     /// <remarks>Doesn't lock. Creates a copy of the data to enumerate through.</remarks>
     public VehicleData? GetDataSync(Guid guid)
     {
-        SqlItem<VehicleData>[] d = Items.ToArray();
+        SqlItem<VehicleData>[] d;
+        lock (Items)
+        {
+            d = Items.ToArray();
+        }
         int map = MapScheduler.Current;
         for (int i = 0; i < d.Length; i++)
         {
@@ -258,10 +266,44 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 
         return null;
     }
+    /// <remarks>Doesn't lock. Doesn't create a copy of the data unless it gets modified while enumerating.
+    /// Can cause <see cref="InvalidOperationException"/> errors elsewhere.</remarks>
+    public VehicleData? GetDataSyncUnsafe(Guid guid)
+    {
+        int map = MapScheduler.Current;
+        if (IsLocked)
+            return GetDataSync(guid);
+        try
+        {
+            lock (Items)
+            {
+                foreach (SqlItem<VehicleData> item in List)
+                {
+                    if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
+                        return item.Item;
+                }
+                foreach (SqlItem<VehicleData> item in List)
+                {
+                    if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
+                        return item.Item;
+                }
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            return GetDataSync(guid);
+        }
+
+        return null;
+    }
     /// <remarks>Doesn't lock. Creates a copy of the data to enumerate through.</remarks>
     public SqlItem<VehicleData>? GetDataProxySync(Guid guid)
     {
-        SqlItem<VehicleData>[] d = Items.ToArray();
+        SqlItem<VehicleData>[] d;
+        lock (Items)
+        {
+            d = Items.ToArray();
+        }
         int map = MapScheduler.Current;
         for (int i = 0; i < d.Length; i++)
         {
@@ -285,17 +327,20 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         int map = MapScheduler.Current;
         try
         {
-            for (int i = 0; i < List.Count; ++i)
+            lock (Items)
             {
-                SqlItem<VehicleData> item = List[i];
-                if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
-                    return item;
-            }
-            for (int i = 0; i < List.Count; ++i)
-            {
-                SqlItem<VehicleData> item = List[i];
-                if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
-                    return item;
+                for (int i = 0; i < List.Count; ++i)
+                {
+                    SqlItem<VehicleData> item = List[i];
+                    if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
+                        return item;
+                }
+                for (int i = 0; i < List.Count; ++i)
+                {
+                    SqlItem<VehicleData> item = List[i];
+                    if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
+                        return item;
+                }
             }
         }
         finally
@@ -397,7 +442,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     {
                         if (Assets.find(vb.BarricadeID) is not ItemBarricadeAsset basset)
                         {
-                            L.LogError("SpawnLockedVehicle: Unable to find barricade asset of " + vb.BarricadeID.ToString("N") + ".");
+                            L.LogError("Unable to find barricade asset of " + vb.BarricadeID.ToString("N") + ".");
                             continue;
                         }
                         byte[] state = Util.CloneBytes(vb.Metadata);
@@ -776,7 +821,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                             IsOwnerInVehicle(e.Vehicle, owner) ||
                             (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                             (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                            (c.Data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EFOBRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
+                            (c.Data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
 
                         if (!canEnterDriverSeat)
                         {

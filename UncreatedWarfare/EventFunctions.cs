@@ -186,9 +186,9 @@ public static class EventFunctions
         if (VehicleBay.Config.TOWMissileWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<GuidedMissileComponent>().Initialize(projectile, gun.player, 90, 0.33f, 800);
         else if (VehicleBay.Config.GroundAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 4, 0.33f);
+            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 4, 0.33f);
         else if (VehicleBay.Config.AirAAWeapons.HasGuid(gun.equippedGunAsset.GUID))
-            projectile.AddComponent<HeatSeakingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
+            projectile.AddComponent<HeatSeekingMissileComponent>().Initialize(projectile, gun.player, 150, 5f, 1000, 10, 0f);
         else if (VehicleBay.Config.LaserGuidedWeapons.HasGuid(gun.equippedGunAsset.GUID))
             projectile.AddComponent<LaserGuidedMissileComponent>().Initialize(projectile, gun.player, 120, 1.15f, 150, 15, 0.6f);
 
@@ -348,15 +348,14 @@ public static class EventFunctions
             if (!build && !(ammoAsset is not null && ammoAsset.GUID == item.GUID))
                 return;
             Items? trunk = e.Player.Player.inventory.items[PlayerInventory.STORAGE];
-            if (trunk is null)
-                return;
-            if (e.Player.Keys.IsKeyDown(Data.Keys.DropSupplyOverride))
+            if (trunk is null || e.Player.Keys.IsKeyDown(Data.Keys.DropSupplyOverride))
                 return;
             for (int i = 0; i < VehicleManager.vehicles.Count; ++i)
             {
                 if (VehicleManager.vehicles[i].trunkItems == trunk)
                 {
-                    if (VehicleBay.VehicleExists(VehicleManager.vehicles[i].asset.GUID, out VehicleData data) && data.Type is EVehicleType.LOGISTICS or EVehicleType.HELI_TRANSPORT)
+                    VehicleBay? bay = VehicleBay.GetSingletonQuick();
+                    if (bay?.GetDataSyncUnsafe(VehicleManager.vehicles[i].asset.GUID) is { } data && VehicleData.IsLogistics(data.Type))
                     {
                         trunk.removeItem(e.Index);
                         Item it2 = new Item((!build ? buildAsset : ammoAsset)!.id, true);
@@ -534,7 +533,7 @@ public static class EventFunctions
             PlayerManager.ApplyTo(ucplayer);
 
             ulong team = ucplayer.GetTeam();
-            FPlayerName names = ucplayer.Name;
+            PlayerNames names = ucplayer.Name;
 
             bool g = Data.Is(out ITeams t);
             if (Data.PlaytimeComponents.ContainsKey(ucplayer.Steam64))
@@ -712,7 +711,7 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        FPlayerName names = F.GetPlayerOriginalNames(client.player);
+        PlayerNames names = F.GetPlayerOriginalNames(client.player);
         ulong team = client.GetTeam();
         Chat.Broadcast(T.BattlEyeKickBroadcast, names);
         L.Log($"{names.PlayerName} ({client.playerID.steamID.m_SteamID}) was kicked by BattlEye for \"{reason}\".");
@@ -1085,7 +1084,7 @@ public static class EventFunctions
                 }
             }
         }
-    next:
+        next:
         if (!shouldAllow) return;
 
         StrengthInNumbers.OnPlayerDamageRequested(ref parameters);
@@ -1294,19 +1293,16 @@ public static class EventFunctions
                 }
             });
         }
-        UCBarricadeManager.FindBarricade(instanceID, out BarricadeDrop? drop);
-        if (drop != default)
+        BarricadeDrop? drop = UCBarricadeManager.FindBarricade(instanceID, point);
+        if (drop is { interactable: InteractableSign sign })
         {
-            if (drop.model.TryGetComponent(out InteractableSign sign))
+            if (RequestSigns.SignExists(sign, out RequestSign rsign))
             {
-                if (RequestSigns.SignExists(sign, out RequestSign rsign))
-                {
-                    rsign.Position = drop.model.position;
-                    rsign.Rotation = drop.model.rotation.eulerAngles;
-                    RequestSigns.SaveSingleton();
-                }
-                TraitSigns.OnBarricadeMoved(drop, sign);
+                rsign.Position = drop.model.position;
+                rsign.Rotation = drop.model.rotation.eulerAngles;
+                RequestSigns.SaveSingleton();
             }
+            TraitSigns.OnBarricadeMoved(drop, sign);
         }
     }
     internal static void OnPlayerLeavesVehicle(ExitVehicle e)
@@ -1382,7 +1378,7 @@ public static class EventFunctions
         Tips.OnPlayerDisconnected(s64);
         UCPlayer ucplayer = e.Player;
         string kit = string.Empty;
-        FPlayerName names = F.GetPlayerOriginalNames(ucplayer.Player.channel.owner);
+        PlayerNames names = F.GetPlayerOriginalNames(ucplayer.Player.channel.owner);
         try
         {
             Points.OnPlayerLeft(ucplayer);
@@ -1407,7 +1403,6 @@ public static class EventFunctions
                 L.LogError(ex);
             }
             UCPlayerData? c = ucplayer.Player.GetPlayerData(out bool gotptcomp);
-            Data.OriginalNames.Remove(s64);
             ulong id = s64;
             if (UCWarfare.Config.EnablePlayerJoinLeaveMessages)
                 Chat.Broadcast(T.PlayerDisconnected, ucplayer);
@@ -1444,7 +1439,7 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SteamPending player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == ticket.m_SteamID.m_SteamID);
+        SteamPending? player = Provider.pending.FirstOrDefault(x => x.playerID.steamID.m_SteamID == ticket.m_SteamID.m_SteamID);
         if (player == null) return;
         try
         {
@@ -1492,8 +1487,8 @@ public static class EventFunctions
             }
             else
             {
-                player.playerID.characterName = cn;
-                player.playerID.nickName = cn;
+                player.playerID.characterName = cn!;
+                player.playerID.nickName = cn!;
             }
 
             player.playerID.characterName = Regex.Replace(player.playerID.characterName, "<.*>", string.Empty);
@@ -1506,21 +1501,21 @@ public static class EventFunctions
                     UCWarfare.Config.MinAlphanumericStringLength);
                 return;
             }
-            else if (player.playerID.characterName.Length < 3)
+            if (player.playerID.characterName.Length < 3)
             {
                 player.playerID.characterName = player.playerID.nickName;
             }
-            else if (player.playerID.nickName.Length < 3)
+            if (player.playerID.nickName.Length < 3)
             {
                 player.playerID.nickName = player.playerID.characterName;
             }
 
-            FPlayerName names = new FPlayerName(player.playerID);
+            PlayerNames names = new PlayerNames(player.playerID);
 
-            if (Data.OriginalNames.ContainsKey(player.playerID.steamID.m_SteamID))
-                Data.OriginalNames[player.playerID.steamID.m_SteamID] = names;
+            if (Data.OriginalPlayerNames.ContainsKey(player.playerID.steamID.m_SteamID))
+                Data.OriginalPlayerNames[player.playerID.steamID.m_SteamID] = names;
             else
-                Data.OriginalNames.Add(player.playerID.steamID.m_SteamID, names);
+                Data.OriginalPlayerNames.Add(player.playerID.steamID.m_SteamID, names);
 
             L.Log("PN: \"" + player.playerID.playerName + "\", CN: \"" + player.playerID.characterName + "\", NN: \"" + player.playerID.nickName + "\" (" + player.playerID.steamID.m_SteamID.ToString(Data.Locale) + ") trying to connect.", ConsoleColor.Cyan);
         }
@@ -1529,7 +1524,7 @@ public static class EventFunctions
             L.LogError($"Error accepting {player.playerID.playerName} in OnPrePlayerConnect:");
             L.LogError(ex);
             isValid = false;
-            explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening.";
+            explanation = "Uncreated Network was unable to authenticate your connection, try again later or contact a Director if this keeps happening (discord.gg/" + UCWarfare.Config.DiscordInviteCode + ").";
         }
     }
     internal static void OnStructureDestroyed(StructureDestroyed e)

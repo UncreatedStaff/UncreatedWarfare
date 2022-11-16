@@ -7,10 +7,10 @@ using UnityEngine;
 
 namespace Uncreated.Players;
 
-public struct FPlayerName : IPlayer
+public struct PlayerNames : IPlayer
 {
-    public static readonly FPlayerName Nil = new FPlayerName() { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
-    public static readonly FPlayerName Console = new FPlayerName() { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = 0 };
+    public static readonly PlayerNames Nil = new PlayerNames() { CharacterName = string.Empty, NickName = string.Empty, PlayerName = string.Empty, Steam64 = 0 };
+    public static readonly PlayerNames Console = new PlayerNames() { CharacterName = "Console", NickName = "Console", PlayerName = "Console", Steam64 = 0 };
     public ulong Steam64;
     public string PlayerName;
     public string CharacterName;
@@ -18,7 +18,7 @@ public struct FPlayerName : IPlayer
     public bool WasFound;
     ulong IPlayer.Steam64 => Steam64;
 
-    public FPlayerName(SteamPlayerID player)
+    public PlayerNames(SteamPlayerID player)
     {
         this.PlayerName = player.playerName;
         this.CharacterName = player.characterName;
@@ -26,7 +26,7 @@ public struct FPlayerName : IPlayer
         this.Steam64 = player.steamID.m_SteamID;
         WasFound = true;
     }
-    public FPlayerName(ulong player)
+    public PlayerNames(ulong player)
     {
         string ts = player.ToString();
         this.PlayerName = ts;
@@ -35,7 +35,7 @@ public struct FPlayerName : IPlayer
         this.Steam64 = player;
         WasFound = true;
     }
-    public FPlayerName(SteamPlayer player)
+    public PlayerNames(SteamPlayer player)
     {
         this.PlayerName = player.playerID.playerName;
         this.CharacterName = player.playerID.characterName;
@@ -43,7 +43,7 @@ public struct FPlayerName : IPlayer
         this.Steam64 = player.playerID.steamID.m_SteamID;
         WasFound = true;
     }
-    public FPlayerName(Player player)
+    public PlayerNames(Player player)
     {
         this.PlayerName = player.channel.owner.playerID.playerName;
         this.CharacterName = player.channel.owner.playerID.characterName;
@@ -51,15 +51,15 @@ public struct FPlayerName : IPlayer
         this.Steam64 = player.channel.owner.playerID.steamID.m_SteamID;
         WasFound = true;
     }
-    public static void Write(ByteWriter W, FPlayerName N)
+    public static void Write(ByteWriter W, PlayerNames N)
     {
         W.Write(N.Steam64);
         W.Write(N.PlayerName);
         W.Write(N.CharacterName);
         W.Write(N.NickName);
     }
-    public static FPlayerName Read(ByteReader R) =>
-        new FPlayerName
+    public static PlayerNames Read(ByteReader R) =>
+        new PlayerNames
         {
             Steam64 = R.ReadUInt64(),
             PlayerName = R.ReadString(),
@@ -67,9 +67,9 @@ public struct FPlayerName : IPlayer
             NickName = R.ReadString()
         };
     public override string ToString() => PlayerName;
-    public static bool operator ==(FPlayerName left, FPlayerName right) => left.Steam64 == right.Steam64;
-    public static bool operator !=(FPlayerName left, FPlayerName right) => left.Steam64 != right.Steam64;
-    public override bool Equals(object obj) => obj is FPlayerName pn && this.Steam64 == pn.Steam64;
+    public static bool operator ==(PlayerNames left, PlayerNames right) => left.Steam64 == right.Steam64;
+    public static bool operator !=(PlayerNames left, PlayerNames right) => left.Steam64 != right.Steam64;
+    public override bool Equals(object obj) => obj is PlayerNames pn && this.Steam64 == pn.Steam64;
     public override int GetHashCode() => Steam64.GetHashCode();
     string ITranslationArgument.Translate(string language, string? format, UCPlayer? target, ref TranslationFlags flags) => new OfflinePlayer(in this).Translate(language, format, target, ref flags);
 }

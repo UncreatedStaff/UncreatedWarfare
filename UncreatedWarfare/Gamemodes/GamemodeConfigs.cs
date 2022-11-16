@@ -307,6 +307,54 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("effect_unload_build")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectUnloadBuild { get; set; }
 
+    [Sync(526)]
+    [JsonPropertyName("effect_unlock_vehicle")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectUnlockVehicle { get; set; }
+
+    [Sync(527)]
+    [JsonPropertyName("effect_dig")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectDig { get; set; }
+
+    [Sync(528)]
+    [JsonPropertyName("effect_repair")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectRepair { get; set; }
+
+    [Sync(529)]
+    [JsonPropertyName("effect_refuel")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectRefuel { get; set; }
+
+    [Sync(530)]
+    [JsonPropertyName("effect_laser_guided_no_sound")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectLaserGuidedNoSound { get; set; }
+
+    [Sync(531)]
+    [JsonPropertyName("effect_laser_guided_sound")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectLaserGuidedSound { get; set; }
+
+    [Sync(532)]
+    [JsonPropertyName("effect_guided_missile_no_sound")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectGuidedMissileNoSound { get; set; }
+
+    [Sync(533)]
+    [JsonPropertyName("effect_guided_missile_sound")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectGuidedMissileSound { get; set; }
+
+    [Sync(534)]
+    [JsonPropertyName("effect_heat_seeking_missile_no_sound")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectHeatSeekingMissileNoSound { get; set; }
+
+    [Sync(535)]
+    [JsonPropertyName("effect_heat_seeking_missile_sound")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectHeatSeekingMissileSound { get; set; }
+
+    [Sync(536)]
+    [JsonPropertyName("effect_purchase")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectPurchase { get; set; }
+
+    [Sync(537)]
+    [JsonPropertyName("effect_ammo")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectAmmo { get; set; }
+
     [Sync(550)]
     [JsonPropertyName("ui_capture_enable_player_count")]
     public bool UICaptureEnablePlayerCount { get; set; }
@@ -689,6 +737,18 @@ public sealed class GamemodeConfigData : JSONConfigData
         EffectActionBuild = new JsonAssetReference<EffectAsset>("793bd80007f3484882284a6994e80bb3");
         EffectUnloadAmmo = new JsonAssetReference<EffectAsset>("8a2740cfc6f64ca68410145a83027735");
         EffectUnloadBuild = new JsonAssetReference<EffectAsset>("066c35a3e97e476a9f0a75218b4f6683");
+        EffectUnlockVehicle = new JsonAssetReference<EffectAsset>("bc41e0feaebe4e788a3612811b8722d3");
+        EffectDig = new JsonAssetReference<EffectAsset>("f894dff1d7ef453887182accd14dc9f9");
+        EffectRepair = new JsonAssetReference<EffectAsset>("84347b13028340b8976033c08675d458");
+        EffectRefuel = new JsonAssetReference<EffectAsset>("1d4fa25996114b7b89b061021fcc688f");
+        EffectLaserGuidedNoSound = new JsonAssetReference<EffectAsset>("64c3a204acd441679b9322be04016cbf");
+        EffectLaserGuidedSound = new JsonAssetReference<EffectAsset>("12209d06336142f8a0c4e49999759189");
+        EffectGuidedMissileNoSound = new JsonAssetReference<EffectAsset>("5e7e9379872a40059cdc7e6d189d10dd");
+        EffectGuidedMissileSound = new JsonAssetReference<EffectAsset>("7b458028c9de4a449c30ed5fc201bd37");
+        EffectHeatSeekingMissileNoSound = new JsonAssetReference<EffectAsset>("39abdc11cd68477fa3c9b44aaf299760");
+        EffectHeatSeekingMissileSound = new JsonAssetReference<EffectAsset>("5552f714ca744ab7bd0687fba0d541d3");
+        EffectPurchase = new JsonAssetReference<EffectAsset>("5e2a0073025849d39322932d88609777");
+        EffectAmmo = new JsonAssetReference<EffectAsset>("03caec479dd2475c92e1c326e1720140");
         UICaptureEnablePlayerCount = true;
         UICaptureShowPointCount = false;
         UICircleFontCharacters = "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀ";

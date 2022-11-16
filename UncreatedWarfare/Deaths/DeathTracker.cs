@@ -220,7 +220,7 @@ public class DeathTracker : BaseReloadSingleton
                 }
                 else if (killer == null || triggerer.Steam64 != killer.Steam64)
                 {
-                    FPlayerName names = F.GetPlayerOriginalNames(triggerer);
+                    PlayerNames names = F.GetPlayerOriginalNames(triggerer);
                     args.Player3Name = names.CharacterName;
                     args.Player3Team = triggerer.GetTeam();
                     args.Flags |= EDeathFlags.PLAYER3;

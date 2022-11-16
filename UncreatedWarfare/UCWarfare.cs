@@ -260,8 +260,8 @@ public class UCWarfare : MonoBehaviour
         StatsManager.LoadEvents();
 
         GameUpdateMonitor.OnGameUpdateDetected += EventFunctions.OnGameUpdateDetected;
-        EventDispatcher.OnPlayerJoined += EventFunctions.OnPostPlayerConnected;
-        EventDispatcher.OnPlayerLeaving += EventFunctions.OnPlayerDisconnected;
+        EventDispatcher.PlayerJoined += EventFunctions.OnPostPlayerConnected;
+        EventDispatcher.PlayerLeaving += EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation += EventFunctions.OnPrePlayerConnect;
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
         LangCommand.OnPlayerChangedLanguage += EventFunctions.LangCommand_OnPlayerChangedLanguage;
@@ -285,18 +285,18 @@ public class UCWarfare : MonoBehaviour
         StructureManager.onTransformRequested += EventFunctions.StructureMovedInWorkzone;
         StructureManager.onDamageStructureRequested += EventFunctions.OnStructureDamaged;
         BarricadeManager.onOpenStorageRequested += EventFunctions.OnEnterStorage;
-        EventDispatcher.OnEnterVehicle += EventFunctions.OnEnterVehicle;
-        EventDispatcher.OnVehicleSwapSeat += EventFunctions.OnVehicleSwapSeat;
-        EventDispatcher.OnExitVehicle += EventFunctions.OnPlayerLeavesVehicle;
-        EventDispatcher.OnLandmineExploding += EventFunctions.OnLandmineExploding;
-        EventDispatcher.OnItemDropRequested += EventFunctions.OnItemDropRequested;
-        EventDispatcher.OnCraftRequested += EventFunctions.OnCraftRequested;
+        EventDispatcher.EnterVehicle += EventFunctions.OnEnterVehicle;
+        EventDispatcher.VehicleSwapSeat += EventFunctions.OnVehicleSwapSeat;
+        EventDispatcher.ExitVehicle += EventFunctions.OnPlayerLeavesVehicle;
+        EventDispatcher.LandmineExploding += EventFunctions.OnLandmineExploding;
+        EventDispatcher.ItemDropRequested += EventFunctions.OnItemDropRequested;
+        EventDispatcher.CraftRequested += EventFunctions.OnCraftRequested;
         VehicleManager.onDamageVehicleRequested += EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop += EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid += EventFunctions.OnPostHealedPlayer;
         UseableConsumeable.onConsumePerformed += EventFunctions.OnConsume;
-        EventDispatcher.OnBarricadeDestroyed += EventFunctions.OnBarricadeDestroyed;
-        EventDispatcher.OnStructureDestroyed += EventFunctions.OnStructureDestroyed;
+        EventDispatcher.BarricadeDestroyed += EventFunctions.OnBarricadeDestroyed;
+        EventDispatcher.StructureDestroyed += EventFunctions.OnStructureDestroyed;
         PlayerVoice.onRelayVoice += EventFunctions.OnRelayVoice2;
     }
     private void UnsubscribeFromEvents()
@@ -309,8 +309,8 @@ public class UCWarfare : MonoBehaviour
 
         GameUpdateMonitor.OnGameUpdateDetected -= EventFunctions.OnGameUpdateDetected;
         ReloadCommand.OnTranslationsReloaded -= EventFunctions.ReloadCommand_onTranslationsReloaded;
-        EventDispatcher.OnPlayerJoined -= EventFunctions.OnPostPlayerConnected;
-        EventDispatcher.OnPlayerLeaving -= EventFunctions.OnPlayerDisconnected;
+        EventDispatcher.PlayerJoined -= EventFunctions.OnPostPlayerConnected;
+        EventDispatcher.PlayerLeaving -= EventFunctions.OnPlayerDisconnected;
         Provider.onCheckValidWithExplanation -= EventFunctions.OnPrePlayerConnect;
         Provider.onBattlEyeKick += EventFunctions.OnBattleyeKicked;
         LangCommand.OnPlayerChangedLanguage -= EventFunctions.LangCommand_OnPlayerChangedLanguage;
@@ -333,17 +333,17 @@ public class UCWarfare : MonoBehaviour
         StructureManager.onTransformRequested -= EventFunctions.StructureMovedInWorkzone;
         BarricadeManager.onOpenStorageRequested -= EventFunctions.OnEnterStorage;
         StructureManager.onDamageStructureRequested -= EventFunctions.OnStructureDamaged;
-        EventDispatcher.OnItemDropRequested -= EventFunctions.OnItemDropRequested;
-        EventDispatcher.OnLandmineExploding -= EventFunctions.OnLandmineExploding;
-        EventDispatcher.OnEnterVehicle -= EventFunctions.OnEnterVehicle;
-        EventDispatcher.OnVehicleSwapSeat -= EventFunctions.OnVehicleSwapSeat;
-        EventDispatcher.OnExitVehicle -= EventFunctions.OnPlayerLeavesVehicle;
+        EventDispatcher.ItemDropRequested -= EventFunctions.OnItemDropRequested;
+        EventDispatcher.LandmineExploding -= EventFunctions.OnLandmineExploding;
+        EventDispatcher.EnterVehicle -= EventFunctions.OnEnterVehicle;
+        EventDispatcher.VehicleSwapSeat -= EventFunctions.OnVehicleSwapSeat;
+        EventDispatcher.ExitVehicle -= EventFunctions.OnPlayerLeavesVehicle;
         VehicleManager.onDamageVehicleRequested -= EventFunctions.OnPreVehicleDamage;
         ItemManager.onServerSpawningItemDrop -= EventFunctions.OnDropItemFinal;
         UseableConsumeable.onPerformedAid -= EventFunctions.OnPostHealedPlayer;
         UseableConsumeable.onConsumePerformed -= EventFunctions.OnConsume;
-        EventDispatcher.OnBarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
-        EventDispatcher.OnStructureDestroyed -= EventFunctions.OnStructureDestroyed;
+        EventDispatcher.BarricadeDestroyed -= EventFunctions.OnBarricadeDestroyed;
+        EventDispatcher.StructureDestroyed -= EventFunctions.OnStructureDestroyed;
         PlayerVoice.onRelayVoice -= EventFunctions.OnRelayVoice2;
         StatsManager.UnloadEvents();
     }

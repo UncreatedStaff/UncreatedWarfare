@@ -61,9 +61,9 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         _t1Tickets = 0;
         _t2Tickets = 0;
         Provider.Load();
-        EventDispatcher.OnPlayerDied += OnPlayerDeath;
-        EventDispatcher.OnGroupChanged += OnGroupChanged;
-        EventDispatcher.OnUIRefreshRequested += ReloadUI;
+        EventDispatcher.PlayerDied += OnPlayerDeath;
+        EventDispatcher.GroupChanged += OnGroupChanged;
+        EventDispatcher.UIRefreshRequested += ReloadUI;
     }
     public override void Unload()
     {
@@ -73,9 +73,9 @@ public class TicketManager : BaseSingleton, IPlayerPreInitListener, IGameStartLi
         Provider = null!;
         Team1Tickets = 0;
         Team2Tickets = 0;
-        EventDispatcher.OnUIRefreshRequested -= ReloadUI;
-        EventDispatcher.OnGroupChanged -= OnGroupChanged;
-        EventDispatcher.OnPlayerDied -= OnPlayerDeath;
+        EventDispatcher.UIRefreshRequested -= ReloadUI;
+        EventDispatcher.GroupChanged -= OnGroupChanged;
+        EventDispatcher.PlayerDied -= OnPlayerDeath;
     }
     void IGameTickListener.Tick()
     {

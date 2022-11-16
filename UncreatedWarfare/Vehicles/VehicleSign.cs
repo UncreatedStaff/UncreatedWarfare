@@ -123,7 +123,7 @@ public class VehicleSigns : ListSingleton<VehicleSign>, ILevelStartListener
         {
             foreach (VehicleSpawn spawn in VehicleSpawner.Spawners)
             {
-                if (VehicleBay.VehicleExists(spawn.VehicleGuid, out VehicleData data) && (data.HasDelayType(EDelayType.FLAG) || data.HasDelayType(EDelayType.FLAG_PERCENT)))
+                if (spawn.Data?.Item != null && (spawn.Data.Item.HasDelayType(EDelayType.FLAG) || spawn.Data.Item.HasDelayType(EDelayType.FLAG_PERCENT)))
                 {
                     spawn.UpdateSign();
                 }
@@ -316,17 +316,15 @@ public class VehicleSign
             {
                 if (bay.StructureType == EStructType.BARRICADE)
                 {
-                    BarricadeData? paddata =
-                        UCBarricadeManager.FindBarricade(bay.InstanceId, out BarricadeDrop? paddrop);
-                    if (paddata != null)
-                        saver.BeginAddBarricade(paddrop!);
+                    BarricadeDrop? paddrop = UCBarricadeManager.FindBarricade(bay.InstanceId);
+                    if (paddrop != null)
+                        saver.BeginAddBarricade(paddrop);
                 }
                 else if (bay.StructureType == EStructType.STRUCTURE)
                 {
-                    StructureData? paddata =
-                        UCBarricadeManager.FindStructure(bay.InstanceId, out StructureDrop? paddrop);
-                    if (paddata != null)
-                        saver.BeginAddStructure(paddrop!);
+                    StructureDrop? paddrop = UCBarricadeManager.FindStructure(bay.InstanceId);
+                    if (paddrop != null)
+                        saver.BeginAddStructure(paddrop);
                 }
             }
         }

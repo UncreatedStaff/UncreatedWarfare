@@ -94,7 +94,7 @@ public class DebugCommand : AsyncCommand
 #pragma warning disable IDE1006
 #pragma warning disable IDE0051
     private const string GIVE_XP_SYNTAX = "/test givexp <player> <amount> [team - required if offline]";
-    private void givexp(CommandInteraction ctx)
+    private async Task givexp(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -114,14 +114,10 @@ public class DebugCommand : AsyncCommand
                     {
                         if (team is > 0 and < 3)
                         {
-                            Task.Run(async () =>
-                            {
-                                await Data.DatabaseManager.AddXP(player, team, amount);
-                                FPlayerName name = await Data.DatabaseManager.GetUsernamesAsync(player);
-                                await UCWarfare.ToUpdate();
-                                ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
-                            });
-                            ctx.Defer();
+                            await Data.DatabaseManager.AddXP(player, team, amount, token).ConfigureAwait(false);
+                            PlayerNames name = await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
+
+                            ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                         }
                         else
                             ctx.SendCorrectUsage(GIVE_XP_SYNTAX);
@@ -133,9 +129,12 @@ public class DebugCommand : AsyncCommand
                 {
                     if (team is < 1 or > 2)
                         team = onlinePlayer.GetTeam();
-                    Points.AwardXP(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
-                    FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
-                    ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
+                    await XPParameters
+                        .WithTranslation(onlinePlayer, team, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, amount)
+                        .Award(token)
+                        .ThenToUpdate(token);
+                    ctx.ReplyString($"Given <#fff>{amount}</color> <#ff9b01>XP</color> " +
+                                    $"to {(ctx.IsConsole ? onlinePlayer.Name.PlayerName : onlinePlayer.Name.CharacterName)}.");
                 }
             }
             else
@@ -145,7 +144,7 @@ public class DebugCommand : AsyncCommand
             ctx.ReplyString($"Couldn't parse {ctx.Get(1)!} as a number.");
     }
     private const string GIVE_CREDITS_SYNTAX = "/test givecredits <player> <amount> [team - required if offline]";
-    private void givecredits(CommandInteraction ctx)
+    private async Task givecredits(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -163,16 +162,12 @@ public class DebugCommand : AsyncCommand
                 {
                     if (PlayerSave.HasPlayerSave(player))
                     {
-                        if (team > 0 && team < 3)
+                        if (team is > 0 and < 3)
                         {
-                            Task.Run(async () =>
-                            {
-                                await Data.DatabaseManager.AddCredits(player, team, amount);
-                                FPlayerName name = await Data.DatabaseManager.GetUsernamesAsync(player);
-                                await UCWarfare.ToUpdate();
-                                ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
-                            });
-                            ctx.Defer();
+                            await Data.DatabaseManager.AddCredits(player, team, amount, token).ConfigureAwait(false);
+                            PlayerNames name = await Data.DatabaseManager.GetUsernamesAsync(player, token).ThenToUpdate(token);
+                            
+                            ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> to {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
                         }
                         else
                             ctx.SendCorrectUsage(GIVE_CREDITS_SYNTAX);
@@ -182,11 +177,12 @@ public class DebugCommand : AsyncCommand
                 }
                 else
                 {
-                    if (team < 1 || team > 2)
+                    if (team is < 1 or > 2)
                         team = onlinePlayer.GetTeam();
-                    Points.AwardCredits(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer);
-                    FPlayerName names = F.GetPlayerOriginalNames(onlinePlayer);
-                    ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> to {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}.");
+                    await Points.AwardCreditsAsync(onlinePlayer, amount, ctx.IsConsole ? T.XPToastFromOperator : T.XPToastFromPlayer, token: token)
+                        .ThenToUpdate(token);
+                    ctx.ReplyString($"Given <#{UCWarfare.GetColorHex("credits")}>C</color> <#fff>{amount}</color> " +
+                                    $"to {(ctx.IsConsole ? onlinePlayer.Name.PlayerName : onlinePlayer.Name.CharacterName)}.");
                 }
             }
             else
@@ -241,7 +237,7 @@ public class DebugCommand : AsyncCommand
         if (ctx.TryGet(0, out ulong id))
             team = id;
         else if (!ctx.IsConsole)
-            team = ctx.Caller!.GetTeam();
+            team = ctx.Caller.GetTeam();
         else
         {
             ctx.Reply(T.NotOnCaptureTeam);
@@ -278,7 +274,6 @@ public class DebugCommand : AsyncCommand
 
         if (!ctx.TryGet(0, out uint times))
             times = 1U;
-        List<Zone> zones = new List<Zone>();
         string directory = Path.Combine(Data.Paths.FlagStorage, "GraphExport", Path.DirectorySeparatorChar.ToString());
         if (!Directory.Exists(directory))
             Directory.CreateDirectory(directory);
@@ -286,7 +281,6 @@ public class DebugCommand : AsyncCommand
         for (int i = 0; i < times; i++)
         {
             ObjectivePathing.TryPath(rot);
-            zones.Clear();
             ZoneDrawing.DrawZoneMap(fg.LoadedFlags, rot, Path.Combine(directory, "zonegraph_" + i.ToString(Data.Locale)));
             L.Log("Done with " + (i + 1).ToString(Data.Locale) + '/' + times.ToString(Data.Locale));
             rot.Clear();
@@ -301,7 +295,7 @@ public class DebugCommand : AsyncCommand
 
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
-        Flag flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos));
+        Flag? flag = fg.Rotation.FirstOrDefault(f => f.PlayerInRange(pos));
         string txt = $"Position: <#ff9999>({pos.x.ToString("0.##", Data.Locale)}, {pos.y.ToString("0.##", Data.Locale)}, {pos.z.ToString("0.##", Data.Locale)})</color>. " +
                      $"Yaw: <#ff9999>{ctx.Caller.Player.transform.eulerAngles.y.ToString("0.##", Data.Locale)}</color>.";
         if (flag is null)
@@ -369,10 +363,9 @@ public class DebugCommand : AsyncCommand
         List<Zone> zones = new List<Zone>();
         if (all)
         {
-            if (extra)
-                zones.AddRange(Data.ZoneProvider.Zones);
-            else
-                zones.AddRange(Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
+            zones.AddRange(extra
+                ? Data.ZoneProvider.Zones
+                : Data.ZoneProvider.Zones.Where(x => x.Data.UseCase == EZoneUseCase.FLAG));
         }
         else
             zones.AddRange(fg.Rotation.Select(x => x.ZoneData));
@@ -387,11 +380,10 @@ public class DebugCommand : AsyncCommand
         ctx.AssertGamemode(out IFlagRotation fg);
         Zone zone;
         string zoneName;
-        string zoneColor;
         Vector3 pos = ctx.Caller.Position;
         if (pos == Vector3.zero) return;
-        Flag flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
-        if (flag == default)
+        Flag? flag = fg.LoadedFlags.FirstOrDefault(f => f.PlayerInRange(pos));
+        if (flag == null)
         {
             ctx.Reply(T.ZoneNoResultsLocation);
             return;
@@ -400,7 +392,6 @@ public class DebugCommand : AsyncCommand
         {
             zone = flag.ZoneData;
             zoneName = flag.Name;
-            zoneColor = flag.TeamSpecificHexColor;
         }
         List<Zone> zones = new List<Zone>(1) { zone };
         ctx.LogAction(EActionLogType.BUILD_ZONE_MAP, "DRAWZONE");
@@ -479,7 +470,7 @@ public class DebugCommand : AsyncCommand
             ctx.SendGamemodeError();
     }
     private const string PLAYER_SAVE_USAGE = "/test playersave <player> <property> <value>";
-    private void playersave(CommandInteraction ctx)
+    private async Task playersave(CommandInteraction ctx, CancellationToken token)
     {
         ctx.AssertPermissions(EAdminType.MODERATOR);
 
@@ -498,7 +489,8 @@ public class DebugCommand : AsyncCommand
                     switch (result)
                     {
                         case ESetFieldResult.SUCCESS:
-                            FPlayerName names = F.GetPlayerOriginalNames(player);
+                            PlayerNames names = onlinePlayer is not null ? onlinePlayer.Name :
+                                await F.GetPlayerOriginalNamesAsync(player, token).ThenToUpdate(token);
                             ctx.ReplyString($"Set {property} in {(ctx.IsConsole ? names.PlayerName : names.CharacterName)}'s playersave to {value}.");
                             break;
                         case ESetFieldResult.FIELD_NOT_FOUND:
@@ -520,7 +512,7 @@ public class DebugCommand : AsyncCommand
                     ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
             }
             else
-                ctx.ReplyString($"This player hasn't joined the server yet.");
+                ctx.ReplyString("This player hasn't joined the server yet.");
         }
         else
             ctx.SendCorrectUsage(PLAYER_SAVE_USAGE);
@@ -640,7 +632,7 @@ public class DebugCommand : AsyncCommand
             if (ctx.TryGet(0, out _, out UCPlayer? player) && player is not null)
             {
                 t.TeamSelector?.ResetState(player);
-                FPlayerName name = F.GetPlayerOriginalNames(player);
+                PlayerNames name = F.GetPlayerOriginalNames(player);
                 ctx.ReplyString($"Reset lobby for {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
             }
             else

@@ -139,9 +139,9 @@ public class OrderCommand : Command
                             case EOrder.BUILDFOB:
                                 ctx.AssertGamemode<IFOBs>();
 
-                                if (FOB.GetNearestFOB(marker, EFOBRadius.FOB_PLACEMENT, team) != null)
+                                if (FOB.GetNearestFOB(marker, EfobRadius.FOB_PLACEMENT, team) != null)
                                     throw ctx.Reply(T.OrderBuildFOBExists);
-                                else if (FOB.GetFOBs(team).Count >= FOBManager.Config.FobLimit)
+                                else if (FOB.GetFoBs(team).Count >= FOBManager.Config.FobLimit)
                                     throw ctx.Reply(T.OrderBuildFOBTooMany);
                                 else
                                 {

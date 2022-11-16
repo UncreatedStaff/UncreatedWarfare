@@ -103,10 +103,8 @@ public class FOBComponent : MonoBehaviour
             {
                 if (Parent.IsBleeding)
                 {
-                    ushort loss = 10;
-
-                    Barricade barricade = Parent.Radio.GetServersideData().barricade;
-
+                    const ushort loss = 10;
+                    
                     BarricadeManager.damage(transform, loss, 1, false, default, EDamageOrigin.Useable_Melee);
                 }
 
@@ -131,12 +129,11 @@ public class FOBComponent : MonoBehaviour
 public class FOB : IFOB, IDeployable
 {
     public BarricadeDrop Radio;
-    private FOBComponent component;
+    private FOBComponent _component;
     public int Number;
-    private string _name;
     private readonly string _cl;
     private readonly GridLocation _gc;
-    public string Name { get => _name; set => _name = value; }
+    public string Name { get; set; }
     public GridLocation GridLocation => _gc;
     public string ClosestLocation => _cl;
     public ulong Team => Radio.GetServersideData().group.GetTeam();
@@ -163,22 +160,20 @@ public class FOB : IFOB, IDeployable
         {
             if (IsBleeding)
                 return UCWarfare.GetColorHex("bleeding_fob_color");
-            else if (Bunker == null)
+            if (Bunker == null)
                 return UCWarfare.GetColorHex("no_bunker_fob_color");
-            else if (NearbyEnemies.Count != 0)
+            if (NearbyEnemies.Count != 0)
                 return UCWarfare.GetColorHex("enemy_nearby_fob_color");
-            else
-                return UCWarfare.GetColorHex("default_fob_color");
+            return UCWarfare.GetColorHex("default_fob_color");
         }
     }
     public string UIResourceString
     {
         get
         {
-            if (IsBleeding)
-                return string.Empty;
-            else
-                return Build.ToString(Data.Locale).Colorize("d4c49d") + " " + Ammo.ToString(Data.Locale).Colorize("b56e6e");
+            return IsBleeding
+                ? string.Empty
+                : Build.ToString(Data.Locale).Colorize("d4c49d") + " " + Ammo.ToString(Data.Locale).Colorize("b56e6e");
         }
     }
     public BarricadeDrop? RepairStation
@@ -194,20 +189,20 @@ public class FOB : IFOB, IDeployable
             : Array.Empty<BarricadeDrop>();
     }
     public IEnumerable<InteractableVehicle> Emplacements => UCVehicleManager.GetNearbyVehicles(FOBManager.Config.Buildables.Where(bl => bl.Type == EBuildableType.EMPLACEMENT).Cast<Guid>(), Radius, Position);
-    public List<UCPlayer> FriendliesOnFOB { get; private set; }
-    public List<UCPlayer> NearbyEnemies { get; private set; }
+    public List<UCPlayer> FriendliesOnFOB { get; }
+    public List<UCPlayer> NearbyEnemies { get; }
     public ulong Killer { get; private set; }
-    public ulong Placer { get; private set; }
-    public ulong Creator { get; private set; }
+    public ulong Placer { get; }
+    public ulong Creator { get; }
 
-    private readonly Guid builtRadioGUID;
-    private byte[] builtState;
+    private readonly Guid _builtRadioGUID;
+    private byte[] _builtState;
 
-    private readonly Guid BuildID;
-    private readonly Guid AmmoID;
+    private readonly Guid _buildID;
+    private readonly Guid _ammoID;
 
-    private readonly ushort shortBuildID;
-    private readonly ushort shortAmmoID;
+    private readonly ushort _shortBuildID;
+    private readonly ushort _shortAmmoID;
 
     public FOB(BarricadeDrop radio)
     {
@@ -246,23 +241,23 @@ public class FOB : IFOB, IDeployable
 
         Placer = radio.GetServersideData().owner;
 
-        builtRadioGUID = radio.asset.GUID;
+        _builtRadioGUID = radio.asset.GUID;
 
         TeamManager.GetFaction(Team).Build.ValidReference(out ItemAsset? build);
         TeamManager.GetFaction(Team).Ammo.ValidReference(out ItemAsset? ammo);
 
         if (build is not null)
         {
-            BuildID = build.GUID;
-            shortBuildID = build.id;
+            _buildID = build.GUID;
+            _shortBuildID = build.id;
         }
         if (ammo is not null)
         {
-            AmmoID = ammo.GUID;
-            shortAmmoID = ammo.id;
+            _ammoID = ammo.GUID;
+            _shortAmmoID = ammo.id;
         }
 
-        InteractableVehicle nearestLogi = UCVehicleManager.GetNearestLogi(Position, 30, Team);
+        InteractableVehicle? nearestLogi = UCVehicleManager.GetNearestLogi(Position, 30, Team);
         if (nearestLogi != null)
         {
             if (nearestLogi.transform.TryGetComponent(out VehicleComponent component))
@@ -291,13 +286,11 @@ public class FOB : IFOB, IDeployable
 
                     if (groupsUnloaded > 0)
                     {
-                        int tw = Points.TWConfig.UnloadSuppliesPoints;
                         int xp = Points.XPConfig.UnloadSuppliesXP;
 
                         if (creator.KitClass == EClass.PILOT)
                         {
                             xp *= 2;
-                            tw *= 2;
                         }
 
                         Points.AwardXP(creator, groupsUnloaded * xp, T.XPToastSuppliesUnloaded);
@@ -311,12 +304,12 @@ public class FOB : IFOB, IDeployable
                 {
                     ItemJar item = nearestLogi.trunkItems.items[i];
                     bool shouldRemove = false;
-                    if (item.item.id == shortBuildID && buildRemoved < 16)
+                    if (item.item.id == _shortBuildID && buildRemoved < 16)
                     {
                         shouldRemove = true;
                         buildRemoved++;
                     }
-                    if (item.item.id == shortAmmoID && ammoRemoved < 12)
+                    if (item.item.id == _shortAmmoID && ammoRemoved < 12)
                     {
                         shouldRemove = true;
                         ammoRemoved++;
@@ -333,8 +326,8 @@ public class FOB : IFOB, IDeployable
         if (Gamemode.Config.BarricadeFOBBunker.ValidReference(out Guid fob))
             UpdateBunker(UCBarricadeManager.GetNearbyBarricades(fob, 30, Position, Team, false).FirstOrDefault());
 
-        component = Radio.model.gameObject.AddComponent<FOBComponent>();
-        component.Initialize(this);
+        _component = Radio.model.gameObject.AddComponent<FOBComponent>();
+        _component.Initialize(this);
     }
     public void UpdateBunker(BarricadeDrop? bunker)
     {
@@ -342,14 +335,7 @@ public class FOB : IFOB, IDeployable
 
         Bunker = bunker;
 
-        if (Bunker == null)
-        {
-            Radius = 30;
-        }
-        else
-        {
-            Radius = FOBManager.Config.FOBBuildPickupRadius;
-        }
+        Radius = Bunker == null ? 30 : FOBManager.Config.FOBBuildPickupRadius;
 
         FOBManager.UpdateFOBListForTeam(Team, this);
     }
@@ -358,16 +344,17 @@ public class FOB : IFOB, IDeployable
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        List<SDG.Unturned.ItemData> NearbyBuild = UCBarricadeManager.GetNearbyItems(BuildID, Radius, Position);
-        List<SDG.Unturned.ItemData> NearbyAmmo = UCBarricadeManager.GetNearbyItems(AmmoID, Radius, Position);
+        List<ItemData> nearbyBuild = UCBarricadeManager.GetNearbyItems(_buildID, Radius, Position);
+        List<ItemData> nearbyAmmo = UCBarricadeManager.GetNearbyItems(_ammoID, Radius, Position);
 
-        IEnumerable<SDG.Unturned.ItemData> items = NearbyBuild.Concat(NearbyAmmo);
+        List<ItemData> items = new List<ItemData>(nearbyBuild);
+        items.AddRange(nearbyAmmo);
 
-        int itemsCount = items.Count();
+        int itemsCount = items.Count;
         int counter = 0;
-        foreach (SDG.Unturned.ItemData item in items)
+        foreach (ItemData item in items)
         {
-            if (item.item.id == shortBuildID || item.item.id == shortAmmoID)
+            if (item.item.id == _shortBuildID || item.item.id == _shortAmmoID)
             {
                 if (EventFunctions.droppeditemsInverse.TryGetValue(item.instanceID, out ulong playerID))
                 {
@@ -377,13 +364,11 @@ public class FOB : IFOB, IDeployable
                         player.SuppliesUnloaded++;
                         if (player.SuppliesUnloaded >= 6)
                         {
-                            int tw = Points.TWConfig.UnloadSuppliesPoints;
                             int xp = Points.XPConfig.UnloadSuppliesXP;
 
                             if (player.KitClass == EClass.PILOT)
                             {
                                 xp *= 2;
-                                tw *= 2;
                             }
 
                             QuestManager.OnSuppliesConsumed(this, playerID, player.SuppliesUnloaded);
@@ -408,14 +393,15 @@ public class FOB : IFOB, IDeployable
             }
         }
 
-        int buildCount = NearbyBuild.Count;
-        int ammoCount = NearbyAmmo.Count;
+        int buildCount = nearbyBuild.Count;
+        int ammoCount = nearbyAmmo.Count;
 
         if (buildCount > 0)
         {
             Build += Math.Min(buildCount, 3);
-            UCBarricadeManager.RemoveNearbyItemsByID(BuildID, 3, Position, Radius);
-            EffectManager.sendEffect(25997, EffectManager.MEDIUM, NearbyBuild[0].point);
+            UCBarricadeManager.RemoveNearbyItemsByID(_buildID, 3, Position, Radius);
+            if (Gamemode.Config.EffectUnloadBuild.ValidReference(out EffectAsset effect))
+                F.TriggerEffectReliable(effect, EffectManager.MEDIUM, nearbyBuild[0].point);
             foreach (UCPlayer player in FriendliesOnFOB)
                 UpdateBuildUI(player);
             return;
@@ -423,8 +409,9 @@ public class FOB : IFOB, IDeployable
         if (ammoCount > 0)
         {
             Ammo += Math.Min(ammoCount, 3);
-            UCBarricadeManager.RemoveNearbyItemsByID(AmmoID, 3, Position, Radius);
-            EffectManager.sendEffect(25998, EffectManager.MEDIUM, NearbyAmmo[0].point);
+            UCBarricadeManager.RemoveNearbyItemsByID(_ammoID, 3, Position, Radius);
+            if (Gamemode.Config.EffectUnloadAmmo.ValidReference(out EffectAsset effect))
+                F.TriggerEffectReliable(effect, EffectManager.MEDIUM, nearbyBuild[0].point);
             foreach (UCPlayer player in FriendliesOnFOB)
                 UpdateAmmoUI(player);
         }
@@ -453,13 +440,10 @@ public class FOB : IFOB, IDeployable
         ShowResourceUI(player);
 
         InteractableVehicle? vehicle = player.Player.movement.getVehicle();
-        if (vehicle != null &&
-            VehicleBay.VehicleExists(vehicle.asset.GUID, out VehicleData data) &&
-            (data.Type == EVehicleType.LOGISTICS ||
-            data.Type == EVehicleType.HELI_TRANSPORT))
-        {
+        if (vehicle == null)
+            return;
+        if (vehicle.TryGetComponent(out VehicleComponent comp) && comp.Data?.Item != null && VehicleData.IsLogistics(comp.Data.Item.Type))
             Tips.TryGiveTip(player, 120, T.TipUnloadSupplies);
-        }
     }
     internal void OnPlayerLeftFOB(UCPlayer player)
     {
@@ -509,11 +493,11 @@ public class FOB : IFOB, IDeployable
             }
         }
 
-        component.Destroy();
+        _component.Destroy();
 
         Radio = newDrop;
-        component = newDrop.model.gameObject.AddComponent<FOBComponent>();
-        component.Initialize(this);
+        _component = newDrop.model.gameObject.AddComponent<FOBComponent>();
+        _component.Initialize(this);
 
     }
     public void StartBleed()
@@ -527,7 +511,7 @@ public class FOB : IFOB, IDeployable
                        nameof(GamemodeConfigData.BarricadeFOBRadioDamaged) + "\" in gamemode config).");
             return;
         }
-        builtState = Radio.GetServersideData().barricade.state;
+        _builtState = Radio.GetServersideData().barricade.state;
 
         if (Radio.model.TryGetComponent(out BarricadeComponent component))
         {
@@ -551,7 +535,7 @@ public class FOB : IFOB, IDeployable
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         BarricadeData data = Radio.GetServersideData();
-        Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(builtRadioGUID));
+        Barricade barricade = new Barricade(Assets.find<ItemBarricadeAsset>(_builtRadioGUID));
         Transform transform = BarricadeManager.dropNonPlantedBarricade(barricade, data.point, Quaternion.Euler(data.angle_x * 2, data.angle_y * 2, data.angle_z * 2), data.owner, data.group);
         BarricadeDrop newRadio = BarricadeManager.FindBarricadeByRootTransform(transform);
 
@@ -562,8 +546,8 @@ public class FOB : IFOB, IDeployable
         if (Radio.interactable is InteractableStorage storage)
             storage.despawnWhenDestroyed = true;
 
-        Radio.GetServersideData().barricade.state = builtState;
-        Radio.ReceiveUpdateState(builtState);
+        Radio.GetServersideData().barricade.state = _builtState;
+        Radio.ReceiveUpdateState(_builtState);
 
         FOBManager.SendFOBListToTeam(Team);
     }
@@ -577,8 +561,8 @@ public class FOB : IFOB, IDeployable
 
         if (builder.KitClass == EClass.COMBAT_ENGINEER)
             amount *= 2;
-
-        EffectManager.sendEffect(38405, EffectManager.MEDIUM, builder.Position);
+        if (Gamemode.Config.EffectDig.ValidReference(out EffectAsset effect))
+            F.TriggerEffectReliable(effect, EffectManager.MEDIUM, builder.Position);
 
         BarricadeManager.repair(Radio.model, amount, 1, builder.CSteamID);
 
@@ -605,7 +589,7 @@ public class FOB : IFOB, IDeployable
         FriendliesOnFOB.Clear();
         NearbyEnemies.Clear();
 
-        component.Destroy();
+        _component.Destroy();
 
         if (!(Bunker == null || Bunker.GetServersideData().barricade.isDead))
         {
@@ -629,7 +613,7 @@ public class FOB : IFOB, IDeployable
 
         FOBManager.DeleteFOB(this);
     }
-    public static List<FOB> GetFOBs(ulong team)
+    public static List<FOB> GetFoBs(ulong team)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -649,7 +633,7 @@ public class FOB : IFOB, IDeployable
 
         return fobs;
     }
-    public static List<FOB> GetNearbyFOBs(Vector3 point, ulong team = 0, EFOBRadius radius = EFOBRadius.FULL)
+    public static List<FOB> GetNearbyFoBs(Vector3 point, ulong team = 0, EfobRadius radius = EfobRadius.FULL)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -662,7 +646,7 @@ public class FOB : IFOB, IDeployable
                 if (!b.model.TryGetComponent(out FOBComponent f)) return false;
 
                 if (team != 0 && data.group != team) return false;
-                if (radius == EFOBRadius.FULL_WITH_BUNKER_CHECK)
+                if (radius == EfobRadius.FULL_WITH_BUNKER_CHECK)
                 {
                     if ((data.point - point).sqrMagnitude <= 30 * 30)
                         return true;
@@ -685,25 +669,25 @@ public class FOB : IFOB, IDeployable
 
         return fobs;
     }
-    public static FOB? GetNearestFOB(Vector3 point, EFOBRadius radius = EFOBRadius.FULL, ulong team = 0)
+    public static FOB? GetNearestFOB(Vector3 point, EfobRadius radius = EfobRadius.FULL, ulong team = 0)
     {
-        return GetNearbyFOBs(point, team, radius).FirstOrDefault();
+        return GetNearbyFoBs(point, team, radius).FirstOrDefault();
     }
     public static bool IsOnFOB(UCPlayer player, out FOB fob)
     {
-        fob = GetNearbyFOBs(player.Position, player.GetTeam()).Where(f => f.FriendliesOnFOB.Contains(player)).FirstOrDefault();
+        fob = GetNearbyFoBs(player.Position, player.GetTeam()).FirstOrDefault(f => f.FriendliesOnFOB.Contains(player))!;
         return fob != null;
     }
     /// <returns>Numeric radius corresponding to the value of <paramref name="radius"/>.
-    /// <para><see cref="EFOBRadius.ENEMY_BUNKER_CLAIM"/> will return the radius with a bunker,
+    /// <para><see cref="EfobRadius.ENEMY_BUNKER_CLAIM"/> will return the radius with a bunker,
     /// additional checks should be done if this is the case.</para></returns>
-    public static float GetRadius(EFOBRadius radius) => radius switch
+    public static float GetRadius(EfobRadius radius) => radius switch
     {
-        EFOBRadius.SHORT => 30 * 30,
-        EFOBRadius.FULL_WITH_BUNKER_CHECK or EFOBRadius.FULL =>
+        EfobRadius.SHORT => 30 * 30,
+        EfobRadius.FULL_WITH_BUNKER_CHECK or EfobRadius.FULL =>
             FOBManager.Config.FOBBuildPickupRadius * FOBManager.Config.FOBBuildPickupRadius,
-        EFOBRadius.FOB_PLACEMENT => Mathf.Pow(FOBManager.Config.FOBBuildPickupRadius * 2, 2),
-        EFOBRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
+        EfobRadius.FOB_PLACEMENT => Mathf.Pow(FOBManager.Config.FOBBuildPickupRadius * 2, 2),
+        EfobRadius.ENEMY_BUNKER_CLAIM => 5 * 5,
         _ => 0
     };
 
@@ -790,7 +774,7 @@ public interface IFOB : ITranslationArgument
     GridLocation GridLocation { get; }
 }
 
-public enum EFOBRadius : byte
+public enum EfobRadius : byte
 {
     SHORT,
     FULL,

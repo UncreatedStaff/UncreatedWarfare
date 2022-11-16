@@ -2,7 +2,6 @@
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
 public class WarnCommand : Command
@@ -25,7 +24,7 @@ public class WarnCommand : Command
         if (string.IsNullOrEmpty(reason))
             throw ctx.Reply(T.NoReasonProvided);
 
-        FPlayerName targetNames = F.GetPlayerOriginalNames(target);
+        PlayerNames targetNames = target.Name;
 
         OffenseManager.LogWarnPlayer(targetId, ctx.CallerID, reason!, DateTime.Now);
 
@@ -40,7 +39,7 @@ public class WarnCommand : Command
         }
         else
         {
-            FPlayerName callerNames = F.GetPlayerOriginalNames(ctx.CallerID);
+            PlayerNames callerNames = ctx.Caller.Name;
             L.Log($"{targetNames.PlayerName} ({tid}) was warned by {callerNames.PlayerName} ({ctx.CallerID}) for: {reason}.", ConsoleColor.Cyan);
             Chat.Broadcast(LanguageSet.AllBut(targetId, ctx.CallerID), T.WarnSuccessBroadcast, targetNames, ctx.Caller);
             ctx.Reply(T.WarnSuccessFeedback, targetNames);

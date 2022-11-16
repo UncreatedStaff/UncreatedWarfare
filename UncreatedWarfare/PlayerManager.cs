@@ -28,7 +28,7 @@ public static class PlayerManager
     {
         OnlinePlayers = new List<UCPlayer>(50);
         _dict = new Dictionary<ulong, UCPlayer>(50);
-        EventDispatcher.OnGroupChanged += OnGroupChagned;
+        EventDispatcher.GroupChanged += OnGroupChagned;
     }
     public static UCPlayer? FromID(ulong steam64)
     {
@@ -78,10 +78,8 @@ public static class PlayerManager
         }
         return rtn;
     }
-    public static void InvokePlayerConnected(Player player) => OnPlayerConnected(player);
-    public static void InvokePlayerDisconnected(UCPlayer player) => OnPlayerDisconnected(player);
     public static void AddSave(PlayerSave save) => PlayerSave.WriteToSaveFile(save);
-    private static void OnPlayerConnected(Player player)
+    internal static UCPlayer InvokePlayerConnected(Player player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -99,6 +97,7 @@ public static class PlayerManager
             player.channel.owner.playerID.nickName,
             save.IsOtherDonator
         );
+        Data.OriginalPlayerNames.Remove(ucplayer.Steam64);
 
 
         OnlinePlayers.Add(ucplayer);
@@ -109,6 +108,7 @@ public static class PlayerManager
 
         SquadManager.OnPlayerJoined(ucplayer, save.SquadName);
         FOBManager.SendFOBList(ucplayer);
+        return ucplayer;
     }
     private static void OnGroupChagned(GroupChanged e)
     {
@@ -117,7 +117,7 @@ public static class PlayerManager
         if (e.Player.Player.TryGetComponent(out SpottedComponent spot))
             spot.OwnerTeam = e.NewTeam;
     }
-    private static void OnPlayerDisconnected(UCPlayer player)
+    internal static void InvokePlayerDisconnected(UCPlayer player)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();

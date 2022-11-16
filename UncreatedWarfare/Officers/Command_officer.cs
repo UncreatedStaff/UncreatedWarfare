@@ -1,19 +1,20 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands.CommandSystem;
 using Uncreated.Warfare.Point;
-using Command = Uncreated.Warfare.Commands.CommandSystem.Command;
 
 namespace Uncreated.Warfare.Commands;
-public class OfficerCommand : Command
+public class OfficerCommand : AsyncCommand
 {
     private const string SYNTAX = "/officer <discharge|setrank> <player> [value] [team = current team]";
     private const string HELP = "Promotes or demotes a player to an officer rank.";
 
     public OfficerCommand() : base("officer", EAdminType.MODERATOR) { }
 
-    public override void Execute(CommandInteraction ctx)
+    public override async Task Execute(CommandInteraction ctx, CancellationToken token)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -45,12 +46,12 @@ public class OfficerCommand : Command
                 OfficerStorage.ChangeOfficerRank(steam64, level, team);
                 if (onlinePlayer is not null)
                 {
-                    ref Ranks.RankData data = ref Ranks.RankManager.GetRank(onlinePlayer, out _);
+                    Ranks.RankData data = Ranks.RankManager.GetRank(onlinePlayer);
                     ctx.Reply(T.OfficerChangedRankFeedback, onlinePlayer, data, Teams.TeamManager.GetFactionSafe(team)!);
                 }
                 else
                 {
-                    FPlayerName name = F.GetPlayerOriginalNames(steam64);
+                    PlayerNames name = await F.GetPlayerOriginalNamesAsync(steam64, token).ThenToUpdate(token);
                     ctx.Reply(T.OfficerChangedRankFeedback, name, Ranks.RankManager.GetRank(level), Teams.TeamManager.GetFactionSafe(team)!);
                 }
                 ctx.LogAction(EActionLogType.SET_OFFICER_RANK, steam64.ToString(Data.Locale) + " to " + level + " on team " + Teams.TeamManager.TranslateName(team, 0));
@@ -67,7 +68,7 @@ public class OfficerCommand : Command
             if (ctx.TryGet(1, out ulong steam64, out UCPlayer? onlinePlayer))
             {
                 OfficerStorage.DischargeOfficer(steam64);
-                ctx.Reply(T.OfficerDischargedFeedback, onlinePlayer as IPlayer ?? F.GetPlayerOriginalNames(steam64));
+                ctx.Reply(T.OfficerDischargedFeedback, onlinePlayer as IPlayer ?? (await F.GetPlayerOriginalNamesAsync(steam64, token).ThenToUpdate(token)));
                 ctx.LogAction(EActionLogType.DISCHARGE_OFFICER, steam64.ToString(Data.Locale));
             }
             else throw ctx.SendPlayerNotFound();
