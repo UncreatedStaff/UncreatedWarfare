@@ -672,7 +672,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
-        string color = TeamManager.GetTeamHexColor(winner);
         string lang = set.Language;
         int len = 47;
         if (t1Stats is not null)
@@ -755,8 +754,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 Stats stats = t1Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -772,8 +774,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 Stats stats = t2Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -794,7 +799,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            PlayerNames names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 
@@ -989,7 +993,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
-        string color = TeamManager.GetTeamHexColor(winner);
         string lang = set.Language;
         int len = 47;
         if (t1Stats is not null)
@@ -1054,10 +1057,14 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[37] = tracker.fobsDestroyedT1.ToString(Data.Locale);
             values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
+            ulong pl = info.Player;
+            InsurgencyPlayerStats? s;
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
-                    UCPlayer.FromID(info.Player) as IPlayer ?? F.GetPlayerOriginalNames(info.Player));
+                    UCPlayer.FromID(info.Player) as IPlayer ?? ((s = (info.Team == 1ul ? t1Stats : t2Stats)?.Find(x => x.Steam64 == pl)) == null ? new PlayerNames(pl) : (s.Player == null
+                        ? s.cachedNames.HasValue ? s.cachedNames.Value : new PlayerNames(pl)
+                        : s.Player.Name)));
         }
         else
         {
@@ -1072,8 +1079,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 InsurgencyPlayerStats stats = t1Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1089,8 +1099,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 InsurgencyPlayerStats stats = t2Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1111,7 +1124,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            PlayerNames names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 
@@ -1310,7 +1322,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         FactionInfo t1 = TeamManager.GetFaction(1), t2 = TeamManager.GetFaction(2);
-        string color = TeamManager.GetTeamHexColor(winner);
         string lang = set.Language;
         int len = 47;
         if (t1Stats is not null)
@@ -1376,10 +1387,14 @@ public class ConventionalLeaderboardUI : UnturnedUI
             values[37] = tracker.fobsDestroyedT1.ToString(Data.Locale);
             values[38] = tracker.fobsDestroyedT2.ToString(Data.Locale);
             values[39] = (tracker.teamkillsT1 + tracker.teamkillsT2).ToString(Data.Locale);
+            ulong pl = info.Player;
+            ConquestStats? s;
             values[40] = !info.IsValue ? LeaderboardEx.NO_PLAYER_NAME_PLACEHOLDER :
                 T.LongestShot.Translate(lang, info.Distance,
                     Assets.find<ItemAsset>(info.Gun),
-                    UCPlayer.FromID(info.Player) as IPlayer ?? F.GetPlayerOriginalNames(info.Player));
+                    UCPlayer.FromID(info.Player) as IPlayer ?? ((s = (info.Team == 1ul ? t1Stats : t2Stats)?.Find(x => x.Steam64 == pl)) == null ? new PlayerNames(pl) : (s.Player == null
+                        ? s.cachedNames.HasValue ? s.cachedNames.Value : new PlayerNames(pl)
+                        : s.Player.Name)));
         }
         else
         {
@@ -1394,8 +1409,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 ConquestStats stats = t1Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(1, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1411,8 +1429,11 @@ public class ConventionalLeaderboardUI : UnturnedUI
             for (int i = 0; i < num; ++i)
             {
                 ConquestStats stats = t2Stats[i];
+                PlayerNames names = stats.Player == null
+                    ? stats.cachedNames.HasValue ? stats.cachedNames.Value : new PlayerNames(stats.Steam64)
+                    : stats.Player.Name;
                 values[++index] = i == 0 ?
-                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : F.GetPlayerOriginalNames(stats.Steam64).CharacterName;
+                    TeamManager.TranslateShortName(2, lang, true).ToUpperInvariant() : names.CharacterName;
                 values[++index] = stats.kills.ToString(Data.Locale);
                 values[++index] = stats.deaths.ToString(Data.Locale);
                 values[++index] = stats.XPGained.ToString(Data.Locale);
@@ -1434,7 +1455,6 @@ public class ConventionalLeaderboardUI : UnturnedUI
                 _ => null
             };
             ITransportConnection c = pl.Connection;
-            PlayerNames names = F.GetPlayerOriginalNames(pl);
 
             SendToPlayer(c);
 

@@ -329,8 +329,9 @@ public abstract class TeamStatTracker<IndividualStats> : BaseStatTracker<Individ
     }
 }
 
-public abstract class BasePlayerStats : IStats, IPresenceStats
+public abstract class BasePlayerStats : IPresenceStats
 {
+    public PlayerNames? cachedNames;
     protected UCPlayer _player;
     public UCPlayer Player { get => _player; set => _player = value; }
     public int onlineCount;
@@ -339,17 +340,18 @@ public abstract class BasePlayerStats : IStats, IPresenceStats
     public ulong Steam64 => _id;
     public static T New<T>(UCPlayer player) where T : BasePlayerStats
     {
-        return (T)Activator.CreateInstance(typeof(T), new object[1] { player });
+        return (T)Activator.CreateInstance(typeof(T), new object[] { player });
     }
     public static T New<T>(ulong player) where T : BasePlayerStats
     {
-        return (T)Activator.CreateInstance(typeof(T), new object[1] { player });
+        return (T)Activator.CreateInstance(typeof(T), new object[] { player });
     }
-    public BasePlayerStats(UCPlayer player) : this(player.Steam64)
+    protected BasePlayerStats(UCPlayer player) : this(player.Steam64)
     {
+        cachedNames = player.Name;
         _player = player;
     }
-    public BasePlayerStats(ulong player)
+    protected BasePlayerStats(ulong player)
     {
         _id = player;
     }
@@ -386,8 +388,8 @@ public abstract class FFAPlayerStats : BasePlayerStats, IPVPModeStats
     public void AddDamage(float amount) => damage += amount;
     public void AddDeath() => deaths++;
     public void AddKill() => kills++;
-    public FFAPlayerStats(UCPlayer player) : base(player) { }
-    public FFAPlayerStats(ulong player) : base(player) { }
+    protected FFAPlayerStats(UCPlayer player) : base(player) { }
+    protected FFAPlayerStats(ulong player) : base(player) { }
     public override void Reset()
     {
         base.Reset();

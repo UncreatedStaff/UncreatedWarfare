@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Uncreated.Players;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 
 namespace Uncreated.Warfare.Gamemodes.Flags;

@@ -51,6 +51,7 @@ public class MuteCommand : Command
     }
 }
 [Translatable("Mute Severity")]
+[Flags]
 public enum EMuteType : byte
 {
     NONE = 0,

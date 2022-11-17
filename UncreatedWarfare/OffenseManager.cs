@@ -3,11 +3,13 @@ using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Json;
@@ -16,26 +18,25 @@ using Uncreated.Networking.Async;
 using Uncreated.Players;
 using Uncreated.Warfare.Commands;
 using Uncreated.Warfare.Commands.Permissions;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
 using Uncreated.Warfare.Events.Players;
-using UnityEngine;
+using Color = UnityEngine.Color;
 using SteamGameServerNetworkingUtils = SDG.Unturned.SteamGameServerNetworkingUtils;
 
 namespace Uncreated.Warfare;
 
 public static class OffenseManager
 {
-    private static readonly List<Ban> _pendingBans = new List<Ban>(8);
-    private static readonly List<Unban> _pendingUnbans = new List<Unban>(8);
-    private static readonly List<Kick> _pendingKicks = new List<Kick>(8);
-    private static readonly List<Warn> _pendingWarnings = new List<Warn>(8);
-    private static readonly List<Mute> _pendingMutes = new List<Mute>(8);
-    private static readonly List<BattlEyeKick> _pendingBattlEyeKicks = new List<BattlEyeKick>(8);
-    private static readonly List<Teamkill> _pendingTeamkills = new List<Teamkill>(8);
-    private static readonly List<VehicleTeamkill> _pendingVehicleTeamkills = new List<VehicleTeamkill>(8);
-    private static readonly List<Unmute> _pendingUnmutes = new List<Unmute>(9);
-    private static volatile int version = 0;
+    private static readonly List<Ban> PendingBans = new List<Ban>(8);
+    private static readonly List<Unban> PendingUnbans = new List<Unban>(8);
+    private static readonly List<Kick> PendingKicks = new List<Kick>(8);
+    private static readonly List<Warn> PendingWarnings = new List<Warn>(8);
+    private static readonly List<Mute> PendingMutes = new List<Mute>(8);
+    private static readonly List<BattlEyeKick> PendingBattlEyeKicks = new List<BattlEyeKick>(8);
+    private static readonly List<Teamkill> PendingTeamkills = new List<Teamkill>(8);
+    private static readonly List<VehicleTeamkill> PendingVehicleTeamkills = new List<VehicleTeamkill>(8);
+    private static readonly List<Unmute> PendingUnmutes = new List<Unmute>(9);
+    private static volatile int _version = 0;
     // calls the type initializer
     internal static void Init()
     {
@@ -57,9 +58,9 @@ public static class OffenseManager
         EventDispatcher.PlayerPending -= OnPlayerPending;
         EventDispatcher.PlayerJoined -= OnPlayerJoined;
         EventDispatcher.PlayerDied -= OnPlayerDied;
-        for (int i = 0; i < _pendings.Length; ++i)
+        for (int i = 0; i < Pendings.Length; ++i)
         {
-            IList l = _pendings[i];
+            IList l = Pendings[i];
             lock (l)
                 l.Clear();
         }
@@ -67,9 +68,9 @@ public static class OffenseManager
     private static void OnPlayerPending(PlayerPending e)
     {
         List<uint> packs = new List<uint>(4);
-        Data.DatabaseManager.Query("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, R =>
+        Data.DatabaseManager.Query("SELECT `Packed` FROM `ip_addresses` WHERE `Steam64` = @0;", new object[] { e.Steam64 }, reader =>
         {
-            packs.Add(R.GetUInt32(0));
+            packs.Add(reader.GetUInt32(0));
         });
         for (int i = 0; i < SteamBlacklist.list.Count; ++i)
         {
@@ -142,7 +143,7 @@ public static class OffenseManager
                         o2[i] = update[i];
                         continue;
                     }
-                    else if (bytes[i] is not null && bytes[i].Length == 20 && i < 8)
+                    if (bytes[i] is not null && bytes[i].Length == 20 && i < 8)
                     {
                         if (c != 0)
                             sbq.Append(',');
@@ -189,11 +190,10 @@ public static class OffenseManager
         List<byte[]> bytes = new List<byte[]>(8);
         await Data.DatabaseManager.QueryAsync("SELECT `Id`, `Index`, `HWID` FROM `hwids` WHERE `Steam64` = @0 ORDER BY `Index` ASC, `LastLogin` DESC;",
             new object[] { s64 },
-            R =>
+            reader =>
             {
-                int id = R.GetInt32(0);
                 byte[] buffer = new byte[20];
-                R.GetBytes(2, 0, buffer, 0, 20);
+                reader.GetBytes(2, 0, buffer, 0, 20);
                 bytes.Add(buffer);
             }).ConfigureAwait(false);
         return bytes;
@@ -212,19 +212,19 @@ public static class OffenseManager
             "SELECT `Reason`, `Duration`, `Timestamp`, `Type` FROM `muted` WHERE `Steam64` = @0 AND `Deactivated` = 0 AND " +
             "(`Duration` = -1 OR TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1 < `Duration`) ORDER BY (TIME_TO_SEC(TIMEDIFF(`Timestamp`, NOW())) * -1) - `Duration` LIMIT 1;",
             new object[1] { joining.Steam64 },
-            R =>
+            reader =>
             {
-                int dir = R.GetInt32(1);
-                DateTime ts = R.GetDateTime(2);
+                int dir = reader.GetInt32(1);
+                DateTime ts = reader.GetDateTime(2);
                 if (dir == -1 || dir > duration)
                 {
                     duration = dir;
                     timestamp = ts;
-                    reason = R.GetString(0);
+                    reason = reader.GetString(0);
                 }
                 else if (reason is null)
-                    reason = R.GetString(0);
-                type |= (EMuteType)R.GetByte(3);
+                    reason = reader.GetString(0);
+                type |= (EMuteType)reader.GetByte(3);
             }
         );
         if (type == EMuteType.NONE) return;
@@ -256,21 +256,21 @@ public static class OffenseManager
         _ => throw new ArgumentOutOfRangeException("#" + index.ToString(Data.Locale) + " doesn't match a pending type.")
     } + ".json");
 
-    private static readonly IList[] _pendings = new IList[]
+    private static readonly IList[] Pendings = new IList[]
     {
-        _pendingBans,
-        _pendingUnbans,
-        _pendingKicks,
-        _pendingWarnings,
-        _pendingMutes,
-        _pendingBattlEyeKicks,
-        _pendingTeamkills,
-        _pendingVehicleTeamkills,
-        _pendingUnmutes
+        PendingBans,
+        PendingUnbans,
+        PendingKicks,
+        PendingWarnings,
+        PendingMutes,
+        PendingBattlEyeKicks,
+        PendingTeamkills,
+        PendingVehicleTeamkills,
+        PendingUnmutes
     };
-    private static void Save<T>(int index)
+    private static void Save<T>(int index) where T : ITimestampOffense
     {
-        if (_pendings[index] is List<T> col)
+        if (Pendings[index] is List<T> col)
         {
             F.CheckDir(Data.Paths.PendingOffenses, out bool success);
             if (success)
@@ -278,17 +278,15 @@ public static class OffenseManager
                 lock (col)
                 {
                     string path = GetSavePath(index);
-                    using (FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read))
-                    {
-                        JsonSerializer.Serialize(str, col, JsonEx.condensedSerializerSettings);
-                    }
+                    using FileStream str = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+                    JsonSerializer.Serialize(str, col, JsonEx.condensedSerializerSettings);
                 }
             }
         }
     }
-    private static void Load<T>(int index)
+    private static void Load<T>(int index) where T : ITimestampOffense
     {
-        if (_pendings[index] is List<T> col)
+        if (Pendings[index] is List<T> col)
         {
             lock (col)
             {
@@ -307,31 +305,57 @@ public static class OffenseManager
             }
         }
     }
-    internal static async Task OnConnected()
+
+    private static void RemoveFromSave<T>(T obj, int index) where T : ITimestampOffense
     {
-        int v = ++version;
-        try
+        if (Pendings[index] is List<T> col)
         {
-            ITimestampOffense[] stamps = _pendingBans
+            lock (col)
+            {
+                col.Remove(obj);
+            }
+        }
+    }
+    private static ITimestampOffense[] GetOffenses()
+    {
+        lock (PendingBans)
+        lock (PendingUnbans)
+        lock (PendingKicks)
+        lock (PendingWarnings)
+        lock (PendingMutes)
+        lock (PendingBattlEyeKicks)
+        lock (PendingTeamkills)
+        lock (PendingVehicleTeamkills)
+        lock (PendingUnmutes)
+        {
+            return PendingBans
                 .Cast<ITimestampOffense>()
-                .Concat(_pendingUnbans
+                .Concat(PendingUnbans
                     .Cast<ITimestampOffense>())
-                .Concat(_pendingKicks
+                .Concat(PendingKicks
                     .Cast<ITimestampOffense>())
-                .Concat(_pendingWarnings
+                .Concat(PendingWarnings
                     .Cast<ITimestampOffense>())
-                .Concat(_pendingMutes
+                .Concat(PendingMutes
                     .Cast<ITimestampOffense>())
-                .Concat(_pendingBattlEyeKicks
+                .Concat(PendingBattlEyeKicks
                     .Cast<ITimestampOffense>())
-                .Concat(_pendingTeamkills
+                .Concat(PendingTeamkills
                     .Cast<ITimestampOffense>())
-                .Concat(_pendingVehicleTeamkills
+                .Concat(PendingVehicleTeamkills
                     .Cast<ITimestampOffense>())
-                .Concat(_pendingUnmutes
+                .Concat(PendingUnmutes
                     .Cast<ITimestampOffense>())
                 .OrderBy(x => x.Timestamp)
                 .ToArray();
+        }
+    }
+    internal static async Task OnConnected()
+    {
+        int v = Interlocked.Increment(ref _version);
+        try
+        {
+            ITimestampOffense[] stamps = GetOffenses();
 
             if (stamps.Length == 0)
             {
@@ -345,7 +369,7 @@ public static class OffenseManager
             {
                 for (int i = 0; i < stamps.Length; ++i)
                 {
-                    if (version != v)
+                    if (_version != v)
                     {
                         L.LogWarning("Cancelling active send job.");
                         return;
@@ -359,7 +383,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, ban.Violator, ban.Admin, ban.Reason, ban.Duration, ban.Timestamp,
                                     10000)).Responded)
                             {
-                                _pendingBans.Remove(ban);
+                                RemoveFromSave(ban, 0);
                                 Save<Ban>(0);
                             }
                             else
@@ -372,7 +396,7 @@ public static class OffenseManager
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendPlayerUnbanned.RequestAck(
                                     UCWarfare.I.NetClient!, unban.Violator, unban.Admin, unban.Timestamp, 10000)).Responded)
                             {
-                                _pendingUnbans.Remove(unban);
+                                RemoveFromSave(unban, 1);
                                 Save<Unban>(1);
                             }
                             else
@@ -386,7 +410,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, kick.Violator, kick.Admin, kick.Reason, kick.Timestamp, 10000))
                                 .Responded)
                             {
-                                _pendingKicks.Remove(kick);
+                                RemoveFromSave(kick, 2);
                                 Save<Kick>(2);
                             }
                             else
@@ -400,7 +424,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, warn.Violator, warn.Admin, warn.Reason, warn.Timestamp, 10000))
                                 .Responded)
                             {
-                                _pendingWarnings.Remove(warn);
+                                RemoveFromSave(warn, 3);
                                 Save<Warn>(3);
                             }
                             else
@@ -414,7 +438,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, mute.Violator, mute.Admin, mute.MuteType, mute.Duration, mute.Reason,
                                     mute.Timestamp, 10000)).Responded)
                             {
-                                _pendingMutes.Remove(mute);
+                                RemoveFromSave(mute, 4);
                                 Save<Mute>(4);
                             }
                             else
@@ -429,7 +453,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, bekick.Violator, bekick.Reason, bekick.Timestamp,
                                     10000)).Responded)
                             {
-                                _pendingBattlEyeKicks.Remove(bekick);
+                                RemoveFromSave(bekick, 5);
                                 Save<BattlEyeKick>(5);
                             }
                             else
@@ -443,7 +467,7 @@ public static class OffenseManager
                                     UCWarfare.I.NetClient!, teamkill.Violator, teamkill.Dead, teamkill.DeathCause,
                                     teamkill.ItemName, teamkill.Timestamp, 10000)).Responded)
                             {
-                                _pendingTeamkills.Remove(teamkill);
+                                RemoveFromSave(teamkill, 6);
                                 Save<BattlEyeKick>(6);
                             }
                             else
@@ -458,7 +482,7 @@ public static class OffenseManager
                                     vehicleTeamkill.VehicleID, vehicleTeamkill.VehicleName, vehicleTeamkill.Timestamp, 10000))
                                 .Responded)
                             {
-                                _pendingVehicleTeamkills.Remove(vehicleTeamkill);
+                                RemoveFromSave(vehicleTeamkill, 7);
                                 Save<VehicleTeamkill>(7);
                             }
                             else
@@ -471,7 +495,7 @@ public static class OffenseManager
                             if (UCWarfare.CanUseNetCall && (await NetCalls.SendUnmuteRequest.RequestAck(
                                     UCWarfare.I.NetClient!, unmute.Violator, unmute.Admin, unmute.Timestamp, 10000)).Responded)
                             {
-                                _pendingUnmutes.Remove(unmute);
+                                RemoveFromSave(unmute, 8);
                                 Save<Unmute>(8);
                             }
                             else
@@ -504,7 +528,7 @@ public static class OffenseManager
     {
         Task.Run(async () =>
         {
-            await Data.DatabaseManager.AddBan(violator, caller, duration, reason!).ConfigureAwait(false);
+            await Data.DatabaseManager.AddBan(violator, caller, duration, reason).ConfigureAwait(false);
             await UCWarfare.ToUpdate();
             if (UCWarfare.CanUseNetCall)
             {
@@ -513,8 +537,8 @@ public static class OffenseManager
                 if (response.Responded)
                     return;
             }
-            lock (_pendingBans)
-                _pendingBans.Add(new Ban(violator, caller, reason, duration, timestamp));
+            lock (PendingBans)
+                PendingBans.Add(new Ban(violator, caller, reason, duration, timestamp));
             Save<Ban>(0);
         });
     }
@@ -530,8 +554,8 @@ public static class OffenseManager
                     return;
             }
 
-            lock (_pendingUnbans)
-                _pendingUnbans.Add(new Unban(violator, caller, timestamp));
+            lock (PendingUnbans)
+                PendingUnbans.Add(new Unban(violator, caller, timestamp));
             Save<Unban>(1);
         });
     }
@@ -548,8 +572,8 @@ public static class OffenseManager
                     return;
             }
 
-            lock (_pendingKicks)
-                _pendingKicks.Add(new Kick(violator, caller, reason, timestamp));
+            lock (PendingKicks)
+                PendingKicks.Add(new Kick(violator, caller, reason, timestamp));
             Save<Kick>(2);
         });
     }
@@ -566,8 +590,8 @@ public static class OffenseManager
                     return;
             }
 
-            lock (_pendingWarnings)
-                _pendingWarnings.Add(new Warn(violator, caller, reason, timestamp));
+            lock (PendingWarnings)
+                PendingWarnings.Add(new Warn(violator, caller, reason, timestamp));
             Save<Warn>(3);
         });
     }
@@ -583,8 +607,8 @@ public static class OffenseManager
                     return;
             }
 
-            lock (_pendingMutes)
-                _pendingMutes.Add(new Mute(violator, caller, type, duration, reason, timestamp));
+            lock (PendingMutes)
+                PendingMutes.Add(new Mute(violator, caller, type, duration, reason, timestamp));
             Save<Mute>(4);
         });
     }
@@ -601,8 +625,8 @@ public static class OffenseManager
                     return;
             }
 
-            lock (_pendingBattlEyeKicks)
-                _pendingBattlEyeKicks.Add(new BattlEyeKick(violator, reason, timestamp));
+            lock (PendingBattlEyeKicks)
+                PendingBattlEyeKicks.Add(new BattlEyeKick(violator, reason, timestamp));
             Save<BattlEyeKick>(5);
         });
     }
@@ -619,8 +643,8 @@ public static class OffenseManager
                     return;
             }
 
-            lock (_pendingTeamkills)
-                _pendingTeamkills.Add(new Teamkill(violator, teamkilled, deathCause, itemName, timestamp));
+            lock (PendingTeamkills)
+                PendingTeamkills.Add(new Teamkill(violator, teamkilled, deathCause, itemName, timestamp));
             Save<Teamkill>(6);
         });
     }
@@ -636,8 +660,8 @@ public static class OffenseManager
                     return;
             }
 
-            lock (_pendingVehicleTeamkills)
-                _pendingVehicleTeamkills.Add(new VehicleTeamkill(violator, vehicleId, vehicleName, timestamp));
+            lock (PendingVehicleTeamkills)
+                PendingVehicleTeamkills.Add(new VehicleTeamkill(violator, vehicleId, vehicleName, timestamp));
             Save<VehicleTeamkill>(7);
         });
     }
@@ -653,13 +677,13 @@ public static class OffenseManager
                     return;
             }
 
-            lock (_pendingUnmutes)
-                _pendingUnmutes.Add(new Unmute(violator, callerId, timestamp));
+            lock (PendingUnmutes)
+                PendingUnmutes.Add(new Unmute(violator, callerId, timestamp));
             Save<Unmute>(8);
         });
     }
     /// <returns>0 for a successful ban.</returns>
-    internal static async Task<int> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp)
+    internal static async Task<int> BanPlayerAsync(ulong targetId, ulong callerId, string reason, int duration, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -670,23 +694,24 @@ public static class OffenseManager
         PlayerNames callerName;
         uint ipv4;
         List<byte[]> hwids = target is not null ? target.SteamPlayer.playerID.GetHwids().ToList() : (await GetAllHWIDs(targetId).ConfigureAwait(false));
-        await UCWarfare.ToUpdate();
         if (target is not null) // player is online
         {
             CSteamID id = target.Player.channel.owner.playerID.steamID;
+            await UCWarfare.ToUpdate();
             ipv4 = SteamGameServerNetworkingUtils.getIPv4AddressOrZero(id);
-            name = F.GetPlayerOriginalNames(target);
+            name = target.Name;
             Provider.requestBanPlayer(Provider.server, id, ipv4, hwids, reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration));
         }
         else
         {
-            ipv4 = Data.DatabaseManager.GetPackedIP(targetId);
-            name = F.GetPlayerOriginalNames(targetId);
+            ipv4 = await Data.DatabaseManager.TryGetPackedIPAsync(targetId, token).ConfigureAwait(false);
+            name = await F.GetPlayerOriginalNamesAsync(targetId, token).ConfigureAwait(false);
+            await UCWarfare.ToUpdate();
             F.OfflineBan(targetId, ipv4, caller is null ? CSteamID.Nil : caller.Player.channel.owner.playerID.steamID,
-                reason!, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration), hwids.ToArray());
+                reason, duration == -1 ? SteamBlacklist.PERMANENT : checked((uint)duration), hwids.ToArray());
         }
         if (callerId != 0)
-            callerName = F.GetPlayerOriginalNames(callerId);
+            callerName = await F.GetPlayerOriginalNamesAsync(callerId, token).ConfigureAwait(false);
         else
             callerName = PlayerNames.Console;
         ActionLogger.Add(EActionLogType.BAN_PLAYER, $"BANNED {targetId.ToString(Data.Locale)} FOR \"{reason}\" DURATION: " +
@@ -698,28 +723,28 @@ public static class OffenseManager
         {
             if (callerId == 0)
             {
-                L.Log($"{name.PlayerName} ({targetId}) was permanently banned by an operator because {reason!}.", ConsoleColor.Cyan);
+                L.Log($"{name.PlayerName} ({targetId}) was permanently banned by an operator because {reason}.", ConsoleColor.Cyan);
                 Chat.Broadcast(T.BanPermanentSuccessBroadcastOperator, target as IPlayer ?? name);
             }
             else
             {
-                L.Log($"{name.PlayerName} ({targetId}) was permanenly banned by {callerName.PlayerName} ({callerId}) because {reason!}.", ConsoleColor.Cyan);
+                L.Log($"{name.PlayerName} ({targetId}) was permanenly banned by {callerName.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
                 Chat.Broadcast(LanguageSet.AllBut(callerId), T.BanPermanentSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName);
                 caller?.SendChat(T.BanPermanentSuccessFeedback, target as IPlayer ?? name);
             }
         }
         else
         {
-            string time = Localization.GetTimeFromSeconds(duration, L.DEFAULT);
+            string time = duration.GetTimeFromSeconds(L.DEFAULT);
             if (callerId == 0)
             {
-                L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by an operator because {reason!}.", ConsoleColor.Cyan);
+                L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by an operator because {reason}.", ConsoleColor.Cyan);
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.All())
                 {
                     if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
                     {
-                        time = Localization.GetTimeFromSeconds(duration, set.Language);
+                        time = duration.GetTimeFromSeconds(set.Language);
                         f = true;
                     }
                     Chat.Broadcast(set, T.BanSuccessBroadcastOperator, target as IPlayer ?? name, time);
@@ -727,33 +752,33 @@ public static class OffenseManager
             }
             else
             {
-                L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by {callerName.PlayerName} ({callerId}) because {reason!}.", ConsoleColor.Cyan);
+                L.Log($"{name.PlayerName} ({targetId}) was banned for {time} by {callerName.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
                 bool f = false;
                 foreach (LanguageSet set in LanguageSet.AllBut(callerId))
                 {
                     if (f || !set.Language.Equals(L.DEFAULT, StringComparison.Ordinal))
                     {
-                        time = Localization.GetTimeFromSeconds(duration, set.Language);
+                        time = duration.GetTimeFromSeconds(set.Language);
                         f = true;
                     }
                     Chat.Broadcast(set, T.BanSuccessBroadcast, target as IPlayer ?? name, caller as IPlayer ?? callerName, time);
                 }
                 if (f)
-                    time = Localization.GetTimeFromSeconds(duration, callerId);
+                    time = duration.GetTimeFromSeconds(callerId);
                 else if (Data.Languages.TryGetValue(callerId, out string lang) && !lang.Equals(L.DEFAULT, StringComparison.Ordinal))
-                    time = Localization.GetTimeFromSeconds(duration, lang);
+                    time = duration.GetTimeFromSeconds(lang);
                 caller?.SendChat(T.BanSuccessFeedback, target as IPlayer ?? name, time);
             }
         }
         return MessageContext.CODE_SUCCESS;
     }
     /// <returns>0 for a successful kick, 2 when the target is offline.</returns>
-    internal static int KickPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp)
+    internal static async Task<int> KickPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
         UCPlayer? target = UCPlayer.FromID(targetId);
         if (target is null)
             return 2;
-        PlayerNames names = F.GetPlayerOriginalNames(targetId);
+        PlayerNames names = target.Name;
         Provider.kick(target.Player.channel.owner.playerID.steamID, reason);
 
         LogKickPlayer(targetId, callerId, reason, DateTime.Now);
@@ -762,26 +787,26 @@ public static class OffenseManager
         if (callerId == 0)
         {
             L.Log($"{names.PlayerName} ({targetId}) was kicked by an operator because {reason}.", ConsoleColor.Cyan);
-            Chat.Broadcast(T.KickSuccessBroadcastOperator, target as IPlayer ?? names);
+            Chat.Broadcast(T.KickSuccessBroadcastOperator, target as IPlayer);
         }
         else
         {
-            PlayerNames callerNames = F.GetPlayerOriginalNames(callerId);
-            L.Log($"{names.PlayerName} ({targetId}) was kicked by {callerNames.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
             UCPlayer? callerPlayer = UCPlayer.FromID(callerId);
-            Chat.Broadcast(LanguageSet.AllBut(callerId), T.KickSuccessBroadcast, target as IPlayer ?? names, callerPlayer as IPlayer ?? callerNames);
-            callerPlayer?.SendChat(T.KickSuccessFeedback, target as IPlayer ?? names);
+            PlayerNames callerNames = callerPlayer is not null ? callerPlayer.Name : (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token));
+            L.Log($"{names.PlayerName} ({targetId}) was kicked by {callerNames.PlayerName} ({callerId}) because {reason}.", ConsoleColor.Cyan);
+            Chat.Broadcast(LanguageSet.AllBut(callerId), T.KickSuccessBroadcast, target, callerPlayer as IPlayer ?? callerNames);
+            callerPlayer?.SendChat(T.KickSuccessFeedback, target);
         }
 
         return MessageContext.CODE_SUCCESS;
     }
     /// <returns>0 for a successful unban, 2 when the target isn't banned.</returns>
-    internal static int UnbanPlayer(ulong targetId, ulong callerId, DateTimeOffset timestamp)
+    internal static async Task<int> UnbanPlayer(ulong targetId, ulong callerId, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        PlayerNames targetNames = F.GetPlayerOriginalNames(targetId);
+        PlayerNames targetNames = await F.GetPlayerOriginalNamesAsync(targetId, token).ThenToUpdate(token);
         if (!Provider.requestUnbanPlayer(callerId == 0 ? CSteamID.Nil : new CSteamID(callerId), new CSteamID(targetId)))
         {
             L.Log(callerId + " not banned.", ConsoleColor.Cyan);
@@ -799,8 +824,8 @@ public static class OffenseManager
         }
         else
         {
-            PlayerNames callerNames = F.GetPlayerOriginalNames(callerId);
             UCPlayer? caller = UCPlayer.FromID(callerId);
+            PlayerNames callerNames = caller is not null ? caller.Name : (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token));
             L.Log($"{targetNames.PlayerName} ({tid}) was unbanned by {callerNames.PlayerName} ({callerId}).", ConsoleColor.Cyan);
             caller?.SendChat(T.UnbanSuccessFeedback, targetNames);
             Chat.Broadcast(LanguageSet.AllBut(callerId), T.UnbanSuccessBroadcast, targetNames, caller as IPlayer ?? callerNames);
@@ -809,7 +834,7 @@ public static class OffenseManager
         return MessageContext.CODE_SUCCESS;
     }
     /// <returns>0 for a successful warn, 2 when the target isn't banned.</returns>
-    internal static int WarnPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp)
+    internal static async Task<int> WarnPlayer(ulong targetId, ulong callerId, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
@@ -818,7 +843,7 @@ public static class OffenseManager
         if (target is null)
             return 2;
         UCPlayer? caller = UCPlayer.FromID(callerId);
-        PlayerNames targetNames = F.GetPlayerOriginalNames(target);
+        PlayerNames targetNames = target.Name;
 
         LogWarnPlayer(targetId, callerId, reason, DateTime.Now);
 
@@ -833,11 +858,11 @@ public static class OffenseManager
             ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDMOperator.Translate(T.WarnSuccessDMOperator.Translate(lang),
                 lang, reason, target, target.GetTeam(), T.WarnSuccessDMOperator.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
 
-            target.SendChat(T.WarnSuccessDMOperator, reason!);
+            target.SendChat(T.WarnSuccessDMOperator, reason);
         }
         else
         {
-            PlayerNames callerNames = F.GetPlayerOriginalNames(callerId);
+            PlayerNames callerNames = caller is null ? (await F.GetPlayerOriginalNamesAsync(callerId, token).ThenToUpdate(token)) : caller.Name;
             L.Log($"{targetNames.PlayerName} ({targetId}) was warned by {callerNames.PlayerName} ({caller}) because {reason}.", ConsoleColor.Cyan);
             IPlayer caller2 = caller as IPlayer ?? callerNames;
             Chat.Broadcast(LanguageSet.AllBut(callerId, targetId), T.WarnSuccessBroadcast, target, caller2);
@@ -847,25 +872,24 @@ public static class OffenseManager
             ToastMessage.QueueMessage(target, new ToastMessage(T.WarnSuccessDM.Translate(T.WarnSuccessDM.Translate(lang),
                 lang, caller2, reason, target, target.GetTeam(), T.WarnSuccessDM.Flags | TranslationFlags.UnityUI), EToastMessageSeverity.WARNING));
 
-            target.SendChat(T.WarnSuccessDM, caller2, reason!);
+            target.SendChat(T.WarnSuccessDM, caller2, reason);
         }
 
         return MessageContext.CODE_SUCCESS;
     }
     /// <returns>0 for a successful mute.</returns>
-    internal static async Task<int> MutePlayerAsync(ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp)
+    internal static async Task<int> MutePlayerAsync(ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp, CancellationToken token = default)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         UCPlayer? muted = UCPlayer.FromID(target);
-        UCPlayer? muter = UCPlayer.FromID(admin);
         DateTime now = DateTime.Now;
         await Data.DatabaseManager.NonQueryAsync(
             "INSERT INTO `muted` (`Steam64`, `Admin`, `Reason`, `Duration`, `Timestamp`, `Type`) VALUES (@0, @1, @2, @3, @4, @5);",
-            new object[] { target, admin, reason, duration, now, (byte)type }).ConfigureAwait(false);
-        PlayerNames names = await F.GetPlayerOriginalNamesAsync(target).ConfigureAwait(false);
-        PlayerNames names2 = await F.GetPlayerOriginalNamesAsync(admin).ConfigureAwait(false);
+            new object[] { target, admin, reason, duration, now, (byte)type }, token).ConfigureAwait(false);
+        PlayerNames names = await F.GetPlayerOriginalNamesAsync(target, token).ConfigureAwait(false);
+        PlayerNames names2 = await F.GetPlayerOriginalNamesAsync(admin, token).ConfigureAwait(false);
         await UCWarfare.ToUpdate();
         DateTime unmutedTime = duration == -1 ? DateTime.MaxValue : now + TimeSpan.FromSeconds(duration);
         if (muted is not null && muted.TimeUnmuted < unmutedTime)
@@ -1008,12 +1032,12 @@ public static class OffenseManager
         public DateTimeOffset Timestamp { get; set; }
     }
 
-    private struct Ban : ITimestampOffense
+    private struct Ban : ITimestampOffense, IEquatable<Ban>
     {
-        public ulong Violator;
-        public ulong Admin;
-        public string Reason;
-        public int Duration;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public readonly string Reason;
+        public readonly int Duration;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public Ban(ulong violator, ulong admin, string reason, int duration, DateTimeOffset timestamp)
@@ -1024,11 +1048,15 @@ public static class OffenseManager
             Duration = duration;
             Timestamp = timestamp;
         }
+        public bool Equals(Ban offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Duration == offense.Duration && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Unban : ITimestampOffense
+    private struct Unban : ITimestampOffense, IEquatable<Unban>
     {
-        public ulong Violator;
-        public ulong Admin;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public Unban(ulong violator, ulong admin, DateTimeOffset timestamp)
@@ -1037,12 +1065,16 @@ public static class OffenseManager
             Admin = admin;
             Timestamp = timestamp;
         }
+        public bool Equals(Unban offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Kick : ITimestampOffense
+    private struct Kick : ITimestampOffense, IEquatable<Kick>
     {
-        public ulong Violator;
-        public ulong Admin;
-        public string Reason;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public readonly string Reason;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public Kick(ulong violator, ulong admin, string reason, DateTimeOffset timestamp)
@@ -1052,12 +1084,16 @@ public static class OffenseManager
             Reason = reason;
             Timestamp = timestamp;
         }
+        public bool Equals(Kick offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Warn : ITimestampOffense
+    private struct Warn : ITimestampOffense, IEquatable<Warn>
     {
-        public ulong Violator;
-        public ulong Admin;
-        public string Reason;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public readonly string Reason;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public Warn(ulong violator, ulong admin, string reason, DateTimeOffset timestamp)
@@ -1067,14 +1103,18 @@ public static class OffenseManager
             Reason = reason;
             Timestamp = timestamp;
         }
+        public bool Equals(Warn offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Mute : ITimestampOffense
+    private struct Mute : ITimestampOffense, IEquatable<Mute>
     {
-        public ulong Violator;
-        public ulong Admin;
-        public EMuteType MuteType;
-        public int Duration;
-        public string Reason;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
+        public readonly EMuteType MuteType;
+        public readonly int Duration;
+        public readonly string Reason;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public Mute(ulong violator, ulong admin, EMuteType muteType, int duration, string reason, DateTimeOffset timestamp)
@@ -1086,11 +1126,15 @@ public static class OffenseManager
             Reason = reason;
             Timestamp = timestamp;
         }
+        public bool Equals(Mute offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && MuteType == offense.MuteType && Duration == offense.Duration && Timestamp == offense.Timestamp;
+        }
     }
-    private struct BattlEyeKick : ITimestampOffense
+    private struct BattlEyeKick : ITimestampOffense, IEquatable<BattlEyeKick>
     {
-        public ulong Violator;
-        public string Reason;
+        public readonly ulong Violator;
+        public readonly string Reason;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public BattlEyeKick(ulong violator, string reason, DateTimeOffset timestamp)
@@ -1099,13 +1143,17 @@ public static class OffenseManager
             Reason = reason;
             Timestamp = timestamp;
         }
+        public bool Equals(BattlEyeKick offense)
+        {
+            return Violator == offense.Violator && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Teamkill : ITimestampOffense
+    private struct Teamkill : ITimestampOffense, IEquatable<Teamkill>
     {
-        public ulong Violator;
-        public ulong Dead;
-        public string DeathCause;
-        public string ItemName;
+        public readonly ulong Violator;
+        public readonly ulong Dead;
+        public readonly string DeathCause;
+        public readonly string ItemName;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public Teamkill(ulong violator, ulong dead, string deathCause, string itemName, DateTimeOffset timestamp)
@@ -1116,12 +1164,16 @@ public static class OffenseManager
             ItemName = itemName;
             Timestamp = timestamp;
         }
+        public bool Equals(Teamkill offense)
+        {
+            return Violator == offense.Violator && Dead == offense.Dead && Timestamp == offense.Timestamp;
+        }
     }
-    private struct VehicleTeamkill : ITimestampOffense
+    private struct VehicleTeamkill : ITimestampOffense, IEquatable<VehicleTeamkill>
     {
-        public ulong Violator;
-        public ushort VehicleID;
-        public string VehicleName;
+        public readonly ulong Violator;
+        public readonly ushort VehicleID;
+        public readonly string VehicleName;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public VehicleTeamkill(ulong violator, ushort vehicleId, string vehicleName, DateTimeOffset timestamp)
@@ -1131,11 +1183,15 @@ public static class OffenseManager
             VehicleName = vehicleName;
             Timestamp = timestamp;
         }
+        public bool Equals(VehicleTeamkill offense)
+        {
+            return Violator == offense.Violator && VehicleID == offense.VehicleID && Timestamp == offense.Timestamp;
+        }
     }
-    private struct Unmute : ITimestampOffense
+    private struct Unmute : ITimestampOffense, IEquatable<Unmute>
     {
-        public ulong Violator;
-        public ulong Admin;
+        public readonly ulong Violator;
+        public readonly ulong Admin;
         public DateTimeOffset Timestamp { get; set; }
         [JsonConstructor]
         public Unmute(ulong violator, ulong admin, DateTimeOffset timestamp)
@@ -1143,6 +1199,10 @@ public static class OffenseManager
             Violator = violator;
             Admin = admin;
             Timestamp = timestamp;
+        }
+        public bool Equals(Unmute offense)
+        {
+            return Violator == offense.Violator && Admin == offense.Admin && Timestamp == offense.Timestamp;
         }
     }
     public static class NetCalls
@@ -1173,6 +1233,7 @@ public static class OffenseManager
         [NetCall(ENetCall.FROM_SERVER, 1007)]
         internal static async Task ReceiveBanRequest(MessageContext context, ulong target, ulong admin, string reason, int duration, DateTimeOffset timestamp)
         {
+            await UCWarfare.ToUpdate();
             context.Acknowledge(await BanPlayerAsync(target, admin, reason, duration, timestamp));
         }
 
@@ -1180,25 +1241,27 @@ public static class OffenseManager
         internal static async Task ReceiveUnbanRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            context.Acknowledge(UnbanPlayer(target, admin, timestamp));
+            context.Acknowledge(await UnbanPlayer(target, admin, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1010)]
         internal static async Task ReceieveKickRequest(MessageContext context, ulong target, ulong admin, string reason, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            context.Acknowledge(KickPlayer(target, admin, reason, timestamp));
+            context.Acknowledge(await KickPlayer(target, admin, reason, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1028)]
         internal static async Task ReceieveMuteRequest(MessageContext context, ulong target, ulong admin, EMuteType type, int duration, string reason, DateTimeOffset timestamp)
         {
+            await UCWarfare.ToUpdate();
             context.Acknowledge(await MutePlayerAsync(target, admin, type, duration, reason, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1021)]
         internal static async Task ReceieveUnmuteRequest(MessageContext context, ulong target, ulong admin, DateTimeOffset timestamp)
         {
+            await UCWarfare.ToUpdate();
             context.Acknowledge(await UnmutePlayerAsync(target, admin, timestamp));
         }
 
@@ -1206,7 +1269,7 @@ public static class OffenseManager
         internal static async Task ReceiveWarnRequest(MessageContext context, ulong target, ulong admin, string reason, DateTimeOffset timestamp)
         {
             await UCWarfare.ToUpdate();
-            context.Acknowledge(WarnPlayer(target, admin, reason, timestamp));
+            context.Acknowledge(await WarnPlayer(target, admin, reason, timestamp));
         }
 
         [NetCall(ENetCall.FROM_SERVER, 1103)]

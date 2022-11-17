@@ -352,6 +352,7 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
                 if (!(VehicleType.ValueType != EDynamicValueType.ANY && VehicleType.Behavior != EChoiceBehavior.ALLOW_ALL) && lastInstID != vehicle.Vehicle.instanceID)
                 {
                     lastInstID = vehicle.Vehicle.instanceID;
+                    VehicleBay.GetSingletonQuick()?.GetDataSyncUnsafe(vehicle.Vehicle.asset.GUID);
                     if (VehicleBay.VehicleExists(vehicle.Vehicle.asset.GUID, out VehicleData data))
                         lastType = data.Type;
                     else

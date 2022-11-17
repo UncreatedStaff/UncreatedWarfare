@@ -5,7 +5,6 @@ using SDG.Unturned;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,8 +48,8 @@ public class UCWarfare : MonoBehaviour
     public Coroutine? StatsRoutine;
     public UCAnnouncer Announcer;
     internal DebugComponent Debugger;
-    public event EventHandler UCWarfareLoaded;
-    public event EventHandler UCWarfareUnloading;
+    public event EventHandler? UCWarfareLoaded;
+    public event EventHandler? UCWarfareUnloading;
     internal Projectiles.ProjectileSolver Solver;
     public HomebaseClientComponent? NetClient;
     public bool CoroutineTiming = false;
@@ -72,7 +71,7 @@ public class UCWarfare : MonoBehaviour
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        L.Log("Started loading - Uncreated Warfare version " + Version.ToString() + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
+        L.Log("Started loading - Uncreated Warfare version " + Version + " - By BlazingFlame and 420DankMeister. If this is not running on an official Uncreated Server than it has been obtained illigimately. " +
               "Please stop using this plugin now.", ConsoleColor.Green);
 
         /* INITIALIZE UNCREATED NETWORKING */
@@ -685,7 +684,7 @@ public class UCWarfare : MonoBehaviour
 
 public class UCWarfareNexus : IModuleNexus
 {
-    public bool Loaded { get; private set; } = false;
+    public bool Loaded { get; private set; }
 
     void IModuleNexus.initialize()
     {
@@ -694,7 +693,7 @@ public class UCWarfareNexus : IModuleNexus
         Data.LoadColoredConsole();
         Level.onPostLevelLoaded += OnLevelLoaded;
         UCWarfare.Nexus = this;
-        GameObject go = new GameObject("UCWarfare " + UCWarfare.Version.ToString());
+        GameObject go = new GameObject("UCWarfare " + UCWarfare.Version);
         go.AddComponent<Maps.MapScheduler>();
         UnityEngine.Object.DontDestroyOnLoad(go);
         go.AddComponent<UCWarfare>();

@@ -1629,7 +1629,7 @@ public static class KitEx
             reason = ESetFieldResult.FIELD_NOT_FOUND;
             return false;
         }
-        Attribute atr = Attribute.GetCustomAttribute(field, typeof(JsonSettable));
+        Attribute atr = Attribute.GetCustomAttribute(field, typeof(CommandSettable));
         if (atr is not null)
         {
             reason = ESetFieldResult.SUCCESS;
