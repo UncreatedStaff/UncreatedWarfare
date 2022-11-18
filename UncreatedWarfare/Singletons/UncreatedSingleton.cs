@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Uncreated.SQL;
 using Uncreated.Warfare.Commands;
@@ -34,21 +35,21 @@ public interface ILevelStartListenerAsync
 public interface IQuestCompletedHandler
 {
     /// <returns>Whether the quest was handled and execution should be stopped.</returns>
-    bool OnQuestCompleted(UCPlayer player, Guid presetKey);
+    void OnQuestCompleted(QuestCompleted e);
 }
 public interface IQuestCompletedHandlerAsync
 {
     /// <returns>Whether the quest was handled and execution should be stopped.</returns>
-    Task<bool> OnQuestCompletedAsync(UCPlayer player, Guid presetKey);
+    Task OnQuestCompleted(QuestCompleted e);
 }
 
 public interface IQuestCompletedListener
 {
-    void OnQuestCompleted(UCPlayer player, Guid presetKey);
+    void OnQuestCompleted(QuestCompleted e);
 }
 public interface IQuestCompletedListenerAsync
 {
-    Task OnQuestCompletedAsync(UCPlayer player, Guid presetKey);
+    Task OnQuestCompleted(QuestCompleted e);
 }
 
 public interface ITimeSyncListener
@@ -238,14 +239,77 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
     protected ListSqlSingleton(string reloadKey, Schema[] schemas) : base(reloadKey, schemas) { }
     public async Task ReloadAsync()
     {
-        Task task;
-        if (_isLoading || _isUnloading)
-            throw new InvalidOperationException("Already loading or unloading.");
-        if (_isLoaded)
+        Monitor.Enter(this);
+        try
         {
+            Task task;
+            if (_isLoading || _isUnloading)
+                throw new InvalidOperationException("Already loading or unloading.");
+            if (_isLoaded)
+            {
+                _isLoaded = false;
+                _isUnloading = true;
+                task = PreUnload();
+                if (!task.IsCompleted)
+                    await task;
+                await UnloadAll().ConfigureAwait(false);
+                task = PostUnload();
+                if (!task.IsCompleted)
+                    await task;
+                _isUnloading = false;
+            }
+            _isLoading = true;
+            task = PreLoad();
+            if (!task.IsCompleted)
+                await task;
+            await Init().ConfigureAwait(false);
+            task = PostLoad();
+            if (!task.IsCompleted)
+                await task;
+            task = PostReload();
+            if (!task.IsCompleted)
+                await task;
+            _isLoading = false;
+            _isLoaded = true;
+        }
+        finally
+        {
+            Monitor.Exit(this);
+        }
+    }
+    public async Task LoadAsync()
+    {
+        Monitor.Enter(this);
+        try
+        {
+            if (_isLoading || _isUnloading)
+                throw new InvalidOperationException("Already loading or unloading.");
+            _isLoading = true;
+            Task task = PreLoad();
+            if (!task.IsCompleted)
+                await task;
+            await Init().ConfigureAwait(false);
+            task = PostLoad();
+            if (!task.IsCompleted)
+                await task;
+            _isLoading = false;
+            _isLoaded = true;
+        }
+        finally
+        {
+            Monitor.Exit(this);
+        }
+    }
+    public async Task UnloadAsync()
+    {
+        Monitor.Enter(this);
+        try
+        {
+            if (_isLoading || _isUnloading)
+                throw new InvalidOperationException("Already loading or unloading.");
             _isLoaded = false;
             _isUnloading = true;
-            task = PreUnload();
+            Task task = PreUnload();
             if (!task.IsCompleted)
                 await task;
             await UnloadAll().ConfigureAwait(false);
@@ -254,49 +318,10 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
                 await task;
             _isUnloading = false;
         }
-        _isLoading = true;
-        task = PreLoad();
-        if (!task.IsCompleted)
-            await task;
-        await Init().ConfigureAwait(false);
-        task = PostLoad();
-        if (!task.IsCompleted)
-            await task;
-        task = PostReload();
-        if (!task.IsCompleted)
-            await task;
-        _isLoading = false;
-        _isLoaded = true;
-    }
-    public async Task LoadAsync()
-    {
-        if (_isLoading || _isUnloading)
-            throw new InvalidOperationException("Already loading or unloading.");
-        _isLoading = true;
-        Task task = PreLoad();
-        if (!task.IsCompleted)
-            await task;
-        await Init().ConfigureAwait(false);
-        task = PostLoad();
-        if (!task.IsCompleted)
-            await task;
-        _isLoading = false;
-        _isLoaded = true;
-    }
-    public async Task UnloadAsync()
-    {
-        if (_isLoading || _isUnloading)
-            throw new InvalidOperationException("Already loading or unloading.");
-        _isLoaded = false;
-        _isUnloading = true;
-        Task task = PreUnload();
-        if (!task.IsCompleted)
-            await task;
-        await UnloadAll().ConfigureAwait(false);
-        task = PostUnload();
-        if (!task.IsCompleted)
-            await task;
-        _isUnloading = false;
+        finally
+        {
+            Monitor.Exit(this);
+        }
     }
     public void Reload() => throw new NotImplementedException();
     public void Load() => throw new NotImplementedException();

@@ -445,7 +445,7 @@ public class ConfigSync : MonoBehaviour
         try
         {
             L.LogDebug("Patching " + prop.DeclaringType.Name + "." + prop.Name + " for cross-server syncing.");
-            Patches.Patcher.Patch(prop.GetSetMethod(true), postfix: ptfx);
+            Harmony.Patches.Patcher.Patch(prop.GetSetMethod(true), postfix: ptfx);
         }
         catch (Exception ex)
         {
@@ -456,8 +456,8 @@ public class ConfigSync : MonoBehaviour
     private static void UnpatchProperty(PropertyInfo prop)
     {
         MethodInfo setter = prop.GetSetMethod(true);
-        Patches.Patcher.Unpatch(setter, HarmonyPatchType.Prefix, Patches.Patcher.Id);
-        Patches.Patcher.Unpatch(setter, HarmonyPatchType.Postfix, Patches.Patcher.Id);
+        Harmony.Patches.Patcher.Unpatch(setter, HarmonyPatchType.Prefix, Harmony.Patches.Patcher.Id);
+        Harmony.Patches.Patcher.Unpatch(setter, HarmonyPatchType.Postfix, Harmony.Patches.Patcher.Id);
     }
     #endregion
 

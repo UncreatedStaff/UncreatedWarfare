@@ -43,6 +43,7 @@ public class StructureDestroyed : EventState, IBuildableDestroyedEvent
         this._wasPickedUp = wasPickedUp;
         if (save is not null)
         {
+            _save = save;
             save.EnterSync();
             try
             {

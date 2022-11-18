@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using Uncreated.Players;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Quests;
 
 namespace Uncreated.Warfare.Ranks;
@@ -348,25 +349,25 @@ public static class RankManager
                     }
                 }
             }
-        n:;
+            n:;
         }
 
         if (Assets.find(data.QuestID) is QuestAsset qa)
             player.Player.quests.sendRemoveQuest(qa.id);
     }
 
-    public static bool OnQuestCompleted(UCPlayer player, Guid key)
+    public static bool OnQuestCompleted(QuestCompleted e)
     {
-        player.RankData ??= ReadRankData(player);
-        int index = GetRankIndex(player);
+        e.Player.RankData ??= ReadRankData(e.Player);
+        int index = GetRankIndex(e.Player);
         if (index != -1 && index < Config.Ranks.Length - 1)
         {
             ref RankData nextRank = ref Config.Ranks[index + 1];
-            ref RankStatus status = ref player.RankData[index + 1];
+            ref RankStatus status = ref e.Player.RankData[index + 1];
             bool write = false;
             for (int i = 0; i < nextRank.UnlockRequirements.Length; i++)
             {
-                if (nextRank.UnlockRequirements[i] == key)
+                if (nextRank.UnlockRequirements[i] == e.PresetKey)
                 {
                     status.Completions[i] = true;
                     L.LogDebug("Finished rank requirement " + i.ToString());
@@ -382,12 +383,12 @@ public static class RankManager
             {
                 status.IsCompelete = true;
                 L.LogDebug("Finished rank " + nextRank.GetName(0));
-                WriteRankData(player, player.RankData);
+                WriteRankData(e.Player, e.Player.RankData);
                 if (Assets.find(nextRank.QuestID) is QuestAsset quest)
                 {
-                    player.Player.quests.sendRemoveQuest(quest.id);
-                    ToastMessage.QueueMessage(player, new ToastMessage("Quest complete: " + quest.questName, EToastMessageSeverity.BIG));
-                    OnPlayerJoin(player);
+                    e.Player.Player.quests.sendRemoveQuest(quest.id);
+                    ToastMessage.QueueMessage(e.Player, new ToastMessage("Quest complete: " + quest.questName, EToastMessageSeverity.BIG));
+                    OnPlayerJoin(e.Player);
                 }
             }
             return true;

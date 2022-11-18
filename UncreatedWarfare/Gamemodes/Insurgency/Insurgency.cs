@@ -273,7 +273,7 @@ public class Insurgency :
             Destroy(_endScreen);
         }
         _isScreenUp = false;
-        EndGame();
+        Task.Run(EndGame);
     }
     protected override void EventLoopAction()
     {

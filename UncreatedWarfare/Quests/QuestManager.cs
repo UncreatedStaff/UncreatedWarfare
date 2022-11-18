@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Warfare.Commands.CommandSystem;
@@ -261,21 +262,27 @@ public static class QuestManager
         {
             if (!UCWarfare.Config.DisableDailyQuests)
                 DailyQuests.OnDailyQuestCompleted(tracker);
+            DeregisterTracker(tracker);
         }
         else
         {
-            if (tracker.PresetKey != default)
+            QuestCompleted args = new QuestCompleted(tracker);
+            Task.Run(async () =>
             {
-                if (tracker.Player!.CompletedQuests == null) GetCompletedQuests(tracker.Player);
-                tracker.Player.CompletedQuests!.Add(tracker.PresetKey);
-                if (!RankManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
-                    if (!KitManager.OnQuestCompleted(tracker.Player, tracker.PresetKey))
-                        VehicleBay.OnQuestCompleted(tracker.Player, tracker.PresetKey);
-            }
+                await UCWarfare.ToUpdate();
+                if (tracker.PresetKey != default)
+                {
+                    if (tracker.Player!.CompletedQuests == null)
+                        GetCompletedQuests(tracker.Player);
+                    tracker.Player.CompletedQuests!.Add(tracker.PresetKey);
+                    await Data.Gamemode.HandleQuestCompleted(args);
+                }
 
-            tracker.TryGiveRewards();
+                if (args.GiveRewards)
+                    tracker.TryGiveRewards();
+                await Data.Gamemode.OnQuestCompleted(args);
+            });
         }
-        DeregisterTracker(tracker);
     }
     public static void OnQuestUpdated(BaseQuestTracker tracker, bool skipFlagUpdate = false)
     {

@@ -148,7 +148,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
             _endScreen = null!;
         }
         _isScreenUp = false;
-        EndGame();
+        Task.Run(EndGame);
     }
     protected override Task PostGameStarting(bool isOnLoad)
     {

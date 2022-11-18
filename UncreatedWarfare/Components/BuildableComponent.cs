@@ -199,8 +199,8 @@ public class BuildableComponent : MonoBehaviour
                 }
             }
         }
-
-        EffectManager.sendEffect(29, EffectManager.MEDIUM, data.point);
+        if (Gamemode.Config.EffectBuildSuccess.ValidReference(out EffectAsset effect))
+            F.TriggerEffectReliable(effect, EffectManager.MEDIUM, data.point);
 
         foreach (KeyValuePair<ulong, float> entry in PlayerHits)
         {

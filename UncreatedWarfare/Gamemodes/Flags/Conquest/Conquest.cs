@@ -131,7 +131,7 @@ public sealed partial class Conquest :
             _endScreen = null;
         }
         _isScreenUp = false;
-        EndGame();
+        Task.Run(EndGame);
     }
     protected override Task PostGameStarting(bool isOnLoad)
     {

@@ -355,7 +355,7 @@ public static class EventFunctions
                 if (VehicleManager.vehicles[i].trunkItems == trunk)
                 {
                     VehicleBay? bay = VehicleBay.GetSingletonQuick();
-                    if (bay?.GetDataSyncUnsafe(VehicleManager.vehicles[i].asset.GUID) is { } data && VehicleData.IsLogistics(data.Type))
+                    if (bay?.GetDataSync(VehicleManager.vehicles[i].asset.GUID) is { } data && VehicleData.IsLogistics(data.Type))
                     {
                         trunk.removeItem(e.Index);
                         Item it2 = new Item((!build ? buildAsset : ammoAsset)!.id, true);

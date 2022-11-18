@@ -548,7 +548,7 @@ public class VehicleBayCommand : AsyncCommand
                                                                $"FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
                 else
                     ctx.LogAction(EActionLogType.VEHICLE_BAY_FORCE_SPAWN, $"{spawn.VehicleGuid:N} - FORCED VEHICLE TO SPAWN ID: {spawn.InstanceId}");
-                spawn.SpawnVehicle();
+                await spawn.SpawnVehicle(token).ThenToUpdate(token);
                 ctx.Reply(T.VehicleBayForceSuccess, asset!);
             }
             else

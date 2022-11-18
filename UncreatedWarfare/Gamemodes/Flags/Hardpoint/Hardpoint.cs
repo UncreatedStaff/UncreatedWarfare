@@ -283,7 +283,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
             _endScreen = null!;
         }
         _isScreenUp = false;
-        EndGame();
+        Task.Run(EndGame);
     }
     private void EvaluatePointsOverride(Flag flag, bool overrideInactiveCheck) { }
     protected override void PlayerEnteredFlagRadius(Flag flag, Player player) { }

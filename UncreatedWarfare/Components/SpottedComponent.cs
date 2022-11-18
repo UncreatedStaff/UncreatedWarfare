@@ -17,9 +17,9 @@ namespace Uncreated.Warfare.Components;
 public class SpottedComponent : MonoBehaviour
 {
     public Guid EffectGUID { get; private set; }
+    public EffectAsset? Effect { get; private set; }
     public ESpotted? Type { get; private set; }
     public EVehicleType? VehicleType { get; private set; }
-    public ushort EffectID { get; private set; }
     /// <summary>Player who spotted the object.</summary>
     /// <remarks>May not always be online or have a value at all.</remarks>
     public UCPlayer? CurrentSpotter { get; private set; }
@@ -75,7 +75,7 @@ public class SpottedComponent : MonoBehaviour
 
         if (Assets.find(EffectGUID) is EffectAsset effect)
         {
-            EffectID = effect.id;
+            Effect = effect;
         }
         else
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
@@ -162,7 +162,7 @@ public class SpottedComponent : MonoBehaviour
 
         if (Assets.find(EffectGUID) is EffectAsset effect)
         {
-            EffectID = effect.id;
+            Effect = effect;
         }
         else
             L.LogWarning("SpottedComponent could not initialize: Effect asset not found: " + EffectGUID);
@@ -377,7 +377,10 @@ public class SpottedComponent : MonoBehaviour
             UCPlayer player = PlayerManager.OnlinePlayers[i];
             Vector3 pos = UAVMode ? UAVLastKnown : transform.position;
             if (player.GetTeam() == team && (player.Position - pos).sqrMagnitude < Math.Pow(650, 2))
-                EffectManager.sendEffect(EffectID, player.Connection, pos);
+            {
+                if (Effect != null)
+                    F.TriggerEffectReliable(Effect, player.Connection, pos);
+            }
         }
     }
     private void TryAnnounce(UCPlayer spotter, string targetName)

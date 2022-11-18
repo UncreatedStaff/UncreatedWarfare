@@ -98,7 +98,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         ReplaceBarricadesAndStructures();
         Commands.ClearCommand.WipeVehicles();
         Commands.ClearCommand.ClearItems();
-        EndGame();
+        Task.Run(EndGame);
     }
     private void OnScoreUpdated()
     {

@@ -268,7 +268,7 @@ public class RallyUseQuest : BaseQuestData<RallyUseQuest.Tracker, RallyUseQuest.
         public override void ResetToDefaults() => _rallyUses = 0;
         public void OnRallyActivated(RallyPoint rally)
         {
-            if (rally.squad.Leader?.Steam64 == _player.Steam64)
+            if (rally.Squad.Leader?.Steam64 == _player.Steam64)
             {
                 _rallyUses += rally.AwaitingPlayers.Count;
                 if (_rallyUses >= UseCount)

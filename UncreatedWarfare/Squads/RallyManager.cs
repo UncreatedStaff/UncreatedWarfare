@@ -25,7 +25,7 @@ namespace Uncreated.Warfare.Squads
                 UCPlayer? player = UCPlayer.FromID(data.owner);
                 if (player?.Squad != null)
                 {
-                    RegisterNewRallyPoint(data, player.Squad);
+                    RegisterNewRallyPoint(drop, player.Squad);
                 }
             }
         }
@@ -120,7 +120,7 @@ namespace Uncreated.Warfare.Squads
 #endif
             for (int i = 0; i < rallypoints.Count; i++)
             {
-                if (rallypoints[i].structure.instanceID == instanceID)
+                if (rallypoints[i].Drop.instanceID == instanceID)
                 {
                     rallypoints[i].IsActive = false;
                     rallypoints[i].ClearUIForSquad();
@@ -130,39 +130,39 @@ namespace Uncreated.Warfare.Squads
                 }
             }
         }
-        public static void RegisterNewRallyPoint(BarricadeData data, Squad squad)
+        public static void RegisterNewRallyPoint(BarricadeDrop drop, Squad squad)
         {
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            if (!rallypoints.Exists(r => r.structure.instanceID == data.instanceID))
+            if (!rallypoints.Exists(r => r.Drop.instanceID == drop.instanceID))
             {
-                RallyPoint existing = rallypoints.Find(r => r.squad.Name == squad.Name && r.squad.Team == squad.Team);
+                RallyPoint existing = rallypoints.Find(r => r.Squad.Name == squad.Name && r.Squad.Team == squad.Team);
                 if (existing != null)
                 {
                     existing.ClearUIForSquad();
                     existing.IsActive = false;
-                    rallypoints.RemoveAll(r => r.structure.instanceID == existing.structure.instanceID);
-                    BarricadeDrop drop = BarricadeManager.FindBarricadeByRootTransform(existing.drop.model.transform);
-                    if (drop != null && Regions.tryGetCoordinate(drop.model.position, out byte x, out byte y))
-                        BarricadeManager.destroyBarricade(drop, x, y, ushort.MaxValue);
+                    rallypoints.RemoveAll(r => r.Drop.instanceID == existing.Drop.instanceID);
+                    BarricadeDrop drop2 = BarricadeManager.FindBarricadeByRootTransform(existing.Drop.model.transform);
+                    if (drop2 != null && Regions.tryGetCoordinate(drop2.model.position, out byte x, out byte y))
+                        BarricadeManager.destroyBarricade(drop2, x, y, ushort.MaxValue);
                 }
 
-                ActionLogger.Add(EActionLogType.PLACED_RALLY, "AT " + data.point.ToString(), squad.Leader);
+                ActionLogger.Add(EActionLogType.PLACED_RALLY, "AT " + drop.model.position.ToString("F1"), squad.Leader);
 
-                RallyPoint rallypoint = new RallyPoint(data, UCBarricadeManager.FindBarricadeDrop(data), squad);
-                rallypoint.drop.model.transform.gameObject.AddComponent<RallyComponent>().Initialize(rallypoint);
+                RallyPoint rallypoint = new RallyPoint(drop, squad);
+                rallypoint.Drop.model.transform.gameObject.AddComponent<RallyComponent>().Initialize(rallypoint);
 
                 rallypoints.Add(rallypoint);
 
-                foreach (UCPlayer member in rallypoint.squad.Members)
+                foreach (UCPlayer member in rallypoint.Squad.Members)
                     member.SendChat(T.RallyActive);
 
                 rallypoint.ShowUIForSquad();
 
                 if (UCWarfare.Config.Debug)
                     foreach (RallyPoint rally in rallypoints)
-                        L.Log($"Rally point: Squad: {rally.squad.Name}, Active: {rally.IsActive}, Structure: {rally.structure.instanceID}, Drop: {rally.drop.instanceID}." + rally.squad.Name, ConsoleColor.DarkGray);
+                        L.Log($"Rally point: Squad: {rally.Squad.Name}, Active: {rally.IsActive}, Structure: {rally.Drop.instanceID}, Drop: {rally.Drop.instanceID}." + rally.Squad.Name, ConsoleColor.DarkGray);
             }
         }
         public static bool HasRally(UCPlayer player, out RallyPoint rallypoint)
@@ -172,7 +172,7 @@ namespace Uncreated.Warfare.Squads
 #endif
             if (player.Squad != null)
             {
-                rallypoint = rallypoints.Find(r => r.squad.Name == player.Squad.Name && r.squad.Team == player.Squad.Team);
+                rallypoint = rallypoints.Find(r => r.Squad.Name == player.Squad.Name && r.Squad.Team == player.Squad.Team);
                 return rallypoint != null;
             }
             rallypoint = null!;
@@ -183,7 +183,7 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
             using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-            rallypoint = rallypoints.Find(r => r.squad.Name == squad.Name && r.squad.Team == squad.Team);
+            rallypoint = rallypoints.Find(r => r.Squad.Name == squad.Name && r.Squad.Team == squad.Team);
             return rallypoint != null;
         }
         public static IEnumerable<BarricadeDrop> GetRallyPointBarricades()
@@ -202,22 +202,20 @@ namespace Uncreated.Warfare.Squads
 
     public class RallyPoint
     {
-        public readonly BarricadeData structure; // physical barricade structure of the rallypoint
-        public readonly BarricadeDrop drop;
+        public readonly BarricadeDrop Drop;
         public readonly List<UCPlayer> AwaitingPlayers; // list of players currently waiting to teleport to the rally
-        public readonly Squad squad;
+        public readonly Squad Squad;
         public bool IsActive;
-        public int timer;
-        public readonly string nearestLocation;
-        public RallyPoint(BarricadeData structure, BarricadeDrop drop, Squad squad)
+        public int Timer;
+        public readonly string NearestLocation;
+        public RallyPoint(BarricadeDrop drop, Squad squad)
         {
-            this.structure = structure;
-            this.drop = drop;
-            this.squad = squad;
+            this.Drop = drop;
+            this.Squad = squad;
             AwaitingPlayers = new List<UCPlayer>(6);
             IsActive = true;
-            timer = SquadManager.Config.RallyTimer;
-            nearestLocation = F.GetClosestLocation(structure.point);
+            Timer = SquadManager.Config.RallyTimer;
+            NearestLocation = F.GetClosestLocation(drop.model.position);
         }
 
         public void UpdateUIForAwaitingPlayers()
@@ -227,21 +225,21 @@ namespace Uncreated.Warfare.Squads
 #endif
             if (!IsActive)
                 return;
-            TimeSpan seconds = TimeSpan.FromSeconds(timer);
-            for (int i = 0; i < squad.Members.Count; i++)
+            TimeSpan seconds = TimeSpan.FromSeconds(Timer);
+            for (int i = 0; i < Squad.Members.Count; i++)
             {
-                UCPlayer member = squad.Members[i];
+                UCPlayer member = Squad.Members[i];
                 if (AwaitingPlayers.Contains(member))
-                    SquadManager.RallyUI.SendToPlayer(member.Connection, T.RallyUITimer.Translate(member, timer >= 0 ? seconds : TimeSpan.Zero, nearestLocation));
+                    SquadManager.RallyUI.SendToPlayer(member.Connection, T.RallyUITimer.Translate(member, Timer >= 0 ? seconds : TimeSpan.Zero, NearestLocation));
             }
         }
         public void ShowUIForPlayer(UCPlayer player)
         {
-            SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUI.Translate(player, nearestLocation));
+            SquadManager.RallyUI.SendToPlayer(player.Connection, T.RallyUI.Translate(player, NearestLocation));
         }
         public void ShowUIForSquad()
         {
-            foreach (UCPlayer member in squad.Members)
+            foreach (UCPlayer member in Squad.Members)
                 ShowUIForPlayer(member);
         }
         public void ClearUIForPlayer(UCPlayer player)
@@ -250,7 +248,7 @@ namespace Uncreated.Warfare.Squads
         }
         public void ClearUIForSquad()
         {
-            foreach (UCPlayer member in squad.Members)
+            foreach (UCPlayer member in Squad.Members)
                 ClearUIForPlayer(member);
         }
         public void TeleportPlayer(UCPlayer player)
@@ -258,9 +256,9 @@ namespace Uncreated.Warfare.Squads
             if (!player.IsOnline || player.Player.life.isDead || player.Player.movement.getVehicle() != null)
                 return;
 
-            ActionLogger.Add(EActionLogType.TELEPORTED_TO_RALLY, "AT " + drop.model.position.ToString() + " PLACED BY " + squad.Leader.Steam64.ToString(), player);
+            ActionLogger.Add(EActionLogType.TELEPORTED_TO_RALLY, "AT " + Drop.model.position.ToString() + " PLACED BY " + Squad.Leader.Steam64.ToString(), player);
 
-            player.Player.teleportToLocation(new Vector3(structure.point.x, structure.point.y + RallyManager.TELEPORT_HEIGHT_OFFSET, structure.point.z), structure.angle_y);
+            player.Player.teleportToLocation(new Vector3(Drop.model.position.x, Drop.model.position.y + RallyManager.TELEPORT_HEIGHT_OFFSET, Drop.model.position.z), Drop.model.rotation.eulerAngles.y);
 
             player.SendChat(T.RallySuccess);
 
@@ -284,8 +282,8 @@ namespace Uncreated.Warfare.Squads
 #if DEBUG
                 IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-                parent.timer--;
-                if (parent.timer <= 0)
+                parent.Timer--;
+                if (parent.Timer <= 0)
                 {
                     // rally is now spawnable
 
@@ -297,34 +295,34 @@ namespace Uncreated.Warfare.Squads
                     QuestManager.OnRallyActivated(parent);
                     parent.AwaitingPlayers.Clear();
 
-                    parent.timer = SquadManager.Config.RallyTimer;
+                    parent.Timer = SquadManager.Config.RallyTimer;
                 }
                 else
                 {
                     parent.UpdateUIForAwaitingPlayers();
 
-                    if (parent.timer % 5 == 0)
+                    if (parent.Timer % 5 == 0)
                     {
                         ulong enemyTeam = 0;
-                        if (parent.squad.Team == TeamManager.Team1ID)
+                        if (parent.Squad.Team == TeamManager.Team1ID)
                             enemyTeam = TeamManager.Team2ID;
-                        else if (parent.squad.Team == TeamManager.Team2ID)
+                        else if (parent.Squad.Team == TeamManager.Team2ID)
                             enemyTeam = TeamManager.Team1ID;
 
                         // check for enemies nearby rally points every 5 seconds
                         List<UCPlayer> enemies = PlayerManager.OnlinePlayers.Where(p =>
                             p.GetTeam() == enemyTeam &&
-                            (p.Position - parent.structure.point).sqrMagnitude < Math.Pow(SquadManager.Config.RallyDespawnDistance, 2)
+                            (p.Position - parent.Drop.model.position).sqrMagnitude < Math.Pow(SquadManager.Config.RallyDespawnDistance, 2)
                             ).ToList();
 
                         if (enemies.Count > 0)
                         {
-                            if (parent.drop != null && Regions.tryGetCoordinate(parent.drop.model.position, out byte x, out byte y))
-                                BarricadeManager.destroyBarricade(parent.drop, x, y, ushort.MaxValue);
+                            if (parent.Drop != null && Regions.tryGetCoordinate(parent.Drop.model.position, out byte x, out byte y))
+                                BarricadeManager.destroyBarricade(parent.Drop, x, y, ushort.MaxValue);
 
-                            RallyManager.TryDeleteRallyPoint(parent.structure.instanceID);
+                            RallyManager.TryDeleteRallyPoint(parent.Drop!.instanceID);
 
-                            foreach (UCPlayer member in parent.squad.Members)
+                            foreach (UCPlayer member in parent.Squad.Members)
                                 member.SendChat(T.RallyEnemiesNearbyTp);
 
 #if DEBUG

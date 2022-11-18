@@ -2,7 +2,6 @@
 using Steamworks;
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -15,8 +14,8 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.SQL;
 using Uncreated.Warfare.Components;
-using Uncreated.Warfare.Configuration;
 using Uncreated.Warfare.Events;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Events.Vehicles;
 using Uncreated.Warfare.FOBs;
 using Uncreated.Warfare.Gamemodes;
@@ -92,18 +91,31 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     public override bool AwaitLoad => true;
     public override MySqlDatabase Sql => Data.AdminSql;
+    private void StartDualLock()
+    {
+        Monitor.Enter(this);
+        Monitor.Enter(Items);
+    }
+    private void EndDualLock()
+    {
+        Monitor.Exit(this);
+        Monitor.Exit(Items);
+    }
     private void WhitelistItems()
     {
-        for (int i = 0; i < Count; i++)
+        lock (Items)
         {
-            SqlItem<VehicleData> data = Items[i];
-            if (data.Item?.Items != null && data.Item.Items.Length > 0)
+            for (int i = 0; i < Count; i++)
             {
-                VehicleData d = data.Item;
-                for (int j = 0; j < d.Items.Length; j++)
+                SqlItem<VehicleData> data = Items[i];
+                if (data.Item?.Items != null && data.Item.Items.Length > 0)
                 {
-                    if (!Whitelister.IsWhitelisted(d.Items[j], out _))
-                        Whitelister.AddItem(d.Items[j]);
+                    VehicleData d = data.Item;
+                    for (int j = 0; j < d.Items.Length; j++)
+                    {
+                        if (!Whitelister.IsWhitelisted(d.Items[j], out _))
+                            Whitelister.AddItem(d.Items[j]);
+                    }
                 }
             }
         }
@@ -148,9 +160,21 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         {
             if (!UCWarfare.IsMainThread)
                 await UCWarfare.ToUpdate();
+            SendQuests(player);
+        }
+        finally
+        {
+            Release();
+        }
+    }
+    private void SendQuests(UCPlayer player)
+    {
+        ThreadUtil.assertIsGameThread();
 #if DEBUG
-            using IDisposable profiler = ProfilingUtils.StartTracking();
+        using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        lock (Items)
+        {
             for (int i = 0; i < Items.Count; i++)
             {
                 SqlItem<VehicleData> item = Items[i];
@@ -182,10 +206,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 }
             }
         }
-        finally
-        {
-            Release();
-        }
     }
     /// <remarks>Thread Safe</remarks>
     public async Task AddRequestableVehicle(InteractableVehicle vehicle, CancellationToken token = default)
@@ -202,7 +222,15 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         };
         data.SaveMetaData(vehicle);
         ThreadUtil.assertIsGameThread();
-        await AddOrUpdate(data, token).ConfigureAwait(false);
+        StartDualLock();
+        try
+        {
+            await AddOrUpdate(data, token).ConfigureAwait(false);
+        }
+        finally
+        {
+            EndDualLock();
+        }
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveRequestableVehicle(Guid vehicle, CancellationToken token = default)
@@ -213,11 +241,19 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        SqlItem<VehicleData>? data = await this.GetDataProxy(vehicle, token).ConfigureAwait(false);
-        if (data is not null)
+        StartDualLock();
+        try
         {
-            await data.Delete(token).ConfigureAwait(false);
-            return true;
+            SqlItem<VehicleData>? data = await this.GetDataProxy(vehicle, token).ConfigureAwait(false);
+            if (data is not null)
+            {
+                await data.Delete(token).ConfigureAwait(false);
+                return true;
+            }
+        }
+        finally
+        {
+            EndDualLock();
         }
 
         return false;
@@ -226,6 +262,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public async Task<VehicleData?> GetData(Guid guid, CancellationToken token = default)
     {
         await WaitAsync(token).ConfigureAwait(false);
+        StartDualLock();
         try
         {
             for (int i = 0; i < List.Count; ++i)
@@ -237,85 +274,50 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
         finally
         {
+            EndDualLock();
             Release();
         }
 
         return null;
     }
-    /// <remarks>Doesn't lock. Creates a copy of the data to enumerate through.</remarks>
     public VehicleData? GetDataSync(Guid guid)
     {
-        SqlItem<VehicleData>[] d;
         lock (Items)
         {
-            d = Items.ToArray();
-        }
-        int map = MapScheduler.Current;
-        for (int i = 0; i < d.Length; i++)
-        {
-            SqlItem<VehicleData> item = d[i];
-            if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
-                return item.Item;
-        }
-        for (int i = 0; i < d.Length; i++)
-        {
-            SqlItem<VehicleData> item = d[i];
-            if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
-                return item.Item;
-        }
-
-        return null;
-    }
-    /// <remarks>Doesn't lock. Doesn't create a copy of the data unless it gets modified while enumerating.
-    /// Can cause <see cref="InvalidOperationException"/> errors elsewhere.</remarks>
-    public VehicleData? GetDataSyncUnsafe(Guid guid)
-    {
-        int map = MapScheduler.Current;
-        if (IsLocked)
-            return GetDataSync(guid);
-        try
-        {
-            lock (Items)
+            int map = MapScheduler.Current;
+            for (int i = 0; i < Items.Count; i++)
             {
-                foreach (SqlItem<VehicleData> item in List)
-                {
-                    if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
-                        return item.Item;
-                }
-                foreach (SqlItem<VehicleData> item in List)
-                {
-                    if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
-                        return item.Item;
-                }
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
+                    return item.Item;
+            }
+            for (int i = 0; i < Items.Count; i++)
+            {
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
+                    return item.Item;
             }
         }
-        catch (InvalidOperationException)
-        {
-            return GetDataSync(guid);
-        }
 
         return null;
     }
-    /// <remarks>Doesn't lock. Creates a copy of the data to enumerate through.</remarks>
     public SqlItem<VehicleData>? GetDataProxySync(Guid guid)
     {
-        SqlItem<VehicleData>[] d;
         lock (Items)
         {
-            d = Items.ToArray();
-        }
-        int map = MapScheduler.Current;
-        for (int i = 0; i < d.Length; i++)
-        {
-            SqlItem<VehicleData> item = d[i];
-            if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
-                return item;
-        }
-        for (int i = 0; i < d.Length; i++)
-        {
-            SqlItem<VehicleData> item = d[i];
-            if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
-                return item;
+            int map = MapScheduler.Current;
+            for (int i = 0; i < Items.Count; i++)
+            {
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item != null && map == item.Item.Map && item.Item.VehicleID == guid)
+                    return item;
+            }
+            for (int i = 0; i < Items.Count; i++)
+            {
+                SqlItem<VehicleData> item = Items[i];
+                if (item.Item != null && item.Item.Map < 0 && item.Item.VehicleID == guid)
+                    return item;
+            }
         }
 
         return null;
@@ -325,6 +327,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     {
         await WaitAsync(token).ConfigureAwait(false);
         int map = MapScheduler.Current;
+        Monitor.Enter(this);
         try
         {
             lock (Items)
@@ -345,6 +348,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
         finally
         {
+            Monitor.Exit(this);
             Release();
         }
 
@@ -355,6 +359,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     {
         AssertLoadedIntl();
         await WaitAsync(token).ConfigureAwait(false);
+        StartDualLock();
         try
         {
             SqlItem<VehicleData>? item = FindProxyNoLock(data);
@@ -372,6 +377,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
         finally
         {
+            EndDualLock();
             Release();
         }
     }
@@ -614,7 +620,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         DeleteVehicle(vehicle);
 
         if (respawn)
-            spawn.SpawnVehicle();
+            Task.Run(() => spawn.SpawnVehicle());
     }
     public static void DeleteVehicle(InteractableVehicle vehicle)
     {
@@ -808,10 +814,12 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             }
 
             UCPlayer? owner = UCPlayer.FromCSteamID(e.Vehicle.lockedOwner);
-
-            if (c.Data.CrewSeats.Contains(e.FinalSeat) && c.Data.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
+            VehicleData? data = c.Data?.Item;
+            if (data != null &&
+                data.CrewSeats.ArrayContains(e.FinalSeat) &&
+                data.RequiredClass != EClass.NONE) // vehicle requires crewman or pilot
             {
-                if (e.Player.KitClass == c.Data.RequiredClass || e.Player.OnDuty())
+                if (e.Player.KitClass == data.RequiredClass || e.Player.OnDuty())
                 {
                     if (e.FinalSeat == 0) // if a crewman is trying to enter the driver's seat
                     {
@@ -821,7 +829,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                             IsOwnerInVehicle(e.Vehicle, owner) ||
                             (owner != null && owner.Squad != null && owner.Squad.Members.Contains(e.Player) ||
                             (owner!.Position - e.Vehicle.transform.position).sqrMagnitude > Math.Pow(200, 2)) ||
-                            (c.Data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
+                            (data.Type == EVehicleType.LOGISTICS && FOB.GetNearestFOB(e.Vehicle.transform.position, EfobRadius.FULL_WITH_BUNKER_CHECK, e.Vehicle.lockedGroup.m_SteamID) != null);
 
                         if (!canEnterDriverSeat)
                         {
@@ -836,7 +844,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                     {
                         if (!(F.IsInMain(e.Vehicle.transform.position) || e.Player.OnDuty())) // if player is trying to switch to a gunner's seat outside of main
                         {
-                            if (e.Vehicle.passengers[0].player is null) // if they have no driver
+                            if (e.Vehicle.passengers.Length == 0 || e.Vehicle.passengers[0].player is null) // if they have no driver
                             {
                                 e.Player.SendChat(T.VehicleDriverNeeded);
                                 e.Break();
@@ -851,7 +859,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 }
                 else
                 {
-                    e.Player.SendChat(T.VehicleMissingKit, c.Data.RequiredClass);
+                    e.Player.SendChat(T.VehicleMissingKit, data.RequiredClass);
                     e.Break();
                 }
             }
@@ -875,7 +883,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
     }
     // TODO
-    bool IQuestCompletedHandler.OnQuestCompleted(UCPlayer player, Guid presetKey) => false;
+    void IQuestCompletedHandler.OnQuestCompleted(QuestCompleted e) { }
     #region Sql
     private const string TABLE_MAIN = "vehicle_data";
     private const string TABLE_UNLOCK_REQUIREMENTS = "vehicle_data_unlock_requirements";

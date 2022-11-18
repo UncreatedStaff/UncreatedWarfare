@@ -355,6 +355,10 @@ public sealed class GamemodeConfigData : JSONConfigData
     [JsonPropertyName("effect_ammo")]
     public RotatableConfig<JsonAssetReference<EffectAsset>> EffectAmmo { get; set; }
 
+    [Sync(538)]
+    [JsonPropertyName("effect_build_success")]
+    public RotatableConfig<JsonAssetReference<EffectAsset>> EffectBuildSuccess { get; set; }
+
     [Sync(550)]
     [JsonPropertyName("ui_capture_enable_player_count")]
     public bool UICaptureEnablePlayerCount { get; set; }
@@ -749,6 +753,7 @@ public sealed class GamemodeConfigData : JSONConfigData
         EffectHeatSeekingMissileSound = new JsonAssetReference<EffectAsset>("5552f714ca744ab7bd0687fba0d541d3");
         EffectPurchase = new JsonAssetReference<EffectAsset>("5e2a0073025849d39322932d88609777");
         EffectAmmo = new JsonAssetReference<EffectAsset>("03caec479dd2475c92e1c326e1720140");
+        EffectBuildSuccess = new JsonAssetReference<EffectAsset>("43c2ae01755540d4b99ce076aa6731eb");
         UICaptureEnablePlayerCount = true;
         UICaptureShowPointCount = false;
         UICircleFontCharacters = "ĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĲĳĴĵĶķĸĹĺĻļĽľĿŀ";

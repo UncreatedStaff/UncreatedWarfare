@@ -552,10 +552,10 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
             if (RallyManager.HasRally(squad, out RallyPoint rally1))
             {
-                if (rally1.drop != null && Regions.tryGetCoordinate(rally1.drop.model.position, out byte x, out byte y))
-                    BarricadeManager.destroyBarricade(rally1.drop, x, y, ushort.MaxValue);
+                if (Regions.tryGetCoordinate(rally1.Drop.model.position, out byte x, out byte y))
+                    BarricadeManager.destroyBarricade(rally1.Drop, x, y, ushort.MaxValue);
 
-                RallyManager.TryDeleteRallyPoint(rally1.structure.instanceID);
+                RallyManager.TryDeleteRallyPoint(rally1.Drop.instanceID);
             }
 
             PlayerManager.ApplyToOnline();
@@ -619,10 +619,10 @@ public class SquadManager : ConfigSingleton<SquadsConfig, SquadConfigData>, IDec
 
         if (RallyManager.HasRally(squad, out RallyPoint rally))
         {
-            if (rally.drop != null && Regions.tryGetCoordinate(rally.drop.model.position, out byte x, out byte y))
-                BarricadeManager.destroyBarricade(rally.drop, x, y, ushort.MaxValue);
+            if (Regions.tryGetCoordinate(rally.Drop.model.position, out byte x, out byte y))
+                BarricadeManager.destroyBarricade(rally.Drop, x, y, ushort.MaxValue);
 
-            RallyManager.TryDeleteRallyPoint(rally.structure.instanceID);
+            RallyManager.TryDeleteRallyPoint(rally.Drop!.instanceID);
         }
 
         PlayerManager.ApplyToOnline();
@@ -769,7 +769,7 @@ public class Squad : IEnumerable<UCPlayer>, ITranslationArgument
     {
         IEnumerator<UCPlayer> players = Members.GetEnumerator();
         while (players.MoveNext())
-            yield return players.Current.Player.channel.owner.transportConnection;
+            yield return players.Current!.Player.channel.owner.transportConnection;
         players.Dispose();
     }
     [FormatDisplay("Colored Squad Name")]

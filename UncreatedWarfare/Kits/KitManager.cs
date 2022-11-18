@@ -14,6 +14,7 @@ using Uncreated.Framework;
 using Uncreated.Json;
 using Uncreated.Networking;
 using Uncreated.Warfare.Configuration;
+using Uncreated.Warfare.Events.Players;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
 using Uncreated.Warfare.Quests;
@@ -963,7 +964,7 @@ public class KitManager : BaseReloadSingleton
         }
         RequestSigns.UpdateAllSigns(player);
     }
-    public static bool OnQuestCompleted(UCPlayer player, Guid presetKey)
+    public static bool OnQuestCompleted(QuestCompleted e)
     {
         KitManager singleton = GetSingleton();
         bool affectedKit = false;
@@ -976,11 +977,11 @@ public class KitManager : BaseReloadSingleton
                 {
                     for (int j = 0; j < kit.UnlockRequirements.Length; j++)
                     {
-                        if (kit.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(player))
+                        if (kit.UnlockRequirements[j] is QuestUnlockRequirement req && req.UnlockPresets != null && req.UnlockPresets.Length > 0 && !req.CanAccess(e.Player))
                         {
                             for (int r = 0; r < req.UnlockPresets.Length; r++)
                             {
-                                if (req.UnlockPresets[r] == presetKey)
+                                if (req.UnlockPresets[r] == e.PresetKey)
                                 {
                                     return true;
                                 }

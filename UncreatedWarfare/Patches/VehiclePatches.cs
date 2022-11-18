@@ -29,7 +29,7 @@ public static partial class Patches
 #endif
             if (__result)
             {
-                VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSyncUnsafe(__instance.asset.GUID);
+                VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(__instance.asset.GUID);
                 if (data != null)
                 {
                     UCPlayer? enterer = UCPlayer.FromPlayer(player);

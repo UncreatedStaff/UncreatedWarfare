@@ -48,13 +48,13 @@ public class RallyCommand : Command
         }
         else if (ctx.HasArgsExact(0))
         {
-            if (rallypoint.timer <= 0)
+            if (rallypoint.Timer <= 0)
                 rallypoint.TeleportPlayer(ctx.Caller);
             else if (!rallypoint.AwaitingPlayers.Exists(p => p.Steam64 == ctx.CallerID))
             {
                 rallypoint.AwaitingPlayers.Add(ctx.Caller);
                 rallypoint.UpdateUIForAwaitingPlayers();
-                ctx.Reply(T.RallyWait, rallypoint.timer);
+                ctx.Reply(T.RallyWait, rallypoint.Timer);
             }
             else throw ctx.Reply(T.RallyAlreadyQueued);
         }

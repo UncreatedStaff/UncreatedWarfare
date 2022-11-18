@@ -23,6 +23,7 @@ using Uncreated.Warfare.Gamemodes.UI;
 using Uncreated.Warfare.Kits;
 using Uncreated.Warfare.Point;
 using Uncreated.Warfare.Quests;
+using Uncreated.Warfare.Ranks;
 using Uncreated.Warfare.Singletons;
 using Uncreated.Warfare.Squads;
 using Uncreated.Warfare.Stats;
@@ -1175,6 +1176,57 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
     internal virtual string DumpState()
     {
         return "Mode: " + DisplayName;
+    }
+
+    internal async Task OnQuestCompleted(QuestCompleted e)
+    {
+        for (int i = 0; i < _singletons.Count; ++i)
+        {
+            IUncreatedSingleton singleton = _singletons[i];
+            if (singleton is IQuestCompletedListener l1)
+                l1.OnQuestCompleted(e);
+            if (singleton is IQuestCompletedListenerAsync l2)
+            {
+                Task task = l2.OnQuestCompleted(e);
+                if (!task.IsCompleted)
+                {
+                    await task.ConfigureAwait(false);
+                    await UCWarfare.ToUpdate();
+                    if (!e.Player.IsOnline)
+                        return;
+                }
+            }
+        }
+    }
+    internal async Task HandleQuestCompleted(QuestCompleted e)
+    {
+        if (!RankManager.OnQuestCompleted(e) && !KitManager.OnQuestCompleted(e))
+        {
+            for (int i = 0; i < _singletons.Count; ++i)
+            {
+                IUncreatedSingleton singleton = _singletons[i];
+                if (singleton is IQuestCompletedHandler l1)
+                {
+                    l1.OnQuestCompleted(e);
+                    if (!e.CanContinue)
+                        return;
+                }
+                if (singleton is IQuestCompletedHandlerAsync l2)
+                {
+                    Task task = l2.OnQuestCompleted(e);
+                    if (!task.IsCompleted)
+                    {
+                        await task.ConfigureAwait(false);
+                        await UCWarfare.ToUpdate();
+                        if (!e.Player.IsOnline)
+                            return;
+                    }
+                    if (!e.CanContinue)
+                        return;
+                }
+            }
+        }
+        else e.Break();
     }
 }
 public enum EState : byte

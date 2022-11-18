@@ -233,7 +233,7 @@ public class DriveDistanceQuest : BaseQuestData<DriveDistanceQuest.Tracker, Driv
                 if (!(VehicleType.ValueType != EDynamicValueType.ANY && VehicleType.Behavior != EChoiceBehavior.ALLOW_ALL) && lastInstID != vehicle.Vehicle.instanceID)
                 {
                     lastInstID = vehicle.Vehicle.instanceID;
-                    VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSyncUnsafe(vehicle.Vehicle.asset.GUID);
+                    VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(vehicle.Vehicle.asset.GUID);
                     if (data != null)
                         lastType = data.Type;
                     else
@@ -343,7 +343,7 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
             writer.WriteProperty("distance_travelled", _travelled);
         }
 
-        private uint lastInstID = 0;
+        private uint lastInstID;
         private EVehicleType lastType;
         public void OnDistanceUpdated(ulong lastDriver, float totalDistance, float newDistance, Components.VehicleComponent vehicle)
         {
@@ -352,8 +352,8 @@ public class TransportPlayersQuest : BaseQuestData<TransportPlayersQuest.Tracker
                 if (!(VehicleType.ValueType != EDynamicValueType.ANY && VehicleType.Behavior != EChoiceBehavior.ALLOW_ALL) && lastInstID != vehicle.Vehicle.instanceID)
                 {
                     lastInstID = vehicle.Vehicle.instanceID;
-                    VehicleBay.GetSingletonQuick()?.GetDataSyncUnsafe(vehicle.Vehicle.asset.GUID);
-                    if (VehicleBay.VehicleExists(vehicle.Vehicle.asset.GUID, out VehicleData data))
+                    VehicleData? data = VehicleBay.GetSingletonQuick()?.GetDataSync(vehicle.Vehicle.asset.GUID);
+                    if (data != null)
                         lastType = data.Type;
                     else
                         lastType = EVehicleType.NONE;
