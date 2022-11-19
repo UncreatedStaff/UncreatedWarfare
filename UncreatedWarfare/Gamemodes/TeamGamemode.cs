@@ -26,10 +26,11 @@ public abstract class TeamGamemode : Gamemode, ITeams
     {
 
     }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         if (UseTeamSelector)
             AddSingletonRequirement(ref _teamSelector);
+        return TeamManager.ReloadFactions();
     }
     protected override Task PreDispose()
     {

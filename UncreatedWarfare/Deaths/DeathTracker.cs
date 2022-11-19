@@ -54,7 +54,7 @@ public class DeathTracker : BaseReloadSingleton
         }
         if (ReviveManager.Loaded
             && Data.Is(out IRevives revives)
-            && revives.ReviveManager.DownedPlayers.ContainsKey(dead.Steam64)
+            && revives.ReviveManager.IsInjured(dead.Steam64)
             && _injuredPlayers.TryGetValue(dead.Steam64, out InjuredDeathCache cache))
         {
             Localization.BroadcastDeath(cache.EventArgs, cache.MessageArgs);

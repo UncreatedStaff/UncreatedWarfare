@@ -135,7 +135,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
         wasLevelLoadedOnStart = Level.isLoaded;
         _isPreLoading = true;
         InternalPreInit();
-        PreInit();
+        await PreInit().ThenToUpdate();
 
         _isPreLoading = false;
         await Data.Singletons.LoadSingletonsInOrderAsync(_singletons).ConfigureAwait(false);
@@ -238,7 +238,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
 
     /// <summary>Use to add <see cref="IUncreatedSingleton"/>s to be loaded.</summary>
     /// <remarks>Abstract</remarks>
-    protected abstract void PreInit();
+    protected abstract Task PreInit();
 
     /// <summary>Called after all <see cref="IUncreatedSingleton"/>s have been loaded.</summary>
     /// <remarks>Abstract</remarks>
@@ -514,7 +514,7 @@ public abstract class Gamemode : BaseAsyncSingletonComponent, IGamemode, ILevelS
                     }
                     catch (NullReferenceException) { }
                 }
-                L.Log($"Kicking {F.GetPlayerOriginalNames(pl).PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
+                L.Log($"Kicking {pl.Name.PlayerName} ({pl.Steam64}) for null transform.", ConsoleColor.Cyan);
                 Provider.kick(pl.CSteamID, Localization.Translate(T.NullTransformKickMessage, pl, UCWarfare.Config.DiscordInviteCode));
             }
             try

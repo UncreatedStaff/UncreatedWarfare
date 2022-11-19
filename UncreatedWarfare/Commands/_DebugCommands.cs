@@ -632,13 +632,12 @@ public class DebugCommand : AsyncCommand
             if (ctx.TryGet(0, out _, out UCPlayer? player) && player is not null)
             {
                 t.TeamSelector?.ResetState(player);
-                PlayerNames name = F.GetPlayerOriginalNames(player);
+                PlayerNames name = player.Name;
                 ctx.ReplyString($"Reset lobby for {(ctx.IsConsole ? name.PlayerName : name.CharacterName)}.");
             }
             else
             {
                 ctx.SendPlayerNotFound();
-                return;
             }
         }
         else ctx.SendGamemodeError();

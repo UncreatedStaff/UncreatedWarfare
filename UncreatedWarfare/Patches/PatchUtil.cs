@@ -67,7 +67,14 @@ internal static class PatchUtil
     }
     internal static void PatchMethod(MethodInfo original, MethodInfo? prefix = null, MethodInfo? postfix = null, MethodInfo? transpiler = null, MethodInfo? finalizer = null)
     {
-        if (original is null || (prefix is null && postfix is null && transpiler is null && finalizer is null)) return;
+        if ((prefix is null && postfix is null && transpiler is null && finalizer is null))
+            return;
+        if (original is null)
+        {
+            MethodInfo m = prefix ?? postfix ?? transpiler ?? finalizer!;
+            L.LogError("Failed to find original method for patch " + m.FullDescription() + ".");
+            return;
+        }
 
         HarmonyMethod? prfx2 = prefix is null ? null : new HarmonyMethod(prefix);
         HarmonyMethod? pofx2 = postfix is null ? null : new HarmonyMethod(postfix);

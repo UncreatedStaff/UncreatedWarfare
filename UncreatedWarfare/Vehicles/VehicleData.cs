@@ -296,7 +296,7 @@ public class VBarricade : IListSubItem
     public const string COLUMN_ROT_X = "Rot_X";
     public const string COLUMN_ROT_Y = "Rot_Y";
     public const string COLUMN_ROT_Z = "Rot_Z";
-    public const string COLUMN_METADATA = "Item";
+    public const string COLUMN_METADATA = "Metadata";
     public const string COLUMN_ITEM_PK = "pk";
     public const string COLUMN_ITEM_BARRICADE_PK = "Barricade";
     public const string COLUMN_ITEM_GUID = "Guid";
@@ -520,24 +520,24 @@ public struct Delay : IJsonReadWrite
     public const int DELAY_TYPE_MAX_CHAR_LIMIT = 16;
     public static readonly Delay Nil = new Delay(EDelayType.NONE, float.NaN, null);
     [JsonIgnore]
-    public bool IsNil => value == float.NaN;
-    public EDelayType type;
-    public string? gamemode;
-    public float value;
+    public bool IsNil => float.IsNaN(Value);
+    public EDelayType Type;
+    public string? Gamemode;
+    public float Value;
     public Delay(EDelayType type, float value, string? gamemode = null)
     {
-        this.type = type;
-        this.value = value;
-        this.gamemode = gamemode;
+        this.Type = type;
+        this.Value = value;
+        this.Gamemode = gamemode;
     }
     public override string ToString() =>
-        $"{type} Delay, {(string.IsNullOrEmpty(gamemode) ? "any" : gamemode)} " +
-        $"gamemode{(type == EDelayType.NONE || type == EDelayType.OUT_OF_STAGING ? string.Empty : $" Value: {value}")}";
+        $"{Type} Delay, {(string.IsNullOrEmpty(Gamemode) ? "any" : Gamemode)} " +
+        $"gamemode{(Type == EDelayType.NONE || Type == EDelayType.OUT_OF_STAGING ? string.Empty : $" Value: {Value}")}";
     public void WriteJson(Utf8JsonWriter writer)
     {
-        writer.WriteNumber(nameof(type), (int)type);
-        writer.WriteString(nameof(gamemode), gamemode);
-        writer.WriteNumber(nameof(value), value);
+        writer.WriteNumber(nameof(Type), (int)Type);
+        writer.WriteString(nameof(Gamemode), Gamemode);
+        writer.WriteNumber(nameof(Value), Value);
     }
     public void ReadJson(ref Utf8JsonReader reader)
     {
@@ -548,16 +548,16 @@ public struct Delay : IJsonReadWrite
             {
                 switch (prop)
                 {
-                    case nameof(type):
+                    case nameof(Type):
                         if (reader.TryGetInt32(out int i))
-                            type = (EDelayType)i;
+                            Type = (EDelayType)i;
                         break;
-                    case nameof(gamemode):
-                        if (reader.TokenType == JsonTokenType.Null) gamemode = null;
-                        else gamemode = reader.GetString();
+                    case nameof(Gamemode):
+                        if (reader.TokenType == JsonTokenType.Null) Gamemode = null;
+                        else Gamemode = reader.GetString();
                         break;
-                    case nameof(value):
-                        reader.TryGetSingle(out value);
+                    case nameof(Value):
+                        reader.TryGetSingle(out Value);
                         break;
                 }
             }
@@ -569,7 +569,7 @@ public struct Delay : IJsonReadWrite
         for (int i = 0; i < delays.Length; i++)
         {
             ref Delay del = ref delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
+            if (del.Type == type && del.Value == value && (del.Gamemode == gamemode || (string.IsNullOrEmpty(del.Gamemode) && string.IsNullOrEmpty(gamemode))))
             {
                 index = i;
                 break;
@@ -598,7 +598,7 @@ public struct Delay : IJsonReadWrite
         for (int i = 0; i < delays.Length; i++)
         {
             ref Delay del = ref delays[i];
-            if (del.type == type && del.value == value && (del.gamemode == gamemode || (string.IsNullOrEmpty(del.gamemode) && string.IsNullOrEmpty(gamemode))))
+            if (del.Type == type && del.Value == value && (del.Gamemode == gamemode || (string.IsNullOrEmpty(del.Gamemode) && string.IsNullOrEmpty(gamemode))))
             {
                 index = i;
                 break;
@@ -619,8 +619,8 @@ public struct Delay : IJsonReadWrite
         for (int i = 0; i < delays.Length; i++)
         {
             ref Delay del = ref delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode) && !gm.Equals(del.gamemode, StringComparison.OrdinalIgnoreCase)) continue;
-            if (del.type == type) return true;
+            if (!string.IsNullOrEmpty(del.Gamemode) && !gm.Equals(del.Gamemode, StringComparison.OrdinalIgnoreCase)) continue;
+            if (del.Type == type) return true;
         }
         return false;
     }
@@ -630,9 +630,9 @@ public struct Delay : IJsonReadWrite
         for (int i = 0; i < delays.Length; i++)
         {
             ref Delay del = ref delays[i];
-            if (!string.IsNullOrEmpty(del.gamemode))
+            if (!string.IsNullOrEmpty(del.Gamemode))
             {
-                string gamemode = del.gamemode!;
+                string gamemode = del.Gamemode!;
                 bool blacklist = false;
                 if (gamemode[0] == '!')
                 {
@@ -646,7 +646,7 @@ public struct Delay : IJsonReadWrite
                 }
                 else if (!blacklist) continue;
             }
-            if (del.type == type)
+            if (del.Type == type)
             {
                 switch (type)
                 {
@@ -687,10 +687,10 @@ public struct Delay : IJsonReadWrite
         for (int i = delays.Length - 1; i >= 0; i--)
         {
             ref Delay del = ref delays[i];
-            bool universal = string.IsNullOrEmpty(del.gamemode);
+            bool universal = string.IsNullOrEmpty(del.Gamemode);
             if (!universal)
             {
-                string gamemode = del.gamemode!; // !TeamCTF
+                string gamemode = del.Gamemode!; // !TeamCTF
                 bool blacklist = false;
                 if (gamemode[0] == '!') // true
                 {
@@ -706,7 +706,7 @@ public struct Delay : IJsonReadWrite
                 universal = true;
             }
             if (universal && anyVal) continue;
-            switch (del.type)
+            switch (del.Type)
             {
                 case EDelayType.NONE:
                     if (!universal)
@@ -751,14 +751,14 @@ public struct Delay : IJsonReadWrite
         }
         return anyVal;
     }
-    private static bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.value > Data.Gamemode.SecondsSinceStart;
+    private static bool TimeDelayed(ref Delay delay) => Data.Gamemode != null && delay.Value > Data.Gamemode.SecondsSinceStart;
     private static bool FlagDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, false, team);
     private static bool FlagPercentDelayed(ref Delay delay, ulong team) => FlagDelayed(ref delay, true, team);
     private static bool FlagDelayed(ref Delay delay, bool percent, ulong team)
     {
         if (Data.Is(out Invasion inv))
         {
-            int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            int ct = percent ? Mathf.RoundToInt(inv.Rotation.Count * delay.Value / 100f) : Mathf.RoundToInt(delay.Value);
             if (team == 1)
             {
                 if (inv.AttackingTeam == 1)
@@ -777,14 +777,14 @@ public struct Delay : IJsonReadWrite
         }
         else if (Data.Is(out IFlagTeamObjectiveGamemode fr))
         {
-            int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            int ct = percent ? Mathf.RoundToInt(fr.Rotation.Count * delay.Value / 100f) : Mathf.RoundToInt(delay.Value);
             int i2 = GetHighestObjectiveIndex(team, fr);
             return (team == 1 && i2 < ct) ||
                    (team == 2 && fr.Rotation.Count - i2 - 1 < ct);
         }
         else if (Data.Is(out Insurgency ins))
         {
-            int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.value / 100f) : Mathf.RoundToInt(delay.value);
+            int ct = percent ? Mathf.RoundToInt(ins.Caches.Count * delay.Value / 100f) : Mathf.RoundToInt(delay.Value);
             return ins.Caches != null && ins.CachesDestroyed < ct;
         }
         return false;

@@ -961,7 +961,7 @@ public class KitItem : ICloneable
     {
         if (!oneToOne && fkColumn.Equals(COLUMN_PK, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Foreign key column may not be the same as \"" + COLUMN_PK + "\".", nameof(fkColumn));
-        int ct = 6;
+        int ct = 7;
         if (!oneToOne && hasPk)
             ++ct;
         if (includePage)

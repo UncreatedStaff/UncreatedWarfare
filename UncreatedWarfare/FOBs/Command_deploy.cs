@@ -32,13 +32,13 @@ public class DeployCommand : Command
 
         ctx.AssertArgs(1, SYNTAX + " - " + HELP);
 
-        if (ctx.MatchParameter(0, "cancel") && F.TryGetPlayerData(ctx.Caller.Player, out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
+        if (ctx.MatchParameter(0, "cancel") && ctx.Caller.Player.TryGetPlayerData(out UCPlayerData comp) && comp.CurrentTeleportRequest != null)
         {
             comp.CancelTeleport();
             throw ctx.Reply(T.DeployCancelled);
         }
 
-        if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(ctx.CallerID))
+        if (Data.Is(out IRevives r) && r.ReviveManager.IsInjured(ctx.CallerID))
             throw ctx.Reply(T.DeployInjured);
 
         string destination = ctx.GetRange(0)!;

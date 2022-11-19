@@ -101,7 +101,7 @@ public class Insurgency :
     Leaderboard<InsurgencyPlayerStats, InsurgencyTracker> IImplementsLeaderboard<InsurgencyPlayerStats, InsurgencyTracker>.Leaderboard => _endScreen;
     object IGameStats.GameStats => _gameStats;
     public Insurgency() : base("Insurgency", 0.25F) { }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
@@ -115,7 +115,7 @@ public class Insurgency :
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        base.PreInit();
+        return base.PreInit();
     }
     protected override Task PostInit()
     {
@@ -323,7 +323,7 @@ public class Insurgency :
     private void OnPlayerJoinedTeam(UCPlayer player)
     {
         ulong team = player.GetTeam();
-        PlayerNames names = F.GetPlayerOriginalNames(player);
+        PlayerNames names = player.Name;
         if (string.IsNullOrEmpty(player.KitName) && team is > 0 and < 3)
         {
             if (KitManager.KitExists(team == 1 ? TeamManager.Team1UnarmedKit : TeamManager.Team2UnarmedKit, out Kit unarmed))

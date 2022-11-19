@@ -313,7 +313,6 @@ public static class QuestJsonEx
                             else if (c == '-')
                             {
                                 num = -num;
-                                break;
                             }
                             else if (c == ',' || c == ']')
                             {
@@ -604,7 +603,7 @@ public static class QuestJsonEx
             {
                 if (string.Equals(str, "$*", StringComparison.Ordinal) || string.Equals(str, "#*", StringComparison.Ordinal))
                 {
-                    value = new DynamicEnumValue<TEnum>(EDynamicValueType.ANY, str[0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
+                    value = new DynamicEnumValue<TEnum>(EDynamicValueType.ANY, str![0] == '$' ? EChoiceBehavior.ALLOW_ONE : EChoiceBehavior.ALLOW_ALL);
                     return true;
                 }
 
@@ -2802,7 +2801,7 @@ public readonly struct FloatSet : IEnumerable<float>, IDynamicValue<float>.ISet
     }
     public IEnumerator<float> GetEnumerator() => ((IEnumerable<float>)_set).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
-    public override readonly string ToString()
+    public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
@@ -2813,7 +2812,6 @@ public readonly struct FloatSet : IEnumerable<float>, IDynamicValue<float>.ISet
         sb.Append(']');
         return sb.ToString();
     }
-
 }
 /// <summary>Datatype storing an array or set of strings.
 /// <para>Formatted like this: </para><code>"$[string1,ben smells,18,nice]"</code></summary>
@@ -2830,7 +2828,7 @@ public readonly struct StringSet : IEnumerable<string>, IDynamicValue<string>.IS
     }
     public IEnumerator<string> GetEnumerator() => ((IEnumerable<string>)_set).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
-    public override readonly string ToString()
+    public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
@@ -2858,7 +2856,7 @@ public readonly struct EnumSet<TEnum> : IEnumerable<TEnum>, IDynamicValue<TEnum>
     }
     public IEnumerator<TEnum> GetEnumerator() => ((IEnumerable<TEnum>)_set).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
-    public override readonly string ToString()
+    public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)
@@ -2885,7 +2883,7 @@ public readonly struct GuidSet : IEnumerable<Guid>, IDynamicValue<Guid>.ISet
     }
     public IEnumerator<Guid> GetEnumerator() => ((IEnumerable<Guid>)_set).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => _set.GetEnumerator();
-    public override readonly string ToString()
+    public override string ToString()
     {
         StringBuilder sb = new StringBuilder("$[");
         for (int i = 0; i < _length; i++)

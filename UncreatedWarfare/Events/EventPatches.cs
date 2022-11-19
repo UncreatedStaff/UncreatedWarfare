@@ -355,25 +355,14 @@ internal static class EventPatches
         }
         // item drops commented out
 #if false
-        if (__instance.asset.dropsTableId > 0)
-        {
-            int num = Mathf.Clamp(Random.Range(__instance.asset.dropsMin, __instance.asset.dropsMax), 0, 100);
-            for (int index = 0; index < num; ++index)
-            {
-                float f = Random.Range(0.0f, Mathf.PI * 2);
-                ushort newID = SpawnTableTool.resolve(__instance.asset.dropsTableId);
-                if (newID != 0)
-                {
-                    ItemManager.dropItem(new Item(newID, EItemOrigin.NATURE),
-                        __instance.transform.position + new Vector3(Mathf.Sin(f) * 3f, 1f, Mathf.Cos(f) * 3f),
-                        false, Dedicator.IsDedicatedServer, true);
-                }
-            }
-        }
+        __instance.DropScrapItems();
 #endif
         VehicleManager.sendVehicleExploded(__instance);
-        if (__instance.asset.explosion != 0)
-            EffectManager.sendEffect(__instance.asset.explosion, Level.size, __instance.transform.position);
+        EffectAsset effect = __instance.asset.FindExplosionEffectAsset();
+        if (effect != null)
+        {
+            F.TriggerEffectReliable(effect, Provider.EnumerateClients_Remote(), __instance.transform.position);
+        }
         if (data != null)
             data.ExplodingVehicle = null;
         return false;

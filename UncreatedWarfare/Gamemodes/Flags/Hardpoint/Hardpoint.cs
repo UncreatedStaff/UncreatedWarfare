@@ -87,7 +87,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
     public TraitManager TraitManager => _traitManager;
     public ActionManager ActionManager => _actionManager;
     public Hardpoint() : base(nameof(Hardpoint), 0.25f) { }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         _objIndex = -1;
         AddSingletonRequirement(ref _squadManager);
@@ -102,7 +102,7 @@ public sealed class Hardpoint : TicketFlagGamemode<HardpointTicketProvider>,
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        base.PreInit();
+        return base.PreInit();
     }
     public override void LoadRotation()
     {

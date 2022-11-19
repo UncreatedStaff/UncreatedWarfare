@@ -239,77 +239,14 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
     protected ListSqlSingleton(string reloadKey, Schema[] schemas) : base(reloadKey, schemas) { }
     public async Task ReloadAsync()
     {
-        Monitor.Enter(this);
-        try
+        Task task;
+        if (_isLoading || _isUnloading)
+            throw new InvalidOperationException("Already loading or unloading.");
+        if (_isLoaded)
         {
-            Task task;
-            if (_isLoading || _isUnloading)
-                throw new InvalidOperationException("Already loading or unloading.");
-            if (_isLoaded)
-            {
-                _isLoaded = false;
-                _isUnloading = true;
-                task = PreUnload();
-                if (!task.IsCompleted)
-                    await task;
-                await UnloadAll().ConfigureAwait(false);
-                task = PostUnload();
-                if (!task.IsCompleted)
-                    await task;
-                _isUnloading = false;
-            }
-            _isLoading = true;
-            task = PreLoad();
-            if (!task.IsCompleted)
-                await task;
-            await Init().ConfigureAwait(false);
-            task = PostLoad();
-            if (!task.IsCompleted)
-                await task;
-            task = PostReload();
-            if (!task.IsCompleted)
-                await task;
-            _isLoading = false;
-            _isLoaded = true;
-        }
-        finally
-        {
-            Monitor.Exit(this);
-        }
-    }
-    public async Task LoadAsync()
-    {
-        Monitor.Enter(this);
-        try
-        {
-            if (_isLoading || _isUnloading)
-                throw new InvalidOperationException("Already loading or unloading.");
-            _isLoading = true;
-            Task task = PreLoad();
-            if (!task.IsCompleted)
-                await task;
-            await Init().ConfigureAwait(false);
-            task = PostLoad();
-            if (!task.IsCompleted)
-                await task;
-            _isLoading = false;
-            _isLoaded = true;
-        }
-        finally
-        {
-            Monitor.Exit(this);
-        }
-    }
-    public async Task UnloadAsync()
-    {
-        Monitor.Enter(this);
-        try
-        {
-            if (_isLoading || _isUnloading)
-                throw new InvalidOperationException("Already loading or unloading.");
             _isLoaded = false;
             _isUnloading = true;
-            Task task = PreUnload();
+            task = PreUnload();
             if (!task.IsCompleted)
                 await task;
             await UnloadAll().ConfigureAwait(false);
@@ -318,10 +255,49 @@ public abstract class ListSqlSingleton<TItem> : ListSqlConfig<TItem>, IReloadabl
                 await task;
             _isUnloading = false;
         }
-        finally
-        {
-            Monitor.Exit(this);
-        }
+        _isLoading = true;
+        task = PreLoad();
+        if (!task.IsCompleted)
+            await task;
+        await Init().ConfigureAwait(false);
+        task = PostLoad();
+        if (!task.IsCompleted)
+            await task;
+        task = PostReload();
+        if (!task.IsCompleted)
+            await task;
+        _isLoading = false;
+        _isLoaded = true;
+    }
+    public async Task LoadAsync()
+    {
+        if (_isLoading || _isUnloading)
+            throw new InvalidOperationException("Already loading or unloading.");
+        _isLoading = true;
+        Task task = PreLoad();
+        if (!task.IsCompleted)
+            await task;
+        await Init().ConfigureAwait(false);
+        task = PostLoad();
+        if (!task.IsCompleted)
+            await task;
+        _isLoading = false;
+        _isLoaded = true;
+    }
+    public async Task UnloadAsync()
+    {
+        if (_isLoading || _isUnloading)
+            throw new InvalidOperationException("Already loading or unloading.");
+        _isLoaded = false;
+        _isUnloading = true;
+        Task task = PreUnload();
+        if (!task.IsCompleted)
+            await task;
+        await UnloadAll().ConfigureAwait(false);
+        task = PostUnload();
+        if (!task.IsCompleted)
+            await task;
+        _isUnloading = false;
     }
     public void Reload() => throw new NotImplementedException();
     public void Load() => throw new NotImplementedException();

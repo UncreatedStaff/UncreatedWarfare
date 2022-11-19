@@ -711,7 +711,8 @@ public static class EventFunctions
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        PlayerNames names = F.GetPlayerOriginalNames(client.player);
+        UCPlayer? player = UCPlayer.FromSteamPlayer(client);
+        PlayerNames names = player != null ? player.Name : new PlayerNames(client);
         ulong team = client.GetTeam();
         Chat.Broadcast(T.BattlEyeKickBroadcast, names);
         L.Log($"{names.PlayerName} ({client.playerID.steamID.m_SteamID}) was kicked by BattlEye for \"{reason}\".");
@@ -726,7 +727,7 @@ public static class EventFunctions
     internal static void OnConsume(Player instigatingPlayer, ItemConsumeableAsset consumeableAsset)
     {
         UCPlayerData? data = null;
-        if (consumeableAsset.explosion != 0)
+        if (consumeableAsset.FindExplosionEffectAsset() != null)
         {
             if (instigatingPlayer.TryGetPlayerData(out data))
                 data.LastExplosiveConsumed = consumeableAsset.GUID;
@@ -758,9 +759,10 @@ public static class EventFunctions
         {
             if (data != null || instigatingPlayer.TryGetPlayerData(out data))
             {
+                UCPlayer? pl = UCPlayer.FromPlayer(instigatingPlayer);
                 data.LastBleedingArgs = new DeathMessageArgs()
                 {
-                    DeadPlayerName = F.GetPlayerOriginalNames(instigatingPlayer).CharacterName,
+                    DeadPlayerName = pl == null ? instigatingPlayer.channel.owner.playerID.characterName : pl.Name.CharacterName,
                     DeadPlayerTeam = instigatingPlayer.GetTeam(),
                     DeathCause = EDeathCause.INFECTION,
                     ItemName = consumeableAsset.itemName,
@@ -1155,16 +1157,17 @@ public static class EventFunctions
             PlaceMarker(ucplayer, hit.point, true, true);
         }
     }
-    private static void PlaceMarker(UCPlayer ucplayer, Vector3 Point, bool requireSquad, bool placeMarkerOnMap)
+    private static void PlaceMarker(UCPlayer ucplayer, Vector3 point, bool requireSquad, bool placeMarkerOnMap)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
         ThreadUtil.assertIsGameThread();
         if (placeMarkerOnMap)
-            ucplayer.Player.quests.replicateSetMarker(true, Point);
-        ushort markerid = ucplayer.GetMarkerID();
-        ushort lastping = ucplayer.LastPingID == 0 ? markerid : ucplayer.LastPingID;
+            ucplayer.Player.quests.replicateSetMarker(true, point);
+        EffectAsset marker = ucplayer.GetMarker();
+        EffectAsset? lastping = ucplayer.LastPing;
+        // todo this clears other squad-member's markers
         if (ucplayer.Squad == null)
         {
             if (requireSquad)
@@ -1172,42 +1175,48 @@ public static class EventFunctions
                 ucplayer.SendChat(T.MarkerNotInSquad);
                 return;
             }
-            if (markerid == 0) return;
-            EffectManager.askEffectClearByID(lastping, ucplayer.Player.channel.owner.transportConnection);
-            EffectManager.sendEffectReliable(markerid, ucplayer.Player.channel.owner.transportConnection, Point);
-            ucplayer.LastPingID = markerid;
+            if (marker == null) return;
+            if (lastping != null)
+                EffectManager.ClearEffectByGuid(lastping.GUID, ucplayer.Player.channel.owner.transportConnection);
+            F.TriggerEffectReliable(marker, ucplayer.Player.channel.owner.transportConnection, point);
+            ucplayer.LastPing = marker;
             return;
         }
-        if (markerid == 0) return;
+        if (marker == null) return;
         for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
         {
-            EffectManager.askEffectClearByID(lastping, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
-            EffectManager.sendEffectReliable(markerid, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection, Point);
-            ucplayer.LastPingID = markerid;
+            if (lastping != null)
+                EffectManager.ClearEffectByGuid(lastping.GUID, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
+            F.TriggerEffectReliable(marker, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection, point);
         }
     }
-    public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer) => ClearPlayerMarkerForSquad(ucplayer, ucplayer.LastPingID == 0 ? ucplayer.GetMarkerID() : ucplayer.LastPingID);
-    public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer, ushort markerid)
+    public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer)
+    {
+        if (ucplayer.LastPing != null)
+            ClearPlayerMarkerForSquad(ucplayer, ucplayer.LastPing);
+    }
+
+    public static void ClearPlayerMarkerForSquad(UCPlayer ucplayer, EffectAsset marker)
     {
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
+        if (marker == null) return;
         ThreadUtil.assertIsGameThread();
-        if (markerid == 0) return;
         if (ucplayer.Squad == null)
         {
-            EffectManager.askEffectClearByID(markerid, ucplayer.Player.channel.owner.transportConnection);
-            ucplayer.LastPingID = 0;
+            EffectManager.ClearEffectByGuid(marker.GUID, ucplayer.Player.channel.owner.transportConnection);
+            ucplayer.LastPing = null;
             return;
         }
         for (int i = 0; i < ucplayer.Squad.Members.Count; i++)
         {
-            EffectManager.askEffectClearByID(markerid, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
-            ucplayer.LastPingID = 0;
+            EffectManager.ClearEffectByGuid(marker.GUID, ucplayer.Squad.Members[i].Player.channel.owner.transportConnection);
+            ucplayer.LastPing = null;
         }
     }
 
-    private static readonly Guid KIT_RACK = new Guid("7ee1d28efe904a369c93c544494fa1ef");
+    private static readonly Guid KitRack = new Guid("7ee1d28efe904a369c93c544494fa1ef");
     internal static void OnTryStoreItem(Player player, byte page, ItemJar jar, ref bool allow)
     {
 #if DEBUG
@@ -1221,7 +1230,7 @@ public static class EventFunctions
         if (player.inventory.storage != null)
         {
             BarricadeDrop? drop = BarricadeManager.FindBarricadeByRootTransform(player.inventory.storage.transform);
-            if (drop != null && drop.asset.GUID == KIT_RACK)
+            if (drop != null && drop.asset.GUID == KitRack)
             {
                 allow = false;
                 player.SendChat(T.ProhibitedStoring, asset);
@@ -1378,7 +1387,6 @@ public static class EventFunctions
         Tips.OnPlayerDisconnected(s64);
         UCPlayer ucplayer = e.Player;
         string kit = string.Empty;
-        PlayerNames names = F.GetPlayerOriginalNames(ucplayer.Player.channel.owner);
         try
         {
             Points.OnPlayerLeft(ucplayer);
@@ -1601,15 +1609,17 @@ public static class EventFunctions
             {
                 if (target.TryGetPlayerData(out UCPlayerData data))
                 {
-                    data.LastBleedingArgs = new DeathMessageArgs()
+                    UCPlayer? pl = UCPlayer.FromPlayer(target);
+                    UCPlayer? pl2 = UCPlayer.FromPlayer(instigator);
+                    data.LastBleedingArgs = new DeathMessageArgs
                     {
-                        DeadPlayerName = F.GetPlayerOriginalNames(target).CharacterName,
+                        DeadPlayerName = pl == null ? target.channel.owner.playerID.characterName : pl.Name.CharacterName,
                         DeadPlayerTeam = target.GetTeam(),
                         DeathCause = EDeathCause.INFECTION,
                         ItemName = asset.itemName,
                         ItemGuid = asset.GUID,
                         Flags = EDeathFlags.ITEM | EDeathFlags.KILLER,
-                        KillerName = F.GetPlayerOriginalNames(instigator).CharacterName,
+                        KillerName = pl2 == null ? instigator.channel.owner.playerID.characterName : pl2.Name.CharacterName,
                         KillerTeam = instigator.GetTeam()
                     };
                     data.LastBleedingArgs.isTeamkill = data.LastBleedingArgs.DeadPlayerTeam == data.LastBleedingArgs.KillerTeam;

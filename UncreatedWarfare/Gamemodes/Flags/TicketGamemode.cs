@@ -11,11 +11,11 @@ public abstract class TicketFlagGamemode<TProvider> : FlagGamemode, ITickets whe
     public TicketManager TicketManager => _ticketManager;
     protected TicketFlagGamemode(string name, float eventLoopSpeed) : base(name, eventLoopSpeed)
     { }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         AddSingletonRequirement(ref _ticketManager);
         _ticketManager.Provider = new TProvider();
-        base.PreInit();
+        return base.PreInit();
     }
     protected override void EventLoopAction()
     {
@@ -38,11 +38,11 @@ public abstract class TicketGamemode<TProvider> : TeamGamemode, ITickets where T
     public TicketManager TicketManager => _ticketManager;
     protected TicketGamemode(string name, float eventLoopSpeed) : base(name, eventLoopSpeed)
     { }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         AddSingletonRequirement(ref _ticketManager);
         _ticketManager.Provider = new TProvider();
-        base.PreInit();
+        return base.PreInit();
     }
     protected override void EventLoopAction()
     {

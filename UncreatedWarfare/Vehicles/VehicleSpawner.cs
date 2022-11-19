@@ -828,7 +828,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
         IdleTime = 0f;
         DeadTime = 0f;
         if (vehicleData.Item != null && vehicleData.Item.IsDelayed(out Delay delay))
-            this.state = delay.type == EDelayType.TIME ? EVehicleBayState.TIME_DELAYED : EVehicleBayState.DELAYED;
+            this.state = delay.Type == EDelayType.TIME ? EVehicleBayState.TIME_DELAYED : EVehicleBayState.DELAYED;
         else this.state = EVehicleBayState.READY;
     }
     public void OnRequest()
@@ -855,7 +855,7 @@ public sealed class VehicleBayComponent : MonoBehaviour
             checkTime = false;
             if (vehicleData.Item != null && vehicleData.Item.IsDelayed(out Delay delay))
             {
-                if (delay.type == EDelayType.TIME)
+                if (delay.Type == EDelayType.TIME)
                 {
                     state = EVehicleBayState.TIME_DELAYED;
                     lastSignUpdate = time;

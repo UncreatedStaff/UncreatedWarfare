@@ -177,7 +177,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
     public Player Player { get; internal set; }
     public CSteamID CSteamID { get; internal set; }
     public ITransportConnection Connection => Player.channel.owner.transportConnection!;
-    public ushort LastPingID { get; internal set; }
+    public EffectAsset? LastPing { get; internal set; }
     ulong IPlayer.Steam64 => Steam64;
     public bool IsAdmin => Player.channel.owner.isAdmin;
     public bool IsTeam1 => Player.quests.groupID.m_SteamID == TeamManager.Team1ID;
@@ -283,50 +283,50 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         }
     }
 
-    public ushort MarkerID
+    public EffectAsset Marker
     {
         get
         {
             EffectAsset asset;
             if (SquadManager.Config.Classes == null || SquadManager.Config.Classes.Length == 0)
-                return 36101;
+                return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
             for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
             {
                 ref ClassConfig c = ref SquadManager.Config.Classes[i];
                 if (c.Class == KitClass)
                 {
                     if (c.MarkerEffect.ValidReference(out asset))
-                        return asset.id;
+                        return asset;
                     else break;
                 }
             }
 
             if (SquadManager.Config.Classes[0].MarkerEffect.ValidReference(out asset))
-                return asset.id;
-            return 36101;
+                return asset;
+            return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
         }
     }
-    public ushort SquadLeaderMarkerID
+    public EffectAsset SquadLeaderMarker
     {
         get
         {
             EffectAsset asset;
             if (SquadManager.Config.Classes == null || SquadManager.Config.Classes.Length == 0)
-                return 36131;
+                return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
             for (int i = 0; i < SquadManager.Config.Classes.Length; ++i)
             {
                 ref ClassConfig c = ref SquadManager.Config.Classes[i];
                 if (c.Class == KitClass)
                 {
                     if (c.SquadLeaderMarkerEffect.ValidReference(out asset))
-                        return asset.id;
+                        return asset;
                     else break;
                 }
             }
 
             if (SquadManager.Config.Classes[0].SquadLeaderMarkerEffect.ValidReference(out asset))
-                return asset.id;
-            return 36131;
+                return asset;
+            return Assets.find<EffectAsset>(new Guid("28b4d205725c42be9a816346200ba1d8"));
         }
     }
 
@@ -505,7 +505,7 @@ public sealed class UCPlayer : IPlayer, IComparable<UCPlayer>, IEquatable<UCPlay
         KitClass = kit.Class;
         PlayerManager.ApplyTo(this);
     }
-    public ushort GetMarkerID() => Squad == null || Squad.Leader == null || Squad.Leader.Steam64 != Steam64 ? MarkerID : SquadLeaderMarkerID;
+    public EffectAsset GetMarker() => Squad == null || Squad.Leader == null || Squad.Leader.Steam64 != Steam64 ? Marker : SquadLeaderMarker;
     public bool IsSquadLeader()
     {
 #if DEBUG

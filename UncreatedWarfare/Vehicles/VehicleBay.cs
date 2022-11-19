@@ -155,25 +155,18 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     }
     async Task IPlayerPostInitListenerAsync.OnPostPlayerInit(UCPlayer player)
     {
-        await WaitAsync().ConfigureAwait(false);
-        try
-        {
-            if (!UCWarfare.IsMainThread)
-                await UCWarfare.ToUpdate();
-            SendQuests(player);
-        }
-        finally
-        {
-            Release();
-        }
+        await SendQuests(player).ConfigureAwait(false);
     }
-    private void SendQuests(UCPlayer player)
+    private async Task SendQuests(UCPlayer player, CancellationToken token = default)
     {
         ThreadUtil.assertIsGameThread();
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        lock (Items)
+        await WaitAsync(token).ConfigureAwait(false);
+        if (!UCWarfare.IsMainThread)
+            await UCWarfare.ToUpdate(token);
+        try
         {
             for (int i = 0; i < Items.Count; i++)
             {
@@ -206,6 +199,10 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 }
             }
         }
+        finally
+        {
+            Release();
+        }
     }
     /// <remarks>Thread Safe</remarks>
     public async Task AddRequestableVehicle(InteractableVehicle vehicle, CancellationToken token = default)
@@ -223,14 +220,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         data.SaveMetaData(vehicle);
         ThreadUtil.assertIsGameThread();
         StartDualLock();
-        try
-        {
-            await AddOrUpdate(data, token).ConfigureAwait(false);
-        }
-        finally
-        {
-            EndDualLock();
-        }
+        await AddOrUpdate(data, token).ConfigureAwait(false);
     }
     /// <remarks>Thread Safe</remarks>
     public async Task<bool> RemoveRequestableVehicle(Guid vehicle, CancellationToken token = default)
@@ -241,19 +231,11 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
 #if DEBUG
         using IDisposable profiler = ProfilingUtils.StartTracking();
 #endif
-        StartDualLock();
-        try
+        SqlItem<VehicleData>? data = await this.GetDataProxy(vehicle, token).ConfigureAwait(false);
+        if (data is not null)
         {
-            SqlItem<VehicleData>? data = await this.GetDataProxy(vehicle, token).ConfigureAwait(false);
-            if (data is not null)
-            {
-                await data.Delete(token).ConfigureAwait(false);
-                return true;
-            }
-        }
-        finally
-        {
-            EndDualLock();
+            await data.Delete(token).ConfigureAwait(false);
+            return true;
         }
 
         return false;
@@ -262,7 +244,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     public async Task<VehicleData?> GetData(Guid guid, CancellationToken token = default)
     {
         await WaitAsync(token).ConfigureAwait(false);
-        StartDualLock();
         try
         {
             for (int i = 0; i < List.Count; ++i)
@@ -274,7 +255,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
         finally
         {
-            EndDualLock();
             Release();
         }
 
@@ -327,7 +307,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
     {
         await WaitAsync(token).ConfigureAwait(false);
         int map = MapScheduler.Current;
-        Monitor.Enter(this);
         try
         {
             lock (Items)
@@ -348,7 +327,6 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         }
         finally
         {
-            Monitor.Exit(this);
             Release();
         }
 
@@ -611,7 +589,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
         if (pl != null)
         {
             int creditReward = 0;
-            if (data.CreditCost > 0 && spawn.Component != null && spawn.Component.RequestTime != 0)
+            if (data!.CreditCost > 0 && spawn.Component != null && spawn.Component.RequestTime != 0)
                 creditReward = data.CreditCost - Mathf.Min(data.CreditCost, Mathf.FloorToInt(data.AbandonValueLossSpeed * (Time.realtimeSinceStartup - spawn.Component.RequestTime)));
 
             Points.AwardCredits(pl, creditReward, T.AbandonCompensationToast.Translate(pl), false, false);
@@ -780,7 +758,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             e.Break();
             return;
         }
-        if (Data.Is(out IRevives r) && r.ReviveManager.DownedPlayers.ContainsKey(e.Player.Steam64))
+        if (Data.Is(out IRevives r) && r.ReviveManager.IsInjured(e.Player.Steam64))
         {
             e.Break();
             return;
@@ -967,15 +945,9 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             {
                 Default = nameof(EClass.NONE)
             },
-            new Schema.Column(COLUMN_REQUIRES_SQUADLEADER, SqlTypes.BOOLEAN)
-            {
-                Default = "0"
-            },
-            new Schema.Column(COLUMN_ABANDON_BLACKLISTED, SqlTypes.BOOLEAN)
-            {
-                Default = "0"
-            },
-            new Schema.Column(COLUMN_ABANDON_VALUE_LOSS_SPEED, SqlTypes.BOOLEAN)
+            new Schema.Column(COLUMN_REQUIRES_SQUADLEADER, SqlTypes.BOOLEAN),
+            new Schema.Column(COLUMN_ABANDON_BLACKLISTED, SqlTypes.BOOLEAN),
+            new Schema.Column(COLUMN_ABANDON_VALUE_LOSS_SPEED, SqlTypes.FLOAT)
             {
                 Default = "0.125"
             },
@@ -1064,13 +1036,13 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
             {
                 Delay delay = item.Delays[i];
                 int index = i * 3;
-                objs[index] = delay.type.ToString();
-                objs[index + 1] = delay.type switch
+                objs[index] = delay.Type.ToString();
+                objs[index + 1] = delay.Type switch
                 {
                     EDelayType.OUT_OF_STAGING or EDelayType.NONE => DBNull.Value,
-                    _ => delay.value
+                    _ => delay.Value
                 };
-                objs[index + 2] = (object?)delay.gamemode ?? DBNull.Value;
+                objs[index + 2] = (object?)delay.Gamemode ?? DBNull.Value;
                 if (i != 0)
                     builder.Append(',');
                 builder.Append('(');
@@ -1179,7 +1151,7 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                              $"`{COLUMN_BRANCH}`,`{COLUMN_REQUIRED_CLASS}`,`{COLUMN_VEHICLE_TYPE}`,`{COLUMN_REQUIRES_SQUADLEADER}`," +
                              $"`{COLUMN_ABANDON_BLACKLISTED}`,`{COLUMN_ABANDON_VALUE_LOSS_SPEED}` FROM `{TABLE_MAIN}` " +
                              $"WHERE (`{COLUMN_FACTION}` IS NULL OR `{COLUMN_FACTION}`=@0 OR `{COLUMN_FACTION}`=@1) AND " +
-                             $"(`{COLUMN_MAP}` IS NULL OR `{COLUMN_MAP}`=@2;",
+                             $"(`{COLUMN_MAP}` IS NULL OR `{COLUMN_MAP}`=@2);",
             new object[]
             {
                 TeamManager.Team1Faction.PrimaryKey.Key, TeamManager.Team2Faction.PrimaryKey.Key, MapScheduler.Current
@@ -1211,7 +1183,8 @@ public class VehicleBay : ListSqlSingleton<VehicleData>, ILevelStartListenerAsyn
                 data.Name = Assets.find(data.VehicleID)?.FriendlyName ?? data.VehicleID.ToString("N");
                 list.Add(data);
             }, token).ConfigureAwait(false);
-
+        if (list.Count == 0)
+            return list.ToArray();
         StringBuilder sb = new StringBuilder("IN (", 6 + list.Count * 4);
         object[] pkeyObjs = new object[list.Count];
         for (int i = 0; i < list.Count; ++i)

@@ -290,7 +290,7 @@ public static class TraitSigns
                 checkTime = false;
                 if (Delay.IsDelayed(data.Delays, out Delay delay, Team))
                 {
-                    if (delay.type == EDelayType.TIME)
+                    if (delay.Type == EDelayType.TIME)
                     {
                         state = ETraitSignState.TIME_DELAYED;
                         UpdateSign();

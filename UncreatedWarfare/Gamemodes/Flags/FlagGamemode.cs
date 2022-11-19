@@ -176,8 +176,8 @@ public abstract class FlagGamemode : TeamGamemode, IFlagRotation
             if (f == 0) flags.Append('\n');
             Flag flag = _rotation[f];
             flags.Append(flag.Name).Append("\nOwner: ").Append(flag.Owner).Append(" Players: \n1: ")
-                .Append(string.Join(",", flag.PlayersOnFlagTeam1.Select(x => F.GetPlayerOriginalNames(x).PlayerName))).Append("\n2: ")
-                .Append(string.Join(",", flag.PlayersOnFlagTeam2.Select(x => F.GetPlayerOriginalNames(x).PlayerName)))
+                .Append(string.Join(",", flag.PlayersOnFlagTeam1.Select(x => x.Name.PlayerName))).Append("\n2: ")
+                .Append(string.Join(",", flag.PlayersOnFlagTeam2.Select(x => x.Name.PlayerName)))
                 .Append("\nPoints: ").Append(flag.Points).Append(" State: ").Append(flag.LastDeltaPoints).Append('\n');
         }
 

@@ -1,8 +1,9 @@
-﻿using HarmonyLib;
+﻿using System;
+using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
-using System;
-using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Gamemodes.Interfaces;
+// ReSharper disable InconsistentNaming
 
 namespace Uncreated.Warfare.Harmony;
 
@@ -15,18 +16,21 @@ public static partial class Patches
         /// <summary>Prefix of <see cref="PlayerLife.askStarve(byte)"/> to prevent starving in main base.</summary>
         [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askStarve))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnPlayerFoodTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
 
         // SDG.Unturned.PlayerLife
         /// <summary>Prefix of <see cref="PlayerLife.askDehydrate(byte)"/> to prevent dehydrating in main base.</summary>
         [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askDehydrate))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnPlayerWaterTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
 
         // SDG.Unturned.PlayerLife
         /// <summary>Prefix of <see cref="PlayerLife.askTire(byte)"/> to prevent tiring in main base.</summary>
         [HarmonyPatch(typeof(PlayerLife), nameof(PlayerLife.askTire))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnPlayerTireTick(byte amount, PlayerLife __instance) => !Data.Is<ITeams>() || !Teams.TeamManager.IsInAnyMainOrLobby(__instance.player);
 
         // SDG.Unturned.PlayerLife
@@ -35,6 +39,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerLife), "simulate")]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool SimulatePlayerLifePre(uint simulation, PlayerLife __instance, uint ___lastBleed, ref bool ____isBleeding, ref uint ___lastRegenerate)
         {
 #if DEBUG
@@ -49,7 +54,7 @@ public static partial class Patches
                     {
                         if (simulation - ___lastBleed > Provider.modeConfigData.Players.Bleed_Damage_Ticks)
                         {
-                            if (r.ReviveManager != null && r.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
+                            if (r.ReviveManager != null && r.ReviveManager.IsInjured(__instance.player.channel.owner.playerID.steamID.m_SteamID))
                             {
                                 ____isBleeding = false;
                                 ___lastRegenerate = simulation; // reset last regeneration to stop it from regenerating hp since it thinks the player isnt bleeding.
@@ -66,6 +71,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerLife), "simulate")]
         [HarmonyPostfix]
+        [UsedImplicitly]
         static void SimulatePlayerLifePost(uint simulation, PlayerLife __instance, ref uint ___lastBleed, ref bool ____isBleeding)
         {
 #if DEBUG
@@ -80,11 +86,11 @@ public static partial class Patches
                     {
                         if (simulation - ___lastBleed > Provider.modeConfigData.Players.Bleed_Damage_Ticks)
                         {
-                            if (r.ReviveManager != null && r.ReviveManager.DownedPlayers.ContainsKey(__instance.player.channel.owner.playerID.steamID.m_SteamID))
+                            if (r.ReviveManager != null && r.ReviveManager.IsInjured(__instance.player.channel.owner.playerID.steamID.m_SteamID))
                             {
                                 ___lastBleed = simulation;
                                 ____isBleeding = true;
-                                DamagePlayerParameters p = r.ReviveManager.DownedPlayers[__instance.player.channel.owner.playerID.steamID.m_SteamID].parameters;
+                                DamagePlayerParameters p = r.ReviveManager.GetParameters(__instance.player.channel.owner.playerID.steamID.m_SteamID);
                                 __instance.askDamage(1, p.direction, p.cause, p.limb, p.killer, out EPlayerKill _, canCauseBleeding: false, bypassSafezone: true);
                             }
                         }
@@ -98,6 +104,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerInventory), nameof(PlayerInventory.closeStorage))]
         [HarmonyPostfix]
+        [UsedImplicitly]
         static void OnStopStoring(PlayerInventory __instance)
         {
 #if DEBUG

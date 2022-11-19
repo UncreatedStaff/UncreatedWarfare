@@ -57,9 +57,8 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
     public int Team2Score => _t2score;
     protected int _t1score = 0;
     protected int _t2score = 0;
-    protected override void PreInit()
+    protected override Task PreInit()
     {
-        base.PreInit();
         AddSingletonRequirement(ref _squadManager);
         AddSingletonRequirement(ref _kitManager);
         AddSingletonRequirement(ref _vehicleSpawner);
@@ -72,6 +71,7 @@ public class TeamDeathmatch : TeamGamemode, IKitRequests, IVehicles, IFOBs, ISqu
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
+        return base.PreInit();
     }
     public override void Subscribe()
     {

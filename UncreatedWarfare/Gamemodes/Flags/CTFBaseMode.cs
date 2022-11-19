@@ -93,7 +93,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
     {
 
     }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
@@ -107,7 +107,7 @@ public abstract class CTFBaseMode<Leaderboard, Stats, StatTracker, TTicketProvid
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        base.PreInit();
+        return base.PreInit();
     }
     protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.AASFlagTickSeconds);
     public override Task DeclareWin(ulong winner)

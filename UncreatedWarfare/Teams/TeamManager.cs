@@ -1088,35 +1088,43 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
             },
             new Schema.Column(COLUMN_ASSETS_SUPPLY_AMMO, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID
+                Default = EMPTY_GUID,
+                Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_SUPPLY_BUILD, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID
+                Default = EMPTY_GUID,
+                Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_RALLY_POINT, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID
+                Default = EMPTY_GUID,
+                Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_FOB_RADIO, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID
+                Default = EMPTY_GUID,
+                Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_BACKPACK, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID
+                Default = EMPTY_GUID,
+                Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_SHIRT, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID
+                Default = EMPTY_GUID,
+                Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_PANTS, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID
+                Default = EMPTY_GUID,
+                Nullable = true
             },
             new Schema.Column(COLUMN_ASSETS_DEFAULT_VEST, SqlTypes.GUID_STRING)
             {
-                Default = EMPTY_GUID
+                Default = EMPTY_GUID,
+                Nullable = true
             }
         }, false, typeof(FactionInfo)),
         F.GetTranslationListSchema(TABLE_NAME_TRANSLATIONS, COLUMN_EXT_PK, TABLE_MAIN, COLUMN_PK, FACTION_NAME_MAX_CHAR_LIMIT),
@@ -1132,7 +1140,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
         {
             FactionInfo def = TeamManager.DefaultFactions[i];
-            def.PrimaryKey = i;
+            def.PrimaryKey = i + 1;
             if (i != 0)
                 builder.Append(',');
             builder.Append('(');
@@ -1144,7 +1152,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                 builder.Append('@').Append(st + j);
             }
             builder.Append(')');
-            objs[st] = i;
+            objs[st] = def.PrimaryKey.Key;
             objs[st + 1] = def.FactionId;
             objs[st + 2] = def.Name;
             objs[st + 3] = def.ShortName;
@@ -1160,45 +1168,45 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         builder.Append($"INSERT INTO `{TABLE_MAP_ASSETS}` (`{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`,`{COLUMN_ASSETS_RALLY_POINT}`," +
                        $"`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`,`{COLUMN_ASSETS_DEFAULT_SHIRT}`," +
                        $"`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}`) VALUES ");
-
+        objs = new object[TeamManager.DefaultFactions.Length * 9];
         for (int i = 0; i < TeamManager.DefaultFactions.Length; ++i)
         {
             FactionInfo def = TeamManager.DefaultFactions[i];
             if (i != 0)
                 builder.Append(',');
             builder.Append('(');
-            int st = i * 8 + TeamManager.DefaultFactions.Length * 8;
-            for (int j = 0; j < 8; ++j)
+            int st = i * 9;
+            for (int j = 0; j < 9; ++j)
             {
                 if (j != 0)
                     builder.Append(',');
                 builder.Append('@').Append(st + j);
             }
             builder.Append(')');
-            objs[st] = i;
-            if (def.Ammo is null) objs[st] = DBNull.Value;
-            else objs[st] = def.Ammo.Guid.ToString();
+            objs[st] = def.PrimaryKey.Key;
+            if (def.Ammo is null) objs[st + 1] = DBNull.Value;
+            else objs[st + 1] = def.Ammo.Guid.ToString("N");
 
-            if (def.Build is null) objs[st + 1] = DBNull.Value;
-            else objs[st + 1] = def.Build.Guid.ToString();
+            if (def.Build is null) objs[st + 2] = DBNull.Value;
+            else objs[st + 2] = def.Build.Guid.ToString("N");
 
-            if (def.RallyPoint is null) objs[st + 2] = DBNull.Value;
-            else objs[st + 2] = def.RallyPoint.Guid.ToString();
+            if (def.RallyPoint is null) objs[st + 3] = DBNull.Value;
+            else objs[st + 3] = def.RallyPoint.Guid.ToString("N");
 
-            if (def.FOBRadio is null) objs[st + 3] = DBNull.Value;
-            else objs[st + 3] = def.FOBRadio.Guid.ToString();
+            if (def.FOBRadio is null) objs[st + 4] = DBNull.Value;
+            else objs[st + 4] = def.FOBRadio.Guid.ToString("N");
 
-            if (def.DefaultBackpack is null) objs[st + 4] = DBNull.Value;
-            else objs[st + 4] = def.DefaultBackpack.Guid.ToString();
+            if (def.DefaultBackpack is null) objs[st + 5] = DBNull.Value;
+            else objs[st + 5] = def.DefaultBackpack.Guid.ToString("N");
 
-            if (def.DefaultShirt is null) objs[st + 5] = DBNull.Value;
-            else objs[st + 5] = def.DefaultShirt.Guid.ToString();
+            if (def.DefaultShirt is null) objs[st + 6] = DBNull.Value;
+            else objs[st + 6] = def.DefaultShirt.Guid.ToString("N");
 
-            if (def.DefaultPants is null) objs[st + 6] = DBNull.Value;
-            else objs[st + 6] = def.DefaultPants.Guid.ToString();
+            if (def.DefaultPants is null) objs[st + 7] = DBNull.Value;
+            else objs[st + 7] = def.DefaultPants.Guid.ToString("N");
 
-            if (def.DefaultVest is null) objs[st + 7] = DBNull.Value;
-            else objs[st + 7] = def.DefaultVest.Guid.ToString();
+            if (def.DefaultVest is null) objs[st + 8] = DBNull.Value;
+            else objs[st + 8] = def.DefaultVest.Guid.ToString("N");
         }
 
         builder.Append(';');
@@ -1219,16 +1227,20 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                     builder.Append(',');
                 else
                     f = true;
-                builder.Append("(@0,@1,@2)");
+                int c = objs2.Count;
+                builder.Append("(@" + c.ToString(Data.AdminLocale) + ",@" + (c + 1).ToString(Data.AdminLocale) + ",@" + (c + 2).ToString(Data.AdminLocale) + ")");
                 objs2.Add(def.PrimaryKey.Key);
                 objs2.Add(v.Key);
                 objs2.Add(v.Value);
             }
         }
+        if (objs2.Count != 0)
+        {
+            builder.Append(';');
+            await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
+            objs2.Clear();
+        }
 
-        builder.Append(';');
-        await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
-        objs2.Clear();
         builder.Clear();
         builder.Append($"INSERT INTO `{TABLE_SHORT_NAME_TRANSLATIONS}` (`{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}`) VALUES ");
         f = false;
@@ -1243,16 +1255,20 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                     builder.Append(',');
                 else
                     f = true;
-                builder.Append("(@0,@1,@2)");
+                int c = objs2.Count;
+                builder.Append("(@" + c.ToString(Data.AdminLocale) + ",@" + (c + 1).ToString(Data.AdminLocale) + ",@" + (c + 2).ToString(Data.AdminLocale) + ")");
                 objs2.Add(def.PrimaryKey.Key);
                 objs2.Add(v.Key);
                 objs2.Add(v.Value);
             }
         }
 
-        builder.Append(';');
-        await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
-        objs2.Clear();
+        if (objs2.Count != 0)
+        {
+            builder.Append(';');
+            await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
+            objs2.Clear();
+        }
         builder.Clear();
         builder.Append($"INSERT INTO `{TABLE_ABBREVIATIONS_TRANSLATIONS}` (`{COLUMN_EXT_PK}`,`{F.COLUMN_LANGUAGE}`,`{F.COLUMN_VALUE}`) VALUES ");
         f = false;
@@ -1267,12 +1283,16 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
                     builder.Append(',');
                 else
                     f = true;
-                builder.Append("(@0,@1,@2)");
+                int c = objs2.Count;
+                builder.Append("(@" + c.ToString(Data.AdminLocale) + ",@" + (c + 1).ToString(Data.AdminLocale) + ",@" + (c + 2).ToString(Data.AdminLocale) + ")");
                 objs2.Add(def.PrimaryKey.Key);
                 objs2.Add(v.Key);
                 objs2.Add(v.Value);
             }
         }
+
+        if (objs2.Count == 0)
+            return;
 
         builder.Append(';');
         await sql.NonQueryAsync(builder.ToString(), objs2.ToArray(), token).ConfigureAwait(false);
@@ -1357,7 +1377,7 @@ public class FactionInfo : ITranslationArgument, IListItem, ICloneable
         await sql.QueryAsync(
             $"SELECT `{COLUMN_EXT_PK}`,`{COLUMN_ASSETS_SUPPLY_AMMO}`,`{COLUMN_ASSETS_SUPPLY_BUILD}`," +
             $"`{COLUMN_ASSETS_RALLY_POINT}`,`{COLUMN_ASSETS_FOB_RADIO}`,`{COLUMN_ASSETS_DEFAULT_BACKPACK}`," +
-            $"`{COLUMN_ASSETS_DEFAULT_SHIRT}`,`{COLUMN_ASSETS_DEFAULT_PANTS}`.`{COLUMN_ASSETS_DEFAULT_VEST}` FROM `{TABLE_MAP_ASSETS}`;", null,
+            $"`{COLUMN_ASSETS_DEFAULT_SHIRT}`,`{COLUMN_ASSETS_DEFAULT_PANTS}`,`{COLUMN_ASSETS_DEFAULT_VEST}` FROM `{TABLE_MAP_ASSETS}`;", null,
             reader =>
             {
                 int pk = reader.GetInt32(0);

@@ -76,7 +76,7 @@ public sealed partial class Conquest :
     public override string DisplayName => "Conquest";
     public override EGamemode GamemodeType => EGamemode.CONQUEST;
     public Conquest() : base(nameof(Conquest), Config.AASEvaluateTime) { }
-    protected override void PreInit()
+    protected override Task PreInit()
     {
         AddSingletonRequirement(ref _vehicleSpawner);
         AddSingletonRequirement(ref _vehicleBay);
@@ -90,7 +90,7 @@ public sealed partial class Conquest :
         AddSingletonRequirement(ref _traitManager);
         if (UCWarfare.Config.EnableActionMenu)
             AddSingletonRequirement(ref _actionManager);
-        base.PreInit();
+        return base.PreInit();
     }
     protected override bool TimeToEvaluatePoints() => EveryXSeconds(Config.ConquestFlagTickSeconds);
     public override bool IsAttackSite(ulong team, Flag flag) => true;

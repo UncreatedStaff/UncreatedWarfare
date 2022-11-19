@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using JetBrains.Annotations;
 using SDG.Unturned;
 using Steamworks;
 using System;
@@ -12,6 +13,7 @@ using Uncreated.Warfare.Components;
 using Uncreated.Warfare.Gamemodes;
 using Uncreated.Warfare.Squads;
 using UnityEngine;
+// ReSharper disable InconsistentNaming
 
 namespace Uncreated.Warfare.Harmony;
 
@@ -72,6 +74,7 @@ public static partial class Patches
         }*/
         [HarmonyPatch(typeof(SteamPlayerID), "BypassIntegrityChecks", MethodType.Getter)]
         [HarmonyPostfix]
+        [UsedImplicitly]
         static void GetBypassIntegrityChecksPrefix(SteamPlayerID __instance, ref bool __result)
         {
 #if DEBUG
@@ -89,6 +92,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(Provider), "verifyNextPlayerInQueue")]
         [HarmonyPostfix]
+        [UsedImplicitly]
         static void OnPlayerEnteredQueuePost()
         {
 #if DEBUG
@@ -101,12 +105,12 @@ public static partial class Patches
                     SteamPending pending = Provider.pending[i];
                     if (pending.hasSentVerifyPacket)
                         continue;
-                    if (F.IsAdmin(pending.playerID.steamID.m_SteamID) || F.IsIntern(pending.playerID.steamID.m_SteamID) || PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip)
+                    if (pending.playerID.steamID.m_SteamID.IsAdmin() || pending.playerID.steamID.m_SteamID.IsIntern() || PlayerManager.HasSave(pending.playerID.steamID.m_SteamID, out PlayerSave save) && save.HasQueueSkip)
                         pending.sendVerifyPacket();
                 }
             }
         }
-        private static readonly string[] dontLogCommands = new string[]
+        private static readonly string[] dontLogCommands =
         {
             "request",
             "req",
@@ -143,6 +147,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(ChatManager), nameof(ChatManager.ReceiveChatRequest))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnChatRequested(in ServerInvocationContext context, byte flags, string text)
         {
 #if DEBUG
@@ -164,7 +169,7 @@ public static partial class Patches
                 text = text.Substring(0, ChatManager.MAX_MESSAGE_LENGTH);
             if (CommandWindow.shouldLogChat)
             {
-                PlayerNames n = F.GetPlayerOriginalNames(callingPlayer);
+                PlayerNames n = caller is null ? new PlayerNames(callingPlayer) : caller.Name;
                 string name = $"[{n.PlayerName} ({n.CharacterName})]:";
                 int len = 40 - name.Length;
                 if (len > 0)
@@ -279,6 +284,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerAnimator), nameof(PlayerAnimator.ReceiveGestureRequest))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnGestureReceived(EPlayerGesture newGesture, PlayerAnimator __instance)
         {
 #if DEBUG
@@ -298,6 +304,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerQuests), "replicateSetMarker")]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool OnPlayerMarked(ref bool newIsMarkerPlaced, ref Vector3 newMarkerPosition, ref string newMarkerTextOverride, PlayerQuests __instance)
         {
 #if DEBUG
@@ -313,6 +320,7 @@ public static partial class Patches
         ///</summary>
         [HarmonyPatch(typeof(PlayerInventory), nameof(PlayerInventory.ReceiveDragItem))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool CancelStoringNonWhitelistedItem(PlayerInventory __instance, byte page_0, byte x_0, byte y_0, byte page_1, byte x_1, byte y_1, byte rot_1)
         {
 #if DEBUG
@@ -331,6 +339,7 @@ public static partial class Patches
         ///</summary>
         [HarmonyPatch(typeof(GroupManager), nameof(GroupManager.requestGroupExit))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool CancelLeavingGroup(Player player)
         {
 #if DEBUG
@@ -347,6 +356,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerClothing), nameof(PlayerClothing.ReceiveVisualToggleRequest))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool CancelCosmeticChangesPrefix(EVisualToggleType type, PlayerClothing __instance)
         {
 #if DEBUG
@@ -363,6 +373,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(PlayerClothing), nameof(PlayerClothing.ServerSetVisualToggleState))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool CancelCosmeticSetPrefix(EVisualToggleType type, ref bool isVisible, PlayerClothing __instance)
         {
 #if DEBUG
@@ -379,6 +390,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(VehicleManager), nameof(VehicleManager.ReceiveStealVehicleBattery))]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static bool BatteryStealingOverride(in ServerInvocationContext context)
         {
 #if DEBUG
@@ -395,6 +407,7 @@ public static partial class Patches
         /// </summary>
         [HarmonyPatch(typeof(UseableMelee), "fire")]
         [HarmonyPrefix]
+        [UsedImplicitly]
         static void OnPreMeleeHit(UseableMelee __instance)
         {
 #if DEBUG
@@ -425,9 +438,10 @@ public static partial class Patches
                 }
             }
         }
-        [HarmonyPatch(typeof(SDG.Unturned.Rocket), "OnTriggerEnter")]
+        [HarmonyPatch(typeof(Rocket), "OnTriggerEnter")]
         [HarmonyPrefix]
-        static void OnProjectileCollided(SDG.Unturned.Rocket __instance, Collider other)
+        [UsedImplicitly]
+        static void OnProjectileCollided(Rocket __instance, Collider other)
         {
             if (__instance.gameObject.TryGetComponent(out ProjectileComponent projectile))
             {
@@ -444,8 +458,7 @@ public static partial class Patches
             private static readonly MethodInfo? LogMethod = typeof(L).GetMethod(nameof(L.LogWarning), BindingFlags.Public | BindingFlags.Static);
             private static readonly MethodInfo? GuidToStringMethod = typeof(Guid).GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault(x => x.Name.Equals(nameof(Guid.ToString), StringComparison.Ordinal) && x.GetParameters().Length == 2);
             private static readonly MethodInfo? Concat2Method = typeof(string).GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(x => x.Name.Equals(nameof(string.Concat)) && x.GetParameters().Length == 2 && x.GetParameters()[0].ParameterType == typeof(string));
-            private const int LOCAL_NUMBER = 5;
-            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
+            private static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
             {
                 bool found = false;
                 foreach (CodeInstruction instruction in instructions)
@@ -492,7 +505,6 @@ public static partial class Patches
                 else
                 {
                     L.LogWarning("Failed to find method " + VALIDATE_ASSETS_HANDLER_NAME + ".");
-                    return;
                 }
             }
         }
